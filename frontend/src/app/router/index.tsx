@@ -1,5 +1,6 @@
 import { createBrowserRouter } from 'react-router-dom';
 import { LandingPage } from '../../features/landing/pages/LandingPage';
+import { CheckoutSummaryPage } from '../../features/checkout/pages/CheckoutSummaryPage';
 
 // Componente temporal (Mock) para que la ruta del catálogo exista
 const CatalogPlaceholder = () => (
@@ -17,5 +18,9 @@ export const router = createBrowserRouter([
   {
     path: '/catalogo',
     element: <CatalogPlaceholder />,
+  },
+  {
+    path: '/checkout/resumen',
+    element: <CheckoutSummaryPage />,
   }
 ]);
