@@ -2,6 +2,8 @@ from rest_framework import serializers
 from apps.core.models import Producto, VarianteProducto
 
 class VarianteProductoSerializer(serializers.ModelSerializer):
+    stock = serializers.IntegerField(min_value=0, required=False)
+
     class Meta:
         model = VarianteProducto
         fields = [
