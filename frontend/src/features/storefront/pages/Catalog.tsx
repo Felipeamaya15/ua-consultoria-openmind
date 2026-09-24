@@ -5,6 +5,8 @@ import { mockProducts, categories } from '../data/mockData';
 import { ProductCard } from '../components/store/ProductCard';
 import { Pagination, EmptyState, Icon } from '../components/ui';
 import { useStorefrontTemplate } from '../hooks/useStorefrontTemplate';
+import { useAttributeFilters } from '../hooks/useAttributeFilters';
+import { AttributeFilters, AppliedAttributeFilters } from '../components/store/AttributeFilters';
 
 const SORT_OPTIONS = [
   {
@@ -53,6 +55,29 @@ export default function Catalog() {
   const [maxPrice, setMaxPrice] = useState('');
   const [sort, setSort] = useState('featured');
   const [page, setPage] = useState(1);
+
+  const attrFilters = useAttributeFilters(mockProducts, category);
+
+  const activeFiltersCount =
+    attrFilters.count +
+    availability.length +
+    (minPrice !== '' ? 1 : 0) +
+    (maxPrice !== '' ? 1 : 0) +
+    (category !== 'Todos' ? 1 : 0);
+
+  const appliedFilters = (
+    <AppliedAttributeFilters
+      selected={attrFilters.selected}
+      onRemove={(name, value) => {
+        attrFilters.toggle(name, value);
+        setPage(1);
+      }}
+      onClearAll={() => {
+        attrFilters.clear();
+        setPage(1);
+      }}
+    />
+  );
 
   const [viewMode, setViewMode] =
     useState<'grid' | 'list'>('grid');
@@ -113,6 +138,8 @@ export default function Catalog() {
       );
     }
 
+    list = list.filter(attrFilters.matches);
+
     switch (sort) {
       case 'price-asc':
         list.sort(
@@ -148,6 +175,7 @@ export default function Catalog() {
     availability,
     minPrice,
     maxPrice,
+    attrFilters.matches,
   ]);
 
   const paginated = filtered.slice(
@@ -166,6 +194,7 @@ export default function Catalog() {
     setAvailability([]);
     setMinPrice('');
     setMaxPrice('');
+    attrFilters.clear();
     setPage(1);
   };
 
@@ -258,7 +287,7 @@ export default function Catalog() {
             aria-expanded={filtersOpen}
             onClick={() => setFiltersOpen(!filtersOpen)}
           >
-            Filtros {filtersOpen ? '−' : '+'}
+            Filtros{activeFiltersCount > 0 && ` (${activeFiltersCount})`} {filtersOpen ? '−' : '+'}
           </button>
 
           <div className="grid grid-cols-12 gap-5 md:gap-7 items-start">
@@ -355,6 +384,15 @@ export default function Catalog() {
                   </div>
                 </div>
 
+                <AttributeFilters
+                  groups={attrFilters.groups}
+                  selected={attrFilters.selected}
+                  onToggle={(name, value) => {
+                    attrFilters.toggle(name, value);
+                    setPage(1);
+                  }}
+                />
+
                 <button
                   type="button"
                   onClick={clearFilters}
@@ -367,6 +405,8 @@ export default function Catalog() {
 
             {/* PRODUCTOS */}
             <main className="col-span-12 md:col-span-9">
+              {appliedFilters}
+
               {paginated.length === 0 ? (
                 <div className="rounded-[18px] border border-white/10 bg-[#111113] px-6 py-20 text-center">
                   <Icon name="search" className="w-10 h-10 mx-auto text-white/25" />
@@ -434,6 +474,54 @@ export default function Catalog() {
               Nuestra colección
             </h1>
           </div>
+
+          {/* FILTROS */}
+          <div className="mb-6 border-b border-black/10 pb-6">
+            <div className="flex items-center justify-between gap-4">
+              <button
+                type="button"
+                aria-expanded={filtersOpen}
+                onClick={() => setFiltersOpen(!filtersOpen)}
+                className="inline-flex items-center gap-2 rounded-full border border-black/15 px-5 py-2.5 text-[11px] font-semibold uppercase tracking-[0.12em] transition-colors hover:border-black"
+              >
+                Filtros{activeFiltersCount > 0 && ` (${activeFiltersCount})`}{' '}
+                <span aria-hidden="true">{filtersOpen ? '−' : '+'}</span>
+              </button>
+
+              {activeFiltersCount > 0 && (
+                <button
+                  type="button"
+                  onClick={clearFilters}
+                  className="text-[11px] font-semibold underline underline-offset-4 hover:opacity-60"
+                >
+                  Limpiar filtros ({activeFiltersCount})
+                </button>
+              )}
+            </div>
+
+            {filtersOpen && (
+              <div className="mt-6">
+                {attrFilters.groups.length === 0 ? (
+                  <p className="text-[13px] text-[#8c8683]">
+                    No hay filtros disponibles.
+                  </p>
+                ) : (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-8 gap-y-6">
+                    <AttributeFilters
+                      groups={attrFilters.groups}
+                      selected={attrFilters.selected}
+                      onToggle={(name, value) => {
+                        attrFilters.toggle(name, value);
+                        setPage(1);
+                      }}
+                    />
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {appliedFilters}
 
           {paginated.length === 0 ? (
             <EmptyState
@@ -694,7 +782,7 @@ export default function Catalog() {
           setFiltersOpen(!filtersOpen)
         }
       >
-        Filtros {filtersOpen ? '−' : '+'}
+        Filtros{activeFiltersCount > 0 && ` (${activeFiltersCount})`} {filtersOpen ? '−' : '+'}
       </button>
 
       {/* CONTENIDO */}
@@ -880,12 +968,33 @@ export default function Catalog() {
                 />
               </div>
             </div>
+
+            <AttributeFilters
+              groups={attrFilters.groups}
+              selected={attrFilters.selected}
+              onToggle={(name, value) => {
+                attrFilters.toggle(name, value);
+                setPage(1);
+              }}
+            />
+
+            {activeFiltersCount > 0 && (
+              <button
+                type="button"
+                onClick={clearFilters}
+                className="mt-4 w-full rounded-lg border border-[var(--border)] py-2 text-sm font-semibold text-[var(--foreground)] transition-colors hover:bg-[var(--muted)]"
+              >
+                Limpiar filtros ({activeFiltersCount})
+              </button>
+            )}
           </div>
         </aside>
 
         {/* PRODUCTOS */}
 
         <main className="col-span-12 md:col-span-9">
+          {appliedFilters}
+
           {paginated.length === 0 ? (
             <EmptyState
               icon={
