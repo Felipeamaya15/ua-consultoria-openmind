@@ -43,33 +43,6 @@ class Producto(models.Model):
             models.CheckConstraint(check=Q(stock__gte=0), name='chk_stock_valido'),
         ]
 
-class VarianteProducto(models.Model):
-    id_variante = models.BigAutoField(primary_key=True)
-    id_producto = models.ForeignKey(
-        Producto, 
-        on_delete=models.CASCADE, 
-        db_column='id_producto',
-        related_name='variantes'
-    )
-    sku = models.CharField(max_length=64, unique=True)
-    precio = models.DecimalField(max_digits=12, decimal_places=2)
-    stock = models.IntegerField(default=0)
-    atributos = models.JSONField(
-        default=dict, 
-        help_text="Ejemplo: {'color': 'Negro', 'talla': 'M'}"
-    )
-    es_activa = models.BooleanField(default=True)
-    fecha_creacion = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        db_table = 'variante_producto'
-        constraints = [
-            models.CheckConstraint(check=Q(precio__gte=0), name='chk_variante_precio_valido'),
-            models.CheckConstraint(check=Q(stock__gte=0), name='chk_variante_stock_valido'),
-        ]
-
-    def __str__(self):
-        return f"{self.id_producto.nombre} - {self.sku}"
 
 class Carrito(models.Model):
     id_carrito = models.BigAutoField(primary_key=True)
@@ -115,14 +88,6 @@ class ItemPedido(models.Model):
     id_item_pedido = models.BigAutoField(primary_key=True)
     id_pedido = models.ForeignKey(Pedido, on_delete=models.CASCADE, db_column='id_pedido')
     id_producto = models.ForeignKey(Producto, on_delete=models.CASCADE, db_column='id_producto')
-    id_variante = models.ForeignKey(
-        'VarianteProducto', 
-        on_delete=models.PROTECT, 
-        db_column='id_variante', 
-        null=True, 
-        blank=True,
-        related_name='items_pedido'
-    )
     
     cantidad = models.IntegerField()
     precio_unitario = models.DecimalField(max_digits=12, decimal_places=2)
