@@ -1,5 +1,6 @@
 from rest_framework.views import exception_handler as drf_exception_handler
 from rest_framework.exceptions import ValidationError
+from apps.core.infrastructure.tenant import ErrorConfiguracionTienda
 
 ERROR_CODES_BY_STATUS = {
     400: "SOLICITUD_INVALIDA",
@@ -31,7 +32,10 @@ def custom_exception_handler(exc, context):
         mensaje = "Los datos enviados contienen errores de validación"
         detalles = response.data if isinstance(response.data, (dict, list)) else None
     else:
-        codigo = ERROR_CODES_BY_STATUS.get(response.status_code, "ERROR")
+        codigo = (
+            exc.default_code if isinstance(exc, ErrorConfiguracionTienda)
+            else ERROR_CODES_BY_STATUS.get(response.status_code, "ERROR")
+        )
         detail = response.data.get("detail") if isinstance(response.data, dict) else None
         mensaje = str(detail) if detail else DEFAULT_MESSAGES_BY_STATUS.get(
             response.status_code, "Ocurrió un error al procesar la solicitud"

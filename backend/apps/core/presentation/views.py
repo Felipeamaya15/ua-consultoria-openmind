@@ -4,6 +4,7 @@ from rest_framework.exceptions import NotFound
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from apps.core.infrastructure.tenant import resolver_tienda
 from apps.core.models import ItemPedido, Pedido, Producto, Usuario, VarianteProducto
 from .serializers import (
     RegistrarCompraSerializer,
@@ -13,12 +14,14 @@ from .serializers import (
 
 class VarianteProductoListCreateView(generics.ListCreateAPIView):
     serializer_class = VarianteProductoSerializer
-    authentication_classes = []
 
     def get_producto(self):
+        tienda = resolver_tienda(
+            self.request, exigir_propietario=self.request.method == 'POST',
+        )
         id_producto = self.kwargs.get('id_producto')
         try:
-            return Producto.objects.get(id_producto=id_producto)
+            return Producto.objects.get(id_producto=id_producto, id_tienda=tienda)
         except Producto.DoesNotExist:
             raise NotFound(detail=f"No existe un producto con el id {id_producto}.")
 
@@ -27,7 +30,7 @@ class VarianteProductoListCreateView(generics.ListCreateAPIView):
 
     def get_serializer_context(self):
         context = super().get_serializer_context()
-        context['id_producto'] = self.kwargs.get('id_producto')
+        context['id_producto'] = self.get_producto().pk
         return context
 
     def perform_create(self, serializer):
@@ -40,14 +43,16 @@ class VarianteProductoDetailView(generics.RetrieveUpdateAPIView):
     los datos editables de una variante específica.
     """
     serializer_class = VarianteProductoSerializer
-    authentication_classes = []
     lookup_field = 'id_variante'
     lookup_url_kwarg = 'id_variante'
 
     def get_producto(self):
+        tienda = resolver_tienda(
+            self.request, exigir_propietario=self.request.method in ('PUT', 'PATCH'),
+        )
         id_producto = self.kwargs.get('id_producto')
         try:
-            return Producto.objects.get(id_producto=id_producto)
+            return Producto.objects.get(id_producto=id_producto, id_tienda=tienda)
         except Producto.DoesNotExist:
             raise NotFound(detail=f"No existe un producto con el id {id_producto}.")
 
@@ -56,7 +61,7 @@ class VarianteProductoDetailView(generics.RetrieveUpdateAPIView):
 
     def get_serializer_context(self):
         context = super().get_serializer_context()
-        context['id_producto'] = self.kwargs.get('id_producto')
+        context['id_producto'] = self.get_producto().pk
         return context
 
 
@@ -69,7 +74,8 @@ class RegistrarCompraView(APIView):
     authentication_classes = []
 
     def post(self, request):
-        serializer = RegistrarCompraSerializer(data=request.data)
+        tienda = resolver_tienda(request)
+        serializer = RegistrarCompraSerializer(data=request.data, context={'tienda': tienda})
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -98,7 +104,8 @@ class RegistrarCompraView(APIView):
                 for item in items:
                     # select_for_update bloquea la fila en la BD para evitar compras concurrentes duplicadas
                     variante = VarianteProducto.objects.select_for_update().get(
-                        id_variante=item['id_variante']
+                        id_variante=item['id_variante'],
+                        id_producto__id_tienda=tienda,
                     )
 
                     # Validación de seguridad: rechazar si stock es 0 o menor a lo pedido
@@ -139,6 +146,11 @@ class RegistrarCompraView(APIView):
                 status=status.HTTP_201_CREATED
             )
 
+        except VarianteProducto.DoesNotExist:
+            return Response(
+                {"error": "COMPRA_RECHAZADA", "detalle": "La variante no existe en la tienda de esta instalación."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         except ValueError as err:
             return Response(
                 {"error": "COMPRA_RECHAZADA", "detalle": str(err)}, 

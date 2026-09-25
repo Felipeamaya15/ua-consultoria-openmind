@@ -1,9 +1,3 @@
-from django.conf import settings
+from apps.core.infrastructure.tenant import resolver_tienda, resolver_tienda_id
 
-
-def resolver_tienda_id(request) -> str:
-    """
-    Determina el tienda_id correspondiente a la solicitud actual.
-
-    """
-    return settings.TIENDA_ID_DEFAULT
+__all__ = ['resolver_tienda', 'resolver_tienda_id']

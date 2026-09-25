@@ -11,6 +11,8 @@ from apps.core.infrastructure.mongo_client import get_mongo_client
 
 class MongoStockContract:
     """Mismo contrato para los dos caminos de importación existentes."""
+    tienda_id = '37'
+
     def setUp(self):
         super().setUp()
         client = get_mongo_client()
@@ -22,7 +24,7 @@ class MongoStockContract:
             self.repository = module.ProductRepository()
 
     def create_product(self, stock=5):
-        return self.repository.create({
+        return self.repository.create(self.tienda_id, {
             'nombre': 'Producto', 'stock': stock,
             'variantes': [{'sku': 'SKU', 'stock': stock}],
         })
@@ -40,17 +42,17 @@ class MongoStockContract:
         for data in ({'stock': -1}, {'variantes': [{'sku': 'OK', 'stock': 3}, {'sku': 'NO', 'stock': -1}]}):
             with self.subTest(data=data):
                 with self.assertRaises(ValueError):
-                    self.repository.create(data)
+                    self.repository.create(self.tienda_id, data)
                 self.assertEqual(self.db.productos.count_documents({}), 0)
 
     def test_actualiza_producto_y_variantes_con_stock_cero_o_positivo(self):
         pk = self.create_product()
         for stock in (0, 3):
-            self.assertTrue(self.repository.update(pk, {'stock': stock, 'variantes.0.stock': stock}))
+            self.assertTrue(self.repository.update(self.tienda_id, pk, {'stock': stock, 'variantes.0.stock': stock}))
             product = self.read(pk)
             self.assertEqual(product['stock'], stock)
             self.assertEqual(product['variantes'][0]['stock'], stock)
-        self.assertTrue(self.repository.update(pk, {'variantes': [{'sku': 'NUEVA', 'stock': 0}]}))
+        self.assertTrue(self.repository.update(self.tienda_id, pk, {'variantes': [{'sku': 'NUEVA', 'stock': 0}]}))
         self.assertEqual(self.read(pk)['variantes'], [{'sku': 'NUEVA', 'stock': 0}])
 
     def test_rechaza_actualizaciones_negativas_completas_parciales_y_posicionales(self):
@@ -66,7 +68,7 @@ class MongoStockContract:
         for update in updates:
             with self.subTest(update=update):
                 with self.assertRaises(ValueError):
-                    self.repository.update(pk, {'nombre': 'No guardar', **update})
+                    self.repository.update(self.tienda_id, pk, {'nombre': 'No guardar', **update})
                 self.assertEqual(self.read(pk), original)
 
     def test_rechaza_stock_no_entero_sin_persistir(self):
@@ -75,25 +77,25 @@ class MongoStockContract:
         for value in (-0.5, '-1', None, True, float('nan')):
             with self.subTest(value=value):
                 with self.assertRaises(ValueError):
-                    self.repository.update(pk, {'stock': value})
+                    self.repository.update(self.tienda_id, pk, {'stock': value})
                 self.assertEqual(self.read(pk), original)
 
     def test_descuento_exige_stock_en_la_misma_variante(self):
-        pk = self.repository.create({'variantes': [
+        pk = self.repository.create(self.tienda_id, {'variantes': [
             {'sku': 'ESCASO', 'stock': 1}, {'sku': 'ABUNDANTE', 'stock': 10},
         ]})
         original = self.read(pk)
-        self.assertFalse(self.repository.decrease_stock('ESCASO', 2))
+        self.assertFalse(self.repository.decrease_stock(self.tienda_id, 'ESCASO', 2))
         self.assertEqual(self.read(pk), original)
-        self.assertTrue(self.repository.decrease_stock('ABUNDANTE', 2))
+        self.assertTrue(self.repository.decrease_stock(self.tienda_id, 'ABUNDANTE', 2))
         self.assertEqual(self.read(pk)['variantes'], [
             {'sku': 'ESCASO', 'stock': 1}, {'sku': 'ABUNDANTE', 'stock': 8},
         ])
 
     def test_descuento_hasta_cero_y_rechazo_de_operacion_siguiente(self):
         pk = self.create_product(2)
-        self.assertTrue(self.repository.decrease_stock('SKU', 2))
-        self.assertFalse(self.repository.decrease_stock('SKU', 1))
+        self.assertTrue(self.repository.decrease_stock(self.tienda_id, 'SKU', 2))
+        self.assertFalse(self.repository.decrease_stock(self.tienda_id, 'SKU', 1))
         self.assertEqual(self.read(pk)['variantes'][0]['stock'], 0)
 
     def test_descuento_invalido_no_modifica_inventario(self):
@@ -101,13 +103,13 @@ class MongoStockContract:
         original = self.read(pk)
         for cantidad in (-1, 1.5, '-1', True):
             with self.assertRaises(ValueError):
-                self.repository.decrease_stock('SKU', cantidad)
+                self.repository.decrease_stock(self.tienda_id, 'SKU', cantidad)
             self.assertEqual(self.read(pk), original)
 
     def test_descuentos_concurrentes_no_superan_stock_disponible(self):
         pk = self.create_product(3)
         with ThreadPoolExecutor(max_workers=8) as executor:
-            results = list(executor.map(lambda _: self.repository.decrease_stock('SKU', 1), range(8)))
+            results = list(executor.map(lambda _: self.repository.decrease_stock(self.tienda_id, 'SKU', 1), range(8)))
         self.assertEqual(sum(results), 3)
         self.assertEqual(self.read(pk)['variantes'][0]['stock'], 0)
 
