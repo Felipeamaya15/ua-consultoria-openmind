@@ -21,6 +21,11 @@ class ConfiguracionVisual(models.Model):
         default='',
     )
 
+    logo_negocio = models.TextField(
+        blank=True,
+        default='',
+    )
+
     personalizacion = models.JSONField(
         default=dict,
         blank=True,
