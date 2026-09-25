@@ -297,7 +297,7 @@ export default function Catalog() {
                 filtersOpen ? 'block' : 'hidden'
               } md:block`}
             >
-              <div className="sticky top-28 rounded-[16px] bg-[#f5f5f3] p-5 text-[#151515]">
+              <div className="sticky top-28 max-h-[calc(100vh-8rem)] overflow-y-auto rounded-[16px] bg-[#f5f5f3] p-5 text-[#151515]">
                 <p className="mb-4 text-[10px] font-black uppercase tracking-[0.16em] text-black/45">
                   Categorías
                 </p>
@@ -811,10 +811,11 @@ export default function Catalog() {
               border-[var(--border)]
               p-4
               sticky
+              overflow-y-auto
               ${
                 isMinimal
-                  ? 'rounded-[20px] top-24'
-                  : 'rounded-xl top-20'
+                  ? 'rounded-[20px] top-24 max-h-[calc(100vh-7rem)]'
+                  : 'rounded-xl top-20 max-h-[calc(100vh-6rem)]'
               }
             `}
           >
