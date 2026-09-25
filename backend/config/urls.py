@@ -22,4 +22,5 @@ urlpatterns = [
     path('api/auth/', include('apps.authentication.urls')),
     path('api/catalog/', include('apps.catalog.urls')),
     path('api/', include('apps.core.urls')),  
+    path('api/visual-config/', include('apps.visual_config.urls')),
 ]
