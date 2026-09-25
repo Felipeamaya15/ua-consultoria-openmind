@@ -171,7 +171,3 @@ REST_FRAMEWORK = {
 REST_FRAMEWORK = {
     'EXCEPTION_HANDLER': 'apps.core.presentation.exceptions.custom_exception_handler',
 }
-
-# (SCRUM-138): valor temporal mientras no exista el id real de las tiendas.
-# 
-TIENDA_ID_DEFAULT = os.getenv('TIENDA_ID_DEFAULT', 'empresa_123')
