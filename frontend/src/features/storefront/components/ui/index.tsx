@@ -371,13 +371,14 @@ export function Toggle({ checked, onChange, label, id }: { checked: boolean; onC
 // ── Institutional Badge ───────────────────────────────────────────────────────
 export function InstitutionalBadge({ compact = false }: { compact?: boolean }) {
   return (
-    <div className={`flex items-center gap-2 bg-[var(--institutional)] text-white ${compact ? 'px-2 py-1 rounded-lg text-xs' : 'px-3 py-1.5 rounded-xl text-xs'} font-semibold`}>
-      <svg viewBox="0 0 24 24" className={compact ? 'w-3 h-3' : 'w-4 h-4'} fill="currentColor">
-        <path d="M12 3L1 9l11 6 9-4.91V17h2V9L12 3zM5 13.18v4L12 21l7-3.82v-4L12 17l-7-3.82z"/>
-      </svg>
+    <div className={`flex items-center gap-2.5 bg-[var(--institutional)] text-white ${compact ? 'px-2.5 py-1.5 rounded-lg text-xs' : 'px-4 py-2 rounded-xl text-sm'} font-semibold`}>
+      <img
+        src="/logo-universidad-autonoma.png"
+        alt="Logo Universidad Autónoma de Chile"
+        className={compact ? 'w-6 h-6 object-contain bg-white rounded-md p-0.5 shadow-sm' : 'w-8 h-8 object-contain bg-white rounded-md p-1 shadow-sm'}
+      />
       {compact ? 'UAutónoma' : 'Universidad Autónoma de Chile'}
     </div>
   );
 }
-
 export { Icon } from './Icon';
