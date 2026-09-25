@@ -1,5 +1,6 @@
 from typing import Optional, List, Dict, Any
 from bson import ObjectId
+from apps.catalog.domain.stock import validate_product_stock, validate_stock
 from apps.core.infrastructure.mongo_client import get_mongo_db
 
 
@@ -12,6 +13,7 @@ class ProductRepository:
     
     def create(self, product_data: Dict[str, Any]) -> str:
         """Crea un nuevo producto. Retorna el ID como string."""
+        validate_product_stock(product_data)
         result = self.collection.insert_one(product_data)
         return str(result.inserted_id)
     
@@ -58,6 +60,7 @@ class ProductRepository:
     
     def update(self, product_id: str, update_data: Dict[str, Any]) -> bool:
         """Actualiza un producto."""
+        validate_product_stock(update_data)
         try:
             result = self.collection.update_one(
                 {"_id": ObjectId(product_id)},
@@ -77,10 +80,10 @@ class ProductRepository:
     
     def decrease_stock(self, sku: str, cantidad: int) -> bool:
         """Disminuye stock de una variante de forma atómica (RN-03)."""
+        validate_stock(cantidad)
         result = self.collection.find_one_and_update(
             {
-                "variantes.sku": sku,
-                "variantes.stock": {"$gte": cantidad}
+                "variantes": {"$elemMatch": {"sku": sku, "stock": {"$gte": cantidad}}}
             },
             {"$inc": {"variantes.$.stock": -cantidad}},
         )

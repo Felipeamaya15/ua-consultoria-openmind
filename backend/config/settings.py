@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     'apps.authentication',
     'apps.catalog',
     'apps.visual_config',
+    'apps.landing',
 ]
 
 MIDDLEWARE = [

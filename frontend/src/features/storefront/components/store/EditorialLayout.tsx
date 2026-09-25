@@ -95,14 +95,23 @@ export function EditorialLayout() {
         <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between gap-6">
 
           {/* Logo / nombre de tienda */}
+                    {/* Logo / nombre de tienda */}
           <Link
             to="."
             className="flex items-center gap-3"
             aria-label={`Ir al inicio de ${config.name}`}
           >
-            <div className="w-8 h-8 rounded-full bg-[var(--primary)] flex items-center justify-center text-white text-xs font-bold">
-              MT
-            </div>
+            {config.logo ? (
+              <img
+                src={config.logo}
+                alt={`Logo de ${config.name}`}
+                className="w-8 h-8 rounded-full object-cover"
+              />
+            ) : (
+              <div className="w-8 h-8 rounded-full bg-[var(--primary)] flex items-center justify-center text-white text-xs font-bold">
+                {config.name?.slice(0, 2).toUpperCase() || 'MT'}
+              </div>
+            )}
 
             <span className="font-display text-xl text-[var(--foreground)]">
               {config.name}
