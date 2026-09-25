@@ -79,11 +79,8 @@ export default function Catalog() {
     />
   );
 
-  const [viewMode, setViewMode] =
-    useState<'grid' | 'list'>('grid');
-
-  const [filtersOpen, setFiltersOpen] =
-    useState(false);
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
   const PAGE_SIZE = 12;
 
@@ -198,7 +195,6 @@ export default function Catalog() {
     setPage(1);
   };
 
-
   /*
    * ==========================================================
    * PLANTILLA 4 — CATALOG / DARK EDITORIAL
@@ -297,109 +293,119 @@ export default function Catalog() {
                 filtersOpen ? 'block' : 'hidden'
               } md:block`}
             >
-              <div className="sticky top-28 max-h-[calc(100vh-8rem)] overflow-y-auto rounded-[16px] bg-[#f5f5f3] p-5 text-[#151515]">
-                <p className="mb-4 text-[10px] font-black uppercase tracking-[0.16em] text-black/45">
-                  Categorías
-                </p>
+              <div className="sticky top-28 max-h-[calc(100vh-8rem)] flex flex-col rounded-[16px] bg-[#f5f5f3] text-[#151515]">
+                <div className="flex items-center justify-between gap-3 px-5 pt-5 pb-4 border-b border-black/10">
+                  <p className="text-[10px] font-black uppercase tracking-[0.16em] text-black/45">
+                    Filtros
+                  </p>
 
-                <div className="flex flex-col gap-1">
-                  {categories.map((cat) => (
+                  {activeFiltersCount > 0 && (
                     <button
                       type="button"
-                      key={cat}
-                      onClick={() => {
-                        setCategory(cat);
-                        setPage(1);
-                      }}
-                      className={`rounded-[9px] px-3 py-2.5 text-left text-[12px] font-medium transition-colors ${
-                        category === cat
-                          ? 'bg-[#1683ff] text-white'
-                          : 'text-[#202020] hover:bg-black/[0.05]'
-                      }`}
+                      onClick={clearFilters}
+                      className="text-[11px] font-semibold text-[#1683ff] hover:opacity-70"
                     >
-                      {cat}
+                      Limpiar ({activeFiltersCount})
                     </button>
-                  ))}
+                  )}
                 </div>
 
-                <div className="border-t border-black/10 mt-5 pt-5">
-                  <p className="mb-3 text-[10px] font-black uppercase tracking-[0.16em] text-black/45">
-                    Disponibilidad
+                <div className="flex-1 overflow-y-auto p-5">
+                  <p className="mb-4 text-[10px] font-black uppercase tracking-[0.16em] text-black/45">
+                    Categorías
                   </p>
 
-                  {['En stock', 'Sin stock'].map((option) => (
-                    <label
-                      key={option}
-                      className="flex items-center gap-2.5 py-1.5 text-[12px] cursor-pointer"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={availability.includes(option)}
-                        onChange={(event) => {
-                          setAvailability((previous) =>
-                            event.target.checked
-                              ? [...previous, option]
-                              : previous.filter((value) => value !== option),
-                          );
+                  <div className="flex flex-col gap-1">
+                    {categories.map((cat) => (
+                      <button
+                        type="button"
+                        key={cat}
+                        onClick={() => {
+                          setCategory(cat);
                           setPage(1);
                         }}
-                        className="accent-[#1683ff]"
-                      />
-                      <span>{option}</span>
-                    </label>
-                  ))}
-                </div>
-
-                <div className="border-t border-black/10 mt-5 pt-5">
-                  <p className="mb-3 text-[10px] font-black uppercase tracking-[0.16em] text-black/45">
-                    Precio
-                  </p>
-
-                  <div className="grid grid-cols-2 gap-2">
-                    <input
-                      type="number"
-                      min="0"
-                      aria-label="Precio mínimo"
-                      value={minPrice}
-                      onChange={(event) => {
-                        setMinPrice(event.target.value);
-                        setPage(1);
-                      }}
-                      placeholder="Mín."
-                      className="h-10 min-w-0 rounded-[8px] border border-black/10 bg-white px-3 text-[11px] outline-none focus:border-[#1683ff]"
-                    />
-
-                    <input
-                      type="number"
-                      min="0"
-                      aria-label="Precio máximo"
-                      value={maxPrice}
-                      onChange={(event) => {
-                        setMaxPrice(event.target.value);
-                        setPage(1);
-                      }}
-                      placeholder="Máx."
-                      className="h-10 min-w-0 rounded-[8px] border border-black/10 bg-white px-3 text-[11px] outline-none focus:border-[#1683ff]"
-                    />
+                        className={`rounded-[9px] px-3 py-2.5 text-left text-[12px] font-medium transition-colors ${
+                          category === cat
+                            ? 'bg-[#1683ff] text-white'
+                            : 'text-[#202020] hover:bg-black/[0.05]'
+                        }`}
+                      >
+                        {cat}
+                      </button>
+                    ))}
                   </div>
+
+                  <div className="border-t border-black/10 mt-5 pt-5">
+                    <p className="mb-3 text-[10px] font-black uppercase tracking-[0.16em] text-black/45">
+                      Disponibilidad
+                    </p>
+
+                    {['En stock', 'Sin stock'].map((option) => (
+                      <label
+                        key={option}
+                        className="flex items-center gap-2.5 py-1.5 text-[12px] cursor-pointer"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={availability.includes(option)}
+                          onChange={(event) => {
+                            setAvailability((previous) =>
+                              event.target.checked
+                                ? [...previous, option]
+                                : previous.filter((value) => value !== option),
+                            );
+                            setPage(1);
+                          }}
+                          className="accent-[#1683ff]"
+                        />
+                        <span>{option}</span>
+                      </label>
+                    ))}
+                  </div>
+
+                  <div className="border-t border-black/10 mt-5 pt-5">
+                    <p className="mb-3 text-[10px] font-black uppercase tracking-[0.16em] text-black/45">
+                      Precio
+                    </p>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      <input
+                        type="number"
+                        min="0"
+                        aria-label="Precio mínimo"
+                        value={minPrice}
+                        onChange={(event) => {
+                          setMinPrice(event.target.value);
+                          setPage(1);
+                        }}
+                        placeholder="Mín."
+                        className="h-10 min-w-0 rounded-[8px] border border-black/10 bg-white px-3 text-[11px] outline-none focus:border-[#1683ff]"
+                      />
+
+                      <input
+                        type="number"
+                        min="0"
+                        aria-label="Precio máximo"
+                        value={maxPrice}
+                        onChange={(event) => {
+                          setMaxPrice(event.target.value);
+                          setPage(1);
+                        }}
+                        placeholder="Máx."
+                        className="h-10 min-w-0 rounded-[8px] border border-black/10 bg-white px-3 text-[11px] outline-none focus:border-[#1683ff]"
+                      />
+                    </div>
+                  </div>
+
+                  <AttributeFilters
+                    groups={attrFilters.groups}
+                    selected={attrFilters.selected}
+                    onToggle={(name, value) => {
+                      attrFilters.toggle(name, value);
+                      setPage(1);
+                    }}
+                  />
                 </div>
-
-                <AttributeFilters
-                  groups={attrFilters.groups}
-                  selected={attrFilters.selected}
-                  onToggle={(name, value) => {
-                    attrFilters.toggle(name, value);
-                    setPage(1);
-                  }}
-                />
-
-                <button
-                  type="button"
-                  onClick={clearFilters}
-                  className="mt-5 w-full rounded-[9px] border border-black/15 py-2.5 text-[11px] font-semibold transition-colors hover:bg-black hover:text-white"
-                >
-                  Limpiar filtros
-                </button>
               </div>
             </aside>
 
@@ -414,13 +420,6 @@ export default function Catalog() {
                   <p className="mt-2 text-sm text-white/45">
                     No encontramos productos para tu búsqueda.
                   </p>
-                  <button
-                    type="button"
-                    onClick={clearFilters}
-                    className="mt-6 rounded-full bg-[#1683ff] px-6 py-3 text-[12px] font-semibold text-white"
-                  >
-                    Limpiar filtros
-                  </button>
                 </div>
               ) : (
                 <>
@@ -506,7 +505,7 @@ export default function Catalog() {
                     No hay filtros disponibles.
                   </p>
                 ) : (
-                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-8 gap-y-6">
+                  <div className="max-h-[280px] overflow-y-auto pr-2 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-8 gap-y-6 content-start">
                     <AttributeFilters
                       groups={attrFilters.groups}
                       selected={attrFilters.selected}
@@ -528,15 +527,6 @@ export default function Catalog() {
               icon={<Icon name="search" className="w-12 h-12" />}
               title="Sin resultados"
               description="No se encontraron productos para tu búsqueda."
-              action={
-                <button
-                  type="button"
-                  onClick={clearFilters}
-                  className="text-sm underline underline-offset-4"
-                >
-                  Limpiar filtros
-                </button>
-              }
             />
           ) : (
             <>
@@ -809,9 +799,9 @@ export default function Catalog() {
               bg-white
               border
               border-[var(--border)]
-              p-4
               sticky
-              overflow-y-auto
+              flex
+              flex-col
               ${
                 isMinimal
                   ? 'rounded-[20px] top-24 max-h-[calc(100vh-7rem)]'
@@ -819,223 +809,219 @@ export default function Catalog() {
               }
             `}
           >
-            {/* Categorías */}
+            {/* Encabezado fijo con Limpiar filtros */}
 
-            <p
+            <div
               className={`
-                text-xs
-                font-semibold
-                uppercase
-                tracking-wider
-                text-[var(--muted-foreground)]
-                mb-3
-                ${isMinimal ? 'px-1' : ''}
+                flex items-center justify-between gap-3
+                border-b border-[var(--border)]
+                ${isMinimal ? 'px-4 py-3' : 'px-4 py-3'}
               `}
             >
-              Categorías
-            </p>
-
-            <div className="flex flex-col gap-1">
-              {categories.map((cat) => (
-                <button
-                  type="button"
-                  key={cat}
-                  onClick={() => {
-                    setCategory(cat);
-                    setPage(1);
-                  }}
-                  className={`
-                    text-left
-                    text-sm
-                    px-3
-                    py-2
-                    transition-colors
-                    ${
-                      isMinimal
-                        ? 'rounded-xl'
-                        : 'rounded-lg'
-                    }
-                    ${
-                      category === cat
-                        ? 'bg-[var(--primary)] text-white'
-                        : 'text-[var(--foreground)] hover:bg-[var(--muted)]'
-                    }
-                  `}
-                >
-                  {cat}
-                </button>
-              ))}
-            </div>
-
-            {/* Disponibilidad */}
-
-            <div className="border-t border-[var(--border)] mt-4 pt-4">
-              <p className="text-xs font-semibold uppercase tracking-wider text-[var(--muted-foreground)] mb-3">
-                Disponibilidad
+              <p className="text-xs font-semibold uppercase tracking-wider text-[var(--muted-foreground)]">
+                Filtros
               </p>
 
-              {['En stock', 'Sin stock'].map(
-                (option) => (
-                  <label
-                    key={option}
-                    className="flex items-center gap-2 text-sm py-1 cursor-pointer"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={availability.includes(
-                        option,
-                      )}
-                      onChange={(event) => {
-                        setAvailability(
-                          (previous) =>
-                            event.target.checked
-                              ? [
-                                  ...previous,
-                                  option,
-                                ]
-                              : previous.filter(
-                                  (value) =>
-                                    value !== option,
-                                ),
-                        );
-
-                        setPage(1);
-                      }}
-                      className="rounded border-[var(--border)]"
-                    />
-
-                    <span>{option}</span>
-                  </label>
-                ),
+              {activeFiltersCount > 0 && (
+                <button
+                  type="button"
+                  onClick={clearFilters}
+                  className="text-xs font-semibold text-[var(--primary)] hover:underline"
+                >
+                  Limpiar ({activeFiltersCount})
+                </button>
               )}
             </div>
 
-            {/* Precio */}
+            <div className="flex-1 overflow-y-auto p-4">
+              {/* Categorías */}
 
-            <div className="border-t border-[var(--border)] mt-4 pt-4">
-              <p className="text-xs font-semibold uppercase tracking-wider text-[var(--muted-foreground)] mb-3">
-                Precio
+              <p
+                className={`
+                  text-xs
+                  font-semibold
+                  uppercase
+                  tracking-wider
+                  text-[var(--muted-foreground)]
+                  mb-3
+                  ${isMinimal ? 'px-1' : ''}
+                `}
+              >
+                Categorías
               </p>
 
-              <div className="flex gap-2">
-                <input
-                  type="number"
-                  min="0"
-                  aria-label="Precio mínimo"
-                  value={minPrice}
-                  onChange={(event) => {
-                    setMinPrice(event.target.value);
-                    setPage(1);
-                  }}
-                  placeholder="Min"
-                  className={`
-                    w-full
-                    text-xs
-                    border
-                    border-[var(--border)]
-                    px-2
-                    focus:outline-none
-                    ${
-                      isMinimal
-                        ? 'h-9 rounded-lg'
-                        : 'h-7 rounded'
-                    }
-                  `}
-                />
-
-                <input
-                  type="number"
-                  min="0"
-                  aria-label="Precio máximo"
-                  value={maxPrice}
-                  onChange={(event) => {
-                    setMaxPrice(event.target.value);
-                    setPage(1);
-                  }}
-                  placeholder="Max"
-                  className={`
-                    w-full
-                    text-xs
-                    border
-                    border-[var(--border)]
-                    px-2
-                    focus:outline-none
-                    ${
-                      isMinimal
-                        ? 'h-9 rounded-lg'
-                        : 'h-7 rounded'
-                    }
-                  `}
-                />
+              <div className="flex flex-col gap-1">
+                {categories.map((cat) => (
+                  <button
+                    type="button"
+                    key={cat}
+                    onClick={() => {
+                      setCategory(cat);
+                      setPage(1);
+                    }}
+                    className={`
+                      text-left
+                      text-sm
+                      px-3
+                      py-2
+                      transition-colors
+                      ${
+                        isMinimal
+                          ? 'rounded-xl'
+                          : 'rounded-lg'
+                      }
+                      ${
+                        category === cat
+                          ? 'bg-[var(--primary)] text-white'
+                          : 'text-[var(--foreground)] hover:bg-[var(--muted)]'
+                      }
+                    `}
+                  >
+                    {cat}
+                  </button>
+                ))}
               </div>
+
+              {/* Disponibilidad */}
+
+              <div className="border-t border-[var(--border)] mt-4 pt-4">
+                <p className="text-xs font-semibold uppercase tracking-wider text-[var(--muted-foreground)] mb-3">
+                  Disponibilidad
+                </p>
+
+                {['En stock', 'Sin stock'].map(
+                  (option) => (
+                    <label
+                      key={option}
+                      className="flex items-center gap-2 text-sm py-1 cursor-pointer"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={availability.includes(
+                          option,
+                        )}
+                        onChange={(event) => {
+                          setAvailability(
+                            (previous) =>
+                              event.target.checked
+                                ? [
+                                    ...previous,
+                                    option,
+                                  ]
+                                : previous.filter(
+                                    (value) =>
+                                      value !== option,
+                                  ),
+                          );
+
+                          setPage(1);
+                        }}
+                        className="rounded border-[var(--border)]"
+                      />
+
+                      <span>{option}</span>
+                    </label>
+                  ),
+                )}
+              </div>
+
+              {/* Precio */}
+
+              <div className="border-t border-[var(--border)] mt-4 pt-4">
+                <p className="text-xs font-semibold uppercase tracking-wider text-[var(--muted-foreground)] mb-3">
+                  Precio
+                </p>
+
+                <div className="flex gap-2">
+                  <input
+                    type="number"
+                    min="0"
+                    aria-label="Precio mínimo"
+                    value={minPrice}
+                    onChange={(event) => {
+                      setMinPrice(event.target.value);
+                      setPage(1);
+                    }}
+                    placeholder="Min"
+                    className={`
+                      w-full
+                      text-xs
+                      border
+                      border-[var(--border)]
+                      px-2
+                      focus:outline-none
+                      ${
+                        isMinimal
+                          ? 'h-9 rounded-lg'
+                          : 'h-7 rounded'
+                      }
+                    `}
+                  />
+
+                  <input
+                    type="number"
+                    min="0"
+                    aria-label="Precio máximo"
+                    value={maxPrice}
+                    onChange={(event) => {
+                      setMaxPrice(event.target.value);
+                      setPage(1);
+                    }}
+                    placeholder="Max"
+                    className={`
+                      w-full
+                      text-xs
+                      border
+                      border-[var(--border)]
+                      px-2
+                      focus:outline-none
+                      ${
+                        isMinimal
+                          ? 'h-9 rounded-lg'
+                          : 'h-7 rounded'
+                      }
+                    `}
+                  />
+                </div>
+              </div>
+
+              <AttributeFilters
+                groups={attrFilters.groups}
+                selected={attrFilters.selected}
+                onToggle={(name, value) => {
+                  attrFilters.toggle(name, value);
+                  setPage(1);
+                }}
+              />
             </div>
-
-            <AttributeFilters
-              groups={attrFilters.groups}
-              selected={attrFilters.selected}
-              onToggle={(name, value) => {
-                attrFilters.toggle(name, value);
-                setPage(1);
-              }}
-            />
-
-            {activeFiltersCount > 0 && (
-              <button
-                type="button"
-                onClick={clearFilters}
-                className="mt-4 w-full rounded-lg border border-[var(--border)] py-2 text-sm font-semibold text-[var(--foreground)] transition-colors hover:bg-[var(--muted)]"
-              >
-                Limpiar filtros ({activeFiltersCount})
-              </button>
-            )}
           </div>
         </aside>
 
         {/* PRODUCTOS */}
 
-        <main className="col-span-12 md:col-span-9">
+        <main className="col-span-12 md:col-span-3 lg:col-span-9">
           {appliedFilters}
 
           {paginated.length === 0 ? (
             <EmptyState
-              icon={
-                <Icon
-                  name="search"
-                  className="w-12 h-12"
-                />
-              }
+              icon={<Icon name="search" className="w-12 h-12 text-gray-400" />}
               title="Sin resultados"
-              description="No se encontraron productos para tu búsqueda."
-              action={
-                <button
-                  type="button"
-                  onClick={clearFilters}
-                  className="text-sm text-[var(--primary)] hover:underline"
-                >
-                  Limpiar filtros
-                </button>
-              }
+              description="No encontramos productos para tu búsqueda."
             />
           ) : (
             <>
               <div
                 className={
                   viewMode === 'grid'
-                    ? isMinimal
-                      ? 'grid grid-cols-1 sm:grid-cols-2 gap-4'
-                      : 'grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
-                    : 'flex flex-col gap-3'
+                    ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6'
+                    : 'flex flex-col gap-4'
                 }
               >
                 {paginated.map((product) => (
                   <ProductCard
                     key={product.id}
                     product={product}
-                    layout={
-                      viewMode === 'list'
-                        ? 'list'
-                        : 'grid'
-                    }
+                    layout={viewMode === 'list' ? 'list' : 'grid'}
                   />
                 ))}
               </div>
