@@ -64,7 +64,10 @@ class RegistrarCompraSerializer(serializers.Serializer):
             cantidad = item['cantidad']
 
             try:
-                variante = VarianteProducto.objects.get(id_variante=id_variante)
+                variante = VarianteProducto.objects.get(
+                    id_variante=id_variante,
+                    id_producto__id_tienda=self.context['tienda'],
+                )
             except VarianteProducto.DoesNotExist:
                 raise serializers.ValidationError(
                     f"La variante con ID {id_variante} no existe."

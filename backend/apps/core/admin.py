@@ -3,6 +3,8 @@ from django.contrib.auth import get_user_model
 from django.core.exceptions import PermissionDenied
 from apps.core.models import Usuario, Tienda, Producto, VarianteProducto
 from apps.core.services import configurar_tienda
+from apps.core.infrastructure.tenant import resolver_tienda
+from rest_framework.exceptions import APIException
 
 @admin.register(Usuario)
 class UsuarioAdmin(admin.ModelAdmin):
@@ -50,14 +52,37 @@ class TiendaAdmin(admin.ModelAdmin):
             kwargs['queryset'] = get_user_model().objects.filter(is_active=True)
         return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
+class TiendaAdministradaMixin:
+    def tienda_administrada(self, request):
+        try:
+            return resolver_tienda(request, exigir_propietario=True)
+        except APIException as error:
+            raise PermissionDenied(str(error.detail)) from error
+
+    def get_queryset(self, request):
+        tienda = self.tienda_administrada(request)
+        return super().get_queryset(request).filter(**{self.filtro_tienda: tienda})
+
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        if db_field.name in ('id_tienda', 'id_producto'):
+            tienda = self.tienda_administrada(request)
+            kwargs['queryset'] = (
+                Tienda.objects.filter(pk=tienda.pk) if db_field.name == 'id_tienda'
+                else Producto.objects.filter(id_tienda=tienda)
+            )
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)
+
+
 @admin.register(Producto)
-class ProductoAdmin(admin.ModelAdmin):
+class ProductoAdmin(TiendaAdministradaMixin, admin.ModelAdmin):
+    filtro_tienda = 'id_tienda'
     list_display = ('id_producto', 'nombre', 'precio', 'stock', 'id_tienda')
     search_fields = ('nombre',)
     list_filter = ('id_tienda',)
 
 @admin.register(VarianteProducto)
-class VarianteProductoAdmin(admin.ModelAdmin):
+class VarianteProductoAdmin(TiendaAdministradaMixin, admin.ModelAdmin):
+    filtro_tienda = 'id_producto__id_tienda'
     list_display = ('id_variante', 'sku', 'id_producto', 'precio', 'stock', 'es_activa')
     search_fields = ('sku',)
     list_filter = ('es_activa',)

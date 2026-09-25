@@ -1,3 +1,4 @@
+from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
 from django.db.models import F
@@ -13,7 +14,8 @@ class StockPostgreSQLTests(TestCase):
             correo='stock@example.test', password_hash='test', nombre='Stock',
             apellido='Test', rol='admin',
         )
-        self.tienda = Tienda.objects.create(nombre='Test', id_usuario_propietario=self.usuario)
+        self.propietario = get_user_model().objects.create_user(username='propietario-stock')
+        self.tienda = Tienda.objects.create(nombre='Test', id_usuario_propietario=self.propietario)
         self.producto = Producto.objects.create(
             nombre='Producto', precio=10, stock=5, id_tienda=self.tienda,
         )
@@ -21,6 +23,7 @@ class StockPostgreSQLTests(TestCase):
             id_producto=self.producto, sku='SKU', precio=10, stock=5,
         )
         self.api = APIClient()
+        self.api.force_authenticate(user=self.propietario)
 
     def test_creacion_y_actualizacion_no_negativas_en_ambos_modelos(self):
         for stock in (0, 3):
