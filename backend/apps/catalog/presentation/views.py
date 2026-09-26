@@ -5,6 +5,10 @@ from rest_framework import status
 from apps.core.presentation.responses import success_response, error_response
 from apps.core.infrastructure.tenant import resolver_tienda_id
 from apps.catalog.infrastructure.repositories import ProductRepository
+from apps.catalog.infrastructure.attribute_filters import (
+    FiltrosAtributosInvalidos,
+    parse_attribute_params,
+)
 from apps.catalog.application.use_cases import ListPublicProductsUseCase , GetPublicProductDetailUseCase,GetPublicProductAttributesUseCase
 from .serializers import ProductPublicListItemSerializer, ProductPublicDetailSerializer, ProductPublicAttributesSerializer
 
@@ -16,8 +20,17 @@ class PublicProductListAPIView(APIView):
     def get(self, request):
         tienda_id = resolver_tienda_id(request)
 
+        try:
+            atributos = parse_attribute_params(request.query_params)
+        except FiltrosAtributosInvalidos as error:
+            return error_response(
+                mensaje=str(error),
+                codigo="ERROR_VALIDACION",
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         use_case = ListPublicProductsUseCase(ProductRepository())
-        productos = use_case.execute(tienda_id)
+        productos = use_case.execute(tienda_id, atributos=atributos)
 
         data = ProductPublicListItemSerializer(productos, many=True).data
 
