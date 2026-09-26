@@ -27,7 +27,7 @@ export default function CatalogHome() {
 
           <div className="relative z-10 min-h-[620px] md:min-h-[720px] flex items-center">
             <div className="px-7 sm:px-12 md:px-20 max-w-[650px]">
-              <p className="text-[#ff5a1f] text-[11px] md:text-xs font-extrabold uppercase tracking-[0.08em]">
+              <p className="text-[var(--primary)] text-[11px] md:text-xs font-extrabold uppercase tracking-[0.08em]">
                 Producto destacado
               </p>
 
@@ -51,7 +51,7 @@ export default function CatalogHome() {
                 </span>
                 <Link
                   to={route(`producto/${polera.id}`)}
-                  className="rounded-full bg-[#147fe8] px-7 py-3 text-sm font-semibold hover:bg-[#3194f5] transition-colors"
+                  className="rounded-full bg-[var(--accent)] px-7 py-3 text-sm font-semibold hover:bg-[var(--accent)] transition-colors"
                 >
                   Comprar
                 </Link>
@@ -81,7 +81,7 @@ export default function CatalogHome() {
           <div className="absolute inset-0 bg-gradient-to-r from-black/65 via-black/25 to-transparent" />
 
           <div className="relative z-10 p-8 md:p-12">
-            <p className="text-[#ff5a1f] text-xs font-bold">
+            <p className="text-[var(--primary)] text-xs font-bold">
               {mochila.category}
             </p>
             <h3 className="mt-6 text-3xl md:text-4xl font-semibold tracking-tight">
@@ -99,7 +99,7 @@ export default function CatalogHome() {
         <div className="grid grid-cols-1 lg:grid-cols-2 min-h-[560px]">
           <div className="flex items-center">
             <div className="max-w-[580px] px-8 sm:px-14 lg:pl-[max(4rem,calc((100vw-1160px)/2))] lg:pr-16 py-20">
-              <p className="text-[#e04b1a] text-xs font-bold">
+              <p className="text-[var(--primary)] text-xs font-bold">
                 Selección cuidada
               </p>
 
@@ -118,7 +118,7 @@ export default function CatalogHome() {
 
               <Link
                 to={route('catalogo')}
-                className="inline-flex mt-8 text-[#087cf0] text-base font-medium hover:translate-x-1 transition-transform"
+                className="inline-flex mt-8 text-[var(--accent)] text-base font-medium hover:translate-x-1 transition-transform"
               >
                 Explorar el catálogo →
               </Link>
@@ -139,7 +139,7 @@ export default function CatalogHome() {
       <section className="max-w-[1160px] mx-auto px-5 py-24 md:py-28">
         <div className="flex items-end justify-between gap-6 mb-10">
           <div>
-            <p className="text-[#ff5a1f] text-xs font-bold">
+            <p className="text-[var(--primary)] text-xs font-bold">
               Más para descubrir
             </p>
             <h2 className="mt-3 text-3xl md:text-4xl font-black tracking-[-0.035em]">
@@ -149,7 +149,7 @@ export default function CatalogHome() {
 
           <Link
             to={route('catalogo')}
-            className="hidden sm:block text-[#1683ff] text-sm hover:opacity-70"
+            className="hidden sm:block text-[var(--accent)] text-sm hover:opacity-70"
           >
             Ver todos →
           </Link>
@@ -169,7 +169,7 @@ export default function CatalogHome() {
                 />
               </Link>
 
-              <p className="mt-5 text-[#ff5a1f] text-xs font-bold">
+              <p className="mt-5 text-[var(--primary)] text-xs font-bold">
                 {product.category}
               </p>
 
@@ -183,7 +183,7 @@ export default function CatalogHome() {
 
               <Link
                 to={route(`producto/${product.id}`)}
-                className="mt-5 h-11 rounded-full bg-[#147fe8] text-white text-sm font-semibold flex items-center justify-center hover:bg-[#3194f5] transition-colors"
+                className="mt-5 h-11 rounded-full bg-[var(--accent)] text-white text-sm font-semibold flex items-center justify-center hover:bg-[var(--accent)] transition-colors"
               >
                 Comprar
               </Link>
@@ -193,7 +193,7 @@ export default function CatalogHome() {
 
         <Link
           to={route('catalogo')}
-          className="sm:hidden inline-block mt-9 text-[#1683ff] text-sm"
+          className="sm:hidden inline-block mt-9 text-[var(--accent)] text-sm"
         >
           Ver todos los productos →
         </Link>
