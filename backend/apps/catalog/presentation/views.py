@@ -1,15 +1,17 @@
 from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny
 from rest_framework import status
+from rest_framework.response import Response
 
 from apps.core.presentation.responses import success_response, error_response
-from apps.core.infrastructure.tenant import resolver_tienda_id
+from apps.core.infrastructure.tenant import resolver_tienda_id, resolver_tienda
 from apps.catalog.infrastructure.repositories import ProductRepository
 from apps.catalog.application.use_cases import ListPublicProductsUseCase , GetPublicProductDetailUseCase,GetPublicProductAttributesUseCase
 from apps.catalog.application.use_cases import SoftDeleteProductUseCase
-from .serializers import ProductPublicListItemSerializer, ProductPublicDetailSerializer, ProductPublicAttributesSerializer
+from .serializers import ProductPublicListItemSerializer, ProductPublicDetailSerializer, ProductPublicAttributesSerializer, ProductoCreateSerializer
 from apps.core.models import Tienda
 from rest_framework.permissions import IsAuthenticated
+from ..application.use_cases import CrearProductoUseCase
 
 
 class PublicProductListAPIView(APIView):
@@ -109,3 +111,23 @@ class ProductDeleteAPIView(APIView):
                 codigo="ERROR_INTERNO", 
                 status=500
             )
+
+class ProductoCreateView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        tienda = resolver_tienda(request, exigir_propietario=True)
+        
+        serializer = ProductoCreateSerializer(data=request.data)
+        if serializer.is_valid():
+            caso_uso = CrearProductoUseCase()
+            producto = caso_uso.ejecutar(tienda, serializer.validated_data)
+            return Response(
+                {
+                    "mensaje": "Producto creado con éxito", 
+                    "id_producto": producto.id_producto
+                },
+                status=status.HTTP_201_CREATED
+            )
+            
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
