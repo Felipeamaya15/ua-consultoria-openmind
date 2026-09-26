@@ -1,4 +1,6 @@
 from rest_framework import serializers
+# CAMBIO: Importamos el validador de Base64 que creamos para MongoDB
+from apps.core.domain.validators import validate_base64_image
 
 
 class ProductPublicListItemSerializer(serializers.Serializer):
@@ -32,6 +34,7 @@ class ProductPublicListItemSerializer(serializers.Serializer):
     def get_disponible(self, producto):
         return any((v.get("stock") or 0) > 0 for v in self._variantes(producto))
 
+
 class VarianteSerializer(serializers.Serializer):
     sku = serializers.CharField()
     precio = serializers.FloatField(allow_null=True)
@@ -55,7 +58,7 @@ class ProductPublicDetailSerializer(serializers.Serializer):
     """
     No incluye tienda_id, activo ni fecha_creacion (son datos internos).
     """
-    id = serializers.CharField(source="_id")
+    id = serializers.CharField(source="_id", required=False)
     nombre = serializers.CharField()
     slug = serializers.CharField()
     descripcion = serializers.CharField(required=False, allow_blank=True)
@@ -65,6 +68,17 @@ class ProductPublicDetailSerializer(serializers.Serializer):
     variantes = VarianteSerializer(many=True, required=False)
     seo = SeoSerializer(required=False)
  
+    
+    def validate_imagenes(self, value):
+        for img_b64 in value:
+           
+            if img_b64.startswith('http') or img_b64.startswith('/'):
+                continue
+            
+            validate_base64_image(img_b64, max_size_mb=2)
+        return value
+
+
 class AtributoVarianteAgrupadoSerializer(serializers.Serializer):
     clave = serializers.CharField()
     etiqueta = serializers.CharField()
@@ -74,4 +88,16 @@ class AtributoVarianteAgrupadoSerializer(serializers.Serializer):
 class ProductPublicAttributesSerializer(serializers.Serializer):
     atributos_generales = AtributoGeneralSerializer(many=True)
     atributos_variante = AtributoVarianteAgrupadoSerializer(many=True)
+
  
+class ProductImageSerializer(serializers.Serializer):
+    
+    imagen = serializers.CharField()
+
+    
+    def validate_imagen(self, value):
+        if value.startswith('http') or value.startswith('/'):
+            return value
+            
+        validate_base64_image(value, max_size_mb=2)
+        return value

@@ -82,9 +82,15 @@ export function EditorialLayout() {
       {/* =====================================================
           BARRA INSTITUCIONAL
       ====================================================== */}
-      <div className="bg-[var(--institutional)] text-white py-1.5 px-4 text-xs text-center font-medium">
-        Plataforma impulsada por{' '}
-        <strong>Universidad Autónoma de Chile</strong>
+      <div className="bg-[var(--institutional)] text-white py-2 px-4 text-xs flex items-center justify-center gap-2.5 font-medium">
+        <img
+          src="/logo-universidad-autonoma.png"
+          alt="Logo Universidad Autónoma de Chile"
+          className="w-8 h-8 object-contain bg-white rounded-md p-1 shadow-sm"
+        />
+        <span>
+          Plataforma impulsada por <strong>Universidad Autónoma de Chile</strong>
+        </span>
       </div>
 
       {/* =====================================================
@@ -95,14 +101,23 @@ export function EditorialLayout() {
         <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between gap-6">
 
           {/* Logo / nombre de tienda */}
+                    {/* Logo / nombre de tienda */}
           <Link
             to="."
             className="flex items-center gap-3"
             aria-label={`Ir al inicio de ${config.name}`}
           >
-            <div className="w-8 h-8 rounded-full bg-[var(--primary)] flex items-center justify-center text-white text-xs font-bold">
-              MT
-            </div>
+            {config.logo ? (
+              <img
+                src={config.logo}
+                alt={`Logo de ${config.name}`}
+                className="w-8 h-8 rounded-full object-cover"
+              />
+            ) : (
+              <div className="w-8 h-8 rounded-full bg-[var(--primary)] flex items-center justify-center text-white text-xs font-bold">
+                {config.name?.slice(0, 2).toUpperCase() || 'MT'}
+              </div>
+            )}
 
             <span className="font-display text-xl text-[var(--foreground)]">
               {config.name}

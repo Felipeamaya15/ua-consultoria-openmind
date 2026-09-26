@@ -1,7 +1,9 @@
 from typing import List, Dict, Any, Optional
 
 from apps.catalog.infrastructure.repositories import ProductRepository
-
+from apps.core.models import Producto
+from apps.core.infrastructure.mongo_client import get_mongo_db
+from bson import ObjectId
 
 class ListPublicProductsUseCase:
 
@@ -62,3 +64,28 @@ class GetPublicProductAttributesUseCase:
                 if valor is not None and valor not in entry["valores"]:
                     entry["valores"].append(valor)
         return list(agrupados.values())
+class SoftDeleteProductUseCase:
+    def execute(self, id_producto: int, tienda_id: str) -> dict:
+        # 1. Soft Delete en PostgreSQL
+        try:
+            producto_pg = Producto.objects.get(id_producto=id_producto, id_tienda=tienda_id)
+            if not producto_pg.activo:
+                raise ValueError("El producto ya se encuentra eliminado.")
+            
+            producto_pg.activo = False
+            producto_pg.save(update_fields=['activo'])
+        except Producto.DoesNotExist:
+            raise ValueError("El producto no existe en el catálogo.")
+
+        # 2. Soft Delete en MongoDB (Si existe ahí)
+        db = get_mongo_db()
+        productos_collection = db.productos
+        
+        # Actualizamos el estado 'activo' en Mongo asegurando que pertenezca a la misma tienda
+        # En MongoDB los productos se guardan con id de la tienda en string (Ej: "tienda_id": "7")
+        productos_collection.update_one(
+            {"id_postgresql": id_producto, "tienda_id": str(tienda_id)}, 
+            {"$set": {"activo": False}}
+        )
+
+        return {"exito": True, "mensaje": "Producto eliminado lógicamente de forma correcta."}

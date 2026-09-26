@@ -8,12 +8,33 @@ import { useLocation } from 'react-router-dom';
 import {
   defaultStoreConfig,
   type TemplateId,
+  type StoreConfig,
 } from '../data/mockData';
 
 const ADMIN_STORAGE_KEY = 'ua-entrepreneur-demo-v1';
 
+function readBusinessConfig(): StoreConfig {
+  try {
+    const raw = localStorage.getItem(ADMIN_STORAGE_KEY);
+    if (!raw) return defaultStoreConfig;
+
+    const parsed = JSON.parse(raw);
+    const saved = parsed?.config;
+    if (!saved || typeof saved !== 'object') return defaultStoreConfig;
+
+    return {
+      ...defaultStoreConfig,
+      name: saved.name || defaultStoreConfig.name,
+      description: saved.description || defaultStoreConfig.description,
+      logo: saved.logo || defaultStoreConfig.logo,
+    };
+  } catch {
+    return defaultStoreConfig;
+  }
+}
+
 const StoreContext = createContext({
-  config: defaultStoreConfig,
+  config: readBusinessConfig(),
 });
 
 const templateByNumber: Record<string, TemplateId> = {
@@ -145,7 +166,7 @@ export function StoreProvider({
 
   return (
     <StoreContext.Provider
-      value={{ config: defaultStoreConfig }}
+      value={{ config: readBusinessConfig() }}
     >
       {children}
     </StoreContext.Provider>
