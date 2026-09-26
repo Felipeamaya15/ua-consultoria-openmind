@@ -46,12 +46,13 @@ class Tienda(models.Model):
 
 class Producto(models.Model):
     id_producto = models.BigAutoField(primary_key=True)
-    id_tienda = models.ForeignKey(Tienda, on_delete=models.CASCADE, db_column='id_tienda')
     nombre = models.CharField(max_length=200)
     descripcion = models.TextField(blank=True, null=True)
     precio = models.DecimalField(max_digits=12, decimal_places=2)
     stock = models.IntegerField(default=0)
+    activo = models.BooleanField(default=True) 
     fecha_creacion = models.DateTimeField(auto_now_add=True)
+    id_tienda = models.ForeignKey(db_column='id_tienda', on_delete=models.CASCADE, to='core.tienda')
 
     class Meta:
         db_table = 'producto'

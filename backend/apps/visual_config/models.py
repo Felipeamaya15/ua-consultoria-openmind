@@ -1,6 +1,5 @@
 from django.db import models
 
-
 class ConfiguracionVisual(models.Model):
     class Plantilla(models.TextChoices):
         EDITORIAL = 'editorial', 'Editorial'
@@ -13,7 +12,6 @@ class ConfiguracionVisual(models.Model):
         on_delete=models.CASCADE,
         related_name='configuracion_visual',
     )
-
     plantilla_seleccionada = models.CharField(
         max_length=20,
         choices=Plantilla.choices,
