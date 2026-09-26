@@ -9,7 +9,7 @@ class ConfiguracionLandingSerializerTests(SimpleTestCase):
             'titulo': 'Mi emprendimiento',
             'descripcion': 'Productos hechos con dedicación.',
             'texto_boton': 'Ver productos',
-            'imagen_principal': 'imagen-principal.jpg',
+            'imagen_principal': None,
             'secciones': {
                 'productos_destacados': True,
                 'ubicacion': False,
@@ -82,7 +82,7 @@ class ConfiguracionLandingSerializerTests(SimpleTestCase):
     def test_permite_descripcion_e_imagen_vacias(self):
         datos = self.datos_validos()
         datos['descripcion'] = ''
-        datos['imagen_principal'] = ''
+        datos['imagen_principal'] = None
 
         serializer = ConfiguracionLandingSerializer(data=datos)
 
