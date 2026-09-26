@@ -8,6 +8,10 @@ const productStatus = (status: Product["status"]) => ({
   active: <Badge variant="success">Activo</Badge>, archived: <Badge variant="default">Archivado</Badge>, draft: <Badge variant="warning">Borrador</Badge>,
 })[status]
 const stockState = (stock: number) => stock === 0 ? { label: "Sin stock", color: "bg-red-500", badge: "error" as const } : stock <= 5 ? { label: "Stock bajo", color: "bg-amber-500", badge: "warning" as const } : { label: "Disponible", color: "bg-emerald-500", badge: "success" as const }
+const variantAttributes = (variant: ProductVariant) =>
+  Object.entries(variant.attributes)
+    .map(([name, value]) => `${name}: ${value}`)
+    .join(" · ") || "Sin atributos"
 
 export function ProductList() {
   const [search, setSearch] = useState("")
@@ -15,13 +19,13 @@ export function ProductList() {
   const products = config.products ?? mockProducts
   const filtered = products.filter((product) => `${product.name} ${product.category} ${product.tags.join(" ")}`.toLowerCase().includes(search.toLowerCase()))
 
-  // Lógica del Flujo Administrativo para Eliminar (SCRUM-231)
+  // Logica del Flujo Administrativo para Eliminar (SCRUM-231)
   const handleDeleteProduct = async (productId: string) => {
-    if (!window.confirm("¿Estás seguro de que deseas desactivar este producto? Dejará de ser visible en el catálogo, pero se mantendrá en tu historial de ventas.")) return;
-    
+    if (!window.confirm("Estas seguro de que deseas desactivar este producto? Dejara de ser visible en el catalogo, pero se mantendra en tu historial de ventas.")) return;
+
     try {
-      /* 
-       * INTEGRACIÓN API REAL: Descomentar esto cuando se conecte el frontend 100%
+      /*
+       * INTEGRACION API REAL: Descomentar esto cuando se conecte el frontend 100%
        *
        * const token = localStorage.getItem("token");
        * const response = await fetch(`http://localhost:8000/api/productos/${productId}/`, {
@@ -38,17 +42,70 @@ export function ProductList() {
       });
 
       if (success) {
-        alert("Producto eliminado lógicamente de forma correcta.");
+        alert("Producto eliminado logicamente de forma correcta.");
       }
     } catch (error) {
-      alert("Ocurrió un error al intentar eliminar el producto.");
+      alert("Ocurrio un error al intentar eliminar el producto.");
     }
   };
 
   return <div>
-    <div className="flex items-center justify-between flex-wrap gap-3 mb-5"><div><h2 className="font-semibold">Productos</h2><p className="text-xs text-[var(--muted-foreground)] mt-1">Gestiona catálogo, atributos, variantes, SKU e inventario.</p></div><Link to="/emprendedor/productos/nuevo"><Button variant="primary" size="sm">+ Nuevo producto</Button></Link></div>
-    <Input aria-label="Buscar productos" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Buscar por nombre, categoría o etiqueta…" className="max-w-md mb-4" />
-    <div className="bg-white border border-[var(--border)] rounded-xl overflow-x-auto"><table className="w-full min-w-[720px] text-sm"><thead><tr className="border-b border-[var(--border)] bg-[var(--muted)]">{["Producto", "Categoría", "Precio", "Stock", "Estado", "Acciones"].map((label) => <th key={label} className="px-4 py-3 text-left text-xs font-semibold text-[var(--muted-foreground)] uppercase tracking-wider">{label}</th>)}</tr></thead><tbody>{filtered.map((product) => { const stock = product.variants.reduce((sum, variant) => sum + variant.stock, 0); const state = stockState(stock); return <tr key={product.id} className="border-b border-[var(--border)] last:border-0 hover:bg-[var(--muted)]/30"><td className="px-4 py-3"><div className="flex items-center gap-3"><img src={product.images[0]} alt="" className="w-10 h-10 rounded-lg object-cover bg-[var(--muted)]" /><div><p className="font-medium">{product.name}</p><p className="text-xs text-[var(--muted-foreground)]">{product.variants.length} variantes · {product.variants[0]?.sku ?? "Sin SKU"}</p></div></div></td><td className="px-4 py-3 text-xs text-[var(--muted-foreground)]">{product.category}</td><td className="px-4 py-3 font-semibold">{formatPrice(product.basePrice)}</td><td className="px-4 py-3"><div className="min-w-28"><div className="flex justify-between text-xs mb-1"><span>{stock} uds</span><Badge variant={state.badge}>{state.label}</Badge></div><div className="h-1.5 bg-[var(--muted)] rounded-full overflow-hidden"><div className={`${state.color} h-full rounded-full`} style={{ width: `${Math.min(100, stock * 2)}%` }} /></div></div></td><td className="px-4 py-3">{productStatus(product.status)}</td><td className="px-4 py-3"><div className="flex items-center gap-3"><Link to={`/emprendedor/productos/${product.id}`} className="text-xs font-semibold text-[var(--primary)] hover:underline">Editar</Link><button onClick={() => handleDeleteProduct(product.id)} className="text-xs font-semibold text-[var(--error)] hover:underline">Eliminar</button></div></td></tr> })}</tbody></table>{filtered.length === 0 && <p className="py-12 text-center text-sm text-[var(--muted-foreground)]">No encontramos productos con esa búsqueda.</p>}</div>
+    <div className="flex items-center justify-between flex-wrap gap-3 mb-5">
+      <div>
+        <h2 className="font-semibold">Productos</h2>
+        <p className="text-xs text-[var(--muted-foreground)] mt-1">Gestiona catalogo, atributos, variantes, SKU e inventario.</p>
+      </div>
+      <Link to="/emprendedor/productos/nuevo"><Button variant="primary" size="sm">+ Nuevo producto</Button></Link>
+    </div>
+    <Input aria-label="Buscar productos" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Buscar por nombre, categoria o etiqueta..." className="max-w-md mb-4" />
+    <div className="bg-white border border-[var(--border)] rounded-xl overflow-x-auto">
+      <table className="w-full min-w-[860px] text-sm">
+        <thead>
+          <tr className="border-b border-[var(--border)] bg-[var(--muted)]">
+            {["Producto", "Variantes", "Categoria", "Precio", "Stock", "Estado", "Acciones"].map((label) => <th key={label} className="px-4 py-3 text-left text-xs font-semibold text-[var(--muted-foreground)] uppercase tracking-wider">{label}</th>)}
+          </tr>
+        </thead>
+        <tbody>
+          {filtered.map((product) => {
+            const stock = product.variants.reduce((sum, variant) => sum + variant.stock, 0)
+            const state = stockState(stock)
+
+            return <tr key={product.id} className="border-b border-[var(--border)] last:border-0 hover:bg-[var(--muted)]/30 align-top">
+              <td className="px-4 py-3">
+                <div className="flex items-center gap-3">
+                  <img src={product.images[0]} alt="" className="w-10 h-10 rounded-lg object-cover bg-[var(--muted)]" />
+                  <div>
+                    <p className="font-medium">{product.name}</p>
+                    <p className="text-xs text-[var(--muted-foreground)]">{product.variants.length} variantes</p>
+                  </div>
+                </div>
+              </td>
+              <td className="px-4 py-3">
+                <div className="grid gap-2 max-w-sm">
+                  {product.variants.map((variant) => {
+                    const variantState = stockState(variant.stock)
+
+                    return <div key={variant.id} className="rounded-lg border border-[var(--border)] bg-[var(--muted)]/30 px-3 py-2">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-mono text-xs font-semibold">{variant.sku}</span>
+                        <Badge variant={variantState.badge}>{variant.stock} uds</Badge>
+                      </div>
+                      <p className="mt-1 text-xs text-[var(--muted-foreground)]">{variantAttributes(variant)}</p>
+                    </div>
+                  })}
+                </div>
+              </td>
+              <td className="px-4 py-3 text-xs text-[var(--muted-foreground)]">{product.category}</td>
+              <td className="px-4 py-3 font-semibold">{formatPrice(product.basePrice)}</td>
+              <td className="px-4 py-3"><div className="min-w-28"><div className="flex justify-between text-xs mb-1"><span>{stock} uds</span><Badge variant={state.badge}>{state.label}</Badge></div><div className="h-1.5 bg-[var(--muted)] rounded-full overflow-hidden"><div className={`${state.color} h-full rounded-full`} style={{ width: `${Math.min(100, stock * 2)}%` }} /></div></div></td>
+              <td className="px-4 py-3">{productStatus(product.status)}</td>
+              <td className="px-4 py-3"><div className="flex items-center gap-3"><Link to={`/emprendedor/productos/${product.id}`} className="text-xs font-semibold text-[var(--primary)] hover:underline">Editar</Link><button onClick={() => handleDeleteProduct(product.id)} className="text-xs font-semibold text-[var(--error)] hover:underline">Eliminar</button></div></td>
+            </tr>
+          })}
+        </tbody>
+      </table>
+      {filtered.length === 0 && <p className="py-12 text-center text-sm text-[var(--muted-foreground)]">No encontramos productos con esa busqueda.</p>}
+    </div>
   </div>
 }
 
