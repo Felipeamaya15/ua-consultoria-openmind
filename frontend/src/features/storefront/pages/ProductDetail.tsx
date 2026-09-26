@@ -112,9 +112,14 @@ export default function ProductDetail() {
           .every(
             ([key, selectedValue]) =>
               variant.attributes[key] === selectedValue,
-          ),
+      ),
     );
   };
+
+  const variantOptionLabel = (
+    value: string,
+    available: boolean,
+  ) => available ? value : `${value} - Sin stock`;
 
   const completeSelection = Object.keys(
     product.attributes,
@@ -298,6 +303,8 @@ export default function ProductDetail() {
                           key={value}
                           disabled={!available}
                           aria-pressed={selected}
+                          aria-label={variantOptionLabel(value, available)}
+                          title={variantOptionLabel(value, available)}
                           onClick={() => {
                             setSelectedAttrs((previous) => ({
                               ...previous,
@@ -317,6 +324,9 @@ export default function ProductDetail() {
                           }`}
                         >
                           {value}
+                          {!available && (
+                            <span className="sr-only"> Sin stock</span>
+                          )}
                         </button>
                       );
                     })}
@@ -586,6 +596,8 @@ export default function ProductDetail() {
                           key={value}
                           disabled={!available}
                           aria-pressed={selected}
+                          aria-label={variantOptionLabel(value, available)}
+                          title={variantOptionLabel(value, available)}
                           onClick={() => {
                             setSelectedAttrs((previous) => ({
                               ...previous,
@@ -605,6 +617,9 @@ export default function ProductDetail() {
                           }`}
                         >
                           {value}
+                          {!available && (
+                            <span className="sr-only"> Sin stock</span>
+                          )}
                         </button>
                       );
                     })}
@@ -978,6 +993,8 @@ export default function ProductDetail() {
                         key={value}
                         disabled={!available}
                         aria-pressed={selected}
+                        aria-label={variantOptionLabel(value, available)}
+                        title={variantOptionLabel(value, available)}
                         onClick={() => {
                           setSelectedAttrs(
                             (previous) => ({
@@ -1010,6 +1027,9 @@ export default function ProductDetail() {
                         `}
                       >
                         {value}
+                        {!available && (
+                          <span className="sr-only"> Sin stock</span>
+                        )}
                       </button>
                     );
                   })}

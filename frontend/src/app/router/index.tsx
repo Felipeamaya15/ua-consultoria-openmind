@@ -29,6 +29,47 @@ import { PendingPage } from '../../features/storefront/pages/PreviewPages';
 import { StoreProvider } from '../../features/storefront/context/StoreContext';
 import { CartProvider } from '../../features/storefront/context/CartContext';
 import { OrderProvider } from '../../features/storefront/context/OrderContext';
+import type { TemplateId } from '../../features/storefront/data/mockData';
+
+const ADMIN_STORAGE_KEY = 'ua-entrepreneur-demo-v1';
+
+const selectedTemplatePaths: Record<TemplateId, string> = {
+  editorial: '/plantilla/1',
+  minimal: '/plantilla/2',
+  visual: '/plantilla/3',
+  catalog: '/plantilla/4',
+};
+
+function selectedTemplatePath(path = '') {
+  try {
+    const raw = localStorage.getItem(ADMIN_STORAGE_KEY);
+    const template = JSON.parse(raw ?? '{}')?.config?.template as
+      | TemplateId
+      | undefined;
+    const base =
+      template && selectedTemplatePaths[template]
+        ? selectedTemplatePaths[template]
+        : selectedTemplatePaths.editorial;
+    return path ? `${base}/${path}` : base;
+  } catch {
+    return path
+      ? `${selectedTemplatePaths.editorial}/${path}`
+      : selectedTemplatePaths.editorial;
+  }
+}
+
+function SelectedTemplateRedirect({
+  path = '',
+}: {
+  path?: string;
+}) {
+  return (
+    <Navigate
+      to={selectedTemplatePath(path)}
+      replace
+    />
+  );
+}
 
 function StorefrontProviders({
   children,
@@ -94,7 +135,7 @@ export const router = createBrowserRouter([
    */
   {
     path: '/',
-    element: <Navigate to="/plantilla/1" replace />,
+    element: <SelectedTemplateRedirect />,
   },
 
   /*
@@ -192,23 +233,23 @@ export const router = createBrowserRouter([
    */
   {
     path: '/home',
-    element: <Navigate to="/plantilla/1" replace />,
+    element: <SelectedTemplateRedirect />,
   },
   {
     path: '/catalogo',
-    element: <Navigate to="/plantilla/1/catalogo" replace />,
+    element: <SelectedTemplateRedirect path="catalogo" />,
   },
   {
     path: '/carrito',
-    element: <Navigate to="/plantilla/1/carrito" replace />,
+    element: <SelectedTemplateRedirect path="carrito" />,
   },
   {
     path: '/seguimiento',
-    element: <Navigate to="/plantilla/1/seguimiento" replace />,
+    element: <SelectedTemplateRedirect path="seguimiento" />,
   },
   {
     path: '/ingresar',
-    element: <Navigate to="/plantilla/1/ingresar" replace />,
+    element: <SelectedTemplateRedirect path="ingresar" />,
   },
 
   /*
@@ -218,6 +259,6 @@ export const router = createBrowserRouter([
    */
   {
     path: '*',
-    element: <Navigate to="/plantilla/1" replace />,
+    element: <SelectedTemplateRedirect />,
   },
 ]);
