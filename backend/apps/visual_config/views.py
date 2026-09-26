@@ -2,7 +2,9 @@ from rest_framework import status
 from rest_framework.permissions import AllowAny
 from rest_framework.views import APIView
 
+from apps.core.infrastructure.tenant import resolver_tienda
 from apps.core.presentation.responses import success_response
+from apps.visual_config.models import ConfiguracionVisual
 from apps.visual_config.serializers import PlantillaDisponibleSerializer
 
 
@@ -75,5 +77,30 @@ class PlantillasDisponiblesAPIView(APIView):
         return success_response(
             data=serializer.data,
             mensaje="Plantillas disponibles obtenidas correctamente",
+            status=status.HTTP_200_OK,
+        )
+
+
+class LogoNegocioAPIView(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        tienda = resolver_tienda(request)
+
+        configuracion = ConfiguracionVisual.objects.filter(
+            tienda=tienda
+        ).first()
+
+        logo_negocio = (
+            configuracion.logo_negocio
+            if configuracion
+            else ""
+        )
+
+        return success_response(
+            data={
+                "logo_negocio": logo_negocio,
+            },
+            mensaje="Logo del negocio obtenido correctamente",
             status=status.HTTP_200_OK,
         )
