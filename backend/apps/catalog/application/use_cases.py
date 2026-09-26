@@ -4,6 +4,7 @@ from apps.catalog.infrastructure.repositories import ProductRepository
 from apps.core.models import Producto
 from apps.core.infrastructure.mongo_client import get_mongo_db
 from bson import ObjectId
+from django.shortcuts import get_object_or_404
 
 class ListPublicProductsUseCase:
 
@@ -95,4 +96,9 @@ class CrearProductoUseCase:
             id_tienda=tienda,
             **datos_validados
         )
+        return producto
+
+class ObtenerProductoAdminUseCase:
+    def ejecutar(self, tienda, id_producto):
+        producto = get_object_or_404(Producto, id_producto=id_producto, id_tienda=tienda)
         return producto
