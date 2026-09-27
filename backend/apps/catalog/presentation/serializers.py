@@ -102,6 +102,77 @@ class ProductImageSerializer(serializers.Serializer):
         validate_base64_image(value, max_size_mb=2)
         return value
 
+class ProductoCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Producto
+        fields = ['nombre', 'precio', 'stock', 'activo']
+        extra_kwargs = {
+            'nombre': {
+                'required': True, 
+                'allow_blank': False,
+                'error_messages': {
+                    'required': 'El campo nombre es obligatorio.',
+                    'blank': 'El nombre no puede estar vacío.'
+                }
+            },
+            'precio': {
+                'required': True,
+                'error_messages': {
+                    'required': 'El campo precio es obligatorio.',
+                    'invalid': 'El precio debe ser un número válido.'
+                }
+            },
+            'stock': {
+                'required': True,
+                'error_messages': {
+                    'required': 'El campo stock es obligatorio.',
+                    'invalid': 'El stock debe ser un número válido.'
+                }
+            }
+        }
+
+    def validate_precio(self, value):
+        if value < 0:
+            raise serializers.ValidationError("El precio no puede ser negativo.")
+        return value
+
+    def validate_stock(self, value):
+        if value < 0:
+            raise serializers.ValidationError("El stock inicial no puede ser negativo.")
+        return value
+
+class ProductoAdminDetailSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Producto
+        fields = ['id_producto', 'nombre', 'precio', 'stock', 'activo', 'id_tienda']
+
+class ProductoUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Producto
+        fields = ['nombre', 'precio', 'stock', 'activo']
+        extra_kwargs = {
+            'nombre': {
+                'allow_blank': False,
+                'error_messages': {
+                    'blank': 'Si decides actualizar el nombre, no puede estar vacío.'
+                }
+            }
+        }
+
+    def validate_precio(self, value):
+        if value < 0:
+            raise serializers.ValidationError("El precio no puede ser negativo.")
+        return value
+
+class ProductoStockUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Producto
+        fields = ['stock']
+
+    def validate_stock(self, value):
+        if value < 0:
+            raise serializers.ValidationError("El stock no puede ser negativo o inválido.")
+        return value
 
 class VarianteInputSerializer(serializers.Serializer):
     sku = serializers.CharField()

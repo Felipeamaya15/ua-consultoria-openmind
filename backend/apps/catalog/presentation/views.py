@@ -18,8 +18,11 @@ from rest_framework.permissions import IsAuthenticated
 from ..application.use_cases import CrearProductoUseCase
 from .serializers import ProductoAdminDetailSerializer
 from ..application.use_cases import ObtenerProductoAdminUseCase
-
-
+from .serializers import ProductoUpdateSerializer
+from ..application.use_cases import ActualizarProductoAdminUseCase
+from .serializers import ProductoStockUpdateSerializer
+from ..application.use_cases import ActualizarStockProductoUseCase
+from ..application.use_cases import ValidarDisponibilidadProductoUseCase
 
 class PublicProductListAPIView(APIView):
     """Listado público de productos activos del catálogo."""
@@ -160,9 +163,6 @@ class ProductoAdminDetailView(APIView):
         serializer = ProductoAdminDetailSerializer(producto)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
-from .serializers import ProductoUpdateSerializer
-from ..application.use_cases import ActualizarProductoAdminUseCase
-
 class ProductoUpdateView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -183,3 +183,54 @@ class ProductoUpdateView(APIView):
             )
             
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class ProductoStockUpdateView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def patch(self, request, id_producto):
+        tienda = resolver_tienda(request, exigir_propietario=True)
+        
+        serializer = ProductoStockUpdateSerializer(data=request.data)
+        
+        if serializer.is_valid():
+            caso_uso = ActualizarStockProductoUseCase()
+            producto = caso_uso.ejecutar(tienda, id_producto, serializer.validated_data['stock'])
+            
+            return Response(
+                {
+                    "mensaje": "Stock actualizado con éxito", 
+                    "stock_actual": producto.stock
+                },
+                status=status.HTTP_200_OK
+            )
+            
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class ValidarDisponibilidadAPIView(APIView):
+    """Endpoint público para verificar stock antes de agregar al carrito o comprar"""
+    permission_classes = [AllowAny]
+
+    def post(self, request, id_producto):
+        tienda_id = resolver_tienda_id(request)
+        
+        cantidad = request.data.get('cantidad', 1)
+        
+        try:
+            cantidad = int(cantidad)
+            if cantidad <= 0:
+                raise ValueError("La cantidad a comprar debe ser mayor a 0.")
+                
+            caso_uso = ValidarDisponibilidadProductoUseCase()
+            producto = caso_uso.ejecutar(tienda_id, id_producto, cantidad)
+            
+            return success_response(
+                data={"stock_disponible": producto.stock},
+                mensaje="El producto está disponible para la compra",
+                status=status.HTTP_200_OK
+            )
+        except ValueError as e:
+            return error_response(
+                mensaje=str(e),
+                codigo="COMPRA_INVALIDA",
+                status=status.HTTP_400_BAD_REQUEST
+            )
