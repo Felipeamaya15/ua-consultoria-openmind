@@ -146,3 +146,27 @@ class ProductoAdminDetailView(APIView):
         
         serializer = ProductoAdminDetailSerializer(producto)
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+from .serializers import ProductoUpdateSerializer
+from ..application.use_cases import ActualizarProductoAdminUseCase
+
+class ProductoUpdateView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def put(self, request, id_producto):
+        tienda = resolver_tienda(request, exigir_propietario=True)
+        serializer = ProductoUpdateSerializer(data=request.data, partial=True)
+        
+        if serializer.is_valid():
+            caso_uso = ActualizarProductoAdminUseCase()
+            producto = caso_uso.ejecutar(tienda, id_producto, serializer.validated_data)
+            
+            return Response(
+                {
+                    "mensaje": "Producto actualizado con éxito", 
+                    "id_producto": producto.id_producto
+                },
+                status=status.HTTP_200_OK
+            )
+            
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

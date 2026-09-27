@@ -116,3 +116,13 @@ class ProductoAdminDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = Producto
         fields = ['id_producto', 'nombre', 'precio', 'stock', 'activo', 'id_tienda']
+
+class ProductoUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Producto
+        fields = ['nombre', 'precio', 'stock', 'activo']
+
+    def validate_precio(self, value):
+        if value < 0:
+            raise serializers.ValidationError("El precio no puede ser negativo.")
+        return value

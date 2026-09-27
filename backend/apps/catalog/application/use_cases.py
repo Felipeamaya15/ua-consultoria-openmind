@@ -102,3 +102,13 @@ class ObtenerProductoAdminUseCase:
     def ejecutar(self, tienda, id_producto):
         producto = get_object_or_404(Producto, id_producto=id_producto, id_tienda=tienda)
         return producto
+
+class ActualizarProductoAdminUseCase:
+    def ejecutar(self, tienda, id_producto, datos_actualizados):
+        producto = get_object_or_404(Producto, id_producto=id_producto, id_tienda=tienda)
+        
+        for campo, valor in datos_actualizados.items():
+            setattr(producto, campo, valor)
+            
+        producto.save()
+        return producto
