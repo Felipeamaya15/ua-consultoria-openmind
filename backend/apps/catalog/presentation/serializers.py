@@ -136,6 +136,11 @@ class ProductoCreateSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("El precio no puede ser negativo.")
         return value
 
+    def validate_stock(self, value):
+        if value < 0:
+            raise serializers.ValidationError("El stock inicial no puede ser negativo.")
+        return value
+
 class ProductoAdminDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = Producto
