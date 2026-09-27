@@ -106,6 +106,30 @@ class ProductoCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Producto
         fields = ['nombre', 'precio', 'stock', 'activo']
+        extra_kwargs = {
+            'nombre': {
+                'required': True, 
+                'allow_blank': False,
+                'error_messages': {
+                    'required': 'El campo nombre es obligatorio.',
+                    'blank': 'El nombre no puede estar vacío.'
+                }
+            },
+            'precio': {
+                'required': True,
+                'error_messages': {
+                    'required': 'El campo precio es obligatorio.',
+                    'invalid': 'El precio debe ser un número válido.'
+                }
+            },
+            'stock': {
+                'required': True,
+                'error_messages': {
+                    'required': 'El campo stock es obligatorio.',
+                    'invalid': 'El stock debe ser un número válido.'
+                }
+            }
+        }
 
     def validate_precio(self, value):
         if value < 0:
@@ -121,6 +145,14 @@ class ProductoUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Producto
         fields = ['nombre', 'precio', 'stock', 'activo']
+        extra_kwargs = {
+            'nombre': {
+                'allow_blank': False,
+                'error_messages': {
+                    'blank': 'Si decides actualizar el nombre, no puede estar vacío.'
+                }
+            }
+        }
 
     def validate_precio(self, value):
         if value < 0:
