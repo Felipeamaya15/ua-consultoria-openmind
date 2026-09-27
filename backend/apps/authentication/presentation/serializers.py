@@ -22,3 +22,6 @@ class UserResponseSerializer(serializers.Serializer):
     last_name = serializers.CharField()
     full_name = serializers.CharField()
     is_staff = serializers.BooleanField()
+
+class GoogleLoginRequestSerializer(serializers.Serializer):
+    token = serializers.CharField(help_text="ID Token devuelto por Google")

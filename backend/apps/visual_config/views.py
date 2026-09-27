@@ -105,6 +105,7 @@ class LogoNegocioAPIView(APIView):
                 "logo_negocio": logo_negocio,
             },
             mensaje="Logo del negocio obtenido correctamente",
+        )
 class PlantillaSeleccionadaAPIView(APIView):
     def put(self, request):
         tienda = resolver_tienda(

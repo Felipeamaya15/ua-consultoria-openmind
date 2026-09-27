@@ -13,10 +13,14 @@ urlpatterns = [
         PlantillasDisponiblesAPIView.as_view(),
         name="plantillas-disponibles",
     ),
+
     path(
         "logo-negocio/",
         LogoNegocioAPIView.as_view(),
         name="logo-negocio",
+    ),
+
+    path(
         "plantilla-seleccionada/",
         PlantillaSeleccionadaAPIView.as_view(),
         name="plantilla-seleccionada",
