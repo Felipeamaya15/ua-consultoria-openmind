@@ -126,3 +126,13 @@ class ProductoUpdateSerializer(serializers.ModelSerializer):
         if value < 0:
             raise serializers.ValidationError("El precio no puede ser negativo.")
         return value
+
+class ProductoStockUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Producto
+        fields = ['stock']
+
+    def validate_stock(self, value):
+        if value < 0:
+            raise serializers.ValidationError("El stock no puede ser negativo o inválido.")
+        return value

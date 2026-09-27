@@ -112,3 +112,12 @@ class ActualizarProductoAdminUseCase:
             
         producto.save()
         return producto
+
+class ActualizarStockProductoUseCase:
+    def ejecutar(self, tienda, id_producto, nuevo_stock):
+        producto = get_object_or_404(Producto, id_producto=id_producto, id_tienda=tienda)
+        
+        producto.stock = nuevo_stock
+        producto.save()
+        
+        return producto
