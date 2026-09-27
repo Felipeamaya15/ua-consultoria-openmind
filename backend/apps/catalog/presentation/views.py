@@ -1,70 +1,185 @@
 from rest_framework.views import APIView
-from rest_framework.response import Response
+from rest_framework.permissions import AllowAny
 from rest_framework import status
-from apps.catalog.application.services import VariantService
+from rest_framework.response import Response
 
-class ProductVariantsView(APIView):
-    authentication_classes = []
-
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.service = VariantService()
-
-    # Tarea 1: Crear y persistir variante
-    def post(self, request, product_id):
-        try:
-            variante = self.service.create_variant(product_id, request.data)
-            return Response(
-                {"mensaje": "Variante creada en MongoDB", "variante": variante},
-                status=status.HTTP_201_CREATED
-            )
-        except ValueError as e:
-            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
-
-    # Tarea 2: Actualizar datos editables de una variante por su SKU
-    def patch(self, request, product_id, sku):
-        try:
-            self.service.update_variant(product_id, sku, request.data)
-            return Response(
-                {"mensaje": f"Variante '{sku}' actualizada correctamente."},
-                status=status.HTTP_200_OK
-            )
-        except ValueError as e:
-            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
-
-
-class PurchaseVariantView(APIView):
-    authentication_classes = []
-
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.service = VariantService()
-
-    # Tarea 3: Validar stock 0 y procesar compra atómica
-    def post(self, request):
-        sku = request.data.get("sku")
-        cantidad = int(request.data.get("cantidad", 1))
-        
-        try:
-            self.service.process_purchase(sku, cantidad)
-            return Response(
-                {"mensaje": f"Compra procesada. Stock descontado para {sku}."},
-                status=status.HTTP_200_OK
-            )
-        except ValueError as e:
-            return Response(
-                {"error": "COMPRA_RECHAZADA", "detalle": str(e)},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        
+from apps.core.presentation.responses import success_response, error_response
+from apps.core.infrastructure.tenant import resolver_tienda_id, resolver_tienda
 from apps.catalog.infrastructure.repositories import ProductRepository
+from apps.catalog.infrastructure.attribute_filters import (
+    FiltrosAtributosInvalidos,
+    parse_attribute_params,
+)
+from apps.catalog.application.use_cases import ListPublicProductsUseCase , GetPublicProductDetailUseCase,GetPublicProductAttributesUseCase
+from apps.catalog.application.use_cases import SoftDeleteProductUseCase
+from .serializers import ProductPublicListItemSerializer, ProductPublicDetailSerializer, ProductPublicAttributesSerializer, ProductoCreateSerializer
+from apps.core.models import Tienda
+from rest_framework.permissions import IsAuthenticated
+from ..application.use_cases import CrearProductoUseCase
+from .serializers import ProductoAdminDetailSerializer
+from ..application.use_cases import ObtenerProductoAdminUseCase
 
-class ProductListView(APIView):
-    authentication_classes = []
+
+
+class PublicProductListAPIView(APIView):
+    """Listado público de productos activos del catálogo."""
+    permission_classes = [AllowAny]
 
     def get(self, request):
-        repo = ProductRepository()
-        # Lista los productos de la tienda '1' (o usa request.query_params si quieres filtrar)
-        tienda_id = request.query_params.get('tienda_id', '1')
-        productos = repo.list_by_store(tienda_id=tienda_id)
-        return Response(productos, status=status.HTTP_200_OK)
+        tienda_id = resolver_tienda_id(request)
+
+        try:
+            atributos = parse_attribute_params(request.query_params)
+        except FiltrosAtributosInvalidos as error:
+            return error_response(
+                mensaje=str(error),
+                codigo="ERROR_VALIDACION",
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        use_case = ListPublicProductsUseCase(ProductRepository())
+        productos = use_case.execute(tienda_id, atributos=atributos)
+
+        data = ProductPublicListItemSerializer(productos, many=True).data
+
+        return success_response(
+            data=data,
+            mensaje="Listado de productos obtenido correctamente",
+            status=status.HTTP_200_OK,
+        )
+class PublicProductDetailAPIView(APIView):
+    """Detalle público de un producto identificado por su slug."""
+    permission_classes = [AllowAny]
+ 
+    def get(self, request, slug):
+        tienda_id = resolver_tienda_id(request)
+ 
+        use_case = GetPublicProductDetailUseCase(ProductRepository())
+        producto = use_case.execute(tienda_id, slug)
+ 
+        if producto is None:
+            return error_response(
+                mensaje="El producto solicitado no fue encontrado",
+                codigo="RECURSO_NO_ENCONTRADO",
+                status=status.HTTP_404_NOT_FOUND,
+            )
+ 
+        data = ProductPublicDetailSerializer(producto).data
+ 
+        return success_response(
+            data=data,
+            mensaje="Detalle de producto obtenido correctamente",
+            status=status.HTTP_200_OK,
+        )
+
+class PublicProductAttributesAPIView(APIView):
+    """Atributos de un producto identificado por su slug."""
+    permission_classes = [AllowAny]
+ 
+    def get(self, request, slug):
+        tienda_id = resolver_tienda_id(request)
+ 
+        use_case = GetPublicProductAttributesUseCase(ProductRepository())
+        atributos = use_case.execute(tienda_id, slug)
+ 
+        if atributos is None:
+            return error_response(
+                mensaje="El producto solicitado no fue encontrado",
+                codigo="RECURSO_NO_ENCONTRADO",
+                status=status.HTTP_404_NOT_FOUND,
+            )
+ 
+        data = ProductPublicAttributesSerializer(atributos).data
+ 
+        return success_response(
+            data=data,
+            mensaje="Atributos de producto obtenidos correctamente",
+            status=status.HTTP_200_OK,
+        )
+
+class ProductDeleteAPIView(APIView):
+   
+    permission_classes = [IsAuthenticated]
+
+    def delete(self, request, producto_id):
+        try:
+            tienda_id = resolver_tienda_id(request)
+            
+          
+            if not Tienda.objects.filter(id_tienda=tienda_id, id_usuario_propietario=request.user).exists():
+                return error_response(
+                    mensaje="No tienes permisos de administrador para eliminar productos en esta tienda.",
+                    codigo="ACCESO_DENEGADO",
+                    status=403
+                )
+            
+           
+            use_case = SoftDeleteProductUseCase()
+            resultado = use_case.execute(id_producto=producto_id, tienda_id=tienda_id)
+            
+            return success_response(mensaje=resultado["mensaje"])
+            
+        except ValueError as e:
+            return error_response(mensaje=str(e), codigo="PRODUCTO_NO_ELIMINADO", status=404)
+        except Exception as e:
+            return error_response(
+                mensaje="Ocurrió un error interno al intentar eliminar el producto", 
+                codigo="ERROR_INTERNO", 
+                status=500
+            )
+
+class ProductoCreateView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        tienda = resolver_tienda(request, exigir_propietario=True)
+        
+        serializer = ProductoCreateSerializer(data=request.data)
+        if serializer.is_valid():
+            caso_uso = CrearProductoUseCase()
+            producto = caso_uso.ejecutar(tienda, serializer.validated_data)
+            return Response(
+                {
+                    "mensaje": "Producto creado con éxito", 
+                    "id_producto": producto.id_producto
+                },
+                status=status.HTTP_201_CREATED
+            )
+            
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class ProductoAdminDetailView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, id_producto):
+        tienda = resolver_tienda(request, exigir_propietario=True)
+        
+        caso_uso = ObtenerProductoAdminUseCase()
+        producto = caso_uso.ejecutar(tienda, id_producto)
+        
+        serializer = ProductoAdminDetailSerializer(producto)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+from .serializers import ProductoUpdateSerializer
+from ..application.use_cases import ActualizarProductoAdminUseCase
+
+class ProductoUpdateView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def put(self, request, id_producto):
+        tienda = resolver_tienda(request, exigir_propietario=True)
+        serializer = ProductoUpdateSerializer(data=request.data, partial=True)
+        
+        if serializer.is_valid():
+            caso_uso = ActualizarProductoAdminUseCase()
+            producto = caso_uso.ejecutar(tienda, id_producto, serializer.validated_data)
+            
+            return Response(
+                {
+                    "mensaje": "Producto actualizado con éxito", 
+                    "id_producto": producto.id_producto
+                },
+                status=status.HTTP_200_OK
+            )
+            
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

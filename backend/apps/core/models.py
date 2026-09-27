@@ -1,3 +1,5 @@
+from django.conf import settings
+from django.contrib.auth import get_user_model
 from django.db import models
 from django.db.models import Q
 
@@ -17,24 +19,40 @@ class Usuario(models.Model):
     class Meta:
         db_table = 'usuario'
 
+class TiendaQuerySet(models.QuerySet):
+    def del_propietario(self, usuario):
+        """Consulta de propiedad explícita; no resuelve tenants ni solicitudes."""
+        if not isinstance(usuario, get_user_model()) or not usuario.is_active or usuario.pk is None:
+            return self.none()
+        return self.filter(id_usuario_propietario=usuario)
+
+
 class Tienda(models.Model):
     id_tienda = models.BigAutoField(primary_key=True)
-    id_usuario_propietario = models.ForeignKey(Usuario, on_delete=models.CASCADE, db_column='id_usuario_propietario')
+    id_usuario_propietario = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        db_column='id_usuario_propietario',
+        related_name='tiendas_propias',
+    )
     nombre = models.CharField(max_length=150)
     descripcion = models.TextField(blank=True, null=True)
     fecha_creacion = models.DateTimeField(auto_now_add=True)
+
+    objects = TiendaQuerySet.as_manager()
 
     class Meta:
         db_table = 'tienda'
 
 class Producto(models.Model):
     id_producto = models.BigAutoField(primary_key=True)
-    id_tienda = models.ForeignKey(Tienda, on_delete=models.CASCADE, db_column='id_tienda')
     nombre = models.CharField(max_length=200)
     descripcion = models.TextField(blank=True, null=True)
     precio = models.DecimalField(max_digits=12, decimal_places=2)
     stock = models.IntegerField(default=0)
+    activo = models.BooleanField(default=True) 
     fecha_creacion = models.DateTimeField(auto_now_add=True)
+    id_tienda = models.ForeignKey(db_column='id_tienda', on_delete=models.CASCADE, to='core.tienda')
 
     class Meta:
         db_table = 'producto'
