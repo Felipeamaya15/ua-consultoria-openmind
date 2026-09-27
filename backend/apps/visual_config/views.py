@@ -84,6 +84,27 @@ class PlantillasDisponiblesAPIView(APIView):
         )
 
 
+class LogoNegocioAPIView(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        tienda = resolver_tienda(request)
+
+        configuracion = ConfiguracionVisual.objects.filter(
+            tienda=tienda
+        ).first()
+
+        logo_negocio = (
+            configuracion.logo_negocio
+            if configuracion
+            else ""
+        )
+
+        return success_response(
+            data={
+                "logo_negocio": logo_negocio,
+            },
+            mensaje="Logo del negocio obtenido correctamente",
 class PlantillaSeleccionadaAPIView(APIView):
     def put(self, request):
         tienda = resolver_tienda(

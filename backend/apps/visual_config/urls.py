@@ -1,6 +1,7 @@
 from django.urls import path
 
 from apps.visual_config.views import (
+    LogoNegocioAPIView,
     PlantillaSeleccionadaAPIView,
     PlantillasDisponiblesAPIView,
 )
@@ -13,6 +14,9 @@ urlpatterns = [
         name="plantillas-disponibles",
     ),
     path(
+        "logo-negocio/",
+        LogoNegocioAPIView.as_view(),
+        name="logo-negocio",
         "plantilla-seleccionada/",
         PlantillaSeleccionadaAPIView.as_view(),
         name="plantilla-seleccionada",
