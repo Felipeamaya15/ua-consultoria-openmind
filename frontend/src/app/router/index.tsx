@@ -1,5 +1,6 @@
 import { createBrowserRouter } from 'react-router-dom';
 import { LandingPage } from '../../features/landing/pages/LandingPage';
+import { CheckoutSummaryPage } from '../../features/checkout/pages/CheckoutSummaryPage';
 import { LinkifyConfigPage } from '../../features/integrations/pages/LinkifyConfigPage';
 import { adminRoute } from '../../features/admin/routes';
 import {
@@ -202,6 +203,8 @@ export const router = createBrowserRouter([
     element: <CatalogPlaceholder />,
   },
   {
+    path: '/checkout/resumen',
+    element: <CheckoutSummaryPage />,
     path: '/integraciones/linkify',
     element: <LinkifyConfigPage />,
   }
