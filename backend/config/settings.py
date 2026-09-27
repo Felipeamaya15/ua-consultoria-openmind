@@ -45,6 +45,9 @@ INSTALLED_APPS = [
     #Apps propias
     'apps.core',
     'apps.authentication',
+    'apps.catalog',
+    'apps.visual_config',
+    'apps.landing',
 ]
 
 MIDDLEWARE = [
@@ -164,6 +167,7 @@ REST_FRAMEWORK = {
         'rest_framework.renderers.JSONRenderer',
         'rest_framework.renderers.BrowsableAPIRenderer',
     ],
+}
 REST_FRAMEWORK = {
     'EXCEPTION_HANDLER': 'apps.core.presentation.exceptions.custom_exception_handler',
 }
