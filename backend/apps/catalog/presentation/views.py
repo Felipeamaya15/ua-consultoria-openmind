@@ -16,6 +16,9 @@ from .serializers import ProductPublicListItemSerializer, ProductPublicDetailSer
 from apps.core.models import Tienda
 from rest_framework.permissions import IsAuthenticated
 from ..application.use_cases import CrearProductoUseCase
+from .serializers import ProductoAdminDetailSerializer
+from ..application.use_cases import ObtenerProductoAdminUseCase
+
 
 
 class PublicProductListAPIView(APIView):
@@ -144,3 +147,15 @@ class ProductoCreateView(APIView):
             )
             
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class ProductoAdminDetailView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, id_producto):
+        tienda = resolver_tienda(request, exigir_propietario=True)
+        
+        caso_uso = ObtenerProductoAdminUseCase()
+        producto = caso_uso.ejecutar(tienda, id_producto)
+        
+        serializer = ProductoAdminDetailSerializer(producto)
+        return Response(serializer.data, status=status.HTTP_200_OK)
