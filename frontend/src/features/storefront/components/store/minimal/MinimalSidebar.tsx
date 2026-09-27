@@ -8,7 +8,7 @@ export function MinimalSidebar() {
       <Link
         to="."
         aria-label="Inicio"
-        className="mt-5 w-9 h-9 rounded-full bg-[#17213b] text-white flex items-center justify-center font-semibold text-sm"
+        className="mt-5 w-9 h-9 rounded-full bg-[var(--primary)] text-white flex items-center justify-center font-semibold text-sm"
       >
         S
       </Link>
@@ -21,7 +21,7 @@ export function MinimalSidebar() {
         <Link
           to="."
           aria-label="Inicio"
-          className="w-10 h-10 rounded-full flex items-center justify-center text-gray-500 hover:bg-gray-100 hover:text-[#17213b] transition-colors"
+          className="w-10 h-10 rounded-full flex items-center justify-center text-gray-500 hover:bg-gray-100 hover:text-[var(--primary)] transition-colors"
         >
           <Icon name="home" className="w-5 h-5" />
         </Link>
@@ -29,7 +29,7 @@ export function MinimalSidebar() {
         <Link
           to="catalogo"
           aria-label="Catálogo"
-          className="w-10 h-10 rounded-full flex items-center justify-center text-gray-500 hover:bg-gray-100 hover:text-[#17213b] transition-colors"
+          className="w-10 h-10 rounded-full flex items-center justify-center text-gray-500 hover:bg-gray-100 hover:text-[var(--primary)] transition-colors"
         >
           <Icon name="grid" className="w-5 h-5" />
         </Link>
@@ -37,7 +37,7 @@ export function MinimalSidebar() {
         <Link
           to="seguimiento"
           aria-label="Seguimiento"
-          className="w-10 h-10 rounded-full flex items-center justify-center text-gray-500 hover:bg-gray-100 hover:text-[#17213b] transition-colors"
+          className="w-10 h-10 rounded-full flex items-center justify-center text-gray-500 hover:bg-gray-100 hover:text-[var(--primary)] transition-colors"
         >
           <Icon name="truck" className="w-5 h-5" />
         </Link>
@@ -48,7 +48,7 @@ export function MinimalSidebar() {
         <Link
           to="ingresar"
           aria-label="Mi cuenta"
-          className="w-9 h-9 rounded-full bg-gray-100 text-[#17213b] flex items-center justify-center text-xs font-semibold"
+          className="w-9 h-9 rounded-full bg-gray-100 text-[var(--primary)] flex items-center justify-center text-xs font-semibold"
         >
           M
         </Link>

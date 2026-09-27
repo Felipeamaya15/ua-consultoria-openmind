@@ -1,14 +1,24 @@
 from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny
 from rest_framework import status
+from rest_framework.response import Response
 
 from apps.core.presentation.responses import success_response, error_response
-from apps.core.infrastructure.tenant import resolver_tienda_id
+from apps.core.infrastructure.tenant import resolver_tienda_id, resolver_tienda
 from apps.catalog.infrastructure.repositories import ProductRepository
-from apps.catalog.application.use_cases import ListPublicProductsUseCase, GetPublicProductDetailUseCase, GetPublicProductAttributesUseCase, CreateProductUseCase
+from apps.catalog.infrastructure.attribute_filters import (
+    FiltrosAtributosInvalidos,
+    parse_attribute_params,
+)
+from apps.catalog.application.use_cases import ListPublicProductsUseCase , GetPublicProductDetailUseCase,GetPublicProductAttributesUseCase
 from apps.catalog.application.use_cases import SoftDeleteProductUseCase
-from .serializers import ProductPublicListItemSerializer, ProductPublicDetailSerializer, ProductPublicAttributesSerializer, ProductCreateSerializer
+from .serializers import ProductPublicListItemSerializer, ProductPublicDetailSerializer, ProductPublicAttributesSerializer, ProductoCreateSerializer
+from apps.core.models import Tienda
 from rest_framework.permissions import IsAuthenticated
+from ..application.use_cases import CrearProductoUseCase
+from .serializers import ProductoAdminDetailSerializer
+from ..application.use_cases import ObtenerProductoAdminUseCase
+
 
 
 class PublicProductListAPIView(APIView):
@@ -18,8 +28,17 @@ class PublicProductListAPIView(APIView):
     def get(self, request):
         tienda_id = resolver_tienda_id(request)
 
+        try:
+            atributos = parse_attribute_params(request.query_params)
+        except FiltrosAtributosInvalidos as error:
+            return error_response(
+                mensaje=str(error),
+                codigo="ERROR_VALIDACION",
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         use_case = ListPublicProductsUseCase(ProductRepository())
-        productos = use_case.execute(tienda_id)
+        productos = use_case.execute(tienda_id, atributos=atributos)
 
         data = ProductPublicListItemSerializer(productos, many=True).data
 
@@ -109,23 +128,58 @@ class ProductDeleteAPIView(APIView):
                 status=500
             )
 
-
-class ProductCreateAPIView(APIView):
-    """Crea un producto nuevo en el catálogo de la tienda."""
-    # TODO: reemplazar por autenticación real del emprendedor cuando exista login en el backend.
-    permission_classes = [AllowAny]
+class ProductoCreateView(APIView):
+    permission_classes = [IsAuthenticated]
 
     def post(self, request):
-        tienda_id = resolver_tienda_id(request)
+        tienda = resolver_tienda(request, exigir_propietario=True)
+        
+        serializer = ProductoCreateSerializer(data=request.data)
+        if serializer.is_valid():
+            caso_uso = CrearProductoUseCase()
+            producto = caso_uso.ejecutar(tienda, serializer.validated_data)
+            return Response(
+                {
+                    "mensaje": "Producto creado con éxito", 
+                    "id_producto": producto.id_producto
+                },
+                status=status.HTTP_201_CREATED
+            )
+            
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-        serializer = ProductCreateSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
+class ProductoAdminDetailView(APIView):
+    permission_classes = [IsAuthenticated]
 
-        use_case = CreateProductUseCase(ProductRepository())
-        producto_id = use_case.execute(tienda_id, serializer.validated_data)
+    def get(self, request, id_producto):
+        tienda = resolver_tienda(request, exigir_propietario=True)
+        
+        caso_uso = ObtenerProductoAdminUseCase()
+        producto = caso_uso.ejecutar(tienda, id_producto)
+        
+        serializer = ProductoAdminDetailSerializer(producto)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
-        return success_response(
-            data={"id": producto_id},
-            mensaje="Producto creado correctamente",
-            status=status.HTTP_201_CREATED,
-        )
+from .serializers import ProductoUpdateSerializer
+from ..application.use_cases import ActualizarProductoAdminUseCase
+
+class ProductoUpdateView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def put(self, request, id_producto):
+        tienda = resolver_tienda(request, exigir_propietario=True)
+        serializer = ProductoUpdateSerializer(data=request.data, partial=True)
+        
+        if serializer.is_valid():
+            caso_uso = ActualizarProductoAdminUseCase()
+            producto = caso_uso.ejecutar(tienda, id_producto, serializer.validated_data)
+            
+            return Response(
+                {
+                    "mensaje": "Producto actualizado con éxito", 
+                    "id_producto": producto.id_producto
+                },
+                status=status.HTTP_200_OK
+            )
+            
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

@@ -5,6 +5,7 @@ import { formatPrice, type Product } from '../data/mockData';
 import { Badge, Breadcrumb, Alert, Icon } from '../components/ui';
 import { useCart } from '../context/CartContext';
 import { ProductCard } from '../components/store/ProductCard';
+import { ProductAttributes } from '../components/store/ProductAttributes';
 import { useStorefrontTemplate } from '../hooks/useStorefrontTemplate';
 import {
   fetchPublicProductDetail,
@@ -350,6 +351,8 @@ export default function ProductDetail() {
                 {product.description}
               </p>
 
+              <ProductAttributes slug={product.id} />
+
               {/* VARIANTES */}
               {Object.entries(product.attributes).map(([attrName, values]) => (
                 <div key={attrName} className="border-t border-white/10 mt-7 pt-6">
@@ -637,6 +640,8 @@ export default function ProductDetail() {
               <p className="mt-6 max-w-xl text-[14px] leading-7 text-[#716b68]">
                 {product.description}
               </p>
+
+              <ProductAttributes slug={product.id} />
 
               {/* Variantes */}
               {Object.entries(product.attributes).map(([attrName, values]) => (
@@ -1255,6 +1260,8 @@ export default function ProductDetail() {
               {product.description}
             </p>
           </div>
+
+          <ProductAttributes slug={product.id} />
 
           {/* =================================================
               ENTREGA

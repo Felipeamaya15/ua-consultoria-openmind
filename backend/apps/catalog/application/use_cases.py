@@ -6,14 +6,17 @@ from apps.catalog.infrastructure.repositories import ProductRepository
 from apps.core.models import Producto
 from apps.core.infrastructure.mongo_client import get_mongo_db
 from bson import ObjectId
+from django.shortcuts import get_object_or_404
 
 class ListPublicProductsUseCase:
 
     def __init__(self, repository: ProductRepository):
         self.repository = repository
 
-    def execute(self, tienda_id: str) -> List[Dict[str, Any]]:
-        return self.repository.list_by_store(tienda_id, activo=True)
+    def execute(
+        self, tienda_id: str, atributos: Optional[Dict[str, List[str]]] = None
+    ) -> List[Dict[str, Any]]:
+        return self.repository.list_by_store(tienda_id, activo=True, atributos=atributos)
 
 class GetPublicProductDetailUseCase:
     """Obtiene el detalle de un producto activo, identificado por su slug."""
@@ -64,7 +67,6 @@ class GetPublicProductAttributesUseCase:
                 if valor is not None and valor not in entry["valores"]:
                     entry["valores"].append(valor)
         return list(agrupados.values())
-
 class SoftDeleteProductUseCase:
     def execute(self, id_producto: int, tienda_id: str) -> dict:
         # 1. Soft Delete en PostgreSQL
@@ -121,3 +123,26 @@ class CreateProductUseCase:
             sufijo += 1
             slug = f"{base_slug}-{sufijo}"
         return slug
+
+class CrearProductoUseCase:
+    def ejecutar(self, tienda, datos_validados):
+        producto = Producto.objects.create(
+            id_tienda=tienda,
+            **datos_validados
+        )
+        return producto
+
+class ObtenerProductoAdminUseCase:
+    def ejecutar(self, tienda, id_producto):
+        producto = get_object_or_404(Producto, id_producto=id_producto, id_tienda=tienda)
+        return producto
+
+class ActualizarProductoAdminUseCase:
+    def ejecutar(self, tienda, id_producto, datos_actualizados):
+        producto = get_object_or_404(Producto, id_producto=id_producto, id_tienda=tienda)
+        
+        for campo, valor in datos_actualizados.items():
+            setattr(producto, campo, valor)
+            
+        producto.save()
+        return producto

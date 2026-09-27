@@ -23,4 +23,5 @@ urlpatterns = [
     path('api/catalog/', include('apps.catalog.urls')),
     path('api/', include('apps.core.urls')),  
     path('api/visual-config/', include('apps.visual_config.urls')),
+    path('api/landing/', include('apps.landing.urls')),
 ]

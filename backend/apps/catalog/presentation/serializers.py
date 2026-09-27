@@ -1,7 +1,7 @@
 from rest_framework import serializers
 # CAMBIO: Importamos el validador de Base64 que creamos para MongoDB
 from apps.core.domain.validators import validate_base64_image
-
+from apps.core.models import Producto
 
 class ProductPublicListItemSerializer(serializers.Serializer):
     id = serializers.CharField(source="_id")
