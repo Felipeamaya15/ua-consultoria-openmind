@@ -1,18 +1,25 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 
-import { mockProducts, formatPrice } from '../data/mockData';
+import { formatPrice, type Product } from '../data/mockData';
 import { Badge, Breadcrumb, Alert, Icon } from '../components/ui';
 import { useCart } from '../context/CartContext';
 import { ProductCard } from '../components/store/ProductCard';
 import { useStorefrontTemplate } from '../hooks/useStorefrontTemplate';
+import {
+  fetchPublicProductDetail,
+  fetchPublicProducts,
+} from '../services/catalogService';
 
 export default function ProductDetail() {
   const { id } = useParams();
   const { addItem, items } = useCart();
   const { route, isMinimal, isVisual, isCatalog } = useStorefrontTemplate();
 
-  const product = mockProducts.find((p) => p.id === id);
+  const [product, setProduct] = useState<Product | null>(null);
+  const [related, setRelated] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [notFound, setNotFound] = useState(false);
 
   const [selectedAttrs, setSelectedAttrs] = useState<Record<string, string>>({});
   const [qty, setQty] = useState(1);
@@ -24,14 +31,90 @@ export default function ProductDetail() {
     setQty(1);
     setActiveImg(0);
     setAdded(false);
+    setLoading(true);
+    setNotFound(false);
+    setProduct(null);
+
+    if (!id) {
+      setNotFound(true);
+      setLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+
+    fetchPublicProductDetail(id)
+      .then((data) => {
+        if (cancelled) return;
+
+        if (!data) {
+          setNotFound(true);
+          setLoading(false);
+          return;
+        }
+
+        setProduct(data);
+        setLoading(false);
+
+        fetchPublicProducts()
+          .then((all) => {
+            if (cancelled) return;
+
+            setRelated(
+              all
+                .filter(
+                  (candidate) =>
+                    candidate.category === data.category &&
+                    candidate.id !== data.id,
+                )
+                .slice(0, 4),
+            );
+          })
+          .catch(() => {
+            // Los relacionados son un extra: si fallan, no bloquean la vista.
+          });
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setNotFound(true);
+          setLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, [id]);
+
+  /*
+   * ==========================================================
+   * CARGANDO
+   * ==========================================================
+   */
+  if (loading) {
+    return (
+      <div
+        className={
+          isCatalog
+            ? 'max-w-[1160px] mx-auto px-5 py-24 text-center text-white'
+            : isMinimal
+              ? 'max-w-6xl mx-auto px-4 md:px-8 py-20 text-center'
+              : 'max-w-7xl mx-auto px-4 py-16 text-center'
+        }
+      >
+        <p className="text-sm text-[var(--muted-foreground)]">
+          Cargando producto...
+        </p>
+      </div>
+    );
+  }
 
   /*
    * ==========================================================
    * PRODUCTO NO ENCONTRADO
    * ==========================================================
    */
-  if (!product) {
+  if (!product || notFound) {
     return (
       <div
         className={
@@ -60,7 +143,6 @@ export default function ProductDetail() {
       </div>
     );
   }
-
   /*
    * ==========================================================
    * VARIANTE SELECCIONADA
@@ -160,13 +242,7 @@ export default function ProductDetail() {
     setAdded(true);
     };
 
-  const related = mockProducts
-    .filter(
-      (relatedProduct) =>
-        relatedProduct.category === product.category &&
-        relatedProduct.id !== product.id,
-    )
-    .slice(0, 4);
+
 
 
   /*

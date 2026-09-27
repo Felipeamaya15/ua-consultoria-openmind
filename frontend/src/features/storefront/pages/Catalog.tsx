@@ -1,10 +1,11 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 
-import { mockProducts, categories } from '../data/mockData';
 import { ProductCard } from '../components/store/ProductCard';
 import { Pagination, EmptyState, Icon } from '../components/ui';
 import { useStorefrontTemplate } from '../hooks/useStorefrontTemplate';
+import type { Product } from '../data/mockData';
+import { fetchPublicProducts } from '../services/catalogService';
 
 const SORT_OPTIONS = [
   {
@@ -27,6 +28,40 @@ const SORT_OPTIONS = [
 
 export default function Catalog() {
   const { isMinimal, isVisual, isCatalog } = useStorefrontTemplate();
+
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    fetchPublicProducts()
+      .then((data) => {
+        if (!cancelled) {
+          setProducts(data);
+          setLoading(false);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setLoadError(true);
+          setLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const categories = useMemo(() => {
+    const unique = Array.from(
+      new Set(products.map((product) => product.category)),
+    );
+
+    return ['Todos', ...unique];
+  }, [products]);
 
   const [params, setParams] = useSearchParams();
 
@@ -63,7 +98,7 @@ export default function Catalog() {
   const PAGE_SIZE = 12;
 
   const filtered = useMemo(() => {
-    let list = mockProducts.filter(
+    let list = products.filter(
       (product) => product.status === 'active',
     );
 
@@ -142,6 +177,7 @@ export default function Catalog() {
 
     return list;
   }, [
+    products,
     search,
     category,
     sort,
@@ -169,6 +205,24 @@ export default function Catalog() {
     setPage(1);
   };
 
+
+  if (loading) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 py-20 text-center text-sm text-[var(--muted-foreground)]">
+        Cargando catálogo...
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 py-20 text-center">
+        <p className="text-sm text-[var(--muted-foreground)]">
+          No pudimos cargar el catálogo. Intenta recargar la página.
+        </p>
+      </div>
+    );
+  }
 
   /*
    * ==========================================================

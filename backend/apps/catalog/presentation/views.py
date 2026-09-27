@@ -5,10 +5,9 @@ from rest_framework import status
 from apps.core.presentation.responses import success_response, error_response
 from apps.core.infrastructure.tenant import resolver_tienda_id
 from apps.catalog.infrastructure.repositories import ProductRepository
-from apps.catalog.application.use_cases import ListPublicProductsUseCase , GetPublicProductDetailUseCase,GetPublicProductAttributesUseCase
+from apps.catalog.application.use_cases import ListPublicProductsUseCase, GetPublicProductDetailUseCase, GetPublicProductAttributesUseCase, CreateProductUseCase
 from apps.catalog.application.use_cases import SoftDeleteProductUseCase
-from .serializers import ProductPublicListItemSerializer, ProductPublicDetailSerializer, ProductPublicAttributesSerializer
-from apps.core.models import Tienda
+from .serializers import ProductPublicListItemSerializer, ProductPublicDetailSerializer, ProductPublicAttributesSerializer, ProductCreateSerializer
 from rest_framework.permissions import IsAuthenticated
 
 
@@ -109,3 +108,24 @@ class ProductDeleteAPIView(APIView):
                 codigo="ERROR_INTERNO", 
                 status=500
             )
+
+
+class ProductCreateAPIView(APIView):
+    """Crea un producto nuevo en el catálogo de la tienda."""
+    # TODO: reemplazar por autenticación real del emprendedor cuando exista login en el backend.
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        tienda_id = resolver_tienda_id(request)
+
+        serializer = ProductCreateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        use_case = CreateProductUseCase(ProductRepository())
+        producto_id = use_case.execute(tienda_id, serializer.validated_data)
+
+        return success_response(
+            data={"id": producto_id},
+            mensaje="Producto creado correctamente",
+            status=status.HTTP_201_CREATED,
+        )

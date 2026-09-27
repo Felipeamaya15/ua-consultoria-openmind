@@ -1,5 +1,7 @@
 from typing import List, Dict, Any, Optional
 
+from django.utils.text import slugify
+
 from apps.catalog.infrastructure.repositories import ProductRepository
 from apps.core.models import Producto
 from apps.core.infrastructure.mongo_client import get_mongo_db
@@ -88,3 +90,34 @@ class SoftDeleteProductUseCase:
         )
 
         return {"exito": True, "mensaje": "Producto eliminado lógicamente de forma correcta."}
+    
+class CreateProductUseCase:
+    """Crea un producto nuevo en el catálogo de la tienda (RF-03.4 / tarea de creación)."""
+
+    def __init__(self, repository: ProductRepository):
+        self.repository = repository
+
+    def execute(self, tienda_id: str, data: Dict[str, Any]) -> str:
+        slug = self._slug_disponible(tienda_id, slugify(data["nombre"]))
+
+        producto = {
+            "nombre": data["nombre"],
+            "slug": slug,
+            "descripcion": data.get("descripcion", ""),
+            "categoria": data["categoria"],
+            "activo": True,
+            "imagenes": data.get("imagenes", []),
+            "atributos_generales": data.get("atributos_generales", []),
+            "variantes": data["variantes"],
+            "seo": data.get("seo", {}),
+        }
+
+        return self.repository.create(tienda_id, producto)
+
+    def _slug_disponible(self, tienda_id: str, base_slug: str) -> str:
+        slug = base_slug or "producto"
+        sufijo = 1
+        while self.repository.get_by_slug(tienda_id, slug):
+            sufijo += 1
+            slug = f"{base_slug}-{sufijo}"
+        return slug
