@@ -59,12 +59,56 @@ const templateOptions = TEMPLATES.map((template) => ({
 export default function Design() {
   const {
     config,
+    setConfig,
     updateTemplate,
     previewTemplate,
     setPreviewTemplate,
   } = useAdmin()
 
   const [saved, setSaved] = useState(false)
+  const [colorsSaved, setColorsSaved] = useState(false)
+  const activeTemplate = previewTemplate ?? config.template
+  const activeTheme =
+    config.themeEditor?.[activeTemplate] ?? {
+      primaryColor: config.primaryColor,
+      secondaryColor: config.secondaryColor,
+      accentColor: config.accentColor,
+      paletteName: "Original",
+      images: {},
+    }
+
+  const palettes = [
+    { name: "Original", primaryColor: "#1a3a6b", secondaryColor: "#eef1f8", accentColor: "#e04b1a" },
+    { name: "Oceano", primaryColor: "#2563eb", secondaryColor: "#eff6ff", accentColor: "#0ea5e9" },
+    { name: "Bosque", primaryColor: "#15803d", secondaryColor: "#f0fdf4", accentColor: "#84cc16" },
+    { name: "Grafito", primaryColor: "#1f2937", secondaryColor: "#f3f4f6", accentColor: "#f97316" },
+  ]
+
+  const updateColors = (
+    patch: Partial<typeof activeTheme>,
+  ) => {
+    const nextTheme = {
+      ...activeTheme,
+      ...patch,
+      images: activeTheme.images,
+    }
+
+    const ok = setConfig({
+      ...config,
+      primaryColor: nextTheme.primaryColor,
+      secondaryColor: nextTheme.secondaryColor,
+      accentColor: nextTheme.accentColor,
+      themeEditor: {
+        ...config.themeEditor,
+        [activeTemplate]: nextTheme,
+      },
+    })
+
+    if (ok) {
+      setColorsSaved(true)
+      setTimeout(() => setColorsSaved(false), 1800)
+    }
+  }
 
   const handleSave = () => {
     if (previewTemplate) updateTemplate(previewTemplate)
@@ -92,6 +136,85 @@ export default function Design() {
           Plantilla seleccionada. El botón Ver tienda abrirá su ruta.
         </Alert>
       )}
+      {colorsSaved && (
+        <Alert variant="success">
+          Colores guardados para la plantilla seleccionada.
+        </Alert>
+      )}
+
+      <div className="bg-white border border-[var(--border)] rounded-2xl p-5">
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-5">
+          <div>
+            <h2 className="font-semibold">
+              Colores de la tienda
+            </h2>
+            <p className="text-xs text-[var(--muted-foreground)] mt-1">
+              Ajusta la paleta usada por botones, acentos y fondos de apoyo.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <span className="w-7 h-7 rounded-full border border-[var(--border)]" style={{ background: activeTheme.primaryColor }} />
+            <span className="w-7 h-7 rounded-full border border-[var(--border)]" style={{ background: activeTheme.secondaryColor }} />
+            <span className="w-7 h-7 rounded-full border border-[var(--border)]" style={{ background: activeTheme.accentColor }} />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-5">
+          {palettes.map((palette) => (
+            <button
+              key={palette.name}
+              type="button"
+              onClick={() => updateColors({
+                ...palette,
+                paletteName: palette.name,
+              })}
+              className={`rounded-xl border p-2 text-left transition-colors ${
+                activeTheme.paletteName === palette.name
+                  ? "border-[var(--primary)] ring-2 ring-[var(--primary)]/15"
+                  : "border-[var(--border)] hover:border-[var(--muted-foreground)]"
+              }`}
+            >
+              <div className="flex gap-1 mb-2">
+                <span className="h-7 flex-1 rounded" style={{ background: palette.primaryColor }} />
+                <span className="h-7 flex-1 rounded" style={{ background: palette.secondaryColor }} />
+                <span className="h-7 flex-1 rounded" style={{ background: palette.accentColor }} />
+              </div>
+              <span className="text-xs font-semibold">
+                {palette.name}
+              </span>
+            </button>
+          ))}
+        </div>
+
+        <div className="grid sm:grid-cols-3 gap-3">
+          {[
+            ["Principal", "primaryColor"],
+            ["Secundario", "secondaryColor"],
+            ["Acento", "accentColor"],
+          ].map(([label, key]) => (
+            <label
+              key={key}
+              className="flex items-center justify-between gap-3 rounded-xl border border-[var(--border)] px-3 py-2"
+            >
+              <span className="text-sm">{label}</span>
+              <input
+                type="color"
+                value={activeTheme[key as "primaryColor" | "secondaryColor" | "accentColor"]}
+                onChange={(event) =>
+                  updateColors({
+                    paletteName: "Personalizada",
+                    [key]: event.target.value,
+                  })
+                }
+                className="h-9 w-14 cursor-pointer rounded border border-[var(--border)] bg-white"
+              />
+            </label>
+          ))}
+        </div>
+      </div>
+
+
 
       <div>
         <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 mb-4">
