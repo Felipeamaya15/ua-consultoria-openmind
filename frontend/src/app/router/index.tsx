@@ -1,6 +1,7 @@
 import { createBrowserRouter } from 'react-router-dom';
 import { LandingPage } from '../../features/landing/pages/LandingPage';
 import { CheckoutSummaryPage } from '../../features/checkout/pages/CheckoutSummaryPage';
+import { LinkifyConfigPage } from '../../features/integrations/pages/LinkifyConfigPage';
 import { adminRoute } from '../../features/admin/routes';
 import {
   createBrowserRouter,
@@ -204,6 +205,8 @@ export const router = createBrowserRouter([
   {
     path: '/checkout/resumen',
     element: <CheckoutSummaryPage />,
+    path: '/integraciones/linkify',
+    element: <LinkifyConfigPage />,
   }
 ]);
     element: <Navigate to="/plantilla/1/catalogo" replace />,
