@@ -7,7 +7,7 @@ export function VisualHeader() {
   const { route } = useStorefrontTemplate();
 
   return (
-    <header className="bg-white border-t-4 border-[#111111] border-b border-black/10">
+       <header className="bg-white border-t-4 border-[var(--primary)] border-b border-black/10">
       <div className="max-w-6xl mx-auto px-5 min-h-16 flex items-center justify-between gap-5">
 
         <Link

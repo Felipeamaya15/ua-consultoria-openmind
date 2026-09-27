@@ -20,7 +20,7 @@ function MinimalCartIcon({ count }: { count: number }) {
       </svg>
 
       {count > 0 && (
-        <span className="absolute -top-2 -right-2 min-w-4 h-4 px-1 rounded-full bg-white text-[#17213b] text-[9px] font-bold flex items-center justify-center">
+        <span className="absolute -top-2 -right-2 min-w-4 h-4 px-1 rounded-full bg-white text-[var(--primary)] text-[9px] font-bold flex items-center justify-center">
           {count}
         </span>
       )}
@@ -38,7 +38,7 @@ export function MinimalHeader() {
         {/* Nombre */}
         <Link
           to="."
-          className="font-semibold text-[#17213b] whitespace-nowrap"
+          className="font-semibold text-[var(--primary)] whitespace-nowrap"
         >
           Mi Tienda.
         </Link>
@@ -50,21 +50,21 @@ export function MinimalHeader() {
         >
           <Link
             to="."
-            className="px-5 py-2 rounded-full text-xs font-medium text-gray-600 hover:bg-white hover:text-[#17213b] transition-colors"
+            className="px-5 py-2 rounded-full text-xs font-medium text-gray-600 hover:bg-white hover:text-[var(--primary)] transition-colors"
           >
             Inicio
           </Link>
 
           <Link
             to="catalogo"
-            className="px-5 py-2 rounded-full text-xs font-medium text-gray-600 hover:bg-white hover:text-[#17213b] transition-colors"
+            className="px-5 py-2 rounded-full text-xs font-medium text-gray-600 hover:bg-white hover:text-[var(--primary)] transition-colors"
           >
             Catálogo
           </Link>
 
           <Link
             to="seguimiento"
-            className="px-5 py-2 rounded-full text-xs font-medium text-gray-600 hover:bg-white hover:text-[#17213b] transition-colors"
+            className="px-5 py-2 rounded-full text-xs font-medium text-gray-600 hover:bg-white hover:text-[var(--primary)] transition-colors"
           >
             Seguimiento
           </Link>
@@ -74,14 +74,14 @@ export function MinimalHeader() {
         <div className="flex items-center gap-2 md:gap-4">
           <Link
             to="ingresar"
-            className="hidden sm:block text-xs font-medium text-[#17213b]"
+            className="hidden sm:block text-xs font-medium text-[var(--primary)]"
           >
             Iniciar Sesión
           </Link>
 
           <Link
             to="ingresar"
-            className="hidden md:block px-4 py-2 rounded-full border border-gray-200 text-xs font-medium text-[#17213b] hover:bg-gray-50 transition-colors"
+            className="hidden md:block px-4 py-2 rounded-full border border-gray-200 text-xs font-medium text-[var(--primary)] hover:bg-gray-50 transition-colors"
           >
             Registrarse
           </Link>
@@ -89,7 +89,7 @@ export function MinimalHeader() {
           <Link
             to="carrito"
             aria-label={`Ver carrito (${count} productos)`}
-            className="w-10 h-10 rounded-full bg-[#17213b] text-white flex items-center justify-center hover:opacity-90 transition-opacity"
+            className="w-10 h-10 rounded-full bg-[var(--primary)] text-white flex items-center justify-center hover:opacity-90 transition-opacity"
           >
             <MinimalCartIcon count={count} />
           </Link>

@@ -5,7 +5,10 @@ from rest_framework.views import APIView
 from apps.core.infrastructure.tenant import resolver_tienda
 from apps.core.presentation.responses import success_response
 from apps.visual_config.models import ConfiguracionVisual
-from apps.visual_config.serializers import PlantillaDisponibleSerializer
+from apps.visual_config.serializers import (
+    PlantillaDisponibleSerializer,
+    PlantillaSeleccionadaSerializer,
+)
 
 
 PLANTILLAS_DISPONIBLES = [
@@ -102,5 +105,31 @@ class LogoNegocioAPIView(APIView):
                 "logo_negocio": logo_negocio,
             },
             mensaje="Logo del negocio obtenido correctamente",
+class PlantillaSeleccionadaAPIView(APIView):
+    def put(self, request):
+        tienda = resolver_tienda(
+            request,
+            exigir_propietario=True,
+        )
+
+        serializer = PlantillaSeleccionadaSerializer(
+            data=request.data
+        )
+        serializer.is_valid(raise_exception=True)
+
+        configuracion, _ = ConfiguracionVisual.objects.get_or_create(
+            tienda=tienda
+        )
+
+        configuracion.plantilla_seleccionada = (
+            serializer.validated_data['plantilla_seleccionada']
+        )
+        configuracion.save(
+            update_fields=['plantilla_seleccionada']
+        )
+
+        return success_response(
+            data=PlantillaSeleccionadaSerializer(configuracion).data,
+            mensaje="Plantilla seleccionada guardada correctamente",
             status=status.HTTP_200_OK,
         )
