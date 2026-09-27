@@ -89,3 +89,11 @@ class SoftDeleteProductUseCase:
         )
 
         return {"exito": True, "mensaje": "Producto eliminado lógicamente de forma correcta."}
+
+class CrearProductoUseCase:
+    def ejecutar(self, tienda, datos_validados):
+        producto = Producto.objects.create(
+            id_tienda=tienda,
+            **datos_validados
+        )
+        return producto

@@ -1,7 +1,7 @@
 from rest_framework import serializers
 # CAMBIO: Importamos el validador de Base64 que creamos para MongoDB
 from apps.core.domain.validators import validate_base64_image
-
+from apps.core.models import Producto
 
 class ProductPublicListItemSerializer(serializers.Serializer):
     id = serializers.CharField(source="_id")
@@ -100,4 +100,14 @@ class ProductImageSerializer(serializers.Serializer):
             return value
             
         validate_base64_image(value, max_size_mb=2)
+        return value
+
+class ProductoCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Producto
+        fields = ['nombre', 'precio', 'stock', 'activo']
+
+    def validate_precio(self, value):
+        if value < 0:
+            raise serializers.ValidationError("El precio no puede ser negativo.")
         return value
