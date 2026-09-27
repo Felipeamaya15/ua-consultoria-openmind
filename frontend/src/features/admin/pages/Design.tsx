@@ -51,6 +51,11 @@ const TEMPLATES: {
   },
 ]
 
+const templateOptions = TEMPLATES.map((template) => ({
+  value: template.id,
+  label: template.name,
+}))
+
 export default function Design() {
   const {
     config,
@@ -89,9 +94,40 @@ export default function Design() {
       )}
 
       <div>
-        <h2 className="font-semibold mb-4">
-          Selecciona una plantilla
-        </h2>
+        <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 mb-4">
+          <div>
+            <h2 className="font-semibold">
+              Selecciona una plantilla
+            </h2>
+
+            <p className="text-xs text-[var(--muted-foreground)] mt-1">
+              Puedes elegir desde el selector o revisar cada propuesta visual.
+            </p>
+          </div>
+
+          <label className="w-full sm:w-80">
+            <span className="text-xs font-medium text-[var(--muted-foreground)]">
+              Plantilla activa
+            </span>
+
+            <select
+              value={previewTemplate ?? config.template}
+              onChange={(event) =>
+                setPreviewTemplate(event.target.value as TemplateId)
+              }
+              className="mt-1 h-10 w-full rounded-lg border border-[var(--border)] bg-white px-3 text-sm outline-none focus:border-[var(--primary)]"
+            >
+              {templateOptions.map((option) => (
+                <option
+                  key={option.value}
+                  value={option.value}
+                >
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {TEMPLATES.map((tpl) => {

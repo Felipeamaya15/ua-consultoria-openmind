@@ -42,44 +42,147 @@ export function ProductCard({
     (variant) => variant.available && variant.stock > 0,
   );
 
+  const attributeNames = Object.keys(product.attributes);
+
   const requiresVariantSelection =
-    Object.keys(product.attributes).length > 0;
+    attributeNames.length > 0;
+
+  const [selectedAttributes, setSelectedAttributes] = useState<
+    Record<string, string>
+  >(() => ({
+    ...Object.fromEntries(
+      attributeNames.map((name) => [
+        name,
+        product.attributes[name]?.[0] ?? '',
+      ]),
+    ),
+    ...(defaultVariant?.attributes ?? {}),
+  }));
+
+  const selectedVariant =
+    product.variants.find((variant) =>
+      attributeNames.every(
+        (name) =>
+          !selectedAttributes[name] ||
+          variant.attributes[name] === selectedAttributes[name],
+      ),
+    ) ?? defaultVariant;
+
+  const selectedStock = selectedVariant?.stock ?? 0;
+
+  const canBuySelectedVariant =
+    !!selectedVariant &&
+    selectedVariant.available &&
+    selectedVariant.stock > 0;
 
   const quantity =
     items.find(
       (item) =>
         item.productId === product.id &&
-        item.variantId === defaultVariant?.id,
+        item.variantId === selectedVariant?.id,
     )?.quantity ?? 0;
 
   const atLimit =
-    !!defaultVariant && quantity >= defaultVariant.stock;
+    !!selectedVariant && quantity >= selectedVariant.stock;
 
   const productPath = route(`producto/${product.id}`);
 
   const handleAddToCart = () => {
-    if (requiresVariantSelection) {
-      return;
-    }
-
-    if (!defaultVariant || !inStock || atLimit) {
+    if (!selectedVariant || !canBuySelectedVariant || atLimit) {
       return;
     }
 
     addItem({
       productId: product.id,
-      variantId: defaultVariant.id,
+      variantId: selectedVariant.id,
       name: product.name,
       image: product.images[0],
-      price: defaultVariant.price,
-      comparePrice: defaultVariant.comparePrice,
+      price: selectedVariant.price,
+      comparePrice: selectedVariant.comparePrice,
       quantity: 1,
-      attributes: defaultVariant.attributes,
-      sku: defaultVariant.sku,
-      maxStock: defaultVariant.stock,
+      attributes: selectedVariant.attributes,
+      sku: selectedVariant.sku,
+      maxStock: selectedVariant.stock,
     });
 
     setAdded(true);
+  };
+
+  const hasAvailableVariantFor = (
+    name: string,
+    value: string,
+  ) =>
+    product.variants.some(
+      (variant) =>
+        variant.available &&
+        variant.stock > 0 &&
+        attributeNames.every((attribute) =>
+          attribute === name
+            ? variant.attributes[attribute] === value
+            : !selectedAttributes[attribute] ||
+              variant.attributes[attribute] ===
+                selectedAttributes[attribute],
+        ),
+    );
+
+  const renderVariantSelector = (
+    mode: 'dark' | 'light' | 'visual' = 'light',
+  ) => {
+    if (!requiresVariantSelection) return null;
+
+    const selectClass =
+      mode === 'dark'
+        ? 'border-white/10 bg-[#202022] text-white'
+        : mode === 'visual'
+          ? 'border-[#d8d4d1] bg-white text-[#111111]'
+          : 'border-[var(--border)] bg-white text-[var(--foreground)]';
+
+    const mutedClass =
+      mode === 'dark'
+        ? 'text-white/50'
+        : mode === 'visual'
+          ? 'text-[#77716f]'
+          : 'text-[var(--muted-foreground)]';
+
+    return (
+      <div className="mt-3 grid gap-2">
+        <div className="grid gap-2">
+          {attributeNames.map((name) => (
+            <label
+              key={name}
+              className={`grid gap-1 text-[10px] font-semibold uppercase tracking-[0.08em] ${mutedClass}`}
+            >
+              <span>{name}</span>
+              <select
+                value={selectedAttributes[name] ?? ''}
+                onChange={(event) => {
+                  setSelectedAttributes((current) => ({
+                    ...current,
+                    [name]: event.target.value,
+                  }));
+                  setAdded(false);
+                }}
+                className={`h-9 rounded-lg border px-2 text-xs normal-case tracking-normal outline-none ${selectClass}`}
+              >
+                {(product.attributes[name] ?? []).map((value) => (
+                  <option
+                    key={value}
+                    value={value}
+                    disabled={!hasAvailableVariantFor(name, value)}
+                  >
+                    {value}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ))}
+        </div>
+        <p className={`text-[10px] ${mutedClass}`}>
+          SKU: {selectedVariant?.sku ?? 'No disponible'} · Stock:{' '}
+          {selectedStock} uds
+        </p>
+      </div>
+    );
   };
 
 
@@ -159,25 +262,19 @@ export function ProductCard({
             )}
           </div>
 
-          {inStock &&
-            (requiresVariantSelection ? (
-              <Link
-                to={productPath}
-                className="mt-4 flex h-10 w-full items-center justify-center rounded-[9px] bg-[#1683ff] text-[11px] font-bold text-white transition-colors hover:bg-[#3194f5]"
-              >
-                Elegir opciones
-              </Link>
-            ) : (
-              <button
-                type="button"
-                onClick={handleAddToCart}
-                disabled={atLimit}
-                aria-label={`Agregar ${product.name} al carrito`}
-                className="mt-4 h-10 w-full rounded-[9px] bg-[#1683ff] text-[11px] font-bold text-white transition-colors hover:bg-[#3194f5] disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                {atLimit ? 'Máximo disponible' : added ? 'Agregado ✓' : 'Comprar'}
-              </button>
-            ))}
+          {renderVariantSelector()}
+
+          {inStock && (
+            <button
+              type="button"
+              onClick={handleAddToCart}
+              disabled={!canBuySelectedVariant || atLimit}
+              aria-label={`Agregar ${product.name} al carrito`}
+              className="mt-4 h-10 w-full rounded-[9px] bg-[#1683ff] text-[11px] font-bold text-white transition-colors hover:bg-[#3194f5] disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              {atLimit ? 'Maximo disponible' : added ? 'Agregado' : 'Comprar'}
+            </button>
+          )}
 
           <span className="sr-only" role="status">
             {added ? `${product.name} agregado al carrito` : ''}
@@ -237,18 +334,23 @@ export function ProductCard({
             </div>
 
             {inStock ? (
-              <Link
-                to={productPath}
-                className="rounded-[8px] bg-[#1683ff] px-4 py-2.5 text-[10px] font-bold text-white hover:bg-[#3194f5]"
+              <button
+                type="button"
+                onClick={handleAddToCart}
+                disabled={!canBuySelectedVariant || atLimit}
+                aria-label={`Agregar ${product.name} al carrito`}
+                className="rounded-[8px] bg-[#1683ff] px-4 py-2.5 text-[10px] font-bold text-white hover:bg-[#3194f5] disabled:cursor-not-allowed disabled:opacity-40"
               >
-                Ver producto
-              </Link>
+                {atLimit ? 'Maximo' : added ? 'Agregado' : 'Agregar'}
+              </button>
             ) : (
               <span className="text-[9px] font-bold uppercase tracking-[0.1em] text-black/35">
                 Agotado
               </span>
             )}
           </div>
+
+          {renderVariantSelector()}
         </div>
       </article>
     );
@@ -312,30 +414,23 @@ export function ProductCard({
             </div>
 
             {inStock ? (
-              requiresVariantSelection ? (
-                <Link
-                  to={productPath}
-                  className="inline-flex h-9 flex-shrink-0 items-center justify-center rounded-[7px] bg-[#111111] px-4 text-[11px] font-semibold text-white transition-opacity hover:opacity-80"
-                >
-                  Comprar
-                </Link>
-              ) : (
-                <button
-                  type="button"
-                  onClick={handleAddToCart}
-                  disabled={atLimit}
-                  aria-label={`Agregar ${product.name} al carrito`}
-                  className="inline-flex h-9 flex-shrink-0 items-center justify-center rounded-[7px] bg-[#111111] px-4 text-[11px] font-semibold text-white transition-opacity hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-35"
-                >
-                  {atLimit ? 'Máximo' : added ? 'Agregado ✓' : 'Comprar'}
-                </button>
-              )
+              <button
+                type="button"
+                onClick={handleAddToCart}
+                disabled={!canBuySelectedVariant || atLimit}
+                aria-label={`Agregar ${product.name} al carrito`}
+                className="inline-flex h-9 flex-shrink-0 items-center justify-center rounded-[7px] bg-[#111111] px-4 text-[11px] font-semibold text-white transition-opacity hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-35"
+              >
+                {atLimit ? 'Maximo' : added ? 'Agregado' : 'Comprar'}
+              </button>
             ) : (
               <span className="text-[10px] font-semibold uppercase tracking-[0.1em] text-[#8b8582]">
                 Agotado
               </span>
             )}
           </div>
+
+          {renderVariantSelector('visual')}
 
           <span className="sr-only" role="status">
             {added ? `${product.name} agregado al carrito` : ''}
@@ -353,8 +448,7 @@ export function ProductCard({
 
   if (layout === 'list') {
     return (
-      <Link
-        to={productPath}
+      <article
         className={`
           flex gap-4
           bg-white
@@ -364,12 +458,13 @@ export function ProductCard({
           group
           ${
             isMinimal
-              ? 'rounded-[20px] hover:shadow-sm'
-              : 'rounded-xl hover:shadow-md'
+              ? 'rounded-[20px]'
+              : 'rounded-xl'
           }
         `}
       >
-        <div
+        <Link
+          to={productPath}
           className={`
             w-20 h-20
             overflow-hidden
@@ -392,7 +487,7 @@ export function ProductCard({
               transition-transform
             "
           />
-        </div>
+        </Link>
 
         <div className="flex-1 min-w-0">
           <p className="text-xs text-[var(--muted-foreground)]">
@@ -400,7 +495,9 @@ export function ProductCard({
           </p>
 
           <h3 className="font-semibold text-sm text-[var(--foreground)] truncate">
-            {product.name}
+            <Link to={productPath}>
+              {product.name}
+            </Link>
           </h3>
 
           <p className="text-xs text-[var(--muted-foreground)] line-clamp-1 mt-0.5">
@@ -418,6 +515,20 @@ export function ProductCard({
               </span>
             )}
           </div>
+
+          {renderVariantSelector()}
+
+          {inStock && (
+            <button
+              type="button"
+              onClick={handleAddToCart}
+              disabled={!canBuySelectedVariant || atLimit}
+              aria-label={`Agregar ${product.name} al carrito`}
+              className="mt-3 h-8 rounded-lg bg-[var(--primary)] px-4 text-xs font-semibold text-white transition-colors hover:bg-[#0f2a56] disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {atLimit ? 'Maximo disponible' : added ? 'Agregado' : 'Agregar al carrito'}
+            </button>
+          )}
         </div>
 
         {!inStock && (
@@ -428,7 +539,7 @@ export function ProductCard({
             Sin stock
           </Badge>
         )}
-      </Link>
+      </article>
     );
   }
 
@@ -621,60 +732,38 @@ export function ProductCard({
           )}
         </div>
 
-        {inStock &&
-          (requiresVariantSelection ? (
-            <Link
-              to={productPath}
-              className={`
-                w-full
-                font-semibold
-                bg-[var(--primary)]
-                text-white
-                hover:bg-[#0f2a56]
-                transition-colors
-                mt-1
-                flex
-                items-center
-                justify-center
-                ${
-                  isMinimal
-                    ? 'h-10 text-xs rounded-xl'
-                    : 'h-8 text-xs rounded-lg'
-                }
-              `}
-            >
-              Elegir opciones
-            </Link>
-          ) : (
-            <button
-              type="button"
-              onClick={handleAddToCart}
-              disabled={atLimit}
-              aria-label={`Agregar ${product.name} al carrito`}
-              className={`
-                w-full
-                font-semibold
-                bg-[var(--primary)]
-                text-white
-                hover:bg-[#0f2a56]
-                transition-colors
-                mt-1
-                disabled:opacity-50
-                disabled:cursor-not-allowed
-                ${
-                  isMinimal
-                    ? 'h-10 text-xs rounded-xl'
-                    : 'h-8 text-xs rounded-lg'
-                }
-              `}
-            >
-              {atLimit
-                ? 'Máximo disponible'
-                : added
-                  ? 'Agregado ✓'
-                  : 'Agregar al carrito'}
-            </button>
-          ))}
+        {renderVariantSelector()}
+
+        {inStock && (
+          <button
+            type="button"
+            onClick={handleAddToCart}
+            disabled={!canBuySelectedVariant || atLimit}
+            aria-label={`Agregar ${product.name} al carrito`}
+            className={`
+              w-full
+              font-semibold
+              bg-[var(--primary)]
+              text-white
+              hover:bg-[#0f2a56]
+              transition-colors
+              mt-1
+              disabled:opacity-50
+              disabled:cursor-not-allowed
+              ${
+                isMinimal
+                  ? 'h-10 text-xs rounded-xl'
+                  : 'h-8 text-xs rounded-lg'
+              }
+            `}
+          >
+            {atLimit
+              ? 'Maximo disponible'
+              : added
+                ? 'Agregado'
+                : 'Agregar al carrito'}
+          </button>
+        )}
 
         <span className="sr-only" role="status">
           {added
