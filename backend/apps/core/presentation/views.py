@@ -1,3 +1,5 @@
+# Vistas del módulo Core (PostgreSQL)
+# La lógica de variantes y catálogo fue migrada a apps/catalog (MongoDB)
 from django.db import transaction
 from rest_framework import generics, status
 from rest_framework.exceptions import NotFound
