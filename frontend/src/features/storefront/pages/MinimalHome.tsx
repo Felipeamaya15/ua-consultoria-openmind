@@ -114,7 +114,7 @@ export default function MinimalHome() {
                     </p>
 
                     <div className="flex items-center gap-1 mt-1">
-                      <span className="text-[10px] text-[#17213b]">
+                      <span className="text-[10px] text-[var(--primary)]">
                         ★★★★★
                       </span>
 
@@ -132,7 +132,7 @@ export default function MinimalHome() {
           {/* Título */}
           <div className="text-center">
             <h1 className="text-[72px] sm:text-[92px] md:text-[118px] leading-none tracking-[-0.08em] font-semibold text-[#151515]">
-              shop<span className="text-[#4f68ff]">.</span>
+              shop<span className="text-[var(--accent)]">.</span>
             </h1>
           </div>
 
@@ -170,7 +170,7 @@ export default function MinimalHome() {
               <button
                 type="submit"
                 aria-label="Buscar"
-                className="w-11 h-11 flex-shrink-0 rounded-full bg-[#17213b] text-white flex items-center justify-center hover:scale-105 transition-transform"
+                className="w-11 h-11 flex-shrink-0 rounded-full bg-[var(--primary)] text-white flex items-center justify-center hover:scale-105 transition-transform"
               >
                 <svg
                   className="w-4 h-4"
@@ -199,7 +199,7 @@ export default function MinimalHome() {
                 key={category}
                 type="button"
                 onClick={() => goToCategory(category)}
-                className="px-4 py-2 rounded-full bg-white border border-black/5 text-xs text-gray-600 hover:bg-[#17213b] hover:text-white transition-colors"
+                className="px-4 py-2 rounded-full bg-white border border-black/5 text-xs text-gray-600 hover:bg-[var(--primary)] hover:text-white transition-colors"
               >
                 {category}
               </button>
@@ -230,7 +230,7 @@ export default function MinimalHome() {
 
             <Link
               to="catalogo"
-              className="hidden sm:inline-flex text-sm text-[#17213b] hover:opacity-60 transition-opacity"
+              className="hidden sm:inline-flex text-sm text-[var(--primary)] hover:opacity-60 transition-opacity"
             >
               Ver todo →
             </Link>
@@ -269,7 +269,7 @@ export default function MinimalHome() {
                       </p>
                     </div>
 
-                    <span className="w-8 h-8 flex-shrink-0 rounded-full border border-gray-200 flex items-center justify-center text-[#17213b] group-hover:bg-[#17213b] group-hover:text-white transition-colors">
+                    <span className="w-8 h-8 flex-shrink-0 rounded-full border border-gray-200 flex items-center justify-center text-[var(--primary)] group-hover:bg-[var(--primary)] group-hover:text-white transition-colors">
                       →
                     </span>
 
@@ -282,7 +282,7 @@ export default function MinimalHome() {
 
           <Link
             to="catalogo"
-            className="sm:hidden inline-flex mt-5 text-sm text-[#17213b]"
+            className="sm:hidden inline-flex mt-5 text-sm text-[var(--primary)]"
           >
             Ver todo →
           </Link>
@@ -352,7 +352,7 @@ export default function MinimalHome() {
 
             <Link
               to="catalogo"
-              className="text-sm text-[#17213b] hover:opacity-60 transition-opacity"
+              className="text-sm text-[var(--primary)] hover:opacity-60 transition-opacity"
             >
               Ver catálogo →
             </Link>

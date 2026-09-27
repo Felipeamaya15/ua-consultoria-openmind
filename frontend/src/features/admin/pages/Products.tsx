@@ -8,6 +8,10 @@ const productStatus = (status: Product["status"]) => ({
   active: <Badge variant="success">Activo</Badge>, archived: <Badge variant="default">Archivado</Badge>, draft: <Badge variant="warning">Borrador</Badge>,
 })[status]
 const stockState = (stock: number) => stock === 0 ? { label: "Sin stock", color: "bg-red-500", badge: "error" as const } : stock <= 5 ? { label: "Stock bajo", color: "bg-amber-500", badge: "warning" as const } : { label: "Disponible", color: "bg-emerald-500", badge: "success" as const }
+const variantAttributes = (variant: ProductVariant) =>
+  Object.entries(variant.attributes)
+    .map(([name, value]) => `${name}: ${value}`)
+    .join(" · ") || "Sin atributos"
 
 export function ProductList() {
   const [search, setSearch] = useState("")
@@ -15,13 +19,13 @@ export function ProductList() {
   const products = config.products ?? mockProducts
   const filtered = products.filter((product) => `${product.name} ${product.category} ${product.tags.join(" ")}`.toLowerCase().includes(search.toLowerCase()))
 
-  // Lógica del Flujo Administrativo para Eliminar (SCRUM-231)
+  // Logica del Flujo Administrativo para Eliminar (SCRUM-231)
   const handleDeleteProduct = async (productId: string) => {
-    if (!window.confirm("¿Estás seguro de que deseas desactivar este producto? Dejará de ser visible en el catálogo, pero se mantendrá en tu historial de ventas.")) return;
-    
+    if (!window.confirm("Estas seguro de que deseas desactivar este producto? Dejara de ser visible en el catalogo, pero se mantendra en tu historial de ventas.")) return;
+
     try {
-      /* 
-       * INTEGRACIÓN API REAL: Descomentar esto cuando se conecte el frontend 100%
+      /*
+       * INTEGRACION API REAL: Descomentar esto cuando se conecte el frontend 100%
        *
        * const token = localStorage.getItem("token");
        * const response = await fetch(`http://localhost:8000/api/productos/${productId}/`, {
@@ -38,17 +42,70 @@ export function ProductList() {
       });
 
       if (success) {
-        alert("Producto eliminado lógicamente de forma correcta.");
+        alert("Producto eliminado logicamente de forma correcta.");
       }
     } catch (error) {
-      alert("Ocurrió un error al intentar eliminar el producto.");
+      alert("Ocurrio un error al intentar eliminar el producto.");
     }
   };
 
   return <div>
-    <div className="flex items-center justify-between flex-wrap gap-3 mb-5"><div><h2 className="font-semibold">Productos</h2><p className="text-xs text-[var(--muted-foreground)] mt-1">Gestiona catálogo, atributos, variantes, SKU e inventario.</p></div><Link to="/emprendedor/productos/nuevo"><Button variant="primary" size="sm">+ Nuevo producto</Button></Link></div>
-    <Input aria-label="Buscar productos" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Buscar por nombre, categoría o etiqueta…" className="max-w-md mb-4" />
-    <div className="bg-white border border-[var(--border)] rounded-xl overflow-x-auto"><table className="w-full min-w-[720px] text-sm"><thead><tr className="border-b border-[var(--border)] bg-[var(--muted)]">{["Producto", "Categoría", "Precio", "Stock", "Estado", "Acciones"].map((label) => <th key={label} className="px-4 py-3 text-left text-xs font-semibold text-[var(--muted-foreground)] uppercase tracking-wider">{label}</th>)}</tr></thead><tbody>{filtered.map((product) => { const stock = product.variants.reduce((sum, variant) => sum + variant.stock, 0); const state = stockState(stock); return <tr key={product.id} className="border-b border-[var(--border)] last:border-0 hover:bg-[var(--muted)]/30"><td className="px-4 py-3"><div className="flex items-center gap-3"><img src={product.images[0]} alt="" className="w-10 h-10 rounded-lg object-cover bg-[var(--muted)]" /><div><p className="font-medium">{product.name}</p><p className="text-xs text-[var(--muted-foreground)]">{product.variants.length} variantes · {product.variants[0]?.sku ?? "Sin SKU"}</p></div></div></td><td className="px-4 py-3 text-xs text-[var(--muted-foreground)]">{product.category}</td><td className="px-4 py-3 font-semibold">{formatPrice(product.basePrice)}</td><td className="px-4 py-3"><div className="min-w-28"><div className="flex justify-between text-xs mb-1"><span>{stock} uds</span><Badge variant={state.badge}>{state.label}</Badge></div><div className="h-1.5 bg-[var(--muted)] rounded-full overflow-hidden"><div className={`${state.color} h-full rounded-full`} style={{ width: `${Math.min(100, stock * 2)}%` }} /></div></div></td><td className="px-4 py-3">{productStatus(product.status)}</td><td className="px-4 py-3"><div className="flex items-center gap-3"><Link to={`/emprendedor/productos/${product.id}`} className="text-xs font-semibold text-[var(--primary)] hover:underline">Editar</Link><button onClick={() => handleDeleteProduct(product.id)} className="text-xs font-semibold text-[var(--error)] hover:underline">Eliminar</button></div></td></tr> })}</tbody></table>{filtered.length === 0 && <p className="py-12 text-center text-sm text-[var(--muted-foreground)]">No encontramos productos con esa búsqueda.</p>}</div>
+    <div className="flex items-center justify-between flex-wrap gap-3 mb-5">
+      <div>
+        <h2 className="font-semibold">Productos</h2>
+        <p className="text-xs text-[var(--muted-foreground)] mt-1">Gestiona catalogo, atributos, variantes, SKU e inventario.</p>
+      </div>
+      <Link to="/emprendedor/productos/nuevo"><Button variant="primary" size="sm">+ Nuevo producto</Button></Link>
+    </div>
+    <Input aria-label="Buscar productos" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Buscar por nombre, categoria o etiqueta..." className="max-w-md mb-4" />
+    <div className="bg-white border border-[var(--border)] rounded-xl overflow-x-auto">
+      <table className="w-full min-w-[860px] text-sm">
+        <thead>
+          <tr className="border-b border-[var(--border)] bg-[var(--muted)]">
+            {["Producto", "Variantes", "Categoria", "Precio", "Stock", "Estado", "Acciones"].map((label) => <th key={label} className="px-4 py-3 text-left text-xs font-semibold text-[var(--muted-foreground)] uppercase tracking-wider">{label}</th>)}
+          </tr>
+        </thead>
+        <tbody>
+          {filtered.map((product) => {
+            const stock = product.variants.reduce((sum, variant) => sum + variant.stock, 0)
+            const state = stockState(stock)
+
+            return <tr key={product.id} className="border-b border-[var(--border)] last:border-0 hover:bg-[var(--muted)]/30 align-top">
+              <td className="px-4 py-3">
+                <div className="flex items-center gap-3">
+                  <img src={product.images[0]} alt="" className="w-10 h-10 rounded-lg object-cover bg-[var(--muted)]" />
+                  <div>
+                    <p className="font-medium">{product.name}</p>
+                    <p className="text-xs text-[var(--muted-foreground)]">{product.variants.length} variantes</p>
+                  </div>
+                </div>
+              </td>
+              <td className="px-4 py-3">
+                <div className="grid gap-2 max-w-sm">
+                  {product.variants.map((variant) => {
+                    const variantState = stockState(variant.stock)
+
+                    return <div key={variant.id} className="rounded-lg border border-[var(--border)] bg-[var(--muted)]/30 px-3 py-2">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-mono text-xs font-semibold">{variant.sku}</span>
+                        <Badge variant={variantState.badge}>{variant.stock} uds</Badge>
+                      </div>
+                      <p className="mt-1 text-xs text-[var(--muted-foreground)]">{variantAttributes(variant)}</p>
+                    </div>
+                  })}
+                </div>
+              </td>
+              <td className="px-4 py-3 text-xs text-[var(--muted-foreground)]">{product.category}</td>
+              <td className="px-4 py-3 font-semibold">{formatPrice(product.basePrice)}</td>
+              <td className="px-4 py-3"><div className="min-w-28"><div className="flex justify-between text-xs mb-1"><span>{stock} uds</span><Badge variant={state.badge}>{state.label}</Badge></div><div className="h-1.5 bg-[var(--muted)] rounded-full overflow-hidden"><div className={`${state.color} h-full rounded-full`} style={{ width: `${Math.min(100, stock * 2)}%` }} /></div></div></td>
+              <td className="px-4 py-3">{productStatus(product.status)}</td>
+              <td className="px-4 py-3"><div className="flex items-center gap-3"><Link to={`/emprendedor/productos/${product.id}`} className="text-xs font-semibold text-[var(--primary)] hover:underline">Editar</Link><button onClick={() => handleDeleteProduct(product.id)} className="text-xs font-semibold text-[var(--error)] hover:underline">Eliminar</button></div></td>
+            </tr>
+          })}
+        </tbody>
+      </table>
+      {filtered.length === 0 && <p className="py-12 text-center text-sm text-[var(--muted-foreground)]">No encontramos productos con esa busqueda.</p>}
+    </div>
   </div>
 }
 
@@ -61,6 +118,7 @@ export function ProductForm() {
   const [product, setProduct] = useState<Product>({ ...initial, images: [...initial.images], variants: initial.variants.map((variant) => ({ ...variant, attributes: { ...variant.attributes } })), attributes: { ...initial.attributes }, tags: [...initial.tags] })
   const [error, setError] = useState("");
   const variants = product.variants; const attributeNames = Object.keys(product.attributes); const totalStock = useMemo(() => variants.reduce((sum, variant) => sum + Math.max(0, Number(variant.stock) || 0), 0), [variants])
+  const findDuplicatedSku = () => { const seen = new Set<string>(); for (const variant of product.variants) { const sku = variant.sku.trim().toUpperCase(); if (!sku) continue; if (seen.has(sku)) return sku; seen.add(sku); } const currentProductId = product.id; const usedByOtherProduct = new Set(products.filter((item) => item.id !== currentProductId).flatMap((item) => item.variants.map((variant) => variant.sku.trim().toUpperCase()).filter(Boolean))); return [...seen].find((sku) => usedByOtherProduct.has(sku)); }
   const setField = <K extends keyof Product>(key: K, value: Product[K]) => setProduct((current) => ({ ...current, [key]: value }))
   const updateVariant = (variantId: string, change: Partial<ProductVariant>) => setProduct((current) => ({ ...current, variants: current.variants.map((variant) => variant.id === variantId ? { ...variant, ...change } : variant) }))
   const updateAttribute = (name: string, values: string) => setProduct((current) => ({ ...current, attributes: { ...current.attributes, [name]: values.split(",").map((value) => value.trim()).filter(Boolean) } }))
@@ -68,7 +126,7 @@ export function ProductForm() {
   const renameAttribute = (oldName: string, newName: string) => { if (!newName.trim() || newName === oldName) return; if (product.attributes[newName]) { setError("Ya existe un atributo con ese nombre."); return; } setProduct((current) => { const attributes = { ...current.attributes }; const values = attributes[oldName]; delete attributes[oldName]; attributes[newName] = values; return { ...current, attributes, variants: current.variants.map((variant) => { const next = { ...variant.attributes, [newName]: variant.attributes[oldName] ?? values[0] ?? "" }; delete next[oldName]; return { ...variant, attributes: next } }) } }) }
   const addVariant = () => setProduct((current) => ({ ...current, variants: [...current.variants, { id: `v-${Date.now()}`, sku: `SKU-${current.variants.length + 1}`, attributes: Object.fromEntries(Object.entries(current.attributes).map(([name, values]) => [name, values[0] ?? ""])), price: current.basePrice, comparePrice: current.comparePrice, stock: 0, available: true }] }))
   const addImages = (files?: FileList | null) => { if (!files) return; if(Array.from(files).some(file => file.size > 1024 * 1024 || !["image/png","image/jpeg","image/webp"].includes(file.type))) {setError("Usa imágenes JPG, PNG o WebP de hasta 1 MB.");return;} Array.from(files).filter((file) => file.type.startsWith("image/")).forEach((file) => { const reader = new FileReader(); reader.onload = () => setProduct((current) => ({ ...current, images: [...current.images, String(reader.result)] })); reader.readAsDataURL(file) }) }
-  const save = () => { if (!product.name.trim()) { setError("Ingresa el nombre del producto."); setActiveTab("info"); return }; if(product.basePrice < 0 || product.variants.some(v => !v.sku.trim() || v.price < 0 || !Number.isInteger(v.stock) || v.stock < 0) || new Set(product.variants.map(v => v.sku.trim())).size !== product.variants.length) {setError("Revisa los precios, el stock entero y los SKU únicos de las variantes.");return;} const finalProduct = { ...product, basePrice: Number(product.basePrice) || 0, images: product.images.length ? product.images : ["https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=600&fit=crop&auto=format"] }; const exists = products.some((item) => item.id === finalProduct.id); const ok = setConfig({ ...config, products: exists ? products.map((item) => item.id === finalProduct.id ? finalProduct : item) : [...products, finalProduct] }); if(!ok) return; setSaved(true); setTimeout(() => navigate("/emprendedor/productos"), 800) }
+  const save = () => { if (!product.name.trim()) { setError("Ingresa el nombre del producto."); setActiveTab("info"); return }; const duplicatedSku = findDuplicatedSku(); if (duplicatedSku) { setError(`El SKU ${duplicatedSku} ya existe. Usa un SKU unico por variante.`); setActiveTab("variants"); return; } if(product.basePrice < 0 || product.variants.some(v => !v.sku.trim() || v.price < 0 || !Number.isInteger(v.stock) || v.stock < 0)) {setError("Revisa los precios, el stock entero y los SKU de las variantes.");return;} const finalProduct = { ...product, basePrice: Number(product.basePrice) || 0, images: product.images.length ? product.images : ["https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=600&fit=crop&auto=format"] }; const exists = products.some((item) => item.id === finalProduct.id); const ok = setConfig({ ...config, products: exists ? products.map((item) => item.id === finalProduct.id ? finalProduct : item) : [...products, finalProduct] }); if(!ok) return; setSaved(true); setTimeout(() => navigate("/emprendedor/productos"), 800) }
   const removeImage = (index: number) => setProduct((current) => ({ ...current, images: current.images.filter((_, imageIndex) => imageIndex !== index) }))
   if (id !== "nuevo" && !source) return <Alert variant="error">Producto no encontrado. <Link to="/emprendedor/productos">Volver a productos</Link></Alert>;
   return <div>

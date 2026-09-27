@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 
 import { useOrders } from '../context/OrderContext';
@@ -44,6 +44,148 @@ const REGIONES = [
 }));
 
 type AuthMode = 'guest' | 'login' | 'google';
+
+type ShippingOption = {
+  id: string;
+  label: string;
+  icon: string;
+  desc: string;
+  priceLabel: string;
+  requiresAddress: boolean;
+};
+
+type PaymentOption = {
+  id: string;
+  label: string;
+  icon: string;
+  desc: string;
+};
+
+const ADMIN_STORAGE_KEY = 'ua-entrepreneur-demo-v1';
+
+const defaultShippingOptions: ShippingOption[] = [
+  {
+    id: 'Chilexpress',
+    label: 'Chilexpress',
+    icon: 'box',
+    desc: '3-5 dias habiles · $3.490',
+    priceLabel: '$3.490',
+    requiresAddress: true,
+  },
+  {
+    id: 'Starken',
+    label: 'Starken',
+    icon: 'truck',
+    desc: '3-5 dias habiles · $3.490',
+    priceLabel: '$3.490',
+    requiresAddress: true,
+  },
+  {
+    id: 'Retiro',
+    label: 'Retiro en tienda',
+    icon: 'store',
+    desc: 'Sin costo · Lun-Sab 9:00-18:00',
+    priceLabel: 'Gratis',
+    requiresAddress: false,
+  },
+];
+
+const defaultPaymentOptions: PaymentOption[] = [
+  {
+    id: 'Transbank',
+    label: 'Webpay / Transbank',
+    icon: 'card',
+    desc: 'Tarjeta debito, credito o prepago',
+  },
+  {
+    id: 'MercadoPago',
+    label: 'Mercado Pago',
+    icon: 'wallet',
+    desc: 'Tarjetas o saldo Mercado Pago',
+  },
+  {
+    id: 'PayPal',
+    label: 'PayPal',
+    icon: 'card',
+    desc: 'Cuenta PayPal o tarjeta',
+  },
+  {
+    id: 'Linkify',
+    label: 'Linkify',
+    icon: 'link',
+    desc: 'Pago por link',
+  },
+  {
+    id: 'Transferencia',
+    label: 'Transferencia bancaria',
+    icon: 'bank',
+    desc: 'Verificacion manual en 24-48h',
+  },
+];
+
+function readCheckoutOptions() {
+  try {
+    const raw = localStorage.getItem(ADMIN_STORAGE_KEY);
+    if (!raw) {
+      return {
+        shippingOptions: defaultShippingOptions,
+        paymentOptions: defaultPaymentOptions,
+      };
+    }
+
+    const config = JSON.parse(raw)?.config;
+    const shippingConfig = config?.shippingConfiguration;
+    const paymentConfig = config?.paymentConfiguration;
+
+    const shippingOptions = defaultShippingOptions.filter((option) => {
+      if (option.id === 'Chilexpress') return !!shippingConfig?.chilexpress?.enabled;
+      if (option.id === 'Starken') return !!shippingConfig?.starken?.enabled;
+      if (option.id === 'Retiro') return !!shippingConfig?.pickup?.enabled;
+      return true;
+    }).map((option) =>
+      option.id === 'Retiro'
+        ? {
+            ...option,
+            desc:
+              shippingConfig?.pickup?.schedule ||
+              shippingConfig?.pickup?.address
+                ? `Sin costo · ${[
+                    shippingConfig?.pickup?.schedule,
+                    shippingConfig?.pickup?.address,
+                  ].filter(Boolean).join(' · ')}`
+                : option.desc,
+          }
+        : option,
+    );
+
+    const paymentMap: Record<string, string> = {
+      Transbank: 'transbank',
+      MercadoPago: 'mercadopago',
+      PayPal: 'paypal',
+      Linkify: 'linkify',
+      Transferencia: 'transfer',
+    };
+
+    const paymentOptions = defaultPaymentOptions.filter((option) => {
+      const key = paymentMap[option.id];
+      return key ? !!paymentConfig?.[key]?.enabled : true;
+    });
+
+    return {
+      shippingOptions: shippingOptions.length
+        ? shippingOptions
+        : defaultShippingOptions,
+      paymentOptions: paymentOptions.length
+        ? paymentOptions
+        : defaultPaymentOptions,
+    };
+  } catch {
+    return {
+      shippingOptions: defaultShippingOptions,
+      paymentOptions: defaultPaymentOptions,
+    };
+  }
+}
 
 const fmtCardNumber = (value: string) =>
   value
@@ -182,6 +324,11 @@ export default function Checkout() {
   const { route, isMinimal, isVisual, isCatalog } =
     useStorefrontTemplate();
 
+  const { shippingOptions, paymentOptions } = useMemo(
+    readCheckoutOptions,
+    [],
+  );
+
   const navigate = useNavigate();
 
   const [step, setStep] = useState('contact');
@@ -246,6 +393,33 @@ export default function Checkout() {
     password: 'demostracion',
   });
 
+  const selectedShippingOption =
+    shippingOptions.find(
+      (option) => option.id === shippingMethod,
+    );
+
+  useEffect(() => {
+    if (
+      shippingMethod &&
+      !shippingOptions.some(
+        (option) => option.id === shippingMethod,
+      )
+    ) {
+      setShippingMethod('');
+    }
+  }, [shippingMethod, shippingOptions, setShippingMethod]);
+
+  useEffect(() => {
+    if (
+      paymentMethod &&
+      !paymentOptions.some(
+        (option) => option.id === paymentMethod,
+      )
+    ) {
+      setPaymentMethod('');
+    }
+  }, [paymentMethod, paymentOptions]);
+
   const setTbField = (
     key: keyof CardData,
     value: string,
@@ -289,7 +463,7 @@ export default function Checkout() {
 
     if (currentStep === 'delivery') {
       if (
-        shippingMethod !== 'Retiro' &&
+        selectedShippingOption?.requiresAddress &&
         (!address.street.trim() ||
           !address.number.trim() ||
           !address.city.trim())
@@ -769,13 +943,9 @@ export default function Checkout() {
               )}
 
               <div className="flex flex-col gap-3">
-                {[
-                  'Chilexpress',
-                  'Starken',
-                  'Retiro',
-                ].map((method) => (
+                {shippingOptions.map((method) => (
                   <label
-                    key={method}
+                    key={method.id}
                     className={`
                       flex items-center gap-4
                       p-4 border cursor-pointer
@@ -786,8 +956,7 @@ export default function Checkout() {
                           : 'rounded-xl'
                       }
                       ${
-                        shippingMethod ===
-                        method
+                        shippingMethod === method.id
                           ? 'border-[var(--primary)] bg-[var(--secondary)]'
                           : 'border-[var(--border)] hover:border-[var(--muted-foreground)]'
                       }
@@ -796,60 +965,38 @@ export default function Checkout() {
                     <input
                       type="radio"
                       name="shipping"
-                      value={method}
-                      checked={
-                        shippingMethod ===
-                        method
-                      }
-                      onChange={() =>
-                        setShippingMethod(
-                          method,
-                        )
-                      }
+                      value={method.id}
+                      checked={shippingMethod === method.id}
+                      onChange={() => setShippingMethod(method.id)}
                       className="sr-only"
                     />
 
                     <div className="w-10 h-10 rounded-full bg-[var(--muted)] flex items-center justify-center text-[#667085]">
                       <Icon
-                        name={
-                          method ===
-                          'Chilexpress'
-                            ? 'box'
-                            : method ===
-                                'Starken'
-                              ? 'truck'
-                              : 'store'
-                        }
+                        name={method.icon}
                         className="w-5 h-5"
                       />
                     </div>
 
                     <div className="flex-1">
                       <p className={isCatalog ? "font-semibold text-sm text-[#151515]" : "font-semibold text-sm"}>
-                        {method === 'Retiro'
-                          ? 'Retiro en tienda'
-                          : method}
+                        {method.label}
                       </p>
 
                       <p className="text-xs text-[#667085] mt-0.5">
-                        {method === 'Retiro'
-                          ? 'Sin costo · Lun-Sáb 9:00-18:00'
-                          : '3-5 días hábiles · $3.490'}
+                        {method.desc}
                       </p>
                     </div>
 
                     <span className="text-sm font-semibold">
-                      {method === 'Retiro'
-                        ? 'Gratis'
-                        : '$3.490'}
+                      {method.priceLabel}
                     </span>
                   </label>
                 ))}
               </div>
 
               {shippingMethod &&
-                shippingMethod !==
-                  'Retiro' && (
+                selectedShippingOption?.requiresAddress && (
                   <div className="flex flex-col gap-4 border-t border-[var(--border)] pt-5">
                     <h3 className="text-sm font-semibold">
                       Dirección de entrega
@@ -974,40 +1121,7 @@ export default function Checkout() {
               )}
 
               <div className="flex flex-col gap-3">
-                {[
-                  {
-                    id: 'Transbank',
-                    label:
-                      'Webpay / Transbank',
-                    icon: 'card',
-                    desc: 'Tarjeta débito, crédito o prepago',
-                  },
-                  {
-                    id: 'MercadoPago',
-                    label: 'Mercado Pago',
-                    icon: 'wallet',
-                    desc: 'Tarjetas o saldo Mercado Pago',
-                  },
-                  {
-                    id: 'PayPal',
-                    label: 'PayPal',
-                    icon: 'card',
-                    desc: 'Cuenta PayPal o tarjeta',
-                  },
-                  {
-                    id: 'Linkify',
-                    label: 'Linkify',
-                    icon: 'link',
-                    desc: 'Pago por link',
-                  },
-                  {
-                    id: 'Transferencia',
-                    label:
-                      'Transferencia bancaria',
-                    icon: 'bank',
-                    desc: 'Verificación manual en 24-48h',
-                  },
-                ].map((payment) => (
+                {paymentOptions.map((payment) => (
                   <label
                     key={payment.id}
                     className={`
@@ -1020,8 +1134,7 @@ export default function Checkout() {
                           : 'rounded-xl'
                       }
                       ${
-                        paymentMethod ===
-                        payment.id
+                        paymentMethod === payment.id
                           ? 'border-[var(--primary)] bg-[var(--secondary)]'
                           : 'border-[var(--border)] hover:border-[var(--muted-foreground)]'
                       }
@@ -1031,15 +1144,8 @@ export default function Checkout() {
                       type="radio"
                       name="payment"
                       value={payment.id}
-                      checked={
-                        paymentMethod ===
-                        payment.id
-                      }
-                      onChange={() =>
-                        setPaymentMethod(
-                          payment.id,
-                        )
-                      }
+                      checked={paymentMethod === payment.id}
+                      onChange={() => setPaymentMethod(payment.id)}
                       className="sr-only"
                     />
 
@@ -1060,10 +1166,9 @@ export default function Checkout() {
                       </p>
                     </div>
 
-                    {paymentMethod ===
-                      payment.id && (
+                    {paymentMethod === payment.id && (
                       <span className={isCatalog ? "text-[#1683ff] text-lg" : "text-[var(--primary)] text-lg"}>
-                        ✓
+                        OK
                       </span>
                     )}
                   </label>
@@ -1465,8 +1570,7 @@ export default function Checkout() {
                     {shippingMethod}
                   </p>
 
-                  {shippingMethod !==
-                    'Retiro' && (
+                  {selectedShippingOption?.requiresAddress && (
                     <p className="text-[#667085] text-xs mt-0.5">
                       {address.street}{' '}
                       {address.number},{' '}

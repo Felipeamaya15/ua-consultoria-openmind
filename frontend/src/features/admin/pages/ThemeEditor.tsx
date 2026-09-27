@@ -1,6 +1,5 @@
 import {
   useEffect,
-  useMemo,
   useRef,
   useState,
 } from 'react';
@@ -18,6 +17,7 @@ import type {
 } from '../types';
 import {
   Button,
+  Modal,
 } from '../components/ui';
 
 import '../admin.css';
@@ -96,22 +96,35 @@ export default function ThemeEditor() {
   const [saved, setSaved] =
     useState(false);
 
-  const theme = useMemo<
-    ThemeTemplateCustomization
-  >(
-    () =>
-      config.themeEditor?.[template] ?? {
+  const [confirmOpen, setConfirmOpen] =
+    useState(false);
+
+
+  function loadThemeFor(
+    targetTemplate: TemplateId,
+  ): ThemeTemplateCustomization {
+    return (
+      config.themeEditor?.[targetTemplate] ?? {
         primaryColor: config.primaryColor,
         secondaryColor: config.secondaryColor,
         accentColor: config.accentColor,
         paletteName: 'Original',
         images: {},
-      },
-    [
-      config,
-      template,
-    ],
-  );
+      }
+    );
+  }
+
+  // Borrador local: solo vive en esta pantalla hasta publicar
+  const [theme, setTheme] =
+    useState<ThemeTemplateCustomization>(() =>
+      loadThemeFor(template),
+    );
+
+  // Si cambia la plantilla que se está editando, reinicia
+  // el borrador con lo último publicado de esa plantilla
+  useEffect(() => {
+    setTheme(loadThemeFor(template));
+  }, [template]);
 
   function updateTheme(
     patch: Partial<ThemeTemplateCustomization>,
@@ -122,13 +135,7 @@ export default function ThemeEditor() {
       images: patch.images ?? theme.images,
     };
 
-    setConfig({
-      ...config,
-      themeEditor: {
-        ...config.themeEditor,
-        [template]: nextTheme,
-      },
-    });
+    setTheme(nextTheme);
 
     applyThemeToPreview(nextTheme);
   }
@@ -404,9 +411,11 @@ export default function ThemeEditor() {
       primaryColor: theme.primaryColor,
       secondaryColor: theme.secondaryColor,
       accentColor: theme.accentColor,
+      themeEditor: {
+        ...config.themeEditor,
+        [template]: theme,
+      },
     });
-
-    updateTemplate(template);
 
     setSaved(true);
 
@@ -486,9 +495,19 @@ export default function ThemeEditor() {
           </Link>
 
           <Button
+            variant="ghost"
+            size="sm"
+            onClick={() =>
+              setTheme(loadThemeFor(template))
+            }
+          >
+            Descartar cambios
+          </Button>
+
+          <Button
             variant="primary"
             size="sm"
-            onClick={saveAndPublish}
+            onClick={() => setConfirmOpen(true)}
           >
             {saved
               ? '✓ Publicado'
@@ -639,6 +658,40 @@ export default function ThemeEditor() {
           className="w-full h-full border-0 bg-white"
         />
       </main>
+
+      <Modal
+        open={confirmOpen}
+        onClose={() => setConfirmOpen(false)}
+        title="¿Aplicar estos cambios a tu tienda?"
+        size="sm"
+      >
+      
+        <p className="text-sm text-[var(--muted-foreground)] mb-5">
+          Los visitantes de tu tienda verán este diseño de inmediato. Puedes
+          seguir editando si algo no te convence todavía.
+        </p>
+
+        <div className="flex justify-end gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setConfirmOpen(false)}
+          >
+            Seguir editando
+          </Button>
+
+          <Button
+            variant="primary"
+            size="sm"
+            onClick={() => {
+              saveAndPublish();
+              setConfirmOpen(false);
+            }}
+          >
+            Sí, aplicar a mi tienda
+          </Button>
+        </div>
+            </Modal>
 
       {selectedImage && (
         <div
