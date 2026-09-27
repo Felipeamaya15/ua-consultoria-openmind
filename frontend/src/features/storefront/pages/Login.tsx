@@ -1,14 +1,8 @@
 import { useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { matchesDemoCredentials, startDemoSession } from '../../admin/auth/demoSession';
-
-import {
-  Button,
-  Input,
-  Alert,
-  InstitutionalBadge,
-} from '../components/ui';
-
+import { useGoogleLogin } from '@react-oauth/google';
+import { authService } from '../../auth/services/authService';
+import { Button, Input, Alert, InstitutionalBadge } from '../components/ui';
 import { useStorefrontTemplate } from '../hooks/useStorefrontTemplate';
 
 export default function Login() {
@@ -28,35 +22,51 @@ export default function Login() {
   const [message, setMessage] =
     useState('');
 
-  const handleSubmit = async (
-    event: FormEvent,
-  ) => {
-    event.preventDefault();
+  // 1. Hook oficial de Google
+  const loginConGoogle = useGoogleLogin({
+    onSuccess: async (tokenResponse) => {
+      setLoading(true);
+      try {
+        const data = await authService.googleLogin(tokenResponse.access_token);
+        localStorage.setItem('token', data.data.token);
+        navigate('/emprendedor');
+      } catch (err: any) {
+        setMessage(err.mensaje || 'Error al iniciar sesión con Google');
+      } finally {
+        setLoading(false);
+      }
+    },
+    onError: () => setMessage('La autenticación con Google falló.')
+  });
 
+  // 2. Formulario tradicional conectado a la API
+  const handleSubmit = async (event: FormEvent) => {
+    event.preventDefault();
     setLoading(true);
     setMessage('');
 
-    await new Promise((resolve) =>
-      setTimeout(resolve, 1000),
-    );
-
-    setLoading(false);
-
-    if (mode === 'login' && matchesDemoCredentials(email, password)) {
-      try {
-        startDemoSession();
-        navigate('/emprendedor');
-      } catch {
-        setMessage('No se pudo iniciar la sesión demo. Habilita el almacenamiento de sesión del navegador.');
+    try {
+      let data;
+      if (mode === 'login') {
+        data = await authService.login({ username: email, password });
+      } else {
+        const [first_name, ...last_name_arr] = name.split(' ');
+        data = await authService.register({
+          username: email.split('@')[0],
+          email,
+          password,
+          first_name: first_name || '',
+          last_name: last_name_arr.join(' ') || ''
+        });
       }
-      return;
+      
+      localStorage.setItem('token', data.data.token);
+      navigate('/emprendedor');
+    } catch (err: any) {
+      setMessage(err.mensaje || 'Error al procesar la solicitud. Revisa tus credenciales.');
+    } finally {
+      setLoading(false);
     }
-
-    setMessage(
-      mode === 'register'
-        ? 'Cuenta de ejemplo creada. El registro real se conectará más adelante.'
-        : 'Ingreso de demostración completado.',
-    );
   };
 
   const changeMode = () => {
@@ -189,14 +199,16 @@ export default function Login() {
               {mode === 'login' && (
                 <div className="text-right -mt-2">
                   <button
-                    type="button"
-                    onClick={() =>
-                      setMessage(
-                        'Recuperación de contraseña de demostración. No se envían correos.',
-                      )
-                    }
-                    className="text-[10px] text-black/45 hover:text-black transition-colors"
-                  >
+              type="button"
+              onClick={() => loginConGoogle()}
+              className="h-12 flex items-center justify-center gap-3 border border-black/10 bg-white rounded-[9px] text-[12px] font-semibold hover:border-black/30 transition-colors"
+            >
+              <svg
+                className="w-5 h-5"
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+              >
+              </svg>
                     ¿Olvidaste tu contraseña?
                   </button>
                 </div>
@@ -274,11 +286,8 @@ export default function Login() {
 
             <button
               type="button"
-              onClick={() =>
-                setMessage(
-                  'Acceso con Google simulado. No se conecta a una cuenta real.',
-                )
-              }
+              onClick={() => loginConGoogle()}
+                
               className="h-12 flex items-center justify-center gap-3 border border-black/15 bg-white rounded-[8px] text-[12px] font-semibold hover:border-black transition-colors"
             >
               <svg
@@ -350,7 +359,7 @@ export default function Login() {
                 <div className="text-right -mt-2">
                   <button
                     type="button"
-                    onClick={() =>
+                    onClick={() => 
                       setMessage(
                         'Recuperación de contraseña de demostración. No se envían correos.',
                       )
@@ -469,11 +478,8 @@ export default function Login() {
 
           <button
             type="button"
-            onClick={() =>
-              setMessage(
-                'Acceso con Google simulado. No se conecta a una cuenta real.',
-              )
-            }
+            onClick={() => loginConGoogle()}
+              
             className={
               isMinimal
                 ? 'h-12 flex items-center justify-center gap-3 border border-black/10 rounded-full text-sm font-medium hover:bg-gray-50 transition-colors'

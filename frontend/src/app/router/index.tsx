@@ -1,4 +1,4 @@
-import { createBrowserRouter } from 'react-router-dom';
+
 import { LandingPage } from '../../features/landing/pages/LandingPage';
 import { CheckoutSummaryPage } from '../../features/checkout/pages/CheckoutSummaryPage';
 import { LinkifyConfigPage } from '../../features/integrations/pages/LinkifyConfigPage';
@@ -189,40 +189,6 @@ export const router = createBrowserRouter([
     ],
   },
 
-  /*
-   * ==========================================================
-   * RUTAS ANTIGUAS
-   * ==========================================================
-   */
-  {
-    path: '/home',
-    element: <Navigate to="/plantilla/1" replace />,
-  },
-  {
-    path: '/catalogo',
-    element: <CatalogPlaceholder />,
-  },
-  {
-    path: '/checkout/resumen',
-    element: <CheckoutSummaryPage />,
-    path: '/integraciones/linkify',
-    element: <LinkifyConfigPage />,
-  }
-]);
-    element: <Navigate to="/plantilla/1/catalogo" replace />,
-  },
-  {
-    path: '/carrito',
-    element: <Navigate to="/plantilla/1/carrito" replace />,
-  },
-  {
-    path: '/seguimiento',
-    element: <Navigate to="/plantilla/1/seguimiento" replace />,
-  },
-  {
-    path: '/ingresar',
-    element: <Navigate to="/plantilla/1/ingresar" replace />,
-  },
 
   /*
    * ==========================================================
