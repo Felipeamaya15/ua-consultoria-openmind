@@ -121,3 +121,18 @@ class ActualizarStockProductoUseCase:
         producto.save()
         
         return producto
+
+class ValidarDisponibilidadProductoUseCase:
+    def ejecutar(self, tienda_id, id_producto, cantidad_requerida=1):
+        producto = get_object_or_404(Producto, id_producto=id_producto, id_tienda=tienda_id)
+        
+        if not producto.activo:
+            raise ValueError("El producto no se encuentra disponible (inactivo).")
+            
+        if producto.stock <= 0:
+            raise ValueError("El producto se encuentra agotado (stock 0).")
+            
+        if producto.stock < cantidad_requerida:
+            raise ValueError(f"Stock insuficiente. Solo quedan {producto.stock} unidades.")
+            
+        return producto
