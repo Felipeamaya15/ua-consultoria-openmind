@@ -106,7 +106,35 @@ class LogoNegocioAPIView(APIView):
             },
             mensaje="Logo del negocio obtenido correctamente",
         )
+
+
 class PlantillaSeleccionadaAPIView(APIView):
+    def get_permissions(self):
+        if self.request.method == "GET":
+            return [AllowAny()]
+        return super().get_permissions()
+
+    def get(self, request):
+        tienda = resolver_tienda(request)
+
+        configuracion = ConfiguracionVisual.objects.filter(
+            tienda=tienda
+        ).first()
+
+        plantilla_seleccionada = (
+            configuracion.plantilla_seleccionada
+            if configuracion
+            else ""
+        )
+
+        return success_response(
+            data={
+                "plantilla_seleccionada": plantilla_seleccionada,
+            },
+            mensaje="Plantilla seleccionada obtenida correctamente",
+            status=status.HTTP_200_OK,
+        )
+
     def put(self, request):
         tienda = resolver_tienda(
             request,
