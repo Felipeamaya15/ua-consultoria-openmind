@@ -53,7 +53,7 @@ class Migration(migrations.Migration):
     atomic = True
 
     dependencies = [
-        ('core', '0003_itempedido_id_variante'),
+        ('core', '0001_initial'),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 

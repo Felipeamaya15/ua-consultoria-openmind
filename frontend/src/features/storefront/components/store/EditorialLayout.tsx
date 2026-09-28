@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
-import { Link, Outlet, useLocation } from 'react-router-dom';
+import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 
 import { useStore } from '../../context/StoreContext';
 import { useCart } from '../../context/CartContext';
 import { InstitutionalBadge } from '../ui';
+import { authService } from '../../../auth/services/authService';
 
 function CartIcon({ count }: { count: number }) {
   return (
@@ -51,10 +52,30 @@ function CartIcon({ count }: { count: number }) {
 export function EditorialLayout() {
   const { config } = useStore();
   const { count } = useCart();
+  const navigate = useNavigate();
 
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [user, setUser] = useState<any>(null);
 
   const { pathname, search } = useLocation();
+
+  // Buscar si hay un usuario logueado al cargar el layout
+  // Buscar si hay un usuario logueado al cargar o al cambiar de página
+  useEffect(() => {
+    authService.getMe().then(response => {
+      if (response?.data) {
+        setUser(response.data);
+      } else {
+        setUser(null); // Limpia el estado si el token no existe o expiró
+      }
+    });
+  }, [pathname]); // <-- Agregamos 'pathname' para que se actualice al navegar
+
+  const handleLogout = () => {
+    authService.logout();
+    setUser(null);
+    navigate('/plantilla/1');
+  };
 
   /**
    * Al cambiar de página:
@@ -101,7 +122,6 @@ export function EditorialLayout() {
         <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between gap-6">
 
           {/* Logo / nombre de tienda */}
-                    {/* Logo / nombre de tienda */}
           <Link
             to="."
             className="flex items-center gap-3"
@@ -167,18 +187,33 @@ export function EditorialLayout() {
               <CartIcon count={count} />
             </Link>
 
-            {/* Login */}
-            <Link
-              to="ingresar"
-              className="hidden sm:block text-sm font-medium text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition-colors"
-            >
-              Ingresar
-            </Link>
+            {/* Login / Usuario Desktop */}
+            {user ? (
+              <div className="hidden sm:flex items-center gap-4 border-l border-[var(--border)] pl-4 ml-2">
+                <span className="text-sm font-semibold text-[var(--foreground)]">
+                  Bienvenido, {user.first_name || user.username}
+                </span>
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  className="text-sm font-medium text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition-colors"
+                >
+                  Salir
+                </button>
+              </div>
+            ) : (
+              <Link
+                to="ingresar"
+                className="hidden sm:block text-sm font-medium text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition-colors ml-2"
+              >
+                Ingresar
+              </Link>
+            )}
 
             {/* Botón menú móvil */}
             <button
               type="button"
-              className="md:hidden text-[var(--foreground)] p-1"
+              className="md:hidden text-[var(--foreground)] p-1 ml-2"
               onClick={() => setMobileOpen((open) => !open)}
               aria-label="Menú"
               aria-expanded={mobileOpen}
@@ -236,13 +271,32 @@ export function EditorialLayout() {
               Seguimiento
             </Link>
 
-            <Link
-              to="ingresar"
-              className="text-sm py-2"
-              onClick={() => setMobileOpen(false)}
-            >
-              Ingresar
-            </Link>
+            {/* Login / Usuario Móvil */}
+            {user ? (
+              <>
+                <div className="text-sm py-2 font-semibold text-[var(--foreground)] border-t border-[var(--border)] mt-2 pt-4">
+                  Bienvenido, {user.first_name || user.username}
+                </div>
+                <button
+                  type="button"
+                  className="text-sm py-2 text-left text-[var(--muted-foreground)]"
+                  onClick={() => {
+                    handleLogout();
+                    setMobileOpen(false);
+                  }}
+                >
+                  Salir
+                </button>
+              </>
+            ) : (
+              <Link
+                to="ingresar"
+                className="text-sm py-2 border-t border-[var(--border)] mt-2 pt-4"
+                onClick={() => setMobileOpen(false)}
+              >
+                Ingresar
+              </Link>
+            )}
           </nav>
         )}
 

@@ -29,5 +29,28 @@ export const authService = {
     });
     if (!res.ok) throw await res.json();
     return res.json();
-  }
+
+  
+  },
+  async getMe() {
+    const token = localStorage.getItem('token');
+    if (!token) return null;
+
+    const res = await fetch(`${API_URL}/api/auth/me/`, {
+      headers: {
+        'Authorization': `Token ${token}`,
+        'Content-Type': 'application/json'
+      }
+    });
+    
+    if (!res.ok) {
+      localStorage.removeItem('token'); // Limpia el token si expiró o es inválido
+      return null;
+    }
+    return res.json();
+  },
+
+  logout() {
+    localStorage.removeItem('token');
+    }
 };
