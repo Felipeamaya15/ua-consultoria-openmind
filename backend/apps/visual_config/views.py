@@ -5,7 +5,10 @@ from rest_framework.views import APIView
 from apps.core.infrastructure.tenant import resolver_tienda
 from apps.core.presentation.responses import success_response
 from apps.visual_config.models import ConfiguracionVisual
-from apps.visual_config.serializers import PlantillaDisponibleSerializer
+from apps.visual_config.serializers import (
+    PlantillaDisponibleSerializer,
+    PlantillaSeleccionadaSerializer,
+)
 
 
 PLANTILLAS_DISPONIBLES = [
@@ -81,8 +84,35 @@ class PlantillasDisponiblesAPIView(APIView):
         )
 
 
-class PlantillaSeleccionadaAPIView(APIView):
+class LogoNegocioAPIView(APIView):
     permission_classes = [AllowAny]
+
+    def get(self, request):
+        tienda = resolver_tienda(request)
+
+        configuracion = ConfiguracionVisual.objects.filter(
+            tienda=tienda
+        ).first()
+
+        logo_negocio = (
+            configuracion.logo_negocio
+            if configuracion
+            else ""
+        )
+
+        return success_response(
+            data={
+                "logo_negocio": logo_negocio,
+            },
+            mensaje="Logo del negocio obtenido correctamente",
+        )
+
+
+class PlantillaSeleccionadaAPIView(APIView):
+    def get_permissions(self):
+        if self.request.method == "GET":
+            return [AllowAny()]
+        return super().get_permissions()
 
     def get(self, request):
         tienda = resolver_tienda(request)
@@ -102,5 +132,33 @@ class PlantillaSeleccionadaAPIView(APIView):
                 "plantilla_seleccionada": plantilla_seleccionada,
             },
             mensaje="Plantilla seleccionada obtenida correctamente",
+            status=status.HTTP_200_OK,
+        )
+
+    def put(self, request):
+        tienda = resolver_tienda(
+            request,
+            exigir_propietario=True,
+        )
+
+        serializer = PlantillaSeleccionadaSerializer(
+            data=request.data
+        )
+        serializer.is_valid(raise_exception=True)
+
+        configuracion, _ = ConfiguracionVisual.objects.get_or_create(
+            tienda=tienda
+        )
+
+        configuracion.plantilla_seleccionada = (
+            serializer.validated_data['plantilla_seleccionada']
+        )
+        configuracion.save(
+            update_fields=['plantilla_seleccionada']
+        )
+
+        return success_response(
+            data=PlantillaSeleccionadaSerializer(configuracion).data,
+            mensaje="Plantilla seleccionada guardada correctamente",
             status=status.HTTP_200_OK,
         )

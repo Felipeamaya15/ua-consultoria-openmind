@@ -17,11 +17,6 @@ class ConfiguracionLandingSerializer(serializers.ModelSerializer):
         max_length=100,
         trim_whitespace=True,
     )
-    imagen_principal = serializers.CharField(
-        required=False,
-        allow_blank=True,
-        trim_whitespace=True,
-    )
     secciones = serializers.JSONField(
         required=False,
         default=dict,
@@ -36,6 +31,7 @@ class ConfiguracionLandingSerializer(serializers.ModelSerializer):
             'descripcion',
             'texto_boton',
             'imagen_principal',
+            'logo',
             'secciones',
         ]
         read_only_fields = [

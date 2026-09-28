@@ -1,3 +1,7 @@
+
+import { LandingPage } from '../../features/landing/pages/LandingPage';
+import { CheckoutSummaryPage } from '../../features/checkout/pages/CheckoutSummaryPage';
+import { LinkifyConfigPage } from '../../features/integrations/pages/LinkifyConfigPage';
 import { adminRoute } from '../../features/admin/routes';
 import {
   createBrowserRouter,
@@ -185,31 +189,6 @@ export const router = createBrowserRouter([
     ],
   },
 
-  /*
-   * ==========================================================
-   * RUTAS ANTIGUAS
-   * ==========================================================
-   */
-  {
-    path: '/home',
-    element: <Navigate to="/plantilla/1" replace />,
-  },
-  {
-    path: '/catalogo',
-    element: <Navigate to="/plantilla/1/catalogo" replace />,
-  },
-  {
-    path: '/carrito',
-    element: <Navigate to="/plantilla/1/carrito" replace />,
-  },
-  {
-    path: '/seguimiento',
-    element: <Navigate to="/plantilla/1/seguimiento" replace />,
-  },
-  {
-    path: '/ingresar',
-    element: <Navigate to="/plantilla/1/ingresar" replace />,
-  },
 
   /*
    * ==========================================================

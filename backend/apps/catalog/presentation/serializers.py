@@ -1,7 +1,7 @@
 from rest_framework import serializers
 # CAMBIO: Importamos el validador de Base64 que creamos para MongoDB
 from apps.core.domain.validators import validate_base64_image
-
+from apps.core.models import Producto
 
 class ProductPublicListItemSerializer(serializers.Serializer):
     id = serializers.CharField(source="_id")
@@ -101,3 +101,121 @@ class ProductImageSerializer(serializers.Serializer):
             
         validate_base64_image(value, max_size_mb=2)
         return value
+
+class ProductoCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Producto
+        fields = ['nombre', 'precio', 'stock', 'activo']
+        extra_kwargs = {
+            'nombre': {
+                'required': True, 
+                'allow_blank': False,
+                'error_messages': {
+                    'required': 'El campo nombre es obligatorio.',
+                    'blank': 'El nombre no puede estar vacío.'
+                }
+            },
+            'precio': {
+                'required': True,
+                'error_messages': {
+                    'required': 'El campo precio es obligatorio.',
+                    'invalid': 'El precio debe ser un número válido.'
+                }
+            },
+            'stock': {
+                'required': True,
+                'error_messages': {
+                    'required': 'El campo stock es obligatorio.',
+                    'invalid': 'El stock debe ser un número válido.'
+                }
+            }
+        }
+
+    def validate_precio(self, value):
+        if value < 0:
+            raise serializers.ValidationError("El precio no puede ser negativo.")
+        return value
+
+    def validate_stock(self, value):
+        if value < 0:
+            raise serializers.ValidationError("El stock inicial no puede ser negativo.")
+        return value
+
+class ProductoAdminDetailSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Producto
+        fields = ['id_producto', 'nombre', 'precio', 'stock', 'activo', 'id_tienda']
+
+class ProductoUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Producto
+        fields = ['nombre', 'precio', 'stock', 'activo']
+        extra_kwargs = {
+            'nombre': {
+                'allow_blank': False,
+                'error_messages': {
+                    'blank': 'Si decides actualizar el nombre, no puede estar vacío.'
+                }
+            }
+        }
+
+    def validate_precio(self, value):
+        if value < 0:
+            raise serializers.ValidationError("El precio no puede ser negativo.")
+        return value
+
+class ProductoStockUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Producto
+        fields = ['stock']
+
+    def validate_stock(self, value):
+        if value < 0:
+            raise serializers.ValidationError("El stock no puede ser negativo o inválido.")
+        return value
+
+class VarianteInputSerializer(serializers.Serializer):
+    sku = serializers.CharField()
+    precio = serializers.FloatField(min_value=0)
+    precio_oferta = serializers.FloatField(required=False, allow_null=True, min_value=0)
+    stock = serializers.IntegerField(min_value=0)
+    atributos_variante = serializers.ListField(
+        child=serializers.DictField(), required=False, default=list
+    )
+
+
+class AtributoGeneralInputSerializer(serializers.Serializer):
+    clave = serializers.CharField()
+    etiqueta = serializers.CharField()
+    valor = serializers.CharField()
+
+
+class SeoInputSerializer(serializers.Serializer):
+    meta_titulo = serializers.CharField(required=False, allow_blank=True)
+    meta_descripcion = serializers.CharField(required=False, allow_blank=True)
+
+
+class ProductCreateSerializer(serializers.Serializer):
+    nombre = serializers.CharField(max_length=200)
+    descripcion = serializers.CharField(required=False, allow_blank=True)
+    categoria = serializers.CharField(max_length=100)
+    imagenes = serializers.ListField(
+        child=serializers.CharField(), required=False, default=list
+    )
+    atributos_generales = AtributoGeneralInputSerializer(
+        many=True, required=False, default=list
+    )
+    variantes = VarianteInputSerializer(many=True)
+    seo = SeoInputSerializer(required=False)
+
+    def validate_variantes(self, value):
+        if not value:
+            raise serializers.ValidationError(
+                "El producto debe tener al menos una variante."
+            )
+        skus = [v["sku"].strip() for v in value]
+        if len(skus) != len(set(skus)):
+            raise serializers.ValidationError(
+                "Los SKU de las variantes deben ser únicos."
+            )
+        return value        

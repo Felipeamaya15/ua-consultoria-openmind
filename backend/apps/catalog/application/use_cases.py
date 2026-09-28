@@ -1,17 +1,22 @@
 from typing import List, Dict, Any, Optional
 
+from django.utils.text import slugify
+
 from apps.catalog.infrastructure.repositories import ProductRepository
 from apps.core.models import Producto
 from apps.core.infrastructure.mongo_client import get_mongo_db
 from bson import ObjectId
+from django.shortcuts import get_object_or_404
 
 class ListPublicProductsUseCase:
 
     def __init__(self, repository: ProductRepository):
         self.repository = repository
 
-    def execute(self, tienda_id: str) -> List[Dict[str, Any]]:
-        return self.repository.list_by_store(tienda_id, activo=True)
+    def execute(
+        self, tienda_id: str, atributos: Optional[Dict[str, List[str]]] = None
+    ) -> List[Dict[str, Any]]:
+        return self.repository.list_by_store(tienda_id, activo=True, atributos=atributos)
 
 class GetPublicProductDetailUseCase:
     """Obtiene el detalle de un producto activo, identificado por su slug."""
@@ -62,7 +67,6 @@ class GetPublicProductAttributesUseCase:
                 if valor is not None and valor not in entry["valores"]:
                     entry["valores"].append(valor)
         return list(agrupados.values())
-
 class SoftDeleteProductUseCase:
     def execute(self, id_producto: int, tienda_id: str) -> dict:
         # 1. Soft Delete en PostgreSQL
@@ -88,3 +92,81 @@ class SoftDeleteProductUseCase:
         )
 
         return {"exito": True, "mensaje": "Producto eliminado lógicamente de forma correcta."}
+    
+class CreateProductUseCase:
+    """Crea un producto nuevo en el catálogo de la tienda (RF-03.4 / tarea de creación)."""
+
+    def __init__(self, repository: ProductRepository):
+        self.repository = repository
+
+    def execute(self, tienda_id: str, data: Dict[str, Any]) -> str:
+        slug = self._slug_disponible(tienda_id, slugify(data["nombre"]))
+
+        producto = {
+            "nombre": data["nombre"],
+            "slug": slug,
+            "descripcion": data.get("descripcion", ""),
+            "categoria": data["categoria"],
+            "activo": True,
+            "imagenes": data.get("imagenes", []),
+            "atributos_generales": data.get("atributos_generales", []),
+            "variantes": data["variantes"],
+            "seo": data.get("seo", {}),
+        }
+
+        return self.repository.create(tienda_id, producto)
+
+    def _slug_disponible(self, tienda_id: str, base_slug: str) -> str:
+        slug = base_slug or "producto"
+        sufijo = 1
+        while self.repository.get_by_slug(tienda_id, slug):
+            sufijo += 1
+            slug = f"{base_slug}-{sufijo}"
+        return slug
+
+class CrearProductoUseCase:
+    def ejecutar(self, tienda, datos_validados):
+        producto = Producto.objects.create(
+            id_tienda=tienda,
+            **datos_validados
+        )
+        return producto
+
+class ObtenerProductoAdminUseCase:
+    def ejecutar(self, tienda, id_producto):
+        producto = get_object_or_404(Producto, id_producto=id_producto, id_tienda=tienda)
+        return producto
+
+class ActualizarProductoAdminUseCase:
+    def ejecutar(self, tienda, id_producto, datos_actualizados):
+        producto = get_object_or_404(Producto, id_producto=id_producto, id_tienda=tienda)
+        
+        for campo, valor in datos_actualizados.items():
+            setattr(producto, campo, valor)
+            
+        producto.save()
+        return producto
+
+class ActualizarStockProductoUseCase:
+    def ejecutar(self, tienda, id_producto, nuevo_stock):
+        producto = get_object_or_404(Producto, id_producto=id_producto, id_tienda=tienda)
+        
+        producto.stock = nuevo_stock
+        producto.save()
+        
+        return producto
+
+class ValidarDisponibilidadProductoUseCase:
+    def ejecutar(self, tienda_id, id_producto, cantidad_requerida=1):
+        producto = get_object_or_404(Producto, id_producto=id_producto, id_tienda=tienda_id)
+        
+        if not producto.activo:
+            raise ValueError("El producto no se encuentra disponible (inactivo).")
+            
+        if producto.stock <= 0:
+            raise ValueError("El producto se encuentra agotado (stock 0).")
+            
+        if producto.stock < cantidad_requerida:
+            raise ValueError(f"Stock insuficiente. Solo quedan {producto.stock} unidades.")
+            
+        return producto

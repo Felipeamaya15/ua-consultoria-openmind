@@ -1,3 +1,4 @@
+from .serializers import GoogleLoginRequestSerializer
 from rest_framework.views import APIView
 from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -15,6 +16,7 @@ from apps.authentication.application.use_cases import (
     RegisterUserUseCase,
     RegisterUserDTO,
     LoginUseCase,
+    GoogleLoginUseCase
 )
 from apps.authentication.infrastructure.repositories import DjangoUserRepository
 from .serializers import (
@@ -118,3 +120,32 @@ class MeAPIView(APIView):
             mensaje="Usuario obtenido correctamente",
             status=status.HTTP_200_OK,
         )
+
+class GoogleLoginAPIView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        serializer = GoogleLoginRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        use_case = GoogleLoginUseCase(DjangoUserRepository())
+
+        try:
+            user_entity = use_case.execute(token=serializer.validated_data['token'])
+            django_user = UserModel.objects.get(pk=user_entity.id)
+            token, _ = Token.objects.get_or_create(user=django_user)
+
+            return success_response(
+                data={
+                    "user": UserResponseSerializer(user_entity).data,
+                    "token": token.key,
+                },
+                mensaje="Inicio de sesión con Google exitoso",
+                status=status.HTTP_200_OK,
+            )
+        except AuthException as err:
+            return error_response(
+                mensaje=str(err),
+                codigo=_auth_error_code(err),
+                status=status.HTTP_401_UNAUTHORIZED,
+            )

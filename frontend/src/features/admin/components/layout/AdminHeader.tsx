@@ -50,7 +50,7 @@ export function AdminHeader({
   }, []);
 
   function logout() {
-    endDemoSession();
+    localStorage.removeItem('token'); // Elimina el token real
     setProfileOpen(false);
 
     navigate(
