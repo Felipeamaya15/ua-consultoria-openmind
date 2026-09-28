@@ -9,7 +9,7 @@ class Migration(migrations.Migration):
     initial = True
 
     dependencies = [
-        ('core', '0003_itempedido_id_variante'),
+        ('core', '0001_initial'),
     ]
 
     operations = [

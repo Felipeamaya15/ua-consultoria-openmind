@@ -23,13 +23,20 @@ export default function Login() {
     useState('');
 
   // 1. Hook oficial de Google
+  // 1. Hook oficial de Google
   const loginConGoogle = useGoogleLogin({
     onSuccess: async (tokenResponse) => {
       setLoading(true);
       try {
         const data = await authService.googleLogin(tokenResponse.access_token);
         localStorage.setItem('token', data.data.token);
-        navigate('/emprendedor');
+        
+        // Redirección condicional según el correo
+        if (data.data.user.email === 'emprendedor@gmail.com') {
+          navigate('/emprendedor');
+        } else {
+          navigate(route()); // Envía al usuario a la vista pública de la tienda
+        }
       } catch (err: any) {
         setMessage(err.mensaje || 'Error al iniciar sesión con Google');
       } finally {
@@ -61,7 +68,13 @@ export default function Login() {
       }
       
       localStorage.setItem('token', data.data.token);
-      navigate('/emprendedor');
+      
+      // Redirección condicional según el correo
+      if (data.data.user.email === 'emprendedor@gmail.com') {
+        navigate('/emprendedor');
+      } else {
+        navigate(route()); // Envía al usuario a la vista pública de la tienda
+      }
     } catch (err: any) {
       setMessage(err.mensaje || 'Error al procesar la solicitud. Revisa tus credenciales.');
     } finally {
