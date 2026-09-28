@@ -10,7 +10,7 @@ export function CatalogHeader() {
     <>
       <div className="bg-[#1d1d1f] text-white text-center text-[11px] py-2 px-4">
         Compra online con envío a todo Chile.{' '}
-        <Link to={route('seguimiento')} className="text-[#1683ff] hover:opacity-70">
+        <Link to={route('seguimiento')} className="text-[var(--primary)] hover:opacity-70">
           Revisa tu pedido →
         </Link>
       </div>
@@ -21,7 +21,7 @@ export function CatalogHeader() {
             <Link
               to={route()}
               aria-label="Inicio"
-              className="text-white hover:text-[#1683ff] transition-colors"
+              className="text-white hover:text-[var(--primary)] transition-colors"
             >
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" className="w-5 h-5" strokeWidth="1.7">
                 <path d="M3 11.5 12 4l9 7.5" />
@@ -31,23 +31,23 @@ export function CatalogHeader() {
             </Link>
 
             <div className="flex items-center gap-5 md:gap-8 text-[12px] font-semibold text-white">
-              <Link to={route()} className="hidden sm:block hover:text-[#1683ff] transition-colors">
+              <Link to={route()} className="hidden sm:block hover:text-[var(--primary)] transition-colors">
                 Mi Tienda
               </Link>
-              <Link to={route('catalogo')} className="hover:text-[#1683ff] transition-colors">
+              <Link to={route('catalogo')} className="hover:text-[var(--primary)] transition-colors">
                 Catálogo
               </Link>
-              <Link to={route('ingresar')} className="hidden sm:block hover:text-[#1683ff] transition-colors">
+              <Link to={route('ingresar')} className="hidden sm:block hover:text-[var(--primary)] transition-colors">
                 Ingresar
               </Link>
-              <Link to={route('seguimiento')} className="hidden md:block hover:text-[#1683ff] transition-colors">
+              <Link to={route('seguimiento')} className="hidden md:block hover:text-[var(--primary)] transition-colors">
                 Seguimiento
               </Link>
             </div>
 
             <Link
               to={route('carrito')}
-              className="relative text-white hover:text-[#1683ff] transition-colors"
+              className="relative text-white hover:text-[var(--primary)] transition-colors"
               aria-label={`Carrito con ${count} productos`}
             >
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" className="w-5 h-5" strokeWidth="1.6">
@@ -55,7 +55,7 @@ export function CatalogHeader() {
                 <path d="M9 9V6a3 3 0 0 1 6 0v3" />
               </svg>
               {count > 0 && (
-                <span className="absolute -top-2.5 -right-2.5 min-w-4 h-4 px-1 rounded-full bg-[#1d7df2] text-white text-[9px] flex items-center justify-center">
+                <span className="absolute -top-2.5 -right-2.5 min-w-4 h-4 px-1 rounded-full bg-[var(--primary)] text-white text-[9px] flex items-center justify-center">
                   {count}
                 </span>
               )}

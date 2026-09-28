@@ -3,6 +3,7 @@ from bson import ObjectId
 from apps.catalog.domain.stock import validate_product_stock, validate_stock
 from apps.catalog.domain.tienda import data_for_store, validate_store_id
 from apps.core.infrastructure.mongo_client import get_mongo_db
+from apps.catalog.infrastructure.attribute_filters import build_attribute_query
 
 
 class ProductRepository:
@@ -52,13 +53,23 @@ class ProductRepository:
             product["_id"] = str(product["_id"])
         return product
     
-    def list_by_store(self, tienda_id: str, activo: Optional[bool] = None) -> List[Dict[str, Any]]:
-        """Lista productos de una tienda."""
-        validate_store_id(tienda_id)
+    def list_by_store(
+        self,
+        tienda_id: str,
+        activo: Optional[bool] = None,
+        atributos: Optional[Dict[str, List[str]]] = None,
+    ) -> List[Dict[str, Any]]:
+        """Lista productos de una tienda, filtrando opcionalmente por atributos personalizados."""
         query = {"tienda_id": tienda_id}
         if activo is not None:
             query["activo"] = activo
-        
+
+        if atributos:
+            variant_claves = set(
+                self.collection.distinct("variantes.atributos_variante.clave", query)
+            )
+            query = build_attribute_query(query, atributos, variant_claves)
+
         products = list(self.collection.find(query))
         for product in products:
             product["_id"] = str(product["_id"])
@@ -98,6 +109,51 @@ class ProductRepository:
             {"$inc": {"variantes.$.stock": -cantidad}},
         )
         return result is not None
+    
+    def add_variant(self, product_id: str, variant_data: Dict[str, Any]) -> bool:
+        """
+        Agrega una nueva variante al arreglo 'variantes' del producto.
+        Valida que el SKU no esté repetido dentro de ese producto.
+        """
+        try:
+            # 1. Verificar si ya existe ese SKU en el producto
+            existe = self.collection.find_one({
+                "_id": ObjectId(product_id),
+                "variantes.sku": variant_data["sku"]
+            })
+            if existe:
+                raise ValueError(f"Ya existe una variante con el SKU '{variant_data['sku']}' en este producto.")
+
+            # 2. Agregar la variante al array usando $push
+            result = self.collection.update_one(
+                {"_id": ObjectId(product_id)},
+                {"$push": {"variantes": variant_data}}
+            )
+            return result.modified_count > 0
+        except Exception as e:
+            if isinstance(e, ValueError):
+                raise e
+            return False
+
+    def update_variant(self, product_id: str, sku: str, editable_data: Dict[str, Any]) -> bool:
+        """
+        Actualiza los campos editables (precio, stock, atributos, etc.)
+        de una variante específica identificada por su SKU.
+        """
+        try:
+            # Mapear los campos a la sintaxis posicional de Mongo: variantes.$.campo
+            update_fields = {f"variantes.$.{k}": v for k, v in editable_data.items()}
+            
+            result = self.collection.update_one(
+                {
+                    "_id": ObjectId(product_id),
+                    "variantes.sku": sku
+                },
+                {"$set": update_fields}
+            )
+            return result.modified_count > 0
+        except Exception:
+            return False
 
 
 class AttributeTemplateRepository:

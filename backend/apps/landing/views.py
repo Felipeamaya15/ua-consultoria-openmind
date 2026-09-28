@@ -9,7 +9,10 @@ from apps.landing.serializers import ConfiguracionLandingSerializer
 
 
 class ConfiguracionLandingAPIView(APIView):
-    permission_classes = [AllowAny]
+    def get_permissions(self):
+        if self.request.method == "GET":
+            return [AllowAny()]
+        return super().get_permissions()
 
     def get(self, request):
         tienda = resolver_tienda(request)
@@ -34,4 +37,39 @@ class ConfiguracionLandingAPIView(APIView):
             data=serializer.data,
             mensaje="Configuración de landing obtenida correctamente",
             status=status.HTTP_200_OK,
+        )
+
+    def put(self, request):
+        tienda = resolver_tienda(
+            request,
+            exigir_propietario=True,
+        )
+
+        configuracion = ConfiguracionLanding.objects.filter(
+            tienda=tienda
+        ).first()
+
+        creada = configuracion is None
+
+        serializer = ConfiguracionLandingSerializer(
+            instance=configuracion,
+            data=request.data,
+            context={'request': request},
+        )
+        serializer.is_valid(raise_exception=True)
+
+        serializer.save(tienda=tienda)
+
+        return success_response(
+            data=serializer.data,
+            mensaje=(
+                "Configuración de landing creada correctamente"
+                if creada
+                else "Configuración de landing actualizada correctamente"
+            ),
+            status=(
+                status.HTTP_201_CREATED
+                if creada
+                else status.HTTP_200_OK
+            ),
         )

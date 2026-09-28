@@ -88,11 +88,11 @@ export default function VisualHome() {
               <Link
                 to="catalogo"
                 className="
-                  bg-white text-black
+                  bg-[var(--primary)] text-white
                   px-7 py-4
                   text-[11px] font-semibold
                   uppercase tracking-[0.12em]
-                  hover:bg-white/90
+                  hover:opacity-90
                   transition-colors
                 "
               >
@@ -198,11 +198,11 @@ export default function VisualHome() {
               to="catalogo"
               className="
                 inline-flex
-                border border-black
+                border border-[var(--primary)]
                 px-7 py-4
                 text-[11px] font-semibold
                 uppercase tracking-[0.12em]
-                hover:bg-black hover:text-white
+                hover:bg-[var(--primary)] hover:text-white
                 transition-colors
               "
             >
@@ -446,14 +446,14 @@ function VisualHomeProduct({
           <Link
             to={`producto/${product.id}`}
             className="
-              bg-[#111111]
+              bg-[var(--primary)]
               text-white
               px-6 py-3
               text-[10px]
               font-semibold
               uppercase
               tracking-[0.12em]
-              hover:bg-black/80
+              hover:opacity-90
               transition-colors
             "
           >
