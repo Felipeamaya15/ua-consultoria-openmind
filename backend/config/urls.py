@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.urls import path, include
-from apps.catalog.presentation.views import ProductVariantsView
+from apps.catalog.presentation.views import ProductVariantsView, VariantPurchaseView
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -10,6 +10,8 @@ urlpatterns = [
     path('api/visual-config/', include('apps.visual_config.urls')),
     path('api/landing/', include('apps.landing.urls')),
 
-    path('api/productos/<int:id_producto>/variantes/', ProductVariantsView.as_view(), name='qa-variantes'),
-    path('api/productos/<int:id_producto>/variantes/<str:sku>/', ProductVariantsView.as_view(), name='qa-variantes-sku'),
+    path('api/productos/<str:id_producto>/variantes/', ProductVariantsView.as_view(), name='qa-variantes'),
+    path('api/productos/<str:id_producto>/variantes/<str:sku>/', ProductVariantsView.as_view(), name='qa-variantes-sku'),
+    path('api/productos/<str:id_producto>/variantes/<str:sku>/comprar/', VariantPurchaseView.as_view(), name='qa-variante-comprar'),
+    path('api/productos/<str:id_producto>/variantes/<str:sku>/compra/', VariantPurchaseView.as_view(), name='qa-variante-compra'),
 ]

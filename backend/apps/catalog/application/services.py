@@ -113,11 +113,34 @@ class VariantService:
             raise ValueError(f"No se encontró la variante '{sku}' o no hubo cambios.")
         return self.get_variant_by_sku(product_id, sku_real)
 
-    def process_purchase(self, sku: str, cantidad: int):
+    def process_purchase(self, product_id: str, sku: str, cantidad: int = 1) -> dict:
+        """
+        Procesa la compra de una variante disminuyendo su stock de forma atómica.
+        Valida que el stock sea mayor a 0 y suficiente para la cantidad solicitada.
+        """
         if cantidad <= 0:
             raise ValueError("La cantidad a comprar debe ser mayor a 0.")
 
-        actualizado = self.repo.decrease_stock(sku.strip().upper(), cantidad)
+        # 1. Resolver la variante por id numérico, índice o SKU
+        variante = self.get_variant_by_sku(product_id, sku)
+        sku_real = variante.get("sku")
+        stock_actual = int(variante.get("stock", 0))
+
+        # 2. Validación: rechazo si no posee stock
+        if stock_actual <= 0:
+            raise ValueError(f"Operación rechazada: La variante '{sku_real}' tiene stock 0.")
+
+        if stock_actual < cantidad:
+            raise ValueError(
+                f"Operación rechazada: Stock insuficiente. Stock disponible: {stock_actual}, solicitado: {cantidad}."
+            )
+
+        # 3. Disminución atómica en MongoDB
+        actualizado = self.repo.decrease_stock(sku_real, cantidad)
         if not actualizado:
-            raise ValueError(f"Operación rechazada: La variante '{sku}' tiene stock 0 o insuficiente.")
-        return True
+            raise ValueError(
+                f"Operación rechazada: La variante '{sku_real}' no tiene stock suficiente para completar la compra."
+            )
+
+        # 4. Retornar la variante con su stock actualizado
+        return self.get_variant_by_sku(product_id, sku_real)

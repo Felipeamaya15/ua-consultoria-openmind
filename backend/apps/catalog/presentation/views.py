@@ -389,8 +389,59 @@ class ProductVariantsView(APIView):
         except Exception as e:
             return Response({"error": f"Error interno: {str(e)}", "codigo": "ERROR_INTERNO"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
-    def post(self, request, id_producto=None, product_id=None):
+    def post(self, request, id_producto=None, product_id=None, sku=None):
         pid = str(id_producto or product_id)
+
+        
+        
+        if sku:
+            data = request.data or {}
+            try:
+                cantidad = int(data.get("cantidad", 1))
+                if cantidad <= 0:
+                    return Response(
+                        {"error": "La cantidad a comprar debe ser un número entero mayor a 0.", "codigo": "CANTIDAD_INVALIDA"},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+            except (ValueError, TypeError):
+                return Response(
+                    {"error": "La cantidad a comprar debe ser un número entero válido.", "codigo": "CANTIDAD_INVALIDA"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            try:
+                variante_actualizada = self.service.process_purchase(pid, sku, cantidad=cantidad)
+                return Response(
+                    {
+                        "mensaje": "Compra realizada exitosamente",
+                        "id_producto": pid,
+                        "sku": variante_actualizada.get("sku"),
+                        "cantidad_comprada": cantidad,
+                        "stock_actual": variante_actualizada.get("stock"),
+                        "variante": variante_actualizada
+                    },
+                    status=status.HTTP_200_OK
+                )
+            except ValueError as e:
+                msg = str(e)
+                if "no existe" in msg or "No se encontró" in msg:
+                    return Response(
+                        {"error": msg, "codigo": "RECURSO_NO_ENCONTRADO"},
+                        status=status.HTTP_404_NOT_FOUND
+                    )
+                # Rechazo controlado cuando el stock es 0 o insuficiente
+                return Response(
+                    {"error": msg, "codigo": "STOCK_INSUFICIENTE"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            except Exception as e:
+                return Response(
+                    {"error": f"Error interno al procesar compra: {str(e)}", "codigo": "ERROR_INTERNO"},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                )
+
+        
+         
         data = request.data
 
         # --- 1. Validaciones para el caso inválido de QA (HTTP 400) ---
@@ -402,8 +453,8 @@ class ProductVariantsView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        sku = data.get("sku")
-        if not sku or not str(sku).strip():
+        sku_input = data.get("sku")
+        if not sku_input or not str(sku_input).strip():
             errores["sku"] = "El campo 'sku' es obligatorio y no puede estar vacío."
 
         if "precio" not in data or data.get("precio") is None:
@@ -463,3 +514,52 @@ class ProductVariantsView(APIView):
                 {"error": f"Error interno al guardar: {str(e)}", "codigo": "ERROR_INTERNO"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+class VariantPurchaseView(APIView):
+    """
+    Endpoint para procesar compras de variantes y validar stock atómico.
+    """
+    permission_classes = [AllowAny]
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.service = VariantService()
+
+    def post(self, request, id_producto=None, product_id=None, sku=None):
+        pid = str(id_producto or product_id)
+        if not sku:
+            return Response(
+                {"error": "Debe especificar la variante a comprar en la URL.", "codigo": "PARAMETRO_FALTANTE"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        data = request.data or {}
+        try:
+            cantidad = int(data.get("cantidad", 1))
+            if cantidad <= 0:
+                raise ValueError()
+        except (ValueError, TypeError):
+            return Response(
+                {"error": "La cantidad a comprar debe ser un número entero mayor a 0.", "codigo": "CANTIDAD_INVALIDA"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            variante_actualizada = self.service.process_purchase(pid, sku, cantidad=cantidad)
+            return Response(
+                {
+                    "mensaje": "Compra realizada exitosamente",
+                    "id_producto": pid,
+                    "sku": variante_actualizada.get("sku"),
+                    "cantidad_comprada": cantidad,
+                    "stock_actual": variante_actualizada.get("stock"),
+                    "variante": variante_actualizada
+                },
+                status=status.HTTP_200_OK
+            )
+        except ValueError as e:
+            msg = str(e)
+            if "no existe" in msg or "No se encontró" in msg:
+                return Response({"error": msg, "codigo": "RECURSO_NO_ENCONTRADO"}, status=status.HTTP_404_NOT_FOUND)
+            return Response({"error": msg, "codigo": "STOCK_INSUFICIENTE"}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({"error": f"Error interno: {str(e)}", "codigo": "ERROR_INTERNO"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
