@@ -10,6 +10,7 @@ from apps.catalog.presentation.views import (
     ProductoUpdateView,
     ProductoStockUpdateView,
     ValidarDisponibilidadAPIView,
+    ProductVariantsView,  
 )
 
 urlpatterns = [
@@ -68,5 +69,17 @@ urlpatterns = [
         'productos/<int:id_producto>/disponibilidad/',
         ValidarDisponibilidadAPIView.as_view(),
         name='producto-disponibilidad'
+    ),
+
+    # Rutas de Variantes
+    path(
+        'productos/<int:id_producto>/variantes/',
+        ProductVariantsView.as_view(),
+        name='producto-variantes'
+    ),
+    path(
+        'productos/<int:id_producto>/variantes/<str:sku>/',
+        ProductVariantsView.as_view(),
+        name='producto-variante-detalle'
     ),
 ]

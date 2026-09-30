@@ -23,6 +23,7 @@ from ..application.use_cases import ActualizarProductoAdminUseCase
 from .serializers import ProductoStockUpdateSerializer
 from ..application.use_cases import ActualizarStockProductoUseCase
 from ..application.use_cases import ValidarDisponibilidadProductoUseCase
+from apps.catalog.application.services import VariantService
 
 class PublicProductListAPIView(APIView):
     """Listado público de productos activos del catálogo."""
@@ -233,4 +234,111 @@ class ValidarDisponibilidadAPIView(APIView):
                 mensaje=str(e),
                 codigo="COMPRA_INVALIDA",
                 status=status.HTTP_400_BAD_REQUEST
+            )
+class ProductVariantsView(APIView):
+    """
+    """
+    permission_classes = [AllowAny]
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.service = VariantService()
+
+    def get(self, request, id_producto=None, product_id=None, sku=None):
+        pid = str(id_producto or product_id)
+        try:
+            # Si la ruta incluye SKU, retorna esa variante específica
+            if sku:
+                variante = self.service.get_variant_by_sku(pid, sku)
+                return Response(variante, status=status.HTTP_200_OK)
+
+            # Si no hay SKU, lista todas las variantes del producto
+            variantes = self.service.get_variants(pid)
+            return Response(
+                {
+                    "mensaje": "Variantes obtenidas correctamente",
+                    "id_producto": pid,
+                    "variantes": variantes
+                },
+                status=status.HTTP_200_OK
+            )
+        except ValueError as e:
+            return Response(
+                {"error": str(e), "codigo": "RECURSO_NO_ENCONTRADO"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+    def post(self, request, id_producto=None, product_id=None):
+        pid = str(id_producto or product_id)
+        data = request.data
+
+        # --- 1. Validaciones para el caso inválido de QA (HTTP 400) ---
+        errores = {}
+
+        if not data:
+            return Response(
+                {"error": "El cuerpo de la solicitud no puede estar vacío.", "codigo": "DATOS_INVALIDOS"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        sku = data.get("sku")
+        if not sku or not str(sku).strip():
+            errores["sku"] = "El campo 'sku' es obligatorio y no puede estar vacío."
+
+        if "precio" not in data or data.get("precio") is None:
+            errores["precio"] = "El campo 'precio' es obligatorio."
+        else:
+            try:
+                precio = float(data["precio"])
+                if precio < 0:
+                    errores["precio"] = "El precio no puede ser negativo."
+            except (ValueError, TypeError):
+                errores["precio"] = "El precio debe ser un número válido."
+
+        if "stock" in data and data.get("stock") is not None:
+            try:
+                stock = int(data["stock"])
+                if stock < 0:
+                    errores["stock"] = "El stock no puede ser negativo."
+            except (ValueError, TypeError):
+                errores["stock"] = "El stock debe ser un número entero válido."
+
+        if errores:
+            return Response(
+                {
+                    "mensaje": "La solicitud contiene datos inválidos",
+                    "codigo": "ERROR_VALIDACION",
+                    "errores": errores
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # --- 2. Persistencia con VariantService (HTTP 201) ---
+        payload = {
+            "sku": str(data["sku"]).strip().upper(),
+            "precio": float(data["precio"]),
+            "stock": int(data.get("stock", 0)),
+            "nombre": data.get("nombre", f"Variante {str(data['sku']).strip().upper()}"),
+            "atributos": data.get("atributos", {})
+        }
+
+        try:
+            variante_creada = self.service.create_variant(pid, payload)
+            return Response(
+                {
+                    "mensaje": "Variante creada y asociada al producto exitosamente",
+                    "id_producto": pid,
+                    "variante": variante_creada
+                },
+                status=status.HTTP_201_CREATED
+            )
+        except ValueError as e:
+            return Response(
+                {"error": str(e), "codigo": "ERROR_CREACION"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        except Exception as e:
+            return Response(
+                {"error": f"Error interno al guardar: {str(e)}", "codigo": "ERROR_INTERNO"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
