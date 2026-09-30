@@ -30,15 +30,20 @@ class VariantService:
         return producto.get("variantes", [])
 
     def get_variant_by_sku(self, product_id: str, sku: str) -> dict:
-        """Recupera una variante específica según su SKU."""
+        """Recupera una variante específica según su SKU o ID numérico."""
         variantes = self.get_variants(product_id)
-        sku_clean = sku.strip().upper()
-        variante = next((v for v in variantes if v.get("sku", "").upper() == sku_clean), None)
+        clean_id = str(sku).strip().upper()
 
-        if not variante:
-            raise ValueError(f"La variante con SKU '{sku}' no existe en este producto.")
+        for idx, v in enumerate(variantes, start=1):
+            if (
+                v.get("sku", "").strip().upper() == clean_id
+                or str(v.get("id", "")) == clean_id
+                or str(v.get("id_variante", "")) == clean_id
+                or (clean_id.isdigit() and int(clean_id) == idx)
+            ):
+                return v
 
-        return variante
+        raise ValueError(f"La variante '{sku}' no existe en este producto.")
 
     def delete_variant(self, product_id: str, sku: str, soft_delete: bool = False):
         """
@@ -98,16 +103,27 @@ class VariantService:
         return variant_data
 
     def update_variant(self, product_id: str, sku: str, update_data: Dict[str, Any]):
-        sku_clean = sku.strip().upper()
-        if "precio" in update_data and update_data["precio"] < 0:
-            raise ValueError("El precio no puede ser negativo.")
-        if "stock" in update_data and update_data["stock"] < 0:
-            raise ValueError("El stock no puede ser negativo.")
+        # Validaciones de dominio para datos inválidos (rechazo controlado)
+        if "precio" in update_data:
+            try:
+                if float(update_data["precio"]) < 0:
+                    raise ValueError("El precio no puede ser negativo.")
+            except (ValueError, TypeError) as e:
+                raise ValueError("El precio debe ser un número válido mayor o igual a 0.")
 
-        success = self.repo.update_variant(product_id, sku_clean, update_data)
+        if "stock" in update_data:
+            try:
+                if int(update_data["stock"]) < 0:
+                    raise ValueError("El stock no puede ser negativo.")
+            except (ValueError, TypeError) as e:
+                raise ValueError("El stock debe ser un entero válido mayor o igual a 0.")
+
+        success = self.repo.update_variant(product_id, sku, update_data)
         if not success:
-            raise ValueError(f"No se encontró la variante '{sku}' o no hubo cambios.")
-        return True
+            raise ValueError(f"No se encontró la variante '{sku}' para este producto.")
+
+        # Retornar la variante actualizada
+        return self.get_variant_by_sku(product_id, sku)
 
     def process_purchase(self, sku: str, cantidad: int):
         if cantidad <= 0:

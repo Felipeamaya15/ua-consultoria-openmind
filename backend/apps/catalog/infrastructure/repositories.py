@@ -176,22 +176,45 @@ class ProductRepository:
                 raise e
             return False
 
-    def update_variant(self, product_id: str, sku: str, editable_data: Dict[str, Any]) -> bool:
+    def update_variant(self, product_id: str, identifier: str, editable_data: Dict[str, Any]) -> bool:
         """
-        Actualiza los campos editables de una variante específica por su SKU.
+        Actualiza los campos editables de una variante específica.
+        Soporta identificar la variante por SKU, por su campo 'id', o por su índice numérico (1, 2...).
         """
         try:
             id_query = self._build_id_query(product_id)
+            producto = self.collection.find_one(id_query)
+            if not producto:
+                return False
+
+            variantes = producto.get("variantes", [])
+            clean_id = str(identifier).strip().upper()
+
+            # Localizar el SKU real de la variante dentro del arreglo
+            target_sku = None
+            for idx, v in enumerate(variantes, start=1):
+                if (
+                    v.get("sku", "").strip().upper() == clean_id
+                    or str(v.get("id", "")) == clean_id
+                    or str(v.get("id_variante", "")) == clean_id
+                    or (clean_id.isdigit() and int(clean_id) == idx)
+                ):
+                    target_sku = v.get("sku")
+                    break
+
+            if not target_sku:
+                return False
+
+            # Construir la actualización posicional en MongoDB
             update_fields = {f"variantes.$.{k}": v for k, v in editable_data.items()}
 
             result = self.collection.update_one(
-                {"$and": [id_query, {"variantes.sku": sku}]},
+                {"$and": [id_query, {"variantes.sku": target_sku}]},
                 {"$set": update_fields}
             )
-            return result.modified_count > 0
+            return result.matched_count > 0
         except Exception:
             return False
-
 
 class AttributeTemplateRepository:
     """Repositorio para plantillas de atributos por tienda/rubro."""

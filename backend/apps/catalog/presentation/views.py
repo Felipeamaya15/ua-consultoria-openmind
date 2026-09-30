@@ -240,6 +240,7 @@ class ProductVariantsView(APIView):
     """
     permission_classes = [AllowAny]
 
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.service = VariantService()
@@ -268,6 +269,93 @@ class ProductVariantsView(APIView):
                 status=status.HTTP_404_NOT_FOUND
             )
 
+    def put(self, request, id_producto=None, product_id=None, sku=None):
+        return self._actualizar_variante(request, id_producto or product_id, sku)
+
+    def patch(self, request, id_producto=None, product_id=None, sku=None):
+        return self._actualizar_variante(request, id_producto or product_id, sku)
+
+    def _actualizar_variante(self, request, id_producto, sku):
+        pid = str(id_producto)
+        data = request.data
+
+        if not sku:
+            return Response(
+                {"error": "Debe especificar el identificador de la variante en la URL.", "codigo": "PARAMETRO_FALTANTE"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if not data or not isinstance(data, dict):
+            return Response(
+                {"error": "El cuerpo de la solicitud no puede estar vacío.", "codigo": "DATOS_INVALIDOS"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Validaciones para el caso de datos inválidos (HTTP 400)
+        errores = {}
+
+        if "precio" in data:
+            try:
+                precio = float(data["precio"])
+                if precio < 0:
+                    errores["precio"] = "El precio no puede ser negativo."
+            except (ValueError, TypeError):
+                errores["precio"] = "El precio debe ser un número válido."
+
+        if "stock" in data:
+            try:
+                stock = int(data["stock"])
+                if stock < 0:
+                    errores["stock"] = "El stock no puede ser negativo."
+            except (ValueError, TypeError):
+                errores["stock"] = "El stock debe ser un número entero válido."
+
+        if errores:
+            return Response(
+                {
+                    "mensaje": "La actualización contiene datos inválidos",
+                    "codigo": "ERROR_VALIDACION",
+                    "errores": errores
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Campos permitidos para edición
+        campos_permitidos = ["precio", "stock", "nombre", "atributos"]
+        datos_a_actualizar = {}
+        for campo in campos_permitidos:
+            if campo in data:
+                if campo == "precio":
+                    datos_a_actualizar[campo] = float(data[campo])
+                elif campo == "stock":
+                    datos_a_actualizar[campo] = int(data[campo])
+                else:
+                    datos_a_actualizar[campo] = data[campo]
+
+        if not datos_a_actualizar:
+            return Response(
+                {"error": "No se enviaron campos válidos para actualizar.", "codigo": "SIN_CAMBIOS"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            variante_actualizada = self.service.update_variant(pid, sku, datos_a_actualizar)
+            return Response(
+                {
+                    "mensaje": "Variante actualizada exitosamente",
+                    "id_producto": pid,
+                    "variante": variante_actualizada
+                },
+                status=status.HTTP_200_OK
+            )
+        except ValueError as e:
+            msg = str(e)
+            if "No se encontró" in msg:
+                return Response({"error": msg, "codigo": "RECURSO_NO_ENCONTRADO"}, status=status.HTTP_404_NOT_FOUND)
+            return Response({"error": msg, "codigo": "ERROR_VALIDACION"}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({"error": f"Error interno: {str(e)}", "codigo": "ERROR_INTERNO"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
     def post(self, request, id_producto=None, product_id=None):
         pid = str(id_producto or product_id)
         data = request.data
