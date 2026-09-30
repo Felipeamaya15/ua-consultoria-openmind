@@ -23,9 +23,9 @@ export function CatalogHeader() {
             <Link
               to={route()}
               aria-label="Inicio"
-              className="text-white hover:text-[var(--primary)] transition-colors"
+              className="flex items-center text-white hover:text-[var(--primary)] transition-colors"
             >
-              {landing?.logo ? <img data-landing-image src={landing.logo} alt="Logo de la tienda" className="inline-block w-8 h-8 object-contain mr-2" /> : <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" className="w-5 h-5" strokeWidth="1.7">
+              {landing?.logo ? <img data-landing-image src={landing.logo} alt="Logo de la tienda" className="block w-auto h-auto max-w-[80px] sm:max-w-[120px] xl:max-w-[160px] max-h-10 sm:max-h-11 shrink-0 object-contain object-center" /> : <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" className="w-5 h-5" strokeWidth="1.7">
                 <path d="M3 11.5 12 4l9 7.5" />
                 <path d="M5.5 10v10h13V10" />
                 <path d="M9.5 20v-6h5v6" />

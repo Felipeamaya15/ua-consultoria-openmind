@@ -128,7 +128,7 @@ export function EditorialLayout() {
                 data-landing-image={landing?.logo ? true : undefined}
                 src={config.logo}
                 alt={`Logo de ${config.name}`}
-                className="w-8 h-8 rounded-full object-cover"
+                className="block w-auto h-auto max-w-[80px] sm:max-w-[120px] xl:max-w-[160px] max-h-10 sm:max-h-11 shrink-0 object-contain object-center"
               />
             ) : (
               <div className="w-8 h-8 rounded-full bg-[var(--primary)] flex items-center justify-center text-white text-xs font-bold">

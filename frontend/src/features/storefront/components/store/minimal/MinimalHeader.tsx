@@ -35,20 +35,20 @@ export function MinimalHeader() {
 
   return (
     <div className="px-4 md:px-8 pt-5">
-      <header className="max-w-6xl mx-auto bg-white rounded-2xl border border-black/5 shadow-sm px-4 md:px-6 h-16 flex items-center justify-between gap-4">
+      <header className="max-w-6xl mx-auto bg-white rounded-2xl border border-black/5 shadow-sm px-4 md:px-6 h-16 md:max-lg:h-auto md:max-lg:min-h-16 md:max-lg:py-3 md:max-lg:flex-wrap flex items-center justify-between gap-4">
 
         {/* Nombre */}
         <Link
           to="."
-          className="font-semibold text-[var(--primary)] whitespace-nowrap"
+          className="flex items-center gap-2 font-semibold text-[var(--primary)] whitespace-nowrap"
         >
-          {landing?.logo && <img data-landing-image src={landing.logo} alt="Logo de la tienda" className="inline-block w-8 h-8 object-contain mr-2" />}
+          {landing?.logo && <img data-landing-image src={landing.logo} alt="Logo de la tienda" className="block w-auto h-auto max-w-[80px] sm:max-w-[120px] xl:max-w-[160px] max-h-10 sm:max-h-11 shrink-0 object-contain object-center" />}
           Mi Tienda.
         </Link>
 
         {/* Navegación */}
         <nav
-          className="hidden md:flex items-center bg-[#f4f4f4] rounded-full p-1"
+          className="hidden md:flex md:max-lg:order-3 md:max-lg:w-full md:max-lg:justify-center items-center bg-[#f4f4f4] rounded-full p-1"
           aria-label="Navegación principal"
         >
           <Link
