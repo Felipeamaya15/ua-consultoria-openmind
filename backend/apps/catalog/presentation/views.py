@@ -23,6 +23,7 @@ from ..application.use_cases import ActualizarProductoAdminUseCase
 from .serializers import ProductoStockUpdateSerializer
 from ..application.use_cases import ActualizarStockProductoUseCase
 from ..application.use_cases import ValidarDisponibilidadProductoUseCase
+from apps.catalog.application.services import VariantService
 
 class PublicProductListAPIView(APIView):
     """Listado público de productos activos del catálogo."""
@@ -234,3 +235,331 @@ class ValidarDisponibilidadAPIView(APIView):
                 codigo="COMPRA_INVALIDA",
                 status=status.HTTP_400_BAD_REQUEST
             )
+class ProductVariantsView(APIView):
+    """
+    """
+    permission_classes = [AllowAny]
+
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.service = VariantService()
+
+    def get(self, request, id_producto=None, product_id=None, sku=None):
+        pid = str(id_producto or product_id)
+        try:
+            # Si la ruta incluye SKU, retorna esa variante específica
+            if sku:
+                variante = self.service.get_variant_by_sku(pid, sku)
+                return Response(variante, status=status.HTTP_200_OK)
+
+            # Si no hay SKU, lista todas las variantes del producto
+            variantes = self.service.get_variants(pid)
+            return Response(
+                {
+                    "mensaje": "Variantes obtenidas correctamente",
+                    "id_producto": pid,
+                    "variantes": variantes
+                },
+                status=status.HTTP_200_OK
+            )
+        except ValueError as e:
+            return Response(
+                {"error": str(e), "codigo": "RECURSO_NO_ENCONTRADO"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+    def delete(self, request, id_producto=None, product_id=None, sku=None):
+        """
+        Eliminación administrativa de una variante (SCRUM-248).
+        """
+        pid = str(id_producto or product_id)
+        if not sku:
+            return Response(
+                {"error": "Debe especificar el identificador o SKU de la variante a eliminar en la URL.", "codigo": "PARAMETRO_FALTANTE"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        soft_param = request.query_params.get("soft", "false").lower() in ("true", "1")
+
+        try:
+            sku_eliminado = self.service.delete_variant(pid, sku, soft_delete=soft_param)
+            return Response(
+                {
+                    "mensaje": "Variante eliminada exitosamente",
+                    "id_producto": pid,
+                    "sku": sku_eliminado
+                },
+                status=status.HTTP_200_OK
+            )
+        except ValueError as e:
+            return Response(
+                {"error": str(e), "codigo": "RECURSO_NO_ENCONTRADO"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        except Exception as e:
+            return Response(
+                {"error": f"Error interno al eliminar variante: {str(e)}", "codigo": "ERROR_INTERNO"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+    def put(self, request, id_producto=None, product_id=None, sku=None):
+        return self._actualizar_variante(request, id_producto or product_id, sku)
+
+    def patch(self, request, id_producto=None, product_id=None, sku=None):
+        return self._actualizar_variante(request, id_producto or product_id, sku)
+
+    def _actualizar_variante(self, request, id_producto, sku):
+        pid = str(id_producto)
+        data = request.data
+
+        if not sku:
+            return Response(
+                {"error": "Debe especificar el identificador de la variante en la URL.", "codigo": "PARAMETRO_FALTANTE"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if not data or not isinstance(data, dict):
+            return Response(
+                {"error": "El cuerpo de la solicitud no puede estar vacío.", "codigo": "DATOS_INVALIDOS"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Validaciones para el caso de datos inválidos (HTTP 400)
+        errores = {}
+
+        if "precio" in data:
+            try:
+                precio = float(data["precio"])
+                if precio < 0:
+                    errores["precio"] = "El precio no puede ser negativo."
+            except (ValueError, TypeError):
+                errores["precio"] = "El precio debe ser un número válido."
+
+        if "stock" in data:
+            try:
+                stock = int(data["stock"])
+                if stock < 0:
+                    errores["stock"] = "El stock no puede ser negativo."
+            except (ValueError, TypeError):
+                errores["stock"] = "El stock debe ser un número entero válido."
+
+        if errores:
+            return Response(
+                {
+                    "mensaje": "La actualización contiene datos inválidos",
+                    "codigo": "ERROR_VALIDACION",
+                    "errores": errores
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Campos permitidos para edición
+        campos_permitidos = ["precio", "stock", "nombre", "atributos"]
+        datos_a_actualizar = {}
+        for campo in campos_permitidos:
+            if campo in data:
+                if campo == "precio":
+                    datos_a_actualizar[campo] = float(data[campo])
+                elif campo == "stock":
+                    datos_a_actualizar[campo] = int(data[campo])
+                else:
+                    datos_a_actualizar[campo] = data[campo]
+
+        if not datos_a_actualizar:
+            return Response(
+                {"error": "No se enviaron campos válidos para actualizar.", "codigo": "SIN_CAMBIOS"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            variante_actualizada = self.service.update_variant(pid, sku, datos_a_actualizar)
+            return Response(
+                {
+                    "mensaje": "Variante actualizada exitosamente",
+                    "id_producto": pid,
+                    "variante": variante_actualizada
+                },
+                status=status.HTTP_200_OK
+            )
+        except ValueError as e:
+            msg = str(e)
+            if "No se encontró" in msg:
+                return Response({"error": msg, "codigo": "RECURSO_NO_ENCONTRADO"}, status=status.HTTP_404_NOT_FOUND)
+            return Response({"error": msg, "codigo": "ERROR_VALIDACION"}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({"error": f"Error interno: {str(e)}", "codigo": "ERROR_INTERNO"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
+    def post(self, request, id_producto=None, product_id=None, sku=None):
+        pid = str(id_producto or product_id)
+
+        
+        
+        if sku:
+            data = request.data or {}
+            try:
+                cantidad = int(data.get("cantidad", 1))
+                if cantidad <= 0:
+                    return Response(
+                        {"error": "La cantidad a comprar debe ser un número entero mayor a 0.", "codigo": "CANTIDAD_INVALIDA"},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+            except (ValueError, TypeError):
+                return Response(
+                    {"error": "La cantidad a comprar debe ser un número entero válido.", "codigo": "CANTIDAD_INVALIDA"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            try:
+                variante_actualizada = self.service.process_purchase(pid, sku, cantidad=cantidad)
+                return Response(
+                    {
+                        "mensaje": "Compra realizada exitosamente",
+                        "id_producto": pid,
+                        "sku": variante_actualizada.get("sku"),
+                        "cantidad_comprada": cantidad,
+                        "stock_actual": variante_actualizada.get("stock"),
+                        "variante": variante_actualizada
+                    },
+                    status=status.HTTP_200_OK
+                )
+            except ValueError as e:
+                msg = str(e)
+                if "no existe" in msg or "No se encontró" in msg:
+                    return Response(
+                        {"error": msg, "codigo": "RECURSO_NO_ENCONTRADO"},
+                        status=status.HTTP_404_NOT_FOUND
+                    )
+                # Rechazo controlado cuando el stock es 0 o insuficiente
+                return Response(
+                    {"error": msg, "codigo": "STOCK_INSUFICIENTE"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            except Exception as e:
+                return Response(
+                    {"error": f"Error interno al procesar compra: {str(e)}", "codigo": "ERROR_INTERNO"},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                )
+
+        
+         
+        data = request.data
+
+        # --- 1. Validaciones para el caso inválido de QA (HTTP 400) ---
+        errores = {}
+
+        if not data:
+            return Response(
+                {"error": "El cuerpo de la solicitud no puede estar vacío.", "codigo": "DATOS_INVALIDOS"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        sku_input = data.get("sku")
+        if not sku_input or not str(sku_input).strip():
+            errores["sku"] = "El campo 'sku' es obligatorio y no puede estar vacío."
+
+        if "precio" not in data or data.get("precio") is None:
+            errores["precio"] = "El campo 'precio' es obligatorio."
+        else:
+            try:
+                precio = float(data["precio"])
+                if precio < 0:
+                    errores["precio"] = "El precio no puede ser negativo."
+            except (ValueError, TypeError):
+                errores["precio"] = "El precio debe ser un número válido."
+
+        if "stock" in data and data.get("stock") is not None:
+            try:
+                stock = int(data["stock"])
+                if stock < 0:
+                    errores["stock"] = "El stock no puede ser negativo."
+            except (ValueError, TypeError):
+                errores["stock"] = "El stock debe ser un número entero válido."
+
+        if errores:
+            return Response(
+                {
+                    "mensaje": "La solicitud contiene datos inválidos",
+                    "codigo": "ERROR_VALIDACION",
+                    "errores": errores
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # --- 2. Persistencia con VariantService (HTTP 201) ---
+        payload = {
+            "sku": str(data["sku"]).strip().upper(),
+            "precio": float(data["precio"]),
+            "stock": int(data.get("stock", 0)),
+            "nombre": data.get("nombre", f"Variante {str(data['sku']).strip().upper()}"),
+            "atributos": data.get("atributos", {})
+        }
+
+        try:
+            variante_creada = self.service.create_variant(pid, payload)
+            return Response(
+                {
+                    "mensaje": "Variante creada y asociada al producto exitosamente",
+                    "id_producto": pid,
+                    "variante": variante_creada
+                },
+                status=status.HTTP_201_CREATED
+            )
+        except ValueError as e:
+            return Response(
+                {"error": str(e), "codigo": "ERROR_CREACION"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        except Exception as e:
+            return Response(
+                {"error": f"Error interno al guardar: {str(e)}", "codigo": "ERROR_INTERNO"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+class VariantPurchaseView(APIView):
+    """
+    Endpoint para procesar compras de variantes y validar stock atómico.
+    """
+    permission_classes = [AllowAny]
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.service = VariantService()
+
+    def post(self, request, id_producto=None, product_id=None, sku=None):
+        pid = str(id_producto or product_id)
+        if not sku:
+            return Response(
+                {"error": "Debe especificar la variante a comprar en la URL.", "codigo": "PARAMETRO_FALTANTE"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        data = request.data or {}
+        try:
+            cantidad = int(data.get("cantidad", 1))
+            if cantidad <= 0:
+                raise ValueError()
+        except (ValueError, TypeError):
+            return Response(
+                {"error": "La cantidad a comprar debe ser un número entero mayor a 0.", "codigo": "CANTIDAD_INVALIDA"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            variante_actualizada = self.service.process_purchase(pid, sku, cantidad=cantidad)
+            return Response(
+                {
+                    "mensaje": "Compra realizada exitosamente",
+                    "id_producto": pid,
+                    "sku": variante_actualizada.get("sku"),
+                    "cantidad_comprada": cantidad,
+                    "stock_actual": variante_actualizada.get("stock"),
+                    "variante": variante_actualizada
+                },
+                status=status.HTTP_200_OK
+            )
+        except ValueError as e:
+            msg = str(e)
+            if "no existe" in msg or "No se encontró" in msg:
+                return Response({"error": msg, "codigo": "RECURSO_NO_ENCONTRADO"}, status=status.HTTP_404_NOT_FOUND)
+            return Response({"error": msg, "codigo": "STOCK_INSUFICIENTE"}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({"error": f"Error interno: {str(e)}", "codigo": "ERROR_INTERNO"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
