@@ -1,3 +1,5 @@
+import { useLandingContent } from '../../../landing/hooks/useLandingContent';
+import { useLandingSectionVisibility } from '../../../landing/hooks/useLandingSectionVisibility';
 import { useEffect, useState } from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 
@@ -50,7 +52,9 @@ function CartIcon({ count }: { count: number }) {
  * El contenido de cada página se renderiza mediante <Outlet />.
  */
 export function EditorialLayout() {
-  const { config } = useStore();
+  const { categories } = useLandingContent();
+  const isSectionVisible = useLandingSectionVisibility();
+  const { config, landing } = useStore();
   const { count } = useCart();
   const navigate = useNavigate();
 
@@ -87,15 +91,7 @@ export function EditorialLayout() {
     window.scrollTo(0, 0);
   }, [pathname, search]);
 
-  const categories = [
-    'Todos',
-    'Ropa',
-    'Accesorios',
-    'Tecnología',
-    'Hogar',
-    'Papelería',
-    'Alimentos',
-  ];
+
 
   return (
     <div className="template-editorial min-h-screen bg-[#fafaf8] flex flex-col">
@@ -129,6 +125,7 @@ export function EditorialLayout() {
           >
             {config.logo ? (
               <img
+                data-landing-image={landing?.logo ? true : undefined}
                 src={config.logo}
                 alt={`Logo de ${config.name}`}
                 className="w-8 h-8 rounded-full object-cover"
@@ -303,7 +300,7 @@ export function EditorialLayout() {
         {/* =================================================
             CATEGORÍAS
         ================================================== */}
-        <div className="border-t border-[var(--border)] overflow-x-auto scrollbar-hide">
+        {isSectionVisible('Categorías') && categories.length > 0 && (<div className="border-t border-[var(--border)] overflow-x-auto scrollbar-hide">
           <div className="max-w-7xl mx-auto px-4 flex gap-6 py-2">
 
             {categories.map((category) => (
@@ -321,7 +318,7 @@ export function EditorialLayout() {
             ))}
 
           </div>
-        </div>
+        </div>)}
 
       </header>
 

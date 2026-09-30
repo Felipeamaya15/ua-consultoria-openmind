@@ -1,7 +1,12 @@
+import { useLandingContent } from '../../../../landing/hooks/useLandingContent';
+import { Icon } from '../../ui';
+import { useLandingSectionVisibility } from '../../../../landing/hooks/useLandingSectionVisibility';
 import { Link } from 'react-router-dom';
 import { useStorefrontTemplate } from '../../../hooks/useStorefrontTemplate';
 
 export function CatalogFooter() {
+  const { content } = useLandingContent();
+  const isSectionVisible = useLandingSectionVisibility();
   const { route } = useStorefrontTemplate();
 
   return (
@@ -17,15 +22,9 @@ export function CatalogFooter() {
           </p>
         </div>
 
-        <div className="md:text-center">
-          <p className="text-[10px] uppercase tracking-[0.18em] text-[#e04b1a]">
-            Compra con confianza
-          </p>
-
-          <p className="mt-2 text-[12px] text-white/45">
-            Envíos a todo Chile · Pago seguro
-          </p>
-        </div>
+        {isSectionVisible('Beneficios') && content.beneficios.length > 0 && (<div className="md:text-center">
+          {content.beneficios.map((b, i) => <div key={i} className="mb-4"><Icon name={b.icono} className="w-5 h-5 inline-block" /><p className="text-[10px] uppercase tracking-[0.18em] text-[var(--primary)] mt-2">{b.titulo}</p>{b.descripcion && <p className="mt-2 text-[12px] text-white/45">{b.descripcion}</p>}</div>)}
+        </div>)}
 
         <div className="flex flex-wrap md:justify-end gap-x-5 gap-y-2 text-[11px] text-white/50">
           <Link

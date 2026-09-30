@@ -32,6 +32,7 @@ class ConfiguracionLanding(models.Model):
     )
 
     secciones = models.JSONField(default=dict, blank=True)
+    contenido = models.JSONField(default=dict, blank=True)
 
     class Meta:
         db_table = 'configuracion_landing'

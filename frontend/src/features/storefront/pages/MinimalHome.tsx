@@ -1,42 +1,24 @@
-import { FormEvent, useMemo, useState } from 'react';
+import { useLandingContent } from '../../landing/hooks/useLandingContent';
+import { LandingDetails } from '../../landing/components/LandingDetails';
+import { useLandingSectionVisibility } from '../../landing/hooks/useLandingSectionVisibility';
+import { useStore } from '../context/StoreContext';
+import { LandingStatus } from '../../landing/components/LandingStatus';
+import { FormEvent, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 
-import { mockProducts, formatPrice } from '../data/mockData';
-
-const HOME_CATEGORIES = [
-  'Women',
-  'Men',
-  'Beauty',
-  'Home',
-  'Fitness & nutrition',
-  'Baby & toddler',
-  'Food & drinks',
-];
+import { formatPrice } from '../data/mockData';
 
 export default function MinimalHome() {
+  const { featured, categories } = useLandingContent();
+  const isSectionVisible = useLandingSectionVisibility();
+  const { landing } = useStore();
   const navigate = useNavigate();
   const [search, setSearch] = useState('');
 
-  const activeProducts = useMemo(
-    () => mockProducts.filter((product) => product.status === 'active'),
-    [],
-  );
-
-  /*
-   * Productos utilizados en las tarjetas superiores.
-   * Usamos el mismo catálogo de la tienda.
-   */
-  const floatingProducts = activeProducts.slice(0, 4);
-
-  /*
-   * Productos principales de descubrimiento.
-   */
-  const discoveryProducts = activeProducts.slice(0, 4);
-
-  /*
-   * Productos adicionales.
-   */
-  const moreProducts = activeProducts.slice(4, 8);
+  const activeProducts = featured;
+  const floatingProducts = isSectionVisible('Productos destacados') ? featured.slice(0, 4) : [];
+  const discoveryProducts = featured.slice(0, 4);
+  const moreProducts = featured.slice(4, 6);
 
   const handleSearch = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -65,8 +47,9 @@ export default function MinimalHome() {
         <div className="max-w-6xl mx-auto">
 
           {/* Tarjetas flotantes */}
-          <div className="flex justify-center items-end -space-x-5 sm:-space-x-4 md:-space-x-3 mb-4 min-h-[150px] sm:min-h-[170px] md:min-h-[180px] px-6">
+          <div data-landing-content className="flex justify-center items-end -space-x-5 sm:-space-x-4 md:-space-x-3 mb-4 min-h-[150px] sm:min-h-[170px] md:min-h-[180px] px-6">
 
+            {!floatingProducts.length && landing?.imagen_principal && <img data-landing-image src={landing.imagen_principal} alt={landing.titulo} className="max-h-[180px] max-w-full rounded-2xl object-contain" />}
             {floatingProducts.map((product, index) => {
               const rotations = [
                 '-rotate-6 translate-y-4',
@@ -98,8 +81,9 @@ export default function MinimalHome() {
                 >
                   <div className="aspect-[4/3] rounded-xl overflow-hidden bg-gray-100">
                     <img
-                      src={product.images[0]}
-                      alt={product.name}
+                      data-landing-image={index === 0 && landing?.imagen_principal ? true : undefined}
+                      src={index === 0 && landing?.imagen_principal ? landing.imagen_principal : product.images[0]}
+                      alt={index === 0 && landing?.imagen_principal ? landing.titulo : product.name}
                       className="w-full h-full object-cover"
                     />
                   </div>
@@ -131,10 +115,13 @@ export default function MinimalHome() {
 
           {/* Título */}
           <div className="text-center">
+            <LandingStatus />
             <h1 className="text-[72px] sm:text-[92px] md:text-[118px] leading-none tracking-[-0.08em] font-semibold text-[#151515]">
-              shop<span className="text-[var(--accent)]">.</span>
+              {landing?.titulo}
             </h1>
           </div>
+
+          <p className="text-center text-gray-600 mt-4">{landing?.descripcion}</p>
 
           {/* Buscador */}
           <form
@@ -169,9 +156,10 @@ export default function MinimalHome() {
 
               <button
                 type="submit"
-                aria-label="Buscar"
-                className="w-11 h-11 flex-shrink-0 rounded-full bg-[var(--primary)] text-white flex items-center justify-center hover:scale-105 transition-transform"
+                aria-label={landing?.texto_boton || 'Buscar'}
+                className="px-5 min-w-11 h-11 gap-2 flex-shrink-0 rounded-full bg-[var(--primary)] text-white flex items-center justify-center hover:scale-105 transition-transform"
               >
+                {landing?.texto_boton}
                 <svg
                   className="w-4 h-4"
                   viewBox="0 0 24 24"
@@ -192,9 +180,9 @@ export default function MinimalHome() {
           </form>
 
           {/* Categorías */}
-          <div className="mt-5 flex flex-wrap justify-center gap-2">
+          {isSectionVisible('Categorías') && categories.length > 0 && (<div className="mt-5 flex flex-wrap justify-center gap-2">
 
-            {HOME_CATEGORIES.map((category) => (
+            {categories.map((category) => (
               <button
                 key={category}
                 type="button"
@@ -205,7 +193,7 @@ export default function MinimalHome() {
               </button>
             ))}
 
-          </div>
+          </div>)}
 
         </div>
       </section>
@@ -213,7 +201,7 @@ export default function MinimalHome() {
       {/* =====================================================
           DESCUBRIMIENTO
       ====================================================== */}
-      <section className="px-4 md:px-8 mt-16 md:mt-20">
+      {isSectionVisible('Productos destacados') && discoveryProducts.length > 0 && (<section data-landing-content className="px-4 md:px-8 mt-16 md:mt-20">
         <div className="max-w-6xl mx-auto">
 
           <div className="flex items-end justify-between gap-6 mb-7">
@@ -288,13 +276,13 @@ export default function MinimalHome() {
           </Link>
 
         </div>
-      </section>
+      </section>)}
 
       {/* =====================================================
           BANNER
       ====================================================== */}
-      {activeProducts[0] && (
-        <section className="px-4 md:px-8 mt-20">
+      {isSectionVisible('Productos destacados') && activeProducts[0] && (
+        <section data-landing-content className="px-4 md:px-8 mt-20">
           <div className="max-w-6xl mx-auto">
 
             <div className="relative min-h-[420px] md:min-h-[520px] rounded-[32px] overflow-hidden bg-gray-200">
@@ -341,7 +329,7 @@ export default function MinimalHome() {
       {/* =====================================================
           MÁS PARA TI
       ====================================================== */}
-      <section className="px-4 md:px-8 mt-20">
+      {isSectionVisible('Productos destacados') && moreProducts.length > 0 && (<section data-landing-content className="px-4 md:px-8 mt-20">
         <div className="max-w-6xl mx-auto">
 
           <div className="flex items-center justify-between gap-4 mb-7">
@@ -397,54 +385,12 @@ export default function MinimalHome() {
               ))}
 
             </div>
-          ) : (
-            /*
-             * Si el mock tiene pocos productos, mostramos nuevamente
-             * los primeros para mantener la sección visible durante
-             * el desarrollo de la plantilla.
-             */
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-
-              {discoveryProducts.map((product) => (
-                <Link
-                  key={product.id}
-                  to={`producto/${product.id}`}
-                  className="group"
-                >
-                  <div className="aspect-square rounded-[22px] overflow-hidden bg-gray-200">
-
-                    <img
-                      src={product.images[0]}
-                      alt={product.name}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                    />
-
-                  </div>
-
-                  <div className="pt-3">
-
-                    <p className="text-[10px] uppercase tracking-wide text-gray-400">
-                      {product.category}
-                    </p>
-
-                    <h3 className="text-sm font-semibold text-[#171717] mt-1 truncate">
-                      {product.name}
-                    </h3>
-
-                    <p className="text-sm text-gray-500 mt-1">
-                      {formatPrice(product.basePrice)}
-                    </p>
-
-                  </div>
-                </Link>
-              ))}
-
-            </div>
-          )}
+          ) : null}
 
         </div>
-      </section>
+      </section>)}
 
+      <LandingDetails includeBenefits />
     </div>
   );
 }

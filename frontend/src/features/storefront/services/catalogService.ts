@@ -1,3 +1,4 @@
+import { fetchInitialLoad, type InitialLoadOptions } from '../../../core/http/initialLoad';
 import type { Product } from '../data/mockData';
 
 const API_URL =
@@ -39,6 +40,7 @@ function adaptProduct(item: BackendProductListItem): Product {
 
   return {
     id: item.slug,
+    catalogId: item.id,
     name: item.nombre,
     description: '',
     category: item.categoria,
@@ -67,8 +69,8 @@ function adaptProduct(item: BackendProductListItem): Product {
   };
 }
 
-export async function fetchPublicProducts(): Promise<Product[]> {
-  const response = await fetch(`${API_URL}/api/catalog/productos/`);
+export async function fetchPublicProducts(options?: InitialLoadOptions): Promise<Product[]> {
+  const response = await fetchInitialLoad(`${API_URL}/api/catalog/productos/`, options);
 
   if (!response.ok) {
     throw new Error('No se pudo obtener el listado de productos');
@@ -160,6 +162,7 @@ function adaptProductDetail(item: BackendProductDetail): Product {
 
   return {
     id: item.slug,
+    catalogId: item.id,
     name: item.nombre,
     description: item.descripcion ?? '',
     category: item.categoria,

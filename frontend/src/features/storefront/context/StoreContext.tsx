@@ -2,6 +2,7 @@ import {
   createContext,
   useContext,
   useEffect,
+  useState,
   type ReactNode,
 } from 'react';
 import { useLocation } from 'react-router-dom';
@@ -9,7 +10,12 @@ import {
   defaultStoreConfig,
   type TemplateId,
   type StoreConfig,
+  type Product,
 } from '../data/mockData';
+
+import { fetchPublicProducts } from '../services/catalogService';
+import { fetchLandingConfig } from '../../landing/services/landingService';
+import type { LandingConfig } from '../../landing/types/landing.types';
 
 const ADMIN_STORAGE_KEY = 'ua-entrepreneur-demo-v1';
 
@@ -35,6 +41,11 @@ function readBusinessConfig(): StoreConfig {
 
 const StoreContext = createContext({
   config: readBusinessConfig(),
+  landing: null as LandingConfig | null,
+  landingLoading: true,
+  landingError: '',
+  landingProducts: [] as Product[],
+  landingCatalogError: '',
 });
 
 const templateByNumber: Record<string, TemplateId> = {
@@ -79,6 +90,7 @@ function applyImageCustomizations(theme: StoredTheme | null) {
   );
 
   images.forEach((img, index) => {
+    if (img.hasAttribute('data-landing-image') || img.closest('[data-landing-content]')) return;
     const key = `image-${index}`;
     const setting = theme.images?.[key];
 
@@ -139,6 +151,20 @@ export function StoreProvider({
   children: ReactNode;
 }) {
   const { pathname } = useLocation();
+  const [landing, setLanding] = useState<LandingConfig | null>(null);
+  const [landingLoading, setLandingLoading] = useState(true);
+  const [landingError, setLandingError] = useState('');
+  const [landingProducts, setLandingProducts] = useState<Product[]>([]);
+  const [landingCatalogError, setLandingCatalogError] = useState('');
+  useEffect(() => {
+    let active = true;
+    fetchPublicProducts().then(products => { if (active) setLandingProducts(products); })
+      .catch(error => { if (active) setLandingCatalogError(error instanceof Error ? error.message : 'No se pudo cargar el catálogo de landing.'); });
+    fetchLandingConfig().then(data => { if (active) setLanding(data); })
+      .catch(error => { if (active) setLandingError(error instanceof Error ? error.message : 'No se pudo cargar la configuración de landing.'); })
+      .finally(() => { if (active) setLandingLoading(false); });
+    return () => { active = false; };
+  }, []);
 
   useEffect(() => {
     const match = pathname.match(
@@ -166,7 +192,7 @@ export function StoreProvider({
 
   return (
     <StoreContext.Provider
-      value={{ config: readBusinessConfig() }}
+      value={{ config: { ...readBusinessConfig(), ...(landing ? { logo: landing.logo || '' } : {}) }, landing, landingLoading, landingError, landingProducts, landingCatalogError }}
     >
       {children}
     </StoreContext.Provider>

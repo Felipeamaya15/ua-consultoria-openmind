@@ -1,16 +1,21 @@
+import { useLandingContent } from '../../landing/hooks/useLandingContent';
+import { LandingDetails } from '../../landing/components/LandingDetails';
+import { useLandingSectionVisibility } from '../../landing/hooks/useLandingSectionVisibility';
+import { useStore } from '../context/StoreContext';
+import { LandingStatus } from '../../landing/components/LandingStatus';
 import { Link } from 'react-router-dom';
 
-import { formatPrice, mockProducts } from '../data/mockData';
+import { formatPrice } from '../data/mockData';
 import { useStorefrontTemplate } from '../hooks/useStorefrontTemplate';
 
 export default function CatalogHome() {
+  const { featured } = useLandingContent();
+  const isSectionVisible = useLandingSectionVisibility();
+  const { landing } = useStore();
   const { route } = useStorefrontTemplate();
 
-  const polera = mockProducts.find((product) => product.id === 'p1')!;
-  const mochila = mockProducts.find((product) => product.id === 'p2')!;
-  const discover = mockProducts.filter((product) =>
-    ['p3', 'p4', 'p5'].includes(product.id),
-  );
+  const mochila = featured[0];
+  const discover = featured.slice(1);
 
   return (
     <div className="bg-[#050505] text-white overflow-hidden">
@@ -18,8 +23,9 @@ export default function CatalogHome() {
       <section className="max-w-[1320px] mx-auto px-5 pt-2 md:pt-4">
         <div className="relative min-h-[620px] md:min-h-[720px] overflow-hidden rounded-[28px]">
           <img
-            src={polera.images[0]}
-            alt={polera.name}
+            data-landing-image={landing?.imagen_principal ? true : undefined}
+            src={landing?.imagen_principal || undefined} hidden={!landing?.imagen_principal}
+            alt={landing?.titulo || ''}
             className="absolute inset-0 w-full h-full object-cover object-center"
           />
           <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/55 to-black/15" />
@@ -31,29 +37,22 @@ export default function CatalogHome() {
                 Producto destacado
               </p>
 
+              <LandingStatus />
               <h1 className="mt-6 text-[54px] sm:text-[68px] md:text-[82px] leading-[0.93] tracking-[-0.055em] font-black">
-                Polera
-                <br />
-                Esencial.
-                <br />
-                Hecho para
-                <br />
-                durar.
+                {landing?.titulo}
               </h1>
 
               <p className="mt-7 max-w-md text-sm md:text-base leading-7 text-white/80">
-                {polera.description}
+                {landing?.descripcion}
               </p>
 
               <div className="mt-8 flex items-center gap-5">
-                <span className="text-sm text-white/75">
-                  Desde {formatPrice(polera.basePrice)}
-                </span>
+
                 <Link
-                  to={route(`producto/${polera.id}`)}
+                  to={route('catalogo')}
                   className="rounded-full bg-[var(--accent)] px-7 py-3 text-sm font-semibold hover:bg-[var(--accent)] transition-colors"
                 >
-                  Comprar
+                  {landing?.texto_boton}
                 </Link>
               </div>
             </div>
@@ -62,7 +61,7 @@ export default function CatalogHome() {
       </section>
 
       {/* MANIFIESTO + SEGUNDO PRODUCTO */}
-      <section className="max-w-[1160px] mx-auto px-5 py-24 md:py-32">
+      {isSectionVisible('Productos destacados') && mochila && (<section data-landing-content className="max-w-[1160px] mx-auto px-5 py-24 md:py-32">
         <h2 className="max-w-[800px] text-[48px] sm:text-[62px] md:text-[76px] leading-[0.96] tracking-[-0.055em] font-black">
           Todo lo que necesitas.
           <br />
@@ -92,7 +91,7 @@ export default function CatalogHome() {
             </p>
           </div>
         </Link>
-      </section>
+      </section>)}
 
       {/* BLOQUE BLANCO */}
       <section className="bg-[#f6f6f4] text-[#151515]">
@@ -136,7 +135,7 @@ export default function CatalogHome() {
       </section>
 
       {/* DESCUBRIR */}
-      <section className="max-w-[1160px] mx-auto px-5 py-24 md:py-28">
+      {isSectionVisible('Productos destacados') && discover.length > 0 && (<section data-landing-content className="max-w-[1160px] mx-auto px-5 py-24 md:py-28">
         <div className="flex items-end justify-between gap-6 mb-10">
           <div>
             <p className="text-[var(--primary)] text-xs font-bold">
@@ -197,7 +196,8 @@ export default function CatalogHome() {
         >
           Ver todos los productos →
         </Link>
-      </section>
+      </section>)}
+      <LandingDetails />
     </div>
   );
 }

@@ -1,3 +1,4 @@
+import { useStore } from '../../../context/StoreContext';
 import { Link } from 'react-router-dom';
 import { useCart } from '../../../context/CartContext';
 
@@ -29,6 +30,7 @@ function MinimalCartIcon({ count }: { count: number }) {
 }
 
 export function MinimalHeader() {
+  const { landing } = useStore();
   const { count } = useCart();
 
   return (
@@ -40,6 +42,7 @@ export function MinimalHeader() {
           to="."
           className="font-semibold text-[var(--primary)] whitespace-nowrap"
         >
+          {landing?.logo && <img data-landing-image src={landing.logo} alt="Logo de la tienda" className="inline-block w-8 h-8 object-contain mr-2" />}
           Mi Tienda.
         </Link>
 

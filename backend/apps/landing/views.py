@@ -30,7 +30,7 @@ class ConfiguracionLandingAPIView(APIView):
 
         serializer = ConfiguracionLandingSerializer(
             configuracion,
-            context={'request': request},
+            context={'request': request, 'tienda': tienda},
         )
 
         return success_response(
@@ -54,7 +54,7 @@ class ConfiguracionLandingAPIView(APIView):
         serializer = ConfiguracionLandingSerializer(
             instance=configuracion,
             data=request.data,
-            context={'request': request},
+            context={'request': request, 'tienda': tienda},
         )
         serializer.is_valid(raise_exception=True)
 

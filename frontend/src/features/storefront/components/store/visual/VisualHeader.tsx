@@ -1,8 +1,10 @@
+import { useStore } from '../../../context/StoreContext';
 import { Link } from 'react-router-dom';
 import { useCart } from '../../../context/CartContext';
 import { useStorefrontTemplate } from '../../../hooks/useStorefrontTemplate';
 
 export function VisualHeader() {
+  const { landing } = useStore();
   const { count } = useCart();
   const { route } = useStorefrontTemplate();
 
@@ -14,6 +16,7 @@ export function VisualHeader() {
           to={route()}
           className="flex items-center gap-3 flex-shrink-0"
         >
+          {landing?.logo && <img data-landing-image src={landing.logo} alt="Logo de la tienda" className="inline-block w-8 h-8 object-contain mr-2" />}
           <span className="font-serif text-2xl">
             Velta
           </span>

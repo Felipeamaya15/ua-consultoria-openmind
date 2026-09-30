@@ -1,15 +1,15 @@
 from django.db import IntegrityError, transaction
 from django.test import TestCase
 
-from apps.core.models import Tienda, Usuario
+from django.contrib.auth import get_user_model
+from apps.core.models import Tienda
 from apps.landing.models import ConfiguracionLanding
 
 
 class ConfiguracionLandingTests(TestCase):
     def setUp(self):
-        self.propietario = Usuario.objects.create(
-            correo='landing@example.test', password_hash='test',
-            nombre='Nombre', apellido='Apellido', rol='admin',
+        self.propietario = get_user_model().objects.create_user(
+            username='landing-model-owner', password='test-password',
         )
         self.tienda = Tienda.objects.create(
             nombre='Mi tienda', id_usuario_propietario=self.propietario,
@@ -90,10 +90,10 @@ class ConfiguracionLandingTests(TestCase):
         self.configurar().delete()
         self.tienda.refresh_from_db()
         self.assertEqual(self.tienda.id_usuario_propietario_id, self.propietario.pk)
-        self.assertTrue(Usuario.objects.filter(pk=self.propietario.pk).exists())
+        self.assertTrue(get_user_model().objects.filter(pk=self.propietario.pk).exists())
 
     def test_eliminar_tienda_elimina_su_configuracion(self):
         self.configurar()
         self.tienda.delete()
         self.assertFalse(ConfiguracionLanding.objects.exists())
-        self.assertTrue(Usuario.objects.filter(pk=self.propietario.pk).exists())
+        self.assertTrue(get_user_model().objects.filter(pk=self.propietario.pk).exists())

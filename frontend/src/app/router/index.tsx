@@ -1,5 +1,4 @@
 
-import { LandingPage } from '../../features/landing/pages/LandingPage';
 import { CheckoutSummaryPage } from '../../features/checkout/pages/CheckoutSummaryPage';
 import { LinkifyConfigPage } from '../../features/integrations/pages/LinkifyConfigPage';
 import { adminRoute } from '../../features/admin/routes';
@@ -91,6 +90,7 @@ const sharedChildren = [
 
 export const router = createBrowserRouter([
   adminRoute,
+  { path: "/landing", element: <Navigate to="/" replace /> },
   /*
    * ==========================================================
    * INICIO
