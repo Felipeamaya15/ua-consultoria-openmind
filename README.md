@@ -1,5 +1,10 @@
 # 🤝 Proyecto Consultoría: Fundación Gestionar
 
+## Desarrollo con Docker
+
+Consulta [la guía de arranque, autenticación y persistencia](docs/entorno-local.md).
+Incluye la inicialización de la cuenta de demostración y el diagnóstico de MongoDB.
+
 **Repositorio oficial del equipo OpenMind - ua-consultoria-openmind**
 
 Este proyecto se desarrolla en el marco de la asignatura de consultoria de la Universidad Autónoma de Chile. El objetivo es proveer servicios de consultoría y desarrollo tecnológico para la **[Fundación Gestionar](https://fundaciongestionar.org/)**, trabajando bajo SCRUM.

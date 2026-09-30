@@ -12,6 +12,11 @@ services:
       - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\""]
+      interval: 5s
+      timeout: 5s
+      retries: 12
 
   # 2. BASE DE DATOS NOSQL (MongoDB)
   mongodb:
@@ -26,6 +31,12 @@ services:
       - "${MONGO_PORT:-27017}:27017"
     volumes:
       - mongo_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
 
   # 3. BACKEND (Django REST)
   backend:
@@ -34,7 +45,7 @@ services:
       dockerfile: Dockerfile
     container_name: django_backend
     restart: always
-    command: sh -c "python manage.py sync_mongo_indexes && python manage.py runserver 0.0.0.0:8000"
+    command: sh -c "python manage.py sync_mongo_indexes && python manage.py migrate --noinput && python manage.py bootstrap_dev && exec python manage.py runserver 0.0.0.0:8000"
     volumes:
       - ./backend:/app
     ports:
@@ -52,9 +63,12 @@ services:
       - MONGO_USER=${MONGO_USER}
       - MONGO_PASSWORD=${MONGO_PASSWORD}
       - MONGO_DB_NAME=${MONGO_DB_NAME}
+      - DEV_BOOTSTRAP=${DEV_BOOTSTRAP:-0}
     depends_on:
-      - db
-      - mongodb
+      db:
+        condition: service_healthy
+      mongodb:
+        condition: service_healthy
 
   # 4. FRONTEND (React + Vite)
   frontend:
