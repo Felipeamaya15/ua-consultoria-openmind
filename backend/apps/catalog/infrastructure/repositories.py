@@ -215,6 +215,35 @@ class ProductRepository:
             return result.matched_count > 0
         except Exception:
             return False
+        
+    def delete_variant(self, product_id: str, sku: str, soft_delete: bool = False):
+        """
+        Elimina una variante de un producto en MongoDB.
+        """
+        variante_existente = self.get_variant_by_sku(product_id, sku)
+        sku_real = variante_existente.get("sku")
+
+        # 2. Ejecutar la eliminación a través del repositorio
+        if hasattr(self.repo, "delete_variant"):
+            success = self.repo.delete_variant(product_id, sku_real, soft_delete=soft_delete)
+        else:
+            id_query = self.repo._build_id_query(product_id) if hasattr(self.repo, "_build_id_query") else {"_id": product_id}
+            if soft_delete:
+                res = self.repo.collection.update_one(
+                    {"$and": [id_query, {"variantes.sku": sku_real}]},
+                    {"$set": {"variantes.$.es_activa": False}}
+                )
+            else:
+                res = self.repo.collection.update_one(
+                    id_query,
+                    {"$pull": {"variantes": {"sku": sku_real}}}
+                )
+            success = res.modified_count > 0
+
+        if not success:
+            raise ValueError(f"No se pudo eliminar la variante con identificador/SKU '{sku}'.")
+
+        return sku_real    
 
 class AttributeTemplateRepository:
     """Repositorio para plantillas de atributos por tienda/rubro."""

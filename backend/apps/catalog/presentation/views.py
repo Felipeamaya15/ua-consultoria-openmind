@@ -268,6 +268,39 @@ class ProductVariantsView(APIView):
                 {"error": str(e), "codigo": "RECURSO_NO_ENCONTRADO"},
                 status=status.HTTP_404_NOT_FOUND
             )
+    def delete(self, request, id_producto=None, product_id=None, sku=None):
+        """
+        Eliminación administrativa de una variante (SCRUM-248).
+        """
+        pid = str(id_producto or product_id)
+        if not sku:
+            return Response(
+                {"error": "Debe especificar el identificador o SKU de la variante a eliminar en la URL.", "codigo": "PARAMETRO_FALTANTE"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        soft_param = request.query_params.get("soft", "false").lower() in ("true", "1")
+
+        try:
+            sku_eliminado = self.service.delete_variant(pid, sku, soft_delete=soft_param)
+            return Response(
+                {
+                    "mensaje": "Variante eliminada exitosamente",
+                    "id_producto": pid,
+                    "sku": sku_eliminado
+                },
+                status=status.HTTP_200_OK
+            )
+        except ValueError as e:
+            return Response(
+                {"error": str(e), "codigo": "RECURSO_NO_ENCONTRADO"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        except Exception as e:
+            return Response(
+                {"error": f"Error interno al eliminar variante: {str(e)}", "codigo": "ERROR_INTERNO"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
     def put(self, request, id_producto=None, product_id=None, sku=None):
         return self._actualizar_variante(request, id_producto or product_id, sku)
