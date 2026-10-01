@@ -681,7 +681,13 @@ class ProductVariantsView(APIView):
 
         # Campos permitidos para edición
 
-        campos_permitidos = ["precio", "stock", "nombre", "atributos"]
+        campos_permitidos = [
+            "precio",
+            "stock",
+            "nombre",
+            "atributos_variante",
+            "atributos",
+        ]
 
         datos_a_actualizar = {}
 
@@ -934,8 +940,10 @@ class ProductVariantsView(APIView):
 
             "nombre": data.get("nombre", f"Variante {str(data['sku']).strip().upper()}"),
 
-            "atributos": data.get("atributos", {})
-
+            "atributos_variante": data.get(
+                "atributos_variante",
+                data.get("atributos", [])
+            )
         }
 
 

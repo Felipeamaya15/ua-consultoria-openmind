@@ -8,6 +8,153 @@ class VariantService:
     def __init__(self, repository=None):
         self.repo = repository if repository is not None else ProductRepository()
 
+    def _normalizar_atributos_variante(self, atributos):
+        if atributos is None:
+            return []
+
+        if not isinstance(atributos, list):
+            raise ValueError(
+                "Los atributos de la variante deben enviarse como una lista."
+            )
+
+        normalizados = []
+        claves = set()
+
+        for indice, atributo in enumerate(atributos, start=1):
+            if not isinstance(atributo, dict):
+                raise ValueError(
+                    f"El atributo #{indice} debe ser un objeto válido."
+                )
+
+            clave = str(atributo.get("clave", "")).strip()
+            etiqueta = str(atributo.get("etiqueta", "")).strip()
+            valor = str(atributo.get("valor", "")).strip()
+
+            faltantes = []
+
+            if not clave:
+                faltantes.append("clave")
+            if not etiqueta:
+                faltantes.append("etiqueta")
+            if not valor:
+                faltantes.append("valor")
+
+            if faltantes:
+                raise ValueError(
+                    f"El atributo #{indice} está incompleto. "
+                    f"Faltan: {', '.join(faltantes)}."
+                )
+
+            if clave in claves:
+                raise ValueError(
+                    f"El atributo '{clave}' está repetido en la variante."
+                )
+
+            claves.add(clave)
+
+            normalizados.append({
+                "clave": clave,
+                "etiqueta": etiqueta,
+                "valor": valor,
+            })
+
+        return normalizados
+
+
+    def _obtener_esquema_atributos_producto(
+        self,
+        product_id: str,
+        excluir_sku: str | None = None
+    ):
+        variantes = self.get_variants(product_id)
+
+        # Primero intentamos obtener el esquema desde otra variante.
+        for variante in variantes:
+            sku_actual = str(variante.get("sku", "")).strip().upper()
+
+            if excluir_sku and sku_actual == str(excluir_sku).strip().upper():
+                continue
+
+            atributos = (
+                variante.get("atributos_variante")
+                or variante.get("atributos")
+                or []
+            )
+
+            if atributos:
+                return {
+                    str(attr.get("clave", "")).strip()
+                    for attr in atributos
+                    if isinstance(attr, dict)
+                    and str(attr.get("clave", "")).strip()
+                }
+
+        # Si estamos actualizando la única variante del producto,
+        # utilizamos su propio esquema actual como referencia.
+        if excluir_sku:
+            for variante in variantes:
+                sku_actual = str(variante.get("sku", "")).strip().upper()
+
+                if sku_actual == str(excluir_sku).strip().upper():
+                    atributos = (
+                        variante.get("atributos_variante")
+                        or variante.get("atributos")
+                        or []
+                    )
+
+                    if atributos:
+                        return {
+                            str(attr.get("clave", "")).strip()
+                            for attr in atributos
+                            if isinstance(attr, dict)
+                            and str(attr.get("clave", "")).strip()
+                        }
+
+        return set()
+
+
+    def _validar_atributos_contra_producto(
+        self,
+        product_id: str,
+        atributos,
+        excluir_sku: str | None = None
+    ):
+        atributos = self._normalizar_atributos_variante(atributos)
+
+        esquema = self._obtener_esquema_atributos_producto(
+            product_id,
+            excluir_sku=excluir_sku
+        )
+
+        if not esquema:
+            return atributos
+
+        claves_recibidas = {
+            atributo["clave"]
+            for atributo in atributos
+        }
+
+        faltantes = sorted(esquema - claves_recibidas)
+        desconocidos = sorted(claves_recibidas - esquema)
+
+        errores = []
+
+        if faltantes:
+            errores.append(
+                "faltan atributos requeridos: " + ", ".join(faltantes)
+            )
+
+        if desconocidos:
+            errores.append(
+                "se enviaron atributos no definidos para el producto: "
+                + ", ".join(desconocidos)
+            )
+
+        if errores:
+            raise ValueError("; ".join(errores))
+
+        return atributos
+
     def get_variants(self, product_id: str) -> list:
         """Recupera todas las variantes asociadas a un producto."""
         producto = None
@@ -27,6 +174,7 @@ class VariantService:
             raise ValueError(f"No se encontró el producto con ID '{product_id}'.")
 
         return producto.get("variantes", [])
+    
 
     def get_variant_by_sku(self, product_id: str, sku: str) -> dict:
         """Recupera una variante por SKU, id interno o índice numérico."""
@@ -126,6 +274,18 @@ class VariantService:
 
         data["sku"] = str(data["sku"]).strip().upper()
 
+        atributos = data.get(
+            "atributos_variante",
+            data.pop("atributos", [])
+        )
+
+        data["atributos_variante"] = (
+            self._validar_atributos_contra_producto(
+                product_id,
+                atributos
+            )
+        )
+
         if data.get("precio", 0) < 0:
             raise ValueError("El precio no puede ser negativo.")
 
@@ -188,6 +348,18 @@ class VariantService:
 
         variante_existente = self.get_variant_by_sku(product_id, sku)
         sku_real = variante_existente.get("sku")
+
+        if "atributos" in data and "atributos_variante" not in data:
+            data["atributos_variante"] = data.pop("atributos")
+
+        if "atributos_variante" in data:
+            data["atributos_variante"] = (
+                self._validar_atributos_contra_producto(
+                    product_id,
+                    data["atributos_variante"],
+                    excluir_sku=sku_real
+                )
+            )
 
         if tienda_id is None:
             success = self.repo.update_variant(product_id, sku_real, data)

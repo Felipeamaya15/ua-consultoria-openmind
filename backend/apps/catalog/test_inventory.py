@@ -57,6 +57,8 @@ class InventoryPersistenceTests(TemporaryCatalog, SimpleTestCase):
         self.assertEqual(self.service.update_stock('37', pk, 'A', 7)['stock'], 7)
         self.assertEqual(ProductRepository().get_by_id('37', pk)['variantes'][1]['stock'], 5)
 
+
+
     def test_cero_y_positivo_validos_en_todos_los_caminos_de_variante(self):
         pk = self.product()
         for stock in (0, 3):
@@ -158,6 +160,157 @@ class InventoryPersistenceTests(TemporaryCatalog, SimpleTestCase):
         serializer = ProductCreateSerializer(data={'nombre': 'Prueba', 'categoria': 'Prueba', 'variantes': [{'sku': 'A', 'precio': 1, 'stock': -1}]})
         self.assertFalse(serializer.is_valid())
 
+class VariantAttributeValidationTests(TemporaryCatalog, SimpleTestCase):
+
+    def product_with_attribute_schema(self):
+        return self.repo.create('37', {
+            'nombre': 'Polera de prueba',
+            'slug': uuid4().hex,
+            'categoria': 'Vestuario',
+            'activo': True,
+            'variantes': [
+                {
+                    'sku': 'POL-M-ROJO',
+                    'precio': 10000,
+                    'stock': 5,
+                    'atributos_variante': [
+                        {
+                            'clave': 'talla',
+                            'etiqueta': 'Talla',
+                            'valor': 'M'
+                        },
+                        {
+                            'clave': 'color',
+                            'etiqueta': 'Color',
+                            'valor': 'Rojo'
+                        }
+                    ]
+                }
+            ]
+        })
+
+    def test_crear_variante_con_esquema_valido(self):
+        pk = self.product_with_attribute_schema()
+
+        variante = self.service.create_variant(
+            '37',
+            pk,
+            {
+                'sku': 'POL-L-AZUL',
+                'precio': 12000,
+                'stock': 3,
+                'atributos_variante': [
+                    {
+                        'clave': 'talla',
+                        'etiqueta': 'Talla',
+                        'valor': 'L'
+                    },
+                    {
+                        'clave': 'color',
+                        'etiqueta': 'Color',
+                        'valor': 'Azul'
+                    }
+                ]
+            }
+        )
+
+        self.assertEqual(variante['sku'], 'POL-L-AZUL')
+
+        producto = self.read(pk)
+
+        creada = next(
+            v for v in producto['variantes']
+            if v['sku'] == 'POL-L-AZUL'
+        )
+
+        self.assertEqual(
+            {a['clave'] for a in creada['atributos_variante']},
+            {'talla', 'color'}
+        )
+
+    def test_crear_variante_incompleta_se_rechaza_sin_persistir(self):
+        pk = self.product_with_attribute_schema()
+        original = self.read(pk)
+
+        with self.assertRaisesRegex(
+            ValueError,
+            'faltan atributos requeridos'
+        ):
+            self.service.create_variant(
+                '37',
+                pk,
+                {
+                    'sku': 'POL-L',
+                    'precio': 12000,
+                    'stock': 3,
+                    'atributos_variante': [
+                        {
+                            'clave': 'talla',
+                            'etiqueta': 'Talla',
+                            'valor': 'L'
+                        }
+                    ]
+                }
+            )
+
+        self.assertEqual(self.read(pk), original)
+
+    def test_crear_variante_con_atributo_no_definido_se_rechaza(self):
+        pk = self.product_with_attribute_schema()
+        original = self.read(pk)
+
+        with self.assertRaisesRegex(
+            ValueError,
+            'atributos no definidos'
+        ):
+            self.service.create_variant(
+                '37',
+                pk,
+                {
+                    'sku': 'POL-L-ALGODON',
+                    'precio': 12000,
+                    'stock': 3,
+                    'atributos_variante': [
+                        {
+                            'clave': 'talla',
+                            'etiqueta': 'Talla',
+                            'valor': 'L'
+                        },
+                        {
+                            'clave': 'material',
+                            'etiqueta': 'Material',
+                            'valor': 'Algodón'
+                        }
+                    ]
+                }
+            )
+
+        self.assertEqual(self.read(pk), original)
+
+    def test_actualizar_variante_con_esquema_invalido_se_rechaza(self):
+        pk = self.product_with_attribute_schema()
+        original = self.read(pk)
+
+        with self.assertRaisesRegex(
+            ValueError,
+            'faltan atributos requeridos'
+        ):
+            self.service.update_variant(
+                '37',
+                pk,
+                'POL-M-ROJO',
+                {
+                    'atributos_variante': [
+                        {
+                            'clave': 'talla',
+                            'etiqueta': 'Talla',
+                            'valor': 'XL'
+                        }
+                    ]
+                }
+            )
+
+        self.assertEqual(self.read(pk), original)
 
 class InventoryAPITests(TemporaryCatalog, TestCase):
     def setUp(self):
