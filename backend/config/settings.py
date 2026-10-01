@@ -174,3 +174,6 @@ REST_FRAMEWORK = {
     ],
     'EXCEPTION_HANDLER': 'apps.core.presentation.exceptions.custom_exception_handler',
 }
+# Archivos persistidos de la configuración de landing.
+MEDIA_URL = "/media/"
+MEDIA_ROOT = BASE_DIR / "media"

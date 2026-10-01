@@ -1,11 +1,17 @@
+import { useLandingContent } from '../../landing/hooks/useLandingContent';
+import { LandingDetails } from '../../landing/components/LandingDetails';
+import { useLandingSectionVisibility } from '../../landing/hooks/useLandingSectionVisibility';
+import { useStore } from '../context/StoreContext';
+import { LandingStatus } from '../../landing/components/LandingStatus';
 import { Link } from 'react-router-dom';
 
-import {
-  visualProducts,
-  formatVisualPrice,
-} from '../data/visualProducts';
+import { formatPrice } from '../data/mockData';
 
 export default function VisualHome() {
+  const { featured } = useLandingContent();
+  const isSectionVisible = useLandingSectionVisibility();
+  const { landing } = useStore();
+  const visualProducts = featured.map(p => ({ id: p.id, name: p.name, category: p.category, description: p.description, price: p.basePrice, image: p.images[0] }));
   return (
     <>
       {/* ======================================================
@@ -20,8 +26,9 @@ export default function VisualHome() {
           "
         >
           <img
-            src="https://images.unsplash.com/photo-1441984904996-e0b6ba687e04?w=1200&h=900&fit=crop&auto=format"
-            alt="Velta — tienda online"
+            data-landing-image={landing?.imagen_principal ? true : undefined}
+            src={landing?.imagen_principal || undefined} hidden={!landing?.imagen_principal}
+            alt={landing?.titulo || ''}
             className="absolute inset-0 w-full h-full object-cover"
           />
 
@@ -54,6 +61,7 @@ export default function VisualHome() {
               Abierto ahora
             </p>
 
+            <LandingStatus />
             <h1
               className="
                 font-serif
@@ -62,13 +70,7 @@ export default function VisualHome() {
                 max-w-3xl
               "
             >
-              Compra fácil.
-              <br />
-              Entrega rápida.
-              <br />
-              <em className="font-normal">
-                Sin vueltas.
-              </em>
+              {landing?.titulo}
             </h1>
 
             <p
@@ -80,8 +82,7 @@ export default function VisualHome() {
                 text-white/85
               "
             >
-              Productos seleccionados con envío a todo Chile,
-              pago seguro y garantía de calidad en cada pedido.
+              {landing?.descripcion}
             </p>
 
             <div className="flex flex-wrap gap-3 mt-8">
@@ -96,7 +97,7 @@ export default function VisualHome() {
                   transition-colors
                 "
               >
-                Ver catálogo
+                {landing?.texto_boton}
               </Link>
 
               <Link
@@ -132,7 +133,7 @@ export default function VisualHome() {
       {/* ======================================================
           PRODUCTOS DESTACADOS
       ====================================================== */}
-      <section className="px-5 md:px-8 py-20 md:py-28">
+      {isSectionVisible('Productos destacados') && visualProducts.length > 0 && (<section data-landing-content className="px-5 md:px-8 py-20 md:py-28">
         <div className="max-w-6xl mx-auto">
           <header className="mb-12">
             <p
@@ -159,39 +160,19 @@ export default function VisualHome() {
 
           {/* PRODUCTO PRINCIPAL */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-            <VisualHomeProduct
-              product={visualProducts[0]}
-              large
-            />
-
-            <div className="grid grid-cols-1 gap-4">
-              <VisualHomeProduct
-                product={visualProducts[1]}
-              />
-
-              <VisualHomeProduct
-                product={visualProducts[2]}
-              />
-            </div>
+            <VisualHomeProduct product={visualProducts[0]} large />
+            {visualProducts.length > 1 && <div className="grid grid-cols-1 gap-4">
+              {visualProducts.slice(1, 3).map(p => <VisualHomeProduct key={p.id} product={p} />)}
+            </div>}
           </div>
 
           {/* SEGUNDA FILA */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {visualProducts.length > 3 && <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="grid grid-cols-2 gap-4">
-              <VisualHomeProduct
-                product={visualProducts[3]}
-              />
-
-              <VisualHomeProduct
-                product={visualProducts[4]}
-              />
+              {visualProducts.slice(3, 5).map(p => <VisualHomeProduct key={p.id} product={p} />)}
             </div>
-
-            <VisualHomeProduct
-              product={visualProducts[5]}
-              wide
-            />
-          </div>
+            {visualProducts[5] && <VisualHomeProduct product={visualProducts[5]} wide />}
+          </div>}
 
           <div className="mt-10">
             <Link
@@ -210,7 +191,7 @@ export default function VisualHome() {
             </Link>
           </div>
         </div>
-      </section>
+      </section>)}
 
       {/* ======================================================
           HISTORIA
@@ -355,6 +336,7 @@ export default function VisualHome() {
           </div>
         </div>
       </section>
+      <LandingDetails />
     </>
   );
 }
@@ -440,7 +422,7 @@ function VisualHomeProduct({
           "
         >
           <span className="text-sm font-semibold">
-            {formatVisualPrice(product.price)}
+            {formatPrice(product.price)}
           </span>
 
           <Link

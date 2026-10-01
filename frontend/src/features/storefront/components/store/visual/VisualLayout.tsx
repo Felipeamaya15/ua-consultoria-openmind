@@ -1,3 +1,4 @@
+import { useLandingSectionVisibility } from '../../../../landing/hooks/useLandingSectionVisibility';
 import { Outlet } from 'react-router-dom';
 
 import { VisualHeader } from './VisualHeader';
@@ -6,6 +7,7 @@ import { VisualCTA } from './VisualCTA';
 import { VisualFooter } from './VisualFooter';
 
 export function VisualLayout() {
+  const isSectionVisible = useLandingSectionVisibility();
   return (
       <div className="template-visual min-h-screen bg-white text-[#111111] flex flex-col">
       <div className="bg-[var(--institutional)] text-white py-2 px-4 text-xs flex items-center justify-center gap-2.5 font-medium">
@@ -24,7 +26,7 @@ export function VisualLayout() {
         <Outlet />
       </main>
 
-      <VisualBenefits />
+      {isSectionVisible('Beneficios') && <VisualBenefits />}
       <VisualCTA />
       <VisualFooter />
     </div>

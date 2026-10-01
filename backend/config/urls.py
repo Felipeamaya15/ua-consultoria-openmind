@@ -9,6 +9,13 @@ urlpatterns = [
     path('api/', include('apps.core.urls')),  
     path('api/visual-config/', include('apps.visual_config.urls')),
     path('api/landing/', include('apps.landing.urls')),
+]
+
+# Servir las imágenes de landing durante desarrollo local.
+from django.conf import settings
+from django.conf.urls.static import static
+
+urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
     path('api/productos/<str:id_producto>/variantes/', ProductVariantsView.as_view(), name='qa-variantes'),
     path('api/productos/<str:id_producto>/variantes/<str:sku>/', ProductVariantsView.as_view(), name='qa-variantes-sku'),
