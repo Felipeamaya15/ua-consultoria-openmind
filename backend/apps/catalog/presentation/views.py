@@ -279,39 +279,24 @@ class ProductDeleteAPIView(APIView):
 
 
 class ProductoCreateView(APIView):
-
     permission_classes = [IsAuthenticated]
 
-
     def post(self, request):
-
         tienda = resolver_tienda(request, exigir_propietario=True)
 
-
         serializer = ProductoCreateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True) 
 
-        if serializer.is_valid():
-
-            caso_uso = CrearProductoUseCase()
-
-            producto = caso_uso.ejecutar(tienda, serializer.validated_data)
-
-            return Response(
-
-                {
-
-                    "mensaje": "Producto creado con éxito",
-
-                    "id_producto": producto.id_producto
-
-                },
-
-                status=status.HTTP_201_CREATED
-
-            )
-
-
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        caso_uso = CrearProductoUseCase()
+        producto = caso_uso.ejecutar(tienda, serializer.validated_data)
+        
+        return Response(
+            {
+                "mensaje": "Producto creado con éxito",
+                "id_producto": producto.id_producto
+            },
+            status=status.HTTP_201_CREATED
+        )
 
 
 class ProductoAdminDetailView(APIView):

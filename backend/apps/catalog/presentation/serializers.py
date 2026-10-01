@@ -217,7 +217,15 @@ class SeoInputSerializer(serializers.Serializer):
 
 
 class ProductCreateSerializer(serializers.Serializer):
-    nombre = serializers.CharField(max_length=200)
+    nombre = serializers.CharField(
+        max_length=200, 
+        required=True, 
+        allow_blank=False,
+        error_messages={
+            'required': 'El campo nombre es obligatorio.',
+            'blank': 'El nombre no puede estar vacío.'
+        }
+    )
     descripcion = serializers.CharField(required=False, allow_blank=True)
     categoria = serializers.CharField(max_length=100)
     imagenes = serializers.ListField(
