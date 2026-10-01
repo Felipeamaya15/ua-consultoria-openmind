@@ -1,9 +1,11 @@
 from apps.core.infrastructure.mongo_client import get_mongo_db
+from .stock_validation import ensure_product_stock_validator
 
 
 def create_catalog_indexes():
     """Crea los índices del catálogo ."""
     db = get_mongo_db()
+    ensure_product_stock_validator(db)
     
     # Índices para 'productos'
     productos = db.productos

@@ -2,6 +2,16 @@ from rest_framework import serializers
 # CAMBIO: Importamos el validador de Base64 que creamos para MongoDB
 from apps.core.domain.validators import validate_base64_image
 from apps.core.models import Producto
+from apps.catalog.domain.stock import validate_stock
+
+
+class StockValidationMixin:
+    def validate_stock(self, value):
+        try:
+            validate_stock(value)
+        except ValueError as error:
+            raise serializers.ValidationError(str(error)) from error
+        return value
 
 class ProductPublicListItemSerializer(serializers.Serializer):
     id = serializers.CharField(source="_id")
@@ -146,7 +156,7 @@ class ProductoAdminDetailSerializer(serializers.ModelSerializer):
         model = Producto
         fields = ['id_producto', 'nombre', 'precio', 'stock', 'activo', 'id_tienda']
 
-class ProductoUpdateSerializer(serializers.ModelSerializer):
+class ProductoUpdateSerializer(StockValidationMixin, serializers.ModelSerializer):
     class Meta:
         model = Producto
         fields = ['nombre', 'precio', 'stock', 'activo']
@@ -173,6 +183,17 @@ class ProductoStockUpdateSerializer(serializers.ModelSerializer):
         if value < 0:
             raise serializers.ValidationError("El stock no puede ser negativo o inválido.")
         return value
+
+
+class VarianteStockUpdateSerializer(StockValidationMixin, serializers.Serializer):
+    stock = serializers.IntegerField(required=True, min_value=0,
+        error_messages={'min_value': 'El stock no puede ser negativo.', 'invalid': 'El stock debe ser un entero mayor o igual a cero.'})
+
+    def to_internal_value(self, data):
+        # DRF acepta 1.0 y True como enteros. El inventario no se redondea.
+        if isinstance(data, dict) and 'stock' in data and (isinstance(data['stock'], bool) or isinstance(data['stock'], float)):
+            raise serializers.ValidationError({'stock': 'El stock debe ser un entero mayor o igual a cero.'})
+        return super().to_internal_value(data)
 
 class VarianteInputSerializer(serializers.Serializer):
     sku = serializers.CharField()
