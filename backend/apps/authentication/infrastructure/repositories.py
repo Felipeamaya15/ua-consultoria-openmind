@@ -1,8 +1,18 @@
 from typing import Optional
+
 from django.contrib.auth import authenticate, get_user_model
 from django.contrib.auth.models import AbstractBaseUser
-from apps.authentication.domain.entities import UserEntity
-from apps.authentication.domain.interfaces import IUserRepository
+
+from apps.authentication.domain.entities import (
+    UserEntity,
+    ConfiguracionAutenticacionEntity,
+)
+from apps.authentication.domain.interfaces import (
+    IUserRepository,
+    IConfiguracionAutenticacionRepository,
+)
+from apps.authentication.infrastructure.models import ConfiguracionAutenticacion
+
 
 UserModel = get_user_model()
 
@@ -55,3 +65,49 @@ class DjangoUserRepository(IUserRepository):
         if user:
             return self._to_entity(user)
         return None
+
+class DjangoConfiguracionAutenticacionRepository(
+    IConfiguracionAutenticacionRepository
+):
+    """Persistencia ORM de la configuración de autenticación por tienda."""
+
+    def _to_entity(
+        self,
+        obj: ConfiguracionAutenticacion,
+    ) -> ConfiguracionAutenticacionEntity:
+        return ConfiguracionAutenticacionEntity(
+            id=obj.id,
+            tienda_id=obj.tienda_id,
+            email_password=obj.email_password,
+            google=obj.google,
+            google_client_id=obj.google_client_id,
+            guest_checkout=obj.guest_checkout,
+            requires_auth=obj.requires_auth,
+        )
+
+    def get_by_tienda(
+        self,
+        tienda_id: int,
+    ) -> Optional[ConfiguracionAutenticacionEntity]:
+        obj = ConfiguracionAutenticacion.objects.filter(
+            tienda_id=tienda_id
+        ).first()
+
+        return self._to_entity(obj) if obj else None
+
+    def save(
+        self,
+        configuracion: ConfiguracionAutenticacionEntity,
+    ) -> ConfiguracionAutenticacionEntity:
+        obj, _ = ConfiguracionAutenticacion.objects.update_or_create(
+            tienda_id=configuracion.tienda_id,
+            defaults={
+                "email_password": configuracion.email_password,
+                "google": configuracion.google,
+                "google_client_id": configuracion.google_client_id,
+                "guest_checkout": configuracion.guest_checkout,
+                "requires_auth": configuracion.requires_auth,
+            },
+        )
+
+        return self._to_entity(obj)

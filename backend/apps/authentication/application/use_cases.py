@@ -9,7 +9,14 @@ from apps.authentication.domain.exceptions import (
     InvalidCredentialsException,
     UserAlreadyExistsException,
 )
-
+from apps.authentication.domain.entities import (
+    UserEntity,
+    ConfiguracionAutenticacionEntity,
+)
+from apps.authentication.domain.interfaces import (
+    IUserRepository,
+    IConfiguracionAutenticacionRepository,
+)
 
 @dataclass
 class RegisterUserDTO:
@@ -96,3 +103,82 @@ class GoogleLoginUseCase:
             user = self.user_repository.create(new_user, random_password)
 
         return user
+
+@dataclass
+class GuardarConfiguracionAutenticacionDTO:
+    tienda_id: int
+    email_password: bool
+    google: bool
+    google_client_id: str = ""
+    guest_checkout: bool = True
+    requires_auth: str = "optional"
+
+
+class GuardarConfiguracionAutenticacionUseCase:
+    def __init__(
+        self,
+        configuracion_repository: IConfiguracionAutenticacionRepository,
+    ):
+        self.configuracion_repository = configuracion_repository
+
+    def execute(
+        self,
+        dto: GuardarConfiguracionAutenticacionDTO,
+    ) -> ConfiguracionAutenticacionEntity:
+
+        if dto.requires_auth not in {"none", "optional", "required"}:
+            raise ValueError("La regla de autenticación no es válida.")
+
+        if dto.google and not dto.google_client_id.strip():
+            raise ValueError(
+                "Debe indicar Google OAuth Client ID cuando Google está habilitado."
+            )
+
+        if dto.requires_auth == "required":
+            if not dto.email_password and not dto.google:
+                raise ValueError(
+                    "Debe existir al menos un método de autenticación cuando la cuenta es obligatoria."
+                )
+
+        if (
+            not dto.email_password
+            and not dto.google
+            and not dto.guest_checkout
+        ):
+            raise ValueError(
+                "Debe existir al menos una modalidad disponible para el comprador."
+            )
+
+        configuracion = ConfiguracionAutenticacionEntity(
+            id=None,
+            tienda_id=dto.tienda_id,
+            email_password=dto.email_password,
+            google=dto.google,
+            google_client_id=dto.google_client_id.strip(),
+            guest_checkout=dto.guest_checkout,
+            requires_auth=dto.requires_auth,
+        )
+
+        return self.configuracion_repository.save(configuracion)
+
+class ConsultarConfiguracionAutenticacionUseCase:
+    def __init__(
+        self,
+        configuracion_repository: IConfiguracionAutenticacionRepository,
+    ):
+        self.configuracion_repository = configuracion_repository
+
+    def execute(
+        self,
+        tienda_id: int,
+    ) -> ConfiguracionAutenticacionEntity:
+        configuracion = self.configuracion_repository.get_by_tienda(
+            tienda_id
+        )
+
+        if not configuracion:
+            raise ValueError(
+                "No existe configuración de autenticación para la tienda."
+            )
+
+        return configuracion
