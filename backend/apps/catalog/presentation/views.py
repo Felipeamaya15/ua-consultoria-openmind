@@ -34,6 +34,8 @@ from apps.catalog.application.use_cases import (
     ObtenerProductoAdminUseCase,
     SoftDeleteProductUseCase,
     ValidarDisponibilidadProductoUseCase,
+    EliminarItemCarritoDTO,
+    EliminarItemCarritoUseCase,
 )
 
 # 5. Catálogo - Capa de Infraestructura (Repositorios y Filtros)
@@ -159,6 +161,52 @@ class ModificarCantidadItemAPIView(APIView):
                 mensaje=str(err),
                 codigo="ITEM_NO_ENCONTRADO",
                 status=status.HTTP_404_NOT_FOUND
+            )
+    
+    def delete(self, request, id_item_carrito):
+        """
+        Elimina un ítem específico del carrito del usuario autenticado.
+        """
+        dto = EliminarItemCarritoDTO(
+            usuario_id=request.user.id,
+            id_item_carrito=id_item_carrito
+        )
+
+        use_case = EliminarItemCarritoUseCase()
+
+        try:
+            use_case.execute(dto)
+            return Response(
+                {
+                    "exito": True,
+                    "mensaje": "Producto eliminado del carrito exitosamente.",
+                    "data": None
+                },
+                status=status.HTTP_200_OK
+            )
+        except ItemCarritoNoEncontradoException as e:
+            return Response(
+                {
+                    "exito": False,
+                    "mensaje": str(e),
+                    "error": {
+                        "codigo": "RECURSO_NO_ENCONTRADO",
+                        "detalles": None
+                    }
+                },
+                status=status.HTTP_404_NOT_FOUND
+            )
+        except Exception as e:
+            return Response(
+                {
+                    "exito": False,
+                    "mensaje": f"Error interno: {str(e)}",
+                    "error": {
+                        "codigo": "ERROR_INTERNO",
+                        "detalles": None
+                    }
+                },
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
 

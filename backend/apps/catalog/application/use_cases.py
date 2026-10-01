@@ -357,3 +357,37 @@ class AgregarItemCarritoUseCase:
         # Actualizar timestamp del carrito
         carrito.save(update_fields=["fecha_actualizacion"])
         return item
+    
+@dataclass
+class EliminarItemCarritoDTO:
+    usuario_id: int
+    id_item_carrito: int
+
+
+class EliminarItemCarritoUseCase:
+    """
+    Reglas de negocio:
+    1. El ítem debe existir en la base de datos.
+    2. El ítem debe pertenecer al carrito activo del usuario autenticado (seguridad y aislamiento).
+    3. Al eliminar el ítem, se debe refrescar la fecha_actualizacion del carrito padre.
+    """
+
+    def execute(self, dto: EliminarItemCarritoDTO) -> None:
+        # Validación de existencia y pertenencia
+        try:
+            item = ItemCarrito.objects.select_related("id_carrito").get(
+                pk=dto.id_item_carrito,
+                id_carrito__id_usuario_id=dto.usuario_id
+            )
+        except ItemCarrito.DoesNotExist:
+            raise ItemCarritoNoEncontradoException(
+                "El producto no existe en tu carrito o no tienes permiso para eliminarlo."
+            )
+
+        carrito = item.id_carrito
+
+        # Eliminación física del ítem
+        item.delete()
+
+        # Actualizar timestamp del carrito padre
+        carrito.save(update_fields=["fecha_actualizacion"])
