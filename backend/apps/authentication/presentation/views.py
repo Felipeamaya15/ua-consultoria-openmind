@@ -24,7 +24,30 @@ from .serializers import (
     LoginRequestSerializer,
     UserResponseSerializer,
 )
+from apps.core.models import Tienda
 
+from apps.authentication.application.use_cases import (
+    RegisterUserUseCase,
+    RegisterUserDTO,
+    LoginUseCase,
+    GoogleLoginUseCase,
+    GuardarConfiguracionAutenticacionUseCase,
+    GuardarConfiguracionAutenticacionDTO,
+    ConsultarConfiguracionAutenticacionUseCase,
+)
+
+from apps.authentication.infrastructure.repositories import (
+    DjangoUserRepository,
+    DjangoConfiguracionAutenticacionRepository,
+)
+
+from .serializers import (
+    RegisterRequestSerializer,
+    LoginRequestSerializer,
+    UserResponseSerializer,
+    ConfiguracionAutenticacionRequestSerializer,
+    ConfiguracionAutenticacionResponseSerializer,
+)
 UserModel = get_user_model()
 
 AUTH_ERROR_CODES = {
@@ -149,3 +172,105 @@ class GoogleLoginAPIView(APIView):
                 codigo=_auth_error_code(err),
                 status=status.HTTP_401_UNAUTHORIZED,
             )
+
+class ConfiguracionAutenticacionAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        tienda_id = request.query_params.get("tienda_id")
+
+        if not tienda_id:
+            return error_response(
+                mensaje="Debe indicar tienda_id.",
+                codigo="TIENDA_REQUERIDA",
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            tienda_id = int(tienda_id)
+        except ValueError:
+            return error_response(
+                mensaje="tienda_id debe ser un número entero.",
+                codigo="TIENDA_INVALIDA",
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        tienda = Tienda.objects.del_propietario(
+            request.user
+        ).filter(
+            id_tienda=tienda_id
+        ).first()
+
+        if not tienda:
+            return error_response(
+                mensaje="La tienda no existe o no pertenece al usuario autenticado.",
+                codigo="TIENDA_NO_AUTORIZADA",
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        use_case = ConsultarConfiguracionAutenticacionUseCase(
+            DjangoConfiguracionAutenticacionRepository()
+        )
+
+        try:
+            configuracion = use_case.execute(tienda_id)
+        except ValueError as err:
+            return error_response(
+                mensaje=str(err),
+                codigo="CONFIGURACION_AUTENTICACION_NO_ENCONTRADA",
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        return success_response(
+            data=ConfiguracionAutenticacionResponseSerializer(
+                configuracion
+            ).data,
+            mensaje="Configuración de autenticación obtenida correctamente",
+            status=status.HTTP_200_OK,
+        )
+
+    def put(self, request):
+        serializer = ConfiguracionAutenticacionRequestSerializer(
+            data=request.data
+        )
+        serializer.is_valid(raise_exception=True)
+
+        tienda_id = serializer.validated_data["tienda_id"]
+
+        tienda = Tienda.objects.del_propietario(
+            request.user
+        ).filter(
+            id_tienda=tienda_id
+        ).first()
+
+        if not tienda:
+            return error_response(
+                mensaje="La tienda no existe o no pertenece al usuario autenticado.",
+                codigo="TIENDA_NO_AUTORIZADA",
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        dto = GuardarConfiguracionAutenticacionDTO(
+            **serializer.validated_data
+        )
+
+        use_case = GuardarConfiguracionAutenticacionUseCase(
+            DjangoConfiguracionAutenticacionRepository()
+        )
+
+        try:
+            configuracion = use_case.execute(dto)
+        except ValueError as err:
+            return error_response(
+                mensaje=str(err),
+                codigo="CONFIGURACION_AUTENTICACION_INVALIDA",
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        return success_response(
+            data=ConfiguracionAutenticacionResponseSerializer(
+                configuracion
+            ).data,
+            mensaje="Configuración de autenticación guardada correctamente",
+            status=status.HTTP_200_OK,
+        )
