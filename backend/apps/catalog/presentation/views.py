@@ -300,24 +300,35 @@ class ProductoCreateView(APIView):
 
 
 class ProductoAdminDetailView(APIView):
-
     permission_classes = [IsAuthenticated]
 
-
     def get(self, request, id_producto):
-
         tienda = resolver_tienda(request, exigir_propietario=True)
-
-
         caso_uso = ObtenerProductoAdminUseCase()
 
-        producto = caso_uso.ejecutar(tienda, id_producto)
+        try:
+            producto = caso_uso.ejecutar(tienda, id_producto)
+            
+            if producto is None:
+                return Response(
+                    {
+                        "mensaje": "El producto solicitado no fue encontrado", 
+                        "codigo": "RECURSO_NO_ENCONTRADO"
+                    },
+                    status=status.HTTP_404_NOT_FOUND
+                )
 
-
-        serializer = ProductoAdminDetailSerializer(producto)
-
-        return Response(serializer.data, status=status.HTTP_200_OK)
-
+            serializer = ProductoAdminDetailSerializer(producto)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+            
+        except Exception:
+            return Response(
+                {
+                    "mensaje": "El producto solicitado no fue encontrado", 
+                    "codigo": "RECURSO_NO_ENCONTRADO"
+                },
+                status=status.HTTP_404_NOT_FOUND
+            )
 
 class ProductoUpdateView(APIView):
 
