@@ -1,72 +1,126 @@
-from rest_framework.views import APIView
-
-from rest_framework.permissions import AllowAny
-
+# 1. Framework & Librerías de terceros (DRF)
 from rest_framework import status
-
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
-
-
-from apps.core.presentation.responses import success_response, error_response
-
-from apps.core.infrastructure.tenant import resolver_tienda_id, resolver_tienda
-
-from apps.catalog.infrastructure.repositories import ProductRepository
-
-from apps.catalog.infrastructure.attribute_filters import (
-
-    FiltrosAtributosInvalidos,
-
-    parse_attribute_params,
-
-)
-
-from apps.catalog.application.use_cases import ListPublicProductsUseCase , GetPublicProductDetailUseCase,GetPublicProductAttributesUseCase
-
-from apps.catalog.application.use_cases import SoftDeleteProductUseCase
-
-from .serializers import ProductPublicListItemSerializer, ProductPublicDetailSerializer, ProductPublicAttributesSerializer, ProductoCreateSerializer
-
-from apps.core.models import Tienda
-
-from rest_framework.permissions import IsAuthenticated
-
-from ..application.use_cases import CrearProductoUseCase
-
-from .serializers import ProductoAdminDetailSerializer
-
-from ..application.use_cases import ObtenerProductoAdminUseCase
-
-from .serializers import ProductoUpdateSerializer
-
-from ..application.use_cases import ActualizarProductoAdminUseCase
-
-from .serializers import ProductoStockUpdateSerializer
-
-from ..application.use_cases import ActualizarStockProductoUseCase
-
-from ..application.use_cases import ValidarDisponibilidadProductoUseCase
-
-from ..application.services import VariantService
-from .serializers import VarianteStockUpdateSerializer
-
 from rest_framework.views import APIView
-from rest_framework.permissions import IsAuthenticated
-from rest_framework import status
-from apps.core.presentation.responses import success_response, error_response
-from apps.catalog.presentation.serializers import (
-    ModificarCantidadRequestSerializer,
-    ItemCarritoResponseSerializer,
-)
-from apps.catalog.application.use_cases import (
-    ModificarCantidadItemUseCase,
-    ModificarCantidadDTO,
-)
+
+# 2. Módulos Core (Infraestructura, Modelos y Respuestas comunes)
+from apps.core.models import Tienda
+from apps.core.infrastructure.tenant import resolver_tienda, resolver_tienda_id
+from apps.core.presentation.responses import error_response, success_response
+
+# 3. Catálogo - Capa de Dominio (Excepciones)
 from apps.catalog.domain.exceptions import (
     CantidadInvalidaException,
-    StockInsuficienteException,
     ItemCarritoNoEncontradoException,
+    ProductoNoEncontradoException,
+    StockInsuficienteException,
+    VarianteNoEncontradaException,
 )
+
+# 4. Catálogo - Capa de Aplicación (Servicios y Casos de Uso)
+from apps.catalog.application.services import VariantService
+from apps.catalog.application.use_cases import (
+    ActualizarProductoAdminUseCase,
+    ActualizarStockProductoUseCase,
+    AgregarItemCarritoDTO,
+    AgregarItemCarritoUseCase,
+    CrearProductoUseCase,
+    GetPublicProductAttributesUseCase,
+    GetPublicProductDetailUseCase,
+    ListPublicProductsUseCase,
+    ModificarCantidadDTO,
+    ModificarCantidadItemUseCase,
+    ObtenerProductoAdminUseCase,
+    SoftDeleteProductUseCase,
+    ValidarDisponibilidadProductoUseCase,
+)
+
+# 5. Catálogo - Capa de Infraestructura (Repositorios y Filtros)
+from apps.catalog.infrastructure.attribute_filters import (
+    FiltrosAtributosInvalidos,
+    parse_attribute_params,
+)
+from apps.catalog.infrastructure.repositories import ProductRepository
+
+# 6. Catálogo - Capa de Presentación (Serializadores)
+from .serializers import (
+    AgregarItemCarritoRequestSerializer,
+    ItemCarritoResponseSerializer,
+    ModificarCantidadRequestSerializer,
+    ProductPublicAttributesSerializer,
+    ProductPublicDetailSerializer,
+    ProductPublicListItemSerializer,
+    ProductoAdminDetailSerializer,
+    ProductoCreateSerializer,
+    ProductoStockUpdateSerializer,
+    ProductoUpdateSerializer,
+    VarianteStockUpdateSerializer,
+)
+
+
+class CarritoItemsView(APIView):
+    """
+    Endpoint para listar y agregar productos o variantes al carrito del usuario autenticado.
+    POST /api/catalog/carrito/items/
+    """
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        serializer = AgregarItemCarritoRequestSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(
+                {
+                    "exito": False,
+                    "mensaje": "Datos de entrada inválidos.",
+                    "error": {
+                        "codigo": "DATOS_INVALIDOS",
+                        "detalles": serializer.errors
+                    }
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        dto = AgregarItemCarritoDTO(
+            usuario_id=request.user.id,
+            id_producto=serializer.validated_data["id_producto"],
+            cantidad=serializer.validated_data.get("cantidad", 1),
+            sku=serializer.validated_data.get("sku")
+        )
+
+        use_case = AgregarItemCarritoUseCase()
+
+        try:
+            item = use_case.execute(dto)
+            response_serializer = ItemCarritoResponseSerializer(item)
+            return Response(
+                {
+                    "exito": True,
+                    "mensaje": "Producto agregado al carrito exitosamente.",
+                    "data": response_serializer.data
+                },
+                status=status.HTTP_201_CREATED
+            )
+        except CantidadInvalidaException as e:
+            return Response(
+                {"exito": False, "mensaje": str(e), "error": {"codigo": "CANTIDAD_INVALIDA", "detalles": None}},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        except StockInsuficienteException as e:
+            return Response(
+                {"exito": False, "mensaje": str(e), "error": {"codigo": "STOCK_INSUFICIENTE", "detalles": None}},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        except (ProductoNoEncontradoException, VarianteNoEncontradaException) as e:
+            return Response(
+                {"exito": False, "mensaje": str(e), "error": {"codigo": "RECURSO_NO_ENCONTRADO", "detalles": None}},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        except Exception as e:
+            return Response(
+                {"exito": False, "mensaje": f"Error interno: {str(e)}", "error": {"codigo": "ERROR_INTERNO", "detalles": None}},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
 class ModificarCantidadItemAPIView(APIView):
     """

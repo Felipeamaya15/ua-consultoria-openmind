@@ -18,6 +18,20 @@ class ProductoNoDisponibleException(CatalogException):
     pass
 
 
+class ProductoNoEncontradoException(ProductoNoDisponibleException):
+    """Lanzada cuando el producto no existe en la base de datos."""
+    pass
+
+
+class VarianteNoEncontradaException(CatalogException):
+    """Lanzada cuando el SKU o identificador de variante no existe en el producto."""
+    pass
+
+
 class ItemCarritoNoEncontradoException(CatalogException):
     """Lanzada cuando el ítem no existe en el carrito del usuario."""
     pass
+
+
+# Alias de compatibilidad por si algún módulo importa DominioException
+DominioException = CatalogException

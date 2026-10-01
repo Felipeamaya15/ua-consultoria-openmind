@@ -1,9 +1,9 @@
 from typing import List, Dict, Any, Optional
 
 from django.utils.text import slugify
-
+from apps.catalog.application.services import VariantService
 from apps.catalog.infrastructure.repositories import ProductRepository
-from apps.core.models import Producto
+from apps.core.models import Producto, Usuario, Carrito, ItemCarrito
 from apps.core.infrastructure.mongo_client import get_mongo_db
 from bson import ObjectId
 from django.shortcuts import get_object_or_404
@@ -15,7 +15,16 @@ from apps.catalog.domain.exceptions import (
     CantidadInvalidaException,
     StockInsuficienteException,
     ItemCarritoNoEncontradoException,
+    ProductoNoEncontradoException,
+    VarianteNoEncontradaException,
 )
+
+
+
+
+
+
+
 
 class ListPublicProductsUseCase:
 
@@ -232,4 +241,119 @@ class ModificarCantidadItemUseCase:
         # Refrescar la fecha de actualización del carrito padre
         item.id_carrito.save(update_fields=['fecha_actualizacion'])
 
+        return item
+    
+@dataclass
+class AgregarItemCarritoDTO:
+    usuario_id: int
+    id_producto: int
+    cantidad: int = 1
+    sku: Optional[str] = None
+
+
+class AgregarItemCarritoUseCase:
+    """
+    Caso de uso: Agregar productos base y variantes al carrito de compras.
+    Reglas de negocio:
+    1. Cantidad estrictamente mayor a 0.
+    2. Si se proporciona SKU, valida existencia y stock contra VariantService (MongoDB).
+    3. Si no se proporciona SKU, valida existencia y stock del Producto base (PostgreSQL).
+    4. Si el ítem ya existe en el carrito, acumula la cantidad verificando que la suma no supere el stock.
+    5. Si el ítem no existe, lo crea en el carrito del usuario.
+    """
+
+    def __init__(self, variant_service: Optional[VariantService] = None):
+        self.variant_service = variant_service or VariantService()
+
+    def execute(self, dto: AgregarItemCarritoDTO) -> ItemCarrito:
+        # 1. Validación de cantidad inicial
+        if dto.cantidad <= 0:
+            raise CantidadInvalidaException("La cantidad agregada debe ser mayor a 0.")
+
+        # 2. Obtener o vincular el Carrito del usuario autenticado
+        usuario_core = Usuario.objects.filter(id_usuario=dto.usuario_id).first()
+        if not usuario_core:
+            # Fallback por si el usuario proviene de auth_user de Django
+            from django.contrib.auth import get_user_model
+            auth_u = get_user_model().objects.get(pk=dto.usuario_id)
+            usuario_core, _ = Usuario.objects.get_or_create(
+                id_usuario=auth_u.id,
+                defaults={
+                    "correo": auth_u.email,
+                    "nombre": auth_u.first_name or "Cliente",
+                    "apellido": auth_u.last_name or "QA",
+                    "password_hash": auth_u.password,
+                    "rol": "cliente"
+                }
+            )
+
+        carrito, _ = Carrito.objects.get_or_create(id_usuario=usuario_core)
+
+        # 3. Validar existencia del Producto en PostgreSQL
+        try:
+            producto = Producto.objects.get(pk=dto.id_producto, activo=True)
+        except Producto.DoesNotExist:
+            raise ProductoNoEncontradoException(
+                f"El producto con ID '{dto.id_producto}' no existe o no se encuentra activo."
+            )
+
+        # 4. Validar Stock (Variante vs Producto Base)
+        sku_normalizado = str(dto.sku).strip().upper() if dto.sku else None
+        
+        if sku_normalizado:
+            try:
+                variante = self.variant_service.get_variant_by_sku(str(producto.id_producto), sku_normalizado)
+            except ValueError as e:
+                raise VarianteNoEncontradaException(str(e))
+
+            stock_disponible = int(variante.get("stock", 0))
+            if stock_disponible <= 0:
+                raise StockInsuficienteException(
+                    f"La variante con SKU '{sku_normalizado}' se encuentra agotada."
+                )
+        else:
+            stock_disponible = producto.stock
+            if stock_disponible <= 0:
+                raise StockInsuficienteException("El producto seleccionado se encuentra agotado.")
+
+        # 5. Buscar si el ítem ya existe en el carrito
+        filtro_item = {
+            "id_carrito": carrito,
+            "id_producto": producto,
+        }
+        # Soporte dinámico si el modelo ItemCarrito posee la columna sku
+        tiene_columna_sku = hasattr(ItemCarrito, 'sku')
+        if tiene_columna_sku and sku_normalizado:
+            filtro_item["sku"] = sku_normalizado
+
+        item_existente = ItemCarrito.objects.filter(**filtro_item).first()
+
+        cantidad_final = dto.cantidad
+        if item_existente:
+            cantidad_final += item_existente.cantidad
+
+        # Validar stock total acumulado
+        if cantidad_final > stock_disponible:
+            raise StockInsuficienteException(
+                f"Stock insuficiente. Solicitado total: {cantidad_final}, disponible: {stock_disponible}."
+            )
+
+        # 6. Persistir en base de datos
+        if item_existente:
+            item_existente.cantidad = cantidad_final
+            item_existente.save(update_fields=["cantidad"])
+            item = item_existente
+        else:
+            datos_creacion = {
+                "id_carrito": carrito,
+                "id_producto": producto,
+                "cantidad": cantidad_final
+            }
+            if tiene_columna_sku and sku_normalizado:
+                datos_creacion["sku"] = sku_normalizado
+
+            item = ItemCarrito.objects.create(**datos_creacion)
+
+        # Actualizar timestamp del carrito
+        carrito.save(update_fields=["fecha_actualizacion"])
         return item

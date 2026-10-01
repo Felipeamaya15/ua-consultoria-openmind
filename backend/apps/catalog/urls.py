@@ -1,23 +1,30 @@
 from django.urls import path
 
 from apps.catalog.presentation.views import (
+    # Catálogo público
     PublicProductListAPIView,
     PublicProductDetailAPIView,
     PublicProductAttributesAPIView,
-    ProductDeleteAPIView,
+    ValidarDisponibilidadAPIView,
+    # Administración de productos
     ProductoCreateView,
     ProductoAdminDetailView,
     ProductoUpdateView,
     ProductoStockUpdateView,
-    ValidarDisponibilidadAPIView,
-    VarianteStockUpdateView,
+    ProductDeleteAPIView,
+    # Gestión de variantes
     ProductVariantsView,
+    VarianteStockUpdateView,
     VariantPurchaseView,
+    # Carrito de compras
+    CarritoItemsView,
     ModificarCantidadItemAPIView,
 )
 
 urlpatterns = [
-    # Catálogo público
+    # ==========================================
+    # 1. Catálogo Público
+    # ==========================================
     path(
         "productos/",
         PublicProductListAPIView.as_view(),
@@ -33,8 +40,15 @@ urlpatterns = [
         PublicProductAttributesAPIView.as_view(),
         name="mongo-producto-atributos",
     ),
+    path(
+        "productos/<str:id_producto>/disponibilidad/",
+        ValidarDisponibilidadAPIView.as_view(),
+        name="producto-disponibilidad",
+    ),
 
-    # Administración de productos
+    # ==========================================
+    # 2. Administración de Productos
+    # ==========================================
     path(
         "productos/crear/",
         ProductoCreateView.as_view(),
@@ -61,14 +75,9 @@ urlpatterns = [
         name="producto-eliminar",
     ),
 
-    # Validación de disponibilidad
-    path(
-        "productos/<str:id_producto>/disponibilidad/",
-        ValidarDisponibilidadAPIView.as_view(),
-        name="producto-disponibilidad",
-    ),
-
-    # Variantes
+    # ==========================================
+    # 3. Variantes de Producto
+    # ==========================================
     path(
         "productos/<str:id_producto>/variantes/",
         ProductVariantsView.as_view(),
@@ -95,7 +104,16 @@ urlpatterns = [
         name="variante-compra",
     ),
 
-    # Flujo de carrito
+    # ==========================================
+    # 4. Flujo de Carrito de Compras
+    # ==========================================
+    # POST: Agregar producto o variante al carrito
+    path(
+        "carrito/items/",
+        CarritoItemsView.as_view(),
+        name="carrito-items-collection",
+    ),
+    # PATCH: Modificar cantidad de un ítem existente
     path(
         "carrito/items/<int:id_item_carrito>/",
         ModificarCantidadItemAPIView.as_view(),

@@ -258,3 +258,28 @@ class ItemCarritoResponseSerializer(serializers.Serializer):
 
     def get_subtotal(self, obj):
         return obj.cantidad * obj.id_producto.precio
+
+class AgregarItemCarritoRequestSerializer(serializers.Serializer):
+    id_producto = serializers.IntegerField(
+        required=True,
+        min_value=1,
+        error_messages={
+            "required": "El campo 'id_producto' es obligatorio.",
+            "invalid": "El 'id_producto' debe ser un número entero válido."
+        }
+    )
+    cantidad = serializers.IntegerField(
+        required=False,
+        default=1,
+        min_value=1,
+        error_messages={
+            "min_value": "La cantidad debe ser mayor a 0.",
+            "invalid": "La cantidad debe ser un número entero válido."
+        }
+    )
+    sku = serializers.CharField(
+        required=False,
+        allow_null=True,
+        allow_blank=True,
+        default=None
+    )
