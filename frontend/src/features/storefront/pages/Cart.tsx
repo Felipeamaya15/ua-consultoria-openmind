@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 
+import { StockFeedback } from '../components/store/StockFeedback';
 import { useCart } from '../context/CartContext';
 import { formatPrice } from '../data/mockData';
 import { Button, EmptyState, Icon } from '../components/ui';
@@ -159,7 +160,6 @@ export default function Cart() {
             <div className="space-y-3">
               {items.map((item) => {
                 const hasDiscount = Boolean(item.comparePrice);
-                const stockLow = item.maxStock <= 3;
                 const canIncrease = item.quantity < item.maxStock;
 
                 return (
@@ -201,11 +201,7 @@ export default function Cart() {
                               SKU: {item.sku}
                             </p>
 
-                            {stockLow && (
-                              <p className="mt-2 text-[10px] font-semibold text-[#e04b1a]">
-                                Solo {item.maxStock} disponibles
-                              </p>
-                            )}
+                            <StockFeedback sku={item.sku} maxStock={item.maxStock} quantity={item.quantity} className="mt-2 text-[10px] font-semibold text-[#e04b1a]" />
                           </div>
 
                           <button
@@ -429,7 +425,6 @@ export default function Cart() {
             <div className="flex flex-col gap-4">
               {items.map((item) => {
                 const hasDiscount = Boolean(item.comparePrice);
-                const stockLow = item.maxStock <= 3;
 
                 return (
                   <article
@@ -469,11 +464,7 @@ export default function Cart() {
                             SKU: {item.sku}
                           </p>
 
-                          {stockLow && (
-                            <p className="mt-2 text-[10px] text-[#756b51]">
-                              Solo {item.maxStock} disponibles
-                            </p>
-                          )}
+                          <StockFeedback sku={item.sku} maxStock={item.maxStock} quantity={item.quantity} className="mt-2 text-[10px] text-[#756b51]" />
                         </div>
 
                         <button
@@ -701,6 +692,7 @@ export default function Cart() {
                       {Object.keys(item.attributes).length > 0 ? ' · ' : ''}
                       SKU: {item.sku}
                     </p>
+                    <StockFeedback sku={item.sku} maxStock={item.maxStock} quantity={item.quantity} />
                   </div>
 
                   <button

@@ -12,6 +12,8 @@ export interface ProductVariant {
 }
 
 export interface Product {
+  variantsLoaded?: boolean;
+  attributeLabels?: Record<string, string>;
   catalogId?: string; // ID Mongo estable, independiente del slug público.
   id: string;
   name: string;
