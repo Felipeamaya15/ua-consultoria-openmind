@@ -133,32 +133,56 @@ export function ProductForm() {
   const addVariant = () => setProduct((current) => ({ ...current, variants: [...current.variants, { id: `v-${Date.now()}`, sku: `SKU-${current.variants.length + 1}`, attributes: Object.fromEntries(Object.entries(current.attributes).map(([name, values]) => [name, values[0] ?? ""])), price: current.basePrice, comparePrice: current.comparePrice, stock: 0, available: true }] }))
   const addImages = (files?: FileList | null) => { if (!files) return; if(Array.from(files).some(file => file.size > 1024 * 1024 || !["image/png","image/jpeg","image/webp"].includes(file.type))) {setError("Usa imágenes JPG, PNG o WebP de hasta 1 MB.");return;} Array.from(files).filter((file) => file.type.startsWith("image/")).forEach((file) => { const reader = new FileReader(); reader.onload = () => setProduct((current) => ({ ...current, images: [...current.images, String(reader.result)] })); reader.readAsDataURL(file) }) }
   const save = async () => {
-    if (!product.name.trim()) { setError("Ingresa el nombre del producto."); setActiveTab("info"); return }
-    if (product.variants.length === 0) { setError("Agrega al menos una variante con precio y stock."); setActiveTab("variants"); return }
+    if (!product.name.trim()) { setError("Ingresa el nombre del producto."); setActiveTab("info"); return; }
+    if (product.variants.length === 0) { setError("Agrega al menos una variante con precio y stock."); setActiveTab("variants"); return; }
     if(product.basePrice < 0 || product.variants.some(v => !v.sku.trim() || v.price < 0 || !Number.isInteger(v.stock) || v.stock < 0) || new Set(product.variants.map(v => v.sku.trim())).size !== product.variants.length) {setError("Revisa los precios, el stock entero y los SKU únicos de las variantes.");return;}
 
-    const finalProduct = { ...product, basePrice: Number(product.basePrice) || 0, images: product.images.length ? product.images : ["https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=600&fit=crop&auto=format"] }
+    const finalProduct = { ...product, basePrice: Number(product.basePrice) || 0, images: product.images.length ? product.images : ["https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=600&fit=crop&auto=format"] };
 
-    setSaving(true)
-    setError("")
+    const exists = products.some((item) => item.id === finalProduct.id);
 
-    if (!source) {
-      try {
-        await createPublicProduct(finalProduct)
-      } catch (err) {
-        setSaving(false)
-        setError(err instanceof Error ? err.message : "No se pudo guardar el producto en el catálogo.")
-        return
-      }
+    setSaving(true);
+    setError("");
+
+    /*
+     * INTEGRACIÓN API REAL (SCRUM-224): Descomentar esto cuando se conecte el backend 100%
+     * 
+     * try {
+     *   const token = localStorage.getItem("token");
+     *   const method = exists ? 'PUT' : 'POST';
+     *   const url = exists ? `http://localhost:8000/api/productos/${finalProduct.id}/` : `http://localhost:8000/api/productos/`;
+     *   
+     *   const response = await fetch(url, {
+     *     method: method,
+     *     headers: { 
+     *       'Authorization': `Token ${token}`,
+     *       'Content-Type': 'application/json' 
+     *     },
+     *     body: JSON.stringify(finalProduct)
+     *   });
+     *   
+     *   if (!response.ok) throw new Error("Error al guardar los datos del producto en el servidor.");
+     * } catch (error) {
+     *   setSaving(false);
+     *   setError("Ocurrió un error al comunicarse con el servidor.");
+     *   return;
+     * }
+     */
+
+    // PROTOTIPO: Simulamos la actualización/creación cambiando los datos en la memoria local
+    const ok = setConfig({
+      ...config,
+      products: exists ? products.map((item) => item.id === finalProduct.id ? finalProduct : item) : [...products, finalProduct]
+    });
+
+    if(!ok) {
+      setSaving(false);
+      return;
     }
 
-    const exists = products.some((item) => item.id === finalProduct.id)
-    const ok = setConfig({ ...config, products: exists ? products.map((item) => item.id === finalProduct.id ? finalProduct : item) : [...products, finalProduct] })
-    setSaving(false)
-    if(!ok) return
-    setSaved(true)
-    setTimeout(() => navigate("/emprendedor/productos"), 800)
-  }
+    setSaved(true);
+    setTimeout(() => navigate("/emprendedor/productos"), 800);
+  };
   const removeImage = (index: number) => setProduct((current) => ({ ...current, images: current.images.filter((_, imageIndex) => imageIndex !== index) }))
   if (id !== "nuevo" && !source) return <Alert variant="error">Producto no encontrado. <Link to="/emprendedor/productos">Volver a productos</Link></Alert>;
   return <div>
