@@ -279,97 +279,96 @@ class ProductDeleteAPIView(APIView):
 
 
 class ProductoCreateView(APIView):
-
     permission_classes = [IsAuthenticated]
 
-
     def post(self, request):
-
         tienda = resolver_tienda(request, exigir_propietario=True)
 
-
         serializer = ProductoCreateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True) 
 
-        if serializer.is_valid():
-
-            caso_uso = CrearProductoUseCase()
-
-            producto = caso_uso.ejecutar(tienda, serializer.validated_data)
-
-            return Response(
-
-                {
-
-                    "mensaje": "Producto creado con éxito",
-
-                    "id_producto": producto.id_producto
-
-                },
-
-                status=status.HTTP_201_CREATED
-
-            )
-
-
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        caso_uso = CrearProductoUseCase()
+        producto = caso_uso.ejecutar(tienda, serializer.validated_data)
+        
+        return Response(
+            {
+                "mensaje": "Producto creado con éxito",
+                "id_producto": producto.id_producto
+            },
+            status=status.HTTP_201_CREATED
+        )
 
 
 class ProductoAdminDetailView(APIView):
-
     permission_classes = [IsAuthenticated]
-
 
     def get(self, request, id_producto):
-
         tienda = resolver_tienda(request, exigir_propietario=True)
-
-
         caso_uso = ObtenerProductoAdminUseCase()
 
-        producto = caso_uso.ejecutar(tienda, id_producto)
+        try:
+            producto = caso_uso.ejecutar(tienda, id_producto)
+            
+            if producto is None:
+                return Response(
+                    {
+                        "mensaje": "El producto solicitado no fue encontrado", 
+                        "codigo": "RECURSO_NO_ENCONTRADO"
+                    },
+                    status=status.HTTP_404_NOT_FOUND
+                )
 
-
-        serializer = ProductoAdminDetailSerializer(producto)
-
-        return Response(serializer.data, status=status.HTTP_200_OK)
-
-
-class ProductoUpdateView(APIView):
-
-    permission_classes = [IsAuthenticated]
-
-
-    def put(self, request, id_producto):
-
-        tienda = resolver_tienda(request, exigir_propietario=True)
-
-        serializer = ProductoUpdateSerializer(data=request.data, partial=True)
-
-
-        if serializer.is_valid():
-
-            caso_uso = ActualizarProductoAdminUseCase()
-
-            producto = caso_uso.ejecutar(tienda, id_producto, serializer.validated_data)
-
-
+            serializer = ProductoAdminDetailSerializer(producto)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+            
+        except Exception:
             return Response(
-
                 {
-
-                    "mensaje": "Producto actualizado con éxito",
-
-                    "id_producto": producto.id_producto
-
+                    "mensaje": "El producto solicitado no fue encontrado", 
+                    "codigo": "RECURSO_NO_ENCONTRADO"
                 },
-
-                status=status.HTTP_200_OK
-
+                status=status.HTTP_404_NOT_FOUND
             )
 
+class ProductoUpdateView(APIView):
+    permission_classes = [IsAuthenticated]
 
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    def put(self, request, id_producto):
+        return self._actualizar(request, id_producto)
 
+    def patch(self, request, id_producto):
+        return self._actualizar(request, id_producto)
+
+    def _actualizar(self, request, id_producto):
+        tienda = resolver_tienda(request, exigir_propietario=True)
+        serializer = ProductoUpdateSerializer(data=request.data, partial=True)
+
+        serializer.is_valid(raise_exception=True)
+
+        caso_uso = ActualizarProductoAdminUseCase()
+
+        try:
+            producto = caso_uso.ejecutar(tienda, id_producto, serializer.validated_data)
+
+            if producto is None:
+                return Response(
+                    {"mensaje": "El producto a actualizar no existe", "codigo": "RECURSO_NO_ENCONTRADO"},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+
+            return Response(
+                {
+                    "mensaje": "Producto actualizado con éxito",
+                    "id_producto": producto.id_producto
+                },
+                status=status.HTTP_200_OK
+            )
+            
+        except Exception:
+            return Response(
+                {"mensaje": "El producto a actualizar no existe", "codigo": "RECURSO_NO_ENCONTRADO"},
+                status=status.HTTP_404_NOT_FOUND
+            )
 
 class ProductoStockUpdateView(APIView):
 
