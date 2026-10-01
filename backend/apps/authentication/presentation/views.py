@@ -11,6 +11,7 @@ from apps.authentication.domain.exceptions import (
     InvalidCredentialsException,
     UserAlreadyExistsException,
     UserNotFoundException,
+    WeakPasswordException,
 )
 from apps.authentication.application.use_cases import (
     RegisterUserUseCase,
@@ -54,6 +55,7 @@ AUTH_ERROR_CODES = {
     UserAlreadyExistsException: "USUARIO_YA_EXISTE",
     InvalidCredentialsException: "CREDENCIALES_INVALIDAS",
     UserNotFoundException: "USUARIO_NO_ENCONTRADO",
+    WeakPasswordException: "CONTRASENA_INSEGURA",
 }
 
 

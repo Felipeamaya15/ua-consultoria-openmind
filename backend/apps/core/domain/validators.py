@@ -25,3 +25,24 @@ def validate_base64_image(base64_str, max_size_mb=2):
     size_in_bytes = (len(base64_str) * 3) / 4
     if size_in_bytes > (max_size_mb * 1024 * 1024):
         raise ValidationError(f"La imagen excede el peso permitido. El tamaño máximo es {max_size_mb}MB.")
+
+
+
+def validar_password_segura(password: str) -> None:
+    if not password or not isinstance(password, str):
+        raise ValueError("La contraseña no puede estar vacía.")
+
+    if len(password) < 8:
+        raise ValueError("La contraseña debe tener al menos 8 caracteres.")
+
+    if not re.search(r"[A-Z]", password):
+        raise ValueError("La contraseña debe contener al menos una letra mayúscula.")
+
+    if not re.search(r"[a-z]", password):
+        raise ValueError("La contraseña debe contener al menos una letra minúscula.")
+
+    if not re.search(r"\d", password):
+        raise ValueError("La contraseña debe contener al menos un número.")
+
+    if not re.search(r"[@$!%*?&#/._\-]", password):
+        raise ValueError("La contraseña debe contener al menos un carácter especial (@, $, !, %, *, ?, &, #, _, -, .).")

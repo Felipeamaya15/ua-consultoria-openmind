@@ -17,7 +17,7 @@ from apps.authentication.infrastructure.models import ConfiguracionAutenticacion
 UserModel = get_user_model()
 
 class DjangoUserRepository(IUserRepository):
-    """Implementación concreta del repositorio usando Django ORM y Postgres"""
+    """Implementación concreta del repositorio usando Django ORM y Postgres."""
 
     def _to_entity(self, user_obj: AbstractBaseUser) -> UserEntity:
         return UserEntity(
@@ -47,6 +47,10 @@ class DjangoUserRepository(IUserRepository):
         return self._to_entity(user) if user else None
 
     def create(self, user: UserEntity, password: str) -> UserEntity:
+        """
+        Crea un nuevo usuario asegurando el hash seguro de la contraseña.
+        create_user() invoca internamente set_password(), aplicando PBKDF2-SHA256 con salt dinámico.
+        """
         new_user = UserModel.objects.create_user(
             username=user.username,
             email=user.email,
@@ -57,13 +61,18 @@ class DjangoUserRepository(IUserRepository):
         return self._to_entity(new_user)
 
     def verify_credentials(self, username_or_email: str, password: str) -> Optional[UserEntity]:
-        # Busca primero por email, si no, asume que es el username
+        """
+        Verifica las credenciales comparando la contraseña ingresada contra el hash seguro almacenado.
+        check_password() previene timing attacks y valida hashes PBKDF2, Argon2 o BCrypt.
+        """
+        # Buscar usuario por email o por username
         user_obj = UserModel.objects.filter(email=username_or_email).first()
-        username = user_obj.username if user_obj else username_or_email
+        if not user_obj:
+            user_obj = UserModel.objects.filter(username=username_or_email).first()
 
-        user = authenticate(username=username, password=password)
-        if user:
-            return self._to_entity(user)
+        if user_obj and user_obj.is_active and user_obj.check_password(password):
+            return self._to_entity(user_obj)
+
         return None
 
 class DjangoConfiguracionAutenticacionRepository(
