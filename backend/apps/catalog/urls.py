@@ -13,6 +13,7 @@ from apps.catalog.presentation.views import (
     VarianteStockUpdateView,
     ProductVariantsView,
     VariantPurchaseView,
+    ModificarCantidadItemAPIView,
 )
 
 urlpatterns = [
@@ -92,5 +93,12 @@ urlpatterns = [
         "productos/<str:id_producto>/variantes/<str:sku>/compra/",
         VariantPurchaseView.as_view(),
         name="variante-compra",
+    ),
+
+    # Flujo de carrito
+    path(
+        "carrito/items/<int:id_item_carrito>/",
+        ModificarCantidadItemAPIView.as_view(),
+        name="modificar-cantidad-item",
     ),
 ]

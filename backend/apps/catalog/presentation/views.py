@@ -50,6 +50,63 @@ from ..application.use_cases import ValidarDisponibilidadProductoUseCase
 from ..application.services import VariantService
 from .serializers import VarianteStockUpdateSerializer
 
+from rest_framework.views import APIView
+from rest_framework.permissions import IsAuthenticated
+from rest_framework import status
+from apps.core.presentation.responses import success_response, error_response
+from apps.catalog.presentation.serializers import (
+    ModificarCantidadRequestSerializer,
+    ItemCarritoResponseSerializer,
+)
+from apps.catalog.application.use_cases import (
+    ModificarCantidadItemUseCase,
+    ModificarCantidadDTO,
+)
+from apps.catalog.domain.exceptions import (
+    CantidadInvalidaException,
+    StockInsuficienteException,
+    ItemCarritoNoEncontradoException,
+)
+
+class ModificarCantidadItemAPIView(APIView):
+    """
+    Endpoint para modificar la cantidad de un ítem en el carrito del usuario autenticado.
+    PATCH /api/catalog/carrito/items/<id_item_carrito>/
+    """
+    permission_classes = [IsAuthenticated]
+
+    def patch(self, request, id_item_carrito):
+        serializer = ModificarCantidadRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        dto = ModificarCantidadDTO(
+            id_item_carrito=id_item_carrito,
+            nueva_cantidad=serializer.validated_data['cantidad'],
+            usuario_id=request.user.id
+        )
+
+        use_case = ModificarCantidadItemUseCase()
+
+        try:
+            item_actualizado = use_case.execute(dto)
+            return success_response(
+                data=ItemCarritoResponseSerializer(item_actualizado).data,
+                mensaje="Cantidad actualizada exitosamente.",
+                status=status.HTTP_200_OK
+            )
+        except (CantidadInvalidaException, StockInsuficienteException) as err:
+            return error_response(
+                mensaje=str(err),
+                codigo="CANTIDAD_INVALIDA",
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        except ItemCarritoNoEncontradoException as err:
+            return error_response(
+                mensaje=str(err),
+                codigo="ITEM_NO_ENCONTRADO",
+                status=status.HTTP_404_NOT_FOUND
+            )
+
 
 class VarianteStockUpdateView(APIView):
     permission_classes = [IsAuthenticated]

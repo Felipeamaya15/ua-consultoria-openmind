@@ -9,6 +9,14 @@ from bson import ObjectId
 from django.shortcuts import get_object_or_404
 from apps.catalog.domain.stock import validate_stock
 
+from dataclasses import dataclass
+from apps.core.models import ItemCarrito, Producto
+from apps.catalog.domain.exceptions import (
+    CantidadInvalidaException,
+    StockInsuficienteException,
+    ItemCarritoNoEncontradoException,
+)
+
 class ListPublicProductsUseCase:
 
     def __init__(self, repository: ProductRepository):
@@ -176,3 +184,52 @@ class ValidarDisponibilidadProductoUseCase:
             raise ValueError(f"Stock insuficiente. Solo quedan {producto.stock} unidades.")
             
         return producto
+
+@dataclass
+class ModificarCantidadDTO:
+    id_item_carrito: int
+    nueva_cantidad: int
+    usuario_id: int
+
+
+class ModificarCantidadItemUseCase:
+    """
+    Reglas de negocio:
+    1. Cantidad estrictamente mayor a 0 (si es 0, suele manejarse como eliminación).
+    2. La cantidad solicitada no puede superar el stock físico del producto.
+    3. El ítem debe pertenecer al carrito activo del usuario autenticado.
+    """
+
+    def execute(self, dto: ModificarCantidadDTO) -> ItemCarrito:
+        # Validación 1: Cantidad válida
+        if dto.nueva_cantidad <= 0:
+            raise CantidadInvalidaException("La cantidad debe ser mayor a 0.")
+
+        # Validación 2: Pertenencia e existencia del ítem en el carrito del usuario
+        try:
+            item = ItemCarrito.objects.select_related('id_producto', 'id_carrito').get(
+                pk=dto.id_item_carrito,
+                id_carrito__id_usuario_id=dto.usuario_id
+            )
+        except ItemCarrito.DoesNotExist:
+            raise ItemCarritoNoEncontradoException("El producto no existe en tu carrito.")
+
+        producto = item.id_producto
+
+        # Validación 3: Stock suficiente disponible en inventario
+        if not producto.activo:
+            raise StockInsuficienteException("El producto ya no se encuentra disponible para la venta.")
+
+        if dto.nueva_cantidad > producto.stock:
+            raise StockInsuficienteException(
+                f"No hay stock suficiente. Stock disponible: {producto.stock} unidades."
+            )
+
+        # Actualización de la cantidad y persistencia
+        item.cantidad = dto.nueva_cantidad
+        item.save(update_fields=['cantidad'])
+
+        # Refrescar la fecha de actualización del carrito padre
+        item.id_carrito.save(update_fields=['fecha_actualizacion'])
+
+        return item

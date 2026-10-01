@@ -240,3 +240,21 @@ class ProductCreateSerializer(serializers.Serializer):
                 "Los SKU de las variantes deben ser únicos."
             )
         return value        
+
+class ModificarCantidadRequestSerializer(serializers.Serializer):
+    cantidad = serializers.IntegerField(min_value=1, error_messages={
+        'min_value': 'La cantidad mínima permitida es 1.',
+        'invalid': 'Debe ingresar un número entero válido.'
+    })
+
+class ItemCarritoResponseSerializer(serializers.Serializer):
+    id_item_carrito = serializers.IntegerField()
+    id_producto = serializers.IntegerField(source='id_producto.id_producto')
+    nombre_producto = serializers.CharField(source='id_producto.nombre')
+    precio_unitario = serializers.DecimalField(source='id_producto.precio', max_digits=12, decimal_places=2)
+    cantidad = serializers.IntegerField()
+    subtotal = serializers.SerializerMethodField()
+    stock_disponible = serializers.IntegerField(source='id_producto.stock')
+
+    def get_subtotal(self, obj):
+        return obj.cantidad * obj.id_producto.precio
