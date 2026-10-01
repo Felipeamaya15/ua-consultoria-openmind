@@ -7,6 +7,7 @@ from apps.core.models import Producto
 from apps.core.infrastructure.mongo_client import get_mongo_db
 from bson import ObjectId
 from django.shortcuts import get_object_or_404
+from apps.catalog.domain.stock import validate_stock
 
 class ListPublicProductsUseCase:
 
@@ -126,6 +127,8 @@ class CreateProductUseCase:
 
 class CrearProductoUseCase:
     def ejecutar(self, tienda, datos_validados):
+        if 'stock' in datos_validados:
+            validate_stock(datos_validados['stock'])
         producto = Producto.objects.create(
             id_tienda=tienda,
             **datos_validados
@@ -139,6 +142,8 @@ class ObtenerProductoAdminUseCase:
 
 class ActualizarProductoAdminUseCase:
     def ejecutar(self, tienda, id_producto, datos_actualizados):
+        if 'stock' in datos_actualizados:
+            validate_stock(datos_actualizados['stock'])
         producto = get_object_or_404(Producto, id_producto=id_producto, id_tienda=tienda)
         
         for campo, valor in datos_actualizados.items():
@@ -149,6 +154,7 @@ class ActualizarProductoAdminUseCase:
 
 class ActualizarStockProductoUseCase:
     def ejecutar(self, tienda, id_producto, nuevo_stock):
+        validate_stock(nuevo_stock)
         producto = get_object_or_404(Producto, id_producto=id_producto, id_tienda=tienda)
         
         producto.stock = nuevo_stock
