@@ -10,9 +10,11 @@ from apps.catalog.presentation.views import (
     ProductoUpdateView,
     ProductoStockUpdateView,
     ValidarDisponibilidadAPIView,
+    VarianteStockUpdateView,
 )
 
 urlpatterns = [
+    path('productos/<str:producto_id>/variantes/<str:sku>/stock/', VarianteStockUpdateView.as_view(), name='variante-stock'),
     # Catálogo público
     path(
         'productos/',

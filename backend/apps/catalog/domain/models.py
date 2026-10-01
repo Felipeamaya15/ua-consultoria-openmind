@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from typing import Dict, Any
+from .stock import validate_stock
 
 @dataclass
 class Variante:
@@ -13,5 +14,4 @@ class Variante:
         self.sku = self.sku.strip().upper()
         if self.precio < 0:
             raise ValueError("El precio no puede ser negativo.")
-        if self.stock < 0:
-            raise ValueError("El stock no puede ser negativo.")
+        validate_stock(self.stock)

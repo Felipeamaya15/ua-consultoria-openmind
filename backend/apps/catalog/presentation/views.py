@@ -23,6 +23,22 @@ from ..application.use_cases import ActualizarProductoAdminUseCase
 from .serializers import ProductoStockUpdateSerializer
 from ..application.use_cases import ActualizarStockProductoUseCase
 from ..application.use_cases import ValidarDisponibilidadProductoUseCase
+from ..application.services import VariantService
+from .serializers import VarianteStockUpdateSerializer
+
+
+class VarianteStockUpdateView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def patch(self, request, producto_id, sku):
+        tienda_id = resolver_tienda_id(request, exigir_propietario=True)
+        serializer = VarianteStockUpdateSerializer(data=request.data)
+        if not serializer.is_valid():
+            return error_response(mensaje='El stock enviado no es válido.', codigo='ERROR_VALIDACION', detalles=serializer.errors)
+        variante = VariantService().update_stock(tienda_id, producto_id, sku, serializer.validated_data['stock'])
+        if variante is None:
+            return error_response(mensaje='El producto o la variante no existe en esta tienda.', codigo='RECURSO_NO_ENCONTRADO', status=status.HTTP_404_NOT_FOUND)
+        return success_response(data={'producto_id': producto_id, 'sku': variante['sku'], 'stock': variante['stock']}, mensaje='Stock de variante actualizado correctamente')
 
 class PublicProductListAPIView(APIView):
     """Listado público de productos activos del catálogo."""

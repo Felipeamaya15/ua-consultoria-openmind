@@ -1,5 +1,8 @@
 from typing import Optional, List, Dict, Any
 from bson import ObjectId
+from bson.errors import InvalidId
+from pymongo import ReturnDocument
+from pymongo.errors import DuplicateKeyError
 from apps.catalog.domain.stock import validate_product_stock, validate_stock
 from apps.catalog.domain.tienda import data_for_store, validate_store_id
 from apps.core.infrastructure.mongo_client import get_mongo_db
@@ -110,50 +113,53 @@ class ProductRepository:
         )
         return result is not None
     
-    def add_variant(self, product_id: str, variant_data: Dict[str, Any]) -> bool:
-        """
-        Agrega una nueva variante al arreglo 'variantes' del producto.
-        Valida que el SKU no esté repetido dentro de ese producto.
-        """
+    def add_variant(self, tienda_id: str, product_id: str, variant_data: Dict[str, Any]) -> bool:
+        """Añade una variante sin permitir SKU repetido ni stock negativo."""
+        validate_store_id(tienda_id)
+        validate_product_stock({'variantes': [variant_data]})
         try:
-            # 1. Verificar si ya existe ese SKU en el producto
-            existe = self.collection.find_one({
-                "_id": ObjectId(product_id),
-                "variantes.sku": variant_data["sku"]
-            })
-            if existe:
-                raise ValueError(f"Ya existe una variante con el SKU '{variant_data['sku']}' en este producto.")
-
-            # 2. Agregar la variante al array usando $push
+            product_key = {"tienda_id": tienda_id, "_id": ObjectId(product_id)}
+        except (InvalidId, ValueError, TypeError):
+            return False
+        if self.collection.find_one({**product_key, "variantes.sku": variant_data["sku"]}):
+            raise ValueError(f"Ya existe una variante con el SKU '{variant_data['sku']}' en este producto.")
+        try:
             result = self.collection.update_one(
-                {"_id": ObjectId(product_id)},
+                {**product_key, "variantes.sku": {"$ne": variant_data["sku"]}},
                 {"$push": {"variantes": variant_data}}
             )
-            return result.modified_count > 0
-        except Exception as e:
-            if isinstance(e, ValueError):
-                raise e
-            return False
+        except DuplicateKeyError as error:
+            raise ValueError('El SKU ya existe en esta tienda.') from error
+        return result.modified_count > 0
 
-    def update_variant(self, product_id: str, sku: str, editable_data: Dict[str, Any]) -> bool:
-        """
-        Actualiza los campos editables (precio, stock, atributos, etc.)
-        de una variante específica identificada por su SKU.
-        """
+    def update_variant(self, tienda_id: str, product_id: str, sku: str, editable_data: Dict[str, Any]) -> bool:
+        """Edita una variante propia; el stock se valida también sin servicio."""
+        validate_store_id(tienda_id)
+        update_fields = {f"variantes.$.{key}": value for key, value in editable_data.items()}
+        validate_product_stock(update_fields)
         try:
-            # Mapear los campos a la sintaxis posicional de Mongo: variantes.$.campo
-            update_fields = {f"variantes.$.{k}": v for k, v in editable_data.items()}
-            
-            result = self.collection.update_one(
-                {
-                    "_id": ObjectId(product_id),
-                    "variantes.sku": sku
-                },
-                {"$set": update_fields}
-            )
-            return result.modified_count > 0
-        except Exception:
+            product_key = {"tienda_id": tienda_id, "_id": ObjectId(product_id), "variantes.sku": sku}
+        except (InvalidId, ValueError, TypeError):
             return False
+        result = self.collection.update_one(product_key, {"$set": update_fields})
+        return result.matched_count > 0
+
+    def update_variant_stock(self, tienda_id: str, product_id: str, sku: str, stock: int) -> Optional[Dict[str, Any]]:
+        """Devuelve el documento posterior a la escritura atómica de una variante."""
+        validate_store_id(tienda_id)
+        validate_stock(stock)
+        try:
+            object_id = ObjectId(product_id)
+        except (InvalidId, ValueError, TypeError):
+            return None
+        product = self.collection.find_one_and_update(
+            {"tienda_id": tienda_id, "_id": object_id, "variantes.sku": sku},
+            {"$set": {"variantes.$.stock": stock}},
+            return_document=ReturnDocument.AFTER,
+        )
+        if product:
+            return next((variant for variant in product.get('variantes', []) if variant.get('sku') == sku), None)
+        return None
 
 
 class AttributeTemplateRepository:
