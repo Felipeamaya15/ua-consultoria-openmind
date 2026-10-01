@@ -4,13 +4,48 @@ import type { LandingConfig, LandingInput } from '../types/landing.types';
 
 const endpoint = `${API_BASE_URL}/api/landing/configuracion/`;
 
+function normalizeMediaUrl(value: string | null): string | null {
+  if (!value) return null;
+
+  // Ya es una URL absoluta o una imagen Base64.
+  if (
+    value.startsWith('http://') ||
+    value.startsWith('https://') ||
+    value.startsWith('data:')
+  ) {
+    return value;
+  }
+
+  // Django devuelve rutas como /media/landing/images/imagen_principal.png.
+  if (value.startsWith('/')) {
+    return `${API_BASE_URL}${value}`;
+  }
+
+  return `${API_BASE_URL}/${value}`;
+}
+
 async function readResponse(response: Response): Promise<LandingConfig | null> {
   const body = await response.json();
+
   if (!response.ok || body.exito !== true) {
     const details = body.error?.detalles;
-    throw new Error(`${body.mensaje || 'No se pudo consultar o guardar la landing.'}${details ? `: ${JSON.stringify(details)}` : ''}`);
+
+    throw new Error(
+      `${body.mensaje || 'No se pudo consultar o guardar la landing.'}${
+        details ? `: ${JSON.stringify(details)}` : ''
+      }`
+    );
   }
-  return body.data;
+
+  if (!body.data) {
+    return null;
+  }
+
+  return {
+    ...body.data,
+    imagen_principal: normalizeMediaUrl(body.data.imagen_principal),
+    logo: normalizeMediaUrl(body.data.logo),
+  };
 }
 
 export async function fetchLandingConfig(options?: InitialLoadOptions): Promise<LandingConfig | null> {
