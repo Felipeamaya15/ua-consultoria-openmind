@@ -108,7 +108,7 @@ class ProductDeleteAPIView(APIView):
     def delete(self, request, producto_id):
         try:
             tienda_id = resolver_tienda_id(request)
-            
+            #Eliminación de producto, verificando propiedad.
           
             if not Tienda.objects.filter(id_tienda=tienda_id, id_usuario_propietario=request.user).exists():
                 return error_response(

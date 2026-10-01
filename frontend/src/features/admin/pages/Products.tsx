@@ -22,31 +22,36 @@ export function ProductList() {
 
   // Logica del Flujo Administrativo para Eliminar (SCRUM-231)
   const handleDeleteProduct = async (productId: string) => {
-    if (!window.confirm("Estas seguro de que deseas desactivar este producto? Dejara de ser visible en el catalogo, pero se mantendra en tu historial de ventas.")) return;
+    if (!window.confirm("¿Estás seguro de que deseas desactivar este producto? Dejará de ser visible en el catálogo, pero se mantendrá en tu historial de ventas.")) return;
 
     try {
-      /*
-       * INTEGRACION API REAL: Descomentar esto cuando se conecte el frontend 100%
-       *
-       * const token = localStorage.getItem("token");
-       * const response = await fetch(`http://localhost:8000/api/productos/${productId}/`, {
-       *   method: 'DELETE',
-       *   headers: { 'Authorization': `Bearer ${token}` }
-       * });
-       * if (!response.ok) throw new Error("Error al eliminar el producto");
-       */
+      // 1. Obtener el token real del usuario autenticado
+      const token = localStorage.getItem("token");
 
-      // PROTOTIPO: Simulamos el Soft Delete en el contexto local cambiando el status a "archived"
+      // 2. Ejecutar la petición DELETE al backend (Aplica seguridad SCRUM-231)
+      const response = await fetch(`http://localhost:8000/api/productos/${productId}/`, {
+        method: 'DELETE',
+        headers: { 
+          'Authorization': `Token ${token}`, // Nota: DRF por defecto usa "Token". Si usas JWT, cámbialo a "Bearer"
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error("Error de permisos o no se pudo eliminar el producto en el servidor.");
+      }
+
+      // 3. Si el servidor lo borra con éxito (200 OK), actualizamos la interfaz visual
       const success = setConfig({
         ...config,
         products: products.map(p => p.id === productId ? { ...p, status: "archived" as const } : p)
       });
 
       if (success) {
-        alert("Producto eliminado logicamente de forma correcta.");
+        alert("Producto eliminado lógicamente de forma correcta.");
       }
     } catch (error) {
-      alert("Ocurrio un error al intentar eliminar el producto.");
+      alert("Ocurrió un error al intentar eliminar el producto. Revisa tus permisos.");
     }
   };
 
