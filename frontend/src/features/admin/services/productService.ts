@@ -55,7 +55,7 @@ async function agregarVariante(idProducto: number, variant: Product["variants"][
         atributos_variante: Object.entries(variant.attributes).map(
           ([nombre, valor]) => ({
             clave: nombre.toLowerCase(),
-            etiqueta: nombre,
+            etiqueta: product.attributeLabels?.[nombre] || nombre,
             valor,
           }),
         ),
@@ -63,7 +63,7 @@ async function agregarVariante(idProducto: number, variant: Product["variants"][
     },
   );
 
-  const body = await response.json();
+  const body = await response.json().catch(() => null);
 
   if (!response.ok) {
     throw new Error(

@@ -71,7 +71,7 @@ function adaptProduct(item: BackendProductListItem): Product {
   };
 }
 
-export async function fetchPublicProducts(options?: InitialLoadOptions): Promise<Product[]> {
+export async function fetchPublicProducts(options?: InitialLoadOptions & { includeVariants?: boolean }): Promise<Product[]> {
   const response = await fetchInitialLoad(`${API_URL}/api/catalog/productos/`, options);
 
   if (!response.ok) {
@@ -85,7 +85,17 @@ export async function fetchPublicProducts(options?: InitialLoadOptions): Promise
     throw new Error(body.mensaje || 'Error al obtener productos');
   }
 
-  return body.data.map(adaptProduct);
+  if (!options?.includeVariants) return body.data.map(adaptProduct);
+  // El listado no incluye SKUs: cargar detalle con concurrencia acotada.
+  const products: Array<Product | null> = new Array(body.data.length);
+  let next = 0;
+  await Promise.all(Array.from({ length: Math.min(4, body.data.length) }, async () => {
+    while (next < body.data.length) {
+      const index = next++;
+      products[index] = await fetchPublicProductDetail(body.data[index].slug, options);
+    }
+  }));
+  return products.filter((product): product is Product => product !== null);
 }
 
 interface BackendAtributo {
@@ -116,12 +126,16 @@ interface BackendProductDetail {
 
 function adaptProductDetail(item: BackendProductDetail): Product {
   const images = item.imagenes?.length ? item.imagenes : [PLACEHOLDER_IMAGE];
-  const variantesRaw = item.variantes ?? [];
+  const variantesRaw = (item.variantes ?? []).map(v => ({ ...v,
+    atributos_variante: (v.atributos_variante ?? []).filter(a => a.clave?.trim() && a.valor?.trim()),
+  }));
+  const attributeLabels: Record<string, string> = {};
 
   const variants = variantesRaw.map((v, index) => {
     const attributes: Record<string, string> = {};
     (v.atributos_variante ?? []).forEach((a) => {
       attributes[a.clave] = a.valor;
+      attributeLabels[a.clave] = a.etiqueta?.trim() || a.clave;
     });
 
     const hasOffer =
@@ -173,6 +187,8 @@ function adaptProductDetail(item: BackendProductDetail): Product {
     comparePrice,
     variants,
     attributes,
+    attributeLabels,
+    variantsLoaded: true,
     tags: [],
     featured: false,
     status: 'active',
@@ -182,8 +198,8 @@ function adaptProductDetail(item: BackendProductDetail): Product {
   };
 }
 
-export async function fetchPublicProductDetail(slug: string): Promise<Product | null> {
-  const response = await fetch(`${API_URL}/api/catalog/productos/${slug}/`);
+export async function fetchPublicProductDetail(slug: string, options?: InitialLoadOptions): Promise<Product | null> {
+  const response = await fetchInitialLoad(`${API_URL}/api/catalog/productos/${encodeURIComponent(slug)}/`, options);
 
   if (response.status === 404) {
     return null;

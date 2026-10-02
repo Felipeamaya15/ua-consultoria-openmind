@@ -25,13 +25,17 @@ from apps.catalog.application.use_cases import ListPublicProductsUseCase , GetPu
 
 from apps.catalog.application.use_cases import SoftDeleteProductUseCase
 
-from .serializers import ProductPublicListItemSerializer, ProductPublicDetailSerializer, ProductPublicAttributesSerializer, ProductoCreateSerializer
+from .serializers import ProductPublicListItemSerializer, ProductPublicDetailSerializer, ProductPublicAttributesSerializer
 
 from apps.core.models import Tienda, Producto
 
 from rest_framework.permissions import IsAuthenticated
 
-from ..application.use_cases import CrearProductoUseCase
+from ..application.use_cases import CreateProductUseCase
+from .serializers import ProductCreateSerializer, ProductAdminDetailSerializer
+from ..application.use_cases import UpdateCatalogProductUseCase, ProductEditConflict
+from pymongo.errors import DuplicateKeyError, PyMongoError
+from bson import ObjectId
 
 from .serializers import ProductoAdminDetailSerializer
 
@@ -273,17 +277,21 @@ class ProductoCreateView(APIView):
     def post(self, request):
         tienda = resolver_tienda(request)
 
-        serializer = ProductoCreateSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True) 
-
-        caso_uso = CrearProductoUseCase()
-        producto = caso_uso.ejecutar(tienda, serializer.validated_data)
-        
-        return Response(
-            {
-                "mensaje": "Producto creado con éxito",
-                "id_producto": producto.id_producto
-            },
+        serializer = ProductCreateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            product_id = CreateProductUseCase(ProductRepository()).execute(
+                str(tienda.pk), serializer.validated_data
+            )
+        except (DuplicateKeyError, ValueError) as error:
+            return error_response(str(error) if isinstance(error, ValueError) else
+                "El SKU o slug ya existe en esta tienda.", "ERROR_VALIDACION")
+        except PyMongoError:
+            return error_response("No se pudo persistir el producto en el catálogo.",
+                "ERROR_PERSISTENCIA", status=status.HTTP_503_SERVICE_UNAVAILABLE)
+        return success_response(
+            data={"id": product_id},
+            mensaje="Producto creado con éxito",
             status=status.HTTP_201_CREATED
         )
 
@@ -291,8 +299,20 @@ class ProductoCreateView(APIView):
 class ProductoAdminDetailView(APIView):
     permission_classes = [IsAuthenticated]
 
-    def get(self, request, id_producto):
+    def get(self, request, id_producto=None):
         tienda = resolver_tienda(request, exigir_propietario=True)
+        if id_producto is None or ObjectId.is_valid(str(id_producto)):
+            try:
+                repository = ProductRepository()
+                if id_producto is None:
+                    products = repository.list_by_store(str(tienda.pk))
+                    return success_response(data=ProductAdminDetailSerializer(products, many=True).data)
+                product = repository.get_admin_product(str(tienda.pk), id_producto)
+                if product is None:
+                    return error_response("Producto no encontrado en esta tienda.", "RECURSO_NO_ENCONTRADO", status=404)
+                return success_response(data=ProductAdminDetailSerializer(product).data)
+            except PyMongoError:
+                return error_response("No se pudo consultar el catálogo.", "ERROR_PERSISTENCIA", status=503)
         caso_uso = ObtenerProductoAdminUseCase()
 
         try:
@@ -330,6 +350,8 @@ class ProductoUpdateView(APIView):
 
     def _actualizar(self, request, id_producto):
         tienda = resolver_tienda(request, exigir_propietario=True)
+        if ObjectId.is_valid(str(id_producto)):
+            return self._actualizar_mongo(request, str(tienda.pk), id_producto)
         serializer = ProductoUpdateSerializer(data=request.data, partial=True)
 
         serializer.is_valid(raise_exception=True)
@@ -358,6 +380,34 @@ class ProductoUpdateView(APIView):
                 {"mensaje": "El producto a actualizar no existe", "codigo": "RECURSO_NO_ENCONTRADO"},
                 status=status.HTTP_404_NOT_FOUND
             )
+
+    def _actualizar_mongo(self, request, tienda_id, product_id):
+        try:
+            repository = ProductRepository()
+            original = repository.get_admin_product(tienda_id, product_id)
+            if original is None:
+                return error_response("Producto no encontrado en esta tienda.", "RECURSO_NO_ENCONTRADO", status=404)
+            revision = request.data.get('revision')
+            if not isinstance(revision, str) or not revision:
+                return error_response("Recarga el producto antes de editar: falta revision.", "ERROR_VALIDACION")
+            # Validar el documento completo también para PATCH; no perder campos omitidos.
+            serializer = ProductCreateSerializer(data={**original, **request.data})
+            serializer.is_valid(raise_exception=True)
+            fields = {key: value for key, value in serializer.validated_data.items()
+                      if request.method == 'PUT' or key in request.data}
+            product = UpdateCatalogProductUseCase(repository).execute(
+                tienda_id, original, fields, revision,
+            )
+            return success_response(data=ProductAdminDetailSerializer(product).data,
+                                    mensaje="Producto actualizado correctamente")
+        except ProductEditConflict as error:
+            return error_response(str(error), "CONFLICTO_EDICION", status=409)
+        except (DuplicateKeyError, ValueError) as error:
+            return error_response(str(error) if isinstance(error, ValueError) else
+                                  "El SKU ya existe en esta tienda.", "ERROR_VALIDACION")
+        except PyMongoError:
+            return error_response("No se pudo guardar el producto.", "ERROR_PERSISTENCIA", status=503)
+
 
 class ProductoStockUpdateView(APIView):
 

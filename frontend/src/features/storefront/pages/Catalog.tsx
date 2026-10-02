@@ -1,4 +1,3 @@
-import { mockProducts } from '../data/mockData';
 import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 
@@ -39,7 +38,7 @@ export default function Catalog() {
   useEffect(() => {
     let cancelled = false;
 
-    fetchPublicProducts()
+    fetchPublicProducts({ includeVariants: true })
       .then((data) => {
         if (!cancelled) {
           setProducts(data);
@@ -92,7 +91,7 @@ export default function Catalog() {
   const [sort, setSort] = useState('featured');
   const [page, setPage] = useState(1);
 
-  const attrFilters = useAttributeFilters(mockProducts, category);
+  const attrFilters = useAttributeFilters(products, category);
 
   const activeFiltersCount =
     attrFilters.count +

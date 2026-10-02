@@ -27,5 +27,8 @@ from django.test.runner import DiscoverRunner
 
 raise SystemExit(DiscoverRunner(verbosity=1, interactive=False).run_tests([
     'apps.catalog.test_inventory',
+    'apps.catalog.test_creation',
+    'apps.catalog.test_editing',
+    'apps.catalog.test_tenant.MongoTenantTests',
     'apps.catalog.test_stock.MongoStockTests',
 ]))
