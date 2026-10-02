@@ -25,6 +25,12 @@ def create_catalog_indexes():
         partialFilterExpression={"variantes.sku": {"$exists": True}}
     )
     
+    productos.create_index([
+        ("tienda_id", 1),
+        ("variantes.atributos_variante.clave", 1),
+        ("variantes.atributos_variante.valor", 1)
+    ])
+
     # Índices para 'plantillas_atributos'
     plantillas = db.plantillas_atributos
     plantillas.create_index(
