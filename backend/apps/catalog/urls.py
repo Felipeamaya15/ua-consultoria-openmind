@@ -28,6 +28,11 @@ urlpatterns = [
             name="producto-crear",
     ),
     path(
+        "productos/admin/listado/",
+        ProductoAdminDetailView.as_view(),
+        name="producto-admin-list",
+    ),
+    path(
         "productos/<str:slug>/",
         PublicProductDetailAPIView.as_view(),
         name="mongo-producto-detail",
