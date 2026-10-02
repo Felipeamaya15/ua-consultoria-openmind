@@ -153,21 +153,37 @@ export const createDefaultAdminConfig = (): AdminConfig =>
       },
     },
 
-    paymentConfiguration: Object.fromEntries(
-      [
-        'transbank',
-        'mercadopago',
-        'paypal',
-        'linkify',
-        'transfer',
-      ].map((id) => [
-        id,
-        {
-          enabled: !['paypal', 'linkify'].includes(id),
-          fields: {},
+    paymentConfiguration: {
+      transbank: {
+        enabled: true,
+        fields: {},
+      },
+      mercadopago: {
+        enabled: true,
+        fields: {},
+      },
+      paypal: {
+        enabled: false,
+        fields: {},
+      },
+      linkify: {
+        enabled: false,
+        fields: {},
+      },
+      transfer: {
+        enabled: true,
+        fields: {
+          bank_name: 'Banco Estado',
+          account_type: 'Cuenta corriente',
+          account_number: '012345678',
+          holder_rut: '12.345.678-9',
+          holder_name: 'Comercial Demo SpA',
+          confirmation_email: 'pagos@mitienda.cl',
+          instructions:
+            'Validar el comprobante contra monto, correo y numero de pedido.',
         },
-      ]),
-    ),
+      },
+    },
 
     landing: {
       title: 'Bienvenido a Mi Tienda',

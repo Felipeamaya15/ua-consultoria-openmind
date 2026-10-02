@@ -5,6 +5,7 @@ from .views import (
     MeAPIView,
     GoogleLoginAPIView,
     ConfiguracionAutenticacionAPIView,
+    ConfiguracionPagosAPIView,
 )
 
 urlpatterns = [
@@ -16,5 +17,10 @@ urlpatterns = [
         'configuracion/',
         ConfiguracionAutenticacionAPIView.as_view(),
         name='api_configuracion_autenticacion',
+    ),
+    path(
+        'configuracion-pagos/',
+        ConfiguracionPagosAPIView.as_view(),
+        name='api_configuracion_pagos',
     ),
 ]

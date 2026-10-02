@@ -6,12 +6,17 @@ from django.contrib.auth.models import AbstractBaseUser
 from apps.authentication.domain.entities import (
     UserEntity,
     ConfiguracionAutenticacionEntity,
+    ConfiguracionPagosEntity,
 )
 from apps.authentication.domain.interfaces import (
     IUserRepository,
     IConfiguracionAutenticacionRepository,
+    IConfiguracionPagosRepository,
 )
-from apps.authentication.infrastructure.models import ConfiguracionAutenticacion
+from apps.authentication.infrastructure.models import (
+    ConfiguracionAutenticacion,
+    ConfiguracionPagos,
+)
 
 
 UserModel = get_user_model()
@@ -107,6 +112,45 @@ class DjangoConfiguracionAutenticacionRepository(
                 "google_client_id": configuracion.google_client_id,
                 "guest_checkout": configuracion.guest_checkout,
                 "requires_auth": configuracion.requires_auth,
+            },
+        )
+
+        return self._to_entity(obj)
+
+
+class DjangoConfiguracionPagosRepository(
+    IConfiguracionPagosRepository
+):
+    """Persistencia ORM de la configuracion de pagos por tienda."""
+
+    def _to_entity(
+        self,
+        obj: ConfiguracionPagos,
+    ) -> ConfiguracionPagosEntity:
+        return ConfiguracionPagosEntity(
+            id=obj.id,
+            tienda_id=obj.tienda_id,
+            metodos=obj.metodos,
+        )
+
+    def get_by_tienda(
+        self,
+        tienda_id: int,
+    ) -> Optional[ConfiguracionPagosEntity]:
+        obj = ConfiguracionPagos.objects.filter(
+            tienda_id=tienda_id
+        ).first()
+
+        return self._to_entity(obj) if obj else None
+
+    def save(
+        self,
+        configuracion: ConfiguracionPagosEntity,
+    ) -> ConfiguracionPagosEntity:
+        obj, _ = ConfiguracionPagos.objects.update_or_create(
+            tienda_id=configuracion.tienda_id,
+            defaults={
+                "metodos": configuracion.metodos,
             },
         )
 
