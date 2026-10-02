@@ -19,6 +19,8 @@ from apps.catalog.presentation.views import (
     # Carrito de compras
     CarritoItemsView,
     ModificarCantidadItemAPIView,
+    #Transbank
+    ConfiguracionTransbankView,
 )
 
 urlpatterns = [
@@ -118,5 +120,12 @@ urlpatterns = [
         "carrito/items/<int:id_item_carrito>/",
         ModificarCantidadItemAPIView.as_view(),
         name="modificar-cantidad-item",
+    ),
+
+
+    path(
+        "tiendas/<int:id_tienda>/configuracion/transbank/",
+        ConfiguracionTransbankView.as_view(),
+        name="tienda-configuracion-transbank",
     ),
 ]

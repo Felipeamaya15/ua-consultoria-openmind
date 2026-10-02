@@ -283,3 +283,32 @@ class AgregarItemCarritoRequestSerializer(serializers.Serializer):
         allow_blank=True,
         default=None
     )
+
+class ConfiguracionTransbankInputSerializer(serializers.Serializer):
+    codigo_comercio = serializers.CharField(
+        max_length=64,
+        required=True,
+        error_messages={"required": "El código de comercio es obligatorio."}
+    )
+    api_key = serializers.CharField(
+        max_length=255,
+        required=True,
+        error_messages={"required": "La API Key o Secret es obligatoria."}
+    )
+    ambiente = serializers.ChoiceField(
+        choices=["INTEGRACION", "PRODUCCION"],
+        default="INTEGRACION"
+    )
+    activo = serializers.BooleanField(default=True)
+
+
+class ConfiguracionTransbankResponseSerializer(serializers.Serializer):
+    id_tienda = serializers.IntegerField(source="id_tienda.id_tienda")
+    codigo_comercio = serializers.CharField()
+    ambiente = serializers.CharField()
+    activo = serializers.BooleanField()
+    api_key_enmascarada = serializers.SerializerMethodField()
+    fecha_actualizacion = serializers.DateTimeField()
+
+    def get_api_key_enmascarada(self, obj) -> str:
+        return obj.api_key_enmascarada()

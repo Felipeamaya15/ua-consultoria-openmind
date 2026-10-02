@@ -3,7 +3,7 @@ from typing import List, Dict, Any, Optional
 from django.utils.text import slugify
 from apps.catalog.application.services import VariantService
 from apps.catalog.infrastructure.repositories import ProductRepository
-from apps.core.models import Producto, Usuario, Carrito, ItemCarrito
+from apps.core.models import Producto, Usuario, Carrito, ItemCarrito, ConfiguracionTransbank, Tienda
 from apps.core.infrastructure.mongo_client import get_mongo_db
 from bson import ObjectId
 from django.shortcuts import get_object_or_404
@@ -17,10 +17,89 @@ from apps.catalog.domain.exceptions import (
     ItemCarritoNoEncontradoException,
     ProductoNoEncontradoException,
     VarianteNoEncontradaException,
+    ConfiguracionPagoInvalidaException,
+    TiendaNoAutorizadaException,
 )
 
 
+@dataclass
+class GuardarConfiguracionTransbankDTO:
+    usuario_id: int
+    id_tienda: int
+    codigo_comercio: str
+    api_key: str
+    ambiente: str
+    activo: bool = True
 
+
+class ObtenerConfiguracionTransbankUseCase:
+    """Obtiene la configuración de Transbank asignada a la tienda del emprendedor."""
+
+    def execute(self, usuario_id: int, id_tienda: int) -> Optional[ConfiguracionTransbank]:
+        tienda = Tienda.objects.filter(pk=id_tienda).first()
+        if not tienda:
+            raise TiendaNoAutorizadaException("La tienda especificada no existe.")
+
+        if hasattr(tienda, "id_usuario_id") and tienda.id_usuario_id != usuario_id:
+            raise TiendaNoAutorizadaException("No tienes permisos para administrar esta tienda.")
+
+        return ConfiguracionTransbank.objects.filter(id_tienda=tienda).first()
+
+
+class GuardarConfiguracionTransbankUseCase:
+    """Valida reglas de negocio y persiste las credenciales de Transbank."""
+
+    CODIGO_INTEGRACION_DEFECTO = "597055555532"
+
+    def execute(self, dto: GuardarConfiguracionTransbankDTO) -> ConfiguracionTransbank:
+        tienda = Tienda.objects.filter(pk=dto.id_tienda).first()
+        if not tienda:
+            raise TiendaNoAutorizadaException("La tienda especificada no existe.")
+
+        if hasattr(tienda, "id_usuario_id") and tienda.id_usuario_id != dto.usuario_id:
+            raise TiendaNoAutorizadaException("No tienes permisos para administrar esta tienda.")
+
+        codigo = str(dto.codigo_comercio).strip()
+        api_key = str(dto.api_key).strip()
+        ambiente = str(dto.ambiente).strip().upper()
+
+        if ambiente not in ["INTEGRACION", "PRODUCCION"]:
+            raise ConfiguracionPagoInvalidaException("El ambiente debe ser 'INTEGRACION' o 'PRODUCCION'.")
+
+        if not codigo:
+            raise ConfiguracionPagoInvalidaException("El código de comercio es obligatorio.")
+
+        if ambiente == "PRODUCCION":
+            if codigo == self.CODIGO_INTEGRACION_DEFECTO:
+                raise ConfiguracionPagoInvalidaException(
+                    "No puedes utilizar el código de comercio de pruebas en ambiente de PRODUCCIÓN."
+                )
+            if len(api_key) < 16:
+                raise ConfiguracionPagoInvalidaException(
+                    "La API Key de producción debe contener al menos 16 caracteres."
+                )
+
+        config_existente = ConfiguracionTransbank.objects.filter(id_tienda=tienda).first()
+
+        # Si no envía clave nueva o viene con asteriscos, conserva la existente
+        if config_existente and (not api_key or api_key.startswith("****")):
+            api_key_final = config_existente.api_key
+        else:
+            if not api_key:
+                raise ConfiguracionPagoInvalidaException("La API Key es obligatoria.")
+            api_key_final = api_key
+
+        configuracion, _ = ConfiguracionTransbank.objects.update_or_create(
+            id_tienda=tienda,
+            defaults={
+                "codigo_comercio": codigo,
+                "api_key": api_key_final,
+                "ambiente": ambiente,
+                "activo": dto.activo,
+            }
+        )
+
+        return configuracion
 
 
 

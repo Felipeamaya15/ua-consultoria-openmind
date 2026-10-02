@@ -116,3 +116,36 @@ class ItemPedido(models.Model):
             models.CheckConstraint(check=Q(cantidad__gt=0), name='chk_item_pedido_cantidad_valida'),
             models.CheckConstraint(check=Q(precio_unitario__gte=0), name='chk_item_pedido_precio_valido'),
         ]
+
+class ConfiguracionTransbank(models.Model):
+    AMBIENTE_CHOICES = [
+        ('INTEGRACION', 'Integración'),
+        ('PRODUCCION', 'Producción'),
+    ]
+
+    id_configuracion = models.BigAutoField(primary_key=True)
+    id_tienda = models.OneToOneField(
+        'core.Tienda',
+        on_delete=models.CASCADE,
+        db_column='id_tienda',
+        related_name='configuracion_transbank'
+    )
+    codigo_comercio = models.CharField(max_length=64)
+    api_key = models.CharField(max_length=255)
+    ambiente = models.CharField(
+        max_length=20,
+        choices=AMBIENTE_CHOICES,
+        default='INTEGRACION'
+    )
+    activo = models.BooleanField(default=True)
+    fecha_actualizacion = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'configuracion_transbank'
+
+    def api_key_enmascarada(self) -> str:
+        if not self.api_key:
+            return ""
+        if len(self.api_key) <= 4:
+            return "****"
+        return f"{'*' * (len(self.api_key) - 4)}{self.api_key[-4:]}"

@@ -32,6 +32,14 @@ class ItemCarritoNoEncontradoException(CatalogException):
     """Lanzada cuando el ítem no existe en el carrito del usuario."""
     pass
 
+class ConfiguracionPagoInvalidaException(CatalogException):
+    """Lanzada cuando los parámetros de Transbank no cumplen con el formato o reglas requeridas."""
+    pass
+
+
+class TiendaNoAutorizadaException(CatalogException):
+    """Lanzada cuando un usuario intenta acceder o modificar la configuración de una tienda no asignada."""
+    pass
 
 # Alias de compatibilidad por si algún módulo importa DominioException
 DominioException = CatalogException

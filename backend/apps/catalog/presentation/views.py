@@ -16,6 +16,8 @@ from apps.catalog.domain.exceptions import (
     ProductoNoEncontradoException,
     StockInsuficienteException,
     VarianteNoEncontradaException,
+    ConfiguracionPagoInvalidaException,
+    TiendaNoAutorizadaException,
 )
 
 # 4. Catálogo - Capa de Aplicación (Servicios y Casos de Uso)
@@ -36,6 +38,9 @@ from apps.catalog.application.use_cases import (
     ValidarDisponibilidadProductoUseCase,
     EliminarItemCarritoDTO,
     EliminarItemCarritoUseCase,
+    GuardarConfiguracionTransbankDTO,
+    ObtenerConfiguracionTransbankUseCase,
+    GuardarConfiguracionTransbankUseCase,
 )
 
 # 5. Catálogo - Capa de Infraestructura (Repositorios y Filtros)
@@ -58,7 +63,105 @@ from .serializers import (
     ProductoStockUpdateSerializer,
     ProductoUpdateSerializer,
     VarianteStockUpdateSerializer,
+    ConfiguracionTransbankInputSerializer,
+    ConfiguracionTransbankResponseSerializer
 )
+
+
+class ConfiguracionTransbankView(APIView):
+    """
+    Endpoint para consultar y actualizar las credenciales de Transbank de una tienda.
+    GET/POST /api/catalog/tiendas/<int:id_tienda>/configuracion/transbank/
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, id_tienda: int):
+        use_case = ObtenerConfiguracionTransbankUseCase()
+        try:
+            config = use_case.execute(usuario_id=request.user.id, id_tienda=id_tienda)
+            if not config:
+                return Response(
+                    {
+                        "exito": True,
+                        "mensaje": "La tienda aún no tiene configurado Transbank.",
+                        "data": {
+                            "configurado": False,
+                            "id_tienda": id_tienda,
+                            "codigo_comercio": "597055555532",
+                            "ambiente": "INTEGRACION",
+                            "activo": False,
+                            "api_key_enmascarada": ""
+                        }
+                    },
+                    status=status.HTTP_200_OK
+                )
+
+            data = ConfiguracionTransbankResponseSerializer(config).data
+            data["configurado"] = True
+            return Response(
+                {"exito": True, "mensaje": "Configuración obtenida exitosamente.", "data": data},
+                status=status.HTTP_200_OK
+            )
+        except TiendaNoAutorizadaException as e:
+            return Response(
+                {"exito": False, "mensaje": str(e), "error": {"codigo": "NO_AUTORIZADO", "detalles": None}},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+    def post(self, request, id_tienda: int):
+        serializer = ConfiguracionTransbankInputSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(
+                {
+                    "exito": False,
+                    "mensaje": "Datos del formulario inválidos.",
+                    "error": {"codigo": "DATOS_INVALIDOS", "detalles": serializer.errors}
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        dto = GuardarConfiguracionTransbankDTO(
+            usuario_id=request.user.id,
+            id_tienda=id_tienda,
+            codigo_comercio=serializer.validated_data["codigo_comercio"],
+            api_key=serializer.validated_data["api_key"],
+            ambiente=serializer.validated_data["ambiente"],
+            activo=serializer.validated_data.get("activo", True)
+        )
+
+        use_case = GuardarConfiguracionTransbankUseCase()
+
+        try:
+            config_guardada = use_case.execute(dto)
+            data = ConfiguracionTransbankResponseSerializer(config_guardada).data
+            data["configurado"] = True
+            return Response(
+                {
+                    "exito": True,
+                    "mensaje": "Configuración de Transbank guardada exitosamente.",
+                    "data": data
+                },
+                status=status.HTTP_200_OK
+            )
+        except ConfiguracionPagoInvalidaException as e:
+            return Response(
+                {"exito": False, "mensaje": str(e), "error": {"codigo": "CONFIGURACION_INVALIDA", "detalles": None}},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        except TiendaNoAutorizadaException as e:
+            return Response(
+                {"exito": False, "mensaje": str(e), "error": {"codigo": "NO_AUTORIZADO", "detalles": None}},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        except Exception as e:
+            return Response(
+                {"exito": False, "mensaje": f"Error interno: {str(e)}", "error": {"codigo": "ERROR_INTERNO", "detalles": None}},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+
+
+
 
 
 class CarritoItemsView(APIView):
