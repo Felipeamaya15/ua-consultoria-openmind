@@ -58,11 +58,7 @@ function adaptProduct(item: BackendProductListItem): Product {
         available: item.disponible,
       },
     ],
-    // Sin desglose real de variantes a nivel de listado (el backend no
-    // lo entrega ahí). Al dejar esto vacío, la tarjeta del catálogo
-    // permite agregar al carrito directo si hay stock, usando el precio
-    // y disponibilidad general; el detalle real de tallas/colores se
-    // confirma al entrar a la ficha del producto.
+    variantsLoaded: false,
     attributes: {},
     tags: [],
     featured: false,
