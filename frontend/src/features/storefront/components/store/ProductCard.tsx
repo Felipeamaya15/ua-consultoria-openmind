@@ -165,13 +165,19 @@ export function ProductCard({
                 className={`h-9 rounded-lg border px-2 text-xs normal-case tracking-normal outline-none ${selectClass}`}
               >
                 {(product.attributes[name] ?? []).map((value) => (
-                  <option
-                    key={value}
-                    value={value}
-                    disabled={!hasAvailableVariantFor(name, value)}
-                  >
-                    {value}
-                  </option>
+                  (() => {
+                    const available = hasAvailableVariantFor(name, value);
+
+                    return (
+                      <option
+                        key={value}
+                        value={value}
+                        disabled={!available}
+                      >
+                        {available ? value : `${value} - Agotado`}
+                      </option>
+                    );
+                  })()
                 ))}
               </select>
             </label>
