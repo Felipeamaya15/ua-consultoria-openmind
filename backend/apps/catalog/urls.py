@@ -13,14 +13,31 @@ from apps.catalog.presentation.views import (
     VarianteStockUpdateView,
     ProductVariantsView,
     VariantPurchaseView,
+    ProductoAdminListView,
 )
 
 urlpatterns = [
+    # Listado documental utilizado por la administración Mongo.
+    path(
+        "productos/admin/listado/",
+        ProductoAdminDetailView.as_view(),
+        name="producto-admin-list",
+    ),
     # Catálogo público
     path(
         "productos/",
         PublicProductListAPIView.as_view(),
         name="mongo-productos-list",
+    ),
+         path(
+            "productos/crear/",
+            ProductoCreateView.as_view(),
+            name="producto-crear",
+    ),
+    path(
+        "productos/admin/",
+        ProductoAdminListView.as_view(),
+        name="producto-admin-listado",
     ),
     path(
         "productos/<str:slug>/",
@@ -34,11 +51,6 @@ urlpatterns = [
     ),
 
     # Administración de productos
-    path(
-        "productos/crear/",
-        ProductoCreateView.as_view(),
-        name="producto-crear",
-    ),
     path(
         "productos/<str:id_producto>/admin/",
         ProductoAdminDetailView.as_view(),

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 
 import { Product, formatPrice } from '../../data/mockData';
+import { StockFeedback } from './StockFeedback';
 import { Badge } from '../ui';
 import { useCart } from '../../context/CartContext';
 import { useStorefrontTemplate } from '../../hooks/useStorefrontTemplate';
@@ -26,47 +27,19 @@ export function ProductCard({
 
   const [added, setAdded] = useState(false);
 
-  const hasDiscount = !!product.comparePrice;
-
-  const discountPct = hasDiscount
-    ? Math.round(
-        (1 - product.basePrice / product.comparePrice!) * 100,
-      )
-    : 0;
-
-  const inStock = product.variants.some(
-    (variant) => variant.available && variant.stock > 0,
-  );
-
-  const defaultVariant = product.variants.find(
-    (variant) => variant.available && variant.stock > 0,
-  );
-
-  const attributeNames = Object.keys(product.attributes);
-
-  const requiresVariantSelection =
-    attributeNames.length > 0;
-
-  const [selectedAttributes, setSelectedAttributes] = useState<
-    Record<string, string>
-  >(() => ({
-    ...Object.fromEntries(
-      attributeNames.map((name) => [
-        name,
-        product.attributes[name]?.[0] ?? '',
-      ]),
-    ),
-    ...(defaultVariant?.attributes ?? {}),
-  }));
-
-  const selectedVariant =
-    product.variants.find((variant) =>
-      attributeNames.every(
-        (name) =>
-          !selectedAttributes[name] ||
-          variant.attributes[name] === selectedAttributes[name],
-      ),
-    ) ?? defaultVariant;
+  const hasRealVariants = product.variantsLoaded !== false;
+  const inStock = product.variants.some(variant => variant.available && variant.stock > 0);
+  const defaultVariant = product.variants.find(variant => variant.available && variant.stock > 0)
+    ?? product.variants[0];
+  const attributeNames = Object.keys(product.attributes).filter(name =>
+    product.attributes[name].some(value => value.trim()));
+  const [selectedVariantId, setSelectedVariantId] = useState(defaultVariant?.id ?? '');
+  const selectedVariant = hasRealVariants
+    ? product.variants.find(variant => variant.id === selectedVariantId) : undefined;
+  const price = selectedVariant?.price ?? product.basePrice;
+  const comparePrice = selectedVariant ? selectedVariant.comparePrice : product.comparePrice;
+  const hasDiscount = comparePrice !== undefined && comparePrice > price;
+  const discountPct = hasDiscount ? Math.round((1 - price / comparePrice!) * 100) : 0;
 
   const selectedStock = selectedVariant?.stock ?? 0;
 
@@ -108,27 +81,11 @@ export function ProductCard({
     setAdded(true);
   };
 
-  const hasAvailableVariantFor = (
-    name: string,
-    value: string,
-  ) =>
-    product.variants.some(
-      (variant) =>
-        variant.available &&
-        variant.stock > 0 &&
-        attributeNames.every((attribute) =>
-          attribute === name
-            ? variant.attributes[attribute] === value
-            : !selectedAttributes[attribute] ||
-              variant.attributes[attribute] ===
-                selectedAttributes[attribute],
-        ),
-    );
-
   const renderVariantSelector = (
     mode: 'dark' | 'light' | 'visual' = 'light',
   ) => {
-    if (!requiresVariantSelection) return null;
+    if (!hasRealVariants) return <Link to={productPath} className="mt-3 text-xs underline">Ver opciones</Link>;
+    if (attributeNames.length === 0 && product.variants.length < 2) return null;
 
     const selectClass =
       mode === 'dark'
@@ -147,10 +104,13 @@ export function ProductCard({
     return (
       <div className="mt-3 grid gap-2">
         <div className="grid gap-2">
-          {attributeNames.map((name) => (
-            <label
-              key={name}
-              className={`grid gap-1 text-[10px] font-semibold uppercase tracking-[0.08em] ${mutedClass}`}
+          <label className={`grid gap-1 text-[10px] font-semibold uppercase tracking-[0.08em] ${mutedClass}`}>
+            <span>{attributeNames.length === 1 ? product.attributeLabels?.[attributeNames[0]] || attributeNames[0] : 'Variante'}</span>
+            <select
+              aria-label={attributeNames.length === 1 ? product.attributeLabels?.[attributeNames[0]] || attributeNames[0] : 'Variante'}
+              value={selectedVariantId}
+              onChange={event => { setSelectedVariantId(event.target.value); setAdded(false); }}
+              className={`h-9 rounded-lg border px-2 text-xs normal-case tracking-normal outline-none ${selectClass}`}
             >
               <span>{name}</span>
               <select
@@ -251,12 +211,12 @@ export function ProductCard({
           <div className="mt-auto flex items-end justify-between gap-3 pt-5">
             <div>
               <p className="text-[14px] font-black">
-                {formatPrice(product.basePrice)}
+                {formatPrice(price)}
               </p>
 
               {hasDiscount && (
                 <p className="mt-0.5 text-[10px] text-black/35 line-through">
-                  {formatPrice(product.comparePrice!)}
+                  {formatPrice(comparePrice!)}
                 </p>
               )}
             </div>
@@ -269,6 +229,7 @@ export function ProductCard({
           </div>
 
           {renderVariantSelector()}
+          {selectedVariant && <StockFeedback sku={selectedVariant.sku} maxStock={selectedVariant.stock} quantity={quantity} />}
 
           {inStock && (
             <button
@@ -329,12 +290,12 @@ export function ProductCard({
           <div className="mt-auto flex flex-wrap items-end justify-between gap-3 pt-4">
             <div>
               <p className="text-[14px] font-black">
-                {formatPrice(product.basePrice)}
+                {formatPrice(price)}
               </p>
 
               {hasDiscount && (
                 <p className="mt-0.5 text-[10px] text-black/35 line-through">
-                  {formatPrice(product.comparePrice!)}
+                  {formatPrice(comparePrice!)}
                 </p>
               )}
             </div>
@@ -357,6 +318,7 @@ export function ProductCard({
           </div>
 
           {renderVariantSelector()}
+          {selectedVariant && <StockFeedback sku={selectedVariant.sku} maxStock={selectedVariant.stock} quantity={quantity} />}
         </div>
       </article>
     );
@@ -409,12 +371,12 @@ export function ProductCard({
           <div className="mt-auto flex items-center justify-between gap-3 pt-4">
             <div className="min-w-0">
               <p className="whitespace-nowrap text-[13px] font-semibold text-[#111111]">
-                {formatPrice(product.basePrice)}
+                {formatPrice(price)}
               </p>
 
               {hasDiscount && (
                 <p className="mt-0.5 whitespace-nowrap text-[9px] text-[#9b9693] line-through">
-                  {formatPrice(product.comparePrice!)}
+                  {formatPrice(comparePrice!)}
                 </p>
               )}
             </div>
@@ -437,6 +399,7 @@ export function ProductCard({
           </div>
 
           {renderVariantSelector('visual')}
+          {selectedVariant && <StockFeedback sku={selectedVariant.sku} maxStock={selectedVariant.stock} quantity={quantity} />}
 
           <span className="sr-only" role="status">
             {added ? `${product.name} agregado al carrito` : ''}
@@ -512,17 +475,18 @@ export function ProductCard({
 
           <div className="flex items-center gap-2 mt-1.5">
             <span className="font-bold text-sm text-[var(--foreground)]">
-              {formatPrice(product.basePrice)}
+              {formatPrice(price)}
             </span>
 
             {hasDiscount && (
               <span className="text-xs text-[var(--muted-foreground)] line-through">
-                {formatPrice(product.comparePrice!)}
+                {formatPrice(comparePrice!)}
               </span>
             )}
           </div>
 
           {renderVariantSelector()}
+          {selectedVariant && <StockFeedback sku={selectedVariant.sku} maxStock={selectedVariant.stock} quantity={quantity} />}
 
           {inStock && (
             <button
@@ -589,7 +553,7 @@ export function ProductCard({
           </p>
 
           <p className="text-xs font-bold text-[var(--primary)] mt-0.5">
-            {formatPrice(product.basePrice)}
+            {formatPrice(price)}
           </p>
         </div>
       </Link>
@@ -728,17 +692,18 @@ export function ProductCard({
               }
             `}
           >
-            {formatPrice(product.basePrice)}
+            {formatPrice(price)}
           </span>
 
           {hasDiscount && (
             <span className="text-xs text-[var(--muted-foreground)] line-through">
-              {formatPrice(product.comparePrice!)}
+              {formatPrice(comparePrice!)}
             </span>
           )}
         </div>
 
         {renderVariantSelector()}
+          {selectedVariant && <StockFeedback sku={selectedVariant.sku} maxStock={selectedVariant.stock} quantity={quantity} />}
 
         {inStock && (
           <button
