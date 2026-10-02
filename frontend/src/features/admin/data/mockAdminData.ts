@@ -153,21 +153,34 @@ export const createDefaultAdminConfig = (): AdminConfig =>
       },
     },
 
-    paymentConfiguration: Object.fromEntries(
-      [
-        'transbank',
-        'mercadopago',
-        'paypal',
-        'linkify',
-        'transfer',
-      ].map((id) => [
-        id,
-        {
-          enabled: !['paypal', 'linkify'].includes(id),
-          fields: {},
+    paymentConfiguration: {
+      transbank: {
+        enabled: true,
+        fields: {},
+      },
+      mercadopago: {
+        enabled: true,
+        fields: {},
+      },
+      paypal: {
+        enabled: false,
+        fields: {},
+      },
+      linkify: {
+        enabled: false,
+        fields: {
+          environment: 'sandbox',
+          expirationHours: '48',
+          syncApprovedPayments: 'true',
+          emailCustomer: 'true',
+          autoExpireLinks: 'true',
         },
-      ]),
-    ),
+      },
+      transfer: {
+        enabled: true,
+        fields: {},
+      },
+    },
 
     landing: {
       title: 'Bienvenido a Mi Tienda',
