@@ -58,10 +58,12 @@ function adaptProduct(item: BackendProductListItem): Product {
         available: item.disponible,
       },
     ],
-    // Sin desglose real de variantes a nivel de listado:
-    // se fuerza a pasar por la vista de detalle para elegir
-    // opciones y confirmar el stock real antes de comprar.
-    attributes: { _detalle: [] },
+    // Sin desglose real de variantes a nivel de listado (el backend no
+    // lo entrega ahí). Al dejar esto vacío, la tarjeta del catálogo
+    // permite agregar al carrito directo si hay stock, usando el precio
+    // y disponibilidad general; el detalle real de tallas/colores se
+    // confirma al entrar a la ficha del producto.
+    attributes: {},
     tags: [],
     featured: false,
     status: 'active',

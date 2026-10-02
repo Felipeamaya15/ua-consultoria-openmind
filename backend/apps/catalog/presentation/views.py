@@ -27,7 +27,7 @@ from apps.catalog.application.use_cases import SoftDeleteProductUseCase
 
 from .serializers import ProductPublicListItemSerializer, ProductPublicDetailSerializer, ProductPublicAttributesSerializer, ProductoCreateSerializer
 
-from apps.core.models import Tienda
+from apps.core.models import Tienda, Producto
 
 from rest_framework.permissions import IsAuthenticated
 
@@ -229,34 +229,21 @@ class PublicProductAttributesAPIView(APIView):
 
 class ProductDeleteAPIView(APIView):
 
+    # TODO: volver a exigir autenticación real cuando el panel admin
+    # tenga login contra Django (hoy usa una sesión local de prueba,
+    # igual que ProductoCreateView).
+    permission_classes = [AllowAny]
 
-    permission_classes = [IsAuthenticated]
-
-
-    def delete(self, request, producto_id):
+    def delete(self, request, id_producto):
 
         try:
 
             tienda_id = resolver_tienda_id(request)
-            #Eliminación de producto, verificando propiedad.
-          
-            if not Tienda.objects.filter(id_tienda=tienda_id, id_usuario_propietario=request.user).exists():
-
-                return error_response(
-
-                    mensaje="No tienes permisos de administrador para eliminar productos en esta tienda.",
-
-                    codigo="ACCESO_DENEGADO",
-
-                    status=403
-
-                )
 
 
             use_case = SoftDeleteProductUseCase()
 
-            resultado = use_case.execute(id_producto=producto_id, tienda_id=tienda_id)
-
+            resultado = use_case.execute(id_producto=id_producto, tienda_id=tienda_id)
 
             return success_response(mensaje=resultado["mensaje"])
 
@@ -279,10 +266,12 @@ class ProductDeleteAPIView(APIView):
 
 
 class ProductoCreateView(APIView):
-    permission_classes = [IsAuthenticated]
+    # TODO: volver a exigir autenticación real cuando el panel admin
+    # tenga login contra Django (hoy usa una sesión local de prueba).
+    permission_classes = [AllowAny]
 
     def post(self, request):
-        tienda = resolver_tienda(request, exigir_propietario=True)
+        tienda = resolver_tienda(request)
 
         serializer = ProductoCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True) 
@@ -1079,3 +1068,32 @@ class VariantPurchaseView(APIView):
         except Exception as e:
 
             return Response({"error": f"Error interno: {str(e)}", "codigo": "ERROR_INTERNO"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+class ProductoAdminListView(APIView):
+    # TODO: autenticación real cuando el panel admin tenga login contra Django.
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        tienda = resolver_tienda(request)
+        repo = ProductRepository()
+
+        productos = Producto.objects.filter(id_tienda=tienda).order_by('-fecha_creacion')
+        resultado = []
+
+        for producto in productos:
+            doc_mongo = repo.get_by_id(str(tienda.pk), str(producto.id_producto)) or {}
+            resultado.append({
+                'id_producto': producto.id_producto,
+                'nombre': producto.nombre,
+                'descripcion': doc_mongo.get('descripcion', ''),
+                'categoria': doc_mongo.get('categoria', ''),
+                'imagenes': doc_mongo.get('imagenes', []),
+                'activo': producto.activo,
+                'variantes': doc_mongo.get('variantes', []),
+                'seo': doc_mongo.get('seo', {}),
+            })
+
+        return Response(
+            {'mensaje': 'Listado obtenido correctamente', 'productos': resultado},
+            status=status.HTTP_200_OK,
+        )

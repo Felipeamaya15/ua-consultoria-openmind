@@ -1,7 +1,8 @@
 import { useMemo, useRef, useState } from "react"
 import { Link, useNavigate, useParams } from "react-router-dom"
 import { formatPrice, mockProducts, Product, ProductVariant } from "../data/mockAdminData"
-import { createPublicProduct } from "../services/productService"
+import { createPublicProduct, fetchAdminProducts } from "../services/productService"
+import { useEffect } from "react"
 import { useAdmin } from "../context/AdminContext"
 import { Alert, Badge, Button, Input, Select, Tabs, Textarea, Toggle } from "../components/ui"
 
@@ -17,44 +18,47 @@ const variantAttributes = (variant: ProductVariant) =>
 export function ProductList() {
   const [search, setSearch] = useState("")
   const { config, setConfig } = useAdmin()
-  const products = config.products ?? mockProducts
+  const [products, setProducts] = useState<Product[]>([])
+  const [loadingProducts, setLoadingProducts] = useState(true)
+  const [loadError, setLoadError] = useState("")
+
+  const loadProducts = () => {
+    setLoadingProducts(true)
+    setLoadError("")
+    fetchAdminProducts()
+      .then((data) => setProducts(data))
+      .catch((err) => setLoadError(err instanceof Error ? err.message : "No se pudieron cargar los productos."))
+      .finally(() => setLoadingProducts(false))
+  }
+
+  useEffect(() => {
+    loadProducts()
+  }, [])
+
   const filtered = products.filter((product) => `${product.name} ${product.category} ${product.tags.join(" ")}`.toLowerCase().includes(search.toLowerCase()))
 
-  // Logica del Flujo Administrativo para Eliminar (SCRUM-231)
   const handleDeleteProduct = async (productId: string) => {
     if (!window.confirm("¿Estás seguro de que deseas desactivar este producto? Dejará de ser visible en el catálogo, pero se mantendrá en tu historial de ventas.")) return;
 
     try {
-      // 1. Obtener el token real del usuario autenticado
-      const token = localStorage.getItem("token");
-
-      // 2. Ejecutar la petición DELETE al backend (Aplica seguridad SCRUM-231)
-      const response = await fetch(`http://localhost:8000/api/productos/${productId}/`, {
+      const response = await fetch(`http://localhost:8000/api/catalog/productos/${productId}/eliminar/`, {
         method: 'DELETE',
-        headers: { 
-          'Authorization': `Token ${token}`, // Nota: DRF por defecto usa "Token". Si usas JWT, cámbialo a "Bearer"
+        headers: {
           'Content-Type': 'application/json'
         }
       });
 
       if (!response.ok) {
-        throw new Error("Error de permisos o no se pudo eliminar el producto en el servidor.");
+        const body = await response.json().catch(() => null);
+        throw new Error(body?.mensaje || "No se pudo eliminar el producto en el servidor.");
       }
 
-      // 3. Si el servidor lo borra con éxito (200 OK), actualizamos la interfaz visual
-      const success = setConfig({
-        ...config,
-        products: products.map(p => p.id === productId ? { ...p, status: "archived" as const } : p)
-      });
-
-      if (success) {
-        alert("Producto eliminado lógicamente de forma correcta.");
-      }
+      alert("Producto eliminado lógicamente de forma correcta.");
+      loadProducts();
     } catch (error) {
-      alert("Ocurrió un error al intentar eliminar el producto. Revisa tus permisos.");
+      alert(error instanceof Error ? error.message : "Ocurrió un error al intentar eliminar el producto.");
     }
   };
-
   return <div>
     <div className="flex items-center justify-between flex-wrap gap-3 mb-5">
       <div>
@@ -144,32 +148,19 @@ export function ProductForm() {
     setSaving(true);
     setError("");
 
-    /*
-     * INTEGRACIÓN API REAL (SCRUM-224): Descomentar esto cuando se conecte el backend 100%
-     * 
-     * try {
-     *   const token = localStorage.getItem("token");
-     *   const method = exists ? 'PUT' : 'POST';
-     *   const url = exists ? `http://localhost:8000/api/productos/${finalProduct.id}/` : `http://localhost:8000/api/productos/`;
-     *   
-     *   const response = await fetch(url, {
-     *     method: method,
-     *     headers: { 
-     *       'Authorization': `Token ${token}`,
-     *       'Content-Type': 'application/json' 
-     *     },
-     *     body: JSON.stringify(finalProduct)
-     *   });
-     *   
-     *   if (!response.ok) throw new Error("Error al guardar los datos del producto en el servidor.");
-     * } catch (error) {
-     *   setSaving(false);
-     *   setError("Ocurrió un error al comunicarse con el servidor.");
-     *   return;
-     * }
-     */
+       if (!exists) {
+      try {
+        const idReal = await createPublicProduct(finalProduct);
+        finalProduct.id = idReal;
+      } catch (err) {
+        setSaving(false);
+        setError(err instanceof Error ? err.message : "Ocurrió un error al comunicarse con el servidor.");
+        return;
+      }
+    }
 
-    // PROTOTIPO: Simulamos la actualización/creación cambiando los datos en la memoria local
+    // Además de guardar en el backend real, actualizamos la lista local
+    // del panel admin para que se vea reflejado de inmediato.
     const ok = setConfig({
       ...config,
       products: exists ? products.map((item) => item.id === finalProduct.id ? finalProduct : item) : [...products, finalProduct]

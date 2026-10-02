@@ -13,6 +13,7 @@ from apps.catalog.presentation.views import (
     VarianteStockUpdateView,
     ProductVariantsView,
     VariantPurchaseView,
+    ProductoAdminListView,
 )
 
 urlpatterns = [
@@ -22,10 +23,15 @@ urlpatterns = [
         PublicProductListAPIView.as_view(),
         name="mongo-productos-list",
     ),
-    path(
+         path(
             "productos/crear/",
             ProductoCreateView.as_view(),
             name="producto-crear",
+    ),
+    path(
+        "productos/admin/",
+        ProductoAdminListView.as_view(),
+        name="producto-admin-listado",
     ),
     path(
         "productos/<str:slug>/",
