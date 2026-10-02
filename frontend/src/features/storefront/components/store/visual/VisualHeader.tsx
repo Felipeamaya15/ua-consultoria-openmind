@@ -1,3 +1,4 @@
+import { AccountNavigation } from '../AccountNavigation';
 import { useStore } from '../../../context/StoreContext';
 import { Link } from 'react-router-dom';
 import { useCart } from '../../../context/CartContext';
@@ -62,12 +63,7 @@ export function VisualHeader() {
             Seguimiento
           </Link>
 
-          <Link
-            to={route('ingresar')}
-            className="hidden lg:block hover:opacity-50 transition-opacity"
-          >
-            Iniciar sesión
-          </Link>
+          <AccountNavigation className="hidden lg:block hover:opacity-50 transition-opacity" />
 
           <Link
             to={route('carrito')}

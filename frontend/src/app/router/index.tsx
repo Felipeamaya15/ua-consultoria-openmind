@@ -1,3 +1,5 @@
+import { RequireCustomer } from '../../features/storefront/components/store/AccountNavigation';
+import Profile from '../../features/storefront/pages/Profile';
 
 import { CheckoutSummaryPage } from '../../features/checkout/pages/CheckoutSummaryPage';
 import { LinkifyConfigPage } from '../../features/integrations/pages/LinkifyConfigPage';
@@ -50,6 +52,7 @@ function StorefrontProviders({
 }
 
 const sharedChildren = [
+  { path: 'perfil', element: <RequireCustomer><Profile /></RequireCustomer> },
   {
     path: 'catalogo',
     element: <Catalog />,

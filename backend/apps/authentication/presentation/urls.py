@@ -1,3 +1,4 @@
+from .profile import ProfileAPIView, PasswordAPIView
 from django.urls import path
 from .views import (
     RegisterAPIView,
@@ -8,6 +9,8 @@ from .views import (
 )
 
 urlpatterns = [
+    path('perfil/', ProfileAPIView.as_view(), name='api_profile'),
+    path('perfil/password/', PasswordAPIView.as_view(), name='api_profile_password'),
     path('register/', RegisterAPIView.as_view(), name='api_register'),
     path('login/', LoginAPIView.as_view(), name='api_login'),
     path('google/', GoogleLoginAPIView.as_view(), name='api_google_login'),
