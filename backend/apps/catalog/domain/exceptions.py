@@ -42,4 +42,26 @@ class TiendaNoAutorizadaException(CatalogException):
     pass
 
 # Alias de compatibilidad por si algún módulo importa DominioException
+
+
+class TransbankTransaccionException(CatalogException):
+    """Lanzada cuando ocurre un error de comunicación o rechazo técnico con Transbank."""
+    pass
+
+
+class TransbankRechazoException(CatalogException):
+    """Lanzada cuando la transacción es rechazada por el banco emisor o anulada."""
+    pass
+
+
+class TransbankConfiguracionFaltanteException(CatalogException):
+    """Lanzada cuando la tienda no tiene credenciales de Transbank activas o configuradas."""
+    pass
+
+
+
+
+
+
+
 DominioException = CatalogException

@@ -21,6 +21,8 @@ from apps.catalog.presentation.views import (
     ModificarCantidadItemAPIView,
     #Transbank
     ConfiguracionTransbankView,
+    IniciarPagoTransbankView,
+    ConfirmarPagoTransbankView,
 )
 
 urlpatterns = [
@@ -127,5 +129,16 @@ urlpatterns = [
         "tiendas/<int:id_tienda>/configuracion/transbank/",
         ConfiguracionTransbankView.as_view(),
         name="tienda-configuracion-transbank",
+    ),
+
+    path(
+        "pagos/transbank/iniciar/",
+        IniciarPagoTransbankView.as_view(),
+        name="pago-transbank-iniciar",
+    ),
+    path(
+        "pagos/transbank/confirmar/",
+        ConfirmarPagoTransbankView.as_view(),
+        name="pago-transbank-confirmar",
     ),
 ]

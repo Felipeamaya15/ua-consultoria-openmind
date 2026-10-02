@@ -303,12 +303,27 @@ class ConfiguracionTransbankInputSerializer(serializers.Serializer):
 
 
 class ConfiguracionTransbankResponseSerializer(serializers.Serializer):
-    id_tienda = serializers.IntegerField(source="id_tienda.id_tienda")
+    id_tienda = serializers.SerializerMethodField()
     codigo_comercio = serializers.CharField()
     ambiente = serializers.CharField()
     activo = serializers.BooleanField()
-    api_key_enmascarada = serializers.SerializerMethodField()
-    fecha_actualizacion = serializers.DateTimeField()
+    api_key_enmascarada = serializers.CharField(allow_blank=True, required=False)
+    fecha_actualizacion = serializers.DateTimeField(allow_null=True, required=False)
+    configurado = serializers.BooleanField(default=True)
 
-    def get_api_key_enmascarada(self, obj) -> str:
-        return obj.api_key_enmascarada()
+    def get_id_tienda(self, obj):
+        val = obj.get("id_tienda") if isinstance(obj, dict) else getattr(obj, "id_tienda", None)
+        return getattr(val, "id_tienda", val)
+    
+
+class IniciarPagoTransbankSerializer(serializers.Serializer):
+    id_tienda = serializers.IntegerField(required=True)
+    orden_compra = serializers.CharField(max_length=64, required=True)
+    monto = serializers.IntegerField(min_value=1, required=True)
+    session_id = serializers.CharField(max_length=64, required=True)
+    return_url = serializers.URLField(required=True)
+
+
+class ConfirmarPagoTransbankSerializer(serializers.Serializer):
+    id_tienda = serializers.IntegerField(required=True)
+    token_ws = serializers.CharField(max_length=255, required=True)

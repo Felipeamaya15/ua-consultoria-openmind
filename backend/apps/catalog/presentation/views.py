@@ -1,3 +1,4 @@
+
 # 1. Framework & Librerías de terceros (DRF)
 from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -18,6 +19,10 @@ from apps.catalog.domain.exceptions import (
     VarianteNoEncontradaException,
     ConfiguracionPagoInvalidaException,
     TiendaNoAutorizadaException,
+    # Nuevas excepciones - Adaptador Transbank
+    TransbankTransaccionException,
+    TransbankRechazoException,
+    TransbankConfiguracionFaltanteException,
 )
 
 # 4. Catálogo - Capa de Aplicación (Servicios y Casos de Uso)
@@ -28,19 +33,23 @@ from apps.catalog.application.use_cases import (
     AgregarItemCarritoDTO,
     AgregarItemCarritoUseCase,
     CrearProductoUseCase,
+    EliminarItemCarritoDTO,
+    EliminarItemCarritoUseCase,
     GetPublicProductAttributesUseCase,
     GetPublicProductDetailUseCase,
+    GuardarConfiguracionTransbankDTO,
+    GuardarConfiguracionTransbankUseCase,
     ListPublicProductsUseCase,
     ModificarCantidadDTO,
     ModificarCantidadItemUseCase,
+    ObtenerConfiguracionTransbankUseCase,
     ObtenerProductoAdminUseCase,
     SoftDeleteProductUseCase,
     ValidarDisponibilidadProductoUseCase,
-    EliminarItemCarritoDTO,
-    EliminarItemCarritoUseCase,
-    GuardarConfiguracionTransbankDTO,
-    ObtenerConfiguracionTransbankUseCase,
-    GuardarConfiguracionTransbankUseCase,
+    # Nuevos Casos de Uso y DTOs - Adaptador Transbank
+    IniciarPagoTransbankDTO,
+    IniciarPagoTransbankUseCase,
+    ConfirmarPagoTransbankUseCase,
 )
 
 # 5. Catálogo - Capa de Infraestructura (Repositorios y Filtros)
@@ -53,6 +62,8 @@ from apps.catalog.infrastructure.repositories import ProductRepository
 # 6. Catálogo - Capa de Presentación (Serializadores)
 from .serializers import (
     AgregarItemCarritoRequestSerializer,
+    ConfiguracionTransbankInputSerializer,
+    ConfiguracionTransbankResponseSerializer,
     ItemCarritoResponseSerializer,
     ModificarCantidadRequestSerializer,
     ProductPublicAttributesSerializer,
@@ -63,10 +74,10 @@ from .serializers import (
     ProductoStockUpdateSerializer,
     ProductoUpdateSerializer,
     VarianteStockUpdateSerializer,
-    ConfiguracionTransbankInputSerializer,
-    ConfiguracionTransbankResponseSerializer
+    # Nuevos Serializadores - Adaptador Transbank
+    IniciarPagoTransbankSerializer,
+    ConfirmarPagoTransbankSerializer,
 )
-
 
 class ConfiguracionTransbankView(APIView):
     """
@@ -1342,3 +1353,98 @@ class VariantPurchaseView(APIView):
         except Exception as e:
 
             return Response({"error": f"Error interno: {str(e)}", "codigo": "ERROR_INTERNO"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class IniciarPagoTransbankView(APIView):
+    """
+    Inicia la transacción contra Transbank para el checkout.
+    POST /api/catalog/pagos/transbank/iniciar/
+    """
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        serializer = IniciarPagoTransbankSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(
+                {
+                    "exito": False,
+                    "mensaje": "Parámetros de pago inválidos.",
+                    "error": {"codigo": "DATOS_INVALIDOS", "detalles": serializer.errors},
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        dto = IniciarPagoTransbankDTO(
+            id_tienda=serializer.validated_data["id_tienda"],
+            orden_compra=serializer.validated_data["orden_compra"],
+            monto=serializer.validated_data["monto"],
+            session_id=serializer.validated_data["session_id"],
+            return_url=serializer.validated_data["return_url"],
+        )
+
+        use_case = IniciarPagoTransbankUseCase()
+        try:
+            resultado = use_case.execute(dto)
+            return Response(
+                {
+                    "exito": True,
+                    "mensaje": "Transacción Webpay iniciada.",
+                    "data": resultado,
+                },
+                status=status.HTTP_200_OK,
+            )
+        except TransbankConfiguracionFaltanteException as e:
+            return Response(
+                {"exito": False, "mensaje": str(e), "error": {"codigo": "PASARELA_NO_DISPONIBLE", "detalles": None}},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        except TransbankTransaccionException as e:
+            return Response(
+                {"exito": False, "mensaje": str(e), "error": {"codigo": "ERROR_TRANSBANK", "detalles": None}},
+                status=status.HTTP_502_BAD_GATEWAY,
+            )
+
+
+class ConfirmarPagoTransbankView(APIView):
+    """
+    Valida y confirma la transacción tras el retorno desde Webpay.
+    POST /api/catalog/pagos/transbank/confirmar/
+    """
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        serializer = ConfirmarPagoTransbankSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(
+                {
+                    "exito": False,
+                    "mensaje": "Token o parámetros de confirmación inválidos.",
+                    "error": {"codigo": "DATOS_INVALIDOS", "detalles": serializer.errors},
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        use_case = ConfirmarPagoTransbankUseCase()
+        try:
+            resultado = use_case.execute(
+                id_tienda=serializer.validated_data["id_tienda"],
+                token_ws=serializer.validated_data["token_ws"],
+            )
+            return Response(
+                {
+                    "exito": True,
+                    "mensaje": "Pago aprobado con éxito.",
+                    "data": resultado,
+                },
+                status=status.HTTP_200_OK,
+            )
+        except TransbankRechazoException as e:
+            return Response(
+                {"exito": False, "mensaje": str(e), "error": {"codigo": "PAGO_RECHAZADO", "detalles": None}},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        except (TransbankConfiguracionFaltanteException, TransbankTransaccionException) as e:
+            return Response(
+                {"exito": False, "mensaje": str(e), "error": {"codigo": "ERROR_TRANSBANK", "detalles": None}},
+                status=status.HTTP_502_BAD_GATEWAY,
+            )
