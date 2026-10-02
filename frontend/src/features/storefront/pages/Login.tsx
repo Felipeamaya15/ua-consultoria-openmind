@@ -1,9 +1,17 @@
-import { useState, type FormEvent } from 'react';
+import { useMemo, useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useGoogleLogin } from '@react-oauth/google';
 import { authService } from '../../auth/services/authService';
 import { Button, Input, Alert, InstitutionalBadge } from '../components/ui';
 import { useStorefrontTemplate } from '../hooks/useStorefrontTemplate';
+import {
+  getAvailablePublicAuthModes,
+  readPublicAuthSettings,
+} from '../services/authConfiguration';
+import {
+  matchesDemoCredentials,
+  startDemoSession,
+} from '../../admin/auth/demoSession';
 
 export default function Login() {
   const navigate = useNavigate();
@@ -21,6 +29,15 @@ export default function Login() {
     useState(false);
   const [message, setMessage] =
     useState('');
+  const authSettings = useMemo(readPublicAuthSettings, []);
+  const availableAuthModes = useMemo(
+    () => getAvailablePublicAuthModes(authSettings),
+    [authSettings],
+  );
+  const canUseEmailPassword = availableAuthModes.includes('login');
+  const canUseGoogle = availableAuthModes.includes('google');
+  const canContinueAsGuest = availableAuthModes.includes('guest');
+  const showSeparator = canUseGoogle && canUseEmailPassword;
 
   // 1. Hook oficial de Google
   // 1. Hook oficial de Google
@@ -33,6 +50,7 @@ export default function Login() {
         
         // Redirección condicional según el correo
         if (data.data.user.email === 'emprendedor@gmail.com') {
+          startDemoSession();
           navigate('/emprendedor');
         } else {
           navigate(route()); // Envía al usuario a la vista pública de la tienda
@@ -52,7 +70,22 @@ export default function Login() {
     setLoading(true);
     setMessage('');
 
+    if (!canUseEmailPassword) {
+      setLoading(false);
+      setMessage('El acceso con correo no esta habilitado en esta tienda.');
+      return;
+    }
+
     try {
+      if (
+        mode === 'login' &&
+        matchesDemoCredentials(email, password)
+      ) {
+        startDemoSession();
+        navigate('/emprendedor');
+        return;
+      }
+
       let data;
       if (mode === 'login') {
         data = await authService.login({ username: email, password });
@@ -71,6 +104,7 @@ export default function Login() {
       
       // Redirección condicional según el correo
       if (data.data.user.email === 'emprendedor@gmail.com') {
+        startDemoSession();
         navigate('/emprendedor');
       } else {
         navigate(route()); // Envía al usuario a la vista pública de la tienda
@@ -113,6 +147,7 @@ export default function Login() {
                 : 'Crear cuenta'}
             </h1>
 
+            {canUseEmailPassword && (
             <p className="mt-4 text-[13px] text-white/45">
               {mode === 'login'
                 ? '¿No tienes cuenta?'
@@ -128,6 +163,7 @@ export default function Login() {
                   : 'Ingresar'}
               </button>
             </p>
+            )}
           </div>
 
           <div className="rounded-[16px] bg-[#f5f5f3] p-6 md:p-8 text-[#151515] flex flex-col gap-5">
@@ -137,14 +173,15 @@ export default function Login() {
               </Alert>
             )}
 
+            {canUseGoogle && (
             <button
               type="button"
               onClick={() =>
                 setMessage(
-                  'Acceso con Google simulado. No se conecta a una cuenta real.',
+                  'Recuperacion de contrasena de demostracion. No se envian correos.',
                 )
               }
-              className="h-12 flex items-center justify-center gap-3 border border-black/10 bg-white rounded-[9px] text-[12px] font-semibold hover:border-black/30 transition-colors"
+              className="text-[10px] text-black/45 hover:text-[#1683ff] transition-colors"
             >
               <svg
                 className="w-5 h-5"
@@ -159,13 +196,17 @@ export default function Login() {
 
               Continuar con Google
             </button>
+            )}
 
+            {showSeparator && (
             <div className="flex items-center gap-3">
               <div className="flex-1 h-px bg-black/10" />
               <span className="text-[10px] text-black/35">o</span>
               <div className="flex-1 h-px bg-black/10" />
             </div>
+            )}
 
+            {canUseEmailPassword && (
             <form
               onSubmit={handleSubmit}
               className="flex flex-col gap-4 [&_label]:text-[#151515] [&_input]:text-[#151515]"
@@ -216,12 +257,6 @@ export default function Login() {
               onClick={() => loginConGoogle()}
               className="h-12 flex items-center justify-center gap-3 border border-black/10 bg-white rounded-[9px] text-[12px] font-semibold hover:border-black/30 transition-colors"
             >
-              <svg
-                className="w-5 h-5"
-                viewBox="0 0 24 24"
-                aria-hidden="true"
-              >
-              </svg>
                     ¿Olvidaste tu contraseña?
                   </button>
                 </div>
@@ -239,7 +274,9 @@ export default function Login() {
                     : 'Crear cuenta →'}
               </button>
             </form>
+            )}
 
+            {canContinueAsGuest && (
             <div className="text-center pt-1">
               <Link
                 to={route()}
@@ -248,6 +285,7 @@ export default function Login() {
                 Continuar como invitado →
               </Link>
             </div>
+            )}
           </div>
 
           <p className="text-center text-[10px] text-white/30 mt-5">
@@ -273,6 +311,7 @@ export default function Login() {
                 : 'Crear cuenta'}
             </h1>
 
+            {canUseEmailPassword && (
             <p className="mt-4 text-[13px] text-[#77716e]">
               {mode === 'login'
                 ? '¿No tienes cuenta?'
@@ -288,6 +327,7 @@ export default function Login() {
                   : 'Ingresar'}
               </button>
             </p>
+            )}
           </div>
 
           <div className="rounded-[10px] bg-[#f1f1f0] p-6 md:p-8 flex flex-col gap-5">
@@ -297,6 +337,7 @@ export default function Login() {
               </Alert>
             )}
 
+            {canUseGoogle && (
             <button
               type="button"
               onClick={() => loginConGoogle()}
@@ -316,7 +357,9 @@ export default function Login() {
 
               Continuar con Google
             </button>
+            )}
 
+            {showSeparator && (
             <div className="flex items-center gap-3">
               <div className="flex-1 h-px bg-black/10" />
               <span className="text-[10px] text-[#8c8683]">
@@ -324,7 +367,9 @@ export default function Login() {
               </span>
               <div className="flex-1 h-px bg-black/10" />
             </div>
+            )}
 
+            {canUseEmailPassword && (
             <form
               onSubmit={handleSubmit}
               className="flex flex-col gap-4"
@@ -396,7 +441,9 @@ export default function Login() {
                     : 'Crear cuenta →'}
               </button>
             </form>
+            )}
 
+            {canContinueAsGuest && (
             <div className="text-center pt-1">
               <Link
                 to={route()}
@@ -405,6 +452,7 @@ export default function Login() {
                 Continuar como invitado →
               </Link>
             </div>
+            )}
           </div>
 
           <p className="text-center text-[10px] text-[#9a9491] mt-5">
@@ -455,6 +503,7 @@ export default function Login() {
               : 'Crear cuenta'}
           </h1>
 
+          {canUseEmailPassword && (
           <p className="text-sm text-[var(--muted-foreground)] mt-2">
             {mode === 'login'
               ? '¿No tienes cuenta?'
@@ -474,6 +523,7 @@ export default function Login() {
                 : 'Ingresar'}
             </button>
           </p>
+          )}
         </div>
 
         <div
@@ -489,6 +539,7 @@ export default function Login() {
             </Alert>
           )}
 
+          {canUseGoogle && (
           <button
             type="button"
             onClick={() => loginConGoogle()}
@@ -512,7 +563,9 @@ export default function Login() {
 
             Continuar con Google
           </button>
+          )}
 
+          {showSeparator && (
           <div className="flex items-center gap-3">
             <div className="flex-1 h-px bg-[var(--border)]" />
             <span className="text-xs text-[var(--muted-foreground)]">
@@ -520,7 +573,9 @@ export default function Login() {
             </span>
             <div className="flex-1 h-px bg-[var(--border)]" />
           </div>
+          )}
 
+          {canUseEmailPassword && (
           <form
             onSubmit={handleSubmit}
             className="flex flex-col gap-4"
@@ -610,7 +665,9 @@ export default function Login() {
               </Button>
             )}
           </form>
+          )}
 
+          {canContinueAsGuest && (
           <div className="text-center pt-1">
             <Link
               to={route()}
@@ -623,6 +680,7 @@ export default function Login() {
               Continuar como invitado →
             </Link>
           </div>
+          )}
         </div>
 
         {isMinimal && (

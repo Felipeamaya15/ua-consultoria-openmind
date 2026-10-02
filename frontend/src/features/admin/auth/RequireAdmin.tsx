@@ -1,7 +1,8 @@
 import { Navigate, Outlet } from 'react-router-dom';
+import { hasDemoSession } from './demoSession';
 
 export function RequireAdmin() {
-  const hasToken = !!localStorage.getItem('token');
+  const isEntrepreneur = hasDemoSession();
   
-  return hasToken ? <Outlet /> : <Navigate to="/plantilla/1/ingresar" replace />;
+  return isEntrepreneur ? <Outlet /> : <Navigate to="/plantilla/1/ingresar" replace />;
 }

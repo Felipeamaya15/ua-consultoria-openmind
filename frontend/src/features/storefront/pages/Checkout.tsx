@@ -13,6 +13,12 @@ import {
   Icon,
 } from '../components/ui';
 import { useStorefrontTemplate } from '../hooks/useStorefrontTemplate';
+import {
+  getAvailablePublicAuthModes,
+  readPublicAuthSettings,
+  type PublicAuthMode,
+  type PublicAuthSettings,
+} from '../services/authConfiguration';
 
 const STEPS = [
   { id: 'contact', label: 'Contacto' },
@@ -43,7 +49,7 @@ const REGIONES = [
   label: region,
 }));
 
-type AuthMode = 'guest' | 'login' | 'google';
+type AuthMode = PublicAuthMode;
 
 type ShippingOption = {
   id: string;
@@ -130,6 +136,7 @@ function readCheckoutOptions() {
       return {
         shippingOptions: defaultShippingOptions,
         paymentOptions: defaultPaymentOptions,
+        authSettings: readPublicAuthSettings(),
       };
     }
 
@@ -178,11 +185,13 @@ function readCheckoutOptions() {
       paymentOptions: paymentOptions.length
         ? paymentOptions
         : defaultPaymentOptions,
+      authSettings: readPublicAuthSettings(),
     };
   } catch {
     return {
       shippingOptions: defaultShippingOptions,
       paymentOptions: defaultPaymentOptions,
+      authSettings: readPublicAuthSettings(),
     };
   }
 }
@@ -324,9 +333,17 @@ export default function Checkout() {
   const { route, isMinimal, isVisual, isCatalog } =
     useStorefrontTemplate();
 
-  const { shippingOptions, paymentOptions } = useMemo(
+  const { shippingOptions, paymentOptions, authSettings } = useMemo(
     readCheckoutOptions,
     [],
+  ) as {
+    shippingOptions: ShippingOption[];
+    paymentOptions: PaymentOption[];
+    authSettings: PublicAuthSettings;
+  };
+  const availableAuthModes = useMemo(
+    () => getAvailablePublicAuthModes(authSettings),
+    [authSettings],
   );
 
   const navigate = useNavigate();
@@ -334,7 +351,7 @@ export default function Checkout() {
   const [step, setStep] = useState('contact');
 
   const [authMode, setAuthMode] =
-    useState<AuthMode>('guest');
+    useState<AuthMode>(() => availableAuthModes[0] ?? 'login');
 
   const [contact, setContact] = useState({
     name: '',
@@ -363,6 +380,12 @@ export default function Checkout() {
   useEffect(() => {
     window.scrollTo(0, 0);
   }, [step]);
+
+  useEffect(() => {
+    if (!availableAuthModes.includes(authMode)) {
+      setAuthMode(availableAuthModes[0] ?? 'login');
+    }
+  }, [authMode, availableAuthModes]);
 
   /*
    * ==========================================================
@@ -447,6 +470,14 @@ export default function Checkout() {
     const newErrors: Record<string, string> = {};
 
     if (currentStep === 'contact') {
+      if (!availableAuthModes.length) {
+        newErrors.auth =
+          'La tienda no tiene metodos de acceso habilitados.';
+      } else if (!availableAuthModes.includes(authMode)) {
+        newErrors.auth =
+          'Selecciona un metodo de acceso habilitado.';
+      }
+
       if (!contact.name.trim()) {
         newErrors.name = 'Nombre requerido';
       }
@@ -757,13 +788,7 @@ export default function Checkout() {
                     : 'flex gap-2 p-1 bg-[var(--muted)] rounded-xl'
                 }
               >
-                {(
-                  [
-                    'guest',
-                    'login',
-                    'google',
-                  ] as AuthMode[]
-                ).map((mode) => (
+                {availableAuthModes.map((mode) => (
                   <button
                     type="button"
                     key={mode}
@@ -806,6 +831,16 @@ export default function Checkout() {
                   </button>
                 ))}
               </div>
+
+              {errors.auth && (
+                <Alert variant="error">{errors.auth}</Alert>
+              )}
+
+              {!availableAuthModes.includes('guest') && (
+                <Alert variant="info">
+                  La tienda requiere iniciar sesion antes de pagar.
+                </Alert>
+              )}
 
               {authMode === 'google' && (
                 <button
