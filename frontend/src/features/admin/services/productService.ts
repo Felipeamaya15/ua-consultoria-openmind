@@ -3,32 +3,55 @@ import type { Product } from "../data/mockAdminData";
 const API_URL =
   (import.meta as any).env.VITE_API_URL || "http://localhost:8000";
 
-export interface CatalogAttribute { clave: string; etiqueta: string; valor: string }
-export type AdminProduct = Product & {
-  revision?: string;
-  generalAttributes?: CatalogAttribute[];
-  attributeLabels?: Record<string, string>;
-};
+interface CrearProductoResponse {
+  mensaje: string;
+  id_producto: number;
+}
 
-function toBackendPayload(product: AdminProduct) {
-  return {
-    nombre: product.name,
-    descripcion: product.description,
-    categoria: product.category,
-    activo: product.status === "active",
-    imagenes: product.images,
-    atributos_generales: product.generalAttributes ?? [],
-    variantes: product.variants.map((variant) => {
-      const hasOffer =
-        variant.comparePrice !== undefined &&
-        variant.comparePrice !== null &&
-        variant.comparePrice > variant.price;
+async function crearProductoBase(product: Product): Promise<number> {
+  const precios = product.variants.map((v) => v.price);
+  const stockTotal = product.variants.reduce(
+    (total, v) => total + (Number(v.stock) || 0),
+    0,
+  );
 
-      return {
-        sku: variant.sku.trim().toUpperCase(),
-        precio: hasOffer ? variant.comparePrice! : variant.price,
-        precio_oferta: hasOffer ? variant.price : null,
-        stock: variant.stock,
+  const response = await fetch(`${API_URL}/api/catalog/productos/crear/`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      nombre: product.name,
+      descripcion: product.description,
+      categoria: product.category,
+      imagenes: product.images,
+      precio: precios.length ? Math.min(...precios) : 0,
+      stock: stockTotal,
+      activo: true,
+    }),
+  });
+
+  const body: CrearProductoResponse = await response.json();
+
+  if (!response.ok) {
+    throw new Error(
+      (body as any)?.mensaje ||
+        "No se pudo crear el producto. Revisa los datos ingresados.",
+    );
+  }
+
+  return body.id_producto;
+}
+
+async function agregarVariante(idProducto: number, variant: Product["variants"][number]) {
+  const response = await fetch(
+    `${API_URL}/api/catalog/productos/${idProducto}/variantes/`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        sku: variant.sku,
+        precio: variant.price,
+        stock: Math.max(0, Math.round(Number(variant.stock) || 0)),
+        nombre: `Variante ${variant.sku}`,
         atributos_variante: Object.entries(variant.attributes).map(
           ([nombre, valor]) => ({
             clave: nombre.toLowerCase(),
@@ -36,112 +59,73 @@ function toBackendPayload(product: AdminProduct) {
             valor,
           }),
         ),
-      };
-    }),
-    seo: {
-      meta_titulo: product.seoTitle || "",
-      meta_descripcion: product.seoDescription || "",
+      }),
     },
-  };
-}
-
-export async function createPublicProduct(
-  product: Product,
-): Promise<string> {
-  const token = localStorage.getItem("token");
-  if (!token) throw new Error("Inicia sesión para crear productos.");
-  const response = await fetch(`${API_URL}/api/catalog/productos/crear/`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Token ${token}` },
-    body: JSON.stringify(toBackendPayload(product)),
-  });
+  );
 
   const body = await response.json().catch(() => null);
 
-  if (!response.ok || !body?.exito || !body?.data?.id) {
+  if (!response.ok) {
     throw new Error(
-      body?.mensaje || (body ? JSON.stringify(body) : "No se pudo guardar el producto en el catálogo."),
+      body?.error ||
+        body?.mensaje ||
+        `No se pudo agregar la variante ${variant.sku}.`,
     );
   }
-
-  return body.data.id;
 }
 
-export async function deleteCatalogProduct(productId: string): Promise<void> {
-  const token = localStorage.getItem("token");
-  if (!token) throw new Error("Inicia sesión para eliminar productos.");
-  const response = await fetch(`${API_URL}/api/catalog/productos/${productId}/eliminar/`, {
-    method: "DELETE",
-    headers: { Authorization: `Token ${token}` },
-  });
-  const body = await response.json().catch(() => null);
-  if (!response.ok || !body?.exito) {
-    throw new Error(body?.mensaje || "No se pudo eliminar el producto.");
+export async function createPublicProduct(product: Product): Promise<string> {
+  const idProducto = await crearProductoBase(product);
+
+  for (const variant of product.variants) {
+    await agregarVariante(idProducto, variant);
   }
+
+  return String(idProducto);
 }
 
+function adaptAdminProduct(item: any): Product {
+  const variantes = item.variantes ?? [];
 
-function adaptAdminProduct(item: any): AdminProduct {
-  if (!/^[a-f0-9]{24}$/i.test(item.id)) throw new Error("El backend devolvió un ID de producto inválido.");
-  const attributes: Record<string, string[]> = {};
-  const labels: Record<string, string> = {};
-  const variants = (item.variantes ?? []).map((v: any, index: number) => {
-    const values: Record<string, string> = {};
-    for (const a of v.atributos_variante ?? []) {
-      values[a.clave] = a.valor;
-      labels[a.clave] = a.etiqueta;
-      attributes[a.clave] ??= [];
-      if (!attributes[a.clave].includes(a.valor)) attributes[a.clave].push(a.valor);
-    }
-    const offer = v.precio_oferta != null && v.precio_oferta < v.precio;
-    return { id: `variant-${index}`, sku: v.sku, attributes: values,
-      price: offer ? v.precio_oferta : v.precio, comparePrice: offer ? v.precio : undefined,
-      stock: v.stock, available: v.stock > 0 };
-  });
+  const variants = variantes.map((v: any, index: number) => ({
+    id: v.sku || `variante-${index}`,
+    sku: v.sku,
+    attributes: Object.fromEntries(
+      (v.atributos_variante ?? []).map((a: any) => [a.etiqueta, a.valor]),
+    ),
+    price: v.precio ?? 0,
+    comparePrice: v.precio_oferta ?? undefined,
+    stock: v.stock ?? 0,
+    available: (v.stock ?? 0) > 0,
+  }));
+
+  const prices = variants.map((v: any) => v.price);
+
   return {
-    id: item.id, catalogId: item.id, revision: item.revision,
-    name: item.nombre, description: item.descripcion ?? '', category: item.categoria,
-    images: item.imagenes ?? [], variants, attributes, attributeLabels: labels,
-    generalAttributes: item.atributos_generales ?? [],
-    basePrice: variants.length ? Math.min(...variants.map((v: any) => v.price)) : 0,
-    tags: [], featured: false, status: item.activo ? 'active' : 'archived',
-    seoTitle: item.seo?.meta_titulo ?? '', seoDescription: item.seo?.meta_descripcion ?? '',
-    createdAt: item.fecha_creacion ?? '',
+    id: String(item.id_producto),
+    name: item.nombre,
+    description: item.descripcion || "",
+    category: item.categoria || "",
+    images: item.imagenes && item.imagenes.length ? item.imagenes : [],
+    basePrice: prices.length ? Math.min(...prices) : 0,
+    variants,
+    attributes: {},
+    tags: [],
+    featured: false,
+    status: item.activo ? "active" : "archived",
+    seoTitle: item.seo?.meta_titulo,
+    seoDescription: item.seo?.meta_descripcion,
+    createdAt: "",
   };
 }
 
-async function adminRequest(path: string, options: RequestInit = {}): Promise<any> {
-  const token = localStorage.getItem('token');
-  if (!token) throw new Error('Inicia sesión para administrar productos.');
-  const response = await fetch(`${API_URL}/api/catalog/productos/${path}`, {
-    ...options,
-    headers: { 'Content-Type': 'application/json', Authorization: `Token ${token}` },
-  });
-  const body = await response.json().catch(() => null);
-  if (!response.ok || !body?.exito) {
-    throw new Error(body?.mensaje || (body ? JSON.stringify(body) : 'No se pudo consultar o guardar el catálogo.'));
+export async function fetchAdminProducts(): Promise<Product[]> {
+  const response = await fetch(`${API_URL}/api/catalog/productos/admin/`);
+  const body = await response.json();
+
+  if (!response.ok) {
+    throw new Error(body?.mensaje || "No se pudieron obtener los productos.");
   }
-  return body.data;
-}
 
-export async function fetchAdminProducts(): Promise<AdminProduct[]> {
-  const data = await adminRequest('admin/listado/');
-  if (!Array.isArray(data)) throw new Error('Listado administrativo inválido.');
-  return data.map(adaptAdminProduct);
-}
-
-export async function fetchAdminProduct(id: string): Promise<AdminProduct> {
-  if (!/^[a-f0-9]{24}$/i.test(id)) throw new Error('Este ID local o SQL no identifica un producto Mongo. Abre un producto del listado real.');
-  return adaptAdminProduct(await adminRequest(`${id}/admin/`));
-}
-
-export async function updateCatalogProduct(product: AdminProduct): Promise<AdminProduct> {
-  if (!/^[a-f0-9]{24}$/i.test(product.id) || !product.revision) {
-    throw new Error('Recarga el producto desde el catálogo antes de editar.');
-  }
-  const data = await adminRequest(`${product.id}/actualizar/`, {
-    method: 'PUT', body: JSON.stringify({ ...toBackendPayload(product), revision: product.revision }),
-  });
-  if (data?.id !== product.id) throw new Error('El backend no confirmó el producto actualizado.');
-  return adaptAdminProduct(data);
+  return (body.productos ?? []).map(adaptAdminProduct);
 }

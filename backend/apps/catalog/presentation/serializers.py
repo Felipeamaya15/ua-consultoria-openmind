@@ -125,12 +125,18 @@ class ProductImageSerializer(serializers.Serializer):
         return value
 
 class ProductoCreateSerializer(serializers.ModelSerializer):
+    categoria = serializers.CharField(required=False, allow_blank=True, default='')
+    descripcion = serializers.CharField(required=False, allow_blank=True, default='')
+    imagenes = serializers.ListField(
+        child=serializers.CharField(), required=False, default=list
+    )
+
     class Meta:
         model = Producto
-        fields = ['nombre', 'precio', 'stock', 'activo']
+        fields = ['nombre', 'precio', 'stock', 'activo', 'categoria', 'descripcion', 'imagenes']
         extra_kwargs = {
             'nombre': {
-                'required': True, 
+                'required': True,
                 'allow_blank': False,
                 'error_messages': {
                     'required': 'El campo nombre es obligatorio.',

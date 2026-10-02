@@ -1,7 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from "react"
 import { Link, useNavigate, useParams } from "react-router-dom"
+<<<<<<< fix/SCRUM-213-214-217-223-conexion-productos-backend
+import { formatPrice, mockProducts, Product, ProductVariant } from "../data/mockAdminData"
+import { createPublicProduct, fetchAdminProducts } from "../services/productService"
+import { useEffect } from "react"
+import { useAdmin } from "../context/AdminContext"
+=======
 import { formatPrice, Product, ProductVariant } from "../data/mockAdminData"
 import { createPublicProduct, deleteCatalogProduct, fetchAdminProducts, fetchAdminProduct, updateCatalogProduct, type AdminProduct } from "../services/productService"
+>>>>>>> develop
 import { Alert, Badge, Button, Input, Select, Tabs, Textarea, Toggle } from "../components/ui"
 
 const productStatus = (status: Product["status"]) => ({
@@ -15,6 +22,26 @@ const variantAttributes = (variant: ProductVariant) =>
 
 export function ProductList() {
   const [search, setSearch] = useState("")
+<<<<<<< fix/SCRUM-213-214-217-223-conexion-productos-backend
+  const { config, setConfig } = useAdmin()
+  const [products, setProducts] = useState<Product[]>([])
+  const [loadingProducts, setLoadingProducts] = useState(true)
+  const [loadError, setLoadError] = useState("")
+
+  const loadProducts = () => {
+    setLoadingProducts(true)
+    setLoadError("")
+    fetchAdminProducts()
+      .then((data) => setProducts(data))
+      .catch((err) => setLoadError(err instanceof Error ? err.message : "No se pudieron cargar los productos."))
+      .finally(() => setLoadingProducts(false))
+  }
+
+  useEffect(() => {
+    loadProducts()
+  }, [])
+
+=======
   const [products, setProducts] = useState<AdminProduct[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
@@ -25,22 +52,40 @@ export function ProductList() {
       .finally(() => { if (active) setLoading(false) })
     return () => { active = false }
   }, [])
+>>>>>>> develop
   const filtered = products.filter((product) => `${product.name} ${product.category} ${product.tags.join(" ")}`.toLowerCase().includes(search.toLowerCase()))
 
-  // Logica del Flujo Administrativo para Eliminar (SCRUM-231)
   const handleDeleteProduct = async (productId: string) => {
     if (!window.confirm("¿Estás seguro de que deseas desactivar este producto? Dejará de ser visible en el catálogo, pero se mantendrá en tu historial de ventas.")) return;
 
     try {
+<<<<<<< fix/SCRUM-213-214-217-223-conexion-productos-backend
+      const response = await fetch(`http://localhost:8000/api/catalog/productos/${productId}/eliminar/`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        const body = await response.json().catch(() => null);
+        throw new Error(body?.mensaje || "No se pudo eliminar el producto en el servidor.");
+      }
+
+      alert("Producto eliminado lógicamente de forma correcta.");
+      loadProducts();
+    } catch (error) {
+      alert(error instanceof Error ? error.message : "Ocurrió un error al intentar eliminar el producto.");
+=======
       await deleteCatalogProduct(productId);
 
       setProducts(current => current.map(p => p.id === productId ? { ...p, status: "archived" } : p));
       setError("");
     } catch (error) {
       setError(error instanceof Error ? error.message : "No se pudo eliminar el producto.");
+>>>>>>> develop
     }
   };
-
   return <div>
     {loading && <Alert variant="info">Cargando productos reales…</Alert>}
     {error && <Alert variant="error">{error}</Alert>}
@@ -155,6 +200,27 @@ export function ProductEditor({ initial, editing }: { initial: AdminProduct; edi
     setSaving(true);
     setError("");
 
+<<<<<<< fix/SCRUM-213-214-217-223-conexion-productos-backend
+       if (!exists) {
+      try {
+        const idReal = await createPublicProduct(finalProduct);
+        finalProduct.id = idReal;
+      } catch (err) {
+        setSaving(false);
+        setError(err instanceof Error ? err.message : "Ocurrió un error al comunicarse con el servidor.");
+        return;
+      }
+    }
+
+    // Además de guardar en el backend real, actualizamos la lista local
+    // del panel admin para que se vea reflejado de inmediato.
+    const ok = setConfig({
+      ...config,
+      products: exists ? products.map((item) => item.id === finalProduct.id ? finalProduct : item) : [...products, finalProduct]
+    });
+
+    if(!ok) {
+=======
     setSaved(false);
     try {
       if (editing) {
@@ -169,6 +235,7 @@ export function ProductEditor({ initial, editing }: { initial: AdminProduct; edi
     } catch (error) {
       setError(error instanceof Error ? error.message : "No se pudo guardar el producto.");
     } finally {
+>>>>>>> develop
       setSaving(false);
     }
   };

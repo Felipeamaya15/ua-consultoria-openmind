@@ -104,7 +104,7 @@ class SoftDeleteProductUseCase:
         # Actualizamos el estado 'activo' en Mongo asegurando que pertenezca a la misma tienda
         # En MongoDB los productos se guardan con id de la tienda en string (Ej: "tienda_id": "7")
         productos_collection.update_one(
-            {"id_postgresql": id_producto, "tienda_id": str(tienda_id)}, 
+            {"id_producto": id_producto, "tienda_id": str(tienda_id)},
             {"$set": {"activo": False}}
         )
 
@@ -149,10 +149,42 @@ class CrearProductoUseCase:
     def ejecutar(self, tienda, datos_validados):
         if 'stock' in datos_validados:
             validate_stock(datos_validados['stock'])
+
+        # Separamos los campos que sí pertenecen al modelo Producto (Postgres)
+        # de los que solo existen para el catálogo (Mongo).
+        datos = dict(datos_validados)
+        categoria = datos.pop('categoria', '') or 'Sin categoría'
+        descripcion = datos.pop('descripcion', '')
+        imagenes = datos.pop('imagenes', [])
+
         producto = Producto.objects.create(
             id_tienda=tienda,
-            **datos_validados
+            **datos
         )
+
+        # Creamos el documento equivalente en Mongo, vinculado por id_producto,
+        # para que el catálogo público y la gestión de variantes funcionen.
+        slug_base = slugify(producto.nombre) or f"producto-{producto.id_producto}"
+        slug = slug_base
+        sufijo = 1
+        repositorio = ProductRepository()
+        while repositorio.get_by_slug(str(tienda.pk), slug):
+            sufijo += 1
+            slug = f"{slug_base}-{sufijo}"
+
+        repositorio.create(str(tienda.pk), {
+            'id_producto': producto.id_producto,
+            'nombre': producto.nombre,
+            'slug': slug,
+            'descripcion': descripcion,
+            'categoria': categoria,
+            'activo': producto.activo,
+            'imagenes': imagenes,
+            'atributos_generales': [],
+            'variantes': [],
+            'seo': {},
+        })
+
         return producto
 
 

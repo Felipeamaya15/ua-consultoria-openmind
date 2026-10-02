@@ -12,21 +12,18 @@ def create_catalog_indexes():
     productos.create_index([("tienda_id", 1), ("activo", 1)])
     productos.create_index([("tienda_id", 1), ("categoria", 1)])
     productos.create_index([("tienda_id", 1), ("slug", 1)], unique=True)
-    productos.create_index(
-        [("tienda_id", 1), ("variantes.sku", 1)],
-        unique=True,
-        sparse=True
-    )
+
+    
     productos.create_index([
         ("tienda_id", 1),
         ("atributos_generales.clave", 1),
         ("atributos_generales.valor", 1)
     ])
-    productos.create_index([
-        ("tienda_id", 1),
-        ("variantes.atributos_variante.clave", 1),
-        ("variantes.atributos_variante.valor", 1)
-    ])
+    productos.create_index(
+        [("tienda_id", 1), ("variantes.sku", 1)],
+        unique=True,
+        partialFilterExpression={"variantes.sku": {"$exists": True}}
+    )
     
     # Índices para 'plantillas_atributos'
     plantillas = db.plantillas_atributos
