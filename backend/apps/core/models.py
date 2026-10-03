@@ -116,3 +116,31 @@ class ItemPedido(models.Model):
             models.CheckConstraint(check=Q(cantidad__gt=0), name='chk_item_pedido_cantidad_valida'),
             models.CheckConstraint(check=Q(precio_unitario__gte=0), name='chk_item_pedido_precio_valido'),
         ]
+class VarianteProducto(models.Model):
+    id_variante = models.BigAutoField(primary_key=True)
+    id_producto = models.ForeignKey(Producto, on_delete=models.CASCADE, db_column='id_producto')
+    sku = models.CharField(max_length=100)
+    precio = models.DecimalField(max_digits=12, decimal_places=2)
+    stock = models.IntegerField(default=0)
+    atributos = models.JSONField(default=dict)
+    es_activa = models.BooleanField(default=True)
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'variante_producto'
+        constraints = [
+            models.CheckConstraint(check=models.Q(precio__gte=0), name='chk_variante_precio_valido'),
+            models.CheckConstraint(check=models.Q(stock__gte=0), name='chk_variante_stock_valido'),
+        ]
+class ConfiguracionPago(models.Model):
+    tienda = models.OneToOneField(
+        'core.Tienda', 
+        on_delete=models.CASCADE, 
+        related_name='configuracion_pago'
+    )
+    # Almacenará el JSON con los métodos (Transbank, PayPal, etc.) y su estado 'enabled'
+    datos = models.JSONField(default=dict, blank=True)
+    fecha_actualizacion = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'configuracion_pago'

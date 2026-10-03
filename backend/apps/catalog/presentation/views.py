@@ -233,16 +233,12 @@ class PublicProductAttributesAPIView(APIView):
 
 class ProductDeleteAPIView(APIView):
 
-    # TODO: volver a exigir autenticación real cuando el panel admin
-    # tenga login contra Django (hoy usa una sesión local de prueba,
-    # igual que ProductoCreateView).
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
 
     def delete(self, request, id_producto):
+        tienda_id = resolver_tienda_id(request, exigir_propietario=True)
 
         try:
-
-            tienda_id = resolver_tienda_id(request)
 
 
             use_case = SoftDeleteProductUseCase()
@@ -270,12 +266,10 @@ class ProductDeleteAPIView(APIView):
 
 
 class ProductoCreateView(APIView):
-    # TODO: volver a exigir autenticación real cuando el panel admin
-    # tenga login contra Django (hoy usa una sesión local de prueba).
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
 
     def post(self, request):
-        tienda = resolver_tienda(request)
+        tienda = resolver_tienda(request, exigir_propietario=True)
 
         serializer = ProductCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)

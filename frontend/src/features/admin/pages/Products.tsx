@@ -1,14 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react"
 import { Link, useNavigate, useParams } from "react-router-dom"
-<<<<<<< fix/SCRUM-213-214-217-223-conexion-productos-backend
-import { formatPrice, mockProducts, Product, ProductVariant } from "../data/mockAdminData"
-import { createPublicProduct, fetchAdminProducts } from "../services/productService"
-import { useEffect } from "react"
-import { useAdmin } from "../context/AdminContext"
-=======
 import { formatPrice, Product, ProductVariant } from "../data/mockAdminData"
 import { createPublicProduct, deleteCatalogProduct, fetchAdminProducts, fetchAdminProduct, updateCatalogProduct, type AdminProduct } from "../services/productService"
->>>>>>> develop
 import { Alert, Badge, Button, Input, Select, Tabs, Textarea, Toggle } from "../components/ui"
 
 const productStatus = (status: Product["status"]) => ({
@@ -22,26 +15,6 @@ const variantAttributes = (variant: ProductVariant) =>
 
 export function ProductList() {
   const [search, setSearch] = useState("")
-<<<<<<< fix/SCRUM-213-214-217-223-conexion-productos-backend
-  const { config, setConfig } = useAdmin()
-  const [products, setProducts] = useState<Product[]>([])
-  const [loadingProducts, setLoadingProducts] = useState(true)
-  const [loadError, setLoadError] = useState("")
-
-  const loadProducts = () => {
-    setLoadingProducts(true)
-    setLoadError("")
-    fetchAdminProducts()
-      .then((data) => setProducts(data))
-      .catch((err) => setLoadError(err instanceof Error ? err.message : "No se pudieron cargar los productos."))
-      .finally(() => setLoadingProducts(false))
-  }
-
-  useEffect(() => {
-    loadProducts()
-  }, [])
-
-=======
   const [products, setProducts] = useState<AdminProduct[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
@@ -52,38 +25,18 @@ export function ProductList() {
       .finally(() => { if (active) setLoading(false) })
     return () => { active = false }
   }, [])
->>>>>>> develop
   const filtered = products.filter((product) => `${product.name} ${product.category} ${product.tags.join(" ")}`.toLowerCase().includes(search.toLowerCase()))
 
   const handleDeleteProduct = async (productId: string) => {
     if (!window.confirm("¿Estás seguro de que deseas desactivar este producto? Dejará de ser visible en el catálogo, pero se mantendrá en tu historial de ventas.")) return;
 
     try {
-<<<<<<< fix/SCRUM-213-214-217-223-conexion-productos-backend
-      const response = await fetch(`http://localhost:8000/api/catalog/productos/${productId}/eliminar/`, {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (!response.ok) {
-        const body = await response.json().catch(() => null);
-        throw new Error(body?.mensaje || "No se pudo eliminar el producto en el servidor.");
-      }
-
-      alert("Producto eliminado lógicamente de forma correcta.");
-      loadProducts();
-    } catch (error) {
-      alert(error instanceof Error ? error.message : "Ocurrió un error al intentar eliminar el producto.");
-=======
       await deleteCatalogProduct(productId);
 
       setProducts(current => current.map(p => p.id === productId ? { ...p, status: "archived" } : p));
       setError("");
     } catch (error) {
       setError(error instanceof Error ? error.message : "No se pudo eliminar el producto.");
->>>>>>> develop
     }
   };
   return <div>
@@ -176,7 +129,19 @@ export function ProductEditor({ initial, editing }: { initial: AdminProduct; edi
   const [product, setProduct] = useState<AdminProduct>({ ...initial, images: [...initial.images], variants: initial.variants.map((variant) => ({ ...variant, attributes: { ...variant.attributes } })), attributes: { ...initial.attributes }, tags: [...initial.tags] })
   const [error, setError] = useState("");
   const variants = product.variants; const attributeNames = Object.keys(product.attributes); const totalStock = useMemo(() => variants.reduce((sum, variant) => sum + Math.max(0, Number(variant.stock) || 0), 0), [variants])
-  const setField = <K extends keyof AdminProduct>(key: K, value: AdminProduct[K]) => setProduct((current) => ({ ...current, [key]: value }))
+  const normalizeSku = (sku: string) => sku.trim().toUpperCase()
+  const generateSku = (currentVariants: ProductVariant[] = product.variants) => {
+    const used = new Set([...products.flatMap((item) => item.variants), ...currentVariants].map((variant) => normalizeSku(variant.sku)).filter(Boolean))
+    let index = 1
+    let sku = `SKU-${index}`
+    while (used.has(sku)) {
+      index += 1
+      sku = `SKU-${index}`
+    }
+    return sku
+  }
+  const findDuplicatedSku = () => { const seen = new Set<string>(); for (const variant of product.variants) { const sku = variant.sku.trim().toUpperCase(); if (!sku) continue; if (seen.has(sku)) return sku; seen.add(sku); } const currentProductId = product.id; const usedByOtherProduct = new Set(products.filter((item) => item.id !== currentProductId).flatMap((item) => item.variants.map((variant) => variant.sku.trim().toUpperCase()).filter(Boolean))); return [...seen].find((sku) => usedByOtherProduct.has(sku)); }
+  const setField = <K extends keyof Product>(key: K, value: Product[K]) => setProduct((current) => ({ ...current, [key]: value }))
   const updateVariant = (variantId: string, change: Partial<ProductVariant>) => setProduct((current) => ({ ...current, variants: current.variants.map((variant) => variant.id === variantId ? { ...variant, ...change } : variant) }))
   const updateAttribute = (name: string, values: string) => setProduct((current) => ({ ...current, attributes: { ...current.attributes, [name]: values.split(",").map((value) => value.trim()).filter(Boolean) } }))
   const addAttribute = () => {
@@ -187,12 +152,13 @@ export function ProductEditor({ initial, editing }: { initial: AdminProduct; edi
       variants: current.variants.map(variant => ({ ...variant, attributes: { ...variant.attributes, [name]: "Opción 1" } })) }))
   }
   const renameAttribute = (oldName: string, newName: string) => { if (!newName.trim() || newName === oldName) return; if (product.attributes[newName]) { setError("Ya existe un atributo con ese nombre."); return; } setProduct((current) => { const attributes = { ...current.attributes }; const values = attributes[oldName]; delete attributes[oldName]; attributes[newName] = values; return { ...current, attributes, variants: current.variants.map((variant) => { const next = { ...variant.attributes, [newName]: variant.attributes[oldName] ?? values[0] ?? "" }; delete next[oldName]; return { ...variant, attributes: next } }) } }) }
-  const addVariant = () => setProduct((current) => ({ ...current, variants: [...current.variants, { id: `v-${Date.now()}`, sku: `SKU-${current.variants.length + 1}`, attributes: Object.fromEntries(Object.entries(current.attributes).map(([name, values]) => [name, values[0] ?? ""])), price: current.basePrice, comparePrice: current.comparePrice, stock: 0, available: true }] }))
+  const addVariant = () => setProduct((current) => ({ ...current, variants: [...current.variants, { id: `v-${Date.now()}`, sku: generateSku(current.variants), attributes: Object.fromEntries(Object.entries(current.attributes).map(([name, values]) => [name, values[0] ?? ""])), price: current.basePrice, comparePrice: current.comparePrice, stock: 0, available: true }] }))
   const addImages = (files?: FileList | null) => { if (!files) return; if(Array.from(files).some(file => file.size > 1024 * 1024 || !["image/png","image/jpeg","image/webp"].includes(file.type))) {setError("Usa imágenes JPG, PNG o WebP de hasta 1 MB.");return;} Array.from(files).filter((file) => file.type.startsWith("image/")).forEach((file) => { const reader = new FileReader(); reader.onload = () => setProduct((current) => ({ ...current, images: [...current.images, String(reader.result)] })); reader.readAsDataURL(file) }) }
   const save = async () => {
     if (!product.name.trim()) { setError("Ingresa el nombre del producto."); setActiveTab("info"); return; }
     if (product.variants.length === 0) { setError("Agrega al menos una variante con precio y stock."); setActiveTab("variants"); return; }
-    if(product.basePrice < 0 || product.variants.some(v => !v.sku.trim() || v.price < 0 || !Number.isInteger(v.stock) || v.stock < 0) || new Set(product.variants.map(v => v.sku.trim().toUpperCase())).size !== product.variants.length) {setError("Revisa los precios, el stock entero y los SKU únicos de las variantes.");return;}
+    const duplicatedSku = findDuplicatedSku();
+    if(product.basePrice < 0 || product.variants.some(v => !v.sku.trim() || v.price < 0 || !Number.isInteger(v.stock) || v.stock < 0) || duplicatedSku) {setError(duplicatedSku ? `El SKU ${duplicatedSku} ya existe en otra variante o producto.` : "Revisa los precios, el stock entero y los SKU únicos de las variantes.");setActiveTab("variants");return;}
 
     const finalProduct = { ...product, basePrice: Number(product.basePrice) || 0 };
 
@@ -200,27 +166,6 @@ export function ProductEditor({ initial, editing }: { initial: AdminProduct; edi
     setSaving(true);
     setError("");
 
-<<<<<<< fix/SCRUM-213-214-217-223-conexion-productos-backend
-       if (!exists) {
-      try {
-        const idReal = await createPublicProduct(finalProduct);
-        finalProduct.id = idReal;
-      } catch (err) {
-        setSaving(false);
-        setError(err instanceof Error ? err.message : "Ocurrió un error al comunicarse con el servidor.");
-        return;
-      }
-    }
-
-    // Además de guardar en el backend real, actualizamos la lista local
-    // del panel admin para que se vea reflejado de inmediato.
-    const ok = setConfig({
-      ...config,
-      products: exists ? products.map((item) => item.id === finalProduct.id ? finalProduct : item) : [...products, finalProduct]
-    });
-
-    if(!ok) {
-=======
     setSaved(false);
     try {
       if (editing) {
@@ -235,7 +180,6 @@ export function ProductEditor({ initial, editing }: { initial: AdminProduct; edi
     } catch (error) {
       setError(error instanceof Error ? error.message : "No se pudo guardar el producto.");
     } finally {
->>>>>>> develop
       setSaving(false);
     }
   };

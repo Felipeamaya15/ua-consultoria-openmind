@@ -17,6 +17,12 @@ from apps.catalog.presentation.views import (
 )
 
 urlpatterns = [
+    # Listado documental utilizado por la administración Mongo.
+    path(
+        "productos/admin/listado/",
+        ProductoAdminDetailView.as_view(),
+        name="producto-admin-list",
+    ),
     # Catálogo público
     path(
         "productos/",

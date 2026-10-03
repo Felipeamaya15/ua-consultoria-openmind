@@ -168,6 +168,8 @@ export const createDefaultAdminConfig = (): AdminConfig =>
       },
       linkify: {
         enabled: false,
+        linkify: {
+        enabled: false,
         fields: {
           environment: 'sandbox',
           expirationHours: '48',
@@ -178,7 +180,16 @@ export const createDefaultAdminConfig = (): AdminConfig =>
       },
       transfer: {
         enabled: true,
-        fields: {},
+        fields: {
+          bank_name: 'Banco Estado',
+          account_type: 'Cuenta corriente',
+          account_number: '012345678',
+          holder_rut: '12.345.678-9',
+          holder_name: 'Comercial Demo SpA',
+          confirmation_email: 'pagos@mitienda.cl',
+          instructions:
+            'Validar el comprobante contra monto, correo y numero de pedido.',
+        },
       },
     },
 
