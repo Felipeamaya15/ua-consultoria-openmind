@@ -11,7 +11,7 @@ from apps.catalog.infrastructure.repositories import ProductRepository
 from .serializers import RegistrarCompraSerializer
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from apps.core.infrastructure.tenant import resolver_tienda, resolver_tienda_id
-
+from apps.core.presentation.serializers import ConfiguracionPagoSerializer
 class RegistrarCompraView(APIView):
     """
     Procesa una compra utilizando las variantes almacenadas en MongoDB.
@@ -173,6 +173,7 @@ class RegistrarCompraView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 class ConfiguracionPagoAPIView(APIView):
+    permission_classes = [IsAuthenticated]
     def get(self, request):
         try:
             tienda = resolver_tienda(request, exigir_propietario=True)
@@ -184,16 +185,23 @@ class ConfiguracionPagoAPIView(APIView):
     def put(self, request):
         try:
             tienda = resolver_tienda(request, exigir_propietario=True)
-            config_pago, _ = ConfiguracionPago.objects.get_or_create(id_tienda=tienda)
-            config_pago.configuracion = request.data
-            config_pago.save()
-            return success_response(
-                mensaje="Métodos de pago guardados exitosamente.", 
-                data=config_pago.configuracion
-            )
+            
+            #SCRUM-306: Impedir guardado si faltan datos requeridos
+            serializer = ConfiguracionPagoSerializer(data=request.data)
+            if not serializer.is_valid():
+                return error_response(
+                    mensaje="Datos requeridos incompletos para habilitar un medio de pago.", 
+                    codigo="ERROR_VALIDACION_PAGO", 
+                    detalles=serializer.errors,
+                    status=400
+                )
+
+            config, _ = ConfiguracionPago.objects.get_or_create(tienda=tienda)
+            config.datos = serializer.validated_data
+            config.save()
+            return success_response(mensaje="Métodos de pago guardados exitosamente.", data=config.datos)
         except Exception as e:
             return error_response(mensaje=str(e), codigo="ERROR_PAGO", status=400)
-
 class MetodosPagoActivosAPIView(APIView):
     """ Endpoint público para el Checkout: devuelve SOLO los métodos habilitados """
     permission_classes = [AllowAny]

@@ -888,6 +888,29 @@ export default function Payments() {
 
   const updateEnabled = (id: string, enabled: boolean) => {
     const current = form[id] ?? { enabled: false, fields: {} };
+    
+    
+    if (enabled) {
+      if (id === 'linkify') {
+        const missing = linkifyRequiredFields.filter((field) => !current.fields[field]?.trim());
+        if (missing.length > 0) {
+          setValidationError('Completa todos los campos obligatorios de Linkify antes de habilitarlo.');
+          return; 
+        }
+      } else {
+        const method = byId[id];
+        const missing = method?.fields
+          .filter((field) => field.required)
+          .filter((field) => !current.fields[field.key]?.trim());
+
+        if (missing && missing.length > 0) {
+          setValidationError(`Completa todos los campos obligatorios de ${method.name} antes de habilitarlo.`);
+          return; 
+        }
+      }
+    }
+
+    setValidationError('');
     setForm({
       ...form,
       [id]: { ...current, enabled },
@@ -896,10 +919,33 @@ export default function Payments() {
 
   const updateField = (id: string, field: string, value: string) => {
     const current = form[id] ?? { enabled: false, fields: {} };
+    
+    
+    let shouldDisable = false;
+    if (current.enabled && !value.trim()) {
+      if (id === 'linkify') {
+        if (linkifyRequiredFields.includes(field)) shouldDisable = true;
+      } else {
+        const method = byId[id];
+        const isRequired = method?.fields.find((f) => f.key === field)?.required;
+        if (isRequired) shouldDisable = true;
+      }
+    }
+
     setForm({
       ...form,
-      [id]: { ...current, fields: { ...current.fields, [field]: value } },
+      [id]: { 
+        ...current, 
+        enabled: shouldDisable ? false : current.enabled,
+        fields: { ...current.fields, [field]: value } 
+      },
     });
+
+    if (shouldDisable) {
+      setValidationError(`El medio de pago ${byId[id]?.name || 'Linkify'} fue desactivado porque se borró un campo obligatorio.`);
+    } else {
+      setValidationError('');
+    }
   };
 
   const validate = () => {
