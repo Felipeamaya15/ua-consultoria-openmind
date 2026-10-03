@@ -614,6 +614,12 @@ export default function Checkout() {
         transbankPaymentService.redirigirAWebpay(result.data.url, result.data.token);
         return;
       }
+
+      if (paymentMethod === 'Linkify' && order.url_pago) {
+        await clearCart();
+        window.location.href = order.url_pago;
+        return;
+      }
       await clearCart();
       navigate(route('pedido-confirmado'), {
         state: {orderNumber, email: contact.email.trim()}, replace: true,
@@ -1506,6 +1512,8 @@ export default function Checkout() {
 
               {errors.submit && (
                 <Alert variant="error">{errors.submit}</Alert>
+              )}
+
               {errors.payment && (
                 <Alert variant="error">
                   {errors.payment}

@@ -1,15 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { useAdminForm } from '../hooks/useAdminForm';
-import { AdminCard, Alert, Input, Toggle, Button, Icon, Select } from '../components/ui';
+import { AdminCard, Alert, Input, Toggle, Button, Icon, Select, Textarea } from '../components/ui';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 const TIENDA_ID = 1;
 
 // Métodos de demostración secundarios restantes
 const otherMethods = [
-  { id: 'linkify', name: 'Linkify', icon: 'link', desc: 'Pago por link', fields: ['API Key'] },
+  { id: 'linkify', name: 'Linkify', icon: 'link', desc: 'Validación automática de transferencias bancarias', fields: ['ID de cuenta', 'Clave privada'] },
   { id: 'transfer', name: 'Transferencia bancaria', icon: 'bank', desc: 'Verificación manual', fields: ['Banco', 'N° de cuenta', 'RUT', 'Nombre titular'] }
 ];
+
+const linkifyRequiredFields = ['idCuenta', 'clavePrivada'];
 
 const boolValue = (value?: string) => value === 'true';
 
@@ -374,7 +376,7 @@ const { form, setForm, save: localSave, saved } = useAdminForm('paymentConfigura
     setBackendError('');
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/pagos/configuracion/`, {
+      const response = await fetch(`${API_BASE}/api/pagos/configuracion/`, {
         method: 'PUT',
         headers: getAuthHeaders(),
         body: JSON.stringify(form),
@@ -399,239 +401,93 @@ const { form, setForm, save: localSave, saved } = useAdminForm('paymentConfigura
 
     return (
       <div className="border-t border-[var(--border)] pt-3 grid gap-4">
+        <div className="rounded-xl bg-[var(--muted)] p-4 grid gap-2 text-sm">
+          <p className="font-semibold">¿Qué es Linkify?</p>
+          <p className="text-[var(--muted-foreground)]">
+            Linkify no cobra las ventas por ti: valida automáticamente cuando un cliente
+            te transfiere, revisando tu propia cuenta bancaria (con una clave de solo
+            lectura que tú le das) y avisándote al instante. El dinero llega directo a
+            tu cuenta, sin intermediarios.
+          </p>
+          <p className="text-[var(--muted-foreground)]">
+            <strong>Costo:</strong> $19.900 + IVA al mes, incluye 50 validaciones.
+            Cada validación extra cuesta $350 + IVA. Sin comisión por porcentaje,
+            sin permanencia, primer mes gratis.
+          </p>
+          <a
+            href="https://www.linkify.cl/registro"
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex w-fit items-center gap-2 mt-1 rounded-lg bg-[var(--primary)] px-4 py-2 text-xs font-semibold text-white hover:opacity-90"
+          >
+            Contratar Linkify
+          </a>
+          <p className="text-[10px] text-[var(--muted-foreground)]">
+            Te abrirá el registro de Linkify en una pestaña nueva. Una vez que crees
+            tu cuenta, copia tu "ID de cuenta" y "Clave privada" desde su panel
+            (Mi Linkify → Cuentas → Ver datos de integración) y pégalos aquí abajo.
+          </p>
+        </div>
+
         <div className="grid sm:grid-cols-2 gap-3">
           <Input
-            label="Nombre de la cuenta *"
-            value={current.fields.accountName ?? ''}
-            placeholder="Mi Tienda Demo"
-            onChange={(event) => updateField('linkify', 'accountName', event.target.value)}
+            label="ID de cuenta *"
+            value={current.fields.idCuenta ?? ''}
+            placeholder="Lo encuentras en tu panel de Linkify"
+            onChange={(event) => updateField('linkify', 'idCuenta', event.target.value)}
           />
           <Input
-            label="URL publica *"
-            type="url"
-            value={current.fields.publicUrl ?? ''}
-            placeholder="https://linkify.cl/mi-tienda"
-            onChange={(event) => updateField('linkify', 'publicUrl', event.target.value)}
-          />
-          <Input
-            label="API Key *"
+            label="Clave privada *"
             type="password"
             autoComplete="off"
-            value={current.fields.apiKey ?? ''}
-            placeholder="lk_test_..."
-            onChange={(event) => updateField('linkify', 'apiKey', event.target.value)}
-          />
-          <Input
-            label="Webhook Secret *"
-            type="password"
-            autoComplete="off"
-            value={current.fields.webhookSecret ?? ''}
-            placeholder="whsec_..."
-            onChange={(event) => updateField('linkify', 'webhookSecret', event.target.value)}
-          />
-          <Select
-            label="Ambiente"
-            value={current.fields.environment ?? 'sandbox'}
-            onChange={(event) => updateField('linkify', 'environment', event.target.value)}
-            options={[
-              { value: 'sandbox', label: 'Sandbox' },
-              { value: 'production', label: 'Produccion' },
-            ]}
-          />
-          <Input
-            label="Vencimiento del link (horas)"
-            type="number"
-            min="1"
-            value={current.fields.expirationHours ?? '48'}
-            placeholder="48"
-            onChange={(event) => updateField('linkify', 'expirationHours', event.target.value)}
-          />
-          <Input
-            label="URL de retorno"
-            type="url"
-            value={current.fields.returnUrl ?? ''}
-            placeholder="https://mitienda.cl/pedido-confirmado"
-            onChange={(event) => updateField('linkify', 'returnUrl', event.target.value)}
-          />
-          <Input
-            label="Correo de notificaciones"
-            type="email"
-            value={current.fields.notificationEmail ?? ''}
-            placeholder="pagos@mitienda.cl"
-            onChange={(event) => updateField('linkify', 'notificationEmail', event.target.value)}
+            value={current.fields.clavePrivada ?? ''}
+            placeholder="Clave secreta de integración"
+            onChange={(event) => updateField('linkify', 'clavePrivada', event.target.value)}
           />
         </div>
 
-        <div className="grid gap-3">
-          <Toggle
-            label="Sincronizar pagos aprobados con pedidos"
-            checked={boolValue(current.fields.syncApprovedPayments)}
-            onChange={(enabled) => updateField('linkify', 'syncApprovedPayments', String(enabled))}
-          />
-          <Toggle
-            label="Enviar correo al cliente cuando se genere el link"
-            checked={boolValue(current.fields.emailCustomer)}
-            onChange={(enabled) => updateField('linkify', 'emailCustomer', String(enabled))}
-          />
-          <Toggle
-            label="Expirar links pendientes automaticamente"
-            checked={boolValue(current.fields.autoExpireLinks)}
-            onChange={(enabled) => updateField('linkify', 'autoExpireLinks', String(enabled))}
-          />
+        <div className="grid gap-2">
+          <p className="text-xs font-semibold text-[var(--muted-foreground)]">
+            URL de integración (pégala en Linkify → Cuentas → Editar → Cobros remotos)
+          </p>
+          <div className="flex items-center gap-2">
+            <input
+              readOnly
+              value={`${API_BASE}/api/pagos/linkify/notificacion/`}
+              className="flex-1 rounded-lg border border-[var(--border)] bg-[var(--muted)] px-3 py-2 text-xs"
+              onFocus={(event) => event.target.select()}
+            />
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => navigator.clipboard?.writeText(`${API_BASE}/api/pagos/linkify/notificacion/`)}
+            >
+              Copiar
+            </Button>
+          </div>
         </div>
       </div>
     );
   };
-
-  return (
-    <form
-      className="flex flex-col gap-5 max-w-2xl"
-      onSubmit={handleSave}
-    >
-      <Alert variant="info">
-        Activa los metodos de pago de tu tienda. Los pagos seleccionados aquí estarán disponibles automáticamente para el cliente en el checkout.
-      </Alert>
-
-      {methods.map((method) => {
-        const current = form[method.id] ?? {
-          enabled: false,
-          fields: {},
-        };
-      });
-      const data = await res.json();
-
-      if (res.ok && data.exito) {
-        setTbFeedback({ type: 'success', message: 'Configuración de Transbank guardada exitosamente.' });
-        setTbMaskedKey(data.data.api_key_enmascarada || '');
-        setTbApiKey('');
-        setTbIsConfigured(true);
-        return true;
-      } else {
-        const errorDetail = data.error?.detalles
-          ? Object.values(data.error.detalles).flat().join(' ')
-          : data.mensaje || 'Error al guardar Transbank.';
-        setTbFeedback({ type: 'error', message: errorDetail });
-        return false;
-      }
-    } catch {
-      setTbFeedback({ type: 'error', message: 'No se pudo conectar con el servidor backend.' });
-      return false;
-    } finally {
-      setTbSaving(false);
-    }
-  };
-
-  // Guardar PayPal
-  const handleSavePayPal = async () => {
-    setPpSaving(true);
-    setPpFeedback(null);
-
-    if (ppActivo && !ppClientId.trim()) {
-      setPpFeedback({ type: 'error', message: 'El Client ID es obligatorio para activar PayPal.' });
-      setPpSaving(false);
-      return false;
-    }
-
-    const payload = {
-      client_id: ppClientId.trim(),
-      client_secret: ppClientSecret.trim() || (ppIsConfigured ? ppMaskedSecret : ''),
-      ambiente: ppAmbiente,
-      activo: ppActivo,
-    };
-
-    try {
-      const res = await fetch(`${API_BASE}/api/catalog/tiendas/${TIENDA_ID}/configuracion/paypal/`, {
-        method: 'POST',
-        headers: getAuthHeaders(),
-        body: JSON.stringify(payload),
-      });
-      const data = await res.json();
-
-      if (res.ok && data.exito) {
-        setPpFeedback({ type: 'success', message: 'Configuración de PayPal guardada exitosamente.' });
-        setPpMaskedSecret(data.data.client_secret_enmascarado || '');
-        setPpClientSecret('');
-        setPpIsConfigured(true);
-        return true;
-      } else {
-        const errorDetail = data.error?.detalles
-          ? Object.values(data.error.detalles).flat().join(' ')
-          : data.mensaje || 'Error al guardar PayPal.';
-        setPpFeedback({ type: 'error', message: errorDetail });
-        return false;
-      }
-    } catch {
-      setPpFeedback({ type: 'error', message: 'No se pudo conectar con el servidor backend.' });
-      return false;
-    } finally {
-      setPpSaving(false);
-    }
-  };
-
-  // Guardar Mercado Pago
-  const handleSaveMercadoPago = async () => {
-    setMpSaving(true);
-    setMpFeedback(null);
-
-    if (mpActivo && !mpPublicKey.trim()) {
-      setMpFeedback({ type: 'error', message: 'La Public Key es obligatoria para activar Mercado Pago.' });
-      setMpSaving(false);
-      return false;
-    }
-
-    const payload = {
-      public_key: mpPublicKey.trim(),
-      access_token: mpAccessToken.trim() || (mpIsConfigured ? mpMaskedToken : ''),
-      ambiente: mpAmbiente,
-      activo: mpActivo,
-    };
-
-    try {
-      const res = await fetch(`${API_BASE}/api/catalog/tiendas/${TIENDA_ID}/configuracion/mercadopago/`, {
-        method: 'POST',
-        headers: getAuthHeaders(),
-        body: JSON.stringify(payload),
-      });
-      const data = await res.json();
-
-      if (res.ok && data.exito) {
-        setMpFeedback({ type: 'success', message: 'Configuración de Mercado Pago guardada exitosamente.' });
-        setMpMaskedToken(data.data.access_token_enmascarado || '');
-        setMpAccessToken('');
-        setMpIsConfigured(true);
-
-        if (form && setForm) {
-          setForm({
-            ...form,
-            mercadopago: {
-              enabled: mpActivo,
-              fields: {
-                ...(form.mercadopago?.fields || {}),
-                'Public Key': mpPublicKey,
-                'Access Token': data.data.access_token_enmascarado || '••••••••',
-              },
-            },
-          });
-        }
-        return true;
-      } else {
-        const errorDetail = data.error?.detalles
-          ? Object.values(data.error.detalles).flat().join(' ')
-          : data.mensaje || 'Error al guardar Mercado Pago.';
-        setMpFeedback({ type: 'error', message: errorDetail });
-        return false;
-      }
-    } catch {
-      setMpFeedback({ type: 'error', message: 'No se pudo conectar con el servidor backend.' });
-      return false;
-    } finally {
-      setMpSaving(false);
-    }
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    save();
+    localSave();
+    setBackendError('');
+
+    try {
+       const response = await fetch(`${API_BASE}/api/pagos/configuracion/`, {
+        method: 'PUT',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(form),
+      });
+      
+      if (!response.ok) {
+        throw new Error('No se pudo guardar Linkify / Transferencia en el servidor.');
+      }
+    } catch (err) {
+      setBackendError(err instanceof Error ? err.message : 'Error desconocido al guardar.');
+    }
+
     await Promise.all([handleSaveTransbank(), handleSavePayPal(), handleSaveMercadoPago()]);
   };
 
@@ -905,13 +761,8 @@ const { form, setForm, save: localSave, saved } = useAdminForm('paymentConfigura
         )}
       </AdminCard>
 
-      {/* ================= TARJETAS SECUNDARIAS (DEMO) ================= */}
+        {/* ================= TARJETAS SECUNDARIAS (DEMO) ================= */}
       {otherMethods.map((method) => {
-        const current = form[method.id] || { enabled: false, fields: {} };
-        Activa los metodos de pago de tu tienda. Los pagos seleccionados aquí estarán disponibles automáticamente para el cliente en el checkout.
-      </Alert>
-
-      {methods.map((method) => {
         const current = form[method.id] ?? { enabled: false, fields: {} };
         const isTransfer = method.id === 'transfer';
 
@@ -929,7 +780,7 @@ const { form, setForm, save: localSave, saved } = useAdminForm('paymentConfigura
               <Toggle
                 ariaLabel={`Activar ${method.name}`}
                 checked={current.enabled}
-                onChange={(enabled) => updateMethod(method.id, { enabled })}
+                onChange={(enabled) => updateEnabled(method.id, enabled)}
               />
             </div>
 
@@ -939,81 +790,42 @@ const { form, setForm, save: localSave, saved } = useAdminForm('paymentConfigura
               <div className="grid sm:grid-cols-2 gap-3 border-t border-[var(--border)] pt-3">
                 {method.fields.map((field) => (
                   <Input
-                    key={field.key}
-                    label={field.required ? `${field.label} *` : field.label}
+                    key={field}
+                    label={field}
                     autoComplete="off"
-                    type={field.type ?? 'text'}
-                    value={current.fields[field.key] ?? ''}
-                    placeholder={field.placeholder}
-                    onChange={(event) => updateField(method.id, field.key, event.target.value)}
+                    type={/key|token|secret/i.test(field) ? 'password' : 'text'}
+                    value={current.fields?.[field] ?? ''}
+                    placeholder={method.id === 'transfer' ? 'Dato de ejemplo' : 'Credencial demo'}
+                    onChange={(e: any) =>
+                      setForm({
+                        ...form,
+                        [method.id]: {
+                          ...current,
+                          fields: { ...current.fields, [field]: e.target.value },
+                        },
+                      })
+                    }
                   />
                 ))}
               </div>
-              <Toggle
-                ariaLabel={'Activar ' + method.name}
-                checked={current.enabled}
-                onChange={(enabled) =>
-                  setForm({ ...form, [method.id]: { ...current, enabled } })
-                }
-              />
-            </div>
-            <div className="grid sm:grid-cols-2 gap-3 border-t border-[var(--border)] pt-3">
-              {method.fields.map((field) => (
-                <Input
-                  key={field}
-                  label={field}
-                  autoComplete="off"
-                  type={/key|token|secret/i.test(field) ? 'password' : 'text'}
-                  value={current.fields?.[field] ?? ''}
-                  placeholder={method.id === 'transfer' ? 'Dato de ejemplo' : 'Credencial demo'}
-                  onChange={(e: any) =>
-                    setForm({
-                      ...form,
-                      [method.id]: {
-                        ...current,
-                        fields: { ...current.fields, [field]: e.target.value },
-                      },
-                    })
-                  }
-                />
-              ))}
-            </div>
-                ariaLabel={`Activar ${method.name}`}
-                checked={current.enabled}
-                onChange={(enabled) => updateEnabled(method.id, enabled)}
-              />
-            </div>
-
-            <div className="grid sm:grid-cols-2 gap-3 border-t border-[var(--border)] pt-3">
-              {method.fields.map((field) => (
-                <Input
-                  key={field}
-                  label={field}
-                  autoComplete="off"
-                  type={/key|token|secret/i.test(field) ? 'password' : 'text'}
-                  value={current.fields?.[field] ?? ''}
-                  placeholder={method.id === 'transfer' ? 'Dato de ejemplo' : 'Credencial demo'}
-                  onChange={(e: any) =>
-                    setForm({
-                      ...form,
-                      [method.id]: {
-                        ...current,
-                        fields: { ...current.fields, [field]: e.target.value },
-                      },
-                    })
-                  }
-                />
-              ))}
-            </div>
+            )}
 
             {isTransfer && (
               <div className="border-t border-[var(--border)] pt-3 mt-3">
                 <Textarea
                   label="Instrucciones de conciliacion"
-                  value={current.fields.instructions ?? ''}
+                  value={current.fields?.instructions ?? ''}
                   placeholder="Validar el comprobante contra monto, correo y numero de pedido."
                   rows={3}
-                  onChange={(event) => updateField(method.id, 'instructions', event.target.value)}
+                  onChange={(e: any) =>
+                    setForm({
+                      ...form,
+                      [method.id]: {
+                        ...current,
+                        fields: { ...current.fields, instructions: e.target.value },
+                      },
+                    })
+                  }
                 />
               </div>
             )}
@@ -1021,30 +833,12 @@ const { form, setForm, save: localSave, saved } = useAdminForm('paymentConfigura
         );
       })}
 
-      {saved && <Alert variant="success">Métodos de pago guardados correctamente.</Alert>}
-
-      <Button type="submit" loading={tbSaving || ppSaving || mpSaving}>
-        Guardar todos los métodos de pago
-      </Button>
-    </form>
-  );
-}
-      {error && <Alert variant="error">{error}</Alert>}
-      {saved && (
-        <Alert variant="success">
-          Metodos de pago guardados.
-        </Alert>
-      )}
-
-      <Button type="submit">Guardar metodos de pago</Button>
       {validationError && <Alert variant="error">{validationError}</Alert>}
       {backendError && <Alert variant="error">{backendError}</Alert>}
-      {saved && !backendError && !validationError && !isSyncing && (
-        <Alert variant="success">Metodos de pago integrados y actualizados exitosamente en la tienda.</Alert>
-      )}
+      {saved && <Alert variant="success">Métodos de pago guardados correctamente.</Alert>}
 
-      <Button type="submit" loading={isSyncing}>
-        Guardar metodos de pago
+      <Button type="submit" loading={tbSaving || ppSaving || mpSaving || isSyncing}>
+        Guardar todos los métodos de pago
       </Button>
     </form>
   );

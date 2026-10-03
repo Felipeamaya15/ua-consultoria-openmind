@@ -205,7 +205,7 @@ class ConfiguracionPagoSerializer(serializers.Serializer):
         'transbank': ['api_key', 'commerce_id'],
         'mercadopago': ['access_token'],
         'paypal': ['client_id', 'client_secret'],
-        'linkify': ['accountName', 'publicUrl', 'apiKey', 'webhookSecret'],
+        'linkify': ['idCuenta', 'clavePrivada'],
         'transfer': ['bank_name', 'account_type', 'account_number', 'holder_rut', 'holder_name', 'confirmation_email']
     }
 

@@ -124,9 +124,16 @@ class Pedido(models.Model):
         db_table = 'pedido'
         constraints = [
             models.CheckConstraint(check=Q(monto_total__gte=0), name='chk_monto_total_valido'),
-            # Un pedido debe tener un usuario registrado O datos de contacto de invitado.
+            # Un pedido debe tener comprador identificado de alguna forma:
+            # por el sistema viejo (id_usuario / correo_contacto) o por el
+            # nuevo (comprador / contacto).
             models.CheckConstraint(
-                check=Q(id_usuario__isnull=False) | ~Q(correo_contacto=''),
+                check=(
+                    Q(id_usuario__isnull=False)
+                    | ~Q(correo_contacto='')
+                    | Q(comprador__isnull=False)
+                    | ~Q(contacto={})
+                ),
                 name='chk_pedido_tiene_comprador',
             ),
         ]

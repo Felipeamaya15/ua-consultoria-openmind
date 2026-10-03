@@ -194,28 +194,21 @@ class ConfiguracionPagoAPIView(APIView):
     def get(self, request):
         try:
             tienda = resolver_tienda(request, exigir_propietario=True)
-            config_pago, _ = ConfiguracionPago.objects.get_or_create(id_tienda=tienda)
-            return success_response(data=config_pago.configuracion)
+            config_pago, _ = ConfiguracionPago.objects.get_or_create(tienda=tienda)
+            return success_response(data=config_pago.datos)
         except Exception as e:
             return error_response(mensaje=str(e), codigo="ERROR_PAGO", status=400)
 
     def put(self, request):
         try:
             tienda = resolver_tienda(request, exigir_propietario=True)
-            config_pago, _ = ConfiguracionPago.objects.get_or_create(id_tienda=tienda)
-            config_pago.configuracion = request.data
-            config_pago.save()
-            return success_response(
-                mensaje="Métodos de pago guardados exitosamente.",
-                data=config_pago.configuracion
-            )
-            
+
             #SCRUM-306: Impedir guardado si faltan datos requeridos
             serializer = ConfiguracionPagoSerializer(data=request.data)
             if not serializer.is_valid():
                 return error_response(
-                    mensaje="Datos requeridos incompletos para habilitar un medio de pago.", 
-                    codigo="ERROR_VALIDACION_PAGO", 
+                    mensaje="Datos requeridos incompletos para habilitar un medio de pago.",
+                    codigo="ERROR_VALIDACION_PAGO",
                     detalles=serializer.errors,
                     status=400
                 )
