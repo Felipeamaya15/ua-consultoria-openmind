@@ -23,7 +23,15 @@ export function AdminHeader({
 
   const [profileOpen, setProfileOpen] = useState(false);
   const [email, setEmail] = useState('');
-  useEffect(() => { authService.getEntrepreneurProfile().then(data => setEmail(data.email)).catch(() => setEmail('')); }, [profileOpen]);
+  const [sessionStartedAt, setSessionStartedAt] =
+    useState<string | null>(null);
+  useEffect(() => {
+    authService
+      .getEntrepreneurProfile()
+      .then(data => setEmail(data.email))
+      .catch(() => setEmail(''));
+    setSessionStartedAt(authService.getSessionStartedAt());
+  }, [profileOpen]);
   const profileRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -52,7 +60,7 @@ export function AdminHeader({
   }, []);
 
   function logout() {
-    localStorage.removeItem('token'); // Elimina el token real
+    authService.logout();
     setProfileOpen(false);
 
     navigate(
@@ -133,6 +141,13 @@ export function AdminHeader({
 
               <p className="mt-0.5 text-xs text-[var(--muted-foreground)] break-all">
                 {email}
+              </p>
+              <p className="mt-2 text-[11px] text-[var(--muted-foreground)]">
+                {sessionStartedAt
+                  ? `Sesion iniciada ${new Date(
+                      sessionStartedAt,
+                    ).toLocaleString()}`
+                  : 'Sesion activa'}
               </p>
             </div>
 
