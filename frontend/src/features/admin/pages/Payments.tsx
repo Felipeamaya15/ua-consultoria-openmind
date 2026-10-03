@@ -225,8 +225,8 @@ export default function Payments() {
 
         const transfer = transferBody.data?.transfer;
         if (active && transfer && typeof transfer === 'object') {
-          setForm((currentForm: any) => ({
-            ...currentForm,
+          setForm({
+            ...(form || {}),
             transfer: {
               enabled: transfer.enabled === true,
               fields:
@@ -234,7 +234,7 @@ export default function Payments() {
                   ? transfer.fields
                   : {},
             },
-          }));
+          });
         }
       } catch (error) {
         if (!active) return;
