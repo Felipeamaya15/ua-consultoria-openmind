@@ -104,7 +104,9 @@ class SoftDeleteProductUseCase:
         # Actualizamos el estado 'activo' en Mongo asegurando que pertenezca a la misma tienda
         # En MongoDB los productos se guardan con id de la tienda en string (Ej: "tienda_id": "7")
         productos_collection.update_one(
-            {"id_producto": id_producto, "tienda_id": str(tienda_id)},
+            {"tienda_id": str(tienda_id), "$or": [
+                {"id_producto": id_producto}, {"id_postgresql": id_producto}
+            ]},
             {"$set": {"activo": False}}
         )
 
