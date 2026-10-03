@@ -138,17 +138,39 @@ class VarianteProductoSerializer(serializers.ModelSerializer):
 
 
 class CompraItemInputSerializer(serializers.Serializer):
-    id_variante = serializers.IntegerField()
+    def to_internal_value(self, data):
+        if isinstance(data, dict) and (isinstance(data.get("cantidad"), bool) or not isinstance(data.get("cantidad"), int)):
+            raise serializers.ValidationError({"cantidad": "La cantidad debe ser un entero positivo."})
+        return super().to_internal_value(data)
+
+    # El catálogo real vive en MongoDB e identifica cada variante por SKU,
+    # no por un ID de la tabla VarianteProducto (que no se usa en la práctica).
+    sku = serializers.CharField(max_length=100)
     cantidad = serializers.IntegerField(min_value=1)
 
 
-class RegistrarCompraSerializer(serializers.Serializer):
-    id_usuario = serializers.IntegerField()
+from apps.authentication.presentation.profile import StrictSerializer
+
+
+class RegistrarCompraSerializer(StrictSerializer):
+    # Contacto de la compra; la identidad autenticada procede de request.user.
+    clave_checkout = serializers.UUIDField(required=False)
+    nombre_contacto = serializers.CharField(max_length=150, required=False, allow_blank=True)
+    correo_contacto = serializers.EmailField(max_length=320, required=False, allow_blank=True)
+    telefono_contacto = serializers.CharField(max_length=30, required=False, allow_blank=True, default='')
+
     metodo_pago = serializers.CharField(
         required=True,
         error_messages={'required': 'Debe seleccionar un medio de pago.'}
     )
     items = CompraItemInputSerializer(many=True)
+
+    def validate(self, data):
+        if not data.get('nombre_contacto') or not data.get('correo_contacto'):
+            raise serializers.ValidationError(
+                "Debe iniciar sesión o completar los datos de contacto para continuar como invitado."
+            )
+        return data
 
     def validate_metodo_pago(self, value):
         tienda_id = self.context.get('tienda')
@@ -157,7 +179,6 @@ class RegistrarCompraSerializer(serializers.Serializer):
 
         try:
             from apps.core.models import ConfiguracionPago
-            # CORRECCIÓN: Usamos `tienda_id` y la propiedad `datos` (no configuracion)
             config_pago = ConfiguracionPago.objects.get(tienda_id=tienda_id)
             metodo = config_pago.datos.get(value, {})
 
@@ -175,43 +196,6 @@ class RegistrarCompraSerializer(serializers.Serializer):
             raise serializers.ValidationError(
                 "Debe incluir al menos un producto en la compra."
             )
-
-        for item in items:
-            id_variante = item['id_variante']
-            cantidad = item['cantidad']
-
-            try:
-                variante = VarianteProducto.objects.get(
-                    id_variante=id_variante,
-                    id_producto__id_tienda=self.context['tienda'],
-                )
-            except VarianteProducto.DoesNotExist:
-                raise serializers.ValidationError(
-                    f"La variante con ID {id_variante} no existe."
-                )
-
-            if not variante.es_activa:
-                raise serializers.ValidationError(
-                    f"La variante '{variante.sku}' no está activa para la venta."
-                )
-
-            # Regla de negocio crítica: stock en 0 o insuficiente.
-            if variante.stock == 0:
-                raise serializers.ValidationError(
-                    (
-                        f"Operación rechazada: la variante "
-                        f"'{variante.sku}' tiene stock 0 y no puede "
-                        f"ser comprada."
-                    )
-                )
-
-            if variante.stock < cantidad:
-                raise serializers.ValidationError(
-                    (
-                        f"Stock insuficiente para '{variante.sku}'. "
-                        f"Stock disponible: {variante.stock}, "
-                        f"solicitado: {cantidad}."
-                    )
-                )
-
+        # La validación real de stock y existencia de cada SKU se hace contra
+        # MongoDB en el creador común de pedidos, sin confirmar pagos aquí.
         return items

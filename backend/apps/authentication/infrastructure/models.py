@@ -73,3 +73,25 @@ class ConfiguracionAutenticacion(models.Model):
 
     def __str__(self):
         return f"Configuración de autenticación - {self.tienda.nombre}"
+
+
+class ConfiguracionPagos(models.Model):
+    """
+    Configuracion de metodos de pago y credenciales por tienda.
+    Guarda los datos necesarios para que el backend pueda integrar
+    pasarelas o pago por transferencia sin depender del storefront.
+    """
+
+    tienda = models.OneToOneField(
+        Tienda,
+        on_delete=models.CASCADE,
+        related_name="configuracion_pagos",
+    )
+    metodos = models.JSONField(default=dict)
+    fecha_actualizacion = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "configuracion_pagos"
+
+    def __str__(self):
+        return f"Configuracion de pagos - {self.tienda.nombre}"
