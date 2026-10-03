@@ -92,6 +92,12 @@ class Pedido(models.Model):
     ]
     id_pedido = models.BigAutoField(primary_key=True)
     id_usuario = models.ForeignKey(Usuario, on_delete=models.CASCADE, db_column='id_usuario')
+    # Vínculo explícito para lectura del historial autenticado. Los pedidos legados
+    # no se atribuyen por correo ni por coincidencia de IDs.
+    comprador = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='pedidos_comprador',
+    )
     monto_total = models.DecimalField(max_digits=12, decimal_places=2)
     estado = models.CharField(max_length=20, choices=ESTADO_CHOICES, default='pendiente')
     fecha_creacion = models.DateTimeField(auto_now_add=True)
@@ -219,3 +225,31 @@ class ConfiguracionMercadoPago(models.Model):
 
     def __str__(self):
         return f"Mercado Pago Tienda {self.id_tienda_id} ({self.ambiente}) - {'Activo' if self.activo else 'Inactivo'}"
+class VarianteProducto(models.Model):
+    id_variante = models.BigAutoField(primary_key=True)
+    id_producto = models.ForeignKey(Producto, on_delete=models.CASCADE, db_column='id_producto')
+    sku = models.CharField(max_length=100)
+    precio = models.DecimalField(max_digits=12, decimal_places=2)
+    stock = models.IntegerField(default=0)
+    atributos = models.JSONField(default=dict)
+    es_activa = models.BooleanField(default=True)
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'variante_producto'
+        constraints = [
+            models.CheckConstraint(check=models.Q(precio__gte=0), name='chk_variante_precio_valido'),
+            models.CheckConstraint(check=models.Q(stock__gte=0), name='chk_variante_stock_valido'),
+        ]
+class ConfiguracionPago(models.Model):
+    tienda = models.OneToOneField(
+        'core.Tienda', 
+        on_delete=models.CASCADE, 
+        related_name='configuracion_pago'
+    )
+    # Almacenará el JSON con los métodos (Transbank, PayPal, etc.) y su estado 'enabled'
+    datos = models.JSONField(default=dict, blank=True)
+    fecha_actualizacion = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'configuracion_pago'

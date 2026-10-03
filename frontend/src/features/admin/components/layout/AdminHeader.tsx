@@ -3,10 +3,10 @@ import {
   useRef,
   useState,
 } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 
-import { endDemoSession } from '../../auth/demoSession';
-import { DEMO_CREDENTIALS } from '../../config/demoCredentials';
+import { authService } from '../../../auth/services/authService';
+
 import { useAdmin } from '../../context/AdminContext';
 import { templatePaths } from '../../config/navigation';
 import { Icon } from '../ui';
@@ -22,6 +22,8 @@ export function AdminHeader({
   const { config } = useAdmin();
 
   const [profileOpen, setProfileOpen] = useState(false);
+  const [email, setEmail] = useState('');
+  useEffect(() => { authService.getEntrepreneurProfile().then(data => setEmail(data.email)).catch(() => setEmail('')); }, [profileOpen]);
   const profileRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -130,10 +132,11 @@ export function AdminHeader({
               </p>
 
               <p className="mt-0.5 text-xs text-[var(--muted-foreground)] break-all">
-                {DEMO_CREDENTIALS.email}
+                {email}
               </p>
             </div>
 
+            <Link to="/emprendedor/perfil" onClick={() => setProfileOpen(false)} className="block px-4 py-3 text-sm hover:bg-[var(--muted)]">Mi cuenta / Perfil</Link>
             <button
               type="button"
               onClick={logout}

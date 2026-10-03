@@ -67,6 +67,34 @@ class ProductRepository:
 
         return str(result.inserted_id)
 
+    @staticmethod
+    def revision(product):
+        from hashlib import sha256
+        from bson.json_util import dumps
+        return sha256(dumps(product, sort_keys=True).encode()).hexdigest()
+
+    def get_admin_product(self, tienda_id: str, product_id: str):
+        validate_store_id(tienda_id)
+        if not ObjectId.is_valid(product_id):
+            return None
+        product = self.collection.find_one({'tienda_id': tienda_id, '_id': ObjectId(product_id)})
+        if product:
+            product['_id'] = str(product['_id'])
+        return product
+
+    def update_catalog(self, tienda_id: str, original: dict, data: dict):
+        """Compara el documento leído para no pisar stock/cambios concurrentes."""
+        data = data_for_store(tienda_id, data)
+        validate_product_stock(data)
+        query = {key: value for key, value in original.items() if key != '_id'}
+        query.update({'_id': ObjectId(original['_id']), 'tienda_id': tienda_id})
+        product = self.collection.find_one_and_update(
+            query, {'$set': data}, return_document=ReturnDocument.AFTER,
+        )
+        if product:
+            product['_id'] = str(product['_id'])
+        return product
+
 
     def get_by_id(self, tienda_id_or_product_id: str, product_id: Optional[str] = None) -> Optional[Dict[str, Any]]:
 
@@ -78,6 +106,8 @@ class ProductRepository:
 
         """
 
+        if product_id is not None:
+            validate_store_id(tienda_id_or_product_id)
         try:
 
             if product_id is None:
@@ -160,6 +190,7 @@ class ProductRepository:
 
         """Lista productos de una tienda, filtrando opcionalmente por atributos personalizados."""
 
+        validate_store_id(tienda_id)
         query = {"tienda_id": tienda_id}
 
         if activo is not None:
@@ -268,7 +299,7 @@ class ProductRepository:
             }
 
         else:
-            tienda_id = str(tienda_id_or_sku)
+            tienda_id = tienda_id_or_sku
             sku = str(sku_or_cantidad)
             cantidad_recibida = cantidad
 

@@ -1,3 +1,4 @@
+import { AccountNavigation } from '../AccountNavigation';
 import { useStore } from '../../../context/StoreContext';
 import { Link } from 'react-router-dom';
 import { useCart } from '../../../context/CartContext';
@@ -39,9 +40,7 @@ export function CatalogHeader() {
               <Link to={route('catalogo')} className="hover:text-[var(--primary)] transition-colors">
                 Catálogo
               </Link>
-              <Link to={route('ingresar')} className="hidden sm:block hover:text-[var(--primary)] transition-colors">
-                Ingresar
-              </Link>
+              <AccountNavigation className="hidden sm:block hover:text-[var(--primary)] transition-colors" />
               <Link to={route('seguimiento')} className="hidden md:block hover:text-[var(--primary)] transition-colors">
                 Seguimiento
               </Link>

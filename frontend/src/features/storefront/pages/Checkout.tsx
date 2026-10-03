@@ -63,6 +63,38 @@ type PaymentOption = {
 
 const ADMIN_STORAGE_KEY = 'ua-entrepreneur-demo-v1';
 
+type AuthSettings = {
+  emailPassword: boolean;
+  google: boolean;
+  guestCheckout: boolean;
+  requiresAuth: 'none' | 'optional' | 'required';
+};
+
+const defaultAuthSettings: AuthSettings = {
+  emailPassword: true,
+  google: true,
+  guestCheckout: true,
+  requiresAuth: 'optional',
+};
+
+function getAvailableAuthModes(settings: AuthSettings): AuthMode[] {
+  const modes: AuthMode[] = [];
+
+  if (settings.guestCheckout && settings.requiresAuth !== 'required') {
+    modes.push('guest');
+  }
+
+  if (settings.emailPassword) {
+    modes.push('login');
+  }
+
+  if (settings.google) {
+    modes.push('google');
+  }
+
+  return modes.length ? modes : ['login'];
+}
+
 const defaultShippingOptions: ShippingOption[] = [
   {
     id: 'Chilexpress',
@@ -130,12 +162,25 @@ function readCheckoutOptions() {
       return {
         shippingOptions: defaultShippingOptions,
         paymentOptions: defaultPaymentOptions,
+        authSettings: defaultAuthSettings,
       };
     }
 
     const config = JSON.parse(raw)?.config;
     const shippingConfig = config?.shippingConfiguration;
     const paymentConfig = config?.paymentConfiguration;
+    const authConfig = config?.authenticationConfiguration;
+    const authSettings: AuthSettings = {
+      emailPassword:
+        authConfig?.emailPassword ??
+        defaultAuthSettings.emailPassword,
+      google: authConfig?.google ?? defaultAuthSettings.google,
+      guestCheckout:
+        authConfig?.guestCheckout ??
+        defaultAuthSettings.guestCheckout,
+      requiresAuth:
+        config?.requiresAuth ?? defaultAuthSettings.requiresAuth,
+    };
 
     const shippingOptions = defaultShippingOptions.filter((option) => {
       if (option.id === 'Chilexpress') return !!shippingConfig?.chilexpress?.enabled;
@@ -178,11 +223,13 @@ function readCheckoutOptions() {
       paymentOptions: paymentOptions.length
         ? paymentOptions
         : defaultPaymentOptions,
+      authSettings,
     };
   } catch {
     return {
       shippingOptions: defaultShippingOptions,
       paymentOptions: defaultPaymentOptions,
+      authSettings: defaultAuthSettings,
     };
   }
 }
@@ -324,9 +371,13 @@ export default function Checkout() {
   const { route, isMinimal, isVisual, isCatalog } =
     useStorefrontTemplate();
 
-  const { shippingOptions, paymentOptions } = useMemo(
+  const { shippingOptions, paymentOptions, authSettings } = useMemo(
     readCheckoutOptions,
     [],
+  );
+  const availableAuthModes = useMemo(
+    () => getAvailableAuthModes(authSettings),
+    [authSettings],
   );
 
   const navigate = useNavigate();
@@ -334,7 +385,7 @@ export default function Checkout() {
   const [step, setStep] = useState('contact');
 
   const [authMode, setAuthMode] =
-    useState<AuthMode>('guest');
+    useState<AuthMode>(() => availableAuthModes[0]);
 
   const [contact, setContact] = useState({
     name: '',
@@ -363,6 +414,12 @@ export default function Checkout() {
   useEffect(() => {
     window.scrollTo(0, 0);
   }, [step]);
+
+  useEffect(() => {
+    if (!availableAuthModes.includes(authMode)) {
+      setAuthMode(availableAuthModes[0]);
+    }
+  }, [authMode, availableAuthModes]);
 
   /*
    * ==========================================================
@@ -447,6 +504,11 @@ export default function Checkout() {
     const newErrors: Record<string, string> = {};
 
     if (currentStep === 'contact') {
+      if (!availableAuthModes.includes(authMode)) {
+        newErrors.auth =
+          'Selecciona un metodo de acceso permitido por la tienda.';
+      }
+
       if (!contact.name.trim()) {
         newErrors.name = 'Nombre requerido';
       }
@@ -816,13 +878,7 @@ export default function Checkout() {
                     : 'flex gap-2 p-1 bg-[var(--muted)] rounded-xl'
                 }
               >
-                {(
-                  [
-                    'guest',
-                    'login',
-                    'google',
-                  ] as AuthMode[]
-                ).map((mode) => (
+                {availableAuthModes.map((mode) => (
                   <button
                     type="button"
                     key={mode}
@@ -865,6 +921,16 @@ export default function Checkout() {
                   </button>
                 ))}
               </div>
+
+              {errors.auth && (
+                <Alert variant="error">{errors.auth}</Alert>
+              )}
+
+              {!availableAuthModes.includes('guest') && (
+                <Alert variant="info">
+                  La tienda requiere iniciar sesion antes de pagar.
+                </Alert>
+              )}
 
               {authMode === 'google' && (
                 <button

@@ -1,3 +1,4 @@
+import { AccountNavigation } from '../AccountNavigation';
 import { useStore } from '../../../context/StoreContext';
 import { Link } from 'react-router-dom';
 import { useCart } from '../../../context/CartContext';
@@ -75,12 +76,7 @@ export function MinimalHeader() {
 
         {/* Acciones */}
         <div className="flex items-center gap-2 md:gap-4">
-          <Link
-            to="ingresar"
-            className="hidden sm:block text-xs font-medium text-[var(--primary)]"
-          >
-            Iniciar Sesión
-          </Link>
+          <AccountNavigation className="hidden sm:block text-xs font-medium text-[var(--primary)]" />
 
           <Link
             to="ingresar"

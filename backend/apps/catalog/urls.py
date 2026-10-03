@@ -12,6 +12,7 @@ from apps.catalog.presentation.views import (
     ProductoUpdateView,
     ProductoStockUpdateView,
     ProductDeleteAPIView,
+    ProductoAdminListView,
     # Gestión de variantes
     ProductVariantsView,
     VarianteStockUpdateView,
@@ -19,7 +20,7 @@ from apps.catalog.presentation.views import (
     # Carrito de compras
     CarritoItemsView,
     ModificarCantidadItemAPIView,
-    #Transbank
+    # Pasarelas de pago
     ConfiguracionTransbankView,
     IniciarPagoTransbankView,
     ConfirmarPagoTransbankView,
@@ -29,12 +30,22 @@ from apps.catalog.presentation.views import (
 
 urlpatterns = [
     # ==========================================
-    # 1. Catálogo Público
+    # 1. Catálogo Público y Listados
     # ==========================================
     path(
         "productos/",
         PublicProductListAPIView.as_view(),
         name="mongo-productos-list",
+    ),
+    path(
+        "productos/crear/",
+        ProductoCreateView.as_view(),
+        name="producto-crear",
+    ),
+    path(
+        "productos/admin/",
+        ProductoAdminListView.as_view(),
+        name="producto-admin-listado",
     ),
     path(
         "productos/<str:slug>/",
@@ -55,11 +66,6 @@ urlpatterns = [
     # ==========================================
     # 2. Administración de Productos
     # ==========================================
-    path(
-        "productos/crear/",
-        ProductoCreateView.as_view(),
-        name="producto-crear",
-    ),
     path(
         "productos/<str:id_producto>/admin/",
         ProductoAdminDetailView.as_view(),
@@ -126,13 +132,14 @@ urlpatterns = [
         name="modificar-cantidad-item",
     ),
 
-
+    # ==========================================
+    # 5. Configuración y Pasarelas de Pagos
+    # ==========================================
     path(
         "tiendas/<int:id_tienda>/configuracion/transbank/",
         ConfiguracionTransbankView.as_view(),
         name="tienda-configuracion-transbank",
     ),
-
     path(
         "pagos/transbank/iniciar/",
         IniciarPagoTransbankView.as_view(),
@@ -143,13 +150,11 @@ urlpatterns = [
         ConfirmarPagoTransbankView.as_view(),
         name="pago-transbank-confirmar",
     ),
-
     path(
         "tiendas/<int:id_tienda>/configuracion/paypal/",
         ConfiguracionPayPalView.as_view(),
         name="configuracion-paypal",
     ),
-
     path(
         "tiendas/<int:id_tienda>/configuracion/mercadopago/",
         ConfiguracionMercadoPagoView.as_view(),
