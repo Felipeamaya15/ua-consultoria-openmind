@@ -309,10 +309,15 @@ class ItemCarritoResponseSerializer(serializers.Serializer):
     precio_unitario = serializers.DecimalField(source='id_producto.precio', max_digits=12, decimal_places=2)
     cantidad = serializers.IntegerField()
     subtotal = serializers.SerializerMethodField()
-    stock_disponible = serializers.IntegerField(source='id_producto.stock')
+    sku = serializers.CharField(allow_null=True, required=False)
+    stock_disponible = serializers.SerializerMethodField()
 
     def get_subtotal(self, obj):
         return obj.cantidad * obj.id_producto.precio
+
+    def get_stock_disponible(self, obj):
+        # Los casos de uso calculan el stock real (variante o producto base).
+        return getattr(obj, 'stock_disponible_calculado', obj.id_producto.stock)
 
 class AgregarItemCarritoRequestSerializer(serializers.Serializer):
     id_producto = serializers.IntegerField(
@@ -440,10 +445,15 @@ class ItemCarritoResponseSerializer(serializers.Serializer):
     precio_unitario = serializers.DecimalField(source='id_producto.precio', max_digits=12, decimal_places=2)
     cantidad = serializers.IntegerField()
     subtotal = serializers.SerializerMethodField()
-    stock_disponible = serializers.IntegerField(source='id_producto.stock')
+    sku = serializers.CharField(allow_null=True, required=False)
+    stock_disponible = serializers.SerializerMethodField()
 
     def get_subtotal(self, obj):
         return obj.cantidad * obj.id_producto.precio
+
+    def get_stock_disponible(self, obj):
+        # Los casos de uso calculan el stock real (variante o producto base).
+        return getattr(obj, 'stock_disponible_calculado', obj.id_producto.stock)
 
 class AgregarItemCarritoRequestSerializer(serializers.Serializer):
     id_producto = serializers.IntegerField(

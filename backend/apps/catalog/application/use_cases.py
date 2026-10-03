@@ -915,6 +915,8 @@ class AgregarItemCarritoUseCase:
             except ValueError as e:
                 raise VarianteNoEncontradaException(str(e))
 
+            # SKU canónico de la variante (get_variant_by_sku también acepta id o índice)
+            sku_normalizado = str(variante.get("sku") or sku_normalizado).strip().upper()
             stock_disponible = int(variante.get("stock", 0))
             if stock_disponible <= 0:
                 raise StockInsuficienteException(
@@ -925,15 +927,12 @@ class AgregarItemCarritoUseCase:
             if stock_disponible <= 0:
                 raise StockInsuficienteException("El producto seleccionado se encuentra agotado.")
 
-        filtro_item = {
-            "id_carrito": carrito,
-            "id_producto": producto,
-        }
-        tiene_columna_sku = hasattr(ItemCarrito, 'sku')
-        if tiene_columna_sku and sku_normalizado:
-            filtro_item["sku"] = sku_normalizado
-
-        item_existente = ItemCarrito.objects.filter(**filtro_item).first()
+        # sku=None se traduce a IS NULL: el producto base y cada variante son ítems distintos.
+        item_existente = ItemCarrito.objects.filter(
+            id_carrito=carrito,
+            id_producto=producto,
+            sku=sku_normalizado,
+        ).first()
 
         cantidad_final = dto.cantidad
         if item_existente:
@@ -949,17 +948,15 @@ class AgregarItemCarritoUseCase:
             item_existente.save(update_fields=["cantidad"])
             item = item_existente
         else:
-            datos_creacion = {
-                "id_carrito": carrito,
-                "id_producto": producto,
-                "cantidad": cantidad_final
-            }
-            if tiene_columna_sku and sku_normalizado:
-                datos_creacion["sku"] = sku_normalizado
-
-            item = ItemCarrito.objects.create(**datos_creacion)
+            item = ItemCarrito.objects.create(
+                id_carrito=carrito,
+                id_producto=producto,
+                cantidad=cantidad_final,
+                sku=sku_normalizado,
+            )
 
         carrito.save(update_fields=["fecha_actualizacion"])
+        item.stock_disponible_calculado = stock_disponible
         return item
 
 

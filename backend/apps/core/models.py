@@ -76,11 +76,21 @@ class ItemCarrito(models.Model):
     id_carrito = models.ForeignKey(Carrito, on_delete=models.CASCADE, db_column='id_carrito')
     id_producto = models.ForeignKey(Producto, on_delete=models.CASCADE, db_column='id_producto')
     cantidad = models.IntegerField()
+    sku = models.CharField(max_length=100, null=True, blank=True)
 
     class Meta:
         db_table = 'item_carrito'
         constraints = [
             models.CheckConstraint(check=Q(cantidad__gt=0), name='chk_item_carrito_cantidad_valida'),
+            models.UniqueConstraint(
+                fields=['id_carrito', 'id_producto', 'sku'],
+                name='uq_item_carrito_variante',
+            ),
+            models.UniqueConstraint(
+                fields=['id_carrito', 'id_producto'],
+                condition=Q(sku__isnull=True),
+                name='uq_item_carrito_producto_base',
+            ),
         ]
 
 class Pedido(models.Model):
