@@ -138,10 +138,23 @@ class VarianteProductoSerializer(serializers.ModelSerializer):
 
 
 class CompraItemInputSerializer(serializers.Serializer):
-    id_variante = serializers.IntegerField()
+    def to_internal_value(self, data):
+        if isinstance(data, dict) and (isinstance(data.get("cantidad"), bool) or not isinstance(data.get("cantidad"), int)):
+            raise serializers.ValidationError({"cantidad": "La cantidad debe ser un entero positivo."})
+        return super().to_internal_value(data)
+
+    # El catálogo real vive en MongoDB e identifica cada variante por SKU,
+    # no por un ID de la tabla VarianteProducto (que no se usa en la práctica).
+    sku = serializers.CharField(max_length=100)
     cantidad = serializers.IntegerField(min_value=1)
 
 
+from apps.authentication.presentation.profile import StrictSerializer
+
+
+class RegistrarCompraSerializer(StrictSerializer):
+    # Contacto de la compra; la identidad autenticada procede de request.user.
+    clave_checkout = serializers.UUIDField(required=False)
 class CompraItemInputSerializer(serializers.Serializer):
     # El catálogo real vive en MongoDB e identifica cada variante por SKU,
     # no por un ID de la tabla VarianteProducto (que no se usa en la práctica).
@@ -149,10 +162,6 @@ class CompraItemInputSerializer(serializers.Serializer):
     cantidad = serializers.IntegerField(min_value=1)
 
 
-class RegistrarCompraSerializer(serializers.Serializer):
-    # Uno de los dos debe venir: id_usuario (cliente logueado) o los datos
-    # de contacto de invitado.
-    id_usuario = serializers.IntegerField(required=False, allow_null=True)
     nombre_contacto = serializers.CharField(max_length=150, required=False, allow_blank=True)
     correo_contacto = serializers.EmailField(max_length=320, required=False, allow_blank=True)
     telefono_contacto = serializers.CharField(max_length=30, required=False, allow_blank=True, default='')
@@ -164,7 +173,7 @@ class RegistrarCompraSerializer(serializers.Serializer):
     items = CompraItemInputSerializer(many=True)
 
     def validate(self, data):
-        if not data.get('id_usuario') and not data.get('correo_contacto'):
+        if not data.get('nombre_contacto') or not data.get('correo_contacto'):
             raise serializers.ValidationError(
                 "Debe iniciar sesión o completar los datos de contacto para continuar como invitado."
             )
@@ -173,19 +182,59 @@ class RegistrarCompraSerializer(serializers.Serializer):
     def validate_metodo_pago(self, value):
         tienda_id = self.context.get('tienda')
         if not tienda_id:
-            raise serializers.ValidationError("Falta el identificador de la tienda en el contexto.")
+            raise serializers.ValidationError(
+                "Falta el identificador de la tienda en el contexto."
+            )
 
+        from apps.core.models import (
+            ConfiguracionPago,
+            ConfiguracionTransbank,
+            ConfiguracionPayPal,
+            ConfiguracionMercadoPago,
+        )
+
+        normalizado = str(value).strip().lower()
         try:
             from apps.core.models import ConfiguracionPago
             config_pago = ConfiguracionPago.objects.get(tienda_id=tienda_id)
             metodo = config_pago.datos.get(value, {})
 
-            if not metodo.get('enabled', False):
-                raise serializers.ValidationError(
-                    f"El método de pago '{value}' no está habilitado para esta tienda."
+        if normalizado == 'transbank':
+            habilitado = ConfiguracionTransbank.objects.filter(
+                id_tienda_id=tienda_id,
+                activo=True,
+            ).exists()
+
+        elif normalizado == 'paypal':
+            habilitado = ConfiguracionPayPal.objects.filter(
+                id_tienda_id=tienda_id,
+                activo=True,
+            ).exists()
+
+        elif normalizado in {'mercadopago', 'mercado_pago', 'mercado pago'}:
+            habilitado = ConfiguracionMercadoPago.objects.filter(
+                id_tienda_id=tienda_id,
+                activo=True,
+            ).exists()
+
+        elif normalizado in {'transferencia', 'transfer'}:
+            try:
+                config_pago = ConfiguracionPago.objects.get(tienda_id=tienda_id)
+                metodo = (config_pago.datos or {}).get('transfer', {})
+                habilitado = (
+                    isinstance(metodo, dict)
+                    and metodo.get('enabled', False) is True
                 )
-        except ConfiguracionPago.DoesNotExist:
-            raise serializers.ValidationError("La tienda no tiene medios de pago configurados.")
+            except ConfiguracionPago.DoesNotExist:
+                habilitado = False
+
+        else:
+            habilitado = False
+
+        if not habilitado:
+            raise serializers.ValidationError(
+                f"El método de pago '{value}' no está habilitado para esta tienda."
+            )
 
         return value
 
@@ -194,19 +243,25 @@ class RegistrarCompraSerializer(serializers.Serializer):
             raise serializers.ValidationError(
                 "Debe incluir al menos un producto en la compra."
             )
-        # La validación real de stock y existencia de cada SKU se hace contra
-        # MongoDB dentro de la vista, en la misma transacción del descuento
-        # de stock (para evitar condiciones de carrera).
         return items
+
+
 class ConfiguracionPagoSerializer(serializers.Serializer):
     """ Valida que no se habiliten medios de pago sin sus campos obligatorios (SCRUM-306) """
-    
+
     REQUIRED_FIELDS_BY_METHOD = {
-        'transbank': ['api_key', 'commerce_id'],
-        'mercadopago': ['access_token'],
+        'transbank': ['api_key', 'codigo_comercio'],
+        'mercadopago': ['public_key', 'access_token'],
         'paypal': ['client_id', 'client_secret'],
-        'linkify': ['idCuenta', 'clavePrivada'],
-        'transfer': ['bank_name', 'account_type', 'account_number', 'holder_rut', 'holder_name', 'confirmation_email']
+        'linkify': ['accountName', 'publicUrl', 'apiKey', 'webhookSecret'],
+        'transfer': [
+            'bank_name',
+            'account_type',
+            'account_number',
+            'holder_rut',
+            'holder_name',
+            'confirmation_email',
+        ],
     }
 
     def to_internal_value(self, data):
@@ -221,16 +276,17 @@ class ConfiguracionPagoSerializer(serializers.Serializer):
         for method_id, method_data in data.items():
             if not isinstance(method_data, dict):
                 continue
+
                 
             is_enabled = method_data.get('enabled')
             # Solo validamos si intentan guardarlo como habilitado
             if str(is_enabled).lower() == 'true' or is_enabled is True:
                 fields = method_data.get('fields', {})
                 required_fields = self.REQUIRED_FIELDS_BY_METHOD.get(method_id, [])
-                
+
                 # Buscamos campos vacíos o inexistentes
                 missing = [key for key in required_fields if not str(fields.get(key, '')).strip()]
-                
+
                 if missing:
                     errores_metodos[method_id] = f"Faltan campos obligatorios para habilitarlo: {', '.join(missing)}."
 

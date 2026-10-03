@@ -10,7 +10,7 @@ from rest_framework.test import APIClient
 
 from apps.authentication.infrastructure.models import ConfiguracionAutenticacion
 from apps.catalog.infrastructure.repositories import ProductRepository
-from apps.core.models import Tienda, Pedido, ItemPedido, Usuario, Producto, Carrito, ItemCarrito
+from apps.core.models import Tienda, Pedido, ItemPedido, Usuario, Producto, Carrito, ItemCarrito, ConfiguracionPago
 
 
 class CheckoutOrderTests(TestCase):
@@ -54,6 +54,9 @@ class CheckoutOrderTests(TestCase):
         self.assertEqual(order.comprador, self.buyer)
         self.assertEqual(order.tienda, self.store)
         self.assertIsNone(order.id_usuario)
+        self.assertEqual(order.nombre_contacto, 'Comprador')
+        self.assertEqual(order.correo_contacto, 'buyer@example.com')
+        self.assertEqual(order.metodo_pago, 'Transferencia')
         self.assertEqual(order.estado, 'pendiente')
         self.assertEqual(order.monto_total, Decimal(30000))
         self.assertEqual(order.itempedido_set.count(), 2)
@@ -186,3 +189,47 @@ class CheckoutOrderTests(TestCase):
     def test_existing_cart_requires_authentication(self):
         self.api.credentials()
         self.assertEqual(self.api.get('/api/catalog/carrito/items/').status_code, 401)
+
+    def test_scrum289_guest_contract_uses_same_order_creation_and_snapshots(self):
+        self.api.credentials()
+        ConfiguracionPago.objects.create(tienda=self.store, datos={'Transferencia': {'enabled': True}})
+        payload = dict(clave_checkout=str(uuid4()), nombre_contacto='Invitado real',
+                       correo_contacto='guest@example.com', telefono_contacto='+56912345678',
+                       metodo_pago='Transferencia', items=[{'sku': 'QA-M', 'cantidad': 2}])
+        response = self.api.post('/api/pedidos/registrar/', payload, format='json')
+        self.assertEqual(response.status_code, 201, response.data)
+        order = Pedido.objects.get()
+        self.assertEqual(order.estado, 'pendiente')
+        self.assertIsNone(order.comprador)
+        self.assertEqual(order.correo_contacto, 'guest@example.com')
+        self.assertEqual(order.contacto['telefono'], '+56912345678')
+        self.assertEqual(order.itempedido_set.get().atributos, {'Talla': 'M'})
+        self.assertEqual(order.monto_total, Decimal(18000))
+        self.assertEqual(self.api.post('/api/pedidos/registrar/', payload, format='json').status_code, 200)
+        self.assertEqual(Pedido.objects.count(), 1)
+        payload['id_usuario'] = self.buyer.pk
+        self.assertEqual(self.api.post('/api/pedidos/registrar/', payload, format='json').status_code, 400)
+
+    def test_scrum289_alias_preserves_authenticated_buyer_and_history(self):
+        response = self.api.post('/api/pedidos/registrar/', self.payload, format='json')
+        self.assertEqual(response.status_code, 201, response.data)
+        order = Pedido.objects.get()
+        self.assertEqual(order.comprador, self.buyer)
+        self.assertEqual(self.api.get('/api/mi-cuenta/pedidos/').data['data'][0]['id_pedido'], order.pk)
+
+    def test_guest_migration_recovers_existing_checkout_snapshots(self):
+        from django.apps import apps
+        from django.db import connection
+        from importlib import import_module
+        from types import SimpleNamespace
+        self.create()
+        order = Pedido.objects.get()
+        Pedido.objects.filter(pk=order.pk).update(nombre_contacto='', correo_contacto='', telefono_contacto='', metodo_pago='')
+        ItemPedido.objects.filter(id_pedido=order).update(atributos={})
+        migration = import_module('apps.core.migrations.0006_configuracionpago_varianteproducto_and_more')
+        migration.preserve_checkout_snapshots(apps, SimpleNamespace(connection=connection))
+        order.refresh_from_db()
+        self.assertEqual(order.nombre_contacto, order.contacto['nombre'])
+        self.assertEqual(order.correo_contacto, order.contacto['email'])
+        self.assertEqual(order.metodo_pago, order.medio_pago)
+        self.assertEqual(order.itempedido_set.get(sku='QA-M').atributos, {'Talla': 'M'})

@@ -2,6 +2,7 @@
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from hashlib import sha256
 import json
+from uuid import uuid4
 
 from django.db import transaction
 from rest_framework import serializers
@@ -34,7 +35,7 @@ class CheckoutItemSerializer(StrictSerializer):
 
 
 class ContactSerializer(StrictSerializer):
-    nombre = serializers.CharField(max_length=200)
+    nombre = serializers.CharField(max_length=150)
     email = serializers.EmailField()
     telefono = serializers.CharField(max_length=30, allow_blank=True, required=False)
 
@@ -75,8 +76,8 @@ class CheckoutOrderAPIView(APIView):
             raise PermissionDenied('Solo un comprador puede crear pedidos autenticados.')
         config = ConfiguracionAutenticacion.objects.filter(tienda=tienda).first()
         if not buyer and config and (not config.guest_checkout or config.requires_auth == 'required'):
-            raise NotAuthenticated('Esta tienda requiere iniciar sesion para comprar.')
-        serializer = CheckoutSerializer(data=request.data)
+            raise NotAuthenticated('Esta tienda requiere iniciar sesión para comprar.')
+        serializer = CheckoutSerializer(data=self.order_data(request, tienda))
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
         fingerprint = sha256(json.dumps(data, sort_keys=True, default=str).encode()).hexdigest()
@@ -116,6 +117,8 @@ class CheckoutOrderAPIView(APIView):
                     raise ValidationError({'items': str(exc)}) from exc
                 lines[key] = dict(producto_mongo_id=key[0], nombre_producto=product['nombre'], sku=item['sku'],
                                   atributos_variante=variant.get('atributos_variante', []), cantidad=quantity,
+                                  atributos={a.get('etiqueta') or a.get('clave'): a.get('valor')
+                                             for a in variant.get('atributos_variante', [])},
                                   precio_unitario=price.quantize(Decimal('.01'), rounding=ROUND_HALF_UP))
             subtotal = sum((line['precio_unitario'] * line['cantidad'] for line in lines.values()), Decimal(0))
             promo = data['codigo_promocional']
@@ -129,6 +132,8 @@ class CheckoutOrderAPIView(APIView):
                 comprador=buyer, tienda=tienda, monto_total=total,
                 clave_checkout=data['clave_checkout'], huella_checkout=fingerprint,
                 contacto=data['contacto'], medio_pago=data['medio_pago'],
+                nombre_contacto=data['contacto']['nombre'], correo_contacto=data['contacto']['email'],
+                telefono_contacto=data['contacto'].get('telefono', ''), metodo_pago=data['medio_pago'],
                 entrega={'metodo': data['metodo_entrega'], 'direccion': data.get('direccion', {})},
                 costo_envio=shipping, descuento=discount,
             )
@@ -148,6 +153,9 @@ class CheckoutOrderAPIView(APIView):
 
         return success_response(data=self.result(order, url_pago), mensaje='Pedido creado correctamente.', status=201)
 
+    def order_data(self, request, tienda):
+        return request.data
+
     @staticmethod
     def result(order, url_pago=None):
         data = {
@@ -158,3 +166,25 @@ class CheckoutOrderAPIView(APIView):
         if url_pago:
             data['url_pago'] = url_pago
         return data
+  
+
+class GuestCheckoutOrderAPIView(CheckoutOrderAPIView):
+    def order_data(self, request, tienda):
+        # La ruta entrante también acepta el contrato canónico del checkout.
+        if 'contacto' in request.data:
+            return request.data
+        from apps.core.presentation.serializers import RegistrarCompraSerializer
+        serializer = RegistrarCompraSerializer(data=request.data, context={'tienda': tienda})
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+        repository = ProductRepository()
+        items = []
+        for item in data['items']:
+            product = repository.get_by_sku(str(tienda.pk), item['sku'])
+            if not product:
+                raise ValidationError({'items': 'El SKU no está disponible en esta tienda.'})
+            items.append(dict(producto_id=str(product['_id']), sku=item['sku'], cantidad=item['cantidad']))
+        return dict(clave_checkout=data.get('clave_checkout', uuid4()), items=items,
+                    contacto={'nombre': data['nombre_contacto'], 'email': data['correo_contacto'],
+                              'telefono': data.get('telefono_contacto', '')},
+                    medio_pago=data['metodo_pago'], metodo_entrega='Retiro')
