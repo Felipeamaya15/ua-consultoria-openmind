@@ -45,13 +45,14 @@ const result = {id_pedido: 42, tienda_id: 9, estado: 'pendiente', monto_total: '
   await assert.rejects(orderService.create(input), /Stock insuficiente/);
 
   let states, stateIndex, refs, refIndex, navigateCalls, clearCount, createCalls, fail, pending;
+  let recordEffects = false, effects = [], paymentReply, paymentFetches = [];
   const cart = {items, subtotal: 30000, shipping: 0, discount: 0, total: 30000, promoCode: '', shippingMethod: 'Retiro', count: 3,
     clearCart: async () => {clearCount++;}, setShippingMethod() {}, updateQuantity() {}, removeItem() {}, applyPromo() {}};
   let template = 'editorial';
   const mockReact = {
     useState(initial) {const i = stateIndex++; if (!(i in states)) states[i] = typeof initial === 'function' ? initial() : initial; return [states[i], next => {states[i] = typeof next === 'function' ? next(states[i]) : next;}];},
     useRef(initial) {const i = refIndex++; if (!(i in refs)) refs[i] = {current: initial}; return refs[i];},
-    useMemo: callback => callback(), useEffect() {},
+    useMemo: callback => callback(), useEffect(callback) {if (recordEffects) effects.push(callback);},
   };
   const requireMock = name => {
     if (name === 'react/jsx-runtime') return {jsx, jsxs: jsx};
@@ -66,10 +67,13 @@ const result = {id_pedido: 42, tienda_id: 9, estado: 'pendiente', monto_total: '
     if (name.includes('components/ui')) return Object.fromEntries(['Stepper','Button','Input','Select','Alert','Icon','EmptyState'].map(label => [label, label]));
     throw Error(name);
   };
-  const globals = {require: requireMock, localStorage: {getItem: () => null}, crypto: {randomUUID: () => 'fixed-checkout-key'}, window: {location: {origin: 'http://localhost:5173'}}};
+  const globals = {require: requireMock, localStorage: {getItem: () => null}, crypto: {randomUUID: () => 'fixed-checkout-key'}, window: {location: {origin: 'http://localhost:5173'}},
+    fetch: async url => {paymentFetches.push(url); return paymentReply;}};
   const Checkout = load('src/features/storefront/pages/Checkout.tsx', globals).default;
   function reset() {
     states = ['confirm', 'guest', {name: 'Comprador', email: 'buyer@example.com', phone: ''}, {street: '', number: '', apt: '', city: '', region: ''}, 'Transferencia', false, {}];
+    states[10] = [{id: 'Transferencia', label: 'Transferencia'}, {id: 'Transbank', label: 'Transbank'}];
+    states[11] = false; states[12] = '';
     refs = []; navigateCalls = []; clearCount = 0; createCalls = []; fail = false; pending = null;
   }
   function render(component) {stateIndex = 0; refIndex = 0; return nodes(component());}
@@ -100,6 +104,36 @@ const result = {id_pedido: 42, tienda_id: 9, estado: 'pendiente', monto_total: '
   reset(); states[2].email = 'invalid';
   await confirm()();
   assert.equal(createCalls.length, 0);
+
+  async function loadPayments(data, ok = true) {
+    reset(); states[0] = 'payment'; states[10] = []; states[11] = true;
+    recordEffects = true; effects = [];
+    paymentReply = {ok, json: async () => ({exito: ok, data})};
+    render(Checkout);
+    assert.ok(states[11]);
+    effects.find(effect => effect.toString().includes('loadPayments'))();
+    await new Promise(setImmediate);
+    recordEffects = false;
+    return render(Checkout);
+  }
+  let paymentTree = await loadPayments({transfer: {enabled: true}, paypal: {enabled: false}, transbank: {enabled: false}});
+  assert.equal(paymentFetches.at(-1), 'http://localhost:8000/api/pagos/activos/');
+  assert.deepEqual(paymentTree.filter(node => node.type === 'input' && node.props?.name === 'payment').map(node => node.props.value), ['Transferencia']);
+  paymentTree = await loadPayments({Transbank: {enabled: true}, Linkify: {enabled: true}, PayPal: {enabled: 'false'}});
+  assert.deepEqual(paymentTree.filter(node => node.type === 'input' && node.props?.name === 'payment').map(node => node.props.value), ['Transbank', 'Linkify']);
+  paymentTree = await loadPayments({});
+  assert.ok(paymentTree.some(value => typeof value === 'string' && value.includes('no tiene medios de pago habilitados')));
+  states[0] = 'confirm';
+  await confirm()();
+  assert.equal(createCalls.length, 0);
+  paymentTree = await loadPayments({}, false);
+  assert.ok(paymentTree.some(value => typeof value === 'string' && value.includes('No se pudieron cargar')));
+  states[0] = 'confirm';
+  await confirm()();
+  assert.equal(createCalls.length, 0);
+  reset(); states[10] = [{id: 'PayPal'}];
+  await confirm()();
+  assert.equal(createCalls.length, 0, 'No se puede confirmar un medio deshabilitado aunque siga seleccionado');
 
   const Cart = load('src/features/storefront/pages/Cart.tsx', globals).default;
   for (template of ['editorial', 'minimal', 'visual', 'catalog']) {
