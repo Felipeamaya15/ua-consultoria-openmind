@@ -183,26 +183,28 @@ function readCheckoutOptions() {
         config?.requiresAuth ?? defaultAuthSettings.requiresAuth,
     };
 
-    const shippingOptions = defaultShippingOptions.filter((option) => {
-      if (option.id === 'Chilexpress') return !!shippingConfig?.chilexpress?.enabled;
-      if (option.id === 'Starken') return !!shippingConfig?.starken?.enabled;
-      if (option.id === 'Retiro') return !!shippingConfig?.pickup?.enabled;
-      return true;
-    }).map((option) =>
-      option.id === 'Retiro'
-        ? {
-            ...option,
-            desc:
-              shippingConfig?.pickup?.schedule ||
-              shippingConfig?.pickup?.address
-                ? `Sin costo · ${[
-                    shippingConfig?.pickup?.schedule,
-                    shippingConfig?.pickup?.address,
-                  ].filter(Boolean).join(' · ')}`
-                : option.desc,
-          }
-        : option,
-    );
+    let shippingOptions = defaultShippingOptions;
+    if (shippingConfig) {
+      shippingOptions = defaultShippingOptions.filter((option) => {
+        if (option.id === 'Chilexpress') return !!shippingConfig.chilexpress?.enabled;
+        if (option.id === 'Starken') return !!shippingConfig.starken?.enabled;
+        if (option.id === 'Retiro') return !!shippingConfig.pickup?.enabled;
+        return true;
+      }).map((option) =>
+        option.id === 'Retiro'
+          ? {
+              ...option,
+              desc:
+                shippingConfig.pickup?.schedule || shippingConfig.pickup?.address
+                  ? `Sin costo · ${[
+                      shippingConfig.pickup?.schedule,
+                      shippingConfig.pickup?.address,
+                    ].filter(Boolean).join(' · ')}`
+                  : option.desc,
+            }
+          : option,
+      );
+    }
 
     const paymentMap: Record<string, string> = {
       Transbank: 'transbank',
@@ -212,10 +214,13 @@ function readCheckoutOptions() {
       Transferencia: 'transfer',
     };
 
-    const paymentOptions = defaultPaymentOptions.filter((option) => {
-      const key = paymentMap[option.id];
-      return key ? !!paymentConfig?.[key]?.enabled : true;
-    });
+    let paymentOptions = defaultPaymentOptions;
+    if (paymentConfig) {
+      paymentOptions = defaultPaymentOptions.filter((option) => {
+        const key = paymentMap[option.id];
+        return key ? !!paymentConfig[key]?.enabled : false;
+      });
+    }
 
     return {
       shippingOptions: shippingOptions.length
@@ -1321,60 +1326,47 @@ export default function Checkout() {
                 </Alert>
               )}
 
-              <div className="flex flex-col gap-3">
-                {paymentOptions.map((payment) => (
-                  <label
-                    key={payment.id}
-                    className={`
-                      flex items-center gap-4
-                      p-4 border cursor-pointer
-                      transition-all
-                      ${
-                        isMinimal
-                          ? 'rounded-[18px]'
-                          : 'rounded-xl'
-                      }
-                      ${
+              {paymentOptions.length === 0 ? (
+                <Alert variant="error">
+                  La tienda no tiene medios de pago habilitados en este momento. Por favor, comunícate con el administrador.
+                </Alert>
+              ) : (
+                <div className="grid gap-4">
+                  {paymentOptions.map((payment) => (
+                    <label
+                      key={payment.id}
+                      className={`flex items-center gap-4 p-4 border cursor-pointer transition-all ${
+                        isMinimal ? 'rounded-[18px]' : 'rounded-xl'
+                      } ${
                         paymentMethod === payment.id
                           ? 'border-[var(--primary)] bg-[var(--secondary)]'
                           : 'border-[var(--border)] hover:border-[var(--muted-foreground)]'
-                      }
-                    `}
-                  >
-                    <input
-                      type="radio"
-                      name="payment"
-                      value={payment.id}
-                      checked={paymentMethod === payment.id}
-                      onChange={() => setPaymentMethod(payment.id)}
-                      className="sr-only"
-                    />
-
-                    <span className="w-10 h-10 rounded-full bg-[var(--muted)] flex items-center justify-center text-[#667085]">
-                      <Icon
-                        name={payment.icon}
-                        className="w-5 h-5"
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="payment"
+                        value={payment.id}
+                        checked={paymentMethod === payment.id}
+                        onChange={() => setPaymentMethod(payment.id)}
+                        className="sr-only"
                       />
-                    </span>
-
-                    <div className="flex-1">
-                      <p className={isCatalog ? "font-semibold text-sm text-[#151515]" : "font-semibold text-sm"}>
-                        {payment.label}
-                      </p>
-
-                      <p className="text-xs text-[#667085] mt-0.5">
-                        {payment.desc}
-                      </p>
-                    </div>
-
-                    {paymentMethod === payment.id && (
-                      <span className={isCatalog ? "text-[#1683ff] text-lg" : "text-[var(--primary)] text-lg"}>
-                        OK
+                      <span className="w-10 h-10 rounded-full bg-[var(--muted)] flex items-center justify-center text-[#667085]">
+                        <Icon name={payment.icon} className="w-5 h-5" />
                       </span>
-                    )}
-                  </label>
-                ))}
-              </div>
+                      <div className="flex-1">
+                        <p className={isCatalog ? "font-semibold text-sm text-[#151515]" : "font-semibold text-sm"}>
+                          {payment.label}
+                        </p>
+                        <p className="text-xs text-[#667085] mt-0.5">{payment.desc}</p>
+                      </div>
+                      {paymentMethod === payment.id && (
+                        <span className={isCatalog ? "text-[#1683ff] text-lg" : "text-[var(--primary)] text-lg"}>OK</span>
+                      )}
+                    </label>
+                  ))}
+                </div>
+              )}
 
               {/* TRANSBANK */}
               {paymentMethod === 'Transbank' && (
