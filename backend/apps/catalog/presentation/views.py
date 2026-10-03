@@ -50,6 +50,11 @@ from apps.catalog.application.use_cases import (
     IniciarPagoTransbankDTO,
     IniciarPagoTransbankUseCase,
     ConfirmarPagoTransbankUseCase,
+    #PayPal
+    GuardarConfiguracionPayPalDTO,
+    ObtenerConfiguracionPayPalUseCase,
+    GuardarConfiguracionPayPalUseCase,
+
 )
 
 # 5. Catálogo - Capa de Infraestructura (Repositorios y Filtros)
@@ -77,7 +82,79 @@ from .serializers import (
     # Nuevos Serializadores - Adaptador Transbank
     IniciarPagoTransbankSerializer,
     ConfirmarPagoTransbankSerializer,
+    #PayPal
+    ConfiguracionPayPalInputSerializer,
+    ConfiguracionPayPalResponseSerializer,
 )
+
+
+
+class ConfiguracionPayPalView(APIView):
+    """
+    GET: Consulta la configuración actual de PayPal para la tienda.
+    POST: Actualiza credenciales y estado de activación.
+    """
+    permission_classes = [AllowAny]
+
+    def get(self, request, id_tienda):
+        use_case = ObtenerConfiguracionPayPalUseCase()
+        datos = use_case.execute(id_tienda=id_tienda)
+        serializer = ConfiguracionPayPalResponseSerializer(datos)
+        return Response(
+            {
+                "exito": True,
+                "mensaje": "Configuración de PayPal obtenida correctamente.",
+                "data": serializer.data,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+    def post(self, request, id_tienda):
+        serializer = ConfiguracionPayPalInputSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(
+                {
+                    "exito": False,
+                    "mensaje": "Datos del formulario inválidos.",
+                    "error": {"codigo": "DATOS_INVALIDOS", "detalles": serializer.errors},
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        dto = GuardarConfiguracionPayPalDTO(
+            id_tienda=id_tienda,
+            **serializer.validated_data
+        )
+
+        use_case = GuardarConfiguracionPayPalUseCase()
+        try:
+            resultado = use_case.execute(id_tienda=id_tienda, dto=dto)
+            response_serializer = ConfiguracionPayPalResponseSerializer(resultado)
+            return Response(
+                {
+                    "exito": True,
+                    "mensaje": "Configuración de PayPal guardada exitosamente.",
+                    "data": response_serializer.data,
+                },
+                status=status.HTTP_200_OK,
+            )
+        except ConfiguracionPagoInvalidaException as e:
+            return Response(
+                {
+                    "exito": False,
+                    "mensaje": str(e),
+                    "error": {"codigo": "CONFIGURACION_INVALIDA", "detalles": None},
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+
+
+
+
+
+
+
 
 class ConfiguracionTransbankView(APIView):
     """

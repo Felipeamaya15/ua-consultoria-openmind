@@ -10,6 +10,8 @@ from apps.core.models import (
     Carrito,
     ItemCarrito,
     ConfiguracionTransbank,
+    ConfiguracionPayPal,
+    Tienda,
 )
 from apps.core.infrastructure.mongo_client import get_mongo_db
 from apps.catalog.application.services import VariantService
@@ -28,6 +30,137 @@ from apps.catalog.domain.exceptions import (
     ConfiguracionPagoInvalidaException,
 )
 
+
+# ==========================================================
+# CONFIGURACIÓN DE PAYPAL (ADMIN)
+# ==========================================================
+
+class GuardarConfiguracionPayPalDTO:
+    """
+    DTO flexible compatible con instanciación directa o desempaquetado de serializer.
+    """
+    def __init__(
+        self,
+        client_id: str = "",
+        client_secret: str = "",
+        ambiente: str = "SANDBOX",
+        activo: bool = False,
+        id_tienda: Optional[int] = None,
+        tienda_id: Optional[int] = None,
+        *args,
+        **kwargs,
+    ):
+        self.id_tienda = id_tienda if id_tienda is not None else tienda_id
+        self.client_id = str(client_id).strip()
+        self.client_secret = str(client_secret).strip()
+        self.ambiente = str(ambiente).strip().upper()
+        self.activo = bool(activo)
+        self.tienda_id = self.id_tienda
+
+
+class ObtenerConfiguracionPayPalUseCase:
+    """Recupera la configuración de PayPal con el Secret enmascarado."""
+
+    def execute(self, id_tienda: Any, *args, **kwargs) -> Dict[str, Any]:
+        tienda_pk = getattr(id_tienda, "id_tienda", None) or getattr(id_tienda, "pk", None) or id_tienda
+        config = ConfiguracionPayPal.objects.select_related("id_tienda").filter(id_tienda_id=tienda_pk).first()
+
+        if not config:
+            tienda = Tienda.objects.filter(pk=tienda_pk).first() or type("TiendaRef", (), {"id_tienda": tienda_pk})()
+            return {
+                "id_tienda": tienda,
+                "client_id": "",
+                "ambiente": "SANDBOX",
+                "activo": False,
+                "client_secret_enmascarado": "",
+                "fecha_actualizacion": None,
+                "configurado": False,
+            }
+
+        return {
+            "id_tienda": config.id_tienda,
+            "client_id": config.client_id,
+            "ambiente": config.ambiente,
+            "activo": config.activo,
+            "client_secret_enmascarado": config.client_secret_enmascarado,
+            "fecha_actualizacion": config.fecha_actualizacion,
+            "configurado": bool(config.client_id and config.client_secret),
+        }
+
+    def ejecutar(self, *args, **kwargs) -> Dict[str, Any]:
+        return self.execute(*args, **kwargs)
+
+
+class GuardarConfiguracionPayPalUseCase:
+    """Valida reglas de negocio y persiste las credenciales de PayPal."""
+
+    def execute(self, *args, **kwargs) -> Dict[str, Any]:
+        id_tienda = kwargs.get("id_tienda") or kwargs.get("tienda_id")
+        dto = kwargs.get("dto") or kwargs.get("datos")
+
+        if args:
+            if len(args) == 1:
+                dto = args[0]
+            elif len(args) >= 2:
+                id_tienda = args[0]
+                dto = args[1]
+
+        if id_tienda is None and dto is not None:
+            id_tienda = getattr(dto, "id_tienda", None) or getattr(dto, "tienda_id", None)
+            if id_tienda is None and isinstance(dto, dict):
+                id_tienda = dto.get("id_tienda")
+
+        tienda_pk = getattr(id_tienda, "id_tienda", None) or getattr(id_tienda, "pk", None) or id_tienda
+
+        if isinstance(dto, dict):
+            client_id = str(dto.get("client_id", "")).strip()
+            client_secret = str(dto.get("client_secret", "")).strip()
+            ambiente = str(dto.get("ambiente", "SANDBOX")).strip().upper()
+            activo = bool(dto.get("activo", False))
+        else:
+            client_id = str(getattr(dto, "client_id", "")).strip()
+            client_secret = str(getattr(dto, "client_secret", "")).strip()
+            ambiente = str(getattr(dto, "ambiente", "SANDBOX")).strip().upper()
+            activo = bool(getattr(dto, "activo", False))
+
+        if ambiente not in ["SANDBOX", "LIVE"]:
+            raise ConfiguracionPagoInvalidaException("El ambiente debe ser SANDBOX o LIVE.")
+
+        if activo and not client_id:
+            raise ConfiguracionPagoInvalidaException("El Client ID de PayPal es obligatorio para activar la pasarela.")
+
+        config, _ = ConfiguracionPayPal.objects.get_or_create(
+            id_tienda_id=tienda_pk,
+            defaults={
+                "client_id": client_id,
+                "client_secret": client_secret,
+                "ambiente": ambiente,
+                "activo": activo,
+            },
+        )
+
+        config.client_id = client_id
+        config.ambiente = ambiente
+        config.activo = activo
+
+        # Solo actualizar secret si no viene enmascarado
+        if client_secret and not client_secret.startswith("****"):
+            config.client_secret = client_secret
+
+        config.save()
+
+        return {
+            "id_tienda": config.id_tienda,
+            "client_id": config.client_id,
+            "ambiente": config.ambiente,
+            "activo": config.activo,
+            "client_secret_enmascarado": config.client_secret_enmascarado,
+            "fecha_actualizacion": config.fecha_actualizacion,
+            "configurado": bool(config.client_id and config.client_secret),
+        }
+
+    def ejecutar(self, *args, **kwargs) -> Dict[str, Any]:
+        return self.execute(*args, **kwargs)
 
 # ==========================================================
 # CONFIGURACIÓN TRANSBANK (PANEL EMPRENDEDOR / ADMIN)

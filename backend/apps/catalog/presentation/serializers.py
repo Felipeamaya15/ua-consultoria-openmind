@@ -327,3 +327,23 @@ class IniciarPagoTransbankSerializer(serializers.Serializer):
 class ConfirmarPagoTransbankSerializer(serializers.Serializer):
     id_tienda = serializers.IntegerField(required=True)
     token_ws = serializers.CharField(max_length=255, required=True)
+
+class ConfiguracionPayPalInputSerializer(serializers.Serializer):
+    client_id = serializers.CharField(max_length=255, required=False, allow_blank=True)
+    client_secret = serializers.CharField(max_length=255, required=False, allow_blank=True)
+    ambiente = serializers.ChoiceField(choices=['SANDBOX', 'LIVE'], default='SANDBOX')
+    activo = serializers.BooleanField(default=False)
+
+
+class ConfiguracionPayPalResponseSerializer(serializers.Serializer):
+    id_tienda = serializers.SerializerMethodField()
+    client_id = serializers.CharField(allow_blank=True)
+    ambiente = serializers.CharField()
+    activo = serializers.BooleanField()
+    client_secret_enmascarado = serializers.CharField(allow_blank=True, required=False)
+    fecha_actualizacion = serializers.DateTimeField(allow_null=True, required=False)
+    configurado = serializers.BooleanField(default=False)
+
+    def get_id_tienda(self, obj):
+        val = obj.get("id_tienda") if isinstance(obj, dict) else getattr(obj, "id_tienda", None)
+        return getattr(val, "id_tienda", val)
