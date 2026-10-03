@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Optional
+from typing import Optional, Dict, Any
 from datetime import datetime
 
 
@@ -28,3 +28,10 @@ class ConfiguracionAutenticacionEntity:
     google_client_id: str = ""
     guest_checkout: bool = True
     requires_auth: str = "optional"
+
+
+@dataclass
+class ConfiguracionPagosEntity:
+    id: Optional[int]
+    tienda_id: int
+    metodos: Dict[str, Dict[str, Any]]

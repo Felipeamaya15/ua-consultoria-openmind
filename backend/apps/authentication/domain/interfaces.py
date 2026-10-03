@@ -1,6 +1,10 @@
 from abc import ABC, abstractmethod
 from typing import Optional, Dict, Any
-from .entities import UserEntity, ConfiguracionAutenticacionEntity
+from .entities import (
+    UserEntity,
+    ConfiguracionAutenticacionEntity,
+    ConfiguracionPagosEntity,
+)
 
 
 class IUserRepository(ABC):
@@ -63,4 +67,22 @@ class IConfiguracionAutenticacionRepository(ABC):
         self,
         configuracion: ConfiguracionAutenticacionEntity
     ) -> ConfiguracionAutenticacionEntity:
+        pass
+
+
+class IConfiguracionPagosRepository(ABC):
+    """Puerto de persistencia para la configuracion de pagos por tienda."""
+
+    @abstractmethod
+    def get_by_tienda(
+        self,
+        tienda_id: int
+    ) -> Optional[ConfiguracionPagosEntity]:
+        pass
+
+    @abstractmethod
+    def save(
+        self,
+        configuracion: ConfiguracionPagosEntity
+    ) -> ConfiguracionPagosEntity:
         pass
