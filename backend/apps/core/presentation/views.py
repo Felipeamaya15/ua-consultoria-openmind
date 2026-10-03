@@ -4,7 +4,12 @@
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated, AllowAny
 
-from apps.core.models import ConfiguracionPago
+from apps.core.models import (
+    ConfiguracionPago,
+    ConfiguracionTransbank,
+    ConfiguracionPayPal,
+    ConfiguracionMercadoPago,
+)
 from apps.core.presentation.responses import success_response, error_response
 from apps.core.presentation.checkout import GuestCheckoutOrderAPIView
 from apps.core.presentation.serializers import ConfiguracionPagoSerializer
@@ -13,6 +18,28 @@ from apps.core.infrastructure.tenant import resolver_tienda, resolver_tienda_id
 
 class RegistrarCompraView(GuestCheckoutOrderAPIView):
     """Compatibilidad SCRUM-289: reutiliza la creación y seguridad de SCRUM-291."""
+
+
+class TiendaPagoActualAPIView(APIView):
+    """Entrega al panel admin la tienda resuelta por el backend; nunca acepta elegir otra."""
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        try:
+            tienda = resolver_tienda(request, exigir_propietario=True)
+            return success_response(
+                data={
+                    "id_tienda": tienda.pk,
+                    "nombre": tienda.nombre,
+                }
+            )
+        except Exception as e:
+            return error_response(
+                mensaje=str(e),
+                codigo="ERROR_TIENDA",
+                status=getattr(e, "status_code", 400),
+            )
 
 
 class ConfiguracionPagoAPIView(APIView):
@@ -27,7 +54,7 @@ class ConfiguracionPagoAPIView(APIView):
             return error_response(
                 mensaje=str(e),
                 codigo="ERROR_PAGO",
-                status=400,
+                status=getattr(e, "status_code", 400),
             )
 
     def put(self, request):
@@ -58,7 +85,7 @@ class ConfiguracionPagoAPIView(APIView):
             return error_response(
                 mensaje=str(e),
                 codigo="ERROR_PAGO",
-                status=400,
+                status=getattr(e, "status_code", 400),
             )
 
     def patch(self, request):
@@ -69,9 +96,12 @@ class MetodosPagoActivosAPIView(APIView):
     """
     Endpoint público para checkout.
 
-    Devuelve únicamente los medios habilitados de la tienda.
-    Para transferencia incluye solo los datos bancarios que el comprador
-    necesita para transferir. Nunca publica secretos de pasarelas.
+    Los medios habilitados se derivan de la configuración REAL de la tienda:
+    - Transbank, PayPal y Mercado Pago: sus modelos de configuración propios.
+    - Transferencia: ConfiguracionPago.datos.
+    Linkify no se expone como medio de pago; es un complemento de verificación.
+
+    Nunca se publican secretos de pasarelas.
     """
 
     permission_classes = [AllowAny]
@@ -88,38 +118,50 @@ class MetodosPagoActivosAPIView(APIView):
     def get(self, request):
         try:
             tienda_id = resolver_tienda_id(request)
-            config_pago = ConfiguracionPago.objects.get(tienda_id=tienda_id)
-            configuracion = config_pago.datos or {}
-
             metodos_activos = {}
 
-            for key, method_data in configuracion.items():
-                if not isinstance(method_data, dict):
-                    continue
-                if method_data.get("enabled", False) is not True:
-                    continue
+            if ConfiguracionTransbank.objects.filter(
+                id_tienda_id=tienda_id,
+                activo=True,
+            ).exists():
+                metodos_activos["transbank"] = {"enabled": True}
 
-                safe_method = {"enabled": True}
+            if ConfiguracionPayPal.objects.filter(
+                id_tienda_id=tienda_id,
+                activo=True,
+            ).exists():
+                metodos_activos["paypal"] = {"enabled": True}
 
-                if key == "transfer":
-                    fields = method_data.get("fields", {})
-                    if not isinstance(fields, dict):
-                        fields = {}
-                    safe_method["fields"] = {
+            if ConfiguracionMercadoPago.objects.filter(
+                id_tienda_id=tienda_id,
+                activo=True,
+            ).exists():
+                metodos_activos["mercadopago"] = {"enabled": True}
+
+            try:
+                config_pago = ConfiguracionPago.objects.get(tienda_id=tienda_id)
+                transferencia = (config_pago.datos or {}).get("transfer", {})
+            except ConfiguracionPago.DoesNotExist:
+                transferencia = {}
+
+            if isinstance(transferencia, dict) and transferencia.get("enabled") is True:
+                fields = transferencia.get("fields", {})
+                if not isinstance(fields, dict):
+                    fields = {}
+
+                metodos_activos["transfer"] = {
+                    "enabled": True,
+                    "fields": {
                         field: fields.get(field, "")
                         for field in self.TRANSFER_PUBLIC_FIELDS
-                    }
-
-                metodos_activos[key] = safe_method
+                    },
+                }
 
             return success_response(data=metodos_activos)
-
-        except ConfiguracionPago.DoesNotExist:
-            return success_response(data={})
 
         except Exception as e:
             return error_response(
                 mensaje=str(e),
                 codigo="ERROR_METODOS_PAGO",
-                status=400,
+                status=getattr(e, "status_code", 400),
             )

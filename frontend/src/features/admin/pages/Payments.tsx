@@ -8,8 +8,6 @@ import { AdminCard, Alert, Input, Toggle, Button, Icon, Select } from '../compon
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
-const TIENDA_ID = 1;
-
 
 
 // Métodos de demostración secundarios restantes
@@ -116,6 +114,8 @@ export default function Payments() {
   const [transferLoading, setTransferLoading] = useState(true);
   const [transferSaving, setTransferSaving] = useState(false);
   const [transferFeedback, setTransferFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [tiendaId, setTiendaId] = useState<number | null>(null);
+  const [tiendaError, setTiendaError] = useState<string | null>(null);
 
 
 
@@ -136,159 +136,141 @@ export default function Payments() {
 
 
   useEffect(() => {
+    let active = true;
 
-    // 1. Cargar Transbank
+    const loadConfiguration = async () => {
+      setTbLoading(true);
+      setPpLoading(true);
+      setMpLoading(true);
+      setTransferLoading(true);
+      setTiendaError(null);
 
-    setTbLoading(true);
+      try {
+        const tiendaResponse = await fetch(`${API_BASE}/api/pagos/mi-tienda/`, {
+          method: 'GET',
+          headers: getAuthHeaders(),
+        });
+        const tiendaBody = await tiendaResponse.json();
 
-    fetch(`${API_BASE}/api/catalog/tiendas/${TIENDA_ID}/configuracion/transbank/`, {
-
-      method: 'GET',
-
-      headers: getAuthHeaders(),
-
-    })
-
-      .then((res) => res.json())
-
-      .then((res) => {
-
-        if (res.exito && res.data) {
-
-          setTbCodigo(res.data.codigo_comercio || '');
-
-          setTbAmbiente(res.data.ambiente || 'INTEGRACION');
-
-          setTbActivo(res.data.activo ?? true);
-
-          setTbMaskedKey(res.data.api_key_enmascarada || '');
-
-          setTbIsConfigured(Boolean(res.data.configurado));
-
+        if (!tiendaResponse.ok || tiendaBody.exito !== true || !tiendaBody.data?.id_tienda) {
+          throw new Error(
+            tiendaBody?.mensaje ||
+              'No se pudo identificar la tienda del emprendedor autenticado.',
+          );
         }
 
-      })
-
-      .catch((err) => console.error('Error al conectar con Transbank:', err))
-
-      .finally(() => setTbLoading(false));
-
-
-
-    // 2. Cargar PayPal
-
-    setPpLoading(true);
-
-    fetch(`${API_BASE}/api/catalog/tiendas/${TIENDA_ID}/configuracion/paypal/`, {
-
-      method: 'GET',
-
-      headers: getAuthHeaders(),
-
-    })
-
-      .then((res) => res.json())
-
-      .then((res) => {
-
-        if (res.exito && res.data) {
-
-          setPpClientId(res.data.client_id || '');
-
-          setPpAmbiente(res.data.ambiente || 'SANDBOX');
-
-          setPpActivo(res.data.activo ?? false);
-
-          setPpMaskedSecret(res.data.client_secret_enmascarado || '');
-
-          setPpIsConfigured(Boolean(res.data.configurado));
-
+        const resolvedTiendaId = Number(tiendaBody.data.id_tienda);
+        if (!Number.isInteger(resolvedTiendaId) || resolvedTiendaId <= 0) {
+          throw new Error('El backend devolvió un identificador de tienda inválido.');
         }
 
-      })
+        if (!active) return;
+        setTiendaId(resolvedTiendaId);
 
-      .catch((err) => console.error('Error al conectar con PayPal:', err))
+        const [tbResponse, ppResponse, mpResponse, transferResponse] = await Promise.all([
+          fetch(`${API_BASE}/api/catalog/tiendas/${resolvedTiendaId}/configuracion/transbank/`, {
+            method: 'GET',
+            headers: getAuthHeaders(),
+          }),
+          fetch(`${API_BASE}/api/catalog/tiendas/${resolvedTiendaId}/configuracion/paypal/`, {
+            method: 'GET',
+            headers: getAuthHeaders(),
+          }),
+          fetch(`${API_BASE}/api/catalog/tiendas/${resolvedTiendaId}/configuracion/mercadopago/`, {
+            method: 'GET',
+            headers: getAuthHeaders(),
+          }),
+          fetch(`${API_BASE}/api/pagos/configuracion/`, {
+            method: 'GET',
+            headers: getAuthHeaders(),
+          }),
+        ]);
 
-      .finally(() => setPpLoading(false));
+        const [tbBody, ppBody, mpBody, transferBody] = await Promise.all([
+          tbResponse.json(),
+          ppResponse.json(),
+          mpResponse.json(),
+          transferResponse.json(),
+        ]);
 
-
-
-    // 3. Cargar Mercado Pago
-
-    setMpLoading(true);
-
-    fetch(`${API_BASE}/api/catalog/tiendas/${TIENDA_ID}/configuracion/mercadopago/`, {
-
-      method: 'GET',
-
-      headers: getAuthHeaders(),
-
-    })
-
-      .then((res) => res.json())
-
-      .then((res) => {
-
-        if (res.exito && res.data) {
-
-          setMpPublicKey(res.data.public_key || '');
-
-          setMpAmbiente(res.data.ambiente || 'SANDBOX');
-
-          setMpActivo(res.data.activo ?? false);
-
-          setMpMaskedToken(res.data.access_token_enmascarado || '');
-
-          setMpIsConfigured(Boolean(res.data.configurado));
-
+        if (active && tbResponse.ok && tbBody.exito && tbBody.data) {
+          setTbCodigo(tbBody.data.codigo_comercio || '');
+          setTbAmbiente(tbBody.data.ambiente || 'INTEGRACION');
+          setTbActivo(tbBody.data.activo ?? false);
+          setTbMaskedKey(tbBody.data.api_key_enmascarada || '');
+          setTbIsConfigured(Boolean(tbBody.data.configurado));
         }
 
-      })
-
-      .catch((err) => console.error('Error al conectar con Mercado Pago:', err))
-
-      .finally(() => setMpLoading(false));
-
-    // 4. Cargar configuración persistente de transferencia de la tienda autenticada
-    setTransferLoading(true);
-    fetch(`${API_BASE}/api/pagos/configuracion/`, {
-      method: 'GET',
-      headers: getAuthHeaders(),
-    })
-      .then(async (res) => {
-        const body = await res.json();
-        if (!res.ok || body.exito !== true) {
-          throw new Error(body?.mensaje || 'No se pudo cargar la configuración de pagos.');
+        if (active && ppResponse.ok && ppBody.exito && ppBody.data) {
+          setPpClientId(ppBody.data.client_id || '');
+          setPpAmbiente(ppBody.data.ambiente || 'SANDBOX');
+          setPpActivo(ppBody.data.activo ?? false);
+          setPpMaskedSecret(ppBody.data.client_secret_enmascarado || '');
+          setPpIsConfigured(Boolean(ppBody.data.configurado));
         }
-        const transfer = body.data?.transfer;
-        if (transfer && typeof transfer === 'object') {
-          setForm({
-            ...form,
+
+        if (active && mpResponse.ok && mpBody.exito && mpBody.data) {
+          setMpPublicKey(mpBody.data.public_key || '');
+          setMpAmbiente(mpBody.data.ambiente || 'SANDBOX');
+          setMpActivo(mpBody.data.activo ?? false);
+          setMpMaskedToken(mpBody.data.access_token_enmascarado || '');
+          setMpIsConfigured(Boolean(mpBody.data.configurado));
+        }
+
+        if (!transferResponse.ok || transferBody.exito !== true) {
+          throw new Error(
+            transferBody?.mensaje || 'No se pudo cargar la configuración bancaria.',
+          );
+        }
+
+        const transfer = transferBody.data?.transfer;
+        if (active && transfer && typeof transfer === 'object') {
+          setForm((currentForm: any) => ({
+            ...currentForm,
             transfer: {
               enabled: transfer.enabled === true,
-              fields: transfer.fields && typeof transfer.fields === 'object'
-                ? transfer.fields
-                : {},
+              fields:
+                transfer.fields && typeof transfer.fields === 'object'
+                  ? transfer.fields
+                  : {},
             },
-          });
+          }));
         }
-      })
-      .catch((err) => {
-        console.error('Error al cargar transferencia:', err);
-        setTransferFeedback({
-          type: 'error',
-          message: 'No se pudo cargar la configuración bancaria guardada.',
-        });
-      })
-      .finally(() => setTransferLoading(false));
+      } catch (error) {
+        if (!active) return;
+        const message =
+          error instanceof Error
+            ? error.message
+            : 'No se pudo cargar la configuración de pagos.';
+        setTiendaError(message);
+        setTransferFeedback({ type: 'error', message });
+      } finally {
+        if (active) {
+          setTbLoading(false);
+          setPpLoading(false);
+          setMpLoading(false);
+          setTransferLoading(false);
+        }
+      }
+    };
 
-  }, []);
+    void loadConfiguration();
+
+    return () => {
+      active = false;
+    };
+  }, [setForm]);
 
 
 
   // Guardar Transbank
 
   const handleSaveTransbank = async () => {
+    if (!tiendaId) {
+      setTbFeedback({ type: 'error', message: 'No se pudo identificar la tienda del emprendedor.' });
+      return false;
+    }
+
     setTbSaving(true);
     setTbFeedback(null);
 
@@ -323,7 +305,7 @@ export default function Payments() {
 
     try {
 
-      const res = await fetch(`${API_BASE}/api/catalog/tiendas/${TIENDA_ID}/configuracion/transbank/`, {
+      const res = await fetch(`${API_BASE}/api/catalog/tiendas/${tiendaId}/configuracion/transbank/`, {
 
         method: 'POST',
 
@@ -382,6 +364,11 @@ export default function Payments() {
   // Guardar PayPal
 
   const handleSavePayPal = async () => {
+    if (!tiendaId) {
+      setPpFeedback({ type: 'error', message: 'No se pudo identificar la tienda del emprendedor.' });
+      return false;
+    }
+
 
     setPpSaving(true);
 
@@ -422,7 +409,7 @@ export default function Payments() {
 
     try {
 
-      const res = await fetch(`${API_BASE}/api/catalog/tiendas/${TIENDA_ID}/configuracion/paypal/`, {
+      const res = await fetch(`${API_BASE}/api/catalog/tiendas/${tiendaId}/configuracion/paypal/`, {
 
         method: 'POST',
 
@@ -481,6 +468,11 @@ export default function Payments() {
   // Guardar Mercado Pago
 
   const handleSaveMercadoPago = async () => {
+    if (!tiendaId) {
+      setMpFeedback({ type: 'error', message: 'No se pudo identificar la tienda del emprendedor.' });
+      return false;
+    }
+
 
     setMpSaving(true);
 
@@ -521,7 +513,7 @@ export default function Payments() {
 
     try {
 
-      const res = await fetch(`${API_BASE}/api/catalog/tiendas/${TIENDA_ID}/configuracion/mercadopago/`, {
+      const res = await fetch(`${API_BASE}/api/catalog/tiendas/${tiendaId}/configuracion/mercadopago/`, {
 
         method: 'POST',
 
@@ -703,6 +695,10 @@ export default function Payments() {
         Configura las pasarelas de pago de tu tienda. Webpay Plus, PayPal y Mercado Pago se encuentran conectados a tu backend y base de datos real.
 
       </Alert>
+
+      {tiendaError && (
+        <Alert variant="error">{tiendaError}</Alert>
+      )}
 
 
 

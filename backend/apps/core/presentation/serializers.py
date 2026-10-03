@@ -175,19 +175,55 @@ class RegistrarCompraSerializer(StrictSerializer):
     def validate_metodo_pago(self, value):
         tienda_id = self.context.get('tienda')
         if not tienda_id:
-            raise serializers.ValidationError("Falta el identificador de la tienda en el contexto.")
+            raise serializers.ValidationError(
+                "Falta el identificador de la tienda en el contexto."
+            )
 
-        try:
-            from apps.core.models import ConfiguracionPago
-            config_pago = ConfiguracionPago.objects.get(tienda_id=tienda_id)
-            metodo = config_pago.datos.get(value, {})
+        from apps.core.models import (
+            ConfiguracionPago,
+            ConfiguracionTransbank,
+            ConfiguracionPayPal,
+            ConfiguracionMercadoPago,
+        )
 
-            if not metodo.get('enabled', False):
-                raise serializers.ValidationError(
-                    f"El método de pago '{value}' no está habilitado para esta tienda."
+        normalizado = str(value).strip().lower()
+
+        if normalizado == 'transbank':
+            habilitado = ConfiguracionTransbank.objects.filter(
+                id_tienda_id=tienda_id,
+                activo=True,
+            ).exists()
+
+        elif normalizado == 'paypal':
+            habilitado = ConfiguracionPayPal.objects.filter(
+                id_tienda_id=tienda_id,
+                activo=True,
+            ).exists()
+
+        elif normalizado in {'mercadopago', 'mercado_pago', 'mercado pago'}:
+            habilitado = ConfiguracionMercadoPago.objects.filter(
+                id_tienda_id=tienda_id,
+                activo=True,
+            ).exists()
+
+        elif normalizado in {'transferencia', 'transfer'}:
+            try:
+                config_pago = ConfiguracionPago.objects.get(tienda_id=tienda_id)
+                metodo = (config_pago.datos or {}).get('transfer', {})
+                habilitado = (
+                    isinstance(metodo, dict)
+                    and metodo.get('enabled', False) is True
                 )
-        except ConfiguracionPago.DoesNotExist:
-            raise serializers.ValidationError("La tienda no tiene medios de pago configurados.")
+            except ConfiguracionPago.DoesNotExist:
+                habilitado = False
+
+        else:
+            habilitado = False
+
+        if not habilitado:
+            raise serializers.ValidationError(
+                f"El método de pago '{value}' no está habilitado para esta tienda."
+            )
 
         return value
 
@@ -196,12 +232,12 @@ class RegistrarCompraSerializer(StrictSerializer):
             raise serializers.ValidationError(
                 "Debe incluir al menos un producto en la compra."
             )
-        # La validación real de stock y existencia de cada SKU se hace contra
-        # MongoDB en el creador común de pedidos, sin confirmar pagos aquí.
         return items
+
+
 class ConfiguracionPagoSerializer(serializers.Serializer):
     """ Valida que no se habiliten medios de pago sin sus campos obligatorios (SCRUM-306) """
-    
+
     REQUIRED_FIELDS_BY_METHOD = {
         'transbank': ['api_key', 'codigo_comercio'],
         'mercadopago': ['public_key', 'access_token'],
@@ -229,16 +265,16 @@ class ConfiguracionPagoSerializer(serializers.Serializer):
         for method_id, method_data in data.items():
             if not isinstance(method_data, dict):
                 continue
-                
+
             is_enabled = method_data.get('enabled')
             # Solo validamos si intentan guardarlo como habilitado
             if str(is_enabled).lower() == 'true' or is_enabled is True:
                 fields = method_data.get('fields', {})
                 required_fields = self.REQUIRED_FIELDS_BY_METHOD.get(method_id, [])
-                
+
                 # Buscamos campos vacíos o inexistentes
                 missing = [key for key in required_fields if not str(fields.get(key, '')).strip()]
-                
+
                 if missing:
                     errores_metodos[method_id] = f"Faltan campos obligatorios para habilitarlo: {', '.join(missing)}."
 
