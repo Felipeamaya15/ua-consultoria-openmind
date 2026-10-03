@@ -92,6 +92,12 @@ class Pedido(models.Model):
     ]
     id_pedido = models.BigAutoField(primary_key=True)
     id_usuario = models.ForeignKey(Usuario, on_delete=models.CASCADE, db_column='id_usuario')
+    # Vínculo explícito para lectura del historial autenticado. Los pedidos legados
+    # no se atribuyen por correo ni por coincidencia de IDs.
+    comprador = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='pedidos_comprador',
+    )
     monto_total = models.DecimalField(max_digits=12, decimal_places=2)
     estado = models.CharField(max_length=20, choices=ESTADO_CHOICES, default='pendiente')
     fecha_creacion = models.DateTimeField(auto_now_add=True)

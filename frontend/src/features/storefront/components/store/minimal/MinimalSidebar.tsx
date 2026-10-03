@@ -1,3 +1,4 @@
+import { AccountNavigation } from '../AccountNavigation';
 import { Link } from 'react-router-dom';
 import { Icon } from '../../ui';
 
@@ -45,13 +46,7 @@ export function MinimalSidebar() {
 
       {/* Usuario */}
       <div className="mt-auto mb-5">
-        <Link
-          to="ingresar"
-          aria-label="Mi cuenta"
-          className="w-9 h-9 rounded-full bg-gray-100 text-[var(--primary)] flex items-center justify-center text-xs font-semibold"
-        >
-          M
-        </Link>
+        <AccountNavigation className="w-9 h-9 rounded-full bg-gray-100 text-[var(--primary)] flex items-center justify-center text-xs font-semibold" />
       </div>
     </aside>
   );

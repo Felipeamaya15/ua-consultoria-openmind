@@ -1,3 +1,6 @@
+import CustomerOrders from '../../features/storefront/pages/CustomerOrders';
+import { RequireCustomer } from '../../features/storefront/components/store/AccountNavigation';
+import Profile from '../../features/storefront/pages/Profile';
 
 import { CheckoutSummaryPage } from '../../features/checkout/pages/CheckoutSummaryPage';
 import { LinkifyConfigPage } from '../../features/integrations/pages/LinkifyConfigPage';
@@ -50,6 +53,9 @@ function StorefrontProviders({
 }
 
 const sharedChildren = [
+  { path: 'mis-pedidos', element: <RequireCustomer><CustomerOrders /></RequireCustomer> },
+  { path: 'mis-pedidos/:id', element: <RequireCustomer><CustomerOrders /></RequireCustomer> },
+  { path: 'perfil', element: <RequireCustomer><Profile /></RequireCustomer> },
   {
     path: 'catalogo',
     element: <Catalog />,
