@@ -61,6 +61,15 @@ type PaymentOption = {
   desc: string;
 };
 
+type TransferDetails = {
+  bank_name: string;
+  account_type: string;
+  account_number: string;
+  holder_rut: string;
+  holder_name: string;
+  confirmation_email: string;
+};
+
 const ADMIN_STORAGE_KEY = 'ua-entrepreneur-demo-v1';
 
 type AuthSettings = {
@@ -436,6 +445,7 @@ export default function Checkout() {
   const [paymentOptions, setPaymentOptions] = useState<PaymentOption[]>([]);
   const [paymentsLoading, setPaymentsLoading] = useState(true);
   const [paymentsError, setPaymentsError] = useState('');
+  const [transferDetails, setTransferDetails] = useState<TransferDetails | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -448,13 +458,60 @@ export default function Checkout() {
           throw new Error('No se pudieron consultar los medios de pago de la tienda.');
         }
         const keys: Record<string, string> = {
-          Transbank: 'transbank', MercadoPago: 'mercadopago', PayPal: 'paypal', Linkify: 'linkify', Transferencia: 'transfer',
+          Transbank: 'transbank',
+          MercadoPago: 'mercadopago',
+          PayPal: 'paypal',
+          Linkify: 'linkify',
+          Transferencia: 'transfer',
         };
-        const enabled = paymentPresentation.filter(option => {
+
+        const transferConfiguration = body.data.transfer;
+        const transferFields =
+          transferConfiguration?.enabled === true &&
+          transferConfiguration?.fields &&
+          typeof transferConfiguration.fields === 'object'
+            ? transferConfiguration.fields
+            : null;
+
+        const requiredTransferFields = [
+          'bank_name',
+          'account_type',
+          'account_number',
+          'holder_rut',
+          'holder_name',
+          'confirmation_email',
+        ];
+
+        const validTransfer =
+          transferFields &&
+          requiredTransferFields.every(
+            (field) => String(transferFields[field] ?? '').trim(),
+          );
+
+        const enabled = paymentPresentation.filter((option) => {
           const configuration = body.data[keys[option.id]] ?? body.data[option.id];
+          if (option.id === 'Transferencia') {
+            return configuration?.enabled === true && Boolean(validTransfer);
+          }
           return configuration?.enabled === true;
         });
-        if (active) {setPaymentOptions(enabled); setPaymentsError('');}
+
+        if (active) {
+          setTransferDetails(
+            validTransfer
+              ? {
+                  bank_name: String(transferFields.bank_name),
+                  account_type: String(transferFields.account_type),
+                  account_number: String(transferFields.account_number),
+                  holder_rut: String(transferFields.holder_rut),
+                  holder_name: String(transferFields.holder_name),
+                  confirmation_email: String(transferFields.confirmation_email),
+                }
+              : null,
+          );
+          setPaymentOptions(enabled);
+          setPaymentsError('');
+        }
       } catch {
         if (active) {setPaymentOptions([]); setPaymentsError('No se pudieron cargar los medios de pago. Recarga la página para reintentar.');}
       } finally {
@@ -697,7 +754,9 @@ export default function Checkout() {
           ? paypal.email
           : paymentMethod ===
               'Transferencia'
-            ? 'Verificación manual en 24-48h'
+            ? transferDetails
+              ? `${transferDetails.bank_name} · ${transferDetails.account_type} · ${transferDetails.account_number}`
+              : 'Transferencia bancaria'
             : '';
 
   /*
@@ -1458,35 +1517,50 @@ export default function Checkout() {
               )}
 
               {/* TRANSFERENCIA */}
-              {paymentMethod === 'Transferencia' && (
+              {paymentMethod === 'Transferencia' && transferDetails && (
                 <div
                   className={
                     isMinimal
-                      ? 'bg-[var(--info-bg)] border border-[var(--info)] rounded-[18px] p-5 text-sm space-y-2'
-                      : 'bg-[var(--info-bg)] border border-[var(--info)] rounded-xl p-4 text-sm space-y-2'
+                      ? 'bg-[var(--info-bg)] border border-[var(--info)] rounded-[18px] p-5 text-sm space-y-3'
+                      : 'bg-[var(--info-bg)] border border-[var(--info)] rounded-xl p-4 text-sm space-y-3'
                   }
                 >
-                  <p className="font-semibold text-[var(--info)]">
-                    Datos de ejemplo para transferencia
-                  </p>
+                  <div>
+                    <p className="font-semibold text-[var(--info)]">
+                      Datos para realizar la transferencia
+                    </p>
+                    <p className="text-xs text-[#667085] mt-1">
+                      Transfiere el monto exacto a la cuenta configurada por esta tienda.
+                    </p>
+                  </div>
 
-                  <div className="grid grid-cols-2 gap-1 text-xs text-[#151515]">
+                  <div className="grid grid-cols-2 gap-x-3 gap-y-2 text-xs text-[#151515]">
                     <span className="text-[#667085]">Banco:</span>
-                    <span>Banco Estado</span>
+                    <span>{transferDetails.bank_name}</span>
 
-                    <span className="text-[#667085]">Cuenta:</span>
-                    <span>012345678</span>
+                    <span className="text-[#667085]">Tipo de cuenta:</span>
+                    <span>{transferDetails.account_type}</span>
+
+                    <span className="text-[#667085]">N° de cuenta:</span>
+                    <span>{transferDetails.account_number}</span>
+
+                    <span className="text-[#667085]">Titular:</span>
+                    <span>{transferDetails.holder_name}</span>
 
                     <span className="text-[#667085]">RUT:</span>
-                    <span>12.345.678-9</span>
+                    <span>{transferDetails.holder_rut}</span>
+
+                    <span className="text-[#667085]">Correo comprobante:</span>
+                    <span>{transferDetails.confirmation_email}</span>
 
                     <span className="text-[#667085]">Monto:</span>
                     <span className="font-bold">{formatPrice(total)}</span>
                   </div>
 
-                  <p className="text-xs text-[#667085]">
-                    Demostración: no realices transferencias a estos datos.
-                  </p>
+                  <Alert variant="info">
+                    El pago se realiza directamente a la cuenta bancaria informada por el emprendedor.
+                    El pedido quedará registrado para su posterior verificación.
+                  </Alert>
                 </div>
               )}
             </div>

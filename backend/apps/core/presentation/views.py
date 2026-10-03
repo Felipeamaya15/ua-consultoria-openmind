@@ -20,19 +20,9 @@ class ConfiguracionPagoAPIView(APIView):
 
     def get(self, request):
         try:
-            tienda = resolver_tienda(
-                request,
-                exigir_propietario=True,
-            )
-
-            config_pago, _ = ConfiguracionPago.objects.get_or_create(
-                tienda=tienda,
-            )
-
-            return success_response(
-                data=config_pago.datos or {},
-            )
-
+            tienda = resolver_tienda(request, exigir_propietario=True)
+            config_pago, _ = ConfiguracionPago.objects.get_or_create(tienda=tienda)
+            return success_response(data=config_pago.datos or {})
         except Exception as e:
             return error_response(
                 mensaje=str(e),
@@ -42,15 +32,9 @@ class ConfiguracionPagoAPIView(APIView):
 
     def put(self, request):
         try:
-            tienda = resolver_tienda(
-                request,
-                exigir_propietario=True,
-            )
+            tienda = resolver_tienda(request, exigir_propietario=True)
 
-            serializer = ConfiguracionPagoSerializer(
-                data=request.data,
-            )
-
+            serializer = ConfiguracionPagoSerializer(data=request.data)
             if not serializer.is_valid():
                 return error_response(
                     mensaje=(
@@ -62,10 +46,7 @@ class ConfiguracionPagoAPIView(APIView):
                     status=400,
                 )
 
-            config_pago, _ = ConfiguracionPago.objects.get_or_create(
-                tienda=tienda,
-            )
-
+            config_pago, _ = ConfiguracionPago.objects.get_or_create(tienda=tienda)
             config_pago.datos = serializer.validated_data
             config_pago.save()
 
@@ -73,7 +54,6 @@ class ConfiguracionPagoAPIView(APIView):
                 mensaje="Métodos de pago guardados exitosamente.",
                 data=config_pago.datos,
             )
-
         except Exception as e:
             return error_response(
                 mensaje=str(e),
@@ -87,36 +67,52 @@ class ConfiguracionPagoAPIView(APIView):
 
 class MetodosPagoActivosAPIView(APIView):
     """
-    Endpoint público utilizado por checkout.
+    Endpoint público para checkout.
 
-    Devuelve únicamente los medios de pago habilitados
-    para la tienda correspondiente.
+    Devuelve únicamente los medios habilitados de la tienda.
+    Para transferencia incluye solo los datos bancarios que el comprador
+    necesita para transferir. Nunca publica secretos de pasarelas.
     """
 
     permission_classes = [AllowAny]
 
+    TRANSFER_PUBLIC_FIELDS = {
+        "bank_name",
+        "account_type",
+        "account_number",
+        "holder_rut",
+        "holder_name",
+        "confirmation_email",
+    }
+
     def get(self, request):
         try:
             tienda_id = resolver_tienda_id(request)
-
-            config_pago = ConfiguracionPago.objects.get(
-                tienda_id=tienda_id,
-            )
-
+            config_pago = ConfiguracionPago.objects.get(tienda_id=tienda_id)
             configuracion = config_pago.datos or {}
 
-            metodos_activos = {
-                key: method_data
-                for key, method_data in configuracion.items()
-                if (
-                    isinstance(method_data, dict)
-                    and method_data.get("enabled", False)
-                )
-            }
+            metodos_activos = {}
 
-            return success_response(
-                data=metodos_activos,
-            )
+            for key, method_data in configuracion.items():
+                if not isinstance(method_data, dict):
+                    continue
+                if method_data.get("enabled", False) is not True:
+                    continue
+
+                safe_method = {"enabled": True}
+
+                if key == "transfer":
+                    fields = method_data.get("fields", {})
+                    if not isinstance(fields, dict):
+                        fields = {}
+                    safe_method["fields"] = {
+                        field: fields.get(field, "")
+                        for field in self.TRANSFER_PUBLIC_FIELDS
+                    }
+
+                metodos_activos[key] = safe_method
+
+            return success_response(data=metodos_activos)
 
         except ConfiguracionPago.DoesNotExist:
             return success_response(data={})

@@ -14,12 +14,31 @@ const TIENDA_ID = 1;
 
 // Métodos de demostración secundarios restantes
 
+const transferFieldLabels: Record<string, string> = {
+  bank_name: 'Banco',
+  account_type: 'Tipo de cuenta',
+  account_number: 'N° de cuenta',
+  holder_rut: 'RUT del titular',
+  holder_name: 'Nombre del titular',
+  confirmation_email: 'Correo para comprobantes',
+};
+
 const otherMethods = [
-
   { id: 'linkify', name: 'Linkify', icon: 'link', desc: 'Pago por link', fields: ['API Key'] },
-
-  { id: 'transfer', name: 'Transferencia bancaria', icon: 'bank', desc: 'Verificación manual', fields: ['Banco', 'N° de cuenta', 'RUT', 'Nombre titular'] }
-
+  {
+    id: 'transfer',
+    name: 'Transferencia bancaria',
+    icon: 'bank',
+    desc: 'Transferencia directa a la cuenta configurada para esta tienda',
+    fields: [
+      'bank_name',
+      'account_type',
+      'account_number',
+      'holder_rut',
+      'holder_name',
+      'confirmation_email',
+    ],
+  },
 ];
 
 
@@ -94,24 +113,22 @@ export default function Payments() {
 
   const [mpFeedback, setMpFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
+  const [transferLoading, setTransferLoading] = useState(true);
+  const [transferSaving, setTransferSaving] = useState(false);
+  const [transferFeedback, setTransferFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+
 
 
   const getAuthHeaders = () => {
 
     const token =
-
       localStorage.getItem('token') ||
-
       sessionStorage.getItem('token') ||
-
-      'b130c016ab2e6db86bee2da41dd5e3645c6abe93';
+      '';
 
     return {
-
       'Content-Type': 'application/json',
-
-      Authorization: `Token ${token}`,
-
+      ...(token ? { Authorization: `Token ${token}` } : {}),
     };
 
   };
@@ -231,6 +248,39 @@ export default function Payments() {
       .catch((err) => console.error('Error al conectar con Mercado Pago:', err))
 
       .finally(() => setMpLoading(false));
+
+    // 4. Cargar configuración persistente de transferencia de la tienda autenticada
+    setTransferLoading(true);
+    fetch(`${API_BASE}/api/pagos/configuracion/`, {
+      method: 'GET',
+      headers: getAuthHeaders(),
+    })
+      .then(async (res) => {
+        const body = await res.json();
+        if (!res.ok || body.exito !== true) {
+          throw new Error(body?.mensaje || 'No se pudo cargar la configuración de pagos.');
+        }
+        const transfer = body.data?.transfer;
+        if (transfer && typeof transfer === 'object') {
+          setForm({
+            ...form,
+            transfer: {
+              enabled: transfer.enabled === true,
+              fields: transfer.fields && typeof transfer.fields === 'object'
+                ? transfer.fields
+                : {},
+            },
+          });
+        }
+      })
+      .catch((err) => {
+        console.error('Error al cargar transferencia:', err);
+        setTransferFeedback({
+          type: 'error',
+          message: 'No se pudo cargar la configuración bancaria guardada.',
+        });
+      })
+      .finally(() => setTransferLoading(false));
 
   }, []);
 
@@ -555,14 +605,91 @@ export default function Payments() {
 
 
 
+  const handleSaveTransfer = async () => {
+    setTransferSaving(true);
+    setTransferFeedback(null);
+
+    const current = form.transfer ?? { enabled: false, fields: {} };
+    const requiredFields = [
+      'bank_name',
+      'account_type',
+      'account_number',
+      'holder_rut',
+      'holder_name',
+      'confirmation_email',
+    ];
+
+    if (current.enabled) {
+      const missing = requiredFields.filter(
+        (field) => !String(current.fields?.[field] ?? '').trim(),
+      );
+      if (missing.length) {
+        setTransferFeedback({
+          type: 'error',
+          message: 'Completa todos los datos bancarios antes de habilitar la transferencia.',
+        });
+        setTransferSaving(false);
+        return false;
+      }
+    }
+
+    try {
+      const currentResponse = await fetch(`${API_BASE}/api/pagos/configuracion/`, {
+        method: 'GET',
+        headers: getAuthHeaders(),
+      });
+      const currentBody = await currentResponse.json();
+      if (!currentResponse.ok || currentBody.exito !== true) {
+        throw new Error(currentBody?.mensaje || 'No se pudo consultar la configuración actual.');
+      }
+
+      const mergedConfiguration = {
+        ...(currentBody.data ?? {}),
+        transfer: {
+          enabled: current.enabled === true,
+          fields: { ...(current.fields ?? {}) },
+        },
+      };
+
+      const response = await fetch(`${API_BASE}/api/pagos/configuracion/`, {
+        method: 'PUT',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(mergedConfiguration),
+      });
+      const body = await response.json();
+
+      if (!response.ok || body.exito !== true) {
+        const detail = body?.error?.detalles
+          ? Object.values(body.error.detalles).flat().join(' ')
+          : body?.mensaje || 'No se pudo guardar la transferencia bancaria.';
+        throw new Error(detail);
+      }
+
+      setTransferFeedback({
+        type: 'success',
+        message: 'Datos bancarios guardados en el backend para esta tienda.',
+      });
+      return true;
+    } catch (error) {
+      setTransferFeedback({
+        type: 'error',
+        message: error instanceof Error ? error.message : 'No se pudo guardar la transferencia bancaria.',
+      });
+      return false;
+    } finally {
+      setTransferSaving(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
-
     e.preventDefault();
-
     save();
-
-    await Promise.all([handleSaveTransbank(), handleSavePayPal(), handleSaveMercadoPago()]);
-
+    await Promise.all([
+      handleSaveTransbank(),
+      handleSavePayPal(),
+      handleSaveMercadoPago(),
+      handleSaveTransfer(),
+    ]);
   };
 
 
@@ -577,6 +704,9 @@ export default function Payments() {
 
       </Alert>
 
+
+
+      {/* ================= TARJETA REAL: WEBPAY / TRANSBANK ================= */}
 
       <AdminCard>
 
@@ -749,6 +879,10 @@ export default function Payments() {
         )}
 
       </AdminCard>
+
+
+
+      {/* ================= TARJETA REAL: MERCADO PAGO ================= */}
 
       <AdminCard>
 
@@ -924,6 +1058,8 @@ export default function Payments() {
 
 
 
+      {/* ================= TARJETA REAL: PAYPAL ================= */}
+
       <AdminCard>
 
         <div className="flex items-center justify-between gap-3 mb-3">
@@ -1098,6 +1234,8 @@ export default function Payments() {
 
 
 
+      {/* ================= TARJETAS SECUNDARIAS (DEMO) ================= */}
+
       {otherMethods.map((method) => {
 
         const current = form[method.id] || { enabled: false, fields: {} };
@@ -1146,15 +1284,15 @@ export default function Payments() {
 
                   key={field}
 
-                  label={field}
+                  label={method.id === 'transfer' ? (transferFieldLabels[field] ?? field) : field}
 
                   autoComplete="off"
 
-                  type={/key|token|secret/i.test(field) ? 'password' : 'text'}
+                  type={/key|token|secret/i.test(field) ? 'password' : (field === 'confirmation_email' ? 'email' : 'text')}
 
                   value={current.fields?.[field] ?? ''}
 
-                  placeholder={method.id === 'transfer' ? 'Dato de ejemplo' : 'Credencial demo'}
+                  placeholder={method.id === 'transfer' ? 'Dato bancario real de la tienda' : 'Credencial demo'}
 
                   onChange={(e: any) =>
 
@@ -1180,13 +1318,50 @@ export default function Payments() {
 
             </div>
 
+            {method.id === 'transfer' && (
+              <div className="flex flex-col gap-3 pt-3">
+                {transferLoading && (
+                  <p className="text-xs text-[var(--muted-foreground)]">
+                    Cargando datos bancarios guardados...
+                  </p>
+                )}
+                {transferFeedback && (
+                  <Alert variant={transferFeedback.type}>{transferFeedback.message}</Alert>
+                )}
+                <div className="flex justify-end">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="primary"
+                    loading={transferSaving}
+                    onClick={handleSaveTransfer}
+                  >
+                    Guardar transferencia bancaria
+                  </Button>
+                </div>
+              </div>
+            )}
+
           </AdminCard>
+
         );
+
       })}
+
+
+
       {saved && <Alert variant="success">Métodos de pago guardados correctamente.</Alert>}
-      <Button type="submit" loading={tbSaving || ppSaving || mpSaving}>
+
+
+
+      <Button type="submit" loading={tbSaving || ppSaving || mpSaving || transferSaving}>
+
         Guardar todos los métodos de pago
+
       </Button>
+
     </form>
+
   );
+
 }
