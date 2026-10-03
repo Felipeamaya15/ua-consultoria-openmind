@@ -199,3 +199,43 @@ class RegistrarCompraSerializer(StrictSerializer):
         # La validación real de stock y existencia de cada SKU se hace contra
         # MongoDB en el creador común de pedidos, sin confirmar pagos aquí.
         return items
+class ConfiguracionPagoSerializer(serializers.Serializer):
+    """ Valida que no se habiliten medios de pago sin sus campos obligatorios (SCRUM-306) """
+    
+    REQUIRED_FIELDS_BY_METHOD = {
+        'transbank': ['api_key', 'commerce_id'],
+        'mercadopago': ['access_token'],
+        'paypal': ['client_id', 'client_secret'],
+        'linkify': ['accountName', 'publicUrl', 'apiKey', 'webhookSecret'],
+        'transfer': ['bank_name', 'account_type', 'account_number', 'holder_rut', 'holder_name', 'confirmation_email']
+    }
+
+    def to_internal_value(self, data):
+        return data  # Permitimos la estructura dinámica del JSON
+
+    def validate(self, data):
+        if not isinstance(data, dict):
+            raise serializers.ValidationError("La configuración debe ser un objeto JSON válido.")
+
+        errores_metodos = {}
+
+        for method_id, method_data in data.items():
+            if not isinstance(method_data, dict):
+                continue
+                
+            is_enabled = method_data.get('enabled')
+            # Solo validamos si intentan guardarlo como habilitado
+            if str(is_enabled).lower() == 'true' or is_enabled is True:
+                fields = method_data.get('fields', {})
+                required_fields = self.REQUIRED_FIELDS_BY_METHOD.get(method_id, [])
+                
+                # Buscamos campos vacíos o inexistentes
+                missing = [key for key in required_fields if not str(fields.get(key, '')).strip()]
+                
+                if missing:
+                    errores_metodos[method_id] = f"Faltan campos obligatorios para habilitarlo: {', '.join(missing)}."
+
+        if errores_metodos:
+            raise serializers.ValidationError(errores_metodos)
+
+        return data
