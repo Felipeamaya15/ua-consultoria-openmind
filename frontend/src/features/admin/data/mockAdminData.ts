@@ -168,8 +168,6 @@ export const createDefaultAdminConfig = (): AdminConfig =>
       },
       linkify: {
         enabled: false,
-        linkify: {
-        enabled: false,
         fields: {
           environment: 'sandbox',
           expirationHours: '48',

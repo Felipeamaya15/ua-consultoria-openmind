@@ -91,7 +91,20 @@ class Pedido(models.Model):
         ('cancelado', 'Cancelado'),
     ]
     id_pedido = models.BigAutoField(primary_key=True)
-    id_usuario = models.ForeignKey(Usuario, on_delete=models.CASCADE, db_column='id_usuario')
+    # Nulo cuando la compra la hace un invitado (sin cuenta registrada).
+    id_usuario = models.ForeignKey(
+        Usuario, on_delete=models.CASCADE, db_column='id_usuario',
+        null=True, blank=True,
+    )
+
+    # Foto de los datos de contacto al momento de comprar. Se guardan siempre,
+    # sea invitado o usuario registrado, porque el pedido debe conservar esta
+    # información aunque el usuario cambie su correo/nombre después.
+    nombre_contacto = models.CharField(max_length=150)
+    correo_contacto = models.EmailField(max_length=320)
+    telefono_contacto = models.CharField(max_length=30, blank=True, default='')
+
+    metodo_pago = models.CharField(max_length=50, blank=True, default='')
     monto_total = models.DecimalField(max_digits=12, decimal_places=2)
     estado = models.CharField(max_length=20, choices=ESTADO_CHOICES, default='pendiente')
     fecha_creacion = models.DateTimeField(auto_now_add=True)
@@ -100,13 +113,22 @@ class Pedido(models.Model):
         db_table = 'pedido'
         constraints = [
             models.CheckConstraint(check=Q(monto_total__gte=0), name='chk_monto_total_valido'),
+            # Un pedido debe tener un usuario registrado O datos de contacto de invitado.
+            models.CheckConstraint(
+                check=Q(id_usuario__isnull=False) | ~Q(correo_contacto=''),
+                name='chk_pedido_tiene_comprador',
+            ),
         ]
 
 class ItemPedido(models.Model):
     id_item_pedido = models.BigAutoField(primary_key=True)
     id_pedido = models.ForeignKey(Pedido, on_delete=models.CASCADE, db_column='id_pedido')
     id_producto = models.ForeignKey(Producto, on_delete=models.CASCADE, db_column='id_producto')
-    
+
+    # Variante exacta comprada (vive en MongoDB, aquí dejamos una copia para historial).
+    sku = models.CharField(max_length=100, blank=True, default='')
+    atributos = models.JSONField(default=dict, blank=True)
+
     cantidad = models.IntegerField()
     precio_unitario = models.DecimalField(max_digits=12, decimal_places=2)
 

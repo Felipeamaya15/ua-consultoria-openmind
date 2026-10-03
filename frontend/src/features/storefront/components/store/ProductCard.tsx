@@ -101,48 +101,34 @@ export function ProductCard({
           ? 'text-[#77716f]'
           : 'text-[var(--muted-foreground)]';
 
+    const variantLabel = (variant: typeof product.variants[number]) => {
+      const attrs = Object.values(variant.attributes ?? {}).filter(Boolean).join(' / ');
+      return attrs || variant.sku;
+    };
+
     return (
       <div className="mt-3 grid gap-2">
-        <div className="grid gap-2">
-          <label className={`grid gap-1 text-[10px] font-semibold uppercase tracking-[0.08em] ${mutedClass}`}>
-            <span>{attributeNames.length === 1 ? product.attributeLabels?.[attributeNames[0]] || attributeNames[0] : 'Variante'}</span>
-            <select
-              aria-label={attributeNames.length === 1 ? product.attributeLabels?.[attributeNames[0]] || attributeNames[0] : 'Variante'}
-              value={selectedVariantId}
-              onChange={event => { setSelectedVariantId(event.target.value); setAdded(false); }}
-              className={`h-9 rounded-lg border px-2 text-xs normal-case tracking-normal outline-none ${selectClass}`}
-            >
-              <span>{name}</span>
-              <select
-                value={selectedAttributes[name] ?? ''}
-                onChange={(event) => {
-                  setSelectedAttributes((current) => ({
-                    ...current,
-                    [name]: event.target.value,
-                  }));
-                  setAdded(false);
-                }}
-                className={`h-9 rounded-lg border px-2 text-xs normal-case tracking-normal outline-none ${selectClass}`}
+        <label className={`grid gap-1 text-[10px] font-semibold uppercase tracking-[0.08em] ${mutedClass}`}>
+          <span>{attributeNames.length === 1 ? product.attributeLabels?.[attributeNames[0]] || attributeNames[0] : 'Variante'}</span>
+          <select
+            aria-label={attributeNames.length === 1 ? product.attributeLabels?.[attributeNames[0]] || attributeNames[0] : 'Variante'}
+            value={selectedVariantId}
+            onChange={event => { setSelectedVariantId(event.target.value); setAdded(false); }}
+            className={`h-9 rounded-lg border px-2 text-xs normal-case tracking-normal outline-none ${selectClass}`}
+          >
+            {product.variants.map(variant => (
+              <option
+                key={variant.id}
+                value={variant.id}
+                disabled={!variant.available || variant.stock <= 0}
               >
-                {(product.attributes[name] ?? []).map((value) => (
-                  (() => {
-                    const available = hasAvailableVariantFor(name, value);
-
-                    return (
-                      <option
-                        key={value}
-                        value={value}
-                        disabled={!available}
-                      >
-                        {available ? value : `${value} - Agotado`}
-                      </option>
-                    );
-                  })()
-                ))}
-              </select>
-            </label>
-          ))}
-        </div>
+                {variant.available && variant.stock > 0
+                  ? variantLabel(variant)
+                  : `${variantLabel(variant)} - Agotado`}
+              </option>
+            ))}
+          </select>
+        </label>
         <p className={`text-[10px] ${mutedClass}`}>
           SKU: {selectedVariant?.sku ?? 'No disponible'} · Stock:{' '}
           {selectedStock} uds
@@ -150,7 +136,6 @@ export function ProductCard({
       </div>
     );
   };
-
 
   /*
    * ==========================================================
