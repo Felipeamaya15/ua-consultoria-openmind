@@ -155,13 +155,6 @@ from apps.authentication.presentation.profile import StrictSerializer
 class RegistrarCompraSerializer(StrictSerializer):
     # Contacto de la compra; la identidad autenticada procede de request.user.
     clave_checkout = serializers.UUIDField(required=False)
-class CompraItemInputSerializer(serializers.Serializer):
-    # El catálogo real vive en MongoDB e identifica cada variante por SKU,
-    # no por un ID de la tabla VarianteProducto (que no se usa en la práctica).
-    sku = serializers.CharField(max_length=100)
-    cantidad = serializers.IntegerField(min_value=1)
-
-
     nombre_contacto = serializers.CharField(max_length=150, required=False, allow_blank=True)
     correo_contacto = serializers.EmailField(max_length=320, required=False, allow_blank=True)
     telefono_contacto = serializers.CharField(max_length=30, required=False, allow_blank=True, default='')
@@ -194,11 +187,6 @@ class CompraItemInputSerializer(serializers.Serializer):
         )
 
         normalizado = str(value).strip().lower()
-        try:
-            from apps.core.models import ConfiguracionPago
-            config_pago = ConfiguracionPago.objects.get(tienda_id=tienda_id)
-            metodo = config_pago.datos.get(value, {})
-
         if normalizado == 'transbank':
             habilitado = ConfiguracionTransbank.objects.filter(
                 id_tienda_id=tienda_id,
@@ -220,7 +208,9 @@ class CompraItemInputSerializer(serializers.Serializer):
         elif normalizado in {'transferencia', 'transfer'}:
             try:
                 config_pago = ConfiguracionPago.objects.get(tienda_id=tienda_id)
-                metodo = (config_pago.datos or {}).get('transfer', {})
+                datos = config_pago.datos or {}
+                # La UI guarda 'transfer'; se acepta también la clave tal como llega ('Transferencia').
+                metodo = datos.get('transfer') or datos.get(str(value), {})
                 habilitado = (
                     isinstance(metodo, dict)
                     and metodo.get('enabled', False) is True

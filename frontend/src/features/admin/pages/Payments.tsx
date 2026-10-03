@@ -26,7 +26,7 @@ const otherMethods = [
     name: 'Linkify', 
     icon: 'link', 
     desc: 'Validación automática de transferencias bancarias', 
-    fields: [] // Se maneja dinámicamente en renderLinkifyConfig
+    fields: [],
   },
   {
     id: 'transfer',
@@ -44,11 +44,14 @@ const otherMethods = [
   },
 ];
 
-const linkifyRequiredFields = [
-  'accountName',
-  'publicUrl',
-  'apiKey',
-  'webhookSecret',
+const linkifyRequiredFields = ['idCuenta', 'clavePrivada'];
+const transferRequiredFields = [
+  'bank_name',
+  'account_type',
+  'account_number',
+  'holder_rut',
+  'holder_name',
+  'confirmation_email',
 ];
 
 const boolValue = (value?: string) => value === 'true';
@@ -688,26 +691,25 @@ export default function Payments() {
       setTransferSaving(false);
     }
   };
+  const requiredKeysFor = (id: string): string[] =>
+    id === 'linkify' ? linkifyRequiredFields : id === 'transfer' ? transferRequiredFields : [];
+  const methodName = (id: string) => otherMethods.find((method) => method.id === id)?.name ?? id;
 
   const updateEnabled = (id: string, enabled: boolean) => {
     const current = form[id] ?? { enabled: false, fields: {} };
     
     if (enabled) {
       if (id === 'linkify') {
-        const missing = linkifyRequiredFields.filter((field) => !current.fields[field]?.trim());
+        const missing = linkifyRequiredFields.filter((field) => !current.fields?.[field]?.trim());
         if (missing.length > 0) {
           setValidationError('Completa todos los campos obligatorios de Linkify antes de habilitarlo.');
           return; 
         }
       } else {
-        const method = byId[id];
-        const missing = method?.fields
-          .filter((field) => field.required)
-          .filter((field) => !current.fields[field.key]?.trim());
-
-        if (missing && missing.length > 0) {
-          setValidationError(`Completa todos los campos obligatorios de ${method.name} antes de habilitarlo.`);
-          return; 
+        const missing = requiredKeysFor(id).filter((key) => !current.fields?.[key]?.trim());
+        if (missing.length > 0) {
+          setValidationError(`Completa todos los campos obligatorios de ${methodName(id)} antes de habilitarlo.`);
+          return;
         }
       }
     }
@@ -715,7 +717,7 @@ export default function Payments() {
     setValidationError('');
     setForm({
       ...form,
-      [id]: { ...current, enabled },
+      [id]: { ...current, enabled }
     });
   };
 
@@ -727,9 +729,7 @@ export default function Payments() {
       if (id === 'linkify') {
         if (linkifyRequiredFields.includes(field)) shouldDisable = true;
       } else {
-        const method = byId[id];
-        const isRequired = method?.fields.find((f) => f.key === field)?.required;
-        if (isRequired) shouldDisable = true;
+        if (requiredKeysFor(id).includes(field)) shouldDisable = true;
       }
     }
 
@@ -738,76 +738,35 @@ export default function Payments() {
       [id]: { 
         ...current, 
         enabled: shouldDisable ? false : current.enabled,
-        fields: { ...current.fields, [field]: value } 
+        fields: { ...current.fields, [field]: value },
       },
     });
 
     if (shouldDisable) {
-      setValidationError(`El medio de pago ${byId[id]?.name || 'Linkify'} fue desactivado porque se borró un campo obligatorio.`);
+      setValidationError(`El medio de pago ${methodName(id)} fue desactivado porque se borró un campo obligatorio.`);
     } else {
       setValidationError('');
     }
   };
 
   const validate = () => {
-    const enabledMethods = Object.entries(form).filter(([, value]: any) => value?.enabled);
-    if (!enabledMethods.length && !tbActivo && !ppActivo && !mpActivo) return 'Activa al menos un metodo de pago.';
+    const enabledSecondary = otherMethods.filter((method) => form[method.id]?.enabled);
+    if (!enabledSecondary.length && !tbActivo && !ppActivo && !mpActivo) {
+      return 'Activa al menos un metodo de pago.';
+    }
 
-    for (const [id, value] of enabledMethods as any) {
-      if (id === 'linkify') {
-        const missingLinkify = linkifyRequiredFields.filter(
-          (field) => !value.fields[field]?.trim(),
-        );
-
+    for (const method of enabledSecondary) {
+      const fields = form[method.id]?.fields ?? {};
+      if (method.id === 'linkify') {
+        const missingLinkify = linkifyRequiredFields.filter((field) => !fields[field]?.trim());
         if (missingLinkify.length) {
-          return 'Completa la cuenta, URL publica, API Key y Webhook Secret de Linkify.';
+          return 'Completa la cuenta y clave privada de Linkify.';
         }
-        continue;
+      } else if (requiredKeysFor(method.id).some((key) => !fields[key]?.trim())) {
+        return `Completa los campos obligatorios de ${method.name}.`;
       }
-
-      const method = byId[id];
-      const missing = method?.fields
-        ?.filter((field) => field.required)
-        ?.filter((field) => !value.fields[field.key]?.trim());
-
-      if (missing?.length) return `Completa los campos obligatorios de ${method.name}.`;
     }
     return '';
-  };
-
-  const handleSave = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    const errorMsg = validate();
-    
-    if (errorMsg) {
-      setValidationError(errorMsg);
-      return;
-    }
-
-    setValidationError('');
-    localSave();
-    setIsSyncing(true);
-    setBackendError('');
-
-    try {
-      const response = await fetch(`${API_BASE}/api/pagos/configuracion/`, {
-        method: 'PUT',
-        headers: getAuthHeaders(),
-        body: JSON.stringify(form),
-      });
-
-      if (!response.ok) {
-        throw new Error('No se pudieron sincronizar los metodos de pago secundarios con el servidor.');
-      }
-
-      // Guardamos en paralelo las pasarelas reales en los modelos relacionales
-      await Promise.all([handleSaveTransbank(), handleSavePayPal(), handleSaveMercadoPago()]);
-
-    } catch (err) {
-      setBackendError(err instanceof Error ? err.message : 'Error desconocido al guardar.');
-    } finally {
-      setIsSyncing(false);
-    }
   };
 
   const renderLinkifyConfig = () => {
@@ -858,59 +817,117 @@ export default function Payments() {
             placeholder="Clave secreta de integración"
             onChange={(event) => updateField('linkify', 'clavePrivada', event.target.value)}
           />
+          <Select
+            label="Ambiente"
+            value={current.fields.environment ?? 'sandbox'}
+            onChange={(event) => updateField('linkify', 'environment', event.target.value)}
+            options={[
+              { value: 'sandbox', label: 'Sandbox' },
+              { value: 'production', label: 'Produccion' },
+            ]}
+          />
+          <Input
+            label="Vencimiento del link (horas)"
+            type="number"
+            min="1"
+            value={current.fields.expirationHours ?? '48'}
+            placeholder="48"
+            onChange={(event) => updateField('linkify', 'expirationHours', event.target.value)}
+          />
+          <Input
+            label="URL de retorno"
+            type="url"
+            value={current.fields.returnUrl ?? ''}
+            placeholder="https://mitienda.cl/pedido-confirmado"
+            onChange={(event) => updateField('linkify', 'returnUrl', event.target.value)}
+          />
+          <Input
+            label="Correo de notificaciones"
+            type="email"
+            value={current.fields.notificationEmail ?? ''}
+            placeholder="pagos@mitienda.cl"
+            onChange={(event) => updateField('linkify', 'notificationEmail', event.target.value)}
+          />
         </div>
 
-        <div className="grid gap-2">
-          <p className="text-xs font-semibold text-[var(--muted-foreground)]">
-            URL de integración (pégala en Linkify → Cuentas → Editar → Cobros remotos)
-          </p>
-          <div className="flex items-center gap-2">
-            <input
-              readOnly
-              value={`${API_BASE}/api/pagos/linkify/notificacion/`}
-              className="flex-1 rounded-lg border border-[var(--border)] bg-[var(--muted)] px-3 py-2 text-xs"
-              onFocus={(event) => event.target.select()}
-            />
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={() => navigator.clipboard?.writeText(`${API_BASE}/api/pagos/linkify/notificacion/`)}
-            >
-              Copiar
-            </Button>
-          </div>
+        <div className="grid gap-3">
+          <Toggle
+            label="Sincronizar pagos aprobados con pedidos"
+            checked={boolValue(current.fields.syncApprovedPayments)}
+            onChange={(enabled) => updateField('linkify', 'syncApprovedPayments', String(enabled))}
+          />
+          <Toggle
+            label="Enviar correo al cliente cuando se genere el link"
+            checked={boolValue(current.fields.emailCustomer)}
+            onChange={(enabled) => updateField('linkify', 'emailCustomer', String(enabled))}
+          />
+          <Toggle
+            label="Expirar links pendientes automaticamente"
+            checked={boolValue(current.fields.autoExpireLinks)}
+            onChange={(enabled) => updateField('linkify', 'autoExpireLinks', String(enabled))}
+          />
         </div>
       </div>
     );
   };
+
+  const syncLinkify = async () => {
+    const current = form.linkify ?? { enabled: false, fields: {} };
+
+    const currentResponse = await fetch(`${API_BASE}/api/pagos/configuracion/`, {
+      method: 'GET',
+      headers: getAuthHeaders(),
+    });
+    const currentBody = await currentResponse.json();
+    if (!currentResponse.ok || currentBody.exito !== true) {
+      throw new Error(currentBody?.mensaje || 'No se pudo consultar la configuración actual.');
+    }
+
+    const response = await fetch(`${API_BASE}/api/pagos/configuracion/`, {
+      method: 'PUT',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({
+        ...(currentBody.data ?? {}),
+        linkify: {
+          enabled: current.enabled === true,
+          fields: { ...(current.fields ?? {}) },
+        },
+      }),
+    });
+    const body = await response.json();
+    if (!response.ok || body.exito !== true) {
+      const detail = body?.error?.detalles
+        ? Object.values(body.error.detalles).flat().join(' ')
+        : body?.mensaje || 'No se pudo guardar la configuración de Linkify.';
+      throw new Error(detail);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    localSave();
+    const errorMsg = validate();
+    if (errorMsg) {
+      setValidationError(errorMsg);
+      return;
+    }
+    setValidationError('');
+    save();
+    setIsSyncing(true);
     setBackendError('');
 
     try {
-       const response = await fetch(`${API_BASE}/api/pagos/configuracion/`, {
-        method: 'PUT',
-        headers: getAuthHeaders(),
-        body: JSON.stringify(form),
-      });
-      
-      if (!response.ok) {
-        throw new Error('No se pudo guardar Linkify / Transferencia en el servidor.');
-      }
+      await syncLinkify();
+      await Promise.all([
+        handleSaveTransbank(),
+        handleSavePayPal(),
+        handleSaveMercadoPago(),
+        handleSaveTransfer(),
+      ]);
     } catch (err) {
       setBackendError(err instanceof Error ? err.message : 'Error desconocido al guardar.');
+    } finally {
+      setIsSyncing(false);
     }
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    save();
-    await Promise.all([
-      handleSaveTransbank(),
-      handleSavePayPal(),
-      handleSaveMercadoPago(),
-      handleSaveTransfer(),
-    ]);
   };
 
 
@@ -928,6 +945,9 @@ export default function Payments() {
       {tiendaError && (
         <Alert variant="error">{tiendaError}</Alert>
       )}
+
+      {validationError && <Alert variant="error">{validationError}</Alert>}
+      {backendError && <Alert variant="error">{backendError}</Alert>}
 
 
 
@@ -1464,12 +1484,6 @@ export default function Payments() {
       {otherMethods.map((method) => {
 
         const current = form[method.id] || { enabled: false, fields: {} };
-        Activa los metodos de pago de tu tienda. Los pagos seleccionados aquí estarán disponibles automáticamente para el cliente en el checkout.
-      </Alert>
-
-      {methods.map((method) => {
-        const current = form[method.id] ?? { enabled: false, fields: {} };
-        const isTransfer = method.id === 'transfer';
 
         return (
 
@@ -1492,7 +1506,7 @@ export default function Payments() {
               </div>
 
               <Toggle
-                ariaLabel={`Activar ${method.name}`}
+                ariaLabel={'Activar ' + method.name}
                 checked={current.enabled}
                 onChange={(enabled) => updateEnabled(method.id, enabled)}
               />
@@ -1511,61 +1525,45 @@ export default function Payments() {
                     value={current.fields?.[field] ?? ''}
                     placeholder={method.id === 'transfer' ? 'Dato bancario real de la tienda' : 'Credencial demo'}
                     onChange={(e: any) =>
-                      setForm({
-                        ...form,
-                        [method.id]: {
-                          ...current,
-                          fields: { ...current.fields, [field]: e.target.value },
-                        },
-                      })
-                    }
+                       updateField(method.id, field, e.target.value)}
                   />
                 ))}
               </div>
             )}
 
-            {isTransfer && (
-              <div className="border-t border-[var(--border)] pt-3 mt-3">
-                <Textarea
-                  label="Instrucciones de conciliacion"
-                  value={current.fields?.instructions ?? ''}
-                  placeholder="Validar el comprobante contra monto, correo y numero de pedido."
-                  rows={3}
-                  onChange={(e: any) =>
-                    setForm({
-                      ...form,
-                      [method.id]: {
-                        ...current,
-                        fields: { ...current.fields, instructions: e.target.value },
-                      },
-                    })
-                  }
-                />
-              </div>
-            )}
-
             {method.id === 'transfer' && (
-              <div className="flex flex-col gap-3 pt-3">
-                {transferLoading && (
-                  <p className="text-xs text-[var(--muted-foreground)]">
-                    Cargando datos bancarios guardados...
-                  </p>
-                )}
-                {transferFeedback && (
-                  <Alert variant={transferFeedback.type}>{transferFeedback.message}</Alert>
-                )}
-                <div className="flex justify-end">
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="primary"
-                    loading={transferSaving}
-                    onClick={handleSaveTransfer}
-                  >
-                    Guardar transferencia bancaria
-                  </Button>
+              <>
+                <div className="border-t border-[var(--border)] pt-3 mt-3">
+                  <Textarea
+                    label="Instrucciones de conciliación"
+                    value={current.fields?.instructions ?? ''}
+                    placeholder="Validar el comprobante contra monto, correo y número de pedido."
+                    rows={3}
+                    onChange={(e: any) => updateField('transfer', 'instructions', e.target.value)}
+                  />
                 </div>
-              </div>
+                <div className="flex flex-col gap-3 pt-3">
+                  {transferLoading && (
+                    <p className="text-xs text-[var(--muted-foreground)]">
+                      Cargando datos bancarios guardados...
+                    </p>
+                  )}
+                  {transferFeedback && (
+                    <Alert variant={transferFeedback.type}>{transferFeedback.message}</Alert>
+                  )}
+                  <div className="flex justify-end">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="primary"
+                      loading={transferSaving}
+                      onClick={handleSaveTransfer}
+                    >
+                      Guardar transferencia bancaria
+                    </Button>
+                  </div>
+                </div>
+              </>
             )}
           </AdminCard>
 
@@ -1575,36 +1573,20 @@ export default function Payments() {
 
 
 
-      {saved && <Alert variant="success">Métodos de pago guardados correctamente.</Alert>}
-
-
-
-      <Button type="submit" loading={tbSaving || ppSaving || mpSaving || transferSaving}>
-
-        Guardar todos los métodos de pago
-
-      </Button>
-
-    </form>
-
-  );
-
-}
-      {error && <Alert variant="error">{error}</Alert>}
-      {saved && (
-        <Alert variant="success">
-          Metodos de pago guardados.
-        </Alert>
+      {saved && !backendError && !validationError && !isSyncing && (
+        <Alert variant="success">Métodos de pago guardados correctamente.</Alert>
       )}
 
-      <Button type="submit">Guardar metodos de pago</Button>
-      {validationError && <Alert variant="error">{validationError}</Alert>}
-      {backendError && <Alert variant="error">{backendError}</Alert>}
-      {saved && <Alert variant="success">Métodos de pago guardados correctamente.</Alert>}
 
-      <Button type="submit" loading={tbSaving || ppSaving || mpSaving || isSyncing}>
+
+      <Button type="submit" loading={isSyncing || tbSaving || ppSaving || mpSaving || transferSaving}>
+
         Guardar todos los métodos de pago
+
       </Button>
+
     </form>
+
   );
+
 }
