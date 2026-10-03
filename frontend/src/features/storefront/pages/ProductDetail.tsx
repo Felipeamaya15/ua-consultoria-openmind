@@ -150,11 +150,16 @@ export default function ProductDetail() {
    * VARIANTE SELECCIONADA
    * ==========================================================
    */
-  const selectedVariant = product.variants.find((variant) =>
-    Object.entries(selectedAttrs).every(
-      ([key, value]) => variant.attributes[key] === value,
-    ),
-  );
+  const attributeKeys = Object.keys(product.attributes);
+  const completeSelection = attributeKeys.every((key) => selectedAttrs[key]);
+
+  const selectedVariant = completeSelection
+    ? product.variants.find((variant) =>
+        Object.entries(selectedAttrs).every(
+          ([key, value]) => variant.attributes[key] === value,
+        ),
+      )
+    : undefined;
 
   const price = selectedVariant?.price ?? product.basePrice;
 
@@ -200,9 +205,8 @@ export default function ProductDetail() {
     );
   };
 
-  const completeSelection = Object.keys(
-    product.attributes,
-  ).every((key) => selectedAttrs[key]);
+  const variantOptionLabel = (value: string, available: boolean) =>
+    available ? value : `${value} - Agotado`;
 
   const inCart =
     items.find(
@@ -396,7 +400,7 @@ export default function ProductDetail() {
                               : ''
                           }`}
                         >
-                          {value}
+                          {variantOptionLabel(value, available)}
                         </button>
                       );
                     })}
@@ -682,7 +686,7 @@ export default function ProductDetail() {
                               : ''
                           }`}
                         >
-                          {value}
+                          {variantOptionLabel(value, available)}
                         </button>
                       );
                     })}
@@ -1083,7 +1087,7 @@ export default function ProductDetail() {
                           }
                         `}
                       >
-                        {value}
+                        {variantOptionLabel(value, available)}
                       </button>
                     );
                   })}

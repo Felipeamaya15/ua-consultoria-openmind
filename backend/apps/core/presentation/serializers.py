@@ -144,7 +144,31 @@ class CompraItemInputSerializer(serializers.Serializer):
 
 class RegistrarCompraSerializer(serializers.Serializer):
     id_usuario = serializers.IntegerField()
+    metodo_pago = serializers.CharField(
+        required=True,
+        error_messages={'required': 'Debe seleccionar un medio de pago.'}
+    )
     items = CompraItemInputSerializer(many=True)
+
+    def validate_metodo_pago(self, value):
+        tienda_id = self.context.get('tienda')
+        if not tienda_id:
+            raise serializers.ValidationError("Falta el identificador de la tienda en el contexto.")
+
+        try:
+            from apps.core.models import ConfiguracionPago
+            # CORRECCIÓN: Usamos `tienda_id` y la propiedad `datos` (no configuracion)
+            config_pago = ConfiguracionPago.objects.get(tienda_id=tienda_id)
+            metodo = config_pago.datos.get(value, {})
+            
+            if not metodo.get('enabled', False):
+                raise serializers.ValidationError(
+                    f"El método de pago '{value}' no está habilitado para esta tienda."
+                )
+        except ConfiguracionPago.DoesNotExist:
+            raise serializers.ValidationError("La tienda no tiene medios de pago configurados.")
+            
+        return value
 
     def validate_items(self, items):
         if not items:
