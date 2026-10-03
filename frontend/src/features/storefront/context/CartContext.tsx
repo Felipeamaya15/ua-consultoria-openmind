@@ -7,7 +7,7 @@ export interface CartItem extends BaseCartItem {
 }
 
 interface CartState {
-  clearCart: () => void;
+  clearCart: () => Promise<void>;
   promoCode: string;
   applyPromo: (code: string) => boolean;
   discount: number;
@@ -35,6 +35,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   // 1. Sincronizar el carrito real desde PostgreSQL
   const refreshCart = useCallback(async () => {
+    if (!localStorage.getItem('token') && !sessionStorage.getItem('token')) return;
     try {
       setLoading(true);
       const data: any = await cartService.obtenerCarrito();
@@ -46,6 +47,23 @@ export function CartProvider({ children }: { children: ReactNode }) {
         ? data.items
         : [];
 
+      const persistedItems: CartItem[] = itemsList.map((it: any) => ({
+        id_item_carrito: it.id_item_carrito ?? it.id,
+        productId: String(it.id_producto),
+        variantId: it.sku || `item-${it.id_item_carrito ?? it.id_producto}`,
+        sku: it.sku ?? '',
+        name: it.nombre_producto ?? it.nombre ?? '',
+        price: Number(it.precio_unitario ?? it.precio ?? 0),
+        quantity: Number(it.cantidad),
+        maxStock: Number(it.stock_disponible ?? it.stock ?? 0),
+        image: it.imagen ?? '',
+        attributes: it.atributos ?? {},
+      }));
+      // El carrito SQL legado no contiene las variantes Mongo de esta sesión.
+      setItems(current => [...persistedItems, ...current.filter(item =>
+        /^[a-f\d]{24}$/i.test(item.productId) && !item.id_item_carrito &&
+        !persistedItems.some(saved => saved.productId === item.productId && saved.variantId === item.variantId),
+      )]);
       if (itemsList.length > 0) {
         setItems(
           itemsList.map((it: any) => ({
@@ -84,10 +102,12 @@ export function CartProvider({ children }: { children: ReactNode }) {
     return valid;
   };
 
-  const clearCart = () => {
+  const clearCart = async () => {
+    const persisted = items.filter(item => item.id_item_carrito);
     setItems([]);
     setPromoCode('');
     setShippingMethod('');
+    await Promise.allSettled(persisted.map(item => cartService.eliminarItem(item.id_item_carrito!)));
   };
 
   // Tarea: Implementar el agregado de productos y variantes al carrito
@@ -109,8 +129,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
     });
 
     try {
-      const prodId = parseInt(item.productId, 10);
-      if (!isNaN(prodId)) {
+      const prodId = Number(item.productId);
+      if (/^\d+$/.test(item.productId) && Number.isSafeInteger(prodId) &&
+          (localStorage.getItem('token') || sessionStorage.getItem('token'))) {
         const itemGuardado: any = await cartService.agregarItem(
           prodId,
           item.quantity,

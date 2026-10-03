@@ -1,16 +1,23 @@
-from apps.authentication.permissions import IsStoreOwner
-from rest_framework.views import APIView
+from rest_framework.exceptions import PermissionDenied
+from .serializers import ProductPublicListItemSerializer, ProductPublicDetailSerializer, ProductPublicAttributesSerializer
 
-from rest_framework.permissions import AllowAny
+from apps.core.models import Tienda, Producto
+
+from ..application.use_cases import CreateProductUseCase
+from .serializers import ProductCreateSerializer, ProductAdminDetailSerializer
+from ..application.use_cases import UpdateCatalogProductUseCase, ProductEditConflict
+from pymongo.errors import DuplicateKeyError, PyMongoError
+from bson import ObjectId
+
 
 # 1. Framework & Librerías de terceros (DRF)
 from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
+from apps.authentication.permissions import IsStoreOwner
 from rest_framework.views import APIView
 
 # 2. Módulos Core (Infraestructura, Modelos y Respuestas comunes)
-from apps.core.models import Tienda
 from apps.core.infrastructure.tenant import resolver_tienda, resolver_tienda_id
 from apps.core.presentation.responses import error_response, success_response
 
@@ -73,38 +80,24 @@ from apps.catalog.infrastructure.attribute_filters import (
 from apps.catalog.infrastructure.repositories import ProductRepository
 
 # 6. Catálogo - Capa de Presentación (Serializadores)
-from .serializers import (
-    AgregarItemCarritoRequestSerializer,
-    ConfiguracionTransbankInputSerializer,
-    ConfiguracionTransbankResponseSerializer,
-    ItemCarritoResponseSerializer,
-    ModificarCantidadRequestSerializer,
-    ProductPublicAttributesSerializer,
-    ProductPublicDetailSerializer,
-    ProductPublicListItemSerializer,
-    ProductoAdminDetailSerializer,
-    ProductoCreateSerializer,
-    ProductoStockUpdateSerializer,
-    ProductoUpdateSerializer,
-    VarianteStockUpdateSerializer,
-    # Nuevos Serializadores - Adaptador Transbank
-    IniciarPagoTransbankSerializer,
-    ConfirmarPagoTransbankSerializer,
-    #PayPal
-    ConfiguracionPayPalInputSerializer,
-    ConfiguracionPayPalResponseSerializer,
-    #MercadoPago
-    ConfiguracionMercadoPagoInputSerializer,
-    ConfiguracionMercadoPagoResponseSerializer,
-)
+from .serializers import AgregarItemCarritoRequestSerializer, ConfiguracionTransbankInputSerializer, ConfiguracionTransbankResponseSerializer, ItemCarritoResponseSerializer, ModificarCantidadRequestSerializer, ProductoAdminDetailSerializer, ProductoCreateSerializer, ProductoStockUpdateSerializer, ProductoUpdateSerializer, VarianteStockUpdateSerializer, IniciarPagoTransbankSerializer, ConfirmarPagoTransbankSerializer, ConfiguracionPayPalInputSerializer, ConfiguracionPayPalResponseSerializer, ConfiguracionMercadoPagoInputSerializer, ConfiguracionMercadoPagoResponseSerializer
 
 
-class ConfiguracionMercadoPagoView(APIView):
+class StorePaymentConfigurationView(APIView):
+    permission_classes = [IsAuthenticated, IsStoreOwner]
+
+    def initial(self, request, *args, **kwargs):
+        super().initial(request, *args, **kwargs)
+        tienda = resolver_tienda(request, exigir_propietario=True)
+        if str(kwargs.get('id_tienda')) != str(tienda.pk):
+            raise PermissionDenied('Solo puedes administrar la configuración de tu propia tienda.')
+
+
+class ConfiguracionMercadoPagoView(StorePaymentConfigurationView):
     """
     GET: Consulta la configuración actual de Mercado Pago para la tienda.
     POST: Actualiza credenciales y estado de activación.
     """
-    permission_classes = [AllowAny]
 
     def get(self, request, id_tienda):
         use_case = ObtenerConfiguracionMercadoPagoUseCase()
@@ -173,12 +166,11 @@ class ConfiguracionMercadoPagoView(APIView):
 
 
 
-class ConfiguracionPayPalView(APIView):
+class ConfiguracionPayPalView(StorePaymentConfigurationView):
     """
     GET: Consulta la configuración actual de PayPal para la tienda.
     POST: Actualiza credenciales y estado de activación.
     """
-    permission_classes = [AllowAny]
 
     def get(self, request, id_tienda):
         use_case = ObtenerConfiguracionPayPalUseCase()
@@ -240,12 +232,11 @@ class ConfiguracionPayPalView(APIView):
 
 
 
-class ConfiguracionTransbankView(APIView):
+class ConfiguracionTransbankView(StorePaymentConfigurationView):
     """
     Endpoint para consultar y actualizar las credenciales de Transbank de una tienda.
     GET/POST /api/catalog/tiendas/<int:id_tienda>/configuracion/transbank/
     """
-    permission_classes = [IsAuthenticated]
 
     def get(self, request, id_tienda: int):
         use_case = ObtenerConfiguracionTransbankUseCase()
@@ -404,7 +395,7 @@ class CarritoItemsView(APIView):
             status=status.HTTP_200_OK,
         )
 
-    
+
     def post(self, request):
         serializer = AgregarItemCarritoRequestSerializer(data=request.data)
         if not serializer.is_valid():
@@ -499,7 +490,7 @@ class ModificarCantidadItemAPIView(APIView):
                 codigo="ITEM_NO_ENCONTRADO",
                 status=status.HTTP_404_NOT_FOUND
             )
-    
+
     def delete(self, request, id_item_carrito):
         """
         Elimina un ítem específico del carrito del usuario autenticado.
@@ -803,11 +794,11 @@ class ProductoAdminDetailView(APIView):
 
         try:
             producto = caso_uso.ejecutar(tienda, id_producto)
-            
+
             if producto is None:
                 return Response(
                     {
-                        "mensaje": "El producto solicitado no fue encontrado", 
+                        "mensaje": "El producto solicitado no fue encontrado",
                         "codigo": "RECURSO_NO_ENCONTRADO"
                     },
                     status=status.HTTP_404_NOT_FOUND
@@ -815,11 +806,11 @@ class ProductoAdminDetailView(APIView):
 
             serializer = ProductoAdminDetailSerializer(producto)
             return Response(serializer.data, status=status.HTTP_200_OK)
-            
+
         except Exception:
             return Response(
                 {
-                    "mensaje": "El producto solicitado no fue encontrado", 
+                    "mensaje": "El producto solicitado no fue encontrado",
                     "codigo": "RECURSO_NO_ENCONTRADO"
                 },
                 status=status.HTTP_404_NOT_FOUND
@@ -860,7 +851,7 @@ class ProductoUpdateView(APIView):
                 },
                 status=status.HTTP_200_OK
             )
-            
+
         except Exception:
             return Response(
                 {"mensaje": "El producto a actualizar no existe", "codigo": "RECURSO_NO_ENCONTRADO"},
@@ -1704,6 +1695,7 @@ class ConfirmarPagoTransbankView(APIView):
                 {"exito": False, "mensaje": str(e), "error": {"codigo": "ERROR_TRANSBANK", "detalles": None}},
                 status=status.HTTP_502_BAD_GATEWAY,
             )
+
 class ProductoAdminListView(APIView):
     permission_classes = [IsAuthenticated, IsStoreOwner]
 

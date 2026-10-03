@@ -20,7 +20,7 @@ async function profileRequest(path: string, method = 'GET', data?: unknown, base
   return body;
 }
 
-export type CustomerOrderItem = { id_item_pedido: number; producto_id: number; nombre: string; cantidad: number; precio_unitario: string; subtotal: string };
+export type CustomerOrderItem = { id_item_pedido: number; producto_id: number | string; nombre: string; cantidad: number; precio_unitario: string; subtotal: string; sku?: string; atributos_variante?: {clave: string; etiqueta: string; valor: string}[] };
 export type CustomerOrder = { id_pedido: number; fecha_creacion: string; estado: string; estado_etiqueta: string; monto_total: string; cantidad_productos: number; items?: CustomerOrderItem[] };
 
 export const authService = {

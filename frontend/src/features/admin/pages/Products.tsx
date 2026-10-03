@@ -128,6 +128,14 @@ export function ProductEditor({ initial, editing }: { initial: AdminProduct; edi
   const [activeTab, setActiveTab] = useState("info"); const [saved, setSaved] = useState(false); const [saving, setSaving] = useState(false)
   const [product, setProduct] = useState<AdminProduct>({ ...initial, images: [...initial.images], variants: initial.variants.map((variant) => ({ ...variant, attributes: { ...variant.attributes } })), attributes: { ...initial.attributes }, tags: [...initial.tags] })
   const [error, setError] = useState("");
+  const [products, setCatalogProducts] = useState<AdminProduct[]>([])
+  useEffect(() => {
+    let active = true
+    fetchAdminProducts().then(data => { if (active) setCatalogProducts(data) })
+      .catch(() => {}) // La unicidad entre productos también se valida en el backend.
+    return () => { active = false }
+  }, [])
+
   const variants = product.variants; const attributeNames = Object.keys(product.attributes); const totalStock = useMemo(() => variants.reduce((sum, variant) => sum + Math.max(0, Number(variant.stock) || 0), 0), [variants])
   const normalizeSku = (sku: string) => sku.trim().toUpperCase()
   const generateSku = (currentVariants: ProductVariant[] = product.variants) => {

@@ -202,6 +202,13 @@ class ConfiguracionPagoAPIView(APIView):
     def put(self, request):
         try:
             tienda = resolver_tienda(request, exigir_propietario=True)
+            config_pago, _ = ConfiguracionPago.objects.get_or_create(id_tienda=tienda)
+            config_pago.configuracion = request.data
+            config_pago.save()
+            return success_response(
+                mensaje="Métodos de pago guardados exitosamente.",
+                data=config_pago.configuracion
+            )
             
             #SCRUM-306: Impedir guardado si faltan datos requeridos
             serializer = ConfiguracionPagoSerializer(data=request.data)
@@ -227,7 +234,7 @@ class MetodosPagoActivosAPIView(APIView):
         try:
             tienda_id = resolver_tienda_id(request)
             config = ConfiguracionPago.objects.get(tienda_id=tienda_id)
-            
+
             # Filtramos para enviar al checkout solo los activos (enabled: true)
             metodos_activos = {
                 key: method_data

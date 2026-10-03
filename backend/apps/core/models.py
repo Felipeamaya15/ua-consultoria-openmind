@@ -50,7 +50,7 @@ class Producto(models.Model):
     descripcion = models.TextField(blank=True, null=True)
     precio = models.DecimalField(max_digits=12, decimal_places=2)
     stock = models.IntegerField(default=0)
-    activo = models.BooleanField(default=True) 
+    activo = models.BooleanField(default=True)
     fecha_creacion = models.DateTimeField(auto_now_add=True)
     id_tienda = models.ForeignKey(db_column='id_tienda', on_delete=models.CASCADE, to='core.tienda')
 
@@ -91,10 +91,12 @@ class Pedido(models.Model):
         ('cancelado', 'Cancelado'),
     ]
     id_pedido = models.BigAutoField(primary_key=True)
-    # Nulo cuando la compra la hace un invitado (sin cuenta registrada).
-    id_usuario = models.ForeignKey(
-        Usuario, on_delete=models.CASCADE, db_column='id_usuario',
-        null=True, blank=True,
+    id_usuario = models.ForeignKey(Usuario, on_delete=models.CASCADE, db_column='id_usuario', null=True, blank=True)
+    # Vínculo explícito para lectura del historial autenticado. Los pedidos legados
+    # no se atribuyen por correo ni por coincidencia de IDs.
+    comprador = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='pedidos_comprador',
     )
 
     # Foto de los datos de contacto al momento de comprar. Se guardan siempre,
@@ -108,6 +110,15 @@ class Pedido(models.Model):
     monto_total = models.DecimalField(max_digits=12, decimal_places=2)
     estado = models.CharField(max_length=20, choices=ESTADO_CHOICES, default='pendiente')
     fecha_creacion = models.DateTimeField(auto_now_add=True)
+
+    tienda = models.ForeignKey(Tienda, on_delete=models.PROTECT, null=True, blank=True)
+    clave_checkout = models.UUIDField(unique=True, null=True, blank=True)
+    huella_checkout = models.CharField(max_length=64, blank=True, default='')
+    contacto = models.JSONField(default=dict, blank=True)
+    entrega = models.JSONField(default=dict, blank=True)
+    medio_pago = models.CharField(max_length=40, blank=True, default='')
+    costo_envio = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    descuento = models.DecimalField(max_digits=12, decimal_places=2, default=0)
 
     class Meta:
         db_table = 'pedido'
@@ -123,11 +134,11 @@ class Pedido(models.Model):
 class ItemPedido(models.Model):
     id_item_pedido = models.BigAutoField(primary_key=True)
     id_pedido = models.ForeignKey(Pedido, on_delete=models.CASCADE, db_column='id_pedido')
-    id_producto = models.ForeignKey(Producto, on_delete=models.CASCADE, db_column='id_producto')
-
-    # Variante exacta comprada (vive en MongoDB, aquí dejamos una copia para historial).
+    id_producto = models.ForeignKey(Producto, on_delete=models.CASCADE, db_column='id_producto', null=True, blank=True)
+    producto_mongo_id = models.CharField(max_length=24, blank=True, default='')
+    nombre_producto = models.CharField(max_length=200, blank=True, default='')
     sku = models.CharField(max_length=100, blank=True, default='')
-    atributos = models.JSONField(default=dict, blank=True)
+    atributos_variante = models.JSONField(default=list, blank=True)
 
     cantidad = models.IntegerField()
     precio_unitario = models.DecimalField(max_digits=12, decimal_places=2)
@@ -206,7 +217,7 @@ class ConfiguracionPayPal(models.Model):
 
     def __str__(self):
         return f"PayPal Tienda {self.id_tienda_id} ({self.ambiente}) - {'Activo' if self.activo else 'Inactivo'}"
-    
+
 class ConfiguracionMercadoPago(models.Model):
     AMBIENTE_CHOICES = [
         ('SANDBOX', 'Sandbox (Pruebas)'),
@@ -241,6 +252,7 @@ class ConfiguracionMercadoPago(models.Model):
 
     def __str__(self):
         return f"Mercado Pago Tienda {self.id_tienda_id} ({self.ambiente}) - {'Activo' if self.activo else 'Inactivo'}"
+
 class VarianteProducto(models.Model):
     id_variante = models.BigAutoField(primary_key=True)
     id_producto = models.ForeignKey(Producto, on_delete=models.CASCADE, db_column='id_producto')
@@ -259,8 +271,8 @@ class VarianteProducto(models.Model):
         ]
 class ConfiguracionPago(models.Model):
     tienda = models.OneToOneField(
-        'core.Tienda', 
-        on_delete=models.CASCADE, 
+        'core.Tienda',
+        on_delete=models.CASCADE,
         related_name='configuracion_pago'
     )
     # Almacenará el JSON con los métodos (Transbank, PayPal, etc.) y su estado 'enabled'

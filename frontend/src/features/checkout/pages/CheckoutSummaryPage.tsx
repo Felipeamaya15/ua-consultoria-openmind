@@ -28,7 +28,7 @@ export const CheckoutSummaryPage: React.FC = () => {
       try {
         const response = await fetch(`${API_BASE_URL}/api/pagos/activos/`);
         const result = await response.json();
-        
+
         if (response.ok && result.exito) {
           setActivePaymentMethods(Object.entries(result.data));
         }
@@ -87,7 +87,7 @@ export const CheckoutSummaryPage: React.FC = () => {
           <aside style={{ display: 'grid', gap: '1rem' }}>
             <section style={{ backgroundColor: '#ffffff', border: '1px solid #e5e7eb', borderRadius: '16px', padding: '1.5rem' }}>
               <h2 style={{ color: '#111827', marginTop: 0 }}>Medio de pago</h2>
-              
+
               {loadingPayments ? (
                 <p style={{ color: '#6b7280', fontSize: '0.9rem' }}>Cargando medios de pago disponibles...</p>
               ) : activePaymentMethods.length === 0 ? (
@@ -96,12 +96,12 @@ export const CheckoutSummaryPage: React.FC = () => {
                 <div style={{ display: 'grid', gap: '1rem', marginTop: '1rem' }}>
                   {activePaymentMethods.map(([id, _]) => (
                     <label key={id} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer', padding: '0.75rem', border: '1px solid #e5e7eb', borderRadius: '8px' }}>
-                      <input 
-                        type="radio" 
-                        name="paymentMethod" 
-                        value={id} 
-                        checked={selectedPayment === id} 
-                        onChange={(e) => setSelectedPayment(e.target.value)} 
+                      <input
+                        type="radio"
+                        name="paymentMethod"
+                        value={id}
+                        checked={selectedPayment === id}
+                        onChange={(e) => setSelectedPayment(e.target.value)}
                         style={{ width: '1.2rem', height: '1.2rem', accentColor: '#5454EB' }}
                       />
                       <span style={{ textTransform: 'capitalize', fontWeight: 600, color: '#374151' }}>{id}</span>

@@ -16,6 +16,10 @@ from apps.core.models import (
     ConfiguracionMercadoPago
 )
 from apps.core.infrastructure.mongo_client import get_mongo_db
+from bson import ObjectId
+from django.shortcuts import get_object_or_404
+
+from apps.core.models import Usuario, Carrito, ItemCarrito, ConfiguracionTransbank, ConfiguracionPayPal, Tienda, ConfiguracionMercadoPago
 from apps.catalog.application.services import VariantService
 from apps.catalog.infrastructure.repositories import ProductRepository
 from apps.catalog.infrastructure.adapters.transbank_adapter import TransbankWebpayAdapter

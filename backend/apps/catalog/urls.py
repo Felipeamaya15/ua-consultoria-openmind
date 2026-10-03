@@ -29,8 +29,9 @@ from apps.catalog.presentation.views import (
 )
 
 urlpatterns = [
+    path('productos/admin/listado/', ProductoAdminDetailView.as_view(), name='producto-admin-list'),
     # ==========================================
-    # 1. Catálogo Público y Listados
+    # 1. Catálogo Público
     # ==========================================
     path(
         "productos/",
@@ -132,6 +133,7 @@ urlpatterns = [
         name="modificar-cantidad-item",
     ),
 
+
     # ==========================================
     # 5. Configuración y Pasarelas de Pagos
     # ==========================================
@@ -140,6 +142,7 @@ urlpatterns = [
         ConfiguracionTransbankView.as_view(),
         name="tienda-configuracion-transbank",
     ),
+
     path(
         "pagos/transbank/iniciar/",
         IniciarPagoTransbankView.as_view(),
@@ -150,11 +153,13 @@ urlpatterns = [
         ConfirmarPagoTransbankView.as_view(),
         name="pago-transbank-confirmar",
     ),
+
     path(
         "tiendas/<int:id_tienda>/configuracion/paypal/",
         ConfiguracionPayPalView.as_view(),
         name="configuracion-paypal",
     ),
+
     path(
         "tiendas/<int:id_tienda>/configuracion/mercadopago/",
         ConfiguracionMercadoPagoView.as_view(),

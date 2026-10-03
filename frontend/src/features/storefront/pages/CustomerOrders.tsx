@@ -32,7 +32,7 @@ export default function CustomerOrders() {
       <p>Total: {order.monto_total}</p>
       {!id && <Link to={route(`mis-pedidos/${order.id_pedido}`)} className="underline">Ver detalle y seguimiento</Link>}
       {id && <div className="overflow-x-auto"><table className="w-full text-left"><thead><tr><th>Producto</th><th>Cantidad</th><th>Precio unitario</th><th>Subtotal</th></tr></thead>
-        <tbody>{order.items?.map(item => <tr key={item.id_item_pedido}><td>{item.nombre}</td><td>{item.cantidad}</td><td>{item.precio_unitario}</td><td>{item.subtotal}</td></tr>)}</tbody>
+        <tbody>{order.items?.map(item => <tr key={item.id_item_pedido}><td>{item.nombre}{item.sku && <span className="block text-sm">SKU: {item.sku} · {item.atributos_variante?.map(attribute => `${attribute.etiqueta}: ${attribute.valor}`).join(' · ')}</span>}</td><td>{item.cantidad}</td><td>{item.precio_unitario}</td><td>{item.subtotal}</td></tr>)}</tbody>
       </table>{order.items?.length === 0 && <p>Este pedido no tiene productos registrados.</p>}</div>}
     </article>)}
   </main>;

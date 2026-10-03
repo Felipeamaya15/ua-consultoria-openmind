@@ -11,8 +11,10 @@ const otherMethods = [
   { id: 'transfer', name: 'Transferencia bancaria', icon: 'bank', desc: 'Verificación manual', fields: ['Banco', 'N° de cuenta', 'RUT', 'Nombre titular'] }
 ];
 
+const boolValue = (value?: string) => value === 'true';
+
 export default function Payments() {
-  const { form, setForm, save, saved } = useAdminForm('paymentConfiguration');
+const { form, setForm, save: localSave, saved } = useAdminForm('paymentConfiguration');
 
   // Estados reactivos: Transbank
   const [tbActivo, setTbActivo] = useState(true);
@@ -47,14 +49,19 @@ export default function Payments() {
   const [mpSaving, setMpSaving] = useState(false);
   const [mpFeedback, setMpFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
+  // Estados genéricos / Linkify y Transferencia
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [backendError, setBackendError] = useState('');
+  const [validationError, setValidationError] = useState('');
+
   const getAuthHeaders = () => {
     const token =
       localStorage.getItem('token') ||
       sessionStorage.getItem('token') ||
-      'b130c016ab2e6db86bee2da41dd5e3645c6abe93';
+      '';
     return {
       'Content-Type': 'application/json',
-      Authorization: `Token ${token}`,
+      ...(token ? { Authorization: `Token ${token}` } : {}),
     };
   };
 
@@ -134,6 +141,362 @@ export default function Payments() {
         method: 'POST',
         headers: getAuthHeaders(),
         body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+
+      if (res.ok && data.exito) {
+        setTbFeedback({ type: 'success', message: 'Configuración de Transbank guardada exitosamente.' });
+        setTbMaskedKey(data.data.api_key_enmascarada || '');
+        setTbApiKey('');
+        setTbIsConfigured(true);
+        return true;
+      } else {
+        const errorDetail = data.error?.detalles
+          ? Object.values(data.error.detalles).flat().join(' ')
+          : data.mensaje || 'Error al guardar Transbank.';
+        setTbFeedback({ type: 'error', message: errorDetail });
+        return false;
+      }
+    } catch {
+      setTbFeedback({ type: 'error', message: 'No se pudo conectar con el servidor backend.' });
+      return false;
+    } finally {
+      setTbSaving(false);
+    }
+  };
+
+  // Guardar PayPal
+  const handleSavePayPal = async () => {
+    setPpSaving(true);
+    setPpFeedback(null);
+
+    if (ppActivo && !ppClientId.trim()) {
+      setPpFeedback({ type: 'error', message: 'El Client ID es obligatorio para activar PayPal.' });
+      setPpSaving(false);
+      return false;
+    }
+
+    const payload = {
+      client_id: ppClientId.trim(),
+      client_secret: ppClientSecret.trim() || (ppIsConfigured ? ppMaskedSecret : ''),
+      ambiente: ppAmbiente,
+      activo: ppActivo,
+    };
+
+    try {
+      const res = await fetch(`${API_BASE}/api/catalog/tiendas/${TIENDA_ID}/configuracion/paypal/`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+
+      if (res.ok && data.exito) {
+        setPpFeedback({ type: 'success', message: 'Configuración de PayPal guardada exitosamente.' });
+        setPpMaskedSecret(data.data.client_secret_enmascarado || '');
+        setPpClientSecret('');
+        setPpIsConfigured(true);
+        return true;
+      } else {
+        const errorDetail = data.error?.detalles
+          ? Object.values(data.error.detalles).flat().join(' ')
+          : data.mensaje || 'Error al guardar PayPal.';
+        setPpFeedback({ type: 'error', message: errorDetail });
+        return false;
+      }
+    } catch {
+      setPpFeedback({ type: 'error', message: 'No se pudo conectar con el servidor backend.' });
+      return false;
+    } finally {
+      setPpSaving(false);
+    }
+  };
+
+  // Guardar Mercado Pago
+  const handleSaveMercadoPago = async () => {
+    setMpSaving(true);
+    setMpFeedback(null);
+
+    if (mpActivo && !mpPublicKey.trim()) {
+      setMpFeedback({ type: 'error', message: 'La Public Key es obligatoria para activar Mercado Pago.' });
+      setMpSaving(false);
+      return false;
+    }
+
+    const payload = {
+      public_key: mpPublicKey.trim(),
+      access_token: mpAccessToken.trim() || (mpIsConfigured ? mpMaskedToken : ''),
+      ambiente: mpAmbiente,
+      activo: mpActivo,
+    };
+
+    try {
+      const res = await fetch(`${API_BASE}/api/catalog/tiendas/${TIENDA_ID}/configuracion/mercadopago/`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+
+      if (res.ok && data.exito) {
+        setMpFeedback({ type: 'success', message: 'Configuración de Mercado Pago guardada exitosamente.' });
+        setMpMaskedToken(data.data.access_token_enmascarado || '');
+        setMpAccessToken('');
+        setMpIsConfigured(true);
+
+        if (form && setForm) {
+          setForm({
+            ...form,
+            mercadopago: {
+              enabled: mpActivo,
+              fields: {
+                ...(form.mercadopago?.fields || {}),
+                'Public Key': mpPublicKey,
+                'Access Token': data.data.access_token_enmascarado || '••••••••',
+              },
+            },
+          });
+        }
+        return true;
+      } else {
+        const errorDetail = data.error?.detalles
+          ? Object.values(data.error.detalles).flat().join(' ')
+          : data.mensaje || 'Error al guardar Mercado Pago.';
+        setMpFeedback({ type: 'error', message: errorDetail });
+        return false;
+      }
+    } catch {
+      setMpFeedback({ type: 'error', message: 'No se pudo conectar con el servidor backend.' });
+      return false;
+    } finally {
+      setMpSaving(false);
+    }
+  };
+
+  const updateEnabled = (id: string, enabled: boolean) => {
+    const current = form[id] ?? { enabled: false, fields: {} };
+    
+    if (enabled) {
+      if (id === 'linkify') {
+        const missing = linkifyRequiredFields.filter((field) => !current.fields[field]?.trim());
+        if (missing.length > 0) {
+          setValidationError('Completa todos los campos obligatorios de Linkify antes de habilitarlo.');
+          return; 
+        }
+      } else {
+        const method = byId[id];
+        const missing = method?.fields
+          .filter((field) => field.required)
+          .filter((field) => !current.fields[field.key]?.trim());
+
+        if (missing && missing.length > 0) {
+          setValidationError(`Completa todos los campos obligatorios de ${method.name} antes de habilitarlo.`);
+          return; 
+        }
+      }
+    }
+
+    setValidationError('');
+    setForm({
+      ...form,
+      [id]: { ...current, enabled },
+    });
+  };
+
+  const updateField = (id: string, field: string, value: string) => {
+    const current = form[id] ?? { enabled: false, fields: {} };
+    
+    let shouldDisable = false;
+    if (current.enabled && !value.trim()) {
+      if (id === 'linkify') {
+        if (linkifyRequiredFields.includes(field)) shouldDisable = true;
+      } else {
+        const method = byId[id];
+        const isRequired = method?.fields.find((f) => f.key === field)?.required;
+        if (isRequired) shouldDisable = true;
+      }
+    }
+
+    setForm({
+      ...form,
+      [id]: { 
+        ...current, 
+        enabled: shouldDisable ? false : current.enabled,
+        fields: { ...current.fields, [field]: value } 
+      },
+    });
+
+    if (shouldDisable) {
+      setValidationError(`El medio de pago ${byId[id]?.name || 'Linkify'} fue desactivado porque se borró un campo obligatorio.`);
+    } else {
+      setValidationError('');
+    }
+  };
+
+  const validate = () => {
+    const enabledMethods = Object.entries(form).filter(([, value]: any) => value?.enabled);
+    if (!enabledMethods.length && !tbActivo && !ppActivo && !mpActivo) return 'Activa al menos un metodo de pago.';
+
+    for (const [id, value] of enabledMethods as any) {
+      if (id === 'linkify') {
+        const missingLinkify = linkifyRequiredFields.filter(
+          (field) => !value.fields[field]?.trim(),
+        );
+
+        if (missingLinkify.length) {
+          return 'Completa la cuenta, URL publica, API Key y Webhook Secret de Linkify.';
+        }
+        continue;
+      }
+
+      const method = byId[id];
+      const missing = method?.fields
+        ?.filter((field) => field.required)
+        ?.filter((field) => !value.fields[field.key]?.trim());
+
+      if (missing?.length) return `Completa los campos obligatorios de ${method.name}.`;
+    }
+    return '';
+  };
+
+  const handleSave = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const errorMsg = validate();
+    
+    if (errorMsg) {
+      setValidationError(errorMsg);
+      return;
+    }
+
+    setValidationError('');
+    localSave();
+    setIsSyncing(true);
+    setBackendError('');
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/pagos/configuracion/`, {
+        method: 'PUT',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(form),
+      });
+
+      if (!response.ok) {
+        throw new Error('No se pudieron sincronizar los metodos de pago secundarios con el servidor.');
+      }
+
+      // Guardamos en paralelo las pasarelas reales en los modelos relacionales
+      await Promise.all([handleSaveTransbank(), handleSavePayPal(), handleSaveMercadoPago()]);
+
+    } catch (err) {
+      setBackendError(err instanceof Error ? err.message : 'Error desconocido al guardar.');
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  const renderLinkifyConfig = () => {
+    const current = form.linkify ?? { enabled: false, fields: {} };
+
+    return (
+      <div className="border-t border-[var(--border)] pt-3 grid gap-4">
+        <div className="grid sm:grid-cols-2 gap-3">
+          <Input
+            label="Nombre de la cuenta *"
+            value={current.fields.accountName ?? ''}
+            placeholder="Mi Tienda Demo"
+            onChange={(event) => updateField('linkify', 'accountName', event.target.value)}
+          />
+          <Input
+            label="URL publica *"
+            type="url"
+            value={current.fields.publicUrl ?? ''}
+            placeholder="https://linkify.cl/mi-tienda"
+            onChange={(event) => updateField('linkify', 'publicUrl', event.target.value)}
+          />
+          <Input
+            label="API Key *"
+            type="password"
+            autoComplete="off"
+            value={current.fields.apiKey ?? ''}
+            placeholder="lk_test_..."
+            onChange={(event) => updateField('linkify', 'apiKey', event.target.value)}
+          />
+          <Input
+            label="Webhook Secret *"
+            type="password"
+            autoComplete="off"
+            value={current.fields.webhookSecret ?? ''}
+            placeholder="whsec_..."
+            onChange={(event) => updateField('linkify', 'webhookSecret', event.target.value)}
+          />
+          <Select
+            label="Ambiente"
+            value={current.fields.environment ?? 'sandbox'}
+            onChange={(event) => updateField('linkify', 'environment', event.target.value)}
+            options={[
+              { value: 'sandbox', label: 'Sandbox' },
+              { value: 'production', label: 'Produccion' },
+            ]}
+          />
+          <Input
+            label="Vencimiento del link (horas)"
+            type="number"
+            min="1"
+            value={current.fields.expirationHours ?? '48'}
+            placeholder="48"
+            onChange={(event) => updateField('linkify', 'expirationHours', event.target.value)}
+          />
+          <Input
+            label="URL de retorno"
+            type="url"
+            value={current.fields.returnUrl ?? ''}
+            placeholder="https://mitienda.cl/pedido-confirmado"
+            onChange={(event) => updateField('linkify', 'returnUrl', event.target.value)}
+          />
+          <Input
+            label="Correo de notificaciones"
+            type="email"
+            value={current.fields.notificationEmail ?? ''}
+            placeholder="pagos@mitienda.cl"
+            onChange={(event) => updateField('linkify', 'notificationEmail', event.target.value)}
+          />
+        </div>
+
+        <div className="grid gap-3">
+          <Toggle
+            label="Sincronizar pagos aprobados con pedidos"
+            checked={boolValue(current.fields.syncApprovedPayments)}
+            onChange={(enabled) => updateField('linkify', 'syncApprovedPayments', String(enabled))}
+          />
+          <Toggle
+            label="Enviar correo al cliente cuando se genere el link"
+            checked={boolValue(current.fields.emailCustomer)}
+            onChange={(enabled) => updateField('linkify', 'emailCustomer', String(enabled))}
+          />
+          <Toggle
+            label="Expirar links pendientes automaticamente"
+            checked={boolValue(current.fields.autoExpireLinks)}
+            onChange={(enabled) => updateField('linkify', 'autoExpireLinks', String(enabled))}
+          />
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <form
+      className="flex flex-col gap-5 max-w-2xl"
+      onSubmit={handleSave}
+    >
+      <Alert variant="info">
+        Activa los metodos de pago de tu tienda. Los pagos seleccionados aquí estarán disponibles automáticamente para el cliente en el checkout.
+      </Alert>
+
+      {methods.map((method) => {
+        const current = form[method.id] ?? {
+          enabled: false,
+          fields: {},
+        };
       });
       const data = await res.json();
 
@@ -545,440 +908,6 @@ export default function Payments() {
       {/* ================= TARJETAS SECUNDARIAS (DEMO) ================= */}
       {otherMethods.map((method) => {
         const current = form[method.id] || { enabled: false, fields: {} };
-import { useState, type FormEvent } from 'react';
-
-import { useAdminForm } from '../hooks/useAdminForm';
-import {
-  AdminCard,
-  Alert,
-  Input,
-  Select,
-  Textarea,
-  Toggle,
-  Button,
-  Icon,
-} from '../components/ui';
-import { API_BASE_URL } from '../../../api';
-
-type PaymentField = {
-  key: string;
-  label: string;
-  type?: string;
-  placeholder: string;
-  required?: boolean;
-};
-
-type PaymentMethod = {
-  id: string;
-  name: string;
-  icon: string;
-  desc: string;
-  fields: PaymentField[];
-};
-
-const methods: PaymentMethod[] = [
-  {
-    id: 'transbank',
-    name: 'Webpay / Transbank',
-    icon: 'card',
-    desc: 'Credenciales entregadas por Transbank para iniciar pagos.',
-    fields: [
-      { key: 'api_key', label: 'API Key', type: 'password', placeholder: 'Clave privada de integracion', required: true },
-      { key: 'commerce_id', label: 'Codigo de comercio', placeholder: '597055555532', required: true },
-      { key: 'environment', label: 'Ambiente', placeholder: 'integration | production' },
-    ],
-  },
-  {
-    id: 'mercadopago',
-    name: 'Mercado Pago',
-    icon: 'card',
-    desc: 'Token y datos necesarios para crear preferencias de pago.',
-    fields: [
-      { key: 'access_token', label: 'Access Token', type: 'password', placeholder: 'APP_USR-...', required: true },
-      { key: 'public_key', label: 'Public Key', placeholder: 'APP_USR-...' },
-      { key: 'webhook_secret', label: 'Webhook Secret', type: 'password', placeholder: 'Secreto de webhook' },
-    ],
-  },
-  {
-    id: 'paypal',
-    name: 'PayPal',
-    icon: 'paypal',
-    desc: 'Credenciales OAuth para procesar pagos internacionales.',
-    fields: [
-      { key: 'client_id', label: 'Client ID', placeholder: 'Client ID de PayPal', required: true },
-      { key: 'client_secret', label: 'Client Secret', type: 'password', placeholder: 'Client Secret de PayPal', required: true },
-      { key: 'environment', label: 'Ambiente', placeholder: 'sandbox | live' },
-    ],
-  },
-  {
-    id: 'linkify',
-    name: 'Linkify',
-    icon: 'link',
-    desc: 'Credenciales para generar links de pago desde backend.',
-    fields: [
-      { key: 'api_key', label: 'API Key', type: 'password', placeholder: 'Clave API de Linkify', required: true },
-      { key: 'merchant_id', label: 'Merchant ID', placeholder: 'Identificador del comercio' },
-    ],
-  },
-  {
-    id: 'transfer',
-    name: 'Transferencia bancaria',
-    icon: 'bank',
-    desc: 'Datos bancarios para conciliacion manual en backend.',
-    fields: [
-      { key: 'bank_name', label: 'Banco', placeholder: 'Banco Estado', required: true },
-      { key: 'account_type', label: 'Tipo de cuenta', placeholder: 'Cuenta corriente', required: true },
-      { key: 'account_number', label: 'Numero de cuenta', placeholder: '012345678', required: true },
-      { key: 'holder_rut', label: 'RUT del titular', placeholder: '12.345.678-9', required: true },
-      { key: 'holder_name', label: 'Nombre del titular', placeholder: 'Comercial Demo SpA', required: true },
-      { key: 'confirmation_email', label: 'Correo para comprobantes', placeholder: 'pagos@mitienda.cl', required: true },
-    ],
-  },
-];
-
-const byId = Object.fromEntries(methods.map((method) => [method.id, method]));
-
-const linkifyRequiredFields = [
-  'accountName',
-  'publicUrl',
-  'apiKey',
-  'webhookSecret',
-];
-
-const boolValue = (value?: string) => value === 'true';
-
-export default function Payments() {
-  const { form, setForm, save: localSave, saved } = useAdminForm('paymentConfiguration');
-  const [isSyncing, setIsSyncing] = useState(false);
-  const [backendError, setBackendError] = useState('');
-  const [validationError, setValidationError] = useState('');
-
-  const updateMethod = (
-    id: string,
-    change: Partial<{ enabled: boolean; fields: Record<string, string> }>,
-  ) => {
-    const current = form[id] ?? { enabled: false, fields: {} };
-    setForm({
-      ...form,
-      [id]: {
-        ...current,
-        ...change,
-        fields: {
-          ...current.fields,
-          ...(change.fields ?? {}),
-        },
-      },
-    });
-  };
-
-  const updateField = (id: string, field: string, value: string) => {
-    updateMethod(id, { fields: { [field]: value } });
-  };
-
-  const validate = () => {
-    const enabledMethods = Object.entries(form).filter(([, value]: any) => value?.enabled);
-    if (!enabledMethods.length) return 'Activa al menos un metodo de pago.';
-
-    for (const [id, value] of enabledMethods as any) {
-      const method = byId[id];
-      if (!method) continue;
-
-      const missing = method.fields
-        .filter((field) => field.required)
-        .filter((field) => !value.fields[field.key]?.trim());
-
-      if (missing.length) return `Completa los campos obligatorios de ${method.name}.`;
-    }
-
-    const linkify = form.linkify;
-    if (linkify?.enabled) {
-      const missingLinkify = linkifyRequiredFields.filter(
-        (field) => !linkify.fields[field]?.trim(),
-      );
-
-      if (missingLinkify.length) {
-        return 'Completa la cuenta, URL publica, API Key y Webhook Secret de Linkify.';
-      }
-    }
-
-    return '';
-  };
-
-  const handleSave = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    const errorMsg = validate();
-
-    if (errorMsg) {
-      setValidationError(errorMsg);
-      return;
-    }
-
-    setValidationError('');
-    localSave();
-    setIsSyncing(true);
-    setBackendError('');
-
-    try {
-      const token = localStorage.getItem('token') || '';
-      const response = await fetch(`${API_BASE_URL}/api/pagos/configuracion/`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify(form),
-      });
-
-      if (!response.ok) {
-        throw new Error('No se pudieron sincronizar los metodos de pago con el servidor.');
-      }
-    } catch (err) {
-      setBackendError(err instanceof Error ? err.message : 'Error desconocido al guardar.');
-    } finally {
-      setIsSyncing(false);
-    }
-  };
-
-  const renderLinkifyConfig = () => {
-    const current = form.linkify ?? { enabled: false, fields: {} };
-
-    return (
-      <div className="border-t border-[var(--border)] pt-3 grid gap-4">
-        <div className="grid sm:grid-cols-2 gap-3">
-          <Input
-            label="Nombre de la cuenta *"
-            value={current.fields.accountName ?? ''}
-            placeholder="Mi Tienda Demo"
-            onChange={(event) => updateField('linkify', 'accountName', event.target.value)}
-          />
-          <Input
-            label="URL publica *"
-            type="url"
-            value={current.fields.publicUrl ?? ''}
-            placeholder="https://linkify.cl/mi-tienda"
-            onChange={(event) => updateField('linkify', 'publicUrl', event.target.value)}
-          />
-          <Input
-            label="API Key *"
-            type="password"
-            autoComplete="off"
-            value={current.fields.apiKey ?? ''}
-            placeholder="lk_test_..."
-            onChange={(event) => updateField('linkify', 'apiKey', event.target.value)}
-          />
-          <Input
-            label="Webhook Secret *"
-            type="password"
-            autoComplete="off"
-            value={current.fields.webhookSecret ?? ''}
-            placeholder="whsec_..."
-            onChange={(event) => updateField('linkify', 'webhookSecret', event.target.value)}
-          />
-          <Select
-            label="Ambiente"
-            value={current.fields.environment ?? 'sandbox'}
-            onChange={(event) => updateField('linkify', 'environment', event.target.value)}
-            options={[
-              { value: 'sandbox', label: 'Sandbox' },
-              { value: 'production', label: 'Produccion' },
-            ]}
-          />
-          <Input
-            label="Vencimiento del link (horas)"
-            type="number"
-            min="1"
-            value={current.fields.expirationHours ?? '48'}
-            placeholder="48"
-            onChange={(event) => updateField('linkify', 'expirationHours', event.target.value)}
-          />
-          <Input
-            label="URL de retorno"
-            type="url"
-            value={current.fields.returnUrl ?? ''}
-            placeholder="https://mitienda.cl/pedido-confirmado"
-            onChange={(event) => updateField('linkify', 'returnUrl', event.target.value)}
-          />
-          <Input
-            label="Correo de notificaciones"
-            type="email"
-            value={current.fields.notificationEmail ?? ''}
-            placeholder="pagos@mitienda.cl"
-            onChange={(event) => updateField('linkify', 'notificationEmail', event.target.value)}
-          />
-        </div>
-
-        <div className="grid gap-3">
-          <Toggle
-            label="Sincronizar pagos aprobados con pedidos"
-            checked={boolValue(current.fields.syncApprovedPayments)}
-            onChange={(enabled) => updateField('linkify', 'syncApprovedPayments', String(enabled))}
-          />
-          <Toggle
-            label="Enviar correo al cliente cuando se genere el link"
-            checked={boolValue(current.fields.emailCustomer)}
-            onChange={(enabled) => updateField('linkify', 'emailCustomer', String(enabled))}
-          />
-          <Toggle
-            label="Expirar links pendientes automaticamente"
-            checked={boolValue(current.fields.autoExpireLinks)}
-            onChange={(enabled) => updateField('linkify', 'autoExpireLinks', String(enabled))}
-          />
-        </div>
-      </div>
-    );
-  };
-
-  return (
-    <form
-      className="flex flex-col gap-5 max-w-2xl"
-      onSubmit={onSubmit}
-    >
-      <Alert variant="info">
-        Activa los metodos de pago de tu tienda demo. Usa
-        unicamente datos ficticios; no se conectan pasarelas ni
-        se realizan cobros.
-      </Alert>
-
-      {methods.map((method) => {
-        const current = form[method.id] ?? {
-          enabled: false,
-          fields: {},
-        };
-    desc: 'Datos bancarios para conciliacion manual en backend.',
-    fields: [
-      { key: 'bank_name', label: 'Banco', placeholder: 'Banco Estado', required: true },
-      { key: 'account_type', label: 'Tipo de cuenta', placeholder: 'Cuenta corriente', required: true },
-      { key: 'account_number', label: 'Numero de cuenta', placeholder: '012345678', required: true },
-      { key: 'holder_rut', label: 'RUT del titular', placeholder: '12.345.678-9', required: true },
-      { key: 'holder_name', label: 'Nombre del titular', placeholder: 'Comercial Demo SpA', required: true },
-      { key: 'confirmation_email', label: 'Correo para comprobantes', placeholder: 'pagos@mitienda.cl', required: true },
-    ],
-  },
-];
-
-const byId = Object.fromEntries(methods.map((method) => [method.id, method]));
-
-export default function Payments() {
-  const { form, setForm, save: localSave, saved } = useAdminForm('paymentConfiguration');
-  const [isSyncing, setIsSyncing] = useState(false);
-  const [backendError, setBackendError] = useState('');
-  const [validationError, setValidationError] = useState('');
-
-  const updateEnabled = (id: string, enabled: boolean) => {
-    const current = form[id] ?? { enabled: false, fields: {} };
-    
-    
-    if (enabled) {
-      if (id === 'linkify') {
-        const missing = linkifyRequiredFields.filter((field) => !current.fields[field]?.trim());
-        if (missing.length > 0) {
-          setValidationError('Completa todos los campos obligatorios de Linkify antes de habilitarlo.');
-          return; 
-        }
-      } else {
-        const method = byId[id];
-        const missing = method?.fields
-          .filter((field) => field.required)
-          .filter((field) => !current.fields[field.key]?.trim());
-
-        if (missing && missing.length > 0) {
-          setValidationError(`Completa todos los campos obligatorios de ${method.name} antes de habilitarlo.`);
-          return; 
-        }
-      }
-    }
-
-    setValidationError('');
-    setForm({
-      ...form,
-      [id]: { ...current, enabled },
-    });
-  };
-
-  const updateField = (id: string, field: string, value: string) => {
-    const current = form[id] ?? { enabled: false, fields: {} };
-    
-    
-    let shouldDisable = false;
-    if (current.enabled && !value.trim()) {
-      if (id === 'linkify') {
-        if (linkifyRequiredFields.includes(field)) shouldDisable = true;
-      } else {
-        const method = byId[id];
-        const isRequired = method?.fields.find((f) => f.key === field)?.required;
-        if (isRequired) shouldDisable = true;
-      }
-    }
-
-    setForm({
-      ...form,
-      [id]: { 
-        ...current, 
-        enabled: shouldDisable ? false : current.enabled,
-        fields: { ...current.fields, [field]: value } 
-      },
-    });
-
-    if (shouldDisable) {
-      setValidationError(`El medio de pago ${byId[id]?.name || 'Linkify'} fue desactivado porque se borró un campo obligatorio.`);
-    } else {
-      setValidationError('');
-    }
-  };
-
-  const validate = () => {
-    const enabledMethods = Object.entries(form).filter(([, value]: any) => value?.enabled);
-    if (!enabledMethods.length) return 'Activa al menos un metodo de pago.';
-
-    for (const [id, value] of enabledMethods as any) {
-      const method = byId[id];
-      const missing = method?.fields
-        .filter((field) => field.required)
-        .filter((field) => !value.fields[field.key]?.trim());
-
-      if (missing?.length) return `Completa los campos obligatorios de ${method.name}.`;
-    }
-    return '';
-  };
-
-  const handleSave = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    const errorMsg = validate();
-    
-    if (errorMsg) {
-      setValidationError(errorMsg);
-      return;
-    }
-
-    setValidationError('');
-    localSave();
-    setIsSyncing(true);
-    setBackendError('');
-
-    try {
-      const token = localStorage.getItem('token') || '';
-      const response = await fetch(`${API_BASE_URL}/api/pagos/configuracion/`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify(form),
-      });
-
-      if (!response.ok) {
-        throw new Error('No se pudieron sincronizar los metodos de pago con el servidor.');
-      }
-    } catch (err) {
-      setBackendError(err instanceof Error ? err.message : 'Error desconocido al guardar.');
-    } finally {
-      setIsSyncing(false);
-    }
-  };
-
-  return (
-    <form className="flex flex-col gap-5 max-w-2xl" onSubmit={handleSave}>
-      <Alert variant="info">
         Activa los metodos de pago de tu tienda. Los pagos seleccionados aquí estarán disponibles automáticamente para el cliente en el checkout.
       </Alert>
 
@@ -1058,13 +987,21 @@ export default function Payments() {
             <div className="grid sm:grid-cols-2 gap-3 border-t border-[var(--border)] pt-3">
               {method.fields.map((field) => (
                 <Input
-                  key={field.key}
-                  label={field.required ? `${field.label} *` : field.label}
+                  key={field}
+                  label={field}
                   autoComplete="off"
-                  type={field.type ?? 'text'}
-                  value={current.fields[field.key] ?? ''}
-                  placeholder={field.placeholder}
-                  onChange={(event) => updateField(method.id, field.key, event.target.value)}
+                  type={/key|token|secret/i.test(field) ? 'password' : 'text'}
+                  value={current.fields?.[field] ?? ''}
+                  placeholder={method.id === 'transfer' ? 'Dato de ejemplo' : 'Credencial demo'}
+                  onChange={(e: any) =>
+                    setForm({
+                      ...form,
+                      [method.id]: {
+                        ...current,
+                        fields: { ...current.fields, [field]: e.target.value },
+                      },
+                    })
+                  }
                 />
               ))}
             </div>

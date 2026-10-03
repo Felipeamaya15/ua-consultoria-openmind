@@ -55,7 +55,7 @@ async function main() {
       require: id => {
         if (id === 'react/jsx-runtime') return { jsx, jsxs: jsx };
         if (id === 'react') return {
-          useMemo: f => f(), useRef: () => ({ current: null }),
+          useEffect: () => {}, useMemo: f => f(), useRef: () => ({ current: null }),
           useState: initial => {
             const index = state.length;
             state.push(initial);
