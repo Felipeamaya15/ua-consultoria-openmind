@@ -24,11 +24,10 @@ export interface CartDTO {
 const getAuthHeaders = () => {
   const token =
     localStorage.getItem('token') ||
-    sessionStorage.getItem('token') ||
-    'b130c016ab2e6db86bee2da41dd5e3645c6abe93';
+    sessionStorage.getItem('token');
   return {
     'Content-Type': 'application/json',
-    Authorization: `Token ${token}`,
+    ...(token ? {Authorization: `Token ${token}`} : {}),
   };
 };
 

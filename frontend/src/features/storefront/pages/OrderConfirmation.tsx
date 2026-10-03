@@ -32,6 +32,7 @@ export default function OrderConfirmation() {
 
   const orderNumber = state.orderNumber;
   const email = state.email ?? 'tu correo';
+  const hasAccount = !!localStorage.getItem('token');
 
   /*
    * ==========================================================
@@ -59,7 +60,7 @@ export default function OrderConfirmation() {
         </p>
 
         <p className="mt-1 text-[12px] text-white/40">
-          Pedido de ejemplo para{' '}
+          Pedido registrado para{' '}
           <strong className="text-white/75">{email}</strong>
         </p>
 
@@ -74,9 +75,9 @@ export default function OrderConfirmation() {
 
           <div className="mt-7 grid grid-cols-1 md:grid-cols-3 gap-6">
             {[
-              ['1', 'Pedido registrado', 'Tu pedido de ejemplo quedó registrado durante esta sesión.'],
-              ['2', 'Demostración', 'Esta demostración no realiza cobros ni envía correos.'],
-              ['3', 'Sigue tu pedido', 'Puedes consultar el estado de tu pedido desde Seguimiento.'],
+              ['1', 'Pedido registrado', 'Tu pedido quedó registrado con estado pendiente.'],
+              ['2', 'Pago pendiente', 'El registro del pedido no confirma su pago.'],
+              ['3', 'Sigue tu pedido', 'Con tu cuenta puedes consultar el estado en Mis pedidos.'],
             ].map(([number, title, description]) => (
               <div key={number}>
                 <span className="w-8 h-8 rounded-full bg-[#1683ff] text-white flex items-center justify-center text-[11px] font-black">
@@ -91,11 +92,11 @@ export default function OrderConfirmation() {
 
         <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-3">
           <Link
-            to={route('seguimiento')}
+            to={route(hasAccount ? 'mis-pedidos' : 'catalogo')}
             state={{ orderNumber, email }}
             className="h-12 rounded-[9px] bg-[#1683ff] text-white text-[12px] font-bold flex items-center justify-center hover:bg-[#3194f5] transition-colors"
           >
-            Rastrear pedido
+            {hasAccount ? 'Ver mis pedidos' : 'Seguir comprando'}
           </Link>
 
           <Link
@@ -147,7 +148,7 @@ export default function OrderConfirmation() {
               <div className="border-t border-black/10 my-5" />
 
               <p className="text-[11px] text-[#77716e]">
-                Pedido de ejemplo para
+                Pedido registrado para
               </p>
 
               <p className="mt-1 text-[13px] font-medium">
@@ -175,8 +176,8 @@ export default function OrderConfirmation() {
                   </p>
 
                   <p className="mt-2 text-[11px] leading-5 text-[#77716e]">
-                    Tu pedido de ejemplo quedó
-                    registrado durante esta sesión.
+                    Tu pedido quedó
+                    registrado con estado pendiente.
                   </p>
                 </div>
 
@@ -186,11 +187,11 @@ export default function OrderConfirmation() {
                   </span>
 
                   <p className="text-[13px] font-semibold">
-                    Demostración
+                    Pago pendiente
                   </p>
 
                   <p className="mt-2 text-[11px] leading-5 text-[#77716e]">
-                    Esta demostración no realiza
+                    El registro del pedido no realiza
                     cobros ni envía correos.
                   </p>
                 </div>
@@ -214,14 +215,14 @@ export default function OrderConfirmation() {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full max-w-lg mt-6">
               <Link
-                to={route('seguimiento')}
+                to={route(hasAccount ? 'mis-pedidos' : 'catalogo')}
                 state={{
                   orderNumber,
                   email,
                 }}
                 className="h-12 rounded-[8px] bg-black text-white text-[12px] font-semibold flex items-center justify-center hover:opacity-80 transition-opacity"
               >
-                Rastrear pedido →
+                {hasAccount ? 'Ver mis pedidos →' : 'Seguir comprando →'}
               </Link>
 
               <Link
@@ -280,7 +281,7 @@ export default function OrderConfirmation() {
             <div className="border-t border-black/5 my-4" />
 
             <p className="text-xs text-gray-400">
-              Pedido de ejemplo para
+              Pedido registrado para
             </p>
 
             <p className="text-sm font-medium mt-1">
@@ -305,8 +306,8 @@ export default function OrderConfirmation() {
                   </p>
 
                   <p className="text-xs text-gray-500 mt-1 leading-relaxed">
-                    Tu pedido de ejemplo quedó
-                    registrado durante esta sesión.
+                    Tu pedido quedó
+                    registrado con estado pendiente.
                   </p>
                 </div>
               </div>
@@ -318,11 +319,11 @@ export default function OrderConfirmation() {
 
                 <div>
                   <p className="text-sm font-medium text-[#171717]">
-                    Demostración
+                    Pago pendiente
                   </p>
 
                   <p className="text-xs text-gray-500 mt-1 leading-relaxed">
-                    Esta demostración no realiza
+                    El registro del pedido no realiza
                     cobros ni envía correos.
                   </p>
                 </div>
@@ -349,14 +350,14 @@ export default function OrderConfirmation() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full mt-6">
             <Link
-              to={route('seguimiento')}
+              to={route(hasAccount ? 'mis-pedidos' : 'catalogo')}
               state={{
                 orderNumber,
                 email,
               }}
               className="h-12 rounded-full bg-[#17213b] text-white text-sm font-semibold flex items-center justify-center hover:bg-[#0f2a56] transition-colors"
             >
-              Rastrear pedido
+              {hasAccount ? 'Ver mis pedidos' : 'Seguir comprando'}
             </Link>
 
             <Link
@@ -399,7 +400,7 @@ export default function OrderConfirmation() {
         </p>
 
         <p className="text-sm text-[var(--muted-foreground)] mt-1">
-          Pedido de ejemplo para{' '}
+          Pedido registrado para{' '}
           <strong>{email}</strong>
         </p>
       </div>
@@ -416,8 +417,8 @@ export default function OrderConfirmation() {
             </span>
 
             <span>
-              Tu pedido de ejemplo quedó registrado
-              durante esta sesión.
+              Tu pedido quedó registrado
+              con estado pendiente.
             </span>
           </div>
 
@@ -427,7 +428,7 @@ export default function OrderConfirmation() {
             </span>
 
             <span>
-              Esta demostración no realiza cobros ni
+              El registro del pedido no realiza cobros ni
               envía correos.
             </span>
           </div>
@@ -447,7 +448,7 @@ export default function OrderConfirmation() {
 
       <div className="flex flex-col sm:flex-row gap-3 w-full">
         <Link
-          to={route('seguimiento')}
+          to={route(hasAccount ? 'mis-pedidos' : 'catalogo')}
           state={{
             orderNumber,
             email,
@@ -458,7 +459,7 @@ export default function OrderConfirmation() {
             variant="primary"
             fullWidth
           >
-            Rastrear pedido
+            {hasAccount ? 'Ver mis pedidos' : 'Seguir comprando'}
           </Button>
         </Link>
 

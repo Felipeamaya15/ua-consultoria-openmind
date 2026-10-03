@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 
-import { useOrders } from '../context/OrderContext';
+import { orderService } from '../services/orderService';
 import { useCart } from '../context/CartContext';
 import { formatPrice } from '../data/mockData';
 import {
@@ -362,11 +362,13 @@ export default function Checkout() {
     shipping,
     total,
     clearCart,
+    promoCode,
     shippingMethod,
     setShippingMethod,
   } = useCart();
 
-  const { addOrder } = useOrders();
+  const submitting = useRef(false);
+  const checkoutAttempt = useRef({signature: '', key: ''});
 
   const { route, isMinimal, isVisual, isCatalog } =
     useStorefrontTemplate();
@@ -580,114 +582,42 @@ export default function Checkout() {
    * ==========================================================
    */
   const handleConfirm = async () => {
-    if (loading || !items.length) return;
-
+    if (submitting.current || loading || !items.length) return;
+    if (!['contact', 'delivery', 'payment'].every(validate)) return;
+    submitting.current = true;
     setLoading(true);
-
-    const orderNumber = `ORD-${Date.now().toString().slice(-6)}-${crypto
-      .randomUUID()
-      .slice(0, 4)
-      .toUpperCase()}`;
-
-    const now = new Date().toISOString();
-
-    // 1. Integración con el Adaptador de Transbank Webpay
-    if (paymentMethod === 'Transbank') {
-      try {
-        // Guardamos el pedido en el contexto local con estado pendiente
-        addOrder({
-          id: orderNumber,
-          number: orderNumber,
-          customer: {
-            ...contact,
-            email: contact.email.trim(),
-          },
-          items: items.map((item) => ({
-            ...item,
-          })),
-          subtotal,
-          discount,
-          shipping,
-          total,
-          status: 'pending',
-          paymentStatus: 'pending',
-          paymentMethod,
-          shippingMethod,
-          address,
-          createdAt: now,
-          updatedAt: now,
-        });
-
-        // URL de retorno donde Transbank enviará al cliente con su token_ws
+    setErrors({});
+    const signature = JSON.stringify({items, contact, paymentMethod, shippingMethod, address, promoCode});
+    if (checkoutAttempt.current.signature !== signature) {
+      checkoutAttempt.current = {signature, key: crypto.randomUUID()};
+    }
+    try {
+      const order = await orderService.create({
+        key: checkoutAttempt.current.key, items, contact, paymentMethod, shippingMethod, address, promoCode,
+      });
+      const orderNumber = String(order.id_pedido);
+      if (paymentMethod === 'Transbank') {
         const returnUrl = `${window.location.origin}${route('pedido-confirmado')}?orderNumber=${orderNumber}`;
-
-        // Invocamos el endpoint de la API conectado a través del adaptador Webpay
-        const res = await transbankPaymentService.iniciarPago(
-          1, // ID de la tienda activa
-          orderNumber,
-          total,
-          returnUrl,
+        const result = await transbankPaymentService.iniciarPago(
+          order.tienda_id, orderNumber, Number(order.monto_total), returnUrl,
         );
-
-        if (res.exito && res.data?.url && res.data?.token) {
-          clearCart();
-          // Redirige al checkout bancario de Transbank
-          transbankPaymentService.redirigirAWebpay(res.data.url, res.data.token);
-          return;
-        } else {
-          setErrors({
-            payment: res.mensaje || 'Error al iniciar la pasarela de Transbank Webpay.',
-          });
-          setLoading(false);
-          return;
+        if (!result.exito || !result.data?.url || !result.data?.token) {
+          throw new Error(result.mensaje || `Pedido #${orderNumber} registrado; no se pudo iniciar Webpay. Puedes reintentar.`);
         }
-      } catch {
-        setErrors({
-          payment: 'No se pudo establecer conexión con el servidor para iniciar Webpay.',
-        });
-        setLoading(false);
+        await clearCart();
+        transbankPaymentService.redirigirAWebpay(result.data.url, result.data.token);
         return;
       }
+      await clearCart();
+      navigate(route('pedido-confirmado'), {
+        state: {orderNumber, email: contact.email.trim()}, replace: true,
+      });
+    } catch (error) {
+      setErrors({payment: error instanceof Error ? error.message : 'No se pudo registrar el pedido. Intenta nuevamente.'});
+    } finally {
+      submitting.current = false;
+      setLoading(false);
     }
-
-    // 2. Flujo habitual para otros métodos de pago
-    addOrder({
-      id: orderNumber,
-      number: orderNumber,
-
-      customer: {
-        ...contact,
-        email: contact.email.trim(),
-      },
-
-      items: items.map((item) => ({
-        ...item,
-      })),
-
-      subtotal,
-      discount,
-      shipping,
-      total,
-
-      status: 'pending',
-      paymentStatus: 'pending',
-      paymentMethod,
-      shippingMethod,
-      address,
-
-      createdAt: now,
-      updatedAt: now,
-    });
-
-    clearCart();
-
-    navigate(route('pedido-confirmado'), {
-      state: {
-        orderNumber,
-        email: contact.email.trim(),
-      },
-      replace: true,
-    });
   };
 
   /*
@@ -1718,7 +1648,7 @@ export default function Checkout() {
                   onClick={handleConfirm}
                   className="min-h-12 px-6 rounded-[8px] bg-black text-white text-[12px] font-semibold hover:opacity-80 disabled:opacity-50 transition-opacity"
                 >
-                  {loading ? 'Conectando con Webpay...' : `Confirmar y pagar ${formatPrice(total)}`}
+                  {loading ? 'Registrando pedido...' : `Confirmar y pagar ${formatPrice(total)}`}
                 </button>
               ) : isMinimal ? (
                 <button
@@ -1728,7 +1658,7 @@ export default function Checkout() {
                   className="min-h-12 px-6 rounded-full bg-[#17213b] text-white text-sm font-semibold hover:bg-[#0f2a56] disabled:opacity-50 transition-colors"
                 >
                   {loading
-                    ? 'Conectando con Webpay...'
+                    ? 'Registrando pedido...'
                     : `Confirmar y pagar ${formatPrice(total)}`}
                 </button>
               ) : (
@@ -1738,7 +1668,7 @@ export default function Checkout() {
                   loading={loading}
                   onClick={handleConfirm}
                 >
-                  {loading ? 'Conectando con Webpay...' : `Confirmar y pagar ${formatPrice(total)}`}
+                  {loading ? 'Registrando pedido...' : `Confirmar y pagar ${formatPrice(total)}`}
                 </Button>
               )
             ) : isVisual ? (

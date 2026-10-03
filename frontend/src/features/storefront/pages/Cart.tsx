@@ -18,6 +18,7 @@ export default function Cart() {
     total,
     applyPromo,
     count,
+    loading,
   } = useCart();
 
   const { route, isMinimal, isVisual, isCatalog } = useStorefrontTemplate();
@@ -38,6 +39,8 @@ export default function Cart() {
       setPromoSuccess('');
     }
   };
+
+  if (loading && items.length === 0) return <p role="status" className="p-8 text-center">Cargando carrito…</p>;
 
   // ==========================================================
   // CARRITO VACÍO — PLANTILLA 4 / CATALOG
@@ -254,7 +257,7 @@ export default function Cart() {
 
                           <div className="text-left sm:text-right">
                             <p className="text-[15px] font-black">
-                              {formatPrice(item.price * item.quantity)}
+                              {formatPrice(item.price * item.quantity)}<span className="block text-xs font-normal">{formatPrice(item.price)} por unidad</span>
                             </p>
 
                             {hasDiscount && item.comparePrice && (
@@ -517,7 +520,7 @@ export default function Cart() {
 
                         <div className="text-left sm:text-right">
                           <p className="text-[14px] font-semibold">
-                            {formatPrice(item.price * item.quantity)}
+                            {formatPrice(item.price * item.quantity)}<span className="block text-xs font-normal">{formatPrice(item.price)} por unidad</span>
                           </p>
 
                           {hasDiscount && item.comparePrice && (
@@ -733,7 +736,7 @@ export default function Cart() {
 
                   <div className="text-right">
                     <p className="font-semibold">
-                      {formatPrice(item.price * item.quantity)}
+                      {formatPrice(item.price * item.quantity)}<span className="block text-xs font-normal">{formatPrice(item.price)} por unidad</span>
                     </p>
                     {item.comparePrice && (
                       <p className="text-xs line-through text-[var(--muted-foreground)]">

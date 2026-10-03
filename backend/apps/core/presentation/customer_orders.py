@@ -11,8 +11,8 @@ from apps.core.presentation.responses import success_response
 
 
 class OrderItemSerializer(serializers.ModelSerializer):
-    producto_id = serializers.IntegerField(source='id_producto_id')
-    nombre = serializers.CharField(source='id_producto.nombre')
+    producto_id = serializers.SerializerMethodField()
+    nombre = serializers.SerializerMethodField()
     subtotal = serializers.SerializerMethodField()
 
     class Meta:
@@ -21,6 +21,18 @@ class OrderItemSerializer(serializers.ModelSerializer):
 
     def get_subtotal(self, item):
         return format(item.precio_unitario * item.cantidad, '.2f')
+
+    def get_producto_id(self, item):
+        return item.producto_mongo_id or item.id_producto_id
+
+    def get_nombre(self, item):
+        return item.nombre_producto or (item.id_producto.nombre if item.id_producto else '')
+
+    def to_representation(self, item):
+        result = super().to_representation(item)
+        if item.sku:
+            result.update(sku=item.sku, atributos_variante=item.atributos_variante)
+        return result
 
 
 class OrderSerializer(serializers.ModelSerializer):
@@ -40,6 +52,13 @@ class OrderDetailSerializer(OrderSerializer):
 
     class Meta(OrderSerializer.Meta):
         fields = OrderSerializer.Meta.fields + ['items']
+
+    def to_representation(self, order):
+        result = super().to_representation(order)
+        if order.clave_checkout:
+            result.update(medio_pago=order.medio_pago, entrega=order.entrega,
+                          costo_envio=format(order.costo_envio, '.2f'), descuento=format(order.descuento, '.2f'))
+        return result
 
 
 class CustomerOrdersAPIView(APIView):

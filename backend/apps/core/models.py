@@ -91,7 +91,7 @@ class Pedido(models.Model):
         ('cancelado', 'Cancelado'),
     ]
     id_pedido = models.BigAutoField(primary_key=True)
-    id_usuario = models.ForeignKey(Usuario, on_delete=models.CASCADE, db_column='id_usuario')
+    id_usuario = models.ForeignKey(Usuario, on_delete=models.CASCADE, db_column='id_usuario', null=True, blank=True)
     # Vínculo explícito para lectura del historial autenticado. Los pedidos legados
     # no se atribuyen por correo ni por coincidencia de IDs.
     comprador = models.ForeignKey(
@@ -102,6 +102,15 @@ class Pedido(models.Model):
     estado = models.CharField(max_length=20, choices=ESTADO_CHOICES, default='pendiente')
     fecha_creacion = models.DateTimeField(auto_now_add=True)
 
+    tienda = models.ForeignKey(Tienda, on_delete=models.PROTECT, null=True, blank=True)
+    clave_checkout = models.UUIDField(unique=True, null=True, blank=True)
+    huella_checkout = models.CharField(max_length=64, blank=True, default='')
+    contacto = models.JSONField(default=dict, blank=True)
+    entrega = models.JSONField(default=dict, blank=True)
+    medio_pago = models.CharField(max_length=40, blank=True, default='')
+    costo_envio = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    descuento = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+
     class Meta:
         db_table = 'pedido'
         constraints = [
@@ -111,7 +120,11 @@ class Pedido(models.Model):
 class ItemPedido(models.Model):
     id_item_pedido = models.BigAutoField(primary_key=True)
     id_pedido = models.ForeignKey(Pedido, on_delete=models.CASCADE, db_column='id_pedido')
-    id_producto = models.ForeignKey(Producto, on_delete=models.CASCADE, db_column='id_producto')
+    id_producto = models.ForeignKey(Producto, on_delete=models.CASCADE, db_column='id_producto', null=True, blank=True)
+    producto_mongo_id = models.CharField(max_length=24, blank=True, default='')
+    nombre_producto = models.CharField(max_length=200, blank=True, default='')
+    sku = models.CharField(max_length=100, blank=True, default='')
+    atributos_variante = models.JSONField(default=list, blank=True)
 
     cantidad = models.IntegerField()
     precio_unitario = models.DecimalField(max_digits=12, decimal_places=2)
