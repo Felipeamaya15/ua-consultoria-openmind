@@ -20,14 +20,17 @@ class ConfiguracionPagoAPIView(APIView):
 
     def get(self, request):
         try:
-            tienda = resolver_tienda(request, exigir_propietario=True)
+            tienda = resolver_tienda(
+                request,
+                exigir_propietario=True,
+            )
 
             config_pago, _ = ConfiguracionPago.objects.get_or_create(
-                id_tienda=tienda
+                tienda=tienda,
             )
 
             return success_response(
-                data=config_pago.configuracion
+                data=config_pago.datos or {},
             )
 
         except Exception as e:
@@ -39,11 +42,14 @@ class ConfiguracionPagoAPIView(APIView):
 
     def put(self, request):
         try:
-            tienda = resolver_tienda(request, exigir_propietario=True)
+            tienda = resolver_tienda(
+                request,
+                exigir_propietario=True,
+            )
 
-            # SCRUM-306:
-            # Validar que los medios habilitados tengan los datos requeridos.
-            serializer = ConfiguracionPagoSerializer(data=request.data)
+            serializer = ConfiguracionPagoSerializer(
+                data=request.data,
+            )
 
             if not serializer.is_valid():
                 return error_response(
@@ -57,15 +63,15 @@ class ConfiguracionPagoAPIView(APIView):
                 )
 
             config_pago, _ = ConfiguracionPago.objects.get_or_create(
-                id_tienda=tienda
+                tienda=tienda,
             )
 
-            config_pago.configuracion = serializer.validated_data
+            config_pago.datos = serializer.validated_data
             config_pago.save()
 
             return success_response(
                 mensaje="Métodos de pago guardados exitosamente.",
-                data=config_pago.configuracion,
+                data=config_pago.datos,
             )
 
         except Exception as e:
@@ -75,10 +81,13 @@ class ConfiguracionPagoAPIView(APIView):
                 status=400,
             )
 
+    def patch(self, request):
+        return self.put(request)
+
 
 class MetodosPagoActivosAPIView(APIView):
     """
-    Endpoint público para checkout.
+    Endpoint público utilizado por checkout.
 
     Devuelve únicamente los medios de pago habilitados
     para la tienda correspondiente.
@@ -91,10 +100,10 @@ class MetodosPagoActivosAPIView(APIView):
             tienda_id = resolver_tienda_id(request)
 
             config_pago = ConfiguracionPago.objects.get(
-                id_tienda_id=tienda_id
+                tienda_id=tienda_id,
             )
 
-            configuracion = config_pago.configuracion or {}
+            configuracion = config_pago.datos or {}
 
             metodos_activos = {
                 key: method_data
@@ -106,7 +115,7 @@ class MetodosPagoActivosAPIView(APIView):
             }
 
             return success_response(
-                data=metodos_activos
+                data=metodos_activos,
             )
 
         except ConfiguracionPago.DoesNotExist:

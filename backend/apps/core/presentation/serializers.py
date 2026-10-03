@@ -203,11 +203,18 @@ class ConfiguracionPagoSerializer(serializers.Serializer):
     """ Valida que no se habiliten medios de pago sin sus campos obligatorios (SCRUM-306) """
     
     REQUIRED_FIELDS_BY_METHOD = {
-        'transbank': ['api_key', 'commerce_id'],
-        'mercadopago': ['access_token'],
+        'transbank': ['api_key', 'codigo_comercio'],
+        'mercadopago': ['public_key', 'access_token'],
         'paypal': ['client_id', 'client_secret'],
         'linkify': ['accountName', 'publicUrl', 'apiKey', 'webhookSecret'],
-        'transfer': ['bank_name', 'account_type', 'account_number', 'holder_rut', 'holder_name', 'confirmation_email']
+        'transfer': [
+            'bank_name',
+            'account_type',
+            'account_number',
+            'holder_rut',
+            'holder_name',
+            'confirmation_email',
+        ],
     }
 
     def to_internal_value(self, data):
