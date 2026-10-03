@@ -51,19 +51,19 @@ class VarianteSerializer(serializers.Serializer):
     precio_oferta = serializers.FloatField(allow_null=True, required=False)
     stock = serializers.IntegerField()
     atributos_variante = serializers.ListField(child=serializers.DictField(), required=False)
- 
- 
+
+
 class AtributoGeneralSerializer(serializers.Serializer):
     clave = serializers.CharField()
     etiqueta = serializers.CharField()
     valor = serializers.CharField()
- 
- 
+
+
 class SeoSerializer(serializers.Serializer):
     meta_titulo = serializers.CharField(required=False, allow_null=True)
     meta_descripcion = serializers.CharField(required=False, allow_null=True)
- 
- 
+
+
 class ProductPublicDetailSerializer(serializers.Serializer):
     """
     No incluye tienda_id, activo ni fecha_creacion (son datos internos).
@@ -77,48 +77,66 @@ class ProductPublicDetailSerializer(serializers.Serializer):
     atributos_generales = AtributoGeneralSerializer(many=True, required=False)
     variantes = VarianteSerializer(many=True, required=False)
     seo = SeoSerializer(required=False)
- 
-    
+
+
     def validate_imagenes(self, value):
         for img_b64 in value:
-           
+
             if img_b64.startswith('http') or img_b64.startswith('/'):
                 continue
-            
+
             validate_base64_image(img_b64, max_size_mb=2)
         return value
+
+
+class ProductAdminDetailSerializer(ProductPublicDetailSerializer):
+    activo = serializers.BooleanField()
+    fecha_creacion = serializers.DateTimeField(required=False)
+    # El panel necesita todos los campos de las variantes, incluidos metadatos legacy.
+    variantes = serializers.ListField(child=serializers.DictField(), required=False)
+    revision = serializers.SerializerMethodField()
+
+    def get_revision(self, product):
+        from apps.catalog.infrastructure.repositories import ProductRepository
+        return ProductRepository.revision(product)
 
 
 class AtributoVarianteAgrupadoSerializer(serializers.Serializer):
     clave = serializers.CharField()
     etiqueta = serializers.CharField()
     valores = serializers.ListField(child=serializers.CharField())
- 
- 
+
+
 class ProductPublicAttributesSerializer(serializers.Serializer):
     atributos_generales = AtributoGeneralSerializer(many=True)
     atributos_variante = AtributoVarianteAgrupadoSerializer(many=True)
 
- 
+
 class ProductImageSerializer(serializers.Serializer):
-    
+
     imagen = serializers.CharField()
 
-    
+
     def validate_imagen(self, value):
         if value.startswith('http') or value.startswith('/'):
             return value
-            
+
         validate_base64_image(value, max_size_mb=2)
         return value
 
 class ProductoCreateSerializer(serializers.ModelSerializer):
+    categoria = serializers.CharField(required=False, allow_blank=True, default='')
+    descripcion = serializers.CharField(required=False, allow_blank=True, default='')
+    imagenes = serializers.ListField(
+        child=serializers.CharField(), required=False, default=list
+    )
+
     class Meta:
         model = Producto
-        fields = ['nombre', 'precio', 'stock', 'activo']
+        fields = ['nombre', 'precio', 'stock', 'activo', 'categoria', 'descripcion', 'imagenes']
         extra_kwargs = {
             'nombre': {
-                'required': True, 
+                'required': True,
                 'allow_blank': False,
                 'error_messages': {
                     'required': 'El campo nombre es obligatorio.',
@@ -195,7 +213,7 @@ class VarianteStockUpdateSerializer(StockValidationMixin, serializers.Serializer
             raise serializers.ValidationError({'stock': 'El stock debe ser un entero mayor o igual a cero.'})
         return super().to_internal_value(data)
 
-class VarianteInputSerializer(serializers.Serializer):
+class VarianteInputSerializer(VarianteStockUpdateSerializer):
     sku = serializers.CharField()
     precio = serializers.FloatField(min_value=0)
     precio_oferta = serializers.FloatField(required=False, allow_null=True, min_value=0)
@@ -203,6 +221,25 @@ class VarianteInputSerializer(serializers.Serializer):
     atributos_variante = serializers.ListField(
         child=serializers.DictField(), required=False, default=list
     )
+
+    def validate_sku(self, value):
+        return value.strip().upper()
+
+    def validate(self, data):
+        import math
+        if any(not math.isfinite(data[field]) for field in ('precio', 'precio_oferta')
+               if data.get(field) is not None):
+            raise serializers.ValidationError("Los precios deben ser números finitos.")
+        if data.get('precio_oferta') is not None and data['precio_oferta'] >= data['precio']:
+            raise serializers.ValidationError("El precio de oferta debe ser menor al precio normal.")
+        return data
+
+    def validate_atributos_variante(self, value):
+        from apps.catalog.application.services import VariantService
+        try:
+            return VariantService._normalizar_atributos_variante(value)
+        except ValueError as error:
+            raise serializers.ValidationError(str(error)) from error
 
 
 class AtributoGeneralInputSerializer(serializers.Serializer):
@@ -217,7 +254,16 @@ class SeoInputSerializer(serializers.Serializer):
 
 
 class ProductCreateSerializer(serializers.Serializer):
-    nombre = serializers.CharField(max_length=200)
+    activo = serializers.BooleanField(required=False, default=True)
+    nombre = serializers.CharField(
+        max_length=200,
+        required=True,
+        allow_blank=False,
+        error_messages={
+            'required': 'El campo nombre es obligatorio.',
+            'blank': 'El nombre no puede estar vacío.'
+        }
+    )
     descripcion = serializers.CharField(required=False, allow_blank=True)
     categoria = serializers.CharField(max_length=100)
     imagenes = serializers.ListField(
@@ -229,17 +275,29 @@ class ProductCreateSerializer(serializers.Serializer):
     variantes = VarianteInputSerializer(many=True)
     seo = SeoInputSerializer(required=False)
 
+    def validate_imagenes(self, value):
+        from django.core.exceptions import ValidationError
+        for image in value:
+            try:
+                validate_base64_image(image, max_size_mb=2)
+            except ValidationError as error:
+                raise serializers.ValidationError(error.messages) from error
+        return value
+
     def validate_variantes(self, value):
         if not value:
             raise serializers.ValidationError(
                 "El producto debe tener al menos una variante."
             )
-        skus = [v["sku"].strip() for v in value]
+        skus = [v["sku"] for v in value]
         if len(skus) != len(set(skus)):
             raise serializers.ValidationError(
                 "Los SKU de las variantes deben ser únicos."
             )
-        return value        
+        schemas = [{a['clave'] for a in v['atributos_variante']} for v in value]
+        if any(schema != schemas[0] for schema in schemas):
+            raise serializers.ValidationError("Todas las variantes deben tener las mismas claves de atributos.")
+        return value
 
 class ModificarCantidadRequestSerializer(serializers.Serializer):
     cantidad = serializers.IntegerField(min_value=1, error_messages={
@@ -314,7 +372,7 @@ class ConfiguracionTransbankResponseSerializer(serializers.Serializer):
     def get_id_tienda(self, obj):
         val = obj.get("id_tienda") if isinstance(obj, dict) else getattr(obj, "id_tienda", None)
         return getattr(val, "id_tienda", val)
-    
+
 
 class IniciarPagoTransbankSerializer(serializers.Serializer):
     id_tienda = serializers.IntegerField(required=True)

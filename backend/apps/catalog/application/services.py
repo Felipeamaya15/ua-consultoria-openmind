@@ -8,7 +8,8 @@ class VariantService:
     def __init__(self, repository=None):
         self.repo = repository if repository is not None else ProductRepository()
 
-    def _normalizar_atributos_variante(self, atributos):
+    @staticmethod
+    def _normalizar_atributos_variante(atributos):
         if atributos is None:
             return []
 

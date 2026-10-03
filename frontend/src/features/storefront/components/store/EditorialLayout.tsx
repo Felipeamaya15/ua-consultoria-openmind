@@ -1,3 +1,4 @@
+import { AccountNavigation } from './AccountNavigation';
 import { useLandingContent } from '../../../landing/hooks/useLandingContent';
 import { useLandingSectionVisibility } from '../../../landing/hooks/useLandingSectionVisibility';
 import { useEffect, useState } from 'react';
@@ -188,7 +189,7 @@ export function EditorialLayout() {
             {user ? (
               <div className="hidden sm:flex items-center gap-4 border-l border-[var(--border)] pl-4 ml-2">
                 <span className="text-sm font-semibold text-[var(--foreground)]">
-                  Bienvenido, {user.first_name || user.username}
+                  <AccountNavigation className="underline" />
                 </span>
                 <button
                   type="button"
@@ -199,12 +200,7 @@ export function EditorialLayout() {
                 </button>
               </div>
             ) : (
-              <Link
-                to="ingresar"
-                className="hidden sm:block text-sm font-medium text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition-colors ml-2"
-              >
-                Ingresar
-              </Link>
+              <AccountNavigation className="hidden sm:block text-sm font-medium text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition-colors ml-2" />
             )}
 
             {/* Botón menú móvil */}
@@ -272,7 +268,7 @@ export function EditorialLayout() {
             {user ? (
               <>
                 <div className="text-sm py-2 font-semibold text-[var(--foreground)] border-t border-[var(--border)] mt-2 pt-4">
-                  Bienvenido, {user.first_name || user.username}
+                  <AccountNavigation className="underline" />
                 </div>
                 <button
                   type="button"
@@ -286,13 +282,7 @@ export function EditorialLayout() {
                 </button>
               </>
             ) : (
-              <Link
-                to="ingresar"
-                className="text-sm py-2 border-t border-[var(--border)] mt-2 pt-4"
-                onClick={() => setMobileOpen(false)}
-              >
-                Ingresar
-              </Link>
+              <AccountNavigation className="text-sm py-2 border-t border-[var(--border)] mt-2 pt-4" />
             )}
           </nav>
         )}

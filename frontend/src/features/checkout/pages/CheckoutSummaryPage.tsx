@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { API_BASE_URL } from '../../../api';
 
 const items = [
   { name: 'Polera Nova Store', detail: 'Talla M · Color negro', quantity: 2, price: 15990 },
-  { name: 'Mug corporativo', detail: 'Ceramica · 350 ml', quantity: 1, price: 8990 },
+  { name: 'Mug corporativo', detail: 'Cerámica · 350 ml', quantity: 1, price: 8990 },
   { name: 'Sticker pack', detail: 'Set de 6 unidades', quantity: 1, price: 3990 },
 ];
 
@@ -17,14 +18,38 @@ const discount = 5000;
 const total = subtotal + shipping - discount;
 
 export const CheckoutSummaryPage: React.FC = () => {
+  const [selectedPayment, setSelectedPayment] = useState<string>('');
+  const [activePaymentMethods, setActivePaymentMethods] = useState<[string, any][]>([]);
+  const [loadingPayments, setLoadingPayments] = useState(true);
+
+  useEffect(() => {
+    // SCRUM-295: Integración real: solicitamos los medios de pago ACTIVOS al backend
+    const fetchActivePayments = async () => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/pagos/activos/`);
+        const result = await response.json();
+
+        if (response.ok && result.exito) {
+          setActivePaymentMethods(Object.entries(result.data));
+        }
+      } catch (error) {
+        console.error("Error cargando los métodos de pago:", error);
+      } finally {
+        setLoadingPayments(false);
+      }
+    };
+
+    fetchActivePayments();
+  }, []);
+
   return (
     <main style={{ minHeight: '100vh', backgroundColor: '#f7f7fb', fontFamily: 'sans-serif', padding: '2rem' }}>
       <section style={{ maxWidth: '1120px', margin: '0 auto' }}>
         <header style={{ marginBottom: '2rem' }}>
-          <p style={{ color: '#5454EB', fontWeight: 800, margin: '0 0 0.5rem' }}>SCRUM-151</p>
+          <p style={{ color: '#5454EB', fontWeight: 800, margin: '0 0 0.5rem' }}>SCRUM-295</p>
           <h1 style={{ color: '#111827', fontSize: '2.5rem', margin: 0 }}>Resumen del checkout</h1>
           <p style={{ color: '#6b7280', fontSize: '1.05rem', marginTop: '0.75rem' }}>
-            Revisa los productos, datos de entrega y total antes de confirmar la compra.
+            Revisa los productos, selecciona tu medio de pago y confirma la compra.
           </p>
         </header>
 
@@ -37,27 +62,14 @@ export const CheckoutSummaryPage: React.FC = () => {
                 <article
                   key={item.name}
                   style={{
-                    alignItems: 'center',
-                    border: '1px solid #eef0f4',
-                    borderRadius: '14px',
-                    display: 'grid',
-                    gap: '1rem',
-                    gridTemplateColumns: '56px minmax(0, 1fr) auto',
-                    padding: '1rem',
+                    alignItems: 'center', border: '1px solid #eef0f4', borderRadius: '14px',
+                    display: 'grid', gap: '1rem', gridTemplateColumns: '56px minmax(0, 1fr) auto', padding: '1rem'
                   }}
                 >
-                  <div
-                    style={{
-                      alignItems: 'center',
-                      backgroundColor: '#eeeeff',
-                      borderRadius: '14px',
-                      color: '#5454EB',
-                      display: 'flex',
-                      fontWeight: 900,
-                      height: '56px',
-                      justifyContent: 'center',
-                    }}
-                  >
+                  <div style={{
+                    alignItems: 'center', backgroundColor: '#eeeeff', borderRadius: '14px', color: '#5454EB',
+                    display: 'flex', fontWeight: 900, height: '56px', justifyContent: 'center'
+                  }}>
                     x{item.quantity}
                   </div>
                   <div>
@@ -74,12 +86,29 @@ export const CheckoutSummaryPage: React.FC = () => {
 
           <aside style={{ display: 'grid', gap: '1rem' }}>
             <section style={{ backgroundColor: '#ffffff', border: '1px solid #e5e7eb', borderRadius: '16px', padding: '1.5rem' }}>
-              <h2 style={{ color: '#111827', marginTop: 0 }}>Entrega</h2>
-              <p style={{ color: '#111827', fontWeight: 700, marginBottom: '0.25rem' }}>Retiro en tienda</p>
-              <p style={{ color: '#6b7280', marginTop: 0 }}>Disponible desde manana a las 10:00.</p>
-              <div style={{ backgroundColor: '#f3f4f6', borderRadius: '12px', color: '#374151', padding: '0.9rem' }}>
-                Nova Store · Avenida Central 123
-              </div>
+              <h2 style={{ color: '#111827', marginTop: 0 }}>Medio de pago</h2>
+
+              {loadingPayments ? (
+                <p style={{ color: '#6b7280', fontSize: '0.9rem' }}>Cargando medios de pago disponibles...</p>
+              ) : activePaymentMethods.length === 0 ? (
+                <p style={{ color: '#dc2626', fontWeight: 600, fontSize: '0.9rem' }}>No hay medios de pago configurados en la tienda.</p>
+              ) : (
+                <div style={{ display: 'grid', gap: '1rem', marginTop: '1rem' }}>
+                  {activePaymentMethods.map(([id, _]) => (
+                    <label key={id} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer', padding: '0.75rem', border: '1px solid #e5e7eb', borderRadius: '8px' }}>
+                      <input
+                        type="radio"
+                        name="paymentMethod"
+                        value={id}
+                        checked={selectedPayment === id}
+                        onChange={(e) => setSelectedPayment(e.target.value)}
+                        style={{ width: '1.2rem', height: '1.2rem', accentColor: '#5454EB' }}
+                      />
+                      <span style={{ textTransform: 'capitalize', fontWeight: 600, color: '#374151' }}>{id}</span>
+                    </label>
+                  ))}
+                </div>
+              )}
             </section>
 
             <section style={{ backgroundColor: '#111827', borderRadius: '16px', color: '#ffffff', padding: '1.5rem' }}>
@@ -90,7 +119,7 @@ export const CheckoutSummaryPage: React.FC = () => {
                   <dd style={{ margin: 0 }}>{currencyFormatter.format(subtotal)}</dd>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <dt>Envio</dt>
+                  <dt>Envío</dt>
                   <dd style={{ margin: 0 }}>{currencyFormatter.format(shipping)}</dd>
                 </div>
                 <div style={{ color: '#86efac', display: 'flex', justifyContent: 'space-between' }}>
@@ -105,18 +134,17 @@ export const CheckoutSummaryPage: React.FC = () => {
               </div>
 
               <button
+                disabled={!selectedPayment || activePaymentMethods.length === 0}
                 style={{
-                  backgroundColor: '#5454EB',
-                  border: 'none',
-                  borderRadius: '9999px',
-                  color: '#ffffff',
-                  cursor: 'pointer',
-                  fontWeight: 800,
-                  marginTop: '1.5rem',
-                  padding: '0.9rem 1.25rem',
-                  width: '100%',
+                  backgroundColor: '#5454EB', border: 'none', borderRadius: '9999px', color: '#ffffff',
+                  cursor: (!selectedPayment || activePaymentMethods.length === 0) ? 'not-allowed' : 'pointer',
+                  fontWeight: 800, marginTop: '1.5rem', padding: '0.9rem 1.25rem', width: '100%',
+                  opacity: (!selectedPayment || activePaymentMethods.length === 0) ? 0.5 : 1
                 }}
                 type="button"
+                onClick={() => {
+                  alert(`Compra confirmada con el método: ${selectedPayment}`);
+                }}
               >
                 Confirmar pedido
               </button>

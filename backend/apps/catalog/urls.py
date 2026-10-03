@@ -16,6 +16,7 @@ from apps.catalog.presentation.views import (
     ProductVariantsView,
     VarianteStockUpdateView,
     VariantPurchaseView,
+    ProductoAdminListView,
     # Carrito de compras
     CarritoItemsView,
     ModificarCantidadItemAPIView,
@@ -28,6 +29,7 @@ from apps.catalog.presentation.views import (
 )
 
 urlpatterns = [
+    path('productos/admin/listado/', ProductoAdminDetailView.as_view(), name='producto-admin-list'),
     # ==========================================
     # 1. Catálogo Público
     # ==========================================
@@ -35,6 +37,16 @@ urlpatterns = [
         "productos/",
         PublicProductListAPIView.as_view(),
         name="mongo-productos-list",
+    ),
+         path(
+            "productos/crear/",
+            ProductoCreateView.as_view(),
+            name="producto-crear",
+    ),
+    path(
+        "productos/admin/",
+        ProductoAdminListView.as_view(),
+        name="producto-admin-listado",
     ),
     path(
         "productos/<str:slug>/",
@@ -55,11 +67,6 @@ urlpatterns = [
     # ==========================================
     # 2. Administración de Productos
     # ==========================================
-    path(
-        "productos/crear/",
-        ProductoCreateView.as_view(),
-        name="producto-crear",
-    ),
     path(
         "productos/<str:id_producto>/admin/",
         ProductoAdminDetailView.as_view(),

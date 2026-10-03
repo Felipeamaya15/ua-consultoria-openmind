@@ -4,6 +4,7 @@ import { Link, useParams } from 'react-router-dom';
 import { formatPrice, type Product } from '../data/mockData';
 import { Badge, Breadcrumb, Alert, Icon } from '../components/ui';
 import { useCart } from '../context/CartContext';
+import { StockFeedback } from '../components/store/StockFeedback';
 import { ProductCard } from '../components/store/ProductCard';
 import { ProductAttributes } from '../components/store/ProductAttributes';
 import { useStorefrontTemplate } from '../hooks/useStorefrontTemplate';
@@ -149,16 +150,21 @@ export default function ProductDetail() {
    * VARIANTE SELECCIONADA
    * ==========================================================
    */
-  const selectedVariant = product.variants.find((variant) =>
-    Object.entries(selectedAttrs).every(
-      ([key, value]) => variant.attributes[key] === value,
-    ),
-  );
+  const attributeKeys = Object.keys(product.attributes);
+  const completeSelection = attributeKeys.every((key) => selectedAttrs[key]);
+
+  const selectedVariant = completeSelection
+    ? product.variants.find((variant) =>
+        Object.entries(selectedAttrs).every(
+          ([key, value]) => variant.attributes[key] === value,
+        ),
+      )
+    : undefined;
 
   const price = selectedVariant?.price ?? product.basePrice;
 
   const comparePrice =
-    selectedVariant?.comparePrice ?? product.comparePrice;
+    selectedVariant ? selectedVariant.comparePrice : product.comparePrice;
 
   const stock =
     selectedVariant?.stock ??
@@ -199,9 +205,8 @@ export default function ProductDetail() {
     );
   };
 
-  const completeSelection = Object.keys(
-    product.attributes,
-  ).every((key) => selectedAttrs[key]);
+  const variantOptionLabel = (value: string, available: boolean) =>
+    available ? value : `${value} - Agotado`;
 
   const inCart =
     items.find(
@@ -358,7 +363,7 @@ export default function ProductDetail() {
                 <div key={attrName} className="border-t border-white/10 mt-7 pt-6">
                   <div className="flex items-center justify-between gap-4 mb-4">
                     <p className="text-[10px] font-black uppercase tracking-[0.15em] text-white/75">
-                      {attrName}
+                      {product.attributeLabels?.[attrName] || attrName}
                     </p>
 
                     <span className="text-[11px] text-white/35">
@@ -395,7 +400,7 @@ export default function ProductDetail() {
                               : ''
                           }`}
                         >
-                          {value}
+                          {variantOptionLabel(value, available)}
                         </button>
                       );
                     })}
@@ -404,11 +409,7 @@ export default function ProductDetail() {
               ))}
 
               {/* STOCK */}
-              {inStock && stock > 0 && stock <= 5 && (
-                <div className="mt-5 rounded-[10px] border border-[#ff5a1f]/25 bg-[#ff5a1f]/10 px-4 py-3 text-[11px] text-[#ffb291]">
-                  Solo quedan <strong>{stock} unidades</strong> disponibles.
-                </div>
-              )}
+              {selectedVariant && completeSelection && <StockFeedback sku={selectedVariant.sku} maxStock={selectedVariant.stock} quantity={inCart} className="mt-5 rounded-[10px] border border-[#ff5a1f]/25 bg-[#ff5a1f]/10 px-4 py-3 text-[11px] text-[#ffb291]" />}
 
               {!inStock && (
                 <div className="mt-5 rounded-[10px] border border-white/10 bg-white/[0.06] px-4 py-3 text-[11px] text-white/55">
@@ -439,9 +440,9 @@ export default function ProductDetail() {
                     <button
                       type="button"
                       onClick={() =>
-                        setQty((current) => Math.min(stock, current + 1))
+                        setQty((current) => Math.max(1, Math.min(remaining, current + 1)))
                       }
-                      disabled={!inStock}
+                      disabled={!inStock || !completeSelection || qty >= remaining}
                       className="h-full w-11 text-lg transition-colors hover:bg-black/[0.05] disabled:opacity-30"
                     >
                       +
@@ -648,7 +649,7 @@ export default function ProductDetail() {
                 <div key={attrName} className="border-t border-black/10 mt-7 pt-6">
                   <div className="flex items-center justify-between gap-4 mb-4">
                     <p className="text-[10px] font-semibold uppercase tracking-[0.16em]">
-                      {attrName}
+                      {product.attributeLabels?.[attrName] || attrName}
                     </p>
 
                     <span className="text-[11px] text-[#8c8683]">
@@ -685,7 +686,7 @@ export default function ProductDetail() {
                               : ''
                           }`}
                         >
-                          {value}
+                          {variantOptionLabel(value, available)}
                         </button>
                       );
                     })}
@@ -693,11 +694,7 @@ export default function ProductDetail() {
                 </div>
               ))}
 
-              {inStock && stock > 0 && stock <= 5 && (
-                <div className="mt-5 rounded-[8px] bg-[#f4f1e8] px-4 py-3 text-[12px] text-[#5f5849]">
-                  Solo quedan <strong>{stock} unidades</strong> disponibles.
-                </div>
-              )}
+              {selectedVariant && completeSelection && <StockFeedback sku={selectedVariant.sku} maxStock={selectedVariant.stock} quantity={inCart} className="mt-5 rounded-[8px] bg-[#f4f1e8] px-4 py-3 text-[12px] text-[#5f5849]" />}
 
               {!inStock && (
                 <div className="mt-5 rounded-[8px] bg-[#f4eeee] px-4 py-3 text-[12px] text-[#694d4d]">
@@ -728,9 +725,9 @@ export default function ProductDetail() {
                     <button
                       type="button"
                       onClick={() =>
-                        setQty((current) => Math.min(stock, current + 1))
+                        setQty((current) => Math.max(1, Math.min(remaining, current + 1)))
                       }
-                      disabled={!inStock}
+                      disabled={!inStock || !completeSelection || qty >= remaining}
                       className="h-full w-11 text-lg transition-colors hover:bg-[#f1f1f0] disabled:opacity-30"
                     >
                       +
@@ -1033,7 +1030,7 @@ export default function ProductDetail() {
                 }
               >
                 <p className="text-sm font-semibold text-[var(--foreground)] mb-3">
-                  {attrName}
+                  {product.attributeLabels?.[attrName] || attrName}
 
                   <span className="font-normal text-[var(--muted-foreground)] ml-1">
                     {selectedAttrs[attrName]
@@ -1090,7 +1087,7 @@ export default function ProductDetail() {
                           }
                         `}
                       >
-                        {value}
+                        {variantOptionLabel(value, available)}
                       </button>
                     );
                   })}
@@ -1102,13 +1099,7 @@ export default function ProductDetail() {
           {/* =================================================
               STOCK
           ================================================== */}
-          {inStock && stock > 0 && stock <= 5 && (
-            <Alert variant="warning">
-              Solo quedan{' '}
-              <strong>{stock} unidades</strong>{' '}
-              disponibles.
-            </Alert>
-          )}
+          {selectedVariant && completeSelection && <StockFeedback sku={selectedVariant.sku} maxStock={selectedVariant.stock} quantity={inCart} />}
 
           {!inStock && (
             <Alert variant="error">
@@ -1167,10 +1158,10 @@ export default function ProductDetail() {
                 type="button"
                 onClick={() =>
                   setQty((current) =>
-                    Math.min(stock, current + 1),
+                    Math.max(1, Math.min(remaining, current + 1)),
                   )
                 }
-                disabled={!inStock}
+                disabled={!inStock || !completeSelection || qty >= remaining}
                 className={
                   isMinimal
                     ? 'w-11 hover:bg-[var(--muted)] transition-colors text-lg disabled:opacity-40'

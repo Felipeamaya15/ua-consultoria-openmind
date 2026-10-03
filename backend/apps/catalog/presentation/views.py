@@ -1,12 +1,23 @@
+from rest_framework.exceptions import PermissionDenied
+from .serializers import ProductPublicListItemSerializer, ProductPublicDetailSerializer, ProductPublicAttributesSerializer
+
+from apps.core.models import Tienda, Producto
+
+from ..application.use_cases import CreateProductUseCase
+from .serializers import ProductCreateSerializer, ProductAdminDetailSerializer
+from ..application.use_cases import UpdateCatalogProductUseCase, ProductEditConflict
+from pymongo.errors import DuplicateKeyError, PyMongoError
+from bson import ObjectId
+
 
 # 1. Framework & Librerías de terceros (DRF)
 from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
+from apps.authentication.permissions import IsStoreOwner
 from rest_framework.views import APIView
 
 # 2. Módulos Core (Infraestructura, Modelos y Respuestas comunes)
-from apps.core.models import Tienda
 from apps.core.infrastructure.tenant import resolver_tienda, resolver_tienda_id
 from apps.core.presentation.responses import error_response, success_response
 
@@ -69,38 +80,24 @@ from apps.catalog.infrastructure.attribute_filters import (
 from apps.catalog.infrastructure.repositories import ProductRepository
 
 # 6. Catálogo - Capa de Presentación (Serializadores)
-from .serializers import (
-    AgregarItemCarritoRequestSerializer,
-    ConfiguracionTransbankInputSerializer,
-    ConfiguracionTransbankResponseSerializer,
-    ItemCarritoResponseSerializer,
-    ModificarCantidadRequestSerializer,
-    ProductPublicAttributesSerializer,
-    ProductPublicDetailSerializer,
-    ProductPublicListItemSerializer,
-    ProductoAdminDetailSerializer,
-    ProductoCreateSerializer,
-    ProductoStockUpdateSerializer,
-    ProductoUpdateSerializer,
-    VarianteStockUpdateSerializer,
-    # Nuevos Serializadores - Adaptador Transbank
-    IniciarPagoTransbankSerializer,
-    ConfirmarPagoTransbankSerializer,
-    #PayPal
-    ConfiguracionPayPalInputSerializer,
-    ConfiguracionPayPalResponseSerializer,
-    #MercadoPago
-    ConfiguracionMercadoPagoInputSerializer,
-    ConfiguracionMercadoPagoResponseSerializer,
-)
+from .serializers import AgregarItemCarritoRequestSerializer, ConfiguracionTransbankInputSerializer, ConfiguracionTransbankResponseSerializer, ItemCarritoResponseSerializer, ModificarCantidadRequestSerializer, ProductoAdminDetailSerializer, ProductoCreateSerializer, ProductoStockUpdateSerializer, ProductoUpdateSerializer, VarianteStockUpdateSerializer, IniciarPagoTransbankSerializer, ConfirmarPagoTransbankSerializer, ConfiguracionPayPalInputSerializer, ConfiguracionPayPalResponseSerializer, ConfiguracionMercadoPagoInputSerializer, ConfiguracionMercadoPagoResponseSerializer
 
 
-class ConfiguracionMercadoPagoView(APIView):
+class StorePaymentConfigurationView(APIView):
+    permission_classes = [IsAuthenticated, IsStoreOwner]
+
+    def initial(self, request, *args, **kwargs):
+        super().initial(request, *args, **kwargs)
+        tienda = resolver_tienda(request, exigir_propietario=True)
+        if str(kwargs.get('id_tienda')) != str(tienda.pk):
+            raise PermissionDenied('Solo puedes administrar la configuración de tu propia tienda.')
+
+
+class ConfiguracionMercadoPagoView(StorePaymentConfigurationView):
     """
     GET: Consulta la configuración actual de Mercado Pago para la tienda.
     POST: Actualiza credenciales y estado de activación.
     """
-    permission_classes = [AllowAny]
 
     def get(self, request, id_tienda):
         use_case = ObtenerConfiguracionMercadoPagoUseCase()
@@ -169,12 +166,11 @@ class ConfiguracionMercadoPagoView(APIView):
 
 
 
-class ConfiguracionPayPalView(APIView):
+class ConfiguracionPayPalView(StorePaymentConfigurationView):
     """
     GET: Consulta la configuración actual de PayPal para la tienda.
     POST: Actualiza credenciales y estado de activación.
     """
-    permission_classes = [AllowAny]
 
     def get(self, request, id_tienda):
         use_case = ObtenerConfiguracionPayPalUseCase()
@@ -236,12 +232,11 @@ class ConfiguracionPayPalView(APIView):
 
 
 
-class ConfiguracionTransbankView(APIView):
+class ConfiguracionTransbankView(StorePaymentConfigurationView):
     """
     Endpoint para consultar y actualizar las credenciales de Transbank de una tienda.
     GET/POST /api/catalog/tiendas/<int:id_tienda>/configuracion/transbank/
     """
-    permission_classes = [IsAuthenticated]
 
     def get(self, request, id_tienda: int):
         use_case = ObtenerConfiguracionTransbankUseCase()
@@ -400,7 +395,7 @@ class CarritoItemsView(APIView):
             status=status.HTTP_200_OK,
         )
 
-    
+
     def post(self, request):
         serializer = AgregarItemCarritoRequestSerializer(data=request.data)
         if not serializer.is_valid():
@@ -495,7 +490,7 @@ class ModificarCantidadItemAPIView(APIView):
                 codigo="ITEM_NO_ENCONTRADO",
                 status=status.HTTP_404_NOT_FOUND
             )
-    
+
     def delete(self, request, id_item_carrito):
         """
         Elimina un ítem específico del carrito del usuario autenticado.
@@ -721,34 +716,17 @@ class PublicProductAttributesAPIView(APIView):
 
 class ProductDeleteAPIView(APIView):
 
-
     permission_classes = [IsAuthenticated]
 
-
-    def delete(self, request, producto_id):
+    def delete(self, request, id_producto):
+        tienda_id = resolver_tienda_id(request, exigir_propietario=True)
 
         try:
-
-            tienda_id = resolver_tienda_id(request)
-            #Eliminación de producto, verificando propiedad.
-          
-            if not Tienda.objects.filter(id_tienda=tienda_id, id_usuario_propietario=request.user).exists():
-
-                return error_response(
-
-                    mensaje="No tienes permisos de administrador para eliminar productos en esta tienda.",
-
-                    codigo="ACCESO_DENEGADO",
-
-                    status=403
-
-                )
 
 
             use_case = SoftDeleteProductUseCase()
 
-            resultado = use_case.execute(id_producto=producto_id, tienda_id=tienda_id)
-
+            resultado = use_case.execute(id_producto=id_producto, tienda_id=tienda_id)
 
             return success_response(mensaje=resultado["mensaje"])
 
@@ -771,96 +749,141 @@ class ProductDeleteAPIView(APIView):
 
 
 class ProductoCreateView(APIView):
-
     permission_classes = [IsAuthenticated]
 
-
     def post(self, request):
-
         tienda = resolver_tienda(request, exigir_propietario=True)
 
-
-        serializer = ProductoCreateSerializer(data=request.data)
-
-        if serializer.is_valid():
-
-            caso_uso = CrearProductoUseCase()
-
-            producto = caso_uso.ejecutar(tienda, serializer.validated_data)
-
-            return Response(
-
-                {
-
-                    "mensaje": "Producto creado con éxito",
-
-                    "id_producto": producto.id_producto
-
-                },
-
-                status=status.HTTP_201_CREATED
-
+        serializer = ProductCreateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            product_id = CreateProductUseCase(ProductRepository()).execute(
+                str(tienda.pk), serializer.validated_data
             )
-
-
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        except (DuplicateKeyError, ValueError) as error:
+            return error_response(str(error) if isinstance(error, ValueError) else
+                "El SKU o slug ya existe en esta tienda.", "ERROR_VALIDACION")
+        except PyMongoError:
+            return error_response("No se pudo persistir el producto en el catálogo.",
+                "ERROR_PERSISTENCIA", status=status.HTTP_503_SERVICE_UNAVAILABLE)
+        return success_response(
+            data={"id": product_id},
+            mensaje="Producto creado con éxito",
+            status=status.HTTP_201_CREATED
+        )
 
 
 class ProductoAdminDetailView(APIView):
-
     permission_classes = [IsAuthenticated]
 
-
-    def get(self, request, id_producto):
-
+    def get(self, request, id_producto=None):
         tienda = resolver_tienda(request, exigir_propietario=True)
-
-
+        if id_producto is None or ObjectId.is_valid(str(id_producto)):
+            try:
+                repository = ProductRepository()
+                if id_producto is None:
+                    products = repository.list_by_store(str(tienda.pk))
+                    return success_response(data=ProductAdminDetailSerializer(products, many=True).data)
+                product = repository.get_admin_product(str(tienda.pk), id_producto)
+                if product is None:
+                    return error_response("Producto no encontrado en esta tienda.", "RECURSO_NO_ENCONTRADO", status=404)
+                return success_response(data=ProductAdminDetailSerializer(product).data)
+            except PyMongoError:
+                return error_response("No se pudo consultar el catálogo.", "ERROR_PERSISTENCIA", status=503)
         caso_uso = ObtenerProductoAdminUseCase()
 
-        producto = caso_uso.ejecutar(tienda, id_producto)
+        try:
+            producto = caso_uso.ejecutar(tienda, id_producto)
 
+            if producto is None:
+                return Response(
+                    {
+                        "mensaje": "El producto solicitado no fue encontrado",
+                        "codigo": "RECURSO_NO_ENCONTRADO"
+                    },
+                    status=status.HTTP_404_NOT_FOUND
+                )
 
-        serializer = ProductoAdminDetailSerializer(producto)
+            serializer = ProductoAdminDetailSerializer(producto)
+            return Response(serializer.data, status=status.HTTP_200_OK)
 
-        return Response(serializer.data, status=status.HTTP_200_OK)
-
-
-class ProductoUpdateView(APIView):
-
-    permission_classes = [IsAuthenticated]
-
-
-    def put(self, request, id_producto):
-
-        tienda = resolver_tienda(request, exigir_propietario=True)
-
-        serializer = ProductoUpdateSerializer(data=request.data, partial=True)
-
-
-        if serializer.is_valid():
-
-            caso_uso = ActualizarProductoAdminUseCase()
-
-            producto = caso_uso.ejecutar(tienda, id_producto, serializer.validated_data)
-
-
+        except Exception:
             return Response(
-
                 {
-
-                    "mensaje": "Producto actualizado con éxito",
-
-                    "id_producto": producto.id_producto
-
+                    "mensaje": "El producto solicitado no fue encontrado",
+                    "codigo": "RECURSO_NO_ENCONTRADO"
                 },
-
-                status=status.HTTP_200_OK
-
+                status=status.HTTP_404_NOT_FOUND
             )
 
+class ProductoUpdateView(APIView):
+    permission_classes = [IsAuthenticated]
 
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    def put(self, request, id_producto):
+        return self._actualizar(request, id_producto)
+
+    def patch(self, request, id_producto):
+        return self._actualizar(request, id_producto)
+
+    def _actualizar(self, request, id_producto):
+        tienda = resolver_tienda(request, exigir_propietario=True)
+        if ObjectId.is_valid(str(id_producto)):
+            return self._actualizar_mongo(request, str(tienda.pk), id_producto)
+        serializer = ProductoUpdateSerializer(data=request.data, partial=True)
+
+        serializer.is_valid(raise_exception=True)
+
+        caso_uso = ActualizarProductoAdminUseCase()
+
+        try:
+            producto = caso_uso.ejecutar(tienda, id_producto, serializer.validated_data)
+
+            if producto is None:
+                return Response(
+                    {"mensaje": "El producto a actualizar no existe", "codigo": "RECURSO_NO_ENCONTRADO"},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+
+            return Response(
+                {
+                    "mensaje": "Producto actualizado con éxito",
+                    "id_producto": producto.id_producto
+                },
+                status=status.HTTP_200_OK
+            )
+
+        except Exception:
+            return Response(
+                {"mensaje": "El producto a actualizar no existe", "codigo": "RECURSO_NO_ENCONTRADO"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+    def _actualizar_mongo(self, request, tienda_id, product_id):
+        try:
+            repository = ProductRepository()
+            original = repository.get_admin_product(tienda_id, product_id)
+            if original is None:
+                return error_response("Producto no encontrado en esta tienda.", "RECURSO_NO_ENCONTRADO", status=404)
+            revision = request.data.get('revision')
+            if not isinstance(revision, str) or not revision:
+                return error_response("Recarga el producto antes de editar: falta revision.", "ERROR_VALIDACION")
+            # Validar el documento completo también para PATCH; no perder campos omitidos.
+            serializer = ProductCreateSerializer(data={**original, **request.data})
+            serializer.is_valid(raise_exception=True)
+            fields = {key: value for key, value in serializer.validated_data.items()
+                      if request.method == 'PUT' or key in request.data}
+            product = UpdateCatalogProductUseCase(repository).execute(
+                tienda_id, original, fields, revision,
+            )
+            return success_response(data=ProductAdminDetailSerializer(product).data,
+                                    mensaje="Producto actualizado correctamente")
+        except ProductEditConflict as error:
+            return error_response(str(error), "CONFLICTO_EDICION", status=409)
+        except (DuplicateKeyError, ValueError) as error:
+            return error_response(str(error) if isinstance(error, ValueError) else
+                                  "El SKU ya existe en esta tienda.", "ERROR_VALIDACION")
+        except PyMongoError:
+            return error_response("No se pudo guardar el producto.", "ERROR_PERSISTENCIA", status=503)
 
 
 class ProductoStockUpdateView(APIView):
@@ -960,6 +983,11 @@ class ProductVariantsView(APIView):
 
     permission_classes = [AllowAny]
 
+
+    def get_permissions(self):
+        if self.request.method in ('POST', 'PUT', 'PATCH', 'DELETE'):
+            return [IsAuthenticated(), IsStoreOwner()]
+        return super().get_permissions()
 
     def __init__(self, **kwargs):
 
@@ -1667,3 +1695,31 @@ class ConfirmarPagoTransbankView(APIView):
                 {"exito": False, "mensaje": str(e), "error": {"codigo": "ERROR_TRANSBANK", "detalles": None}},
                 status=status.HTTP_502_BAD_GATEWAY,
             )
+
+class ProductoAdminListView(APIView):
+    permission_classes = [IsAuthenticated, IsStoreOwner]
+
+    def get(self, request):
+        tienda = resolver_tienda(request, exigir_propietario=True)
+        repo = ProductRepository()
+
+        productos = Producto.objects.filter(id_tienda=tienda).order_by('-fecha_creacion')
+        resultado = []
+
+        for producto in productos:
+            doc_mongo = repo.get_by_id(str(tienda.pk), str(producto.id_producto)) or {}
+            resultado.append({
+                'id_producto': producto.id_producto,
+                'nombre': producto.nombre,
+                'descripcion': doc_mongo.get('descripcion', ''),
+                'categoria': doc_mongo.get('categoria', ''),
+                'imagenes': doc_mongo.get('imagenes', []),
+                'activo': producto.activo,
+                'variantes': doc_mongo.get('variantes', []),
+                'seo': doc_mongo.get('seo', {}),
+            })
+
+        return Response(
+            {'mensaje': 'Listado obtenido correctamente', 'productos': resultado},
+            status=status.HTTP_200_OK,
+        )

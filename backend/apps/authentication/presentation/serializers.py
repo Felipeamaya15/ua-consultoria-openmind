@@ -28,6 +28,11 @@ class UserResponseSerializer(serializers.Serializer):
     last_name = serializers.CharField()
     full_name = serializers.CharField()
     is_staff = serializers.BooleanField()
+    is_store_owner = serializers.SerializerMethodField()
+
+    def get_is_store_owner(self, user):
+        from apps.core.models import Tienda
+        return Tienda.objects.filter(id_usuario_propietario_id=user.id).exists()
 
 class GoogleLoginRequestSerializer(serializers.Serializer):
     token = serializers.CharField(help_text="ID Token devuelto por Google")
