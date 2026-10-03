@@ -112,36 +112,19 @@ export function ProductCard({
               onChange={event => { setSelectedVariantId(event.target.value); setAdded(false); }}
               className={`h-9 rounded-lg border px-2 text-xs normal-case tracking-normal outline-none ${selectClass}`}
             >
-              <span>{name}</span>
-              <select
-                value={selectedAttributes[name] ?? ''}
-                onChange={(event) => {
-                  setSelectedAttributes((current) => ({
-                    ...current,
-                    [name]: event.target.value,
-                  }));
-                  setAdded(false);
-                }}
-                className={`h-9 rounded-lg border px-2 text-xs normal-case tracking-normal outline-none ${selectClass}`}
-              >
-                {(product.attributes[name] ?? []).map((value) => (
-                  (() => {
-                    const available = hasAvailableVariantFor(name, value);
-
-                    return (
-                      <option
-                        key={value}
-                        value={value}
-                        disabled={!available}
-                      >
-                        {available ? value : `${value} - Agotado`}
-                      </option>
-                    );
-                  })()
-                ))}
-              </select>
-            </label>
-          ))}
+              {product.variants.map(variant => {
+                const label = attributeNames.map(name => {
+                  const value = variant.attributes[name];
+                  if (!value?.trim()) return '';
+                  return attributeNames.length === 1 ? value : `${product.attributeLabels?.[name] || name}: ${value}`;
+                }).filter(Boolean).join(' · ') || variant.sku;
+                const available = variant.available && variant.stock > 0;
+                return <option key={variant.id} value={variant.id} disabled={!available}>
+                  {label}{available ? '' : ' — Sin stock'}
+                </option>;
+              })}
+            </select>
+          </label>
         </div>
         <p className={`text-[10px] ${mutedClass}`}>
           SKU: {selectedVariant?.sku ?? 'No disponible'} · Stock:{' '}
