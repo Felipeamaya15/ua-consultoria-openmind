@@ -108,27 +108,29 @@ export function ProductCard({
 
     return (
       <div className="mt-3 grid gap-2">
-        <label className={`grid gap-1 text-[10px] font-semibold uppercase tracking-[0.08em] ${mutedClass}`}>
-          <span>{attributeNames.length === 1 ? product.attributeLabels?.[attributeNames[0]] || attributeNames[0] : 'Variante'}</span>
-          <select
-            aria-label={attributeNames.length === 1 ? product.attributeLabels?.[attributeNames[0]] || attributeNames[0] : 'Variante'}
-            value={selectedVariantId}
-            onChange={event => { setSelectedVariantId(event.target.value); setAdded(false); }}
-            className={`h-9 rounded-lg border px-2 text-xs normal-case tracking-normal outline-none ${selectClass}`}
-          >
-            {product.variants.map(variant => (
-              <option
-                key={variant.id}
-                value={variant.id}
-                disabled={!variant.available || variant.stock <= 0}
-              >
-                {variant.available && variant.stock > 0
-                  ? variantLabel(variant)
-                  : `${variantLabel(variant)} - Agotado`}
-              </option>
-            ))}
-          </select>
-        </label>
+<div className="grid gap-2">
+          <label className={`grid gap-1 text-[10px] font-semibold uppercase tracking-[0.08em] ${mutedClass}`}>
+            <span>{attributeNames.length === 1 ? product.attributeLabels?.[attributeNames[0]] || attributeNames[0] : 'Variante'}</span>
+            <select
+              aria-label={attributeNames.length === 1 ? product.attributeLabels?.[attributeNames[0]] || attributeNames[0] : 'Variante'}
+              value={selectedVariantId}
+              onChange={event => { setSelectedVariantId(event.target.value); setAdded(false); }}
+              className={`h-9 rounded-lg border px-2 text-xs normal-case tracking-normal outline-none ${selectClass}`}
+            >
+              {product.variants.map(variant => {
+                const label = attributeNames.map(name => {
+                  const value = variant.attributes[name];
+                  if (!value?.trim()) return '';
+                  return attributeNames.length === 1 ? value : `${product.attributeLabels?.[name] || name}: ${value}`;
+                }).filter(Boolean).join(' · ') || variant.sku;
+                const available = variant.available && variant.stock > 0;
+                return <option key={variant.id} value={variant.id} disabled={!available}>
+                  {label}{available ? '' : ' — Sin stock'}
+                </option>;
+              })}
+            </select>
+          </label>
+        </div>
         <p className={`text-[10px] ${mutedClass}`}>
           SKU: {selectedVariant?.sku ?? 'No disponible'} · Stock:{' '}
           {selectedStock} uds

@@ -1,3 +1,4 @@
+import EntrepreneurProfile from './pages/Profile';
 import { Navigate, type RouteObject } from 'react-router-dom';
 
 import { RequireAdmin } from './auth/RequireAdmin';
@@ -38,6 +39,10 @@ export const adminRoute: RouteObject = {
     {
       element: <AdminLayout />,
       children: [
+        {
+          path: 'perfil',
+          element: <EntrepreneurProfile />,
+        },
         {
           index: true,
           element: <Dashboard />,

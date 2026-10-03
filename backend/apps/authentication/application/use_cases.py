@@ -1,14 +1,8 @@
 from dataclasses import dataclass
 import secrets
 import string
-import requests 
-from dataclasses import dataclass
-from apps.authentication.domain.entities import UserEntity
-from apps.authentication.domain.interfaces import IUserRepository
-from apps.authentication.domain.exceptions import (
-    InvalidCredentialsException,
-    UserAlreadyExistsException,
-)
+import requests
+
 from apps.authentication.domain.entities import (
     UserEntity,
     ConfiguracionAutenticacionEntity,
@@ -19,6 +13,13 @@ from apps.authentication.domain.interfaces import (
     IConfiguracionAutenticacionRepository,
     IConfiguracionPagosRepository,
 )
+from apps.authentication.domain.exceptions import (
+    InvalidCredentialsException,
+    UserAlreadyExistsException,
+    WeakPasswordException,
+)
+from apps.core.domain.validators import validar_password_segura
+
 
 @dataclass
 class RegisterUserDTO:
@@ -34,6 +35,12 @@ class RegisterUserUseCase:
         self.user_repository = user_repository
 
     def execute(self, dto: RegisterUserDTO) -> UserEntity:
+        # Validación de política de contraseñas capturada como excepción de dominio
+        try:
+            validar_password_segura(dto.password)
+        except ValueError as err:
+            raise WeakPasswordException(str(err))
+
         if self.user_repository.get_by_email(dto.email):
             raise UserAlreadyExistsException("El correo electrónico ya está registrado.")
 
@@ -59,6 +66,8 @@ class LoginUseCase:
         if not user:
             raise InvalidCredentialsException("Credenciales inválidas.")
         return user
+
+
 class GoogleLoginUseCase:
     def __init__(self, user_repository: IUserRepository):
         self.user_repository = user_repository
@@ -69,27 +78,27 @@ class GoogleLoginUseCase:
             "https://www.googleapis.com/oauth2/v3/userinfo",
             headers={"Authorization": f"Bearer {token}"}
         )
-        
+
         if not response.ok:
             raise InvalidCredentialsException("Token de Google inválido o expirado.")
-            
+
         idinfo = response.json()
-        
+
         email = idinfo.get('email')
         first_name = idinfo.get('given_name', '')
         last_name = idinfo.get('family_name', '')
-        
+
         if not email:
             raise InvalidCredentialsException("El token de Google no contiene un email válido.")
 
         # Buscar si el usuario ya existe en Postgres
         user = self.user_repository.get_by_email(email)
-        
+
         if not user:
             # Si no existe, lo registramos con una contraseña aleatoria segura
             alphabet = string.ascii_letters + string.digits + string.punctuation
-            random_password = ''.join(secrets.choice(alphabet) for i in range(20))
-            
+            random_password = ''.join(secrets.choice(alphabet) for _ in range(20))
+
             # Usamos el email como username por defecto
             username = email.split('@')[0]
             if self.user_repository.get_by_username(username):
@@ -105,6 +114,7 @@ class GoogleLoginUseCase:
             user = self.user_repository.create(new_user, random_password)
 
         return user
+
 
 @dataclass
 class GuardarConfiguracionAutenticacionDTO:
@@ -162,6 +172,7 @@ class GuardarConfiguracionAutenticacionUseCase:
         )
 
         return self.configuracion_repository.save(configuracion)
+
 
 class ConsultarConfiguracionAutenticacionUseCase:
     def __init__(
