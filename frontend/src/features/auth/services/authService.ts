@@ -2,10 +2,10 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 export type CustomerProfile = { first_name: string; last_name: string; email: string; phone: string };
 
-async function profileRequest(path: string, method = 'GET', data?: unknown, base = 'perfil') {
+async function profileRequest(path: string, method = 'GET', data?: unknown, base = 'perfil', namespace = 'auth') {
   const token = localStorage.getItem('token');
   if (!token) throw new Error('Inicia sesión para acceder a tu perfil.');
-  const res = await fetch(`${API_URL}/api/auth/${base}/${path}`, {
+  const res = await fetch(`${API_URL}/api/${namespace ? namespace + '/' : ''}${base}/${path}`, {
     method,
     headers: { Authorization: `Token ${token}`, 'Content-Type': 'application/json' },
     ...(data === undefined ? {} : { body: JSON.stringify(data) }),
@@ -20,7 +20,15 @@ async function profileRequest(path: string, method = 'GET', data?: unknown, base
   return body;
 }
 
+export type CustomerOrderItem = { id_item_pedido: number; producto_id: number; nombre: string; cantidad: number; precio_unitario: string; subtotal: string };
+export type CustomerOrder = { id_pedido: number; fecha_creacion: string; estado: string; estado_etiqueta: string; monto_total: string; cantidad_productos: number; items?: CustomerOrderItem[] };
+
 export const authService = {
+  async getCustomerOrders(): Promise<CustomerOrder[]> { return (await profileRequest('', 'GET', undefined, 'mi-cuenta/pedidos', '')).data; },
+  async getCustomerOrder(id: string): Promise<CustomerOrder> {
+    if (!/^\d+$/.test(id)) throw new Error('Pedido no encontrado.');
+    return (await profileRequest(`${id}/`, 'GET', undefined, 'mi-cuenta/pedidos', '')).data;
+  },
   async getEntrepreneurProfile(): Promise<CustomerProfile> { return (await profileRequest('', 'GET', undefined, 'emprendedor/perfil')).data; },
   async updateEntrepreneurProfile(email: string): Promise<CustomerProfile> {
     return (await profileRequest('', 'PATCH', {email}, 'emprendedor/perfil')).data;

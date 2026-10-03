@@ -1,3 +1,4 @@
+import { CustomerAccountNavigation } from '../components/store/CustomerAccountNavigation';
 import { useEffect, useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { authService, type CustomerProfile } from '../../auth/services/authService';
@@ -37,6 +38,7 @@ export default function Profile() {
   }
   const inputClass = 'block w-full border rounded p-2 mt-1';
   return <main className="max-w-xl mx-auto w-full p-6 space-y-6">
+    <CustomerAccountNavigation />
     <h1 className="text-2xl font-semibold">Mi cuenta · Perfil</h1>
     {loading && <p role="status">Cargando perfil…</p>}
     {error && <p role="alert" className="text-red-700">{error}</p>}

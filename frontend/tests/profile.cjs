@@ -49,6 +49,7 @@ async function run() {
       useEffect: effect => { effects.push(effect); },
     };
     if (id === 'react-router-dom') return {Link: 'Link'};
+    if (id.includes('CustomerAccountNavigation')) return {CustomerAccountNavigation: 'AccountNav'};
     if (id.includes('authService')) return {authService: service};
     if (id.includes('useStorefrontTemplate')) return {useStorefrontTemplate: () => ({route: p => '/plantilla/1/' + p})};
     throw Error(id);
