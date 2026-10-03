@@ -2,15 +2,16 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 export type CustomerProfile = { first_name: string; last_name: string; email: string; phone: string };
 
-async function profileRequest(path: string, method = 'GET', data?: unknown) {
+async function profileRequest(path: string, method = 'GET', data?: unknown, base = 'perfil') {
   const token = localStorage.getItem('token');
   if (!token) throw new Error('Inicia sesión para acceder a tu perfil.');
-  const res = await fetch(`${API_URL}/api/auth/perfil/${path}`, {
+  const res = await fetch(`${API_URL}/api/auth/${base}/${path}`, {
     method,
     headers: { Authorization: `Token ${token}`, 'Content-Type': 'application/json' },
     ...(data === undefined ? {} : { body: JSON.stringify(data) }),
   });
   const body = await res.json();
+  if (res.status === 401) localStorage.removeItem('token');
   if (!res.ok || body.exito !== true) {
     const details = body.error?.detalles;
     const message = details ? Object.values(details).flat().join(' ') : body.mensaje || body.detail;
@@ -20,6 +21,13 @@ async function profileRequest(path: string, method = 'GET', data?: unknown) {
 }
 
 export const authService = {
+  async getEntrepreneurProfile(): Promise<CustomerProfile> { return (await profileRequest('', 'GET', undefined, 'emprendedor/perfil')).data; },
+  async updateEntrepreneurProfile(email: string): Promise<CustomerProfile> {
+    return (await profileRequest('', 'PATCH', {email}, 'emprendedor/perfil')).data;
+  },
+  async changeEntrepreneurPassword(current_password: string, new_password: string): Promise<void> {
+    await profileRequest('password/', 'POST', {current_password, new_password}, 'emprendedor/perfil');
+  },
   async getProfile(): Promise<CustomerProfile> { return (await profileRequest('')).data; },
   async updateProfile(data: Partial<CustomerProfile>): Promise<CustomerProfile> {
     return (await profileRequest('', 'PATCH', data)).data;

@@ -70,6 +70,7 @@ class IsCustomer(BasePermission):
 
 
 class ProfileAPIView(APIView):
+    serializer_class = ProfileSerializer
     authentication_classes = [TokenAuthentication]
     permission_classes = [IsAuthenticated, IsCustomer]
 
@@ -79,7 +80,7 @@ class ProfileAPIView(APIView):
     @transaction.atomic
     def patch(self, request):
         user = get_user_model().objects.select_for_update().get(pk=request.user.pk)
-        serializer = ProfileSerializer(data=request.data, context={'user': user}, partial=True)
+        serializer = self.serializer_class(data=request.data, context={'user': user}, partial=True)
         if not serializer.is_valid():
             return error_response('Datos de perfil inválidos.', 'PERFIL_INVALIDO', serializer.errors, status=400)
         data = dict(serializer.validated_data)
@@ -105,3 +106,21 @@ class PasswordAPIView(APIView):
         user.set_password(serializer.validated_data['new_password'])
         user.save(update_fields=['password'])
         return success_response(data={}, mensaje='Contraseña actualizada correctamente.')
+
+
+# Comparte persistencia y validadores con el perfil comprador, con permisos propios.
+from apps.authentication.permissions import IsStoreOwner
+
+
+class EntrepreneurProfileSerializer(ProfileSerializer):
+    def get_fields(self):
+        return {'email': super().get_fields()['email']}
+
+
+class EntrepreneurProfileAPIView(ProfileAPIView):
+    permission_classes = [IsAuthenticated, IsStoreOwner]
+    serializer_class = EntrepreneurProfileSerializer
+
+
+class EntrepreneurPasswordAPIView(PasswordAPIView):
+    permission_classes = [IsAuthenticated, IsStoreOwner]

@@ -1,3 +1,4 @@
+from apps.authentication.permissions import IsStoreOwner
 from rest_framework.views import APIView
 
 from rest_framework.permissions import AllowAny
@@ -500,6 +501,11 @@ class ProductVariantsView(APIView):
 
     permission_classes = [AllowAny]
 
+
+    def get_permissions(self):
+        if self.request.method in ('POST', 'PUT', 'PATCH', 'DELETE'):
+            return [IsAuthenticated(), IsStoreOwner()]
+        return super().get_permissions()
 
     def __init__(self, **kwargs):
 
@@ -1114,11 +1120,10 @@ class VariantPurchaseView(APIView):
             return Response({"error": f"Error interno: {str(e)}", "codigo": "ERROR_INTERNO"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 class ProductoAdminListView(APIView):
-    # TODO: autenticación real cuando el panel admin tenga login contra Django.
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated, IsStoreOwner]
 
     def get(self, request):
-        tienda = resolver_tienda(request)
+        tienda = resolver_tienda(request, exigir_propietario=True)
         repo = ProductRepository()
 
         productos = Producto.objects.filter(id_tienda=tienda).order_by('-fecha_creacion')

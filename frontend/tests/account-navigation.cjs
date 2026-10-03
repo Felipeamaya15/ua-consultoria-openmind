@@ -22,7 +22,7 @@ async function settled(component, props = {}) {
   index = 0; return component(props);
 }
 (async () => {
-  for (user of [{is_staff: true, is_store_owner: false}, {is_staff: false, is_store_owner: true}]) {
+  for (user of [{is_staff: true, is_store_owner: true}, {is_staff: false, is_store_owner: true}]) {
     const link = await settled(AccountNavigation);
     assert.equal(link.props.children, 'Volver al panel');
     assert.equal(link.props.to, '/emprendedor');
@@ -32,6 +32,9 @@ async function settled(component, props = {}) {
   assert.equal((await settled(AccountNavigation)).props.children, 'Mi cuenta');
   assert.equal((await settled(AccountNavigation)).props.to, '/plantilla/1/perfil');
   assert.equal((await settled(RequireCustomer, {children: 'Profile'})).props.children, 'Profile');
+  user = {is_staff: true, is_store_owner: false};
+  assert.equal(await settled(AccountNavigation), null);
+  assert.equal((await settled(RequireCustomer)).props.role, 'alert');
   user = null;
   assert.equal((await settled(AccountNavigation)).props.children, 'Iniciar sesión');
   assert.equal((await settled(RequireCustomer)).props.to, '/plantilla/1/ingresar');

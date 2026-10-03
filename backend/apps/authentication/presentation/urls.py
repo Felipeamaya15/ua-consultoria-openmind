@@ -1,4 +1,4 @@
-from .profile import ProfileAPIView, PasswordAPIView
+from .profile import ProfileAPIView, PasswordAPIView, EntrepreneurProfileAPIView, EntrepreneurPasswordAPIView
 from django.urls import path
 from .views import (
     RegisterAPIView,
@@ -9,6 +9,8 @@ from .views import (
 )
 
 urlpatterns = [
+    path('emprendedor/perfil/', EntrepreneurProfileAPIView.as_view(), name='api_entrepreneur_profile'),
+    path('emprendedor/perfil/password/', EntrepreneurPasswordAPIView.as_view(), name='api_entrepreneur_password'),
     path('perfil/', ProfileAPIView.as_view(), name='api_profile'),
     path('perfil/password/', PasswordAPIView.as_view(), name='api_profile_password'),
     path('register/', RegisterAPIView.as_view(), name='api_register'),
