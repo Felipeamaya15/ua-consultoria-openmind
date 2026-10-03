@@ -98,14 +98,9 @@ class Pedido(models.Model):
         settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
         related_name='pedidos_comprador',
     )
-
-    # Foto de los datos de contacto al momento de comprar. Se guardan siempre,
-    # sea invitado o usuario registrado, porque el pedido debe conservar esta
-    # información aunque el usuario cambie su correo/nombre después.
-    nombre_contacto = models.CharField(max_length=150)
-    correo_contacto = models.EmailField(max_length=320)
+    nombre_contacto = models.CharField(max_length=150, blank=True, default='')
+    correo_contacto = models.EmailField(max_length=320, blank=True, default='')
     telefono_contacto = models.CharField(max_length=30, blank=True, default='')
-
     metodo_pago = models.CharField(max_length=50, blank=True, default='')
     monto_total = models.DecimalField(max_digits=12, decimal_places=2)
     estado = models.CharField(max_length=20, choices=ESTADO_CHOICES, default='pendiente')
@@ -124,11 +119,7 @@ class Pedido(models.Model):
         db_table = 'pedido'
         constraints = [
             models.CheckConstraint(check=Q(monto_total__gte=0), name='chk_monto_total_valido'),
-            # Un pedido debe tener un usuario registrado O datos de contacto de invitado.
-            models.CheckConstraint(
-                check=Q(id_usuario__isnull=False) | ~Q(correo_contacto=''),
-                name='chk_pedido_tiene_comprador',
-            ),
+            models.CheckConstraint(check=Q(id_usuario__isnull=False) | Q(comprador__isnull=False) | ~Q(correo_contacto=''), name='chk_pedido_tiene_comprador'),
         ]
 
 class ItemPedido(models.Model):
@@ -139,6 +130,7 @@ class ItemPedido(models.Model):
     nombre_producto = models.CharField(max_length=200, blank=True, default='')
     sku = models.CharField(max_length=100, blank=True, default='')
     atributos_variante = models.JSONField(default=list, blank=True)
+    atributos = models.JSONField(default=dict, blank=True)
 
     cantidad = models.IntegerField()
     precio_unitario = models.DecimalField(max_digits=12, decimal_places=2)
