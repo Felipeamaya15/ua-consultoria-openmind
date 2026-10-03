@@ -214,8 +214,8 @@ class ConfiguracionPagoAPIView(APIView):
             serializer = ConfiguracionPagoSerializer(data=request.data)
             if not serializer.is_valid():
                 return error_response(
-                    mensaje="Datos requeridos incompletos para habilitar un medio de pago.", 
-                    codigo="ERROR_VALIDACION_PAGO", 
+                    mensaje="Datos requeridos incompletos para habilitar un medio de pago.",
+                    codigo="ERROR_VALIDACION_PAGO",
                     detalles=serializer.errors,
                     status=400
                 )

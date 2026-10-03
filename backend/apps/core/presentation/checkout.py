@@ -1,4 +1,4 @@
-"""Creación de pedidos SQL con precios y variantes del catálogo Mongo."""
+"""Creacion de pedidos SQL con precios y variantes del catalogo Mongo."""
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from hashlib import sha256
 import json
@@ -18,6 +18,8 @@ from apps.catalog.infrastructure.repositories import ProductRepository
 from apps.core.infrastructure.tenant import resolver_tienda
 from apps.core.models import Pedido, ItemPedido, Tienda
 from apps.core.presentation.responses import success_response
+from apps.core.models import ConfiguracionPago
+from apps.core.infrastructure.linkify_client import LinkifyAdapter
 
 
 class CheckoutItemSerializer(StrictSerializer):
@@ -59,7 +61,7 @@ class CheckoutSerializer(StrictSerializer):
         if data['metodo_entrega'] != 'Retiro':
             address = data.get('direccion', {})
             if not all(address.get(key, '').strip() for key in ('street', 'number', 'city')):
-                raise serializers.ValidationError({'direccion': 'La entrega requiere calle, número y ciudad.'})
+                raise serializers.ValidationError({'direccion': 'La entrega requiere calle, numero y ciudad.'})
         return data
 
 
@@ -80,7 +82,6 @@ class CheckoutOrderAPIView(APIView):
         data = serializer.validated_data
         fingerprint = sha256(json.dumps(data, sort_keys=True, default=str).encode()).hexdigest()
         with transaction.atomic():
-            # Serializa confirmaciones de la tienda, incluida la repetición concurrente.
             Tienda.objects.select_for_update().get(pk=tienda.pk)
             previous = Pedido.objects.filter(clave_checkout=data['clave_checkout']).first()
             if previous:
@@ -91,9 +92,12 @@ class CheckoutOrderAPIView(APIView):
             repository = ProductRepository()
             lines = {}
             for item in data['items']:
-                product = repository.get_by_id(str(tienda.pk), item['producto_id'])
+                product = (
+                    repository.get_by_id(str(tienda.pk), item['producto_id'])
+                    or repository.get_by_slug(str(tienda.pk), item['producto_id'])
+                )
                 if not product or not product.get('activo', False):
-                    raise ValidationError({'items': 'Un producto no está disponible en esta tienda.'})
+                    raise ValidationError({'items': 'Un producto no esta disponible en esta tienda.'})
                 variant = next((v for v in product.get('variantes', []) if v.get('sku') == item['sku']), None)
                 if variant is None or variant.get('activo') is False:
                     raise ValidationError({'items': 'El SKU no pertenece al producto seleccionado.'})
@@ -106,7 +110,7 @@ class CheckoutOrderAPIView(APIView):
                     price = Decimal(str(offer)) if offer is not None else base
                     if (not price.is_finite() or not base.is_finite() or price < 0 or base < 0
                             or price > base or base > Decimal('9999999999.99')):
-                        raise ValueError('Precio inválido.')
+                        raise ValueError('Precio invalido.')
                     if quantity > variant.get('stock', 0):
                         raise ValueError(f"Stock insuficiente para {item['sku']}.")
                 except (ValueError, InvalidOperation, KeyError) as exc:
@@ -117,33 +121,52 @@ class CheckoutOrderAPIView(APIView):
                                              for a in variant.get('atributos_variante', [])},
                                   precio_unitario=price.quantize(Decimal('.01'), rounding=ROUND_HALF_UP))
             subtotal = sum((line['precio_unitario'] * line['cantidad'] for line in lines.values()), Decimal(0))
-            # Reproduce las reglas actuales del carrito; nunca acepta importes del cliente.
             promo = data['codigo_promocional']
             discount = min(subtotal, (subtotal * Decimal('.2')).quantize(Decimal('1'), rounding=ROUND_HALF_UP)
                            if promo == 'VERANO20' else Decimal(5000) if promo == 'NUEVO5000' else Decimal(0))
             shipping = Decimal(0) if data['metodo_entrega'] == 'Retiro' or subtotal > 50000 else Decimal(3490)
             total = subtotal - discount + shipping
             if total > Decimal('9999999999.99'):
-                raise ValidationError({'items': 'El importe del pedido excede el máximo permitido.'})
-            order = Pedido.objects.create(comprador=buyer, tienda=tienda, monto_total=total,
+                raise ValidationError({'items': 'El importe del pedido excede el maximo permitido.'})
+            order = Pedido.objects.create(
+                comprador=buyer, tienda=tienda, monto_total=total,
                 clave_checkout=data['clave_checkout'], huella_checkout=fingerprint,
                 contacto=data['contacto'], medio_pago=data['medio_pago'],
                 nombre_contacto=data['contacto']['nombre'], correo_contacto=data['contacto']['email'],
                 telefono_contacto=data['contacto'].get('telefono', ''), metodo_pago=data['medio_pago'],
                 entrega={'metodo': data['metodo_entrega'], 'direccion': data.get('direccion', {})},
-                costo_envio=shipping, descuento=discount)
+                costo_envio=shipping, descuento=discount,
+            )
             ItemPedido.objects.bulk_create([ItemPedido(id_pedido=order, **line) for line in lines.values()])
-        return success_response(data=self.result(order), mensaje='Pedido creado correctamente.', status=201)
+            for line in lines.values():
+                repository.decrease_stock(str(tienda.pk), line['sku'], line['cantidad'])
+
+        es_linkify = data['medio_pago'].strip().lower() == 'linkify'
+        url_pago = None
+        if es_linkify:
+            config_pago = ConfiguracionPago.objects.filter(tienda=tienda).first()
+            datos_linkify = config_pago.datos.get('linkify', {}).get('fields', {}) if config_pago else {}
+            id_cuenta = datos_linkify.get('idCuenta', '')
+            if id_cuenta:
+                adapter = LinkifyAdapter(id_cuenta=id_cuenta, clave_privada=datos_linkify.get('clavePrivada', ''))
+                url_pago = adapter.url_de_pago(str(order.pk))
+
+        return success_response(data=self.result(order, url_pago), mensaje='Pedido creado correctamente.', status=201)
 
     def order_data(self, request, tienda):
         return request.data
 
     @staticmethod
-    def result(order):
-        return {'id_pedido': order.pk, 'tienda_id': order.tienda_id, 'estado': order.estado,
-                'monto_total': format(order.monto_total, '.2f'),
-                'descuento': format(order.descuento, '.2f'), 'costo_envio': format(order.costo_envio, '.2f')}
-
+    def result(order, url_pago=None):
+        data = {
+            'id_pedido': order.pk, 'tienda_id': order.tienda_id, 'estado': order.estado,
+            'monto_total': format(order.monto_total, '.2f'),
+            'descuento': format(order.descuento, '.2f'), 'costo_envio': format(order.costo_envio, '.2f'),
+        }
+        if url_pago:
+            data['url_pago'] = url_pago
+        return data
+  
 
 class GuestCheckoutOrderAPIView(CheckoutOrderAPIView):
     def order_data(self, request, tienda):

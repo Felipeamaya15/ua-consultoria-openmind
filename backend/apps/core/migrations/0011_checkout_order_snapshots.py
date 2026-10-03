@@ -26,10 +26,15 @@ class Migration(migrations.Migration):
             name='producto_mongo_id',
             field=models.CharField(blank=True, default='', max_length=24),
         ),
-        migrations.AddField(
-            model_name='itempedido',
-            name='sku',
-            field=models.CharField(blank=True, default='', max_length=100),
+        migrations.SeparateDatabaseAndState(
+            state_operations=[
+                migrations.AddField(
+                    model_name='itempedido',
+                    name='sku',
+                    field=models.CharField(blank=True, default='', max_length=100),
+                ),
+            ],
+            database_operations=[],
         ),
         migrations.AddField(
             model_name='pedido',
