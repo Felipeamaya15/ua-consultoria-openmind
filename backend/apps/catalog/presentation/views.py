@@ -339,6 +339,68 @@ class CarritoItemsView(APIView):
     """
     permission_classes = [IsAuthenticated]
 
+    def get(self, request, *args, **kwargs):
+        """Recupera todos los ítems del carrito activo del usuario autenticado."""
+        from apps.core.models import Carrito, ItemCarrito
+
+        # 1. Identificar el ID del usuario
+        user_id = request.user.id if request.user and request.user.is_authenticated else None
+
+        # 2. Buscar el carrito activo usando id_usuario o id_usuario_id
+        carrito = None
+        if user_id:
+            try:
+                carrito = Carrito.objects.filter(id_usuario_id=user_id).first()
+            except Exception:
+                try:
+                    carrito = Carrito.objects.filter(id_usuario=user_id).first()
+                except Exception:
+                    carrito = Carrito.objects.filter(usuario=request.user).first()
+
+        if not carrito:
+            return Response(
+                {
+                    "exito": True,
+                    "mensaje": "El carrito está vacío.",
+                    "data": [],
+                },
+                status=status.HTTP_200_OK,
+            )
+
+        # 3. Buscar los ítems vinculados al carrito
+        try:
+            items_qs = ItemCarrito.objects.filter(id_carrito=carrito).select_related("id_producto")
+            prod_attr = "id_producto"
+        except Exception:
+            items_qs = ItemCarrito.objects.filter(carrito=carrito).select_related("producto")
+            prod_attr = "producto"
+
+        items_data = []
+        for item in items_qs:
+            prod = getattr(item, prod_attr, None)
+            precio = float(getattr(prod, "precio", 0)) if prod else 0.0
+            cantidad = item.cantidad
+            items_data.append({
+                "id_item_carrito": item.pk,
+                "id_producto": prod.pk if prod else None,
+                "nombre_producto": getattr(prod, "nombre", "Producto"),
+                "precio_unitario": str(precio),
+                "cantidad": cantidad,
+                "subtotal": round(precio * cantidad, 2),
+                "stock_disponible": getattr(prod, "stock", 99),
+                "sku": getattr(item, "sku", None),
+            })
+
+        return Response(
+            {
+                "exito": True,
+                "mensaje": "Carrito obtenido exitosamente.",
+                "data": items_data,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+    
     def post(self, request):
         serializer = AgregarItemCarritoRequestSerializer(data=request.data)
         if not serializer.is_valid():
