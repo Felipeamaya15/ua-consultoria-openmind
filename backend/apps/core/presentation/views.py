@@ -14,13 +14,15 @@ from apps.core.infrastructure.tenant import resolver_tienda, resolver_tienda_id
 from apps.core.presentation.serializers import ConfiguracionPagoSerializer
 class RegistrarCompraView(APIView):
     """
-    Procesa una compra utilizando las variantes almacenadas en MongoDB.
+    Procesa una compra (de un invitado o de un usuario registrado) utilizando
+    las variantes almacenadas en MongoDB como fuente de verdad del stock.
 
     Cada item debe contener:
     - sku
     - cantidad
     """
 
+    permission_classes = [AllowAny]
     authentication_classes = []
 
     def post(self, request):
@@ -38,18 +40,20 @@ class RegistrarCompraView(APIView):
             )
 
         datos = serializer.validated_data
-        id_usuario = datos['id_usuario']
+        id_usuario = datos.get('id_usuario')
         items = datos['items']
 
-        try:
-            usuario = Usuario.objects.get(id_usuario=id_usuario)
-        except Usuario.DoesNotExist:
-            return Response(
-                {
-                    "error": f"El usuario con ID {id_usuario} no existe."
-                },
-                status=status.HTTP_404_NOT_FOUND
-            )
+        usuario = None
+        if id_usuario:
+            try:
+                usuario = Usuario.objects.get(id_usuario=id_usuario)
+            except Usuario.DoesNotExist:
+                return Response(
+                    {
+                        "error": f"El usuario con ID {id_usuario} no existe."
+                    },
+                    status=status.HTTP_404_NOT_FOUND
+                )
 
         repository = ProductRepository()
 
@@ -58,6 +62,10 @@ class RegistrarCompraView(APIView):
 
                 pedido = Pedido.objects.create(
                     id_usuario=usuario,
+                    nombre_contacto=datos.get('nombre_contacto', '') or (usuario.nombre if usuario else ''),
+                    correo_contacto=datos.get('correo_contacto', '') or (usuario.correo if usuario else ''),
+                    telefono_contacto=datos.get('telefono_contacto', ''),
+                    metodo_pago=datos['metodo_pago'],
                     monto_total=0,
                     estado='pagado'
                 )
@@ -132,11 +140,15 @@ class RegistrarCompraView(APIView):
                     subtotal = float(precio) * cantidad
                     monto_acumulado += subtotal
 
-                    # Producto equivalente en PostgreSQL
+                    # Producto equivalente en PostgreSQL: se vincula por
+                    # id_producto (clave compartida entre Mongo y Postgres),
+                    # no por nombre, que puede repetirse o cambiar.
+                    id_producto_postgres = producto_mongo.get('id_producto')
+
                     try:
                         producto_postgres = Producto.objects.get(
                             id_tienda=tienda,
-                            nombre=producto_mongo.get('nombre')
+                            id_producto=id_producto_postgres,
                         )
                     except Producto.DoesNotExist:
                         raise ValueError(
@@ -147,6 +159,11 @@ class RegistrarCompraView(APIView):
                     ItemPedido.objects.create(
                         id_pedido=pedido,
                         id_producto=producto_postgres,
+                        sku=sku,
+                        atributos={
+                            a.get('etiqueta', a.get('clave')): a.get('valor')
+                            for a in variante.get('atributos_variante', [])
+                        },
                         cantidad=cantidad,
                         precio_unitario=precio
                     )

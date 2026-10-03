@@ -142,13 +142,33 @@ class CompraItemInputSerializer(serializers.Serializer):
     cantidad = serializers.IntegerField(min_value=1)
 
 
+class CompraItemInputSerializer(serializers.Serializer):
+    # El catálogo real vive en MongoDB e identifica cada variante por SKU,
+    # no por un ID de la tabla VarianteProducto (que no se usa en la práctica).
+    sku = serializers.CharField(max_length=100)
+    cantidad = serializers.IntegerField(min_value=1)
+
+
 class RegistrarCompraSerializer(serializers.Serializer):
-    id_usuario = serializers.IntegerField()
+    # Uno de los dos debe venir: id_usuario (cliente logueado) o los datos
+    # de contacto de invitado.
+    id_usuario = serializers.IntegerField(required=False, allow_null=True)
+    nombre_contacto = serializers.CharField(max_length=150, required=False, allow_blank=True)
+    correo_contacto = serializers.EmailField(max_length=320, required=False, allow_blank=True)
+    telefono_contacto = serializers.CharField(max_length=30, required=False, allow_blank=True, default='')
+
     metodo_pago = serializers.CharField(
         required=True,
         error_messages={'required': 'Debe seleccionar un medio de pago.'}
     )
     items = CompraItemInputSerializer(many=True)
+
+    def validate(self, data):
+        if not data.get('id_usuario') and not data.get('correo_contacto'):
+            raise serializers.ValidationError(
+                "Debe iniciar sesión o completar los datos de contacto para continuar como invitado."
+            )
+        return data
 
     def validate_metodo_pago(self, value):
         tienda_id = self.context.get('tienda')
@@ -157,17 +177,16 @@ class RegistrarCompraSerializer(serializers.Serializer):
 
         try:
             from apps.core.models import ConfiguracionPago
-            # CORRECCIÓN: Usamos `tienda_id` y la propiedad `datos` (no configuracion)
             config_pago = ConfiguracionPago.objects.get(tienda_id=tienda_id)
             metodo = config_pago.datos.get(value, {})
-            
+
             if not metodo.get('enabled', False):
                 raise serializers.ValidationError(
                     f"El método de pago '{value}' no está habilitado para esta tienda."
                 )
         except ConfiguracionPago.DoesNotExist:
             raise serializers.ValidationError("La tienda no tiene medios de pago configurados.")
-            
+
         return value
 
     def validate_items(self, items):
@@ -175,45 +194,9 @@ class RegistrarCompraSerializer(serializers.Serializer):
             raise serializers.ValidationError(
                 "Debe incluir al menos un producto en la compra."
             )
-
-        for item in items:
-            id_variante = item['id_variante']
-            cantidad = item['cantidad']
-
-            try:
-                variante = VarianteProducto.objects.get(
-                    id_variante=id_variante,
-                    id_producto__id_tienda=self.context['tienda'],
-                )
-            except VarianteProducto.DoesNotExist:
-                raise serializers.ValidationError(
-                    f"La variante con ID {id_variante} no existe."
-                )
-
-            if not variante.es_activa:
-                raise serializers.ValidationError(
-                    f"La variante '{variante.sku}' no está activa para la venta."
-                )
-
-            # Regla de negocio crítica: stock en 0 o insuficiente.
-            if variante.stock == 0:
-                raise serializers.ValidationError(
-                    (
-                        f"Operación rechazada: la variante "
-                        f"'{variante.sku}' tiene stock 0 y no puede "
-                        f"ser comprada."
-                    )
-                )
-
-            if variante.stock < cantidad:
-                raise serializers.ValidationError(
-                    (
-                        f"Stock insuficiente para '{variante.sku}'. "
-                        f"Stock disponible: {variante.stock}, "
-                        f"solicitado: {cantidad}."
-                    )
-                )
-
+        # La validación real de stock y existencia de cada SKU se hace contra
+        # MongoDB dentro de la vista, en la misma transacción del descuento
+        # de stock (para evitar condiciones de carrera).
         return items
 class ConfiguracionPagoSerializer(serializers.Serializer):
     """ Valida que no se habiliten medios de pago sin sus campos obligatorios (SCRUM-306) """

@@ -62,6 +62,7 @@ type PaymentOption = {
 };
 
 const ADMIN_STORAGE_KEY = 'ua-entrepreneur-demo-v1';
+const API_URL = (import.meta as any).env.VITE_API_URL || 'http://localhost:8000';
 
 type AuthSettings = {
   emailPassword: boolean;
@@ -583,6 +584,9 @@ export default function Checkout() {
     if (loading || !items.length) return;
 
     setLoading(true);
+    setErrors((current) => {
+      const { submit, ...rest } = current;
+      return rest;
 
     const orderNumber = `ORD-${Date.now().toString().slice(-6)}-${crypto
       .randomUUID()
@@ -679,15 +683,87 @@ export default function Checkout() {
       updatedAt: now,
     });
 
-    clearCart();
+    try {
+      const response = await fetch(`${API_URL}/api/pedidos/registrar/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          // Por ahora todo pedido se registra como invitado: el panel admin
+          // todavía no tiene sesiones reales de Django vinculadas al checkout.
+          nombre_contacto: contact.name.trim(),
+          correo_contacto: contact.email.trim(),
+          telefono_contacto: contact.phone.trim(),
+          metodo_pago: paymentMethod,
+          items: items.map((item) => ({
+            sku: item.sku,
+            cantidad: item.quantity,
+          })),
+        }),
+      });
 
-    navigate(route('pedido-confirmado'), {
-      state: {
-        orderNumber,
-        email: contact.email.trim(),
-      },
-      replace: true,
-    });
+      const body = await response.json();
+
+      if (!response.ok) {
+        const mensaje =
+          body?.detalle ||
+          body?.error ||
+          body?.items?.[0] ||
+          body?.metodo_pago?.[0] ||
+          body?.non_field_errors?.[0] ||
+          'No se pudo procesar el pedido. Revisa los datos e intenta de nuevo.';
+        throw new Error(mensaje);
+      }
+
+      const orderNumber = `ORD-${body.id_pedido}`;
+      const now = new Date().toISOString();
+
+      addOrder({
+        id: orderNumber,
+        number: orderNumber,
+
+        customer: {
+          ...contact,
+          email: contact.email.trim(),
+        },
+
+        items: items.map((item) => ({
+          ...item,
+        })),
+
+        subtotal,
+        discount,
+        shipping,
+        total,
+
+        status: 'pending',
+        paymentStatus: 'paid',
+        paymentMethod,
+        shippingMethod,
+        address,
+
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      clearCart();
+
+      navigate(route('pedido-confirmado'), {
+        state: {
+          orderNumber,
+          email: contact.email.trim(),
+        },
+        replace: true,
+      });
+    } catch (err) {
+      setLoading(false);
+      setErrors((current) => ({
+        ...current,
+        submit:
+          err instanceof Error
+            ? err.message
+            : 'No se pudo procesar el pedido. Intenta de nuevo.',
+      }));
+    }
   };
 
   /*
@@ -1570,7 +1646,7 @@ export default function Checkout() {
                   </p>
                 )}
 
-                <h2
+                                <h2
                   className={
                     isMinimal
                       ? 'text-xl font-semibold tracking-tight'
@@ -1581,6 +1657,8 @@ export default function Checkout() {
                 </h2>
               </div>
 
+              {errors.submit && (
+                <Alert variant="error">{errors.submit}</Alert>
               {errors.payment && (
                 <Alert variant="error">
                   {errors.payment}
