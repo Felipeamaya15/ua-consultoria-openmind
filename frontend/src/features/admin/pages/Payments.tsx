@@ -578,9 +578,6 @@ export default function Payments() {
       </Alert>
 
 
-
-      {/\* ================= TARJETA REAL: WEBPAY / TRANSBANK ================= \*/}
-
       <AdminCard>
 
         <div className="flex items-center justify-between gap-3 mb-3">
@@ -752,10 +749,6 @@ export default function Payments() {
         )}
 
       </AdminCard>
-
-
-
-      {/\* ================= TARJETA REAL: MERCADO PAGO ================= \*/}
 
       <AdminCard>
 
@@ -931,8 +924,6 @@ export default function Payments() {
 
 
 
-      {/\* ================= TARJETA REAL: PAYPAL ================= \*/}
-
       <AdminCard>
 
         <div className="flex items-center justify-between gap-3 mb-3">
@@ -1106,8 +1097,6 @@ export default function Payments() {
       </AdminCard>
 
 
-
-      {/\* ================= TARJETAS SECUNDARIAS (DEMO) ================= \*/}
 
       {otherMethods.map((method) => {
 
