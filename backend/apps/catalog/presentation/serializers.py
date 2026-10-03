@@ -347,3 +347,23 @@ class ConfiguracionPayPalResponseSerializer(serializers.Serializer):
     def get_id_tienda(self, obj):
         val = obj.get("id_tienda") if isinstance(obj, dict) else getattr(obj, "id_tienda", None)
         return getattr(val, "id_tienda", val)
+
+class ConfiguracionMercadoPagoInputSerializer(serializers.Serializer):
+    public_key = serializers.CharField(max_length=255, required=False, allow_blank=True)
+    access_token = serializers.CharField(max_length=255, required=False, allow_blank=True)
+    ambiente = serializers.ChoiceField(choices=['SANDBOX', 'PRODUCCION'], default='SANDBOX')
+    activo = serializers.BooleanField(default=False)
+
+
+class ConfiguracionMercadoPagoResponseSerializer(serializers.Serializer):
+    id_tienda = serializers.SerializerMethodField()
+    public_key = serializers.CharField(allow_blank=True)
+    ambiente = serializers.CharField()
+    activo = serializers.BooleanField()
+    access_token_enmascarado = serializers.CharField(allow_blank=True, required=False)
+    fecha_actualizacion = serializers.DateTimeField(allow_null=True, required=False)
+    configurado = serializers.BooleanField(default=False)
+
+    def get_id_tienda(self, obj):
+        val = obj.get("id_tienda") if isinstance(obj, dict) else getattr(obj, "id_tienda", None)
+        return getattr(val, "id_tienda", val)

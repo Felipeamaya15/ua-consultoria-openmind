@@ -5,9 +5,8 @@ import { AdminCard, Alert, Input, Toggle, Button, Icon, Select } from '../compon
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 const TIENDA_ID = 1;
 
-// Métodos de demostración secundarios (PayPal ahora es una pasarela real conectada)
+// Métodos de demostración secundarios restantes
 const otherMethods = [
-  { id: 'mercadopago', name: 'Mercado Pago', icon: 'card', desc: 'Tarjetas y saldo Mercado Pago', fields: ['Access Token'] },
   { id: 'linkify', name: 'Linkify', icon: 'link', desc: 'Pago por link', fields: ['API Key'] },
   { id: 'transfer', name: 'Transferencia bancaria', icon: 'bank', desc: 'Verificación manual', fields: ['Banco', 'N° de cuenta', 'RUT', 'Nombre titular'] }
 ];
@@ -37,6 +36,17 @@ export default function Payments() {
   const [ppSaving, setPpSaving] = useState(false);
   const [ppFeedback, setPpFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
+  // Estados reactivos: Mercado Pago
+  const [mpActivo, setMpActivo] = useState(false);
+  const [mpPublicKey, setMpPublicKey] = useState('');
+  const [mpAccessToken, setMpAccessToken] = useState('');
+  const [mpAmbiente, setMpAmbiente] = useState<'SANDBOX' | 'PRODUCCION'>('SANDBOX');
+  const [mpMaskedToken, setMpMaskedToken] = useState('');
+  const [mpIsConfigured, setMpIsConfigured] = useState(false);
+  const [mpLoading, setMpLoading] = useState(true);
+  const [mpSaving, setMpSaving] = useState(false);
+  const [mpFeedback, setMpFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+
   const getAuthHeaders = () => {
     const token =
       localStorage.getItem('token') ||
@@ -48,9 +58,8 @@ export default function Payments() {
     };
   };
 
-  // Cargar configuraciones reales desde el backend
   useEffect(() => {
-    // 1. Obtener Transbank
+    // 1. Cargar Transbank
     setTbLoading(true);
     fetch(`${API_BASE}/api/catalog/tiendas/${TIENDA_ID}/configuracion/transbank/`, {
       method: 'GET',
@@ -69,7 +78,7 @@ export default function Payments() {
       .catch((err) => console.error('Error al conectar con Transbank:', err))
       .finally(() => setTbLoading(false));
 
-    // 2. Obtener PayPal
+    // 2. Cargar PayPal
     setPpLoading(true);
     fetch(`${API_BASE}/api/catalog/tiendas/${TIENDA_ID}/configuracion/paypal/`, {
       method: 'GET',
@@ -87,6 +96,25 @@ export default function Payments() {
       })
       .catch((err) => console.error('Error al conectar con PayPal:', err))
       .finally(() => setPpLoading(false));
+
+    // 3. Cargar Mercado Pago
+    setMpLoading(true);
+    fetch(`${API_BASE}/api/catalog/tiendas/${TIENDA_ID}/configuracion/mercadopago/`, {
+      method: 'GET',
+      headers: getAuthHeaders(),
+    })
+      .then((res) => res.json())
+      .then((res) => {
+        if (res.exito && res.data) {
+          setMpPublicKey(res.data.public_key || '');
+          setMpAmbiente(res.data.ambiente || 'SANDBOX');
+          setMpActivo(res.data.activo ?? false);
+          setMpMaskedToken(res.data.access_token_enmascarado || '');
+          setMpIsConfigured(Boolean(res.data.configurado));
+        }
+      })
+      .catch((err) => console.error('Error al conectar con Mercado Pago:', err))
+      .finally(() => setMpLoading(false));
   }, []);
 
   // Guardar Transbank
@@ -107,36 +135,18 @@ export default function Payments() {
         headers: getAuthHeaders(),
         body: JSON.stringify(payload),
       });
-
       const data = await res.json();
 
       if (res.ok && data.exito) {
-        setTbFeedback({
-          type: 'success',
-          message: 'Configuración de Transbank guardada exitosamente.',
-        });
+        setTbFeedback({ type: 'success', message: 'Configuración de Transbank guardada exitosamente.' });
         setTbMaskedKey(data.data.api_key_enmascarada || '');
         setTbApiKey('');
         setTbIsConfigured(true);
-
-        if (form && setForm) {
-          setForm({
-            ...form,
-            transbank: {
-              enabled: tbActivo,
-              fields: {
-                ...(form.transbank?.fields || {}),
-                'Comercio ID': tbCodigo,
-                'API Key': data.data.api_key_enmascarada || '••••••••',
-              },
-            },
-          });
-        }
         return true;
       } else {
         const errorDetail = data.error?.detalles
           ? Object.values(data.error.detalles).flat().join(' ')
-          : data.mensaje || 'Error al guardar la configuración de Transbank.';
+          : data.mensaje || 'Error al guardar Transbank.';
         setTbFeedback({ type: 'error', message: errorDetail });
         return false;
       }
@@ -154,10 +164,7 @@ export default function Payments() {
     setPpFeedback(null);
 
     if (ppActivo && !ppClientId.trim()) {
-      setPpFeedback({
-        type: 'error',
-        message: 'El Client ID es obligatorio para activar PayPal.',
-      });
+      setPpFeedback({ type: 'error', message: 'El Client ID es obligatorio para activar PayPal.' });
       setPpSaving(false);
       return false;
     }
@@ -175,36 +182,18 @@ export default function Payments() {
         headers: getAuthHeaders(),
         body: JSON.stringify(payload),
       });
-
       const data = await res.json();
 
       if (res.ok && data.exito) {
-        setPpFeedback({
-          type: 'success',
-          message: 'Configuración de PayPal guardada exitosamente.',
-        });
+        setPpFeedback({ type: 'success', message: 'Configuración de PayPal guardada exitosamente.' });
         setPpMaskedSecret(data.data.client_secret_enmascarado || '');
         setPpClientSecret('');
         setPpIsConfigured(true);
-
-        if (form && setForm) {
-          setForm({
-            ...form,
-            paypal: {
-              enabled: ppActivo,
-              fields: {
-                ...(form.paypal?.fields || {}),
-                'Client ID': ppClientId,
-                'Client Secret': data.data.client_secret_enmascarado || '••••••••',
-              },
-            },
-          });
-        }
         return true;
       } else {
         const errorDetail = data.error?.detalles
           ? Object.values(data.error.detalles).flat().join(' ')
-          : data.mensaje || 'Error al guardar la configuración de PayPal.';
+          : data.mensaje || 'Error al guardar PayPal.';
         setPpFeedback({ type: 'error', message: errorDetail });
         return false;
       }
@@ -216,16 +205,77 @@ export default function Payments() {
     }
   };
 
+  // Guardar Mercado Pago
+  const handleSaveMercadoPago = async () => {
+    setMpSaving(true);
+    setMpFeedback(null);
+
+    if (mpActivo && !mpPublicKey.trim()) {
+      setMpFeedback({ type: 'error', message: 'La Public Key es obligatoria para activar Mercado Pago.' });
+      setMpSaving(false);
+      return false;
+    }
+
+    const payload = {
+      public_key: mpPublicKey.trim(),
+      access_token: mpAccessToken.trim() || (mpIsConfigured ? mpMaskedToken : ''),
+      ambiente: mpAmbiente,
+      activo: mpActivo,
+    };
+
+    try {
+      const res = await fetch(`${API_BASE}/api/catalog/tiendas/${TIENDA_ID}/configuracion/mercadopago/`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+
+      if (res.ok && data.exito) {
+        setMpFeedback({ type: 'success', message: 'Configuración de Mercado Pago guardada exitosamente.' });
+        setMpMaskedToken(data.data.access_token_enmascarado || '');
+        setMpAccessToken('');
+        setMpIsConfigured(true);
+
+        if (form && setForm) {
+          setForm({
+            ...form,
+            mercadopago: {
+              enabled: mpActivo,
+              fields: {
+                ...(form.mercadopago?.fields || {}),
+                'Public Key': mpPublicKey,
+                'Access Token': data.data.access_token_enmascarado || '••••••••',
+              },
+            },
+          });
+        }
+        return true;
+      } else {
+        const errorDetail = data.error?.detalles
+          ? Object.values(data.error.detalles).flat().join(' ')
+          : data.mensaje || 'Error al guardar Mercado Pago.';
+        setMpFeedback({ type: 'error', message: errorDetail });
+        return false;
+      }
+    } catch {
+      setMpFeedback({ type: 'error', message: 'No se pudo conectar con el servidor backend.' });
+      return false;
+    } finally {
+      setMpSaving(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     save();
-    await Promise.all([handleSaveTransbank(), handleSavePayPal()]);
+    await Promise.all([handleSaveTransbank(), handleSavePayPal(), handleSaveMercadoPago()]);
   };
 
   return (
     <form className="flex flex-col gap-5 max-w-2xl" onSubmit={handleSubmit}>
       <Alert variant="info">
-        Configura las pasarelas de pago de tu tienda. Webpay Plus y PayPal se encuentran conectados a tu backend y base de datos real.
+        Configura las pasarelas de pago de tu tienda. Webpay Plus, PayPal y Mercado Pago se encuentran conectados a tu backend y base de datos real.
       </Alert>
 
       {/* ================= TARJETA REAL: WEBPAY / TRANSBANK ================= */}
@@ -310,6 +360,94 @@ export default function Payments() {
                 onClick={handleSaveTransbank}
               >
                 Guardar credenciales Transbank
+              </Button>
+            </div>
+          </div>
+        )}
+      </AdminCard>
+
+      {/* ================= TARJETA REAL: MERCADO PAGO ================= */}
+      <AdminCard>
+        <div className="flex items-center justify-between gap-3 mb-3">
+          <div className="flex items-center gap-3">
+            <Icon name="wallet" className="w-6 h-6 text-[#009ee3]" />
+            <div>
+              <div className="flex items-center gap-2">
+                <h2 className="font-semibold text-sm">Mercado Pago</h2>
+                {mpIsConfigured && mpActivo && (
+                  <span className="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-[#ebfdf2] text-[#027a48]">
+                    API Conectada
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-[var(--muted-foreground)]">
+                Tarjetas, saldo de Mercado Pago y checkout Pro
+              </p>
+            </div>
+          </div>
+          <Toggle
+            ariaLabel="Activar Mercado Pago"
+            checked={mpActivo}
+            onChange={(enabled) => setMpActivo(enabled)}
+          />
+        </div>
+
+        {mpFeedback && (
+          <div className="mb-3">
+            <Alert variant={mpFeedback.type}>{mpFeedback.message}</Alert>
+          </div>
+        )}
+
+        {mpLoading ? (
+          <div className="border-t border-[var(--border)] pt-3 text-xs text-[var(--muted-foreground)]">
+            Cargando credenciales de Mercado Pago...
+          </div>
+        ) : (
+          <div className="flex flex-col gap-3 border-t border-[var(--border)] pt-3">
+            <div className="grid sm:grid-cols-2 gap-3">
+              <Select
+                label="Entorno de Operación"
+                value={mpAmbiente}
+                onChange={(e: any) => setMpAmbiente(e.target.value)}
+                options={[
+                  { value: 'SANDBOX', label: 'Sandbox (Pruebas)' },
+                  { value: 'PRODUCCION', label: 'Producción (Real)' },
+                ]}
+              />
+
+              <Input
+                label="Public Key"
+                autoComplete="off"
+                type="text"
+                value={mpPublicKey}
+                placeholder="TEST-xxxx o APP_USR-xxxx"
+                onChange={(e: any) => setMpPublicKey(e.target.value)}
+              />
+            </div>
+
+            <Input
+              label="Access Token"
+              autoComplete="off"
+              type="password"
+              value={mpAccessToken}
+              placeholder={mpMaskedToken ? `Guardado: ${mpMaskedToken}` : 'Ingresa el Access Token provisto por Mercado Pago'}
+              hint={
+                mpMaskedToken
+                  ? `Token guardado: ${mpMaskedToken}. Déjalo vacío si no deseas modificarlo.`
+                  : undefined
+              }
+              onChange={(e: any) => setMpAccessToken(e.target.value)}
+            />
+
+            <div className="flex justify-end pt-2">
+              <Button
+                type="button"
+                size="sm"
+                variant="primary"
+                loading={mpSaving}
+                onClick={handleSaveMercadoPago}
+              >
+                Guardar credenciales Mercado Pago
               </Button>
             </div>
           </div>
@@ -452,7 +590,7 @@ export default function Payments() {
 
       {saved && <Alert variant="success">Métodos de pago guardados correctamente.</Alert>}
 
-      <Button type="submit" loading={tbSaving || ppSaving}>
+      <Button type="submit" loading={tbSaving || ppSaving || mpSaving}>
         Guardar todos los métodos de pago
       </Button>
     </form>

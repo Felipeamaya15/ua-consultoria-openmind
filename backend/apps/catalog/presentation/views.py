@@ -54,6 +54,10 @@ from apps.catalog.application.use_cases import (
     GuardarConfiguracionPayPalDTO,
     ObtenerConfiguracionPayPalUseCase,
     GuardarConfiguracionPayPalUseCase,
+    #MercadoPago
+    GuardarConfiguracionMercadoPagoDTO,
+    ObtenerConfiguracionMercadoPagoUseCase,
+    GuardarConfiguracionMercadoPagoUseCase,
 
 )
 
@@ -85,7 +89,83 @@ from .serializers import (
     #PayPal
     ConfiguracionPayPalInputSerializer,
     ConfiguracionPayPalResponseSerializer,
+    #MercadoPago
+    ConfiguracionMercadoPagoInputSerializer,
+    ConfiguracionMercadoPagoResponseSerializer,
 )
+
+
+class ConfiguracionMercadoPagoView(APIView):
+    """
+    GET: Consulta la configuración actual de Mercado Pago para la tienda.
+    POST: Actualiza credenciales y estado de activación.
+    """
+    permission_classes = [AllowAny]
+
+    def get(self, request, id_tienda):
+        use_case = ObtenerConfiguracionMercadoPagoUseCase()
+        datos = use_case.execute(id_tienda=id_tienda)
+        serializer = ConfiguracionMercadoPagoResponseSerializer(datos)
+        return Response(
+            {
+                "exito": True,
+                "mensaje": "Configuración de Mercado Pago obtenida correctamente.",
+                "data": serializer.data,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+    def post(self, request, id_tienda):
+        serializer = ConfiguracionMercadoPagoInputSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(
+                {
+                    "exito": False,
+                    "mensaje": "Datos del formulario inválidos.",
+                    "error": {"codigo": "DATOS_INVALIDOS", "detalles": serializer.errors},
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        dto = GuardarConfiguracionMercadoPagoDTO(
+            id_tienda=id_tienda,
+            **serializer.validated_data
+        )
+
+        use_case = GuardarConfiguracionMercadoPagoUseCase()
+        try:
+            resultado = use_case.execute(id_tienda=id_tienda, dto=dto)
+            response_serializer = ConfiguracionMercadoPagoResponseSerializer(resultado)
+            return Response(
+                {
+                    "exito": True,
+                    "mensaje": "Configuración de Mercado Pago guardada exitosamente.",
+                    "data": response_serializer.data,
+                },
+                status=status.HTTP_200_OK,
+            )
+        except ConfiguracionPagoInvalidaException as e:
+            return Response(
+                {
+                    "exito": False,
+                    "mensaje": str(e),
+                    "error": {"codigo": "CONFIGURACION_INVALIDA", "detalles": None},
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

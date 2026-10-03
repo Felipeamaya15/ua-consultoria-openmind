@@ -24,6 +24,7 @@ from apps.catalog.presentation.views import (
     IniciarPagoTransbankView,
     ConfirmarPagoTransbankView,
     ConfiguracionPayPalView,
+    ConfiguracionMercadoPagoView,
 )
 
 urlpatterns = [
@@ -147,5 +148,11 @@ urlpatterns = [
         "tiendas/<int:id_tienda>/configuracion/paypal/",
         ConfiguracionPayPalView.as_view(),
         name="configuracion-paypal",
+    ),
+
+    path(
+        "tiendas/<int:id_tienda>/configuracion/mercadopago/",
+        ConfiguracionMercadoPagoView.as_view(),
+        name="configuracion-mercadopago",
     ),
 ]

@@ -184,3 +184,38 @@ class ConfiguracionPayPal(models.Model):
 
     def __str__(self):
         return f"PayPal Tienda {self.id_tienda_id} ({self.ambiente}) - {'Activo' if self.activo else 'Inactivo'}"
+    
+class ConfiguracionMercadoPago(models.Model):
+    AMBIENTE_CHOICES = [
+        ('SANDBOX', 'Sandbox (Pruebas)'),
+        ('PRODUCCION', 'Producción (Real)'),
+    ]
+
+    id_tienda = models.OneToOneField(
+        Tienda,
+        on_delete=models.CASCADE,
+        related_name='configuracion_mercadopago',
+        primary_key=True,
+        db_column='id_tienda',
+    )
+    public_key = models.CharField(max_length=255, blank=True, default='')
+    access_token = models.CharField(max_length=255, blank=True, default='')
+    ambiente = models.CharField(max_length=20, choices=AMBIENTE_CHOICES, default='SANDBOX')
+    activo = models.BooleanField(default=False)
+    fecha_actualizacion = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'configuracion_mercadopago'
+        verbose_name = 'Configuración Mercado Pago'
+        verbose_name_plural = 'Configuraciones Mercado Pago'
+
+    @property
+    def access_token_enmascarado(self) -> str:
+        if not self.access_token:
+            return ''
+        if len(self.access_token) <= 8:
+            return '********'
+        return f"{'*' * (len(self.access_token) - 4)}{self.access_token[-4:]}"
+
+    def __str__(self):
+        return f"Mercado Pago Tienda {self.id_tienda_id} ({self.ambiente}) - {'Activo' if self.activo else 'Inactivo'}"

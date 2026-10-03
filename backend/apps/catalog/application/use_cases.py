@@ -12,6 +12,7 @@ from apps.core.models import (
     ConfiguracionTransbank,
     ConfiguracionPayPal,
     Tienda,
+    ConfiguracionMercadoPago
 )
 from apps.core.infrastructure.mongo_client import get_mongo_db
 from apps.catalog.application.services import VariantService
@@ -29,6 +30,138 @@ from apps.catalog.domain.exceptions import (
     TransbankConfiguracionFaltanteException,
     ConfiguracionPagoInvalidaException,
 )
+
+# CONFIGURACIÓN MERCADO PAGO (ADMIN)
+# ==========================================================
+
+class GuardarConfiguracionMercadoPagoDTO:
+    def __init__(
+        self,
+        public_key: str = "",
+        access_token: str = "",
+        ambiente: str = "SANDBOX",
+        activo: bool = False,
+        id_tienda: Optional[int] = None,
+        tienda_id: Optional[int] = None,
+        *args,
+        **kwargs,
+    ):
+        self.id_tienda = id_tienda if id_tienda is not None else tienda_id
+        self.public_key = str(public_key).strip()
+        self.access_token = str(access_token).strip()
+        self.ambiente = str(ambiente).strip().upper()
+        self.activo = bool(activo)
+        self.tienda_id = self.id_tienda
+
+
+class ObtenerConfiguracionMercadoPagoUseCase:
+    """Recupera la configuración de Mercado Pago con el token enmascarado."""
+
+    def execute(self, id_tienda: Any, *args, **kwargs) -> Dict[str, Any]:
+        tienda_pk = getattr(id_tienda, "id_tienda", None) or getattr(id_tienda, "pk", None) or id_tienda
+        config = ConfiguracionMercadoPago.objects.select_related("id_tienda").filter(id_tienda_id=tienda_pk).first()
+
+        if not config:
+            tienda = Tienda.objects.filter(pk=tienda_pk).first() or type("TiendaRef", (), {"id_tienda": tienda_pk})()
+            return {
+                "id_tienda": tienda,
+                "public_key": "",
+                "ambiente": "SANDBOX",
+                "activo": False,
+                "access_token_enmascarado": "",
+                "fecha_actualizacion": None,
+                "configurado": False,
+            }
+
+        return {
+            "id_tienda": config.id_tienda,
+            "public_key": config.public_key,
+            "ambiente": config.ambiente,
+            "activo": config.activo,
+            "access_token_enmascarado": config.access_token_enmascarado,
+            "fecha_actualizacion": config.fecha_actualizacion,
+            "configurado": bool(config.public_key and config.access_token),
+        }
+
+    def ejecutar(self, *args, **kwargs) -> Dict[str, Any]:
+        return self.execute(*args, **kwargs)
+
+
+class GuardarConfiguracionMercadoPagoUseCase:
+    """Valida reglas de negocio y persiste las credenciales de Mercado Pago."""
+
+    def execute(self, *args, **kwargs) -> Dict[str, Any]:
+        id_tienda = kwargs.get("id_tienda") or kwargs.get("tienda_id")
+        dto = kwargs.get("dto") or kwargs.get("datos")
+
+        if args:
+            if len(args) == 1:
+                dto = args[0]
+            elif len(args) >= 2:
+                id_tienda = args[0]
+                dto = args[1]
+
+        if id_tienda is None and dto is not None:
+            id_tienda = getattr(dto, "id_tienda", None) or getattr(dto, "tienda_id", None)
+            if id_tienda is None and isinstance(dto, dict):
+                id_tienda = dto.get("id_tienda")
+
+        tienda_pk = getattr(id_tienda, "id_tienda", None) or getattr(id_tienda, "pk", None) or id_tienda
+
+        if isinstance(dto, dict):
+            public_key = str(dto.get("public_key", "")).strip()
+            access_token = str(dto.get("access_token", "")).strip()
+            ambiente = str(dto.get("ambiente", "SANDBOX")).strip().upper()
+            activo = bool(dto.get("activo", False))
+        else:
+            public_key = str(getattr(dto, "public_key", "")).strip()
+            access_token = str(getattr(dto, "access_token", "")).strip()
+            ambiente = str(getattr(dto, "ambiente", "SANDBOX")).strip().upper()
+            activo = bool(getattr(dto, "activo", False))
+
+        if ambiente not in ["SANDBOX", "PRODUCCION"]:
+            raise ConfiguracionPagoInvalidaException("El ambiente debe ser SANDBOX o PRODUCCION.")
+
+        if activo and not public_key:
+            raise ConfiguracionPagoInvalidaException("La Public Key es obligatoria para activar Mercado Pago.")
+
+        config, _ = ConfiguracionMercadoPago.objects.get_or_create(
+            id_tienda_id=tienda_pk,
+            defaults={
+                "public_key": public_key,
+                "access_token": access_token,
+                "ambiente": ambiente,
+                "activo": activo,
+            },
+        )
+
+        config.public_key = public_key
+        config.ambiente = ambiente
+        config.activo = activo
+
+        if access_token and not access_token.startswith("****"):
+            config.access_token = access_token
+
+        config.save()
+
+        return {
+            "id_tienda": config.id_tienda,
+            "public_key": config.public_key,
+            "ambiente": config.ambiente,
+            "activo": config.activo,
+            "access_token_enmascarado": config.access_token_enmascarado,
+            "fecha_actualizacion": config.fecha_actualizacion,
+            "configurado": bool(config.public_key and config.access_token),
+        }
+
+    def ejecutar(self, *args, **kwargs) -> Dict[str, Any]:
+        return self.execute(*args, **kwargs)
+
+
+
+
+
+
 
 
 # ==========================================================
