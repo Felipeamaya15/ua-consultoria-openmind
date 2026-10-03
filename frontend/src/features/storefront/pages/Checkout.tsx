@@ -71,6 +71,7 @@ type TransferDetails = {
 };
 
 const ADMIN_STORAGE_KEY = 'ua-entrepreneur-demo-v1';
+const API_URL = (import.meta as any).env.VITE_API_URL || 'http://localhost:8000';
 
 type AuthSettings = {
   emailPassword: boolean;
@@ -210,6 +211,22 @@ function readCheckoutOptions() {
             }
           : option,
       );
+    }
+
+    const paymentMap: Record<string, string> = {
+      Transbank: 'transbank',
+      MercadoPago: 'mercadopago',
+      PayPal: 'paypal',
+      Linkify: 'linkify',
+      Transferencia: 'transfer',
+    };
+
+    let paymentOptions = defaultPaymentOptions;
+    if (paymentConfig) {
+      paymentOptions = defaultPaymentOptions.filter((option) => {
+        const key = paymentMap[option.id];
+        return key ? !!paymentConfig[key]?.enabled : false;
+      });
     }
 
     return {
@@ -1578,7 +1595,7 @@ export default function Checkout() {
                   </p>
                 )}
 
-                <h2
+                                <h2
                   className={
                     isMinimal
                       ? 'text-xl font-semibold tracking-tight'
@@ -1589,6 +1606,8 @@ export default function Checkout() {
                 </h2>
               </div>
 
+              {errors.submit && (
+                <Alert variant="error">{errors.submit}</Alert>
               {errors.payment && (
                 <Alert variant="error">
                   {errors.payment}

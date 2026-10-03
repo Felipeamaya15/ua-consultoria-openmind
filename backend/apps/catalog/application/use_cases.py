@@ -1,16 +1,27 @@
 from typing import List, Dict, Any, Optional
 from dataclasses import dataclass
 from django.utils.text import slugify
+from django.shortcuts import get_object_or_404
+from bson import ObjectId
 from django.utils import timezone
 
-from apps.catalog.infrastructure.repositories import ProductRepository
-from apps.core.models import Producto
+from apps.core.models import (
+    Producto,
+    Usuario,
+    Carrito,
+    ItemCarrito,
+    ConfiguracionTransbank,
+    ConfiguracionPayPal,
+    Tienda,
+    ConfiguracionMercadoPago
+)
 from apps.core.infrastructure.mongo_client import get_mongo_db
 from bson import ObjectId
 from django.shortcuts import get_object_or_404
 
 from apps.core.models import Usuario, Carrito, ItemCarrito, ConfiguracionTransbank, ConfiguracionPayPal, Tienda, ConfiguracionMercadoPago
 from apps.catalog.application.services import VariantService
+from apps.catalog.infrastructure.repositories import ProductRepository
 from apps.catalog.infrastructure.adapters.transbank_adapter import TransbankWebpayAdapter
 from apps.catalog.domain.stock import validate_stock
 from apps.catalog.domain.exceptions import (
@@ -643,9 +654,7 @@ class SoftDeleteProductUseCase:
         productos_collection = db.productos
 
         productos_collection.update_one(
-            {"tienda_id": str(tienda_id), "$or": [
-                {"id_producto": id_producto}, {"id_postgresql": id_producto}
-            ]},
+            {"id_postgresql": id_producto, "tienda_id": str(tienda_id)},
             {"$set": {"activo": False}}
         )
 

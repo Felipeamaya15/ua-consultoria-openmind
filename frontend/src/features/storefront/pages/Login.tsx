@@ -29,7 +29,7 @@ export default function Login() {
       setLoading(true);
       try {
         const data = await authService.googleLogin(tokenResponse.access_token);
-        localStorage.setItem('token', data.data.token);
+        authService.setSession(data.data.token);
         
         // Redirección condicional según el correo
         if (data.data.user.is_store_owner === true) {
@@ -67,7 +67,7 @@ export default function Login() {
         });
       }
       
-      localStorage.setItem('token', data.data.token);
+      authService.setSession(data.data.token);
       
       // Redirección condicional según el correo
       if (data.data.user.is_store_owner === true) {

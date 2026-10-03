@@ -155,6 +155,13 @@ from apps.authentication.presentation.profile import StrictSerializer
 class RegistrarCompraSerializer(StrictSerializer):
     # Contacto de la compra; la identidad autenticada procede de request.user.
     clave_checkout = serializers.UUIDField(required=False)
+class CompraItemInputSerializer(serializers.Serializer):
+    # El catálogo real vive en MongoDB e identifica cada variante por SKU,
+    # no por un ID de la tabla VarianteProducto (que no se usa en la práctica).
+    sku = serializers.CharField(max_length=100)
+    cantidad = serializers.IntegerField(min_value=1)
+
+
     nombre_contacto = serializers.CharField(max_length=150, required=False, allow_blank=True)
     correo_contacto = serializers.EmailField(max_length=320, required=False, allow_blank=True)
     telefono_contacto = serializers.CharField(max_length=30, required=False, allow_blank=True, default='')
@@ -187,6 +194,10 @@ class RegistrarCompraSerializer(StrictSerializer):
         )
 
         normalizado = str(value).strip().lower()
+        try:
+            from apps.core.models import ConfiguracionPago
+            config_pago = ConfiguracionPago.objects.get(tienda_id=tienda_id)
+            metodo = config_pago.datos.get(value, {})
 
         if normalizado == 'transbank':
             habilitado = ConfiguracionTransbank.objects.filter(
@@ -266,6 +277,7 @@ class ConfiguracionPagoSerializer(serializers.Serializer):
             if not isinstance(method_data, dict):
                 continue
 
+                
             is_enabled = method_data.get('enabled')
             # Solo validamos si intentan guardarlo como habilitado
             if str(is_enabled).lower() == 'true' or is_enabled is True:

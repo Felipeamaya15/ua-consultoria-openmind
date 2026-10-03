@@ -20,4 +20,5 @@ urlpatterns = [
     path('pagos/mi-tienda/', TiendaPagoActualAPIView.as_view(), name='pagos-mi-tienda'),
     path('pagos/configuracion/', ConfiguracionPagoAPIView.as_view(), name='pagos-configuracion'),
     path('pagos/activos/', MetodosPagoActivosAPIView.as_view(), name='pagos-activos'),
+    path('pedidos/registrar/', RegistrarCompraView.as_view(), name='pedidos-registrar'),
 ]
