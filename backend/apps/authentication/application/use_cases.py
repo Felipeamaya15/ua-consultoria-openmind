@@ -6,10 +6,12 @@ import requests
 from apps.authentication.domain.entities import (
     UserEntity,
     ConfiguracionAutenticacionEntity,
+    ConfiguracionPagosEntity,
 )
 from apps.authentication.domain.interfaces import (
     IUserRepository,
     IConfiguracionAutenticacionRepository,
+    IConfiguracionPagosRepository,
 )
 from apps.authentication.domain.exceptions import (
     InvalidCredentialsException,
@@ -190,6 +192,122 @@ class ConsultarConfiguracionAutenticacionUseCase:
         if not configuracion:
             raise ValueError(
                 "No existe configuración de autenticación para la tienda."
+            )
+
+        return configuracion
+
+
+@dataclass
+class GuardarConfiguracionPagosDTO:
+    tienda_id: int
+    metodos: dict
+
+
+class GuardarConfiguracionPagosUseCase:
+    CAMPOS_REQUERIDOS = {
+        "transbank": ["api_key", "commerce_id"],
+        "mercadopago": ["access_token"],
+        "paypal": ["client_id", "client_secret"],
+        "linkify": ["api_key"],
+        "transfer": [
+            "bank_name",
+            "account_type",
+            "account_number",
+            "holder_rut",
+            "holder_name",
+            "confirmation_email",
+        ],
+    }
+
+    def __init__(
+        self,
+        configuracion_repository: IConfiguracionPagosRepository,
+    ):
+        self.configuracion_repository = configuracion_repository
+
+    def execute(
+        self,
+        dto: GuardarConfiguracionPagosDTO,
+    ) -> ConfiguracionPagosEntity:
+        if not isinstance(dto.metodos, dict):
+            raise ValueError("La configuracion de pagos no es valida.")
+
+        metodos_normalizados = {}
+        habilitados = []
+
+        for metodo, configuracion in dto.metodos.items():
+            if metodo not in self.CAMPOS_REQUERIDOS:
+                raise ValueError(f"Metodo de pago no soportado: {metodo}.")
+
+            if not isinstance(configuracion, dict):
+                raise ValueError(
+                    f"La configuracion de {metodo} no es valida."
+                )
+
+            enabled = bool(configuracion.get("enabled", False))
+            fields = configuracion.get("fields", {})
+
+            if not isinstance(fields, dict):
+                raise ValueError(
+                    f"Los campos de {metodo} no son validos."
+                )
+
+            clean_fields = {
+                str(key): str(value).strip()
+                for key, value in fields.items()
+                if value is not None
+            }
+
+            if enabled:
+                habilitados.append(metodo)
+                missing = [
+                    field
+                    for field in self.CAMPOS_REQUERIDOS[metodo]
+                    if not clean_fields.get(field)
+                ]
+
+                if missing:
+                    raise ValueError(
+                        f"Faltan datos obligatorios para {metodo}: {', '.join(missing)}."
+                    )
+
+            metodos_normalizados[metodo] = {
+                "enabled": enabled,
+                "fields": clean_fields,
+            }
+
+        if not habilitados:
+            raise ValueError(
+                "Debe existir al menos un metodo de pago habilitado."
+            )
+
+        configuracion = ConfiguracionPagosEntity(
+            id=None,
+            tienda_id=dto.tienda_id,
+            metodos=metodos_normalizados,
+        )
+
+        return self.configuracion_repository.save(configuracion)
+
+
+class ConsultarConfiguracionPagosUseCase:
+    def __init__(
+        self,
+        configuracion_repository: IConfiguracionPagosRepository,
+    ):
+        self.configuracion_repository = configuracion_repository
+
+    def execute(
+        self,
+        tienda_id: int,
+    ) -> ConfiguracionPagosEntity:
+        configuracion = self.configuracion_repository.get_by_tienda(
+            tienda_id
+        )
+
+        if not configuracion:
+            raise ValueError(
+                "No existe configuracion de pagos para la tienda."
             )
 
         return configuracion

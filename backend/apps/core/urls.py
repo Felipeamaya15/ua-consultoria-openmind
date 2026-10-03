@@ -2,7 +2,11 @@ from apps.core.presentation.customer_orders import CustomerOrdersAPIView
 from apps.core.presentation.checkout import CheckoutOrderAPIView
 from django.urls import path
 from . import views
-from apps.core.presentation.views import ConfiguracionPagoAPIView, MetodosPagoActivosAPIView
+from apps.core.presentation.views import (
+    ConfiguracionPagoAPIView,
+    MetodosPagoActivosAPIView,
+    RegistrarCompraView,
+)
 
 urlpatterns = [
     path('checkout/pedidos/', CheckoutOrderAPIView.as_view(), name='checkout-order'),
@@ -13,4 +17,5 @@ urlpatterns = [
     path('main_admin/', views.main_admin, name='main_admin'),
     path('pagos/configuracion/', ConfiguracionPagoAPIView.as_view(), name='pagos-configuracion'),
     path('pagos/activos/', MetodosPagoActivosAPIView.as_view(), name='pagos-activos'),
+    path('pedidos/registrar/', RegistrarCompraView.as_view(), name='pedidos-registrar'),
 ]

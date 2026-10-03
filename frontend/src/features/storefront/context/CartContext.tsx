@@ -64,6 +64,26 @@ export function CartProvider({ children }: { children: ReactNode }) {
         /^[a-f\d]{24}$/i.test(item.productId) && !item.id_item_carrito &&
         !persistedItems.some(saved => saved.productId === item.productId && saved.variantId === item.variantId),
       )]);
+      if (itemsList.length > 0) {
+        setItems(
+          itemsList.map((it: any) => ({
+            id_item_carrito: it.id_item_carrito || it.id,
+            productId: String(it.id_producto || 1),
+            variantId: it.sku || `item-${it.id_item_carrito || it.id_producto}`,
+            sku: it.sku || '',
+            name: it.nombre_producto || it.nombre || 'Polera Oversize Test',
+            price: Number(it.precio_unitario || it.precio || 14990),
+            quantity: Number(it.cantidad || 1),
+            maxStock: Number(it.stock_disponible || it.stock || 25),
+            image:
+              it.imagen ||
+              'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=500',
+            attributes: it.atributos || {},
+          }))
+        );
+      } else {
+        setItems([]);
+      }
     } catch (err: any) {
       console.warn('No se pudo sincronizar el carrito con el backend:', err.message);
     } finally {

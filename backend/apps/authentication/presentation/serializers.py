@@ -61,3 +61,14 @@ class ConfiguracionAutenticacionResponseSerializer(serializers.Serializer):
     google_client_id = serializers.CharField()
     guest_checkout = serializers.BooleanField()
     requires_auth = serializers.CharField()
+
+
+class ConfiguracionPagosRequestSerializer(serializers.Serializer):
+    tienda_id = serializers.IntegerField(min_value=1)
+    metodos = serializers.DictField()
+
+
+class ConfiguracionPagosResponseSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    tienda_id = serializers.IntegerField()
+    metodos = serializers.DictField()

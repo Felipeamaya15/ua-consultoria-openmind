@@ -12,15 +12,15 @@ from apps.catalog.presentation.views import (
     ProductoUpdateView,
     ProductoStockUpdateView,
     ProductDeleteAPIView,
+    ProductoAdminListView,
     # Gestión de variantes
     ProductVariantsView,
     VarianteStockUpdateView,
     VariantPurchaseView,
-    ProductoAdminListView,
     # Carrito de compras
     CarritoItemsView,
     ModificarCantidadItemAPIView,
-    #Transbank
+    # Pasarelas de pago
     ConfiguracionTransbankView,
     IniciarPagoTransbankView,
     ConfirmarPagoTransbankView,
@@ -38,10 +38,10 @@ urlpatterns = [
         PublicProductListAPIView.as_view(),
         name="mongo-productos-list",
     ),
-         path(
-            "productos/crear/",
-            ProductoCreateView.as_view(),
-            name="producto-crear",
+    path(
+        "productos/crear/",
+        ProductoCreateView.as_view(),
+        name="producto-crear",
     ),
     path(
         "productos/admin/",
@@ -134,6 +134,9 @@ urlpatterns = [
     ),
 
 
+    # ==========================================
+    # 5. Configuración y Pasarelas de Pagos
+    # ==========================================
     path(
         "tiendas/<int:id_tienda>/configuracion/transbank/",
         ConfiguracionTransbankView.as_view(),

@@ -101,9 +101,14 @@ export function ProductCard({
           ? 'text-[#77716f]'
           : 'text-[var(--muted-foreground)]';
 
+    const variantLabel = (variant: typeof product.variants[number]) => {
+      const attrs = Object.values(variant.attributes ?? {}).filter(Boolean).join(' / ');
+      return attrs || variant.sku;
+    };
+
     return (
       <div className="mt-3 grid gap-2">
-        <div className="grid gap-2">
+<div className="grid gap-2">
           <label className={`grid gap-1 text-[10px] font-semibold uppercase tracking-[0.08em] ${mutedClass}`}>
             <span>{attributeNames.length === 1 ? product.attributeLabels?.[attributeNames[0]] || attributeNames[0] : 'Variante'}</span>
             <select
@@ -133,7 +138,6 @@ export function ProductCard({
       </div>
     );
   };
-
 
   /*
    * ==========================================================
