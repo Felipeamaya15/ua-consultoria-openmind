@@ -823,6 +823,7 @@ def resolver_stock_item(item: ItemCarrito, variant_service: Optional[VariantServ
     """Stock real de un ítem: el de la variante (MongoDB) si tiene SKU, o el del producto base."""
     if not item.sku:
         return item.id_producto.stock
+    service = variant_service or VariantService()
     try:
         variante = service.get_variant_by_sku(str(item.id_producto_id), item.sku)
     except ValueError:
@@ -867,8 +868,13 @@ class ModificarCantidadItemUseCase:
     Reglas de negocio:
     1. Cantidad estrictamente mayor a 0.
     2. La cantidad solicitada no puede superar el stock físico del producto.
+    2. La cantidad solicitada no puede superar el stock físico del producto
+       (o de la variante, si el ítem tiene SKU).
     3. El ítem debe pertenecer al carrito activo del usuario autenticado.
     """
+
+    def __init__(self, variant_service: Optional[VariantService] = None):
+        self.variant_service = variant_service or VariantService()
 
     def execute(self, dto: ModificarCantidadDTO) -> ItemCarrito:
         if dto.nueva_cantidad <= 0:
@@ -882,14 +888,14 @@ class ModificarCantidadItemUseCase:
         except ItemCarrito.DoesNotExist:
             raise ItemCarritoNoEncontradoException("El producto no existe en tu carrito.")
 
-        producto = item.id_producto
-
-        if not producto.activo:
+        if not item.id_producto.activo:
             raise StockInsuficienteException("El producto ya no se encuentra disponible para la venta.")
 
-        if dto.nueva_cantidad > producto.stock:
+        stock_disponible = resolver_stock_item(item, self.variant_service)
+
+        if dto.nueva_cantidad > stock_disponible:
             raise StockInsuficienteException(
-                f"No hay stock suficiente. Stock disponible: {producto.stock} unidades."
+                f"No hay stock suficiente. Stock disponible: {stock_disponible} unidades."
             )
 
         item.cantidad = dto.nueva_cantidad
@@ -897,6 +903,7 @@ class ModificarCantidadItemUseCase:
 
         item.id_carrito.save(update_fields=['fecha_actualizacion'])
 
+        item.stock_disponible_calculado = stock_disponible
         return item
 
 

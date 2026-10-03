@@ -110,6 +110,7 @@ class CarritoVariantesTests(TestCase):
         self.assertEqual(self.add(cantidad=0).status_code, 400)
 
     def test_get_returns_sku_and_variant_stock(self):
+        self.add(sku='QA-L', cantidad=2)
         response = self.api.get(URL)
         self.assertEqual(response.status_code, 200)
         item = response.data['data'][0]
@@ -122,3 +123,13 @@ class CarritoVariantesTests(TestCase):
         self.assertEqual(self.api.get(URL).data['data'], [])
         self.api.force_authenticate(None)
         self.assertEqual(self.api.get(URL).status_code, 401)
+    def test_patch_validates_against_variant_stock(self):
+        self.add(sku='QA-L')
+        item = ItemCarrito.objects.get(sku='QA-L')
+        ok = self.api.patch(f'{URL}{item.pk}/', {'cantidad': 2}, format='json')
+        self.assertEqual(ok.status_code, 200)
+        self.assertEqual(ok.data['data']['stock_disponible'], 2)
+        too_much = self.api.patch(f'{URL}{item.pk}/', {'cantidad': 3}, format='json')
+        self.assertEqual(too_much.status_code, 400)
+        item.refresh_from_db()
+        self.assertEqual(item.cantidad, 2)
