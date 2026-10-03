@@ -92,6 +92,12 @@ class Pedido(models.Model):
     ]
     id_pedido = models.BigAutoField(primary_key=True)
     id_usuario = models.ForeignKey(Usuario, on_delete=models.CASCADE, db_column='id_usuario')
+    # Vínculo explícito para lectura del historial autenticado. Los pedidos legados
+    # no se atribuyen por correo ni por coincidencia de IDs.
+    comprador = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='pedidos_comprador',
+    )
     monto_total = models.DecimalField(max_digits=12, decimal_places=2)
     estado = models.CharField(max_length=20, choices=ESTADO_CHOICES, default='pendiente')
     fecha_creacion = models.DateTimeField(auto_now_add=True)
@@ -116,6 +122,109 @@ class ItemPedido(models.Model):
             models.CheckConstraint(check=Q(cantidad__gt=0), name='chk_item_pedido_cantidad_valida'),
             models.CheckConstraint(check=Q(precio_unitario__gte=0), name='chk_item_pedido_precio_valido'),
         ]
+
+class ConfiguracionTransbank(models.Model):
+    AMBIENTE_CHOICES = [
+        ('INTEGRACION', 'Integración'),
+        ('PRODUCCION', 'Producción'),
+    ]
+
+    id_configuracion = models.BigAutoField(primary_key=True)
+    id_tienda = models.OneToOneField(
+        'core.Tienda',
+        on_delete=models.CASCADE,
+        db_column='id_tienda',
+        related_name='configuracion_transbank'
+    )
+    codigo_comercio = models.CharField(max_length=64)
+    api_key = models.CharField(max_length=255)
+    ambiente = models.CharField(
+        max_length=20,
+        choices=AMBIENTE_CHOICES,
+        default='INTEGRACION'
+    )
+    activo = models.BooleanField(default=True)
+    fecha_actualizacion = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'configuracion_transbank'
+
+    def api_key_enmascarada(self) -> str:
+        if not self.api_key:
+            return ""
+        if len(self.api_key) <= 4:
+            return "****"
+        return f"{'*' * (len(self.api_key) - 4)}{self.api_key[-4:]}"
+
+class ConfiguracionPayPal(models.Model):
+    AMBIENTE_CHOICES = [
+        ('SANDBOX', 'Sandbox (Pruebas)'),
+        ('LIVE', 'Live (Producción)'),
+    ]
+
+    id_tienda = models.OneToOneField(
+        Tienda,
+        on_delete=models.CASCADE,
+        related_name='configuracion_paypal',
+        primary_key=True,
+        db_column='id_tienda',
+    )
+    client_id = models.CharField(max_length=255, blank=True, default='')
+    client_secret = models.CharField(max_length=255, blank=True, default='')
+    ambiente = models.CharField(max_length=20, choices=AMBIENTE_CHOICES, default='SANDBOX')
+    activo = models.BooleanField(default=False)
+    fecha_actualizacion = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'configuracion_paypal'
+        verbose_name = 'Configuración PayPal'
+        verbose_name_plural = 'Configuraciones PayPal'
+
+    @property
+    def client_secret_enmascarado(self) -> str:
+        if not self.client_secret:
+            return ''
+        if len(self.client_secret) <= 8:
+            return '********'
+        return f"{'*' * (len(self.client_secret) - 4)}{self.client_secret[-4:]}"
+
+    def __str__(self):
+        return f"PayPal Tienda {self.id_tienda_id} ({self.ambiente}) - {'Activo' if self.activo else 'Inactivo'}"
+    
+class ConfiguracionMercadoPago(models.Model):
+    AMBIENTE_CHOICES = [
+        ('SANDBOX', 'Sandbox (Pruebas)'),
+        ('PRODUCCION', 'Producción (Real)'),
+    ]
+
+    id_tienda = models.OneToOneField(
+        Tienda,
+        on_delete=models.CASCADE,
+        related_name='configuracion_mercadopago',
+        primary_key=True,
+        db_column='id_tienda',
+    )
+    public_key = models.CharField(max_length=255, blank=True, default='')
+    access_token = models.CharField(max_length=255, blank=True, default='')
+    ambiente = models.CharField(max_length=20, choices=AMBIENTE_CHOICES, default='SANDBOX')
+    activo = models.BooleanField(default=False)
+    fecha_actualizacion = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'configuracion_mercadopago'
+        verbose_name = 'Configuración Mercado Pago'
+        verbose_name_plural = 'Configuraciones Mercado Pago'
+
+    @property
+    def access_token_enmascarado(self) -> str:
+        if not self.access_token:
+            return ''
+        if len(self.access_token) <= 8:
+            return '********'
+        return f"{'*' * (len(self.access_token) - 4)}{self.access_token[-4:]}"
+
+    def __str__(self):
+        return f"Mercado Pago Tienda {self.id_tienda_id} ({self.ambiente}) - {'Activo' if self.activo else 'Inactivo'}"
 class VarianteProducto(models.Model):
     id_variante = models.BigAutoField(primary_key=True)
     id_producto = models.ForeignKey(Producto, on_delete=models.CASCADE, db_column='id_producto')

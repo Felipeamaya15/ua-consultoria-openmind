@@ -1,58 +1,550 @@
+from apps.authentication.permissions import IsStoreOwner
 from rest_framework.views import APIView
 
 from rest_framework.permissions import AllowAny
 
+# 1. Framework & Librerías de terceros (DRF)
 from rest_framework import status
-
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.views import APIView
 
+# 2. Módulos Core (Infraestructura, Modelos y Respuestas comunes)
+from apps.core.models import Tienda
+from apps.core.infrastructure.tenant import resolver_tienda, resolver_tienda_id
+from apps.core.presentation.responses import error_response, success_response
 
-from apps.core.presentation.responses import success_response, error_response
+# 3. Catálogo - Capa de Dominio (Excepciones)
+from apps.catalog.domain.exceptions import (
+    CantidadInvalidaException,
+    ItemCarritoNoEncontradoException,
+    ProductoNoEncontradoException,
+    StockInsuficienteException,
+    VarianteNoEncontradaException,
+    ConfiguracionPagoInvalidaException,
+    TiendaNoAutorizadaException,
+    # Nuevas excepciones - Adaptador Transbank
+    TransbankTransaccionException,
+    TransbankRechazoException,
+    TransbankConfiguracionFaltanteException,
+)
 
-from apps.core.infrastructure.tenant import resolver_tienda_id, resolver_tienda
-
-from apps.catalog.infrastructure.repositories import ProductRepository
-
-from apps.catalog.infrastructure.attribute_filters import (
-
-    FiltrosAtributosInvalidos,
-
-    parse_attribute_params,
+# 4. Catálogo - Capa de Aplicación (Servicios y Casos de Uso)
+from apps.catalog.application.services import VariantService
+from apps.catalog.application.use_cases import (
+    ActualizarProductoAdminUseCase,
+    ActualizarStockProductoUseCase,
+    AgregarItemCarritoDTO,
+    AgregarItemCarritoUseCase,
+    CrearProductoUseCase,
+    EliminarItemCarritoDTO,
+    EliminarItemCarritoUseCase,
+    GetPublicProductAttributesUseCase,
+    GetPublicProductDetailUseCase,
+    GuardarConfiguracionTransbankDTO,
+    GuardarConfiguracionTransbankUseCase,
+    ListPublicProductsUseCase,
+    ModificarCantidadDTO,
+    ModificarCantidadItemUseCase,
+    ObtenerConfiguracionTransbankUseCase,
+    ObtenerProductoAdminUseCase,
+    SoftDeleteProductUseCase,
+    ValidarDisponibilidadProductoUseCase,
+    # Nuevos Casos de Uso y DTOs - Adaptador Transbank
+    IniciarPagoTransbankDTO,
+    IniciarPagoTransbankUseCase,
+    ConfirmarPagoTransbankUseCase,
+    #PayPal
+    GuardarConfiguracionPayPalDTO,
+    ObtenerConfiguracionPayPalUseCase,
+    GuardarConfiguracionPayPalUseCase,
+    #MercadoPago
+    GuardarConfiguracionMercadoPagoDTO,
+    ObtenerConfiguracionMercadoPagoUseCase,
+    GuardarConfiguracionMercadoPagoUseCase,
 
 )
 
-from apps.catalog.application.use_cases import ListPublicProductsUseCase , GetPublicProductDetailUseCase,GetPublicProductAttributesUseCase
+# 5. Catálogo - Capa de Infraestructura (Repositorios y Filtros)
+from apps.catalog.infrastructure.attribute_filters import (
+    FiltrosAtributosInvalidos,
+    parse_attribute_params,
+)
+from apps.catalog.infrastructure.repositories import ProductRepository
 
-from apps.catalog.application.use_cases import SoftDeleteProductUseCase
+# 6. Catálogo - Capa de Presentación (Serializadores)
+from .serializers import (
+    AgregarItemCarritoRequestSerializer,
+    ConfiguracionTransbankInputSerializer,
+    ConfiguracionTransbankResponseSerializer,
+    ItemCarritoResponseSerializer,
+    ModificarCantidadRequestSerializer,
+    ProductPublicAttributesSerializer,
+    ProductPublicDetailSerializer,
+    ProductPublicListItemSerializer,
+    ProductoAdminDetailSerializer,
+    ProductoCreateSerializer,
+    ProductoStockUpdateSerializer,
+    ProductoUpdateSerializer,
+    VarianteStockUpdateSerializer,
+    # Nuevos Serializadores - Adaptador Transbank
+    IniciarPagoTransbankSerializer,
+    ConfirmarPagoTransbankSerializer,
+    #PayPal
+    ConfiguracionPayPalInputSerializer,
+    ConfiguracionPayPalResponseSerializer,
+    #MercadoPago
+    ConfiguracionMercadoPagoInputSerializer,
+    ConfiguracionMercadoPagoResponseSerializer,
+)
 
-from .serializers import ProductPublicListItemSerializer, ProductPublicDetailSerializer, ProductPublicAttributesSerializer
 
-from apps.core.models import Tienda, Producto
+class ConfiguracionMercadoPagoView(APIView):
+    """
+    GET: Consulta la configuración actual de Mercado Pago para la tienda.
+    POST: Actualiza credenciales y estado de activación.
+    """
+    permission_classes = [AllowAny]
 
-from rest_framework.permissions import IsAuthenticated
+    def get(self, request, id_tienda):
+        use_case = ObtenerConfiguracionMercadoPagoUseCase()
+        datos = use_case.execute(id_tienda=id_tienda)
+        serializer = ConfiguracionMercadoPagoResponseSerializer(datos)
+        return Response(
+            {
+                "exito": True,
+                "mensaje": "Configuración de Mercado Pago obtenida correctamente.",
+                "data": serializer.data,
+            },
+            status=status.HTTP_200_OK,
+        )
 
-from ..application.use_cases import CreateProductUseCase
-from .serializers import ProductCreateSerializer, ProductAdminDetailSerializer
-from ..application.use_cases import UpdateCatalogProductUseCase, ProductEditConflict
-from pymongo.errors import DuplicateKeyError, PyMongoError
-from bson import ObjectId
+    def post(self, request, id_tienda):
+        serializer = ConfiguracionMercadoPagoInputSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(
+                {
+                    "exito": False,
+                    "mensaje": "Datos del formulario inválidos.",
+                    "error": {"codigo": "DATOS_INVALIDOS", "detalles": serializer.errors},
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
-from .serializers import ProductoAdminDetailSerializer
+        dto = GuardarConfiguracionMercadoPagoDTO(
+            id_tienda=id_tienda,
+            **serializer.validated_data
+        )
 
-from ..application.use_cases import ObtenerProductoAdminUseCase
+        use_case = GuardarConfiguracionMercadoPagoUseCase()
+        try:
+            resultado = use_case.execute(id_tienda=id_tienda, dto=dto)
+            response_serializer = ConfiguracionMercadoPagoResponseSerializer(resultado)
+            return Response(
+                {
+                    "exito": True,
+                    "mensaje": "Configuración de Mercado Pago guardada exitosamente.",
+                    "data": response_serializer.data,
+                },
+                status=status.HTTP_200_OK,
+            )
+        except ConfiguracionPagoInvalidaException as e:
+            return Response(
+                {
+                    "exito": False,
+                    "mensaje": str(e),
+                    "error": {"codigo": "CONFIGURACION_INVALIDA", "detalles": None},
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
-from .serializers import ProductoUpdateSerializer
 
-from ..application.use_cases import ActualizarProductoAdminUseCase
 
-from .serializers import ProductoStockUpdateSerializer
 
-from ..application.use_cases import ActualizarStockProductoUseCase
 
-from ..application.use_cases import ValidarDisponibilidadProductoUseCase
 
-from ..application.services import VariantService
-from .serializers import VarianteStockUpdateSerializer
+
+
+
+
+
+
+
+
+
+
+class ConfiguracionPayPalView(APIView):
+    """
+    GET: Consulta la configuración actual de PayPal para la tienda.
+    POST: Actualiza credenciales y estado de activación.
+    """
+    permission_classes = [AllowAny]
+
+    def get(self, request, id_tienda):
+        use_case = ObtenerConfiguracionPayPalUseCase()
+        datos = use_case.execute(id_tienda=id_tienda)
+        serializer = ConfiguracionPayPalResponseSerializer(datos)
+        return Response(
+            {
+                "exito": True,
+                "mensaje": "Configuración de PayPal obtenida correctamente.",
+                "data": serializer.data,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+    def post(self, request, id_tienda):
+        serializer = ConfiguracionPayPalInputSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(
+                {
+                    "exito": False,
+                    "mensaje": "Datos del formulario inválidos.",
+                    "error": {"codigo": "DATOS_INVALIDOS", "detalles": serializer.errors},
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        dto = GuardarConfiguracionPayPalDTO(
+            id_tienda=id_tienda,
+            **serializer.validated_data
+        )
+
+        use_case = GuardarConfiguracionPayPalUseCase()
+        try:
+            resultado = use_case.execute(id_tienda=id_tienda, dto=dto)
+            response_serializer = ConfiguracionPayPalResponseSerializer(resultado)
+            return Response(
+                {
+                    "exito": True,
+                    "mensaje": "Configuración de PayPal guardada exitosamente.",
+                    "data": response_serializer.data,
+                },
+                status=status.HTTP_200_OK,
+            )
+        except ConfiguracionPagoInvalidaException as e:
+            return Response(
+                {
+                    "exito": False,
+                    "mensaje": str(e),
+                    "error": {"codigo": "CONFIGURACION_INVALIDA", "detalles": None},
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+
+
+
+
+
+
+
+
+class ConfiguracionTransbankView(APIView):
+    """
+    Endpoint para consultar y actualizar las credenciales de Transbank de una tienda.
+    GET/POST /api/catalog/tiendas/<int:id_tienda>/configuracion/transbank/
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, id_tienda: int):
+        use_case = ObtenerConfiguracionTransbankUseCase()
+        try:
+            config = use_case.execute(usuario_id=request.user.id, id_tienda=id_tienda)
+            if not config:
+                return Response(
+                    {
+                        "exito": True,
+                        "mensaje": "La tienda aún no tiene configurado Transbank.",
+                        "data": {
+                            "configurado": False,
+                            "id_tienda": id_tienda,
+                            "codigo_comercio": "597055555532",
+                            "ambiente": "INTEGRACION",
+                            "activo": False,
+                            "api_key_enmascarada": ""
+                        }
+                    },
+                    status=status.HTTP_200_OK
+                )
+
+            data = ConfiguracionTransbankResponseSerializer(config).data
+            data["configurado"] = True
+            return Response(
+                {"exito": True, "mensaje": "Configuración obtenida exitosamente.", "data": data},
+                status=status.HTTP_200_OK
+            )
+        except TiendaNoAutorizadaException as e:
+            return Response(
+                {"exito": False, "mensaje": str(e), "error": {"codigo": "NO_AUTORIZADO", "detalles": None}},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+    def post(self, request, id_tienda: int):
+        serializer = ConfiguracionTransbankInputSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(
+                {
+                    "exito": False,
+                    "mensaje": "Datos del formulario inválidos.",
+                    "error": {"codigo": "DATOS_INVALIDOS", "detalles": serializer.errors}
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        dto = GuardarConfiguracionTransbankDTO(
+            usuario_id=request.user.id,
+            id_tienda=id_tienda,
+            codigo_comercio=serializer.validated_data["codigo_comercio"],
+            api_key=serializer.validated_data["api_key"],
+            ambiente=serializer.validated_data["ambiente"],
+            activo=serializer.validated_data.get("activo", True)
+        )
+
+        use_case = GuardarConfiguracionTransbankUseCase()
+
+        try:
+            config_guardada = use_case.execute(dto)
+            data = ConfiguracionTransbankResponseSerializer(config_guardada).data
+            data["configurado"] = True
+            return Response(
+                {
+                    "exito": True,
+                    "mensaje": "Configuración de Transbank guardada exitosamente.",
+                    "data": data
+                },
+                status=status.HTTP_200_OK
+            )
+        except ConfiguracionPagoInvalidaException as e:
+            return Response(
+                {"exito": False, "mensaje": str(e), "error": {"codigo": "CONFIGURACION_INVALIDA", "detalles": None}},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        except TiendaNoAutorizadaException as e:
+            return Response(
+                {"exito": False, "mensaje": str(e), "error": {"codigo": "NO_AUTORIZADO", "detalles": None}},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        except Exception as e:
+            return Response(
+                {"exito": False, "mensaje": f"Error interno: {str(e)}", "error": {"codigo": "ERROR_INTERNO", "detalles": None}},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+
+
+
+
+
+class CarritoItemsView(APIView):
+    """
+    Endpoint para listar y agregar productos o variantes al carrito del usuario autenticado.
+    POST /api/catalog/carrito/items/
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, *args, **kwargs):
+        """Recupera todos los ítems del carrito activo del usuario autenticado."""
+        from apps.core.models import Carrito, ItemCarrito
+
+        # 1. Identificar el ID del usuario
+        user_id = request.user.id if request.user and request.user.is_authenticated else None
+
+        # 2. Buscar el carrito activo usando id_usuario o id_usuario_id
+        carrito = None
+        if user_id:
+            try:
+                carrito = Carrito.objects.filter(id_usuario_id=user_id).first()
+            except Exception:
+                try:
+                    carrito = Carrito.objects.filter(id_usuario=user_id).first()
+                except Exception:
+                    carrito = Carrito.objects.filter(usuario=request.user).first()
+
+        if not carrito:
+            return Response(
+                {
+                    "exito": True,
+                    "mensaje": "El carrito está vacío.",
+                    "data": [],
+                },
+                status=status.HTTP_200_OK,
+            )
+
+        # 3. Buscar los ítems vinculados al carrito
+        try:
+            items_qs = ItemCarrito.objects.filter(id_carrito=carrito).select_related("id_producto")
+            prod_attr = "id_producto"
+        except Exception:
+            items_qs = ItemCarrito.objects.filter(carrito=carrito).select_related("producto")
+            prod_attr = "producto"
+
+        items_data = []
+        for item in items_qs:
+            prod = getattr(item, prod_attr, None)
+            precio = float(getattr(prod, "precio", 0)) if prod else 0.0
+            cantidad = item.cantidad
+            items_data.append({
+                "id_item_carrito": item.pk,
+                "id_producto": prod.pk if prod else None,
+                "nombre_producto": getattr(prod, "nombre", "Producto"),
+                "precio_unitario": str(precio),
+                "cantidad": cantidad,
+                "subtotal": round(precio * cantidad, 2),
+                "stock_disponible": getattr(prod, "stock", 99),
+                "sku": getattr(item, "sku", None),
+            })
+
+        return Response(
+            {
+                "exito": True,
+                "mensaje": "Carrito obtenido exitosamente.",
+                "data": items_data,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+    
+    def post(self, request):
+        serializer = AgregarItemCarritoRequestSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(
+                {
+                    "exito": False,
+                    "mensaje": "Datos de entrada inválidos.",
+                    "error": {
+                        "codigo": "DATOS_INVALIDOS",
+                        "detalles": serializer.errors
+                    }
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        dto = AgregarItemCarritoDTO(
+            usuario_id=request.user.id,
+            id_producto=serializer.validated_data["id_producto"],
+            cantidad=serializer.validated_data.get("cantidad", 1),
+            sku=serializer.validated_data.get("sku")
+        )
+
+        use_case = AgregarItemCarritoUseCase()
+
+        try:
+            item = use_case.execute(dto)
+            response_serializer = ItemCarritoResponseSerializer(item)
+            return Response(
+                {
+                    "exito": True,
+                    "mensaje": "Producto agregado al carrito exitosamente.",
+                    "data": response_serializer.data
+                },
+                status=status.HTTP_201_CREATED
+            )
+        except CantidadInvalidaException as e:
+            return Response(
+                {"exito": False, "mensaje": str(e), "error": {"codigo": "CANTIDAD_INVALIDA", "detalles": None}},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        except StockInsuficienteException as e:
+            return Response(
+                {"exito": False, "mensaje": str(e), "error": {"codigo": "STOCK_INSUFICIENTE", "detalles": None}},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        except (ProductoNoEncontradoException, VarianteNoEncontradaException) as e:
+            return Response(
+                {"exito": False, "mensaje": str(e), "error": {"codigo": "RECURSO_NO_ENCONTRADO", "detalles": None}},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        except Exception as e:
+            return Response(
+                {"exito": False, "mensaje": f"Error interno: {str(e)}", "error": {"codigo": "ERROR_INTERNO", "detalles": None}},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+class ModificarCantidadItemAPIView(APIView):
+    """
+    Endpoint para modificar la cantidad de un ítem en el carrito del usuario autenticado.
+    PATCH /api/catalog/carrito/items/<id_item_carrito>/
+    """
+    permission_classes = [IsAuthenticated]
+
+    def patch(self, request, id_item_carrito):
+        serializer = ModificarCantidadRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        dto = ModificarCantidadDTO(
+            id_item_carrito=id_item_carrito,
+            nueva_cantidad=serializer.validated_data['cantidad'],
+            usuario_id=request.user.id
+        )
+
+        use_case = ModificarCantidadItemUseCase()
+
+        try:
+            item_actualizado = use_case.execute(dto)
+            return success_response(
+                data=ItemCarritoResponseSerializer(item_actualizado).data,
+                mensaje="Cantidad actualizada exitosamente.",
+                status=status.HTTP_200_OK
+            )
+        except (CantidadInvalidaException, StockInsuficienteException) as err:
+            return error_response(
+                mensaje=str(err),
+                codigo="CANTIDAD_INVALIDA",
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        except ItemCarritoNoEncontradoException as err:
+            return error_response(
+                mensaje=str(err),
+                codigo="ITEM_NO_ENCONTRADO",
+                status=status.HTTP_404_NOT_FOUND
+            )
+    
+    def delete(self, request, id_item_carrito):
+        """
+        Elimina un ítem específico del carrito del usuario autenticado.
+        """
+        dto = EliminarItemCarritoDTO(
+            usuario_id=request.user.id,
+            id_item_carrito=id_item_carrito
+        )
+
+        use_case = EliminarItemCarritoUseCase()
+
+        try:
+            use_case.execute(dto)
+            return Response(
+                {
+                    "exito": True,
+                    "mensaje": "Producto eliminado del carrito exitosamente.",
+                    "data": None
+                },
+                status=status.HTTP_200_OK
+            )
+        except ItemCarritoNoEncontradoException as e:
+            return Response(
+                {
+                    "exito": False,
+                    "mensaje": str(e),
+                    "error": {
+                        "codigo": "RECURSO_NO_ENCONTRADO",
+                        "detalles": None
+                    }
+                },
+                status=status.HTTP_404_NOT_FOUND
+            )
+        except Exception as e:
+            return Response(
+                {
+                    "exito": False,
+                    "mensaje": f"Error interno: {str(e)}",
+                    "error": {
+                        "codigo": "ERROR_INTERNO",
+                        "detalles": None
+                    }
+                },
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
 
 class VarianteStockUpdateView(APIView):
@@ -233,16 +725,12 @@ class PublicProductAttributesAPIView(APIView):
 
 class ProductDeleteAPIView(APIView):
 
-    # TODO: volver a exigir autenticación real cuando el panel admin
-    # tenga login contra Django (hoy usa una sesión local de prueba,
-    # igual que ProductoCreateView).
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
 
     def delete(self, request, id_producto):
+        tienda_id = resolver_tienda_id(request, exigir_propietario=True)
 
         try:
-
-            tienda_id = resolver_tienda_id(request)
 
 
             use_case = SoftDeleteProductUseCase()
@@ -270,12 +758,10 @@ class ProductDeleteAPIView(APIView):
 
 
 class ProductoCreateView(APIView):
-    # TODO: volver a exigir autenticación real cuando el panel admin
-    # tenga login contra Django (hoy usa una sesión local de prueba).
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
 
     def post(self, request):
-        tienda = resolver_tienda(request)
+        tienda = resolver_tienda(request, exigir_propietario=True)
 
         serializer = ProductCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -506,6 +992,11 @@ class ProductVariantsView(APIView):
 
     permission_classes = [AllowAny]
 
+
+    def get_permissions(self):
+        if self.request.method in ('POST', 'PUT', 'PATCH', 'DELETE'):
+            return [IsAuthenticated(), IsStoreOwner()]
+        return super().get_permissions()
 
     def __init__(self, **kwargs):
 
@@ -1119,12 +1610,105 @@ class VariantPurchaseView(APIView):
 
             return Response({"error": f"Error interno: {str(e)}", "codigo": "ERROR_INTERNO"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-class ProductoAdminListView(APIView):
-    # TODO: autenticación real cuando el panel admin tenga login contra Django.
+
+class IniciarPagoTransbankView(APIView):
+    """
+    Inicia la transacción contra Transbank para el checkout.
+    POST /api/catalog/pagos/transbank/iniciar/
+    """
     permission_classes = [AllowAny]
 
+    def post(self, request):
+        serializer = IniciarPagoTransbankSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(
+                {
+                    "exito": False,
+                    "mensaje": "Parámetros de pago inválidos.",
+                    "error": {"codigo": "DATOS_INVALIDOS", "detalles": serializer.errors},
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        dto = IniciarPagoTransbankDTO(
+            id_tienda=serializer.validated_data["id_tienda"],
+            orden_compra=serializer.validated_data["orden_compra"],
+            monto=serializer.validated_data["monto"],
+            session_id=serializer.validated_data["session_id"],
+            return_url=serializer.validated_data["return_url"],
+        )
+
+        use_case = IniciarPagoTransbankUseCase()
+        try:
+            resultado = use_case.execute(dto)
+            return Response(
+                {
+                    "exito": True,
+                    "mensaje": "Transacción Webpay iniciada.",
+                    "data": resultado,
+                },
+                status=status.HTTP_200_OK,
+            )
+        except TransbankConfiguracionFaltanteException as e:
+            return Response(
+                {"exito": False, "mensaje": str(e), "error": {"codigo": "PASARELA_NO_DISPONIBLE", "detalles": None}},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        except TransbankTransaccionException as e:
+            return Response(
+                {"exito": False, "mensaje": str(e), "error": {"codigo": "ERROR_TRANSBANK", "detalles": None}},
+                status=status.HTTP_502_BAD_GATEWAY,
+            )
+
+
+class ConfirmarPagoTransbankView(APIView):
+    """
+    Valida y confirma la transacción tras el retorno desde Webpay.
+    POST /api/catalog/pagos/transbank/confirmar/
+    """
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        serializer = ConfirmarPagoTransbankSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(
+                {
+                    "exito": False,
+                    "mensaje": "Token o parámetros de confirmación inválidos.",
+                    "error": {"codigo": "DATOS_INVALIDOS", "detalles": serializer.errors},
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        use_case = ConfirmarPagoTransbankUseCase()
+        try:
+            resultado = use_case.execute(
+                id_tienda=serializer.validated_data["id_tienda"],
+                token_ws=serializer.validated_data["token_ws"],
+            )
+            return Response(
+                {
+                    "exito": True,
+                    "mensaje": "Pago aprobado con éxito.",
+                    "data": resultado,
+                },
+                status=status.HTTP_200_OK,
+            )
+        except TransbankRechazoException as e:
+            return Response(
+                {"exito": False, "mensaje": str(e), "error": {"codigo": "PAGO_RECHAZADO", "detalles": None}},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        except (TransbankConfiguracionFaltanteException, TransbankTransaccionException) as e:
+            return Response(
+                {"exito": False, "mensaje": str(e), "error": {"codigo": "ERROR_TRANSBANK", "detalles": None}},
+                status=status.HTTP_502_BAD_GATEWAY,
+            )
+class ProductoAdminListView(APIView):
+    permission_classes = [IsAuthenticated, IsStoreOwner]
+
     def get(self, request):
-        tienda = resolver_tienda(request)
+        tienda = resolver_tienda(request, exigir_propietario=True)
         repo = ProductRepository()
 
         productos = Producto.objects.filter(id_tienda=tienda).order_by('-fecha_creacion')

@@ -32,7 +32,7 @@ export default function Login() {
         localStorage.setItem('token', data.data.token);
         
         // Redirección condicional según el correo
-        if (data.data.user.email === 'emprendedor@gmail.com') {
+        if (data.data.user.is_store_owner === true) {
           navigate('/emprendedor');
         } else {
           navigate(route()); // Envía al usuario a la vista pública de la tienda
@@ -70,7 +70,7 @@ export default function Login() {
       localStorage.setItem('token', data.data.token);
       
       // Redirección condicional según el correo
-      if (data.data.user.email === 'emprendedor@gmail.com') {
+      if (data.data.user.is_store_owner === true) {
         navigate('/emprendedor');
       } else {
         navigate(route()); // Envía al usuario a la vista pública de la tienda

@@ -13,7 +13,7 @@ import {
   Icon,
 } from '../components/ui';
 import { useStorefrontTemplate } from '../hooks/useStorefrontTemplate';
-
+import { transbankPaymentService } from '../../checkout/services/transbankPaymentService';
 const STEPS = [
   { id: 'contact', label: 'Contacto' },
   { id: 'delivery', label: 'Entrega' },
@@ -62,6 +62,38 @@ type PaymentOption = {
 };
 
 const ADMIN_STORAGE_KEY = 'ua-entrepreneur-demo-v1';
+
+type AuthSettings = {
+  emailPassword: boolean;
+  google: boolean;
+  guestCheckout: boolean;
+  requiresAuth: 'none' | 'optional' | 'required';
+};
+
+const defaultAuthSettings: AuthSettings = {
+  emailPassword: true,
+  google: true,
+  guestCheckout: true,
+  requiresAuth: 'optional',
+};
+
+function getAvailableAuthModes(settings: AuthSettings): AuthMode[] {
+  const modes: AuthMode[] = [];
+
+  if (settings.guestCheckout && settings.requiresAuth !== 'required') {
+    modes.push('guest');
+  }
+
+  if (settings.emailPassword) {
+    modes.push('login');
+  }
+
+  if (settings.google) {
+    modes.push('google');
+  }
+
+  return modes.length ? modes : ['login'];
+}
 
 const defaultShippingOptions: ShippingOption[] = [
   {
@@ -130,12 +162,25 @@ function readCheckoutOptions() {
       return {
         shippingOptions: defaultShippingOptions,
         paymentOptions: defaultPaymentOptions,
+        authSettings: defaultAuthSettings,
       };
     }
 
     const config = JSON.parse(raw)?.config;
     const shippingConfig = config?.shippingConfiguration;
     const paymentConfig = config?.paymentConfiguration;
+    const authConfig = config?.authenticationConfiguration;
+    const authSettings: AuthSettings = {
+      emailPassword:
+        authConfig?.emailPassword ??
+        defaultAuthSettings.emailPassword,
+      google: authConfig?.google ?? defaultAuthSettings.google,
+      guestCheckout:
+        authConfig?.guestCheckout ??
+        defaultAuthSettings.guestCheckout,
+      requiresAuth:
+        config?.requiresAuth ?? defaultAuthSettings.requiresAuth,
+    };
 
     let shippingOptions = defaultShippingOptions;
     if (shippingConfig) {
@@ -177,13 +222,19 @@ function readCheckoutOptions() {
     }
 
     return {
-      shippingOptions,
-      paymentOptions,
+      shippingOptions: shippingOptions.length
+        ? shippingOptions
+        : defaultShippingOptions,
+      paymentOptions: paymentOptions.length
+        ? paymentOptions
+        : defaultPaymentOptions,
+      authSettings,
     };
   } catch {
     return {
       shippingOptions: defaultShippingOptions,
       paymentOptions: defaultPaymentOptions,
+      authSettings: defaultAuthSettings,
     };
   }
 }
@@ -325,9 +376,13 @@ export default function Checkout() {
   const { route, isMinimal, isVisual, isCatalog } =
     useStorefrontTemplate();
 
-  const { shippingOptions, paymentOptions } = useMemo(
+  const { shippingOptions, paymentOptions, authSettings } = useMemo(
     readCheckoutOptions,
     [],
+  );
+  const availableAuthModes = useMemo(
+    () => getAvailableAuthModes(authSettings),
+    [authSettings],
   );
 
   const navigate = useNavigate();
@@ -335,7 +390,7 @@ export default function Checkout() {
   const [step, setStep] = useState('contact');
 
   const [authMode, setAuthMode] =
-    useState<AuthMode>('guest');
+    useState<AuthMode>(() => availableAuthModes[0]);
 
   const [contact, setContact] = useState({
     name: '',
@@ -364,6 +419,12 @@ export default function Checkout() {
   useEffect(() => {
     window.scrollTo(0, 0);
   }, [step]);
+
+  useEffect(() => {
+    if (!availableAuthModes.includes(authMode)) {
+      setAuthMode(availableAuthModes[0]);
+    }
+  }, [authMode, availableAuthModes]);
 
   /*
    * ==========================================================
@@ -448,6 +509,11 @@ export default function Checkout() {
     const newErrors: Record<string, string> = {};
 
     if (currentStep === 'contact') {
+      if (!availableAuthModes.includes(authMode)) {
+        newErrors.auth =
+          'Selecciona un metodo de acceso permitido por la tienda.';
+      }
+
       if (!contact.name.trim()) {
         newErrors.name = 'Nombre requerido';
       }
@@ -515,22 +581,81 @@ export default function Checkout() {
 
   /*
    * ==========================================================
-   * CONFIRMAR PEDIDO
+   * CONFIRMAR PEDIDO (CON INTEGRACIÓN ADAPTADOR TRANSBANK)
    * ==========================================================
    */
-  const handleConfirm = () => {
+  const handleConfirm = async () => {
     if (loading || !items.length) return;
 
     setLoading(true);
 
-    const orderNumber =
-      `ORD-DEMO-${crypto
-        .randomUUID()
-        .slice(0, 8)
-        .toUpperCase()}`;
+    const orderNumber = `ORD-${Date.now().toString().slice(-6)}-${crypto
+      .randomUUID()
+      .slice(0, 4)
+      .toUpperCase()}`;
 
     const now = new Date().toISOString();
 
+    // 1. Integración con el Adaptador de Transbank Webpay
+    if (paymentMethod === 'Transbank') {
+      try {
+        // Guardamos el pedido en el contexto local con estado pendiente
+        addOrder({
+          id: orderNumber,
+          number: orderNumber,
+          customer: {
+            ...contact,
+            email: contact.email.trim(),
+          },
+          items: items.map((item) => ({
+            ...item,
+          })),
+          subtotal,
+          discount,
+          shipping,
+          total,
+          status: 'pending',
+          paymentStatus: 'pending',
+          paymentMethod,
+          shippingMethod,
+          address,
+          createdAt: now,
+          updatedAt: now,
+        });
+
+        // URL de retorno donde Transbank enviará al cliente con su token_ws
+        const returnUrl = `${window.location.origin}${route('pedido-confirmado')}?orderNumber=${orderNumber}`;
+
+        // Invocamos el endpoint de la API conectado a través del adaptador Webpay
+        const res = await transbankPaymentService.iniciarPago(
+          1, // ID de la tienda activa
+          orderNumber,
+          total,
+          returnUrl,
+        );
+
+        if (res.exito && res.data?.url && res.data?.token) {
+          clearCart();
+          // Redirige al checkout bancario de Transbank
+          transbankPaymentService.redirigirAWebpay(res.data.url, res.data.token);
+          return;
+        } else {
+          setErrors({
+            payment: res.mensaje || 'Error al iniciar la pasarela de Transbank Webpay.',
+          });
+          setLoading(false);
+          return;
+        }
+      } catch {
+        setErrors({
+          payment: 'No se pudo establecer conexión con el servidor para iniciar Webpay.',
+        });
+        setLoading(false);
+        return;
+      }
+    }
+
+    // 2. Flujo habitual para otros métodos de pago
     addOrder({
       id: orderNumber,
       number: orderNumber,
@@ -758,13 +883,7 @@ export default function Checkout() {
                     : 'flex gap-2 p-1 bg-[var(--muted)] rounded-xl'
                 }
               >
-                {(
-                  [
-                    'guest',
-                    'login',
-                    'google',
-                  ] as AuthMode[]
-                ).map((mode) => (
+                {availableAuthModes.map((mode) => (
                   <button
                     type="button"
                     key={mode}
@@ -807,6 +926,16 @@ export default function Checkout() {
                   </button>
                 ))}
               </div>
+
+              {errors.auth && (
+                <Alert variant="error">{errors.auth}</Alert>
+              )}
+
+              {!availableAuthModes.includes('guest') && (
+                <Alert variant="info">
+                  La tienda requiere iniciar sesion antes de pagar.
+                </Alert>
+              )}
 
               {authMode === 'google' && (
                 <button
@@ -1164,8 +1293,7 @@ export default function Checkout() {
               )}
 
               {/* TRANSBANK */}
-              {paymentMethod ===
-                'Transbank' && (
+              {paymentMethod === 'Transbank' && (
                 <div
                   className={
                     isMinimal
@@ -1183,44 +1311,28 @@ export default function Checkout() {
 
                     <div>
                       <p className="font-semibold text-sm">
-                        Pagar con Webpay
+                        Pagar con Webpay Plus
                       </p>
 
                       <p className="text-xs text-[#667085]">
-                        Demostración con datos
-                        ficticios · Sin cobros
+                        Redirección al portal seguro de Transbank · Débito, Crédito y Prepago
                       </p>
                     </div>
                   </div>
 
                   <Select
-                    label="Tipo de tarjeta"
-                    value={
-                      transbank.cardType
-                    }
+                    label="Tipo de tarjeta preferida"
+                    value={transbank.cardType}
                     onChange={(event) =>
-                      setTransbank(
-                        (current) => ({
-                          ...current,
-                          cardType:
-                            event.target
-                              .value,
-                        }),
-                      )
+                      setTransbank((current) => ({
+                        ...current,
+                        cardType: event.target.value,
+                      }))
                     }
                     options={[
-                      {
-                        value: 'credito',
-                        label: 'Crédito',
-                      },
-                      {
-                        value: 'debito',
-                        label: 'Débito',
-                      },
-                      {
-                        value: 'prepago',
-                        label: 'Prepago',
-                      },
+                      { value: 'credito', label: 'Crédito' },
+                      { value: 'debito', label: 'Débito' },
+                      { value: 'prepago', label: 'Prepago' },
                     ]}
                   />
 
@@ -1236,12 +1348,10 @@ export default function Checkout() {
                     label="RUT del titular"
                     value={transbank.rut}
                     onChange={(event) =>
-                      setTransbank(
-                        (current) => ({
-                          ...current,
-                          rut: event.target.value,
-                        }),
-                      )
+                      setTransbank((current) => ({
+                        ...current,
+                        rut: event.target.value,
+                      }))
                     }
                     placeholder="12.345.678-9"
                     error={errors.tbRut}
@@ -1252,16 +1362,13 @@ export default function Checkout() {
                       name="lock"
                       className="w-3.5 h-3.5"
                     />
-                    Datos de ejemplo. Este
-                    formulario no procesa
-                    pagos.
+                    Al presionar confirmar serás redirigido a Webpay para ingresar tus datos reales de forma segura.
                   </p>
                 </div>
               )}
 
               {/* MERCADO PAGO */}
-              {paymentMethod ===
-                'MercadoPago' && (
+              {paymentMethod === 'MercadoPago' && (
                 <div
                   className={
                     isMinimal
@@ -1283,8 +1390,7 @@ export default function Checkout() {
                       </p>
 
                       <p className="text-xs text-[#667085]">
-                        Tarjeta o saldo de tu
-                        cuenta Mercado Pago
+                        Tarjeta o saldo de tu cuenta Mercado Pago
                       </p>
                     </div>
                   </div>
@@ -1299,37 +1405,18 @@ export default function Checkout() {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <Select
                       label="Cuotas"
-                      value={
-                        mercadopago.installments
-                      }
+                      value={mercadopago.installments}
                       onChange={(event) =>
-                        setMercadopago(
-                          (current) => ({
-                            ...current,
-                            installments:
-                              event.target
-                                .value,
-                          }),
-                        )
+                        setMercadopago((current) => ({
+                          ...current,
+                          installments: event.target.value,
+                        }))
                       }
                       options={[
-                        {
-                          value: '1',
-                          label:
-                            '1 cuota (sin interés)',
-                        },
-                        {
-                          value: '3',
-                          label: '3 cuotas',
-                        },
-                        {
-                          value: '6',
-                          label: '6 cuotas',
-                        },
-                        {
-                          value: '12',
-                          label: '12 cuotas',
-                        },
+                        { value: '1', label: '1 cuota (sin interés)' },
+                        { value: '3', label: '3 cuotas' },
+                        { value: '6', label: '6 cuotas' },
+                        { value: '12', label: '12 cuotas' },
                       ]}
                     />
 
@@ -1337,18 +1424,12 @@ export default function Checkout() {
                       readOnly
                       label="Correo de Mercado Pago (opcional)"
                       type="email"
-                      value={
-                        mercadopago.email
-                      }
+                      value={mercadopago.email}
                       onChange={(event) =>
-                        setMercadopago(
-                          (current) => ({
-                            ...current,
-                            email:
-                              event.target
-                                .value,
-                          }),
-                        )
+                        setMercadopago((current) => ({
+                          ...current,
+                          email: event.target.value,
+                        }))
                       }
                       placeholder="tu@correo.com"
                     />
@@ -1359,15 +1440,13 @@ export default function Checkout() {
                       name="lock"
                       className="w-3.5 h-3.5"
                     />
-                    Demostración sin conexión a
-                    Mercado Pago.
+                    Demostración sin conexión a Mercado Pago.
                   </p>
                 </div>
               )}
 
               {/* PAYPAL */}
-              {paymentMethod ===
-                'PayPal' && (
+              {paymentMethod === 'PayPal' && (
                 <div
                   className={
                     isMinimal
@@ -1389,8 +1468,7 @@ export default function Checkout() {
                       </p>
 
                       <p className="text-xs text-[#667085]">
-                        Simulación con una
-                        cuenta ficticia
+                        Simulación con una cuenta ficticia
                       </p>
                     </div>
                   </div>
@@ -1400,14 +1478,10 @@ export default function Checkout() {
                     type="email"
                     value={paypal.email}
                     onChange={(event) =>
-                      setPaypal(
-                        (current) => ({
-                          ...current,
-                          email:
-                            event.target
-                              .value,
-                        }),
-                      )
+                      setPaypal((current) => ({
+                        ...current,
+                        email: event.target.value,
+                      }))
                     }
                     placeholder="tu@correo.com"
                     readOnly
@@ -1420,21 +1494,15 @@ export default function Checkout() {
                     type="password"
                     value={paypal.password}
                     onChange={(event) =>
-                      setPaypal(
-                        (current) => ({
-                          ...current,
-                          password:
-                            event.target
-                              .value,
-                        }),
-                      )
+                      setPaypal((current) => ({
+                        ...current,
+                        password: event.target.value,
+                      }))
                     }
                     placeholder="••••••••"
                     readOnly
                     autoComplete="off"
-                    error={
-                      errors.ppPassword
-                    }
+                    error={errors.ppPassword}
                   />
 
                   <p className="flex items-center gap-1.5 text-xs text-[#667085]">
@@ -1442,16 +1510,13 @@ export default function Checkout() {
                       name="lock"
                       className="w-3.5 h-3.5"
                     />
-                    Cuenta ficticia de
-                    demostración. No se conecta
-                    a PayPal.
+                    Cuenta ficticia de demostración. No se conecta a PayPal.
                   </p>
                 </div>
               )}
 
               {/* TRANSFERENCIA */}
-              {paymentMethod ===
-                'Transferencia' && (
+              {paymentMethod === 'Transferencia' && (
                 <div
                   className={
                     isMinimal
@@ -1460,39 +1525,25 @@ export default function Checkout() {
                   }
                 >
                   <p className="font-semibold text-[var(--info)]">
-                    Datos de ejemplo para
-                    transferencia
+                    Datos de ejemplo para transferencia
                   </p>
 
                   <div className="grid grid-cols-2 gap-1 text-xs text-[#151515]">
-                    <span className="text-[#667085]">
-                      Banco:
-                    </span>
+                    <span className="text-[#667085]">Banco:</span>
                     <span>Banco Estado</span>
 
-                    <span className="text-[#667085]">
-                      Cuenta:
-                    </span>
+                    <span className="text-[#667085]">Cuenta:</span>
                     <span>012345678</span>
 
-                    <span className="text-[#667085]">
-                      RUT:
-                    </span>
-                    <span>
-                      12.345.678-9
-                    </span>
+                    <span className="text-[#667085]">RUT:</span>
+                    <span>12.345.678-9</span>
 
-                    <span className="text-[#667085]">
-                      Monto:
-                    </span>
-                    <span className="font-bold">
-                      {formatPrice(total)}
-                    </span>
+                    <span className="text-[#667085]">Monto:</span>
+                    <span className="font-bold">{formatPrice(total)}</span>
                   </div>
 
                   <p className="text-xs text-[#667085]">
-                    Demostración: no realices
-                    transferencias a estos datos.
+                    Demostración: no realices transferencias a estos datos.
                   </p>
                 </div>
               )}
@@ -1521,6 +1572,12 @@ export default function Checkout() {
                   Confirmar pedido
                 </h2>
               </div>
+
+              {errors.payment && (
+                <Alert variant="error">
+                  {errors.payment}
+                </Alert>
+              )}
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
                 <div
@@ -1601,9 +1658,7 @@ export default function Checkout() {
                 </Link>{' '}
                 y{' '}
                 <Link
-                  to={route(
-                    'legal/privacy',
-                  )}
+                  to={route('legal/privacy')}
                   className="font-semibold underline"
                   target="_blank"
                 >
@@ -1655,7 +1710,7 @@ export default function Checkout() {
                   onClick={handleConfirm}
                   className="min-h-12 px-6 rounded-[8px] bg-black text-white text-[12px] font-semibold hover:opacity-80 disabled:opacity-50 transition-opacity"
                 >
-                  {loading ? 'Procesando...' : `Confirmar y pagar ${formatPrice(total)}`}
+                  {loading ? 'Conectando con Webpay...' : `Confirmar y pagar ${formatPrice(total)}`}
                 </button>
               ) : isMinimal ? (
                 <button
@@ -1665,22 +1720,17 @@ export default function Checkout() {
                   className="min-h-12 px-6 rounded-full bg-[#17213b] text-white text-sm font-semibold hover:bg-[#0f2a56] disabled:opacity-50 transition-colors"
                 >
                   {loading
-                    ? 'Procesando...'
-                    : `Confirmar y pagar ${formatPrice(
-                        total,
-                      )}`}
+                    ? 'Conectando con Webpay...'
+                    : `Confirmar y pagar ${formatPrice(total)}`}
                 </button>
               ) : (
                 <Button
                   variant="primary"
                   size="lg"
                   loading={loading}
-                  onClick={
-                    handleConfirm
-                  }
+                  onClick={handleConfirm}
                 >
-                  Confirmar y pagar{' '}
-                  {formatPrice(total)}
+                  {loading ? 'Conectando con Webpay...' : `Confirmar y pagar ${formatPrice(total)}`}
                 </Button>
               )
             ) : isVisual ? (
@@ -1771,17 +1821,12 @@ export default function Checkout() {
                     </p>
 
                     <p className="text-xs text-[#667085] mt-0.5">
-                      {Object.values(
-                        item.attributes,
-                      ).join(' / ')}
+                      {Object.values(item.attributes).join(' / ')}
                     </p>
                   </div>
 
                   <p className="text-xs font-semibold">
-                    {formatPrice(
-                      item.price *
-                        item.quantity,
-                    )}
+                    {formatPrice(item.price * item.quantity)}
                   </p>
                 </div>
               ))}
@@ -1803,9 +1848,7 @@ export default function Checkout() {
                   <span>Descuento</span>
 
                   <span>
-                    −{formatPrice(
-                      discount,
-                    )}
+                    −{formatPrice(discount)}
                   </span>
                 </div>
               )}
