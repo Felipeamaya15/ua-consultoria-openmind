@@ -49,7 +49,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
       const persistedItems: CartItem[] = itemsList.map((it: any) => ({
         id_item_carrito: it.id_item_carrito ?? it.id,
-        productId: String(it.id_producto),
+        productId: it.slug || String(it.id_producto),
         variantId: it.sku || `item-${it.id_item_carrito ?? it.id_producto}`,
         sku: it.sku ?? '',
         name: it.nombre_producto ?? it.nombre ?? '',
@@ -68,7 +68,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         setItems(
           itemsList.map((it: any) => ({
             id_item_carrito: it.id_item_carrito || it.id,
-            productId: String(it.id_producto || 1),
+            productId: it.slug || String(it.id_producto || 1),
             variantId: it.sku || `item-${it.id_item_carrito || it.id_producto}`,
             sku: it.sku || '',
             name: it.nombre_producto || it.nombre || 'Polera Oversize Test',
@@ -130,10 +130,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
     try {
       const prodId = Number(item.productId);
-      if (/^\d+$/.test(item.productId) && Number.isSafeInteger(prodId) &&
-          (localStorage.getItem('token') || sessionStorage.getItem('token'))) {
+      const esIdNumerico = /^\d+$/.test(item.productId) && Number.isSafeInteger(prodId);
+      if (item.productId && (localStorage.getItem('token') || sessionStorage.getItem('token'))) {
         const itemGuardado: any = await cartService.agregarItem(
-          prodId,
+          esIdNumerico ? prodId : item.productId,
           item.quantity,
           item.sku || undefined
         );

@@ -819,6 +819,49 @@ class ModificarCantidadDTO:
     usuario_id: int
 
 
+def resolver_stock_item(item: ItemCarrito, variant_service: Optional[VariantService] = None) -> int:
+    """Stock real de un ítem: el de la variante (MongoDB) si tiene SKU, o el del producto base."""
+    if not item.sku:
+        return item.id_producto.stock
+    try:
+        variante = service.get_variant_by_sku(str(item.id_producto_id), item.sku)
+    except ValueError:
+        return 0
+    return int(variante.get("stock", 0))
+
+
+class ConsultarCarritoUseCase:
+    """Devuelve los ítems del carrito del usuario autenticado con su stock real."""
+
+    def __init__(self, variant_service: Optional[VariantService] = None, product_repository=None):
+        self.variant_service = variant_service or VariantService()
+        self._product_repository = product_repository
+
+    def _resolver_slug(self, item: ItemCarrito) -> Optional[str]:
+        """Slug público del producto (MongoDB); la tienda lo usa como clave del producto."""
+        try:
+            if self._product_repository is None:
+                self._product_repository = ProductRepository()
+            documento = self._product_repository.get_by_id(
+                str(item.id_producto.id_tienda_id), str(item.id_producto_id)
+            )
+        except Exception:
+            return None
+        return (documento or {}).get("slug")
+
+    def execute(self, usuario_id: int) -> List[ItemCarrito]:
+        items = list(
+            ItemCarrito.objects
+            .filter(id_carrito__id_usuario_id=usuario_id)
+            .select_related("id_producto")
+            .order_by("id_item_carrito")
+        )
+        for item in items:
+            item.stock_disponible_calculado = resolver_stock_item(item, self.variant_service)
+            item.slug_calculado = self._resolver_slug(item)
+        return items
+
+
 class ModificarCantidadItemUseCase:
     """
     Reglas de negocio:
@@ -860,9 +903,11 @@ class ModificarCantidadItemUseCase:
 @dataclass
 class AgregarItemCarritoDTO:
     usuario_id: int
-    id_producto: int
+    id_producto: Optional[int] = None
     cantidad: int = 1
     sku: Optional[str] = None
+    slug: Optional[str] = None
+    tienda_id: Optional[str] = None
 
 
 class AgregarItemCarritoUseCase:
@@ -876,12 +921,34 @@ class AgregarItemCarritoUseCase:
     5. Si el ítem no existe, lo crea en el carrito del usuario.
     """
 
-    def __init__(self, variant_service: Optional[VariantService] = None):
+    def __init__(self, variant_service: Optional[VariantService] = None, product_repository=None):
         self.variant_service = variant_service or VariantService()
+        self._product_repository = product_repository
+
+    def _resolver_id_producto(self, dto: AgregarItemCarritoDTO) -> int:
+        """Devuelve el id_producto (PostgreSQL), aceptando el slug público del catálogo (MongoDB)."""
+        if dto.id_producto is not None:
+            return dto.id_producto
+
+        slug = str(dto.slug or "").strip()
+        if not slug or not dto.tienda_id:
+            raise ProductoNoEncontradoException("Debes indicar el id o el slug del producto.")
+
+        repositorio = self._product_repository or ProductRepository()
+        documento = repositorio.get_by_slug(str(dto.tienda_id), slug)
+        id_sql = (documento or {}).get("id_producto")
+        try:
+            return int(id_sql)
+        except (TypeError, ValueError):
+            raise ProductoNoEncontradoException(
+                f"El producto '{slug}' no existe o no está disponible para la compra."
+            )
 
     def execute(self, dto: AgregarItemCarritoDTO) -> ItemCarrito:
         if dto.cantidad <= 0:
             raise CantidadInvalidaException("La cantidad agregada debe ser mayor a 0.")
+
+        id_producto = self._resolver_id_producto(dto)
 
         usuario_core = Usuario.objects.filter(id_usuario=dto.usuario_id).first()
         if not usuario_core:
@@ -901,10 +968,10 @@ class AgregarItemCarritoUseCase:
         carrito, _ = Carrito.objects.get_or_create(id_usuario=usuario_core)
 
         try:
-            producto = Producto.objects.get(pk=dto.id_producto, activo=True)
+            producto = Producto.objects.get(pk=id_producto, activo=True)
         except Producto.DoesNotExist:
             raise ProductoNoEncontradoException(
-                f"El producto con ID '{dto.id_producto}' no existe o no se encuentra activo."
+                f"El producto con ID '{id_producto}' no existe o no se encuentra activo."
             )
 
         sku_normalizado = str(dto.sku).strip().upper() if dto.sku else None

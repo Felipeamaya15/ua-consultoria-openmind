@@ -3,6 +3,7 @@ const API_BASE = (import.meta.env.VITE_API_URL || 'http://localhost:8000').repla
 export interface CartItemDTO {
   id_item_carrito: number;
   id_producto: number;
+  slug?: string | null;
   nombre_producto?: string;
   nombre?: string;
   precio_unitario?: string | number;
@@ -44,12 +45,12 @@ export const cartService = {
     return json.data;
   },
 
-  async agregarItem(idProducto: number, cantidad: number = 1, sku?: string): Promise<CartItemDTO> {
+  async agregarItem(producto: number | string, cantidad: number = 1, sku?: string): Promise<CartItemDTO> {
     const res = await fetch(`${API_BASE}/api/catalog/carrito/items/`, {
       method: 'POST',
       headers: getAuthHeaders(),
       body: JSON.stringify({
-        id_producto: idProducto,
+        ...(typeof producto === 'number' ? { id_producto: producto } : { slug: producto }),
         cantidad,
         sku: sku || undefined,
       }),

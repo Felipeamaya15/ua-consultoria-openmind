@@ -311,6 +311,7 @@ class ItemCarritoResponseSerializer(serializers.Serializer):
     subtotal = serializers.SerializerMethodField()
     sku = serializers.CharField(allow_null=True, required=False)
     stock_disponible = serializers.SerializerMethodField()
+    slug = serializers.SerializerMethodField()
 
     def get_subtotal(self, obj):
         return obj.cantidad * obj.id_producto.precio
@@ -319,13 +320,23 @@ class ItemCarritoResponseSerializer(serializers.Serializer):
         # Los casos de uso calculan el stock real (variante o producto base).
         return getattr(obj, 'stock_disponible_calculado', obj.id_producto.stock)
 
+    def get_slug(self, obj):
+        return getattr(obj, 'slug_calculado', None)
+
 class AgregarItemCarritoRequestSerializer(serializers.Serializer):
     id_producto = serializers.IntegerField(
-        required=True,
+        required=False,
         min_value=1,
         error_messages={
-            "required": "El campo 'id_producto' es obligatorio.",
             "invalid": "El 'id_producto' debe ser un número entero válido."
+        }
+    )
+    slug = serializers.SlugField(
+        required=False,
+        allow_blank=False,
+        error_messages={
+            "invalid": "El 'slug' del producto no es válido.",
+            "blank": "El 'slug' del producto no puede estar vacío."
         }
     )
     cantidad = serializers.IntegerField(
@@ -343,6 +354,13 @@ class AgregarItemCarritoRequestSerializer(serializers.Serializer):
         allow_blank=True,
         default=None
     )
+
+    def validate(self, attrs):
+        if attrs.get("id_producto") is None and not attrs.get("slug"):
+            raise serializers.ValidationError(
+                {"id_producto": "Debes indicar el 'id_producto' o el 'slug' del producto."}
+            )
+        return attrs
 
 class ConfiguracionTransbankInputSerializer(serializers.Serializer):
     codigo_comercio = serializers.CharField(
@@ -447,6 +465,7 @@ class ItemCarritoResponseSerializer(serializers.Serializer):
     subtotal = serializers.SerializerMethodField()
     sku = serializers.CharField(allow_null=True, required=False)
     stock_disponible = serializers.SerializerMethodField()
+    slug = serializers.SerializerMethodField()
 
     def get_subtotal(self, obj):
         return obj.cantidad * obj.id_producto.precio
@@ -455,13 +474,24 @@ class ItemCarritoResponseSerializer(serializers.Serializer):
         # Los casos de uso calculan el stock real (variante o producto base).
         return getattr(obj, 'stock_disponible_calculado', obj.id_producto.stock)
 
+    def get_slug(self, obj):
+        # La consulta del carrito lo resuelve desde el catálogo; puede ser None.
+        return getattr(obj, 'slug_calculado', None)
+
 class AgregarItemCarritoRequestSerializer(serializers.Serializer):
     id_producto = serializers.IntegerField(
-        required=True,
+        required=False,
         min_value=1,
         error_messages={
-            "required": "El campo 'id_producto' es obligatorio.",
             "invalid": "El 'id_producto' debe ser un número entero válido."
+        }
+    )
+    slug = serializers.SlugField(
+        required=False,
+        allow_blank=False,
+        error_messages={
+            "invalid": "El 'slug' del producto no es válido.",
+            "blank": "El 'slug' del producto no puede estar vacío."
         }
     )
     cantidad = serializers.IntegerField(
@@ -479,6 +509,13 @@ class AgregarItemCarritoRequestSerializer(serializers.Serializer):
         allow_blank=True,
         default=None
     )
+
+    def validate(self, attrs):
+        if attrs.get("id_producto") is None and not attrs.get("slug"):
+            raise serializers.ValidationError(
+                {"id_producto": "Debes indicar el 'id_producto' o el 'slug' del producto."}
+            )
+        return attrs
 
 class ConfiguracionTransbankInputSerializer(serializers.Serializer):
     codigo_comercio = serializers.CharField(
