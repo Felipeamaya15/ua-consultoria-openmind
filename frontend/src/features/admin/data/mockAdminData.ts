@@ -168,7 +168,15 @@ export const createDefaultAdminConfig = (): AdminConfig =>
       },
       linkify: {
         enabled: false,
-        fields: {},
+        linkify: {
+        enabled: false,
+        fields: {
+          environment: 'sandbox',
+          expirationHours: '48',
+          syncApprovedPayments: 'true',
+          emailCustomer: 'true',
+          autoExpireLinks: 'true',
+        },
       },
       transfer: {
         enabled: true,
