@@ -1,38 +1,46 @@
 from django.urls import path
 
 from apps.catalog.presentation.views import (
+    # Catálogo público
     PublicProductListAPIView,
     PublicProductDetailAPIView,
     PublicProductAttributesAPIView,
-    ProductDeleteAPIView,
+    ValidarDisponibilidadAPIView,
+    # Administración de productos
     ProductoCreateView,
     ProductoAdminDetailView,
     ProductoUpdateView,
     ProductoStockUpdateView,
-    ValidarDisponibilidadAPIView,
-    VarianteStockUpdateView,
-    ProductVariantsView,
-    VariantPurchaseView,
+    ProductDeleteAPIView,
     ProductoAdminListView,
+    # Gestión de variantes
+    ProductVariantsView,
+    VarianteStockUpdateView,
+    VariantPurchaseView,
+    # Carrito de compras
+    CarritoItemsView,
+    ModificarCantidadItemAPIView,
+    # Pasarelas de pago
+    ConfiguracionTransbankView,
+    IniciarPagoTransbankView,
+    ConfirmarPagoTransbankView,
+    ConfiguracionPayPalView,
+    ConfiguracionMercadoPagoView,
 )
 
 urlpatterns = [
-    # Listado documental utilizado por la administración Mongo.
-    path(
-        "productos/admin/listado/",
-        ProductoAdminDetailView.as_view(),
-        name="producto-admin-list",
-    ),
-    # Catálogo público
+    # ==========================================
+    # 1. Catálogo Público y Listados
+    # ==========================================
     path(
         "productos/",
         PublicProductListAPIView.as_view(),
         name="mongo-productos-list",
     ),
-         path(
-            "productos/crear/",
-            ProductoCreateView.as_view(),
-            name="producto-crear",
+    path(
+        "productos/crear/",
+        ProductoCreateView.as_view(),
+        name="producto-crear",
     ),
     path(
         "productos/admin/",
@@ -49,8 +57,15 @@ urlpatterns = [
         PublicProductAttributesAPIView.as_view(),
         name="mongo-producto-atributos",
     ),
+    path(
+        "productos/<str:id_producto>/disponibilidad/",
+        ValidarDisponibilidadAPIView.as_view(),
+        name="producto-disponibilidad",
+    ),
 
-    # Administración de productos
+    # ==========================================
+    # 2. Administración de Productos
+    # ==========================================
     path(
         "productos/<str:id_producto>/admin/",
         ProductoAdminDetailView.as_view(),
@@ -72,14 +87,9 @@ urlpatterns = [
         name="producto-eliminar",
     ),
 
-    # Validación de disponibilidad
-    path(
-        "productos/<str:id_producto>/disponibilidad/",
-        ValidarDisponibilidadAPIView.as_view(),
-        name="producto-disponibilidad",
-    ),
-
-    # Variantes
+    # ==========================================
+    # 3. Variantes de Producto
+    # ==========================================
     path(
         "productos/<str:id_producto>/variantes/",
         ProductVariantsView.as_view(),
@@ -104,5 +114,50 @@ urlpatterns = [
         "productos/<str:id_producto>/variantes/<str:sku>/compra/",
         VariantPurchaseView.as_view(),
         name="variante-compra",
+    ),
+
+    # ==========================================
+    # 4. Flujo de Carrito de Compras
+    # ==========================================
+    # POST: Agregar producto o variante al carrito
+    path(
+        "carrito/items/",
+        CarritoItemsView.as_view(),
+        name="carrito-items-collection",
+    ),
+    # PATCH: Modificar cantidad de un ítem existente
+    path(
+        "carrito/items/<int:id_item_carrito>/",
+        ModificarCantidadItemAPIView.as_view(),
+        name="modificar-cantidad-item",
+    ),
+
+    # ==========================================
+    # 5. Configuración y Pasarelas de Pagos
+    # ==========================================
+    path(
+        "tiendas/<int:id_tienda>/configuracion/transbank/",
+        ConfiguracionTransbankView.as_view(),
+        name="tienda-configuracion-transbank",
+    ),
+    path(
+        "pagos/transbank/iniciar/",
+        IniciarPagoTransbankView.as_view(),
+        name="pago-transbank-iniciar",
+    ),
+    path(
+        "pagos/transbank/confirmar/",
+        ConfirmarPagoTransbankView.as_view(),
+        name="pago-transbank-confirmar",
+    ),
+    path(
+        "tiendas/<int:id_tienda>/configuracion/paypal/",
+        ConfiguracionPayPalView.as_view(),
+        name="configuracion-paypal",
+    ),
+    path(
+        "tiendas/<int:id_tienda>/configuracion/mercadopago/",
+        ConfiguracionMercadoPagoView.as_view(),
+        name="configuracion-mercadopago",
     ),
 ]

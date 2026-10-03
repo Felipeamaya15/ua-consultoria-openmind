@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import PublicProductListAPIView, PublicProductDetailAPIView,PublicProductAttributesAPIView,ProductDeleteAPIView, ProductoCreateView, ProductoAdminDetailView, ProductoUpdateView, ProductoStockUpdateView, ValidarDisponibilidadAPIView
+from .views import PublicProductListAPIView, PublicProductDetailAPIView,PublicProductAttributesAPIView,ProductDeleteAPIView, ProductoCreateView, ProductoAdminDetailView, ProductoUpdateView, ProductoStockUpdateView, ValidarDisponibilidadAPIView, ModificarCantidadItemAPIView
 
 urlpatterns = [
     path('productos/', PublicProductListAPIView.as_view(), name='api_public_product_list'),
