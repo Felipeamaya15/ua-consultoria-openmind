@@ -12,7 +12,7 @@ from apps.core.models import (
 from apps.core.presentation.checkout import GuestCheckoutOrderAPIView
 from apps.core.presentation.responses import error_response, success_response
 from apps.core.presentation.serializers import ConfiguracionPagoSerializer
-
+from apps.core.models import Pedido
 
 class RegistrarCompraView(GuestCheckoutOrderAPIView):
     """Compatibilidad SCRUM-289: reutiliza la creación y seguridad de SCRUM-291."""
@@ -145,3 +145,79 @@ class CapturarPagoPayPalView(APIView):
                 
         except Exception as e:
             return error_response(mensaje=f"Error capturando PayPal: {str(e)}", status=500)
+
+class WebhookLinkifyAPIView(APIView):
+    """
+    Endpoint pasivo (Webhook) para recibir notificaciones automáticas de Linkify 
+    cuando detectan una transferencia en la cuenta del vendedor.
+    """
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        try:
+            datos = request.data
+            reference_id = datos.get('buy_order') or datos.get('reference')
+            estado = datos.get('status')
+
+            if not reference_id:
+                return error_response(mensaje="Falta identificador (reference)", status=400)
+
+            # Buscamos el pedido en PostgreSQL
+            try:
+                pedido = Pedido.objects.get(identificador=reference_id)
+            except Pedido.DoesNotExist:
+                return error_response(mensaje="Pedido no encontrado", status=404)
+
+            # Si el banco de Linkify confirmó el ingreso del dinero
+            if estado in ['PAID', 'VERIFIED', 'COMPLETED']:
+                pedido.estado = 'pagado'
+                pedido.save()
+                return success_response(mensaje="Transferencia detectada automáticamente. Pedido pagado.")
+
+            return success_response(mensaje="Notificación recibida, estado pendiente.")
+            
+        except Exception as e:
+            return error_response(mensaje=f"Error procesando webhook Linkify: {str(e)}", status=500)
+
+
+class VerificarTransferenciaLinkifyAPIView(APIView):
+    """
+    Endpoint activo para que el administrador solicite a Linkify que 
+    busque una transferencia en su cartola bancaria bajo demanda.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        pedido_id = request.data.get('pedido_id')
+        try:
+            tienda = resolver_tienda(request, exigir_propietario=True)
+            pedido = Pedido.objects.get(id_pedido=pedido_id, tienda=tienda)
+            
+            config_pago = ConfiguracionPago.objects.get(tienda=tienda)
+            linkify_config = (config_pago.datos or {}).get("linkify", {})
+            api_key = linkify_config.get("api_key")
+
+            if not api_key:
+                return error_response(mensaje="La tienda no tiene configurado Linkify.", status=400)
+
+            from apps.catalog.infrastructure.adapters.linkify_adapter import LinkifyAdapter
+            adapter = LinkifyAdapter(api_key=api_key)
+            
+            identificador = pedido.identificador or str(pedido.id_pedido)
+            resultado = adapter.verificar_transferencia(identificador, float(pedido.monto_total))
+            
+            if resultado.get("verificado"):
+                pedido.estado = 'pagado'
+                pedido.save()
+                return success_response(mensaje="¡Match exitoso! Transferencia encontrada y pedido actualizado.")
+            else:
+                return error_response(
+                    mensaje="Aún no se detecta la transferencia en el banco.", 
+                    detalles=resultado.get("mensaje"),
+                    status=400
+                )
+                
+        except Pedido.DoesNotExist:
+            return error_response(mensaje="Pedido no encontrado", status=404)
+        except Exception as e:
+            return error_response(mensaje=f"Error en validación Linkify: {str(e)}", status=500)
