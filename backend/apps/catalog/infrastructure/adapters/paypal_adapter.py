@@ -1,0 +1,90 @@
+import urllib.request
+import urllib.parse
+import urllib.error
+import json
+import base64
+from typing import Dict, Any
+
+from apps.catalog.domain.ports.payment_gateway import PaymentGateway
+
+class PayPalAdapter(PaymentGateway):
+    def __init__(self, client_id: str, client_secret: str, ambiente: str = 'SANDBOX'):
+        self.client_id = client_id
+        self.client_secret = client_secret
+        self.base_url = "https://api-m.sandbox.paypal.com" if ambiente == 'SANDBOX' else "https://api-m.paypal.com"
+
+    def _get_access_token(self) -> str:
+        auth_string = f"{self.client_id}:{self.client_secret}"
+        base64_auth = base64.b64encode(auth_string.encode('ascii')).decode('ascii')
+        
+        url = f"{self.base_url}/v1/oauth2/token"
+        data = urllib.parse.urlencode({"grant_type": "client_credentials"}).encode('utf-8')
+        
+        req = urllib.request.Request(url, data=data, method='POST')
+        req.add_header("Authorization", f"Basic {base64_auth}")
+        req.add_header("Content-Type", "application/x-www-form-urlencoded")
+        
+        try:
+            with urllib.request.urlopen(req) as response:
+                return json.loads(response.read().decode())["access_token"]
+        except Exception as e:
+            raise ValueError(f"Error autenticando con PayPal: {str(e)}")
+
+    def create_order(self, amount: float, currency: str, return_url: str, cancel_url: str, reference_id: str) -> Dict[str, Any]:
+        token = self._get_access_token()
+        url = f"{self.base_url}/v2/checkout/orders"
+        
+        payload = {
+            "intent": "CAPTURE",
+            "purchase_units": [{
+                "reference_id": reference_id,
+                "amount": {
+                    "currency_code": currency,
+                    "value": str(round(amount, 2))
+                }
+            }],
+            "application_context": {
+                "return_url": return_url,
+                "cancel_url": cancel_url,
+                "user_action": "PAY_NOW"
+            }
+        }
+        
+        data = json.dumps(payload).encode('utf-8')
+        req = urllib.request.Request(url, data=data, method='POST')
+        req.add_header("Authorization", f"Bearer {token}")
+        req.add_header("Content-Type", "application/json")
+        
+        try:
+            with urllib.request.urlopen(req) as response:
+                data_resp = json.loads(response.read().decode())
+                approve_url = next((link['href'] for link in data_resp.get('links', []) if link['rel'] == 'approve'), None)
+                
+                return {
+                    "exito": True,
+                    "id": data_resp["id"],
+                    "approve_url": approve_url
+                }
+        except urllib.error.HTTPError as e:
+            raise ValueError(f"No se pudo crear la orden en PayPal: {e.reason}")
+
+    def capture_order(self, order_id: str) -> Dict[str, Any]:
+        token = self._get_access_token()
+        url = f"{self.base_url}/v2/checkout/orders/{order_id}/capture"
+        
+        req = urllib.request.Request(url, data=b'', method='POST')
+        req.add_header("Authorization", f"Bearer {token}")
+        req.add_header("Content-Type", "application/json")
+        
+        try:
+            with urllib.request.urlopen(req) as response:
+                data_resp = json.loads(response.read().decode())
+                return {
+                    "exito": data_resp.get("status") == "COMPLETED",
+                    "data": data_resp
+                }
+        except urllib.error.HTTPError as e:
+            return {
+                "exito": False,
+                "mensaje": f"No se pudo capturar el pago en PayPal: {e.reason}"
+            }

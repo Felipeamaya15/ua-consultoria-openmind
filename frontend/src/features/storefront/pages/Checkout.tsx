@@ -14,6 +14,8 @@ import {
 } from '../components/ui';
 import { useStorefrontTemplate } from '../hooks/useStorefrontTemplate';
 import { transbankPaymentService } from '../../checkout/services/transbankPaymentService';
+import { paypalPaymentService } from '../../checkout/services/paypalPaymentService';
+
 const STEPS = [
   { id: 'contact', label: 'Contacto' },
   { id: 'delivery', label: 'Entrega' },
@@ -221,9 +223,10 @@ function readCheckoutOptions() {
       Transferencia: 'transfer',
     };
 
-    let paymentOptions = defaultPaymentOptions;
+    let paymentOptions = paymentPresentation;
+    const paymentConfig = config?.paymentConfiguration;
     if (paymentConfig) {
-      paymentOptions = defaultPaymentOptions.filter((option) => {
+      paymentOptions = paymentPresentation.filter((option) => {
         const key = paymentMap[option.id];
         return key ? !!paymentConfig[key]?.enabled : false;
       });
@@ -665,7 +668,7 @@ export default function Checkout() {
 
   /*
    * ==========================================================
-   * CONFIRMAR PEDIDO (CON INTEGRACIÓN ADAPTADOR TRANSBANK)
+   * CONFIRMAR PEDIDO
    * ==========================================================
    */
   const handleConfirm = async () => {
@@ -682,7 +685,9 @@ export default function Checkout() {
       const order = await orderService.create({
         key: checkoutAttempt.current.key, items, contact, paymentMethod, shippingMethod, address, promoCode,
       });
-      const orderNumber = String(order.id_pedido);
+
+      const orderNumber = String(order.identificador || order.id_pedido);
+
       if (paymentMethod === 'Transbank') {
         const returnUrl = `${window.location.origin}${route('pedido-confirmado')}?orderNumber=${orderNumber}`;
         const result = await transbankPaymentService.iniciarPago(
@@ -696,11 +701,28 @@ export default function Checkout() {
         return;
       }
 
+      if (paymentMethod === 'PayPal') {
+        const returnUrl = `${window.location.origin}${route('pedido-confirmado')}?orderNumber=${orderNumber}&paypal_success=true`;
+        const cancelUrl = `${window.location.origin}${route('checkout')}?paypal_cancel=true`;
+        
+        const result = await paypalPaymentService.iniciarPago(
+          order.tienda_id, orderNumber, Number(order.monto_total), returnUrl, cancelUrl
+        );
+
+        if (!result.exito || !result.data?.approve_url) {
+          throw new Error(result.mensaje || `Pedido #${orderNumber} registrado; no se pudo conectar con PayPal.`);
+        }
+        await clearCart();
+        window.location.href = result.data.approve_url;
+        return;
+      }
+
       if (paymentMethod === 'Linkify' && order.url_pago) {
         await clearCart();
         window.location.href = order.url_pago;
         return;
       }
+      
       await clearCart();
       navigate(route('pedido-confirmado'), {
         state: {orderNumber, email: contact.email.trim()}, replace: true,
@@ -774,7 +796,7 @@ export default function Checkout() {
               : 's'
           }`
         : paymentMethod === 'PayPal'
-          ? paypal.email
+          ? 'Redirección segura a PayPal'
           : paymentMethod ===
               'Transferencia'
             ? transferDetails
@@ -1488,53 +1510,21 @@ export default function Checkout() {
 
                     <div>
                       <p className="font-semibold text-sm">
-                        Iniciar sesión en PayPal
+                        Pagar con PayPal
                       </p>
 
                       <p className="text-xs text-[#667085]">
-                        Simulación con una cuenta ficticia
+                        Serás redirigido a PayPal de forma segura para autorizar el pago
                       </p>
                     </div>
                   </div>
-
-                  <Input
-                    label="Correo electrónico de PayPal"
-                    type="email"
-                    value={paypal.email}
-                    onChange={(event) =>
-                      setPaypal((current) => ({
-                        ...current,
-                        email: event.target.value,
-                      }))
-                    }
-                    placeholder="tu@correo.com"
-                    readOnly
-                    autoComplete="off"
-                    error={errors.ppEmail}
-                  />
-
-                  <Input
-                    label="Contraseña de PayPal"
-                    type="password"
-                    value={paypal.password}
-                    onChange={(event) =>
-                      setPaypal((current) => ({
-                        ...current,
-                        password: event.target.value,
-                      }))
-                    }
-                    placeholder="••••••••"
-                    readOnly
-                    autoComplete="off"
-                    error={errors.ppPassword}
-                  />
 
                   <p className="flex items-center gap-1.5 text-xs text-[#667085]">
                     <Icon
                       name="lock"
                       className="w-3.5 h-3.5"
                     />
-                    Cuenta ficticia de demostración. No se conecta a PayPal.
+                    Al presionar confirmar saldrás temporalmente de la tienda para ingresar tus datos reales.
                   </p>
                 </div>
               )}

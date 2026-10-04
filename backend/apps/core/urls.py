@@ -7,6 +7,10 @@ from apps.core.presentation.views import (
     MetodosPagoActivosAPIView,
     RegistrarCompraView,
     TiendaPagoActualAPIView,
+    IniciarPagoPayPalView, 
+    CapturarPagoPayPalView,
+    WebhookLinkifyAPIView, 
+    VerificarTransferenciaLinkifyAPIView
 )
 
 urlpatterns = [
@@ -20,5 +24,8 @@ urlpatterns = [
     path('pagos/mi-tienda/', TiendaPagoActualAPIView.as_view(), name='pagos-mi-tienda'),
     path('pagos/configuracion/', ConfiguracionPagoAPIView.as_view(), name='pagos-configuracion'),
     path('pagos/activos/', MetodosPagoActivosAPIView.as_view(), name='pagos-activos'),
-    path('pedidos/registrar/', RegistrarCompraView.as_view(), name='pedidos-registrar'),
+    path('pagos/paypal/iniciar/', IniciarPagoPayPalView.as_view(), name='paypal_iniciar'),
+    path('pagos/paypal/capturar/', CapturarPagoPayPalView.as_view(), name='paypal_capturar'),
+    path('pagos/linkify/webhook/', WebhookLinkifyAPIView.as_view(), name='linkify_webhook'),
+    path('pagos/linkify/verificar/', VerificarTransferenciaLinkifyAPIView.as_view(), name='linkify_verificar'),
 ]

@@ -2,6 +2,8 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.db import models
 from django.db.models import Q
+from django.utils import timezone
+from django.utils.crypto import get_random_string
 
 from apps.core.infrastructure.encryption import EncryptedTextField
 
@@ -95,6 +97,11 @@ class ItemCarrito(models.Model):
             ),
         ]
 
+def generar_identificador_orden():
+    fecha = timezone.now().strftime('%Y%m%d')
+    codigo_random = get_random_string(4, allowed_chars='ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789')
+    return f"ORD-{fecha}-{codigo_random}"
+
 class Pedido(models.Model):
     ESTADO_CHOICES = [
         ('pendiente', 'Pendiente'),
@@ -103,9 +110,17 @@ class Pedido(models.Model):
         ('cancelado', 'Cancelado'),
     ]
     id_pedido = models.BigAutoField(primary_key=True)
+    
+    identificador = models.CharField(
+        max_length=20, 
+        unique=False,
+        default=generar_identificador_orden, 
+        editable=False,
+        verbose_name="Número de Orden",
+        null=True
+    )
+    
     id_usuario = models.ForeignKey(Usuario, on_delete=models.CASCADE, db_column='id_usuario', null=True, blank=True)
-    # Vínculo explícito para lectura del historial autenticado. Los pedidos legados
-    # no se atribuyen por correo ni por coincidencia de IDs.
     comprador = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
         related_name='pedidos_comprador',
@@ -131,9 +146,6 @@ class Pedido(models.Model):
         db_table = 'pedido'
         constraints = [
             models.CheckConstraint(check=Q(monto_total__gte=0), name='chk_monto_total_valido'),
-            # Un pedido debe tener comprador identificado de alguna forma:
-            # por el sistema viejo (id_usuario / correo_contacto) o por el
-            # nuevo (comprador / contacto).
             models.CheckConstraint(
                 check=(
                     Q(id_usuario__isnull=False)
