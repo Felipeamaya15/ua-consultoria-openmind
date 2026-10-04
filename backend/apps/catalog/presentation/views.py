@@ -43,6 +43,7 @@ from apps.catalog.application.use_cases import (
     ActualizarStockProductoUseCase,
     AgregarItemCarritoDTO,
     AgregarItemCarritoUseCase,
+    ConsultarCarritoUseCase,
     CrearProductoUseCase,
     EliminarItemCarritoDTO,
     EliminarItemCarritoUseCase,
@@ -335,66 +336,14 @@ class CarritoItemsView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request, *args, **kwargs):
-        """Recupera todos los ítems del carrito activo del usuario autenticado."""
-        from apps.core.models import Carrito, ItemCarrito
-
-        # 1. Identificar el ID del usuario
-        user_id = request.user.id if request.user and request.user.is_authenticated else None
-
-        # 2. Buscar el carrito activo usando id_usuario o id_usuario_id
-        carrito = None
-        if user_id:
-            try:
-                carrito = Carrito.objects.filter(id_usuario_id=user_id).first()
-            except Exception:
-                try:
-                    carrito = Carrito.objects.filter(id_usuario=user_id).first()
-                except Exception:
-                    carrito = Carrito.objects.filter(usuario=request.user).first()
-
-        if not carrito:
-            return Response(
-                {
-                    "exito": True,
-                    "mensaje": "El carrito está vacío.",
-                    "data": [],
-                },
-                status=status.HTTP_200_OK,
-            )
-
-        # 3. Buscar los ítems vinculados al carrito
-        try:
-            items_qs = ItemCarrito.objects.filter(id_carrito=carrito).select_related("id_producto")
-            prod_attr = "id_producto"
-        except Exception:
-            items_qs = ItemCarrito.objects.filter(carrito=carrito).select_related("producto")
-            prod_attr = "producto"
-
-        items_data = []
-        for item in items_qs:
-            prod = getattr(item, prod_attr, None)
-            precio = float(getattr(prod, "precio", 0)) if prod else 0.0
-            cantidad = item.cantidad
-            items_data.append({
-                "id_item_carrito": item.pk,
-                "id_producto": prod.pk if prod else None,
-                "nombre_producto": getattr(prod, "nombre", "Producto"),
-                "precio_unitario": str(precio),
-                "cantidad": cantidad,
-                "subtotal": round(precio * cantidad, 2),
-                "stock_disponible": getattr(prod, "stock", 99),
-                "sku": getattr(item, "sku", None),
-            })
-
-        return Response(
-            {
-                "exito": True,
-                "mensaje": "Carrito obtenido exitosamente.",
-                "data": items_data,
-            },
+        """Recupera los ítems del carrito del usuario autenticado."""
+        items = ConsultarCarritoUseCase().execute(request.user.id)
+        data = ItemCarritoResponseSerializer(items, many=True).data
+        return success_response(
+            data=data,
+            mensaje="Carrito obtenido exitosamente." if items else "El carrito está vacío.",
             status=status.HTTP_200_OK,
         )
-
 
     def post(self, request):
         serializer = AgregarItemCarritoRequestSerializer(data=request.data)
@@ -411,11 +360,16 @@ class CarritoItemsView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
+        id_producto = serializer.validated_data.get("id_producto")
+        slug = serializer.validated_data.get("slug")
+
         dto = AgregarItemCarritoDTO(
             usuario_id=request.user.id,
-            id_producto=serializer.validated_data["id_producto"],
+            id_producto=id_producto,
             cantidad=serializer.validated_data.get("cantidad", 1),
-            sku=serializer.validated_data.get("sku")
+            sku=serializer.validated_data.get("sku"),
+            slug=slug,
+            tienda_id=resolver_tienda_id(request) if id_producto is None else None,
         )
 
         use_case = AgregarItemCarritoUseCase()

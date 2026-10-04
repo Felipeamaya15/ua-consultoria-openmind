@@ -1,5 +1,7 @@
+from decimal import Decimal
 from typing import List, Dict, Any, Optional
 from dataclasses import dataclass
+from django.db import transaction
 from django.utils.text import slugify
 from django.shortcuts import get_object_or_404
 from bson import ObjectId
@@ -819,13 +821,77 @@ class ModificarCantidadDTO:
     usuario_id: int
 
 
+def precio_efectivo_variante(variante: Dict[str, Any]) -> Optional[Decimal]:
+    precio = variante.get("precio")
+    oferta = variante.get("precio_oferta")
+    if precio is None:
+        return None
+    if oferta is not None and oferta < precio:
+        precio = oferta
+    return Decimal(str(precio))
+
+
+def resolver_datos_item(item: ItemCarrito, variant_service: Optional[VariantService] = None):
+    """(stock, precio) reales de un ítem: de la variante (MongoDB) si tiene SKU, o del producto base."""
+    if not item.sku:
+        return item.id_producto.stock, item.id_producto.precio
+    service = variant_service or VariantService()
+    try:
+        variante = service.get_variant_by_sku(str(item.id_producto_id), item.sku)
+    except ValueError:
+        return 0, item.id_producto.precio
+    precio = precio_efectivo_variante(variante)
+    return int(variante.get("stock", 0)), precio if precio is not None else item.id_producto.precio
+
+
+def resolver_stock_item(item: ItemCarrito, variant_service: Optional[VariantService] = None) -> int:
+    """Stock real de un ítem: el de la variante (MongoDB) si tiene SKU, o el del producto base."""
+    return resolver_datos_item(item, variant_service)[0]
+
+
+class ConsultarCarritoUseCase:
+    """Devuelve los ítems del carrito del usuario autenticado con su stock real."""
+
+    def __init__(self, variant_service: Optional[VariantService] = None, product_repository=None):
+        self.variant_service = variant_service or VariantService()
+        self._product_repository = product_repository
+
+    def _resolver_slug(self, item: ItemCarrito) -> Optional[str]:
+        """Slug público del producto (MongoDB); la tienda lo usa como clave del producto."""
+        try:
+            if self._product_repository is None:
+                self._product_repository = ProductRepository()
+            documento = self._product_repository.get_by_id(
+                str(item.id_producto.id_tienda_id), str(item.id_producto_id)
+            )
+        except Exception:
+            return None
+        return (documento or {}).get("slug")
+
+    def execute(self, usuario_id: int) -> List[ItemCarrito]:
+        items = list(
+            ItemCarrito.objects
+            .filter(id_carrito__id_usuario_id=usuario_id)
+            .select_related("id_producto")
+            .order_by("id_item_carrito")
+        )
+        for item in items:
+            item.stock_disponible_calculado, item.precio_calculado = resolver_datos_item(item, self.variant_service)
+            item.slug_calculado = self._resolver_slug(item)
+        return items
+
+
 class ModificarCantidadItemUseCase:
     """
     Reglas de negocio:
     1. Cantidad estrictamente mayor a 0.
-    2. La cantidad solicitada no puede superar el stock físico del producto.
+    2. La cantidad solicitada no puede superar el stock físico del producto
+       (o de la variante, si el ítem tiene SKU).
     3. El ítem debe pertenecer al carrito activo del usuario autenticado.
     """
+
+    def __init__(self, variant_service: Optional[VariantService] = None):
+        self.variant_service = variant_service or VariantService()
 
     def execute(self, dto: ModificarCantidadDTO) -> ItemCarrito:
         if dto.nueva_cantidad <= 0:
@@ -839,14 +905,14 @@ class ModificarCantidadItemUseCase:
         except ItemCarrito.DoesNotExist:
             raise ItemCarritoNoEncontradoException("El producto no existe en tu carrito.")
 
-        producto = item.id_producto
-
-        if not producto.activo:
+        if not item.id_producto.activo:
             raise StockInsuficienteException("El producto ya no se encuentra disponible para la venta.")
 
-        if dto.nueva_cantidad > producto.stock:
+        stock_disponible, precio = resolver_datos_item(item, self.variant_service)
+
+        if dto.nueva_cantidad > stock_disponible:
             raise StockInsuficienteException(
-                f"No hay stock suficiente. Stock disponible: {producto.stock} unidades."
+                f"No hay stock suficiente. Stock disponible: {stock_disponible} unidades."
             )
 
         item.cantidad = dto.nueva_cantidad
@@ -854,15 +920,19 @@ class ModificarCantidadItemUseCase:
 
         item.id_carrito.save(update_fields=['fecha_actualizacion'])
 
+        item.stock_disponible_calculado = stock_disponible
+        item.precio_calculado = precio
         return item
 
 
 @dataclass
 class AgregarItemCarritoDTO:
     usuario_id: int
-    id_producto: int
+    id_producto: Optional[int] = None
     cantidad: int = 1
     sku: Optional[str] = None
+    slug: Optional[str] = None
+    tienda_id: Optional[str] = None
 
 
 class AgregarItemCarritoUseCase:
@@ -876,12 +946,62 @@ class AgregarItemCarritoUseCase:
     5. Si el ítem no existe, lo crea en el carrito del usuario.
     """
 
-    def __init__(self, variant_service: Optional[VariantService] = None):
+    def __init__(self, variant_service: Optional[VariantService] = None, product_repository=None):
         self.variant_service = variant_service or VariantService()
+        self._product_repository = product_repository
+
+    def _resolver_id_producto(self, dto: AgregarItemCarritoDTO) -> int:
+        """Devuelve el id_producto (PostgreSQL), aceptando el slug público del catálogo (MongoDB)."""
+        if dto.id_producto is not None:
+            return dto.id_producto
+
+        slug = str(dto.slug or "").strip()
+        if not slug or not dto.tienda_id:
+            raise ProductoNoEncontradoException("Debes indicar el id o el slug del producto.")
+
+        repositorio = self._product_repository or ProductRepository()
+        documento = repositorio.get_by_slug(str(dto.tienda_id), slug)
+        if not documento or documento.get("activo") is False:
+            raise ProductoNoEncontradoException(
+                f"El producto '{slug}' no existe o no está disponible para la compra."
+            )
+        try:
+            return int(documento.get("id_producto"))
+        except (TypeError, ValueError):
+            return self._vincular_producto_sql(repositorio, str(dto.tienda_id), documento)
+
+    @staticmethod
+    def _vincular_producto_sql(repositorio, tienda_id: str, documento: Dict[str, Any]) -> int:
+        """
+        Los productos creados desde el panel viven solo en MongoDB, pero el carrito referencia la
+        tabla Producto (PostgreSQL). Se crea la fila equivalente una única vez y se guarda su id
+        en el documento del catálogo; el stock y el precio reales siguen saliendo de las variantes.
+        """
+        variantes = documento.get("variantes") or []
+        precios = [Decimal(str(v["precio"])) for v in variantes if v.get("precio") is not None]
+        if not precios:
+            raise ProductoNoEncontradoException(
+                f"El producto '{documento.get('slug')}' no tiene variantes con precio disponibles para la compra."
+            )
+
+        with transaction.atomic():
+            producto = Producto.objects.create(
+                id_tienda=Tienda.objects.get(pk=tienda_id),
+                nombre=str(documento.get("nombre") or documento.get("slug"))[:200],
+                descripcion=documento.get("descripcion") or None,
+                precio=min(precios),
+                stock=sum(int(v.get("stock") or 0) for v in variantes),
+                activo=True,
+            )
+            if not repositorio.update(tienda_id, str(documento["_id"]), {"id_producto": producto.id_producto}):
+                raise RuntimeError("No se pudo vincular el producto del catálogo con el carrito.")
+        return producto.id_producto
 
     def execute(self, dto: AgregarItemCarritoDTO) -> ItemCarrito:
         if dto.cantidad <= 0:
             raise CantidadInvalidaException("La cantidad agregada debe ser mayor a 0.")
+
+        id_producto = self._resolver_id_producto(dto)
 
         usuario_core = Usuario.objects.filter(id_usuario=dto.usuario_id).first()
         if not usuario_core:
@@ -901,10 +1021,10 @@ class AgregarItemCarritoUseCase:
         carrito, _ = Carrito.objects.get_or_create(id_usuario=usuario_core)
 
         try:
-            producto = Producto.objects.get(pk=dto.id_producto, activo=True)
+            producto = Producto.objects.get(pk=id_producto, activo=True)
         except Producto.DoesNotExist:
             raise ProductoNoEncontradoException(
-                f"El producto con ID '{dto.id_producto}' no existe o no se encuentra activo."
+                f"El producto con ID '{id_producto}' no existe o no se encuentra activo."
             )
 
         sku_normalizado = str(dto.sku).strip().upper() if dto.sku else None
@@ -915,6 +1035,8 @@ class AgregarItemCarritoUseCase:
             except ValueError as e:
                 raise VarianteNoEncontradaException(str(e))
 
+            # SKU canónico de la variante (get_variant_by_sku también acepta id o índice)
+            sku_normalizado = str(variante.get("sku") or sku_normalizado).strip().upper()
             stock_disponible = int(variante.get("stock", 0))
             if stock_disponible <= 0:
                 raise StockInsuficienteException(
@@ -925,15 +1047,12 @@ class AgregarItemCarritoUseCase:
             if stock_disponible <= 0:
                 raise StockInsuficienteException("El producto seleccionado se encuentra agotado.")
 
-        filtro_item = {
-            "id_carrito": carrito,
-            "id_producto": producto,
-        }
-        tiene_columna_sku = hasattr(ItemCarrito, 'sku')
-        if tiene_columna_sku and sku_normalizado:
-            filtro_item["sku"] = sku_normalizado
-
-        item_existente = ItemCarrito.objects.filter(**filtro_item).first()
+        # sku=None se traduce a IS NULL: el producto base y cada variante son ítems distintos.
+        item_existente = ItemCarrito.objects.filter(
+            id_carrito=carrito,
+            id_producto=producto,
+            sku=sku_normalizado,
+        ).first()
 
         cantidad_final = dto.cantidad
         if item_existente:
@@ -949,17 +1068,17 @@ class AgregarItemCarritoUseCase:
             item_existente.save(update_fields=["cantidad"])
             item = item_existente
         else:
-            datos_creacion = {
-                "id_carrito": carrito,
-                "id_producto": producto,
-                "cantidad": cantidad_final
-            }
-            if tiene_columna_sku and sku_normalizado:
-                datos_creacion["sku"] = sku_normalizado
-
-            item = ItemCarrito.objects.create(**datos_creacion)
+            item = ItemCarrito.objects.create(
+                id_carrito=carrito,
+                id_producto=producto,
+                cantidad=cantidad_final,
+                sku=sku_normalizado,
+            )
 
         carrito.save(update_fields=["fecha_actualizacion"])
+        item.stock_disponible_calculado = stock_disponible
+        if sku_normalizado:
+            item.precio_calculado = precio_efectivo_variante(variante)
         return item
 
 
