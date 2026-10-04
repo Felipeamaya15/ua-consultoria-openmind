@@ -5,6 +5,8 @@ from django.db.models import Q
 from django.utils import timezone
 from django.utils.crypto import get_random_string
 
+from apps.core.infrastructure.encryption import EncryptedTextField
+
 class Usuario(models.Model):
     ROL_CHOICES = [
         ('cliente', 'Cliente'),
@@ -189,7 +191,7 @@ class ConfiguracionTransbank(models.Model):
         related_name='configuracion_transbank'
     )
     codigo_comercio = models.CharField(max_length=64)
-    api_key = models.CharField(max_length=255)
+    api_key = EncryptedTextField()
     ambiente = models.CharField(
         max_length=20,
         choices=AMBIENTE_CHOICES,
@@ -222,7 +224,7 @@ class ConfiguracionPayPal(models.Model):
         db_column='id_tienda',
     )
     client_id = models.CharField(max_length=255, blank=True, default='')
-    client_secret = models.CharField(max_length=255, blank=True, default='')
+    client_secret = EncryptedTextField(blank=True, default='')
     ambiente = models.CharField(max_length=20, choices=AMBIENTE_CHOICES, default='SANDBOX')
     activo = models.BooleanField(default=False)
     fecha_actualizacion = models.DateTimeField(auto_now=True)
@@ -257,7 +259,7 @@ class ConfiguracionMercadoPago(models.Model):
         db_column='id_tienda',
     )
     public_key = models.CharField(max_length=255, blank=True, default='')
-    access_token = models.CharField(max_length=255, blank=True, default='')
+    access_token = EncryptedTextField(blank=True, default='')
     ambiente = models.CharField(max_length=20, choices=AMBIENTE_CHOICES, default='SANDBOX')
     activo = models.BooleanField(default=False)
     fecha_actualizacion = models.DateTimeField(auto_now=True)
