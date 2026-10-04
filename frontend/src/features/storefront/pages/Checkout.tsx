@@ -221,9 +221,10 @@ function readCheckoutOptions() {
       Transferencia: 'transfer',
     };
 
-    let paymentOptions = defaultPaymentOptions;
+    let paymentOptions = paymentPresentation;
+    const paymentConfig = config?.paymentConfiguration;
     if (paymentConfig) {
-      paymentOptions = defaultPaymentOptions.filter((option) => {
+      paymentOptions = paymentPresentation.filter((option) => {
         const key = paymentMap[option.id];
         return key ? !!paymentConfig[key]?.enabled : false;
       });
@@ -682,7 +683,9 @@ export default function Checkout() {
       const order = await orderService.create({
         key: checkoutAttempt.current.key, items, contact, paymentMethod, shippingMethod, address, promoCode,
       });
-      const orderNumber = String(order.id_pedido);
+
+      const orderNumber = String(order.identificador || order.id_pedido);
+
       if (paymentMethod === 'Transbank') {
         const returnUrl = `${window.location.origin}${route('pedido-confirmado')}?orderNumber=${orderNumber}`;
         const result = await transbankPaymentService.iniciarPago(

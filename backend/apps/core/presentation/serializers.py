@@ -1,13 +1,10 @@
 from rest_framework import serializers
-from apps.core.models import Producto, Tienda, Usuario
+from apps.core.models import Producto, Tienda, Usuario, VarianteProducto, Pedido
 
 class ProductoSerializer(serializers.ModelSerializer):
     class Meta:
         model = Producto
         fields = '__all__'
-
-from apps.core.models import Producto, VarianteProducto
-
 
 class VarianteProductoSerializer(serializers.ModelSerializer):
     stock = serializers.IntegerField(min_value=0, required=False)
@@ -266,7 +263,6 @@ class ConfiguracionPagoSerializer(serializers.Serializer):
         for method_id, method_data in data.items():
             if not isinstance(method_data, dict):
                 continue
-
                 
             is_enabled = method_data.get('enabled')
             # Solo validamos si intentan guardarlo como habilitado
@@ -284,3 +280,20 @@ class ConfiguracionPagoSerializer(serializers.Serializer):
             raise serializers.ValidationError(errores_metodos)
 
         return data
+
+class PedidoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Pedido
+        fields = [
+            'id_pedido',
+            'identificador',
+            'id_usuario',
+            'nombre_contacto',
+            'correo_contacto',
+            'telefono_contacto',
+            'metodo_pago',
+            'monto_total',
+            'estado',
+            'fecha_creacion'
+        ]
+        read_only_fields = ['identificador']
