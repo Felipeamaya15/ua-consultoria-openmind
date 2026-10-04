@@ -210,6 +210,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         await cartService.eliminarItem(target.id_item_carrito);
       } catch (err: any) {
         console.error('Error al eliminar ítem en el backend:', err.message);
+        refreshCart();
       }
     }
   };

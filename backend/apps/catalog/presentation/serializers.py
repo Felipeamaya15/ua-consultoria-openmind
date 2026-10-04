@@ -306,15 +306,23 @@ class ItemCarritoResponseSerializer(serializers.Serializer):
     id_item_carrito = serializers.IntegerField()
     id_producto = serializers.IntegerField(source='id_producto.id_producto')
     nombre_producto = serializers.CharField(source='id_producto.nombre')
-    precio_unitario = serializers.DecimalField(source='id_producto.precio', max_digits=12, decimal_places=2)
+    precio_unitario = serializers.SerializerMethodField()
     cantidad = serializers.IntegerField()
     subtotal = serializers.SerializerMethodField()
     sku = serializers.CharField(allow_null=True, required=False)
     stock_disponible = serializers.SerializerMethodField()
     slug = serializers.SerializerMethodField()
 
+    @staticmethod
+    def _precio(obj):
+        precio = getattr(obj, 'precio_calculado', None)
+        return precio if precio is not None else obj.id_producto.precio
+
+    def get_precio_unitario(self, obj):
+        return f"{self._precio(obj):.2f}"
+
     def get_subtotal(self, obj):
-        return obj.cantidad * obj.id_producto.precio
+        return obj.cantidad * self._precio(obj)
 
     def get_stock_disponible(self, obj):
         # Los casos de uso calculan el stock real (variante o producto base).
@@ -460,15 +468,23 @@ class ItemCarritoResponseSerializer(serializers.Serializer):
     id_item_carrito = serializers.IntegerField()
     id_producto = serializers.IntegerField(source='id_producto.id_producto')
     nombre_producto = serializers.CharField(source='id_producto.nombre')
-    precio_unitario = serializers.DecimalField(source='id_producto.precio', max_digits=12, decimal_places=2)
+    precio_unitario = serializers.SerializerMethodField()
     cantidad = serializers.IntegerField()
     subtotal = serializers.SerializerMethodField()
     sku = serializers.CharField(allow_null=True, required=False)
     stock_disponible = serializers.SerializerMethodField()
     slug = serializers.SerializerMethodField()
 
+    @staticmethod
+    def _precio(obj):
+        precio = getattr(obj, 'precio_calculado', None)
+        return precio if precio is not None else obj.id_producto.precio
+
+    def get_precio_unitario(self, obj):
+        return f"{self._precio(obj):.2f}"
+
     def get_subtotal(self, obj):
-        return obj.cantidad * obj.id_producto.precio
+        return obj.cantidad * self._precio(obj)
 
     def get_stock_disponible(self, obj):
         # Los casos de uso calculan el stock real (variante o producto base).
