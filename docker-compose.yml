@@ -41,6 +41,7 @@ services:
       - "8000:8000"
     environment:
       - SECRET_KEY=${DJANGO_SECRET_KEY}
+      - PAYMENT_CREDENTIALS_KEY=${PAYMENT_CREDENTIALS_KEY}
       - DEBUG=${DJANGO_DEBUG}
       - DB_NAME=${POSTGRES_DB}
       - DB_USER=${POSTGRES_USER}
