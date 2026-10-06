@@ -20,6 +20,14 @@ const transferFieldLabels: Record<string, string> = {
   confirmation_email: 'Correo para comprobantes',
 };
 
+const linkifyFieldLabels: Record<string, string> = {
+  idCuenta: 'ID de cuenta',
+  clavePrivada: 'Clave privada',
+  expirationHours: 'Vencimiento del link',
+  returnUrl: 'URL de retorno',
+  notificationEmail: 'Correo de notificaciones',
+};
+
 const otherMethods = [
 { 
     id: 'linkify', 
@@ -55,6 +63,92 @@ const transferRequiredFields = [
 ];
 
 const boolValue = (value?: string) => value === 'true';
+
+type PaymentFields = Record<string, string | undefined>;
+type FieldErrors = Record<string, string>;
+
+const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const rutPattern = /^\d{1,2}\.?\d{3}\.?\d{3}-[\dkK]$/;
+const accountNumberPattern = /^[0-9-]+$/;
+const accountIdPattern = /^[A-Za-z0-9_-]+$/;
+
+const fieldLabel = (methodId: string, field: string) =>
+  methodId === 'linkify'
+    ? linkifyFieldLabels[field] ?? field
+    : transferFieldLabels[field] ?? field;
+
+const requiredFieldError = (methodId: string, field: string) =>
+  `${fieldLabel(methodId, field)} es obligatorio.`;
+
+const isValidUrl = (value: string) => {
+  try {
+    const url = new URL(value);
+    return url.protocol === 'http:' || url.protocol === 'https:';
+  } catch {
+    return false;
+  }
+};
+
+const firstFieldError = (errors: FieldErrors) => Object.values(errors)[0] ?? '';
+
+const validateLinkifyFields = (fields: PaymentFields = {}): FieldErrors => {
+  const errors: FieldErrors = {};
+
+  linkifyRequiredFields.forEach((field) => {
+    if (!String(fields[field] ?? '').trim()) {
+      errors[field] = requiredFieldError('linkify', field);
+    }
+  });
+
+  const idCuenta = String(fields.idCuenta ?? '').trim();
+  if (idCuenta && !accountIdPattern.test(idCuenta)) {
+    errors.idCuenta = 'ID de cuenta solo puede usar letras, numeros, guiones y guion bajo.';
+  }
+
+  const expirationHours = String(fields.expirationHours ?? '').trim();
+  if (expirationHours && (!/^\d+$/.test(expirationHours) || Number(expirationHours) < 1)) {
+    errors.expirationHours = 'Vencimiento del link debe ser un numero mayor a 0.';
+  }
+
+  const returnUrl = String(fields.returnUrl ?? '').trim();
+  if (returnUrl && !isValidUrl(returnUrl)) {
+    errors.returnUrl = 'URL de retorno debe comenzar con http:// o https://.';
+  }
+
+  const notificationEmail = String(fields.notificationEmail ?? '').trim();
+  if (notificationEmail && !emailPattern.test(notificationEmail)) {
+    errors.notificationEmail = 'Correo de notificaciones debe tener un formato valido.';
+  }
+
+  return errors;
+};
+
+const validateTransferFields = (fields: PaymentFields = {}): FieldErrors => {
+  const errors: FieldErrors = {};
+
+  transferRequiredFields.forEach((field) => {
+    if (!String(fields[field] ?? '').trim()) {
+      errors[field] = requiredFieldError('transfer', field);
+    }
+  });
+
+  const accountNumber = String(fields.account_number ?? '').trim();
+  if (accountNumber && !accountNumberPattern.test(accountNumber)) {
+    errors.account_number = 'NÂ° de cuenta debe contener solo numeros y guiones.';
+  }
+
+  const holderRut = String(fields.holder_rut ?? '').trim();
+  if (holderRut && !rutPattern.test(holderRut)) {
+    errors.holder_rut = 'RUT del titular debe tener formato 12.345.678-9.';
+  }
+
+  const confirmationEmail = String(fields.confirmation_email ?? '').trim();
+  if (confirmationEmail && !emailPattern.test(confirmationEmail)) {
+    errors.confirmation_email = 'Correo para comprobantes debe tener un formato valido.';
+  }
+
+  return errors;
+};
 
 export default function Payments() {
 
@@ -621,27 +715,15 @@ export default function Payments() {
     setTransferFeedback(null);
 
     const current = form.transfer ?? { enabled: false, fields: {} };
-    const requiredFields = [
-      'bank_name',
-      'account_type',
-      'account_number',
-      'holder_rut',
-      'holder_name',
-      'confirmation_email',
-    ];
+    const fieldErrors = validateTransferFields(current.fields ?? {});
 
-    if (current.enabled) {
-      const missing = requiredFields.filter(
-        (field) => !String(current.fields?.[field] ?? '').trim(),
-      );
-      if (missing.length) {
-        setTransferFeedback({
-          type: 'error',
-          message: 'Completa todos los datos bancarios antes de habilitar la transferencia.',
-        });
-        setTransferSaving(false);
-        return false;
-      }
+    if (Object.keys(fieldErrors).length) {
+      setTransferFeedback({
+        type: 'error',
+        message: firstFieldError(fieldErrors),
+      });
+      setTransferSaving(false);
+      return false;
     }
 
     try {
@@ -700,15 +782,15 @@ export default function Payments() {
     
     if (enabled) {
       if (id === 'linkify') {
-        const missing = linkifyRequiredFields.filter((field) => !current.fields?.[field]?.trim());
-        if (missing.length > 0) {
-          setValidationError('Completa todos los campos obligatorios de Linkify antes de habilitarlo.');
+        const fieldErrors = validateLinkifyFields(current.fields ?? {});
+        if (Object.keys(fieldErrors).length > 0) {
+          setValidationError(firstFieldError(fieldErrors));
           return; 
         }
       } else {
-        const missing = requiredKeysFor(id).filter((key) => !current.fields?.[key]?.trim());
-        if (missing.length > 0) {
-          setValidationError(`Completa todos los campos obligatorios de ${methodName(id)} antes de habilitarlo.`);
+        const fieldErrors = id === 'transfer' ? validateTransferFields(current.fields ?? {}) : {};
+        if (Object.keys(fieldErrors).length > 0) {
+          setValidationError(firstFieldError(fieldErrors));
           return;
         }
       }
@@ -758,9 +840,14 @@ export default function Payments() {
     for (const method of enabledSecondary) {
       const fields = form[method.id]?.fields ?? {};
       if (method.id === 'linkify') {
-        const missingLinkify = linkifyRequiredFields.filter((field) => !fields[field]?.trim());
-        if (missingLinkify.length) {
-          return 'Completa la cuenta y clave privada de Linkify.';
+        const fieldErrors = validateLinkifyFields(fields);
+        if (Object.keys(fieldErrors).length) {
+          return firstFieldError(fieldErrors);
+        }
+      } else if (method.id === 'transfer') {
+        const fieldErrors = validateTransferFields(fields);
+        if (Object.keys(fieldErrors).length) {
+          return firstFieldError(fieldErrors);
         }
       } else if (requiredKeysFor(method.id).some((key) => !fields[key]?.trim())) {
         return `Completa los campos obligatorios de ${method.name}.`;
@@ -771,6 +858,12 @@ export default function Payments() {
 
   const renderLinkifyConfig = () => {
     const current = form.linkify ?? { enabled: false, fields: {} };
+    const fieldErrors = validateLinkifyFields(current.fields ?? {});
+    const showRequiredErrors = current.enabled || Boolean(validationError);
+    const linkifyError = (field: string) =>
+      showRequiredErrors || String(current.fields?.[field] ?? '').trim()
+        ? fieldErrors[field]
+        : undefined;
 
     return (
       <div className="border-t border-[var(--border)] pt-3 grid gap-4">
@@ -805,6 +898,8 @@ export default function Payments() {
         <div className="grid sm:grid-cols-2 gap-3">
           <Input
             label="ID de cuenta *"
+            required={current.enabled}
+            error={linkifyError('idCuenta')}
             value={current.fields.idCuenta ?? ''}
             placeholder="Lo encuentras en tu panel de Linkify"
             onChange={(event) => updateField('linkify', 'idCuenta', event.target.value)}
@@ -812,6 +907,8 @@ export default function Payments() {
           <Input
             label="Clave privada *"
             type="password"
+            required={current.enabled}
+            error={linkifyError('clavePrivada')}
             autoComplete="off"
             value={current.fields.clavePrivada ?? ''}
             placeholder="Clave secreta de integración"
@@ -830,6 +927,8 @@ export default function Payments() {
             label="Vencimiento del link (horas)"
             type="number"
             min="1"
+            step="1"
+            error={linkifyError('expirationHours')}
             value={current.fields.expirationHours ?? '48'}
             placeholder="48"
             onChange={(event) => updateField('linkify', 'expirationHours', event.target.value)}
@@ -837,6 +936,7 @@ export default function Payments() {
           <Input
             label="URL de retorno"
             type="url"
+            error={linkifyError('returnUrl')}
             value={current.fields.returnUrl ?? ''}
             placeholder="https://mitienda.cl/pedido-confirmado"
             onChange={(event) => updateField('linkify', 'returnUrl', event.target.value)}
@@ -844,6 +944,7 @@ export default function Payments() {
           <Input
             label="Correo de notificaciones"
             type="email"
+            error={linkifyError('notificationEmail')}
             value={current.fields.notificationEmail ?? ''}
             placeholder="pagos@mitienda.cl"
             onChange={(event) => updateField('linkify', 'notificationEmail', event.target.value)}
@@ -917,12 +1018,19 @@ export default function Payments() {
 
     try {
       await syncLinkify();
-      await Promise.all([
+      const shouldSaveTransfer =
+        form.transfer?.enabled ||
+        transferRequiredFields.some((field) => String(form.transfer?.fields?.[field] ?? '').trim());
+
+      const results = await Promise.all([
         handleSaveTransbank(),
         handleSavePayPal(),
         handleSaveMercadoPago(),
-        handleSaveTransfer(),
+        shouldSaveTransfer ? handleSaveTransfer() : Promise.resolve(true),
       ]);
+      if (results.some((result) => result === false)) {
+        throw new Error('Revisa los mensajes de validacion antes de guardar los metodos de pago.');
+      }
     } catch (err) {
       setBackendError(err instanceof Error ? err.message : 'Error desconocido al guardar.');
     } finally {
@@ -1484,6 +1592,14 @@ export default function Payments() {
       {otherMethods.map((method) => {
 
         const current = form[method.id] || { enabled: false, fields: {} };
+        const fieldErrors = method.id === 'transfer' ? validateTransferFields(current.fields ?? {}) : {};
+        const showTransferErrors =
+          method.id === 'transfer' &&
+          (current.enabled || transferFeedback?.type === 'error' || Boolean(validationError));
+        const transferError = (field: string) =>
+          showTransferErrors || String(current.fields?.[field] ?? '').trim()
+            ? fieldErrors[field]
+            : undefined;
 
         return (
 
@@ -1520,8 +1636,16 @@ export default function Payments() {
                   <Input
                     key={field}
                     label={method.id === 'transfer' ? (transferFieldLabels[field] ?? field) : field}
+                    required={
+                      method.id === 'transfer' &&
+                      current.enabled &&
+                      transferRequiredFields.includes(field)
+                    }
                     autoComplete="off"
                     type={/key|token|secret/i.test(field) ? 'password' : (field === 'confirmation_email' ? 'email' : 'text')}
+                    inputMode={field === 'account_number' || field === 'holder_rut' ? 'numeric' : undefined}
+                    pattern={field === 'account_number' ? '[0-9-]+' : undefined}
+                    error={method.id === 'transfer' ? transferError(field) : undefined}
                     value={current.fields?.[field] ?? ''}
                     placeholder={method.id === 'transfer' ? 'Dato bancario real de la tienda' : 'Credencial demo'}
                     onChange={(e: any) =>
