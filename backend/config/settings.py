@@ -35,6 +35,7 @@ INSTALLED_APPS = [
     'apps.catalog',
     'apps.landing',
     'apps.visual_config',
+    'apps.shipping',
 ]
 
 MIDDLEWARE = [
