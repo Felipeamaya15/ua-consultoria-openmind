@@ -80,6 +80,10 @@ class CheckoutOrderAPIView(APIView):
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
         fingerprint = sha256(json.dumps(data, sort_keys=True, default=str).encode()).hexdigest()
+        if data['medio_pago'].strip().lower() == 'linkify' and not self._credenciales_linkify(tienda):
+            # Se rechaza antes de crear el pedido: asi no queda un pedido sin forma de pago ni stock descontado.
+            raise ValidationError({'medio_pago': 'Linkify no está disponible en esta tienda. '
+                                                 'Elige otro medio de pago o contacta a la tienda.'})
         with transaction.atomic():
             Tienda.objects.select_for_update().get(pk=tienda.pk)
             previous = Pedido.objects.filter(clave_checkout=data['clave_checkout']).first()
@@ -87,7 +91,8 @@ class CheckoutOrderAPIView(APIView):
                 if (previous.tienda_id != tienda.pk or previous.comprador_id != (buyer.pk if buyer else None)
                         or previous.huella_checkout != fingerprint):
                     raise ValidationError('Esta clave de checkout ya fue utilizada para otra solicitud.')
-                return success_response(data=self.result(previous), mensaje='Pedido ya registrado.')
+                return success_response(data=self.result(previous, self._url_pago(previous, tienda)),
+                                        mensaje='Pedido ya registrado.')
             repository = ProductRepository()
             lines = {}
             for item in data['items']:
@@ -154,17 +159,29 @@ class CheckoutOrderAPIView(APIView):
                     except Producto.DoesNotExist:
                         pass
 
-        es_linkify = data['medio_pago'].strip().lower() == 'linkify'
-        url_pago = None
-        if es_linkify:
-            config_pago = ConfiguracionPago.objects.filter(tienda=tienda).first()
-            datos_linkify = config_pago.datos.get('linkify', {}).get('fields', {}) if config_pago else {}
-            id_cuenta = datos_linkify.get('idCuenta', '')
-            if id_cuenta:
-                adapter = LinkifyAdapter(id_cuenta=id_cuenta, clave_privada=datos_linkify.get('clavePrivada', ''))
-                url_pago = adapter.url_de_pago(str(order.pk))
+                return success_response(data=self.result(order, self._url_pago(order, tienda)),
+                                mensaje='Pedido creado correctamente.', status=201)
 
-        return success_response(data=self.result(order, url_pago), mensaje='Pedido creado correctamente.', status=201)
+    @staticmethod
+    def _credenciales_linkify(tienda):
+        """(id_cuenta, clave_privada) si Linkify esta habilitado y configurado en la tienda; si no, None."""
+        config_pago = ConfiguracionPago.objects.filter(tienda=tienda).first()
+        linkify = ((config_pago.datos or {}).get('linkify') or {}) if config_pago else {}
+        campos = linkify.get('fields') or {}
+        id_cuenta = str(campos.get('idCuenta') or '').strip()
+        clave = str(campos.get('clavePrivada') or '').strip()
+        if linkify.get('enabled') is True and id_cuenta and clave:
+            return id_cuenta, clave
+        return None
+
+    def _url_pago(self, order, tienda):
+        """URL de pago de Linkify del pedido; None si el pedido no es de Linkify o no se puede generar."""
+        if (order.medio_pago or '').strip().lower() != 'linkify':
+            return None
+        credenciales = self._credenciales_linkify(tienda)
+        if not credenciales:
+            return None
+        return LinkifyAdapter(*credenciales).url_de_pago(str(order.pk))
 
     def order_data(self, request, tienda):
         return request.data
