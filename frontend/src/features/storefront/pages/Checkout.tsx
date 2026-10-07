@@ -717,7 +717,10 @@ export default function Checkout() {
         return;
       }
 
-      if (paymentMethod === 'Linkify' && order.url_pago) {
+      if (paymentMethod === 'Linkify') {
+        if (!order.url_pago) {
+          throw new Error(`Pedido #${orderNumber} registrado, pero no pudimos iniciar el pago con Linkify. Contacta a la tienda para completarlo.`);
+        }
         await clearCart();
         window.location.href = order.url_pago;
         return;

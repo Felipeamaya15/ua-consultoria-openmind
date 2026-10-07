@@ -78,9 +78,11 @@ class MetodosPagoActivosAPIView(APIView):
 
             try:
                 config_pago = ConfiguracionPago.objects.get(tienda_id=tienda_id)
-                transferencia = (config_pago.datos or {}).get("transfer", {})
+                datos_pago = config_pago.datos or {}
             except ConfiguracionPago.DoesNotExist:
-                transferencia = {}
+                datos_pago = {}
+            transferencia = datos_pago.get("transfer", {})
+            linkify = datos_pago.get("linkify", {})
 
             if isinstance(transferencia, dict) and transferencia.get("enabled") is True:
                 fields = transferencia.get("fields", {})
@@ -88,6 +90,16 @@ class MetodosPagoActivosAPIView(APIView):
                     "enabled": True,
                     "fields": {f: fields.get(f, "") for f in self.TRANSFER_PUBLIC_FIELDS}
                 }
+
+                        # Linkify se lista solo si esta habilitado y con credenciales; nunca se exponen.
+            campos_linkify = (linkify.get("fields") or {}) if isinstance(linkify, dict) else {}
+            if (
+                isinstance(linkify, dict)
+                and linkify.get("enabled") is True
+                and campos_linkify.get("idCuenta")
+                and campos_linkify.get("clavePrivada")
+            ):
+                metodos_activos["linkify"] = {"enabled": True}
 
             return success_response(data=metodos_activos)
         except Exception as e:
