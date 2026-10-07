@@ -1,0 +1,8 @@
+import {useRef,useState} from 'react';
+import {Button,Icon} from './index';
+export function ImageUpload({value,onChange,label='Subir imagen',maxMB=1,allowSVG=true}:{value:string;onChange:(value:string)=>void;label?:string;maxMB?:number;allowSVG?:boolean}) {
+ const formats=allowSVG?['image/png','image/jpeg','image/webp','image/svg+xml']:['image/png','image/jpeg','image/webp'];
+ const input=useRef<HTMLInputElement>(null);const [error,setError]=useState('');
+ function upload(file?:File){if(!file)return; if(!formats.includes(file.type)||file.size>maxMB*1024*1024){setError('Selecciona una imagen válida de hasta '+maxMB+' MB.');return;}const reader=new FileReader();reader.onerror=()=>setError('No se pudo leer la imagen.');reader.onload=()=>{onChange(String(reader.result));setError('');};reader.readAsDataURL(file);}
+ return <div><input ref={input} type="file" accept={formats.join(',')} className="hidden" aria-label={label} onChange={e=>upload(e.target.files?.[0])}/><button type="button" onClick={()=>input.current?.click()} className="w-full border-2 border-dashed border-[var(--border)] rounded-xl p-6 text-center hover:border-[var(--primary)]">{value?<img src={value} alt="Imagen seleccionada" className="max-h-36 object-contain mx-auto mb-3"/>:<Icon name="file" className="w-8 h-8 mx-auto mb-2 text-[var(--muted-foreground)]"/>}<span className="block text-sm font-medium">{label}</span><span className="block text-xs text-[var(--muted-foreground)] mt-1">{allowSVG?'JPG, PNG, WebP o SVG':'JPG, PNG o WebP'} · Máximo {maxMB} MB</span></button>{value&&<Button type="button" variant="ghost" size="sm" onClick={()=>onChange('')}>Quitar imagen</Button>}{error&&<p role="alert" className="text-sm text-[var(--error)] mt-2">{error}</p>}</div>;
+}

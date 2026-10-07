@@ -1,6 +1,10 @@
 from abc import ABC, abstractmethod
 from typing import Optional, Dict, Any
-from .entities import UserEntity
+from .entities import (
+    UserEntity,
+    ConfiguracionAutenticacionEntity,
+    ConfiguracionPagosEntity,
+)
 
 
 class IUserRepository(ABC):
@@ -45,4 +49,40 @@ class IEmailService(ABC):
 
     @abstractmethod
     def send_password_reset_email(self, to_email: str, reset_link: str) -> bool:
+        pass
+
+
+class IConfiguracionAutenticacionRepository(ABC):
+    """Puerto de persistencia para la configuración de autenticación por tienda."""
+
+    @abstractmethod
+    def get_by_tienda(
+        self,
+        tienda_id: int
+    ) -> Optional[ConfiguracionAutenticacionEntity]:
+        pass
+
+    @abstractmethod
+    def save(
+        self,
+        configuracion: ConfiguracionAutenticacionEntity
+    ) -> ConfiguracionAutenticacionEntity:
+        pass
+
+
+class IConfiguracionPagosRepository(ABC):
+    """Puerto de persistencia para la configuracion de pagos por tienda."""
+
+    @abstractmethod
+    def get_by_tienda(
+        self,
+        tienda_id: int
+    ) -> Optional[ConfiguracionPagosEntity]:
+        pass
+
+    @abstractmethod
+    def save(
+        self,
+        configuracion: ConfiguracionPagosEntity
+    ) -> ConfiguracionPagosEntity:
         pass

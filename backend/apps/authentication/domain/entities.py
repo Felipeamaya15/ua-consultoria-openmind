@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Optional
+from typing import Optional, Dict, Any
 from datetime import datetime
 
 
@@ -17,3 +17,21 @@ class UserEntity:
     @property
     def full_name(self) -> str:
         return f"{self.first_name} {self.last_name}".strip() or self.username
+
+
+@dataclass
+class ConfiguracionAutenticacionEntity:
+    id: Optional[int]
+    tienda_id: int
+    email_password: bool = True
+    google: bool = False
+    google_client_id: str = ""
+    guest_checkout: bool = True
+    requires_auth: str = "optional"
+
+
+@dataclass
+class ConfiguracionPagosEntity:
+    id: Optional[int]
+    tienda_id: int
+    metodos: Dict[str, Dict[str, Any]]

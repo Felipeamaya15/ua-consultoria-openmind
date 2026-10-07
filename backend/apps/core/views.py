@@ -11,7 +11,7 @@ from django.shortcuts import redirect, render #permite renderizar vistas basadas
 from django.template import RequestContext # contexto del sistema
 from django.views.decorators.csrf import csrf_exempt #decorador que nos permitira realizar conexiones csrf
 
-from registration.models import Profile #importa el modelo profile, el que usaremos para los perfiles de usuarios
+from apps.core.models import Usuario #importa el modelo profile, el que usaremos para los perfiles de usuarios
 
 # Create your views here.
 def home(request):
@@ -25,7 +25,7 @@ def pre_check_profile(request):
 @login_required
 def check_profile(request):  
     try:
-        profile = Profile.objects.filter(user_id=request.user.id).get()    
+        profile = Usuario.objects.filter(user_id=request.user.id).get()    
     except:
         messages.add_message(request, messages.INFO, 'Hubo un error con su usuario, por favor contactese con los administradores')              
         return redirect('login')
@@ -38,7 +38,7 @@ def check_profile(request):
 @login_required
 def main_admin(request):  
     try:
-        profile = Profile.objects.filter(user_id=request.user.id).get()    
+        profile = Usuario.objects.filter(user_id=request.user.id).get()    
     except:
         messages.add_message(request, messages.INFO, 'Hubo un error con su usuario, por favor contactese con los administradores')              
         return redirect('login')

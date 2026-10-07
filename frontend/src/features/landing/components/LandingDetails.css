@@ -1,0 +1,102 @@
+/* Public contact/location only. Each template retains its own visual identity. */
+.landing-details {
+  --details-ink: #20201e;
+  --details-muted: #64645e;
+  --details-border: #e3e0d9;
+  --details-surface: #fffdf9;
+  --details-icon-bg: #ede9e1;
+  --details-radius: 12px;
+  color: var(--details-ink);
+  padding: 56px 24px;
+}
+.landing-details *, .landing-details *::before, .landing-details *::after { box-sizing: border-box; }
+.landing-details__inner { max-width: 1200px; margin: 0 auto; min-width: 0; }
+.landing-details__heading { margin-bottom: 28px; }
+.landing-details__eyebrow { display: block; font-size: 10px; font-weight: 600; letter-spacing: .18em; text-transform: uppercase; color: var(--details-muted); margin-bottom: 10px; }
+.landing-details__heading h2 { font-size: clamp(28px, 4vw, 40px); line-height: 1.15; font-weight: 500; letter-spacing: -.025em; margin: 0; }
+.landing-details__contact-layout, .landing-details__contacts { display: grid; gap: 16px; min-width: 0; }
+.landing-details__contact-card { display: flex; align-items: flex-start; gap: 16px; padding: 24px; min-width: 0; background: var(--details-surface); border: 1px solid var(--details-border); border-radius: var(--details-radius); color: inherit; text-decoration: none; transition: border-color .2s, background-color .2s; }
+.landing-details__contact-card[href]:hover { border-color: var(--details-muted); }
+.landing-details a:focus-visible { outline: 2px solid currentColor; outline-offset: 4px; }
+.landing-details__icon { width: 40px; height: 40px; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; border-radius: 50%; background: var(--details-icon-bg); }
+.landing-details__contact-copy { display: grid; gap: 6px; min-width: 0; flex: 1; }
+.landing-details__label { color: var(--details-muted); font-size: 12px; font-weight: 500; }
+.landing-details__value { font-size: 14px; font-weight: 500; line-height: 1.6; overflow-wrap: anywhere; }
+.landing-details__link-arrow { width: 16px; height: 16px; margin-top: 12px; color: var(--details-muted); flex-shrink: 0; }
+.landing-details__hours { padding: 24px; border-radius: var(--details-radius); border: 1px solid var(--details-border); background: var(--details-surface); min-width: 0; }
+.landing-details__contact-layout:not(.landing-details__contact-layout--with-hours) .landing-details__hours { max-width: 440px; }
+.landing-details__hours h3 { display: flex; align-items: center; gap: 12px; font-size: 16px; font-weight: 600; margin: 0 0 16px; }
+.landing-details__hours-list { padding: 0; margin: 0; list-style: none; }
+.landing-details__hours-list li { display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: baseline; padding: 12px 0; border-top: 1px solid var(--details-border); font-size: 13px; line-height: 1.5; }
+.landing-details__hours-list li > span:last-child { text-align: right; font-variant-numeric: tabular-nums; }
+.landing-details__hours-list small { display: block; color: var(--details-muted); font-size: 10px; }
+.landing-details__closed { color: var(--details-muted); }
+.landing-details__legacy-hours { white-space: pre-line; overflow-wrap: anywhere; line-height: 1.8; font-size: 14px; margin: 0; }
+.landing-details--location { padding-top: 24px; }
+.landing-details__location-card { display: grid; gap: 24px; align-items: center; padding: 32px; border: 1px solid var(--details-border); background: var(--details-surface); border-radius: var(--details-radius); }
+.landing-details__location-icon { display: inline-flex; align-items: center; justify-content: center; width: 64px; height: 64px; border-radius: 50%; background: var(--details-icon-bg); }
+.landing-details__address { font-style: normal; min-width: 0; }
+.landing-details__address p { margin: 0; font-size: 15px; line-height: 1.8; overflow-wrap: anywhere; }
+.landing-details__address .landing-details__street { font-size: 22px; font-weight: 500; line-height: 1.4; margin-bottom: 8px; }
+.landing-details__address .landing-details__region { color: var(--details-muted); }
+.landing-details__maps-button { display: inline-flex; align-items: center; justify-content: center; gap: 12px; padding: 14px 20px; border: 1px solid var(--details-ink); border-radius: 6px; background: var(--details-ink); color: var(--details-surface); font-size: 13px; font-weight: 600; text-decoration: none; line-height: 1.5; transition: opacity .2s; }
+.landing-details__maps-button:hover { opacity: .8; }
+
+/* Editorial: warm paper, serif headings and softly outlined cards. */
+.landing-details[data-template="editorial"] { background: #f6f3ed; }
+.landing-details[data-template="editorial"] .landing-details__heading h2,
+.landing-details[data-template="editorial"] .landing-details__street { font-family: var(--font-display, Georgia), Georgia, serif; }
+.landing-details[data-template="editorial"] .landing-details__contact-card { box-shadow: 0 4px 20px #3c302505; }
+.landing-details[data-template="editorial"] .landing-details__location-card { border-left: 3px solid #c8bca8; }
+
+/* Minimal: quiet outlines, pill actions and generous whitespace. */
+.landing-details[data-template="minimal"] { --details-ink: #171717; --details-muted: #696965; --details-surface: #ffffff; --details-border: #e7e7e2; --details-icon-bg: #f5f5f3; --details-radius: 20px; padding-top: 72px; padding-bottom: 72px; }
+.landing-details[data-template="minimal"] .landing-details__inner { max-width: 1100px; }
+.landing-details[data-template="minimal"] .landing-details__contact-card { padding: 28px; }
+.landing-details[data-template="minimal"] .landing-details__heading h2 { font-weight: 600; letter-spacing: -.045em; }
+.landing-details[data-template="minimal"] .landing-details__maps-button { border-radius: 999px; }
+.landing-details[data-template="minimal"].landing-details--location { padding-top: 0; }
+
+/* Visual: graphic icon tiles, contrasting panels and asymmetric layout. */
+.landing-details[data-template="visual"] { --details-ink: #111111; --details-muted: #5c5c5c; --details-surface: #ffffff; --details-border: #d8d8d8; --details-icon-bg: #111111; --details-radius: 0; background: #f1f1ef; }
+.landing-details[data-template="visual"] .landing-details__inner { max-width: 1152px; }
+.landing-details[data-template="visual"] .landing-details__heading h2 { font-family: Georgia, serif; }
+.landing-details[data-template="visual"] .landing-details__icon { border-radius: 8px; color: white; }
+.landing-details[data-template="visual"] .landing-details__contact-card { position: relative; flex-direction: column; gap: 20px; }
+.landing-details[data-template="visual"] .landing-details__contact-copy { width: 100%; }
+.landing-details[data-template="visual"] .landing-details__link-arrow { position: absolute; top: 24px; right: 24px; margin: 0; }
+.landing-details[data-template="visual"] .landing-details__hours { --details-ink: #ffffff; --details-muted: #bdbdbd; --details-border: #3f3f3f; background: #111111; color: white; }
+.landing-details[data-template="visual"] .landing-details__hours .landing-details__icon { background: #333333; }
+.landing-details[data-template="visual"] .landing-details__location-card { background: #111111; --details-ink: #ffffff; --details-muted: #bdbdbd; --details-surface: #111111; color: white; border: 0; }
+.landing-details[data-template="visual"] .landing-details__location-icon { background: #333333; border-radius: 12px; }
+.landing-details[data-template="visual"] .landing-details__maps-button { background: white; color: #111111; border-radius: 0; }
+
+/* Catalog: dark commercial panels aligned with the existing footer. */
+.landing-details[data-template="catalog"] { --details-ink: #ffffff; --details-muted: #a8a8ac; --details-border: #303033; --details-surface: #121214; --details-icon-bg: #242427; --details-radius: 16px; background: #050505; border-top: 1px solid #232325; }
+.landing-details[data-template="catalog"] .landing-details__inner { max-width: 1160px; }
+.landing-details[data-template="catalog"] .landing-details__heading h2 { font-size: clamp(26px, 4vw, 36px); font-weight: 800; letter-spacing: -.035em; }
+.landing-details[data-template="catalog"] .landing-details__icon { border-radius: 10px; }
+.landing-details[data-template="catalog"] .landing-details__label { font-size: 10px; letter-spacing: .1em; text-transform: uppercase; }
+.landing-details[data-template="catalog"] .landing-details__maps-button { border-radius: 999px; background: white; color: #111111; }
+.landing-details[data-template="catalog"].landing-details--location { padding-top: 48px; }
+
+@media (min-width: 640px) {
+  .landing-details__contacts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .landing-details__location-card { grid-template-columns: auto minmax(0, 1fr); }
+  .landing-details__maps-button { grid-column: 2; justify-self: start; }
+}
+@media (min-width: 1024px) {
+  .landing-details__contact-layout--with-hours { grid-template-columns: minmax(0, 1fr) 320px; align-items: start; gap: 24px; }
+  .landing-details__contact-layout:not(.landing-details__contact-layout--with-hours) .landing-details__contacts { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .landing-details[data-template="visual"] .landing-details__contact-layout--with-hours { grid-template-columns: minmax(0, 1fr) 360px; gap: 32px; }
+  .landing-details__location-card { grid-template-columns: auto minmax(0, 1fr) auto; gap: 32px; }
+  .landing-details__maps-button { grid-column: auto; }
+}
+@media (max-width: 639px) {
+  .landing-details { padding: 40px 20px; }
+  .landing-details--location { padding-top: 12px; }
+  .landing-details__location-card { padding: 24px; }
+  .landing-details__maps-button { width: 100%; }
+  .landing-details[data-template="minimal"] { padding: 48px 20px; }
+  .landing-details[data-template="minimal"].landing-details--location { padding-top: 0; }
+}

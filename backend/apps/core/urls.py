@@ -1,14 +1,31 @@
-from django.urls import path #importa el metodo path
-from . import views #improta los metodos de que se implementan en el views,py de este directorio
-'''
-En esta sección configuramos las urls que nuestra aplicación usará, si necesitamos renderizar 
-una vista o debemos incluirla en el urlpatternes de la app la función path requiere de tres 
-parametros el primero indica el como se llamara desde el navegador, se deja en blanco solo para 
-la pagina de inicio, el segundo parametro indica que función del views que importamos en la línea 3
-usaremos para la url consultada, esta debe existir, el tercer parametro el nombre que le daremos
-'''
-core_urlpatterns = [
-    path('', views.home, name='home'),    
-    path('check_profile/', views.check_profile, name='check_profile'), 
-    path('main_admin/', views.main_admin, name='main_admin'),     
-    ]
+from apps.core.presentation.customer_orders import CustomerOrdersAPIView
+from apps.core.presentation.checkout import CheckoutOrderAPIView
+from django.urls import path
+from . import views
+from apps.core.presentation.views import (
+    ConfiguracionPagoAPIView,
+    MetodosPagoActivosAPIView,
+    RegistrarCompraView,
+    TiendaPagoActualAPIView,
+    IniciarPagoPayPalView, 
+    CapturarPagoPayPalView,
+    WebhookLinkifyAPIView, 
+    VerificarTransferenciaLinkifyAPIView
+)
+
+urlpatterns = [
+    path('pedidos/registrar/', RegistrarCompraView.as_view(), name='pedidos-registrar'),
+    path('checkout/pedidos/', CheckoutOrderAPIView.as_view(), name='checkout-order'),
+    path('mi-cuenta/pedidos/', CustomerOrdersAPIView.as_view(), name='customer-orders'),
+    path('mi-cuenta/pedidos/<int:pedido_id>/', CustomerOrdersAPIView.as_view(), name='customer-order-detail'),
+    path('', views.home, name='home'),
+    path('check_profile/', views.check_profile, name='check_profile'),
+    path('main_admin/', views.main_admin, name='main_admin'),
+    path('pagos/mi-tienda/', TiendaPagoActualAPIView.as_view(), name='pagos-mi-tienda'),
+    path('pagos/configuracion/', ConfiguracionPagoAPIView.as_view(), name='pagos-configuracion'),
+    path('pagos/activos/', MetodosPagoActivosAPIView.as_view(), name='pagos-activos'),
+    path('pagos/paypal/iniciar/', IniciarPagoPayPalView.as_view(), name='paypal_iniciar'),
+    path('pagos/paypal/capturar/', CapturarPagoPayPalView.as_view(), name='paypal_capturar'),
+    path('pagos/linkify/webhook/', WebhookLinkifyAPIView.as_view(), name='linkify_webhook'),
+    path('pagos/linkify/verificar/', VerificarTransferenciaLinkifyAPIView.as_view(), name='linkify_verificar'),
+]
