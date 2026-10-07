@@ -1,17 +1,21 @@
 # Vistas del módulo Core (PostgreSQL)
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.views import APIView
+from django.db import transaction
 
+from apps.core.delivery import delivery_data, delivery_for_store
 from apps.core.infrastructure.tenant import resolver_tienda, resolver_tienda_id
 from apps.core.models import (
     ConfiguracionMercadoPago,
     ConfiguracionPago,
     ConfiguracionPayPal,
     ConfiguracionTransbank,
+    ConfiguracionEntrega,
+    Tienda,
 )
 from apps.core.presentation.checkout import GuestCheckoutOrderAPIView
 from apps.core.presentation.responses import error_response, success_response
-from apps.core.presentation.serializers import ConfiguracionPagoSerializer
+from apps.core.presentation.serializers import ConfiguracionPagoSerializer, ShippingConfigurationSerializer
 from apps.core.models import Pedido
 from rest_framework import generics
 from .serializers import PedidoTiendaSerializer
@@ -58,6 +62,44 @@ class ConfiguracionPagoAPIView(APIView):
 
     def patch(self, request):
         return self.put(request)
+
+class ConfiguracionEntregaAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        tienda = resolver_tienda(request, exigir_propietario=True)
+        return success_response(data=delivery_for_store(tienda))
+
+    def put(self, request):
+        return self.save_configuration(request, partial=False)
+
+    def patch(self, request):
+        return self.save_configuration(request, partial=True)
+
+    def save_configuration(self, request, *, partial):
+        tienda = resolver_tienda(request, exigir_propietario=True)
+        serializer = ShippingConfigurationSerializer(data=request.data, partial=partial)
+        if not serializer.is_valid():
+            return error_response('Configuración de entrega inválida.', 'ERROR_VALIDACION',
+                                  serializer.errors, status=400)
+        with transaction.atomic():
+            # Serializa PATCH concurrentes, incluso antes de existir la configuración.
+            Tienda.objects.select_for_update().get(pk=tienda.pk)
+            config, _ = ConfiguracionEntrega.objects.get_or_create(tienda=tienda)
+            datos = delivery_data(config.datos)
+            for method, changes in serializer.validated_data.items():
+                datos[method].update(changes)
+            config.datos = datos
+            config.save(update_fields=['datos', 'fecha_actualizacion'])
+        return success_response(data=datos, mensaje='Configuración de entregas guardada.')
+
+
+class AlternativasEntregaAPIView(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        return success_response(data=delivery_for_store(resolver_tienda(request)))
+
 
 class MetodosPagoActivosAPIView(APIView):
     """Endpoint público para checkout."""

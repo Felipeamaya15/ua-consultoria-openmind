@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 
 import { orderService } from '../services/orderService';
+import { getDeliveryAlternatives } from '../services/shippingService';
 import { useCart } from '../context/CartContext';
 import { formatPrice } from '../data/mockData';
 import {
@@ -128,7 +129,7 @@ const defaultShippingOptions: ShippingOption[] = [
     id: 'Retiro',
     label: 'Retiro en tienda',
     icon: 'store',
-    desc: 'Sin costo · Lun-Sab 9:00-18:00',
+    desc: 'Sin costo',
     priceLabel: 'Gratis',
     requiresAddress: false,
   },
@@ -172,13 +173,11 @@ function readCheckoutOptions() {
     const raw = localStorage.getItem(ADMIN_STORAGE_KEY);
     if (!raw) {
       return {
-        shippingOptions: defaultShippingOptions,
         authSettings: defaultAuthSettings,
       };
     }
 
     const config = JSON.parse(raw)?.config;
-    const shippingConfig = config?.shippingConfiguration;
     const authConfig = config?.authenticationConfiguration;
     const authSettings: AuthSettings = {
       emailPassword:
@@ -191,29 +190,6 @@ function readCheckoutOptions() {
       requiresAuth:
         config?.requiresAuth ?? defaultAuthSettings.requiresAuth,
     };
-
-    let shippingOptions = defaultShippingOptions;
-    if (shippingConfig) {
-      shippingOptions = defaultShippingOptions.filter((option) => {
-        if (option.id === 'Chilexpress') return !!shippingConfig.chilexpress?.enabled;
-        if (option.id === 'Starken') return !!shippingConfig.starken?.enabled;
-        if (option.id === 'Retiro') return !!shippingConfig.pickup?.enabled;
-        return true;
-      }).map((option) =>
-        option.id === 'Retiro'
-          ? {
-              ...option,
-              desc:
-                shippingConfig.pickup?.schedule || shippingConfig.pickup?.address
-                  ? `Sin costo · ${[
-                      shippingConfig.pickup?.schedule,
-                      shippingConfig.pickup?.address,
-                    ].filter(Boolean).join(' · ')}`
-                  : option.desc,
-            }
-          : option,
-      );
-    }
 
     const paymentMap: Record<string, string> = {
       Transbank: 'transbank',
@@ -233,12 +209,10 @@ function readCheckoutOptions() {
     }
 
     return {
-      shippingOptions,
       authSettings,
     };
   } catch {
     return {
-      shippingOptions: defaultShippingOptions,
       authSettings: defaultAuthSettings,
     };
   }
@@ -383,10 +357,40 @@ export default function Checkout() {
   const { route, isMinimal, isVisual, isCatalog } =
     useStorefrontTemplate();
 
-  const { shippingOptions, authSettings } = useMemo(
+  const { authSettings } = useMemo(
     readCheckoutOptions,
     [],
   );
+  const [shippingOptions, setShippingOptions] = useState<ShippingOption[]>([]);
+  const [shippingLoading, setShippingLoading] = useState(true);
+  const [shippingError, setShippingError] = useState('');
+  const [shippingLoadAttempt, setShippingLoadAttempt] = useState(0);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    setShippingLoading(true);
+    setShippingError('');
+    getDeliveryAlternatives(controller.signal).then(configuration => {
+      if (controller.signal.aborted) return;
+      const enabled = defaultShippingOptions.filter(option => {
+        if (option.id === 'Chilexpress') return configuration.chilexpress.enabled;
+        if (option.id === 'Starken') return configuration.starken.enabled;
+        return configuration.pickup.enabled;
+      }).map(option => option.id === 'Retiro' ? {
+        ...option,
+        desc: ['Sin costo', configuration.pickup.schedule, configuration.pickup.address].filter(Boolean).join(' · '),
+      } : option);
+      setShippingOptions(enabled);
+    }).catch(cause => {
+      if (!controller.signal.aborted) {
+        setShippingOptions([]);
+        setShippingError(cause instanceof Error ? cause.message : 'No se pudieron cargar las alternativas de entrega.');
+      }
+    }).finally(() => {
+      if (!controller.signal.aborted) setShippingLoading(false);
+    });
+    return () => controller.abort();
+  }, [shippingLoadAttempt]);
   const availableAuthModes = useMemo(
     () => getAvailableAuthModes(authSettings),
     [authSettings],
@@ -626,7 +630,7 @@ export default function Checkout() {
           'Dirección requerida';
       }
 
-      if (!shippingMethod) {
+      if (shippingLoading || shippingError || !selectedShippingOption) {
         newErrors.shipping =
           'Selecciona un método de entrega';
       }
@@ -1116,6 +1120,10 @@ export default function Checkout() {
                   {errors.shipping}
                 </Alert>
               )}
+
+              {shippingLoading && <Alert variant="info">Cargando alternativas de entrega…</Alert>}
+              {shippingError && <><Alert variant="error">{shippingError}</Alert><Button variant="outline" onClick={() => setShippingLoadAttempt(value => value + 1)}>Reintentar carga</Button></>}
+              {!shippingLoading && !shippingError && !shippingOptions.length && <Alert variant="info">La tienda todavía no tiene alternativas de entrega habilitadas.</Alert>}
 
               <div className="flex flex-col gap-3">
                 {shippingOptions.map((method) => (

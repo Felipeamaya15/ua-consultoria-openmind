@@ -5,6 +5,8 @@ from django.urls import path
 from . import views
 from apps.core.presentation.views import (
     ConfiguracionPagoAPIView,
+    ConfiguracionEntregaAPIView,
+    AlternativasEntregaAPIView,
     MetodosPagoActivosAPIView,
     RegistrarCompraView,
     TiendaPagoActualAPIView,
@@ -25,6 +27,8 @@ urlpatterns = [
     path('main_admin/', views.main_admin, name='main_admin'),
     path('pagos/mi-tienda/', TiendaPagoActualAPIView.as_view(), name='pagos-mi-tienda'),
     path('pagos/configuracion/', ConfiguracionPagoAPIView.as_view(), name='pagos-configuracion'),
+    path('entregas/configuracion/', ConfiguracionEntregaAPIView.as_view(), name='entregas-configuracion'),
+    path('entregas/alternativas/', AlternativasEntregaAPIView.as_view(), name='entregas-alternativas'),
     path('pagos/activos/', MetodosPagoActivosAPIView.as_view(), name='pagos-activos'),
     path('pagos/paypal/iniciar/', IniciarPagoPayPalView.as_view(), name='paypal_iniciar'),
     path('pagos/paypal/capturar/', CapturarPagoPayPalView.as_view(), name='paypal_capturar'),

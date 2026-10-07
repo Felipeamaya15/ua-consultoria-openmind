@@ -233,6 +233,45 @@ class RegistrarCompraSerializer(StrictSerializer):
         return items
 
 
+class DeliveryBooleanField(serializers.BooleanField):
+    def to_internal_value(self, data):
+        if not isinstance(data, bool):
+            self.fail('invalid', input=data)
+        return super().to_internal_value(data)
+
+
+class DeliveryStringField(serializers.CharField):
+    def to_internal_value(self, data):
+        if not isinstance(data, str):
+            self.fail('invalid')
+        return super().to_internal_value(data)
+
+
+class PickupConfigurationSerializer(StrictSerializer):
+    enabled = DeliveryBooleanField()
+    address = DeliveryStringField(allow_blank=True, max_length=500)
+    schedule = DeliveryStringField(allow_blank=True, max_length=500)
+
+
+class CarrierConfigurationSerializer(StrictSerializer):
+    enabled = DeliveryBooleanField()
+    # Reservados para compatibilidad de forma; las credenciales reales quedan fuera de este sprint.
+    accountId = DeliveryStringField(allow_blank=True, max_length=200, required=False)
+    apiKey = DeliveryStringField(allow_blank=True, max_length=500, required=False)
+    status = serializers.ChoiceField(choices=['not_configured'], required=False)
+
+    def validate(self, data):
+        if data.get('accountId') or data.get('apiKey'):
+            raise serializers.ValidationError('El guardado de credenciales de transportistas todavía no está disponible.')
+        return data
+
+
+class ShippingConfigurationSerializer(StrictSerializer):
+    chilexpress = CarrierConfigurationSerializer()
+    starken = CarrierConfigurationSerializer()
+    pickup = PickupConfigurationSerializer()
+
+
 class ConfiguracionPagoSerializer(serializers.Serializer):
     """ Valida que no se habiliten medios de pago sin sus campos obligatorios (SCRUM-306) """
 

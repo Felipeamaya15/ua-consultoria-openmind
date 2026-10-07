@@ -10,7 +10,7 @@ from django.test import TestCase
 from rest_framework.test import APIClient
 
 from apps.core.infrastructure.linkify_client import LinkifyAdapter
-from apps.core.models import ConfiguracionPago, ItemPedido, Pedido, Tienda
+from apps.core.models import ConfiguracionPago, ConfiguracionEntrega, ItemPedido, Pedido, Tienda
 from apps.core.presentation.linkify_notificacion import LinkifyNotificacionView
 
 CLAVE = 'clave-privada-qa'
@@ -100,6 +100,7 @@ class LinkifyCheckoutTests(TestCase):
 
     def setUp(self):
         self.tienda = tienda_de_prueba('Tienda checkout linkify')
+        ConfiguracionEntrega.objects.create(tienda=self.tienda, datos={'pickup': {'enabled': True}})
         self.repositorio = RepositorioFalso()
         parche = patch('apps.core.presentation.checkout.ProductRepository', return_value=self.repositorio)
         parche.start()

@@ -19,6 +19,7 @@ from apps.core.infrastructure.tenant import resolver_tienda
 from apps.core.models import Pedido, ItemPedido, Tienda, Producto, ConfiguracionPago
 from apps.core.presentation.responses import success_response
 from apps.core.infrastructure.linkify_client import LinkifyAdapter
+from apps.core.delivery import DELIVERY_METHODS, delivery_for_store
 
 
 class CheckoutItemSerializer(StrictSerializer):
@@ -93,6 +94,9 @@ class CheckoutOrderAPIView(APIView):
                     raise ValidationError('Esta clave de checkout ya fue utilizada para otra solicitud.')
                 return success_response(data=self.result(previous, self._url_pago(previous, tienda)),
                                         mensaje='Pedido ya registrado.')
+            method = DELIVERY_METHODS[data['metodo_entrega']]
+            if not delivery_for_store(tienda)[method]['enabled']:
+                raise ValidationError({'metodo_entrega': 'El método de entrega no está habilitado en esta tienda.'})
             repository = ProductRepository()
             lines = {}
             for item in data['items']:
