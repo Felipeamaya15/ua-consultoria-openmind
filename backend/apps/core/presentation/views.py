@@ -80,10 +80,16 @@ class MetodosPagoActivosAPIView(APIView):
 
             try:
                 config_pago = ConfiguracionPago.objects.get(tienda_id=tienda_id)
-                transferencia = (config_pago.datos or {}).get("transfer", {})
+                datos = config_pago.datos or {}
             except ConfiguracionPago.DoesNotExist:
-                transferencia = {}
+                datos = {}
 
+            # Validación y exposición de Linkify para el frontend
+            linkify_data = datos.get("linkify", {})
+            if isinstance(linkify_data, dict) and linkify_data.get('enabled') is True:
+                metodos_activos["linkify"] = {"enabled": True}
+
+            transferencia = datos.get("transfer", {})
             if isinstance(transferencia, dict) and transferencia.get("enabled") is True:
                 fields = transferencia.get("fields", {})
                 metodos_activos["transfer"] = {
@@ -197,10 +203,13 @@ class VerificarTransferenciaLinkifyAPIView(APIView):
             
             config_pago = ConfiguracionPago.objects.get(tienda=tienda)
             linkify_config = (config_pago.datos or {}).get("linkify", {})
-            api_key = linkify_config.get("api_key")
+            
+            # Buscamos de forma flexible la clave privada o api_key
+            fields = linkify_config.get("fields", {})
+            api_key = fields.get("clavePrivada") or fields.get("apiKey") or linkify_config.get("api_key")
 
             if not api_key:
-                return error_response(mensaje="La tienda no tiene configurado Linkify.", status=400)
+                return error_response(mensaje="La tienda no tiene configurado Linkify correctamente.", status=400)
 
             from apps.catalog.infrastructure.adapters.linkify_adapter import LinkifyAdapter
             adapter = LinkifyAdapter(api_key=api_key)
