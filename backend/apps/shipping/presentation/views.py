@@ -1,45 +1,47 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from apps.shipping.presentation.serializers import CotizacionEnvioRequestSerializer
+from apps.shipping.presentation.serializers import CotizacionEnvioSerializer
 from apps.shipping.infrastructure.adapters import StandardLogisticsAdapter
-from apps.shipping.application.use_cases import CotizarDespachoEcommerceUseCase
+from apps.shipping.application.use_cases import ShippingQuotationService
 from apps.shipping.domain.exceptions import LogisticaException
 
-class CotizarEnvioView(APIView):
+class CotizacionEnvioView(APIView):
     """
-    Endpoint para cotizar alternativas de despacho antes del pago.
+    Servicio de cotizacion de envios para el flujo de Checkout del e-commerce.
     """
+
     def post(self, request):
-        serializer = CotizacionEnvioRequestSerializer(data=request.data)
+        serializer = CotizacionEnvioSerializer(data=request.data)
         if not serializer.is_valid():
             return Response({
                 "exito": False,
-                "mensaje": "Parámetros de dirección o carrito inválidos.",
+                "mensaje": "Parametros de cotizacion invalidos.",
                 "errores": serializer.errors
             }, status=status.HTTP_400_BAD_REQUEST)
 
         try:
-            datos = serializer.validated_data
-            # Inyección de dependencia del puerto con su adaptador activo
-            adaptador = StandardLogisticsAdapter()
-            caso_uso = CotizarDespachoEcommerceUseCase(logistics_port=adaptador)
-            
-            opciones = caso_uso.execute(
-                datos_destino=datos,
-                total_carrito=datos["total_carrito"],
-                total_items=datos["total_items"]
-            )
+            # Resolucion del adaptador e inyeccion al servicio de cotizacion
+            adaptador_logistico = StandardLogisticsAdapter()
+            servicio_cotizacion = ShippingQuotationService(logistics_port=adaptador_logistico)
+
+            resultado = servicio_cotizacion.cotizar(serializer.validated_data)
 
             return Response({
                 "exito": True,
-                "mensaje": "Tarifas de despacho obtenidas correctamente.",
-                "data": opciones
+                "mensaje": "Cotizacion generada exitosamente.",
+                "data": resultado
             }, status=status.HTTP_200_OK)
 
         except LogisticaException as e:
             return Response({
                 "exito": False,
                 "mensaje": str(e),
-                "error": {"codigo": "ERROR_LOGISTICA"}
+                "error": {"codigo": "ERROR_LOGISTICA_CALCULO"}
             }, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({
+                "exito": False,
+                "mensaje": "Error interno al procesar la cotizacion.",
+                "error": {"detalle": str(e)}
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
