@@ -123,5 +123,37 @@ class CotizarDespachoEcommerceUseCase:
             "opciones": opciones_procesadas
         }
 
+
+class ConsultarSeguimientoUseCase:
+    """
+    Caso de uso: Consulta y procesamiento del estado logístico de una orden.
+    """
+
+    def __init__(self, logistics_port: LogisticsPort):
+        self.logistics_port = logistics_port
+
+    def execute(self, numero_seguimiento: str) -> Dict[str, Any]:
+        codigo_limpio = (numero_seguimiento or "").strip()
+        
+        # Orquestación a través del puerto logístico
+        detalle = self.logistics_port.consultar_seguimiento(codigo_limpio)
+
+        return {
+            "numero_seguimiento": detalle.numero_seguimiento,
+            "proveedor": detalle.proveedor,
+            "estado_actual": detalle.estado_actual,
+            "descripcion_estado": detalle.descripcion_estado,
+            "fecha_estimada_entrega": detalle.fecha_estimada_entrega,
+            "historial": [
+                {
+                    "fecha_hora": e.fecha_hora,
+                    "estado": e.estado,
+                    "descripcion": e.descripcion,
+                    "ubicacion": e.ubicacion
+                }
+                for e in detalle.historial_eventos
+            ]
+        }
+
 # Alias para mantener coherencia semántica con el nombre del servicio
 ShippingQuotationService = CotizarDespachoEcommerceUseCase

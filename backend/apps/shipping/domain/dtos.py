@@ -35,3 +35,20 @@ class GuiaDespachoDTO:
     proveedor: str
     url_etiqueta: Optional[str]
     estado: str
+
+
+@dataclass(frozen=True)
+class EventoSeguimientoDTO:
+    fecha_hora: str
+    estado: str
+    descripcion: str
+    ubicacion: str
+
+@dataclass(frozen=True)
+class DetalleSeguimientoDTO:
+    numero_seguimiento: str
+    proveedor: str
+    estado_actual: str
+    descripcion_estado: str
+    fecha_estimada_entrega: str
+    historial_eventos: List[EventoSeguimientoDTO]

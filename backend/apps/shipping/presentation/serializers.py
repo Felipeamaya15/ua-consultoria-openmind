@@ -42,3 +42,18 @@ class CotizacionEnvioSerializer(serializers.Serializer):
                 f"La region '{value}' no es valida dentro del territorio nacional cubierto."
             )
         return region_limpia
+
+
+class EventoSeguimientoResponseSerializer(serializers.Serializer):
+    fecha_hora = serializers.CharField()
+    estado = serializers.CharField()
+    descripcion = serializers.CharField()
+    ubicacion = serializers.CharField()
+
+class DetalleSeguimientoResponseSerializer(serializers.Serializer):
+    numero_seguimiento = serializers.CharField()
+    proveedor = serializers.CharField()
+    estado_actual = serializers.CharField()
+    descripcion_estado = serializers.CharField()
+    fecha_estimada_entrega = serializers.CharField()
+    historial = EventoSeguimientoResponseSerializer(many=True)

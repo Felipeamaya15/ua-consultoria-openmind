@@ -1,6 +1,12 @@
 from abc import ABC, abstractmethod
 from typing import List
-from .dtos import DireccionDespachoDTO, PaqueteDTO, CotizacionEnvioDTO, GuiaDespachoDTO
+from .dtos import (
+    DireccionDespachoDTO, 
+    PaqueteDTO, 
+    CotizacionEnvioDTO,
+    GuiaDespachoDTO,
+    DetalleSeguimientoDTO
+)
 
 class LogisticsPort(ABC):
     """
@@ -31,6 +37,6 @@ class LogisticsPort(ABC):
         pass
 
     @abstractmethod
-    def consultar_estado(self, numero_seguimiento: str) -> str:
-        """Consulta el estado del despacho mediante el código de seguimiento."""
+    def consultar_seguimiento(self, numero_seguimiento: str) -> DetalleSeguimientoDTO:
+        """Consulta el estado detallado y la bitácora de eventos del despacho."""
         pass

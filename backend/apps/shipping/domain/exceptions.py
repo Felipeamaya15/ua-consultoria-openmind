@@ -9,3 +9,12 @@ class DireccionFueraDeCoberturaException(LogisticaException):
 class ProveedorLogisticoError(LogisticaException):
     """Error al comunicarse con el proveedor o servicio logístico."""
     pass
+
+
+class NumeroSeguimientoNoEncontradoException(LogisticaException):
+    """Lanzada cuando el código de seguimiento no existe o no registra envíos."""
+    pass
+
+class FormatoSeguimientoInvalidoException(LogisticaException):
+    """Lanzada cuando el código de seguimiento no cumple con el formato requerido."""
+    pass
