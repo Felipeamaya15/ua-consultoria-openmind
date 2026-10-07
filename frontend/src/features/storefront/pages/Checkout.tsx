@@ -689,7 +689,7 @@ export default function Checkout() {
       const orderNumber = String(order.identificador || order.id_pedido);
 
       if (paymentMethod === 'Transbank') {
-        const returnUrl = `${window.location.origin}${route('pedido-confirmado')}?orderNumber=${orderNumber}`;
+        const returnUrl = `${window.location.origin}${route('pedido-confirmado')}?orderNumber=${orderNumber}&tienda=${order.tienda_id}`;
         const result = await transbankPaymentService.iniciarPago(
           order.tienda_id, orderNumber, Number(order.monto_total), returnUrl,
         );
