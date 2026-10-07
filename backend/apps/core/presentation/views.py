@@ -122,7 +122,7 @@ class IniciarPagoPayPalView(APIView):
         except ConfiguracionPayPal.DoesNotExist:
             return error_response(mensaje="PayPal no configurado para esta tienda.", status=400)
         except Exception as e:
-            return error_response(mensaje=f"Error conectando con PayPal: {str(e)}", status=500)
+            return error_response(mensaje=f"Error conectando con PayPal: {str(e)}", codigo="ERROR_PAYPAL_INICIO", status=500)
 
 class CapturarPagoPayPalView(APIView):
     """Captura los fondos."""
@@ -143,10 +143,10 @@ class CapturarPagoPayPalView(APIView):
             if resultado.get("exito"):
                 return success_response(mensaje="Pago capturado", data=resultado)
             else:
-                return error_response(mensaje="No se pudo capturar el pago", status=400)
+                return error_response(mensaje="No se pudo capturar el pago", codigo="ERROR_CAPTURA", status=400)
                 
         except Exception as e:
-            return error_response(mensaje=f"Error capturando PayPal: {str(e)}", status=500)
+            return error_response(mensaje=f"Error capturando PayPal: {str(e)}", codigo="ERROR_PAYPAL_CAPTURA", status=500)
 
 class WebhookLinkifyAPIView(APIView):
     """
