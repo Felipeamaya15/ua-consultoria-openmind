@@ -13,6 +13,8 @@ from apps.core.presentation.checkout import GuestCheckoutOrderAPIView
 from apps.core.presentation.responses import error_response, success_response
 from apps.core.presentation.serializers import ConfiguracionPagoSerializer
 from apps.core.models import Pedido
+from rest_framework import generics
+from .serializers import PedidoTiendaSerializer
 
 class RegistrarCompraView(GuestCheckoutOrderAPIView):
     """Compatibilidad SCRUM-289: reutiliza la creación y seguridad de SCRUM-291."""
@@ -221,3 +223,12 @@ class VerificarTransferenciaLinkifyAPIView(APIView):
             return error_response(mensaje="Pedido no encontrado", status=404)
         except Exception as e:
             return error_response(mensaje=f"Error en validación Linkify: {str(e)}", status=500)
+
+class TiendaPedidosAPIView(generics.ListAPIView):
+    serializer_class = PedidoTiendaSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return Pedido.objects.filter(
+            tienda__id_usuario_propietario=self.request.user
+        ).order_by('-fecha_creacion')

@@ -16,9 +16,8 @@ from apps.authentication.presentation.profile import IsCustomer, StrictSerialize
 from apps.catalog.domain.stock import validate_stock
 from apps.catalog.infrastructure.repositories import ProductRepository
 from apps.core.infrastructure.tenant import resolver_tienda
-from apps.core.models import Pedido, ItemPedido, Tienda
+from apps.core.models import Pedido, ItemPedido, Tienda, Producto, ConfiguracionPago
 from apps.core.presentation.responses import success_response
-from apps.core.models import ConfiguracionPago
 from apps.core.infrastructure.linkify_client import LinkifyAdapter
 
 
@@ -115,11 +114,17 @@ class CheckoutOrderAPIView(APIView):
                         raise ValueError(f"Stock insuficiente para {item['sku']}.")
                 except (ValueError, InvalidOperation, KeyError) as exc:
                     raise ValidationError({'items': str(exc)}) from exc
-                lines[key] = dict(producto_mongo_id=key[0], nombre_producto=product['nombre'], sku=item['sku'],
-                                  atributos_variante=variant.get('atributos_variante', []), cantidad=quantity,
-                                  atributos={a.get('etiqueta') or a.get('clave'): a.get('valor')
-                                             for a in variant.get('atributos_variante', [])},
-                                  precio_unitario=price.quantize(Decimal('.01'), rounding=ROUND_HALF_UP))
+                lines[key] = dict(
+                    producto_mongo_id=key[0], 
+                    id_producto_id=product.get('id_producto'),
+                    nombre_producto=product['nombre'], 
+                    sku=item['sku'],
+                    atributos_variante=variant.get('atributos_variante', []), 
+                    cantidad=quantity,
+                    atributos={a.get('etiqueta') or a.get('clave'): a.get('valor')
+                               for a in variant.get('atributos_variante', [])},
+                    precio_unitario=price.quantize(Decimal('.01'), rounding=ROUND_HALF_UP)
+                )
             subtotal = sum((line['precio_unitario'] * line['cantidad'] for line in lines.values()), Decimal(0))
             promo = data['codigo_promocional']
             discount = min(subtotal, (subtotal * Decimal('.2')).quantize(Decimal('1'), rounding=ROUND_HALF_UP)
@@ -140,6 +145,14 @@ class CheckoutOrderAPIView(APIView):
             ItemPedido.objects.bulk_create([ItemPedido(id_pedido=order, **line) for line in lines.values()])
             for line in lines.values():
                 repository.decrease_stock(str(tienda.pk), line['sku'], line['cantidad'])
+                id_prod_pg = line.get('id_producto_id')
+                if id_prod_pg:
+                    try:
+                        prod_pg = Producto.objects.get(pk=id_prod_pg, id_tienda=tienda)
+                        prod_pg.stock -= line['cantidad']
+                        prod_pg.save(update_fields=['stock'])
+                    except Producto.DoesNotExist:
+                        pass
 
         es_linkify = data['medio_pago'].strip().lower() == 'linkify'
         url_pago = None
@@ -166,7 +179,7 @@ class CheckoutOrderAPIView(APIView):
         if url_pago:
             data['url_pago'] = url_pago
         return data
-  
+        
 
 class GuestCheckoutOrderAPIView(CheckoutOrderAPIView):
     def order_data(self, request, tienda):

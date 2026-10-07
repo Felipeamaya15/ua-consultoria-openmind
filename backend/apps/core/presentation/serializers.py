@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from apps.core.models import Producto, Tienda, Usuario, VarianteProducto, Pedido
+from apps.core.models import Producto, Tienda, Usuario, VarianteProducto, Pedido, ItemPedido
 
 class ProductoSerializer(serializers.ModelSerializer):
     class Meta:
@@ -297,3 +297,19 @@ class PedidoSerializer(serializers.ModelSerializer):
             'fecha_creacion'
         ]
         read_only_fields = ['identificador']
+
+class ItemPedidoTiendaSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ItemPedido
+        fields = ['nombre_producto', 'cantidad', 'precio_unitario']
+
+class PedidoTiendaSerializer(serializers.ModelSerializer):
+    items = ItemPedidoTiendaSerializer(source='itempedido_set', many=True, read_only=True)
+    
+    class Meta:
+        model = Pedido
+        fields = [
+            'id_pedido', 'identificador', 'nombre_contacto', 'correo_contacto', 
+            'monto_total', 'estado', 'fecha_creacion', 'metodo_pago', 
+            'costo_envio', 'descuento', 'items'
+        ]

@@ -7,6 +7,7 @@ from apps.core.models import Usuario, Tienda, Producto
 from apps.core.services import configurar_tienda
 from apps.core.infrastructure.tenant import resolver_tienda
 from rest_framework.exceptions import APIException
+from .models import Pedido
 
 @admin.register(Usuario)
 class UsuarioAdmin(admin.ModelAdmin):
@@ -105,3 +106,7 @@ class ProductoAdmin(TiendaAdministradaMixin, admin.ModelAdmin):
                 request, 
                 f"✅ Producto guardado en PostgreSQL y sincronizado en MongoDB con ID: {mongo_id}"
             )
+@admin.register(Pedido)
+class PedidoAdmin(admin.ModelAdmin):
+    list_display = ('id_pedido', 'identificador', 'comprador', 'monto_total', 'estado')
+    readonly_fields = ('identificador',)
