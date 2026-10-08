@@ -5,6 +5,7 @@ import { orderService } from '../services/orderService';
 import { getDeliveryAlternatives } from '../services/shippingService';
 import { useCart } from '../context/CartContext';
 import { formatPrice } from '../data/mockData';
+import { comunasDeRegion, esComunaDeRegion } from '../data/comunasChile';
 import {
   Stepper,
   Button,
@@ -628,6 +629,12 @@ export default function Checkout() {
       ) {
         newErrors.address =
           'Dirección requerida';
+      } else if (
+        selectedShippingOption?.requiresAddress &&
+        !esComunaDeRegion(address.city, address.region)
+      ) {
+        newErrors.address =
+          'Selecciona una comuna de la región elegida';
       }
 
       if (shippingLoading || shippingError || !selectedShippingOption) {
@@ -1235,8 +1242,25 @@ export default function Checkout() {
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <Input
-                        label="Ciudad / Comuna"
+                      <Select
+                        label="Región"
+                        value={address.region}
+                        onChange={(event) =>
+                          setAddress(
+                            (current) => ({
+                              ...current,
+                              region:
+                                event.target
+                                  .value,
+                              city: '',
+                            }),
+                          )
+                        }
+                        options={REGIONES}
+                      />
+
+                      <Select
+                        label="Comuna"
                         value={address.city}
                         onChange={(event) =>
                           setAddress(
@@ -1248,23 +1272,15 @@ export default function Checkout() {
                             }),
                           )
                         }
-                        placeholder="Santiago"
-                      />
-
-                      <Select
-                        label="Región"
-                        value={address.region}
-                        onChange={(event) =>
-                          setAddress(
-                            (current) => ({
-                              ...current,
-                              region:
-                                event.target
-                                  .value,
+                        options={[
+                          { value: '', label: 'Selecciona una comuna' },
+                          ...comunasDeRegion(address.region).map(
+                            (comuna) => ({
+                              value: comuna,
+                              label: comuna,
                             }),
-                          )
-                        }
-                        options={REGIONES}
+                          ),
+                        ]}
                       />
                     </div>
                   </div>
