@@ -1,3 +1,5 @@
+from apps.core.payments import TRANSFER_PUBLIC_FIELDS
+from apps.core.models import ConfiguracionPago
 import hashlib
 import hmac
 import json
@@ -101,6 +103,8 @@ class LinkifyCheckoutTests(TestCase):
     def setUp(self):
         self.tienda = tienda_de_prueba('Tienda checkout linkify')
         ConfiguracionEntrega.objects.create(tienda=self.tienda, datos={'pickup': {'enabled': True}})
+        ConfiguracionPago.objects.create(tienda=self.tienda, datos={'transfer': {'enabled': True,
+            'fields': {field: 'qa' for field in TRANSFER_PUBLIC_FIELDS}}})
         self.repositorio = RepositorioFalso()
         parche = patch('apps.core.presentation.checkout.ProductRepository', return_value=self.repositorio)
         parche.start()

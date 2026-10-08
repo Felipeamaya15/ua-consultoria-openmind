@@ -9,7 +9,7 @@ from apps.core.infrastructure.mongo_client import get_mongo_client
 
 
 class MongoTenantContract:
-    """Aislamiento del catálogo en ambos caminos de importación existentes."""
+    """Aislamiento del catálogo en el repositorio canónico."""
 
     tienda_id = '37'
     otra_tienda_id = '92'
@@ -167,7 +167,3 @@ class MongoTenantContract:
 
 class MongoTenantTests(MongoTenantContract, SimpleTestCase):
     repository_module = 'apps.catalog.infrastructure.repositories'
-
-
-class MongoTenantAlternateRepositoryTests(MongoTenantContract, SimpleTestCase):
-    repository_module = 'apps.catalog.application.infrastructure.repositories'

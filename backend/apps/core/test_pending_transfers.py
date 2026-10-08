@@ -1,3 +1,5 @@
+from apps.core.payments import TRANSFER_PUBLIC_FIELDS
+from apps.core.models import ConfiguracionPago
 from datetime import timedelta
 from decimal import Decimal
 import json
@@ -23,6 +25,8 @@ class TransferFixtureMixin:
         self.buyer = users.objects.create_user(username='transfers-buyer', email='buyer@example.com')
         self.other = users.objects.create_user(username='transfers-other', is_staff=True)
         self.store = Tienda.objects.create(nombre='Transfer store', id_usuario_propietario=self.owner)
+        ConfiguracionPago.objects.create(tienda=self.store, datos={'transfer': {'enabled': True,
+            'fields': {field: 'qa' for field in TRANSFER_PUBLIC_FIELDS}}})
         self.api = APIClient()
         self.api.credentials(HTTP_AUTHORIZATION='Token ' + Token.objects.create(user=self.owner).key)
 
@@ -235,6 +239,10 @@ class RegistroTransferenciasTests(TransferFixtureMixin, TestCase):
         self.assertEqual(self.product.stock, 5)
 
     def test_other_checkout_payment_methods_do_not_become_pending_transfers(self):
+        from apps.core.models import ConfiguracionTransbank, ConfiguracionPayPal, ConfiguracionMercadoPago
+        ConfiguracionTransbank.objects.create(id_tienda=self.store, activo=True, codigo_comercio='qa', api_key='qa')
+        ConfiguracionPayPal.objects.create(id_tienda=self.store, activo=True, client_id='qa', client_secret='qa')
+        ConfiguracionMercadoPago.objects.create(id_tienda=self.store, activo=True, public_key='qa', access_token='qa')
         for method in ('Transbank', 'PayPal', 'MercadoPago'):
             data = {**self.payload, 'clave_checkout': str(uuid4()), 'medio_pago': method}
             response = self.api.post(self.checkout_url, data, format='json')

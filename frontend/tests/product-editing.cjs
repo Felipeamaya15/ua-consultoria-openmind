@@ -9,7 +9,7 @@ function load(file, globals) {
   const module = { exports: {} };
   const source = fs.readFileSync(path.join(root, file), 'utf8').replace('(import.meta as any).env.VITE_API_URL', '"http://test"');
   const code = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020, jsx: ts.JsxEmit.ReactJSX } }).outputText;
-  vm.runInNewContext(code, { module, exports: module.exports, Error, ...globals });
+  vm.runInNewContext(code, { module, exports: module.exports, Error, sessionStorage: {getItem: () => null}, ...globals });
   return module.exports;
 }
 const id = '0123456789abcdef01234567';

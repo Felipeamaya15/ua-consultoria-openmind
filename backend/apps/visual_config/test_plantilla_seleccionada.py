@@ -160,7 +160,7 @@ class PlantillaSeleccionadaAPITests(TestCase):
 
         self.assertEqual(
             response.status_code,
-            status.HTTP_403_FORBIDDEN,
+            status.HTTP_401_UNAUTHORIZED,
         )
 
     def test_otro_usuario_no_puede_modificar_la_tienda(self):

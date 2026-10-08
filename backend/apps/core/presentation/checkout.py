@@ -2,6 +2,7 @@
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from hashlib import sha256
 import json
+import logging
 from uuid import uuid4
 
 from django.db import transaction
@@ -20,6 +21,9 @@ from apps.core.models import Pedido, ItemPedido, Tienda, Producto, Configuracion
 from apps.core.presentation.responses import success_response
 from apps.core.infrastructure.linkify_client import LinkifyAdapter
 from apps.core.delivery import DELIVERY_METHODS, delivery_for_store
+from apps.core.payments import PAYMENT_METHODS, payment_methods_for_store
+
+logger = logging.getLogger(__name__)
 
 
 class CheckoutItemSerializer(StrictSerializer):
@@ -81,10 +85,6 @@ class CheckoutOrderAPIView(APIView):
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
         fingerprint = sha256(json.dumps(data, sort_keys=True, default=str).encode()).hexdigest()
-        if data['medio_pago'].strip().lower() == 'linkify' and not self._credenciales_linkify(tienda):
-            # Se rechaza antes de crear el pedido: asi no queda un pedido sin forma de pago ni stock descontado.
-            raise ValidationError({'medio_pago': 'Linkify no está disponible en esta tienda. '
-                                                 'Elige otro medio de pago o contacta a la tienda.'})
         with transaction.atomic():
             Tienda.objects.select_for_update().get(pk=tienda.pk)
             previous = Pedido.objects.filter(clave_checkout=data['clave_checkout']).first()
@@ -94,6 +94,9 @@ class CheckoutOrderAPIView(APIView):
                     raise ValidationError('Esta clave de checkout ya fue utilizada para otra solicitud.')
                 return success_response(data=self.result(previous, self._url_pago(previous, tienda)),
                                         mensaje='Pedido ya registrado.')
+            if PAYMENT_METHODS[data['medio_pago']] not in payment_methods_for_store(tienda):
+                raise ValidationError({'medio_pago': f"{data['medio_pago']} no está disponible en esta tienda. "
+                                                     'Elige otro medio de pago o contacta a la tienda.'})
             method = DELIVERY_METHODS[data['metodo_entrega']]
             if not delivery_for_store(tienda)[method]['enabled']:
                 raise ValidationError({'metodo_entrega': 'El método de entrega no está habilitado en esta tienda.'})
@@ -152,19 +155,31 @@ class CheckoutOrderAPIView(APIView):
                 costo_envio=shipping, descuento=discount,
             )
             ItemPedido.objects.bulk_create([ItemPedido(id_pedido=order, **line) for line in lines.values()])
-            for line in lines.values():
-                repository.decrease_stock(str(tienda.pk), line['sku'], line['cantidad'])
-                id_prod_pg = line.get('id_producto_id')
-                if id_prod_pg:
+            result = self.result(order, self._url_pago(order, tienda))
+            reserved = []
+            try:
+                for line in lines.values():
+                    if not repository.decrease_stock(str(tienda.pk), line['sku'], line['cantidad']):
+                        raise ValidationError({'items': f"Stock insuficiente para {line['sku']}."})
+                    reserved.append(line)
+                    id_prod_pg = line.get('id_producto_id')
+                    if id_prod_pg:
+                        try:
+                            prod_pg = Producto.objects.select_for_update().get(pk=id_prod_pg, id_tienda=tienda)
+                            prod_pg.stock -= line['cantidad']
+                            prod_pg.save(update_fields=['stock'])
+                        except Producto.DoesNotExist:
+                            pass
+            except Exception:
+                # PostgreSQL revierte su transacción; Mongo requiere compensar las reservas ya confirmadas.
+                for line in reversed(reserved):
                     try:
-                        prod_pg = Producto.objects.get(pk=id_prod_pg, id_tienda=tienda)
-                        prod_pg.stock -= line['cantidad']
-                        prod_pg.save(update_fields=['stock'])
-                    except Producto.DoesNotExist:
-                        pass
-
-                return success_response(data=self.result(order, self._url_pago(order, tienda)),
-                                mensaje='Pedido creado correctamente.', status=201)
+                        if not repository.restore_stock(str(tienda.pk), line['producto_mongo_id'], line['sku'], line['cantidad']):
+                            raise RuntimeError('No se encontró la reserva a restituir.')
+                    except Exception:
+                        logger.exception('No se pudo restituir stock del pedido %s, SKU %s', order.pk, line['sku'])
+                raise
+            return success_response(data=result, mensaje='Pedido creado correctamente.', status=201)
 
     @staticmethod
     def _credenciales_linkify(tienda):
@@ -193,7 +208,8 @@ class CheckoutOrderAPIView(APIView):
     @staticmethod
     def result(order, url_pago=None):
         data = {
-            'id_pedido': order.pk, 'tienda_id': order.tienda_id, 'estado': order.estado,
+            'id_pedido': order.pk, 'identificador': order.identificador,
+            'tienda_id': order.tienda_id, 'estado': order.estado,
             'monto_total': format(order.monto_total, '.2f'),
             'descuento': format(order.descuento, '.2f'), 'costo_envio': format(order.costo_envio, '.2f'),
         }

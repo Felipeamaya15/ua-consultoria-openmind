@@ -1,3 +1,5 @@
+from apps.core.payments import TRANSFER_PUBLIC_FIELDS
+from apps.core.models import ConfiguracionPago
 from copy import deepcopy
 from types import SimpleNamespace
 from unittest.mock import patch
@@ -123,6 +125,8 @@ class DeliveryConfigurationTests(TestCase):
         self.store = Tienda.objects.create(nombre='Delivery store', id_usuario_propietario=self.owner)
         self.api = APIClient()
         self.api.force_authenticate(self.owner)
+        ConfiguracionPago.objects.create(tienda=self.store, datos={'transfer': {'enabled': True,
+            'fields': {field: 'qa' for field in TRANSFER_PUBLIC_FIELDS}}})
         self.configuration = delivery_defaults()
         self.configuration['pickup'] = {'enabled': True, 'address': 'Av. Providencia 1234', 'schedule': 'Lun–Sáb 9–18'}
 
@@ -202,6 +206,8 @@ class DeliveryCheckoutTests(TestCase):
         owner = get_user_model().objects.create_user(username='delivery-checkout-owner')
         self.store = Tienda.objects.create(nombre='Checkout delivery', id_usuario_propietario=owner)
         self.api = APIClient()
+        ConfiguracionPago.objects.create(tienda=self.store, datos={'transfer': {'enabled': True,
+            'fields': {field: 'qa' for field in TRANSFER_PUBLIC_FIELDS}}})
         self.configuration = delivery_defaults()
         self.configuration['pickup'] = {'enabled': True, 'address': 'Local', 'schedule': '9–18'}
         self.payload = {

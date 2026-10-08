@@ -87,10 +87,23 @@ export default function TransbankReturnResult({
       );
   }, [tokenWs, tbkToken, tiendaId]);
 
-  const hasAccount = !!localStorage.getItem('token');
   const approvedData = result.status === 'approved' ? result.data : {};
   const orderLabel =
     orderNumber || (approvedData.orden_compra ? String(approvedData.orden_compra) : '');
+  let identificador = '';
+  let email = '';
+  try {
+    const stored: unknown = JSON.parse(sessionStorage.getItem(`order-tracking:${orderLabel}`) ?? 'null');
+    if (stored && typeof stored === 'object') {
+      if ('identificador' in stored && typeof stored.identificador === 'string') identificador = stored.identificador.trim();
+      if ('email' in stored && typeof stored.email === 'string') email = stored.email;
+    }
+  } catch {
+    // El retorno puede abrirse sin la sesión original: queda la búsqueda manual.
+  }
+  const trackingRoute = identificador
+    ? `${route('seguimiento')}?orden=${encodeURIComponent(identificador)}`
+    : route('seguimiento');
 
   const view = {
     loading: { glyph: '…', tone: 'bg-gray-100 text-gray-600', title: 'Confirmando tu pago…' },
@@ -177,12 +190,12 @@ export default function TransbankReturnResult({
         <div className="flex flex-col sm:flex-row gap-3 w-full">
           {result.status === 'approved' ? (
             <Link
-              to={route(hasAccount ? 'mis-pedidos' : 'catalogo')}
-              state={{ orderNumber: orderLabel }}
+              to={trackingRoute}
+              state={{ email }}
               className="flex-1"
             >
               <Button variant="primary" fullWidth>
-                {hasAccount ? 'Ver mis pedidos' : 'Seguir comprando'}
+                Ver mi pedido
               </Button>
             </Link>
           ) : (

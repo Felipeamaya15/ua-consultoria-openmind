@@ -82,10 +82,12 @@ class ProductoAdmin(TiendaAdministradaMixin, admin.ModelAdmin):
     list_filter = ('id_tienda',)
 
     def save_model(self, request, obj, form, change):
+        if obj.id_tienda_id != self.tienda_administrada(request).pk:
+            raise PermissionDenied('El producto no pertenece a la tienda administrada.')
         super().save_model(request, obj, form, change)
         if not change:
             repo = ProductRepository()
-            mongo_id = repo.create({
+            mongo_id = repo.create(str(obj.id_tienda_id), {
                 "id_producto": obj.id_producto,
                 "nombre": obj.nombre,
                 "tienda_id": str(obj.id_tienda_id),
@@ -126,6 +128,17 @@ class ProductoAdmin(TiendaAdministradaMixin, admin.ModelAdmin):
                     f"🔄 Stock ({obj.stock}) y datos del producto sincronizados correctamente en el catálogo y sus variantes."
                 )
 @admin.register(Pedido)
-class PedidoAdmin(admin.ModelAdmin):
+class PedidoAdmin(TiendaAdministradaMixin, admin.ModelAdmin):
+    filtro_tienda = 'tienda'
     list_display = ('id_pedido', 'identificador', 'comprador', 'monto_total', 'estado')
     readonly_fields = ('identificador',)
+
+    def save_model(self, request, obj, form, change):
+        if obj.tienda_id != self.tienda_administrada(request).pk:
+            raise PermissionDenied('El pedido no pertenece a la tienda administrada.')
+        return super().save_model(request, obj, form, change)
+
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        if db_field.name == 'tienda':
+            kwargs['queryset'] = Tienda.objects.filter(pk=self.tienda_administrada(request).pk)
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)

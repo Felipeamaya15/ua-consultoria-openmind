@@ -929,7 +929,24 @@ class ValidarDisponibilidadAPIView(APIView):
 
             )
 
-class ProductVariantsView(APIView):
+class VariantTenantMixin:
+    def initial(self, request, *args, **kwargs):
+        super().initial(request, *args, **kwargs)
+        from apps.catalog.domain.stock import validate_stock
+        from rest_framework.exceptions import ValidationError
+        tienda_id = resolver_tienda_id(request, exigir_propietario=request.method in ('PUT', 'PATCH', 'DELETE')
+                                       or (request.method == 'POST' and isinstance(self, ProductVariantsView)))
+        if request.method in ('POST', 'PUT', 'PATCH'):
+            for field in ('stock', 'cantidad'):
+                if field in request.data:
+                    try:
+                        validate_stock(request.data[field])
+                    except ValueError as error:
+                        raise ValidationError({field: str(error)}) from error
+        self.service = VariantService(tienda_id=tienda_id)
+
+
+class ProductVariantsView(VariantTenantMixin, APIView):
 
     """
 
@@ -1461,7 +1478,7 @@ class ProductVariantsView(APIView):
 
             )
 
-class VariantPurchaseView(APIView):
+class VariantPurchaseView(VariantTenantMixin, APIView):
 
     """
 
@@ -1564,6 +1581,7 @@ class IniciarPagoTransbankView(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
+        resolver_tienda(request)
         serializer = IniciarPagoTransbankSerializer(data=request.data)
         if not serializer.is_valid():
             return Response(
@@ -1614,6 +1632,7 @@ class ConfirmarPagoTransbankView(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
+        resolver_tienda(request)
         serializer = ConfirmarPagoTransbankSerializer(data=request.data)
         if not serializer.is_valid():
             return Response(

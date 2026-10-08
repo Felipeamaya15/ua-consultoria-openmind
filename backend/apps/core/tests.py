@@ -7,6 +7,8 @@ from django.contrib.auth.models import AnonymousUser
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import IntegrityError, connection, connections, transaction
 from django.db.migrations.executor import MigrationExecutor
+from django.db.migrations import RunPython
+from unittest.mock import patch
 from django.db.models.deletion import ProtectedError
 from django.test import RequestFactory, TestCase, TransactionTestCase
 
@@ -199,14 +201,20 @@ class ConfiguracionTiendaConcurrenteTests(TransactionTestCase):
 
 
 class TiendaPropietarioMigrationTests(TransactionTestCase):
-    migrate_from = ('core', '0003_itempedido_id_variante')
+    migrate_from = ('core', '0001_initial')
     migrate_to = ('core', '0004_tienda_propietario_auth')
 
     def setUp(self):
         executor = MigrationExecutor(connection)
-        self.other_targets = [node for node in executor.loader.graph.leaf_nodes() if node[0] != 'core']
+        self.final_targets = executor.loader.graph.leaf_nodes()
+        self.other_targets = [node for node in self.final_targets
+                              if node[0] not in ('core', 'authentication', 'landing', 'visual_config')]
         targets = [self.migrate_from, *self.other_targets]
-        executor.migrate(targets)
+        operation = executor.loader.disk_migrations[('authentication', '0002_ensure_configuracion_autenticacion_table')].operations[0]
+        # No cambia migraciones guardadas ni la BD local: evita el rollback destructivo
+        # preexistente de 0002 para aislar la conciliación de propietarios en la BD temporal.
+        with patch.object(operation, 'reverse_code', RunPython.noop):
+            executor.migrate(targets)
         self.old_apps = executor.loader.project_state(targets).apps
 
     def tearDown(self):
@@ -214,7 +222,7 @@ class TiendaPropietarioMigrationTests(TransactionTestCase):
         executor = MigrationExecutor(connection)
         if self.migrate_to not in executor.loader.applied_migrations:
             self.old_apps.get_model('core', 'Tienda').objects.all().delete()
-        executor.migrate([self.migrate_to, *self.other_targets])
+        executor.migrate(self.final_targets)
         super().tearDown()
 
     def legacy(self, pk, email):

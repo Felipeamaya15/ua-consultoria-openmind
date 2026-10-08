@@ -336,6 +336,18 @@ class ProductRepository:
         return result is not None
 
 
+    def restore_stock(self, tienda_id: str, product_id: str, sku: str, cantidad: int) -> bool:
+        """Compensa exclusivamente una reserva confirmada del checkout en este producto."""
+        validate_store_id(tienda_id)
+        validate_stock(cantidad)
+        if cantidad <= 0:
+            raise ValueError('La cantidad a restituir debe ser positiva.')
+        result = self.collection.update_one(
+            {**self._build_id_query(product_id), 'tienda_id': tienda_id, 'variantes.sku': sku},
+            {'$inc': {'variantes.$.stock': cantidad}},
+        )
+        return result.modified_count == 1
+
     def add_variant(
         self,
         tienda_id_or_product_id: str,

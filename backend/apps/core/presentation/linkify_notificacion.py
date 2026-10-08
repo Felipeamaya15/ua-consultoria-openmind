@@ -25,6 +25,7 @@ nombres exactos de los campos de cada peticion y que se firma en los GET.
 Los nombres aceptados estan concentrados en las constantes de abajo.
 """
 import logging
+from collections.abc import Mapping
 from decimal import Decimal, InvalidOperation
 
 from django.db import transaction
@@ -66,7 +67,10 @@ def _dato(datos, *claves):
 
 def _a_entero(valor, pedido=None):
     try:
-        return int(Decimal(str(valor)))
+        monto = Decimal(str(valor))
+        if not monto.is_finite() or monto < 0:
+            raise ValueError('Monto inválido.')
+        return monto
     except (InvalidOperation, ValueError):
         raise _Rechazo("MONTO_INVALIDO", "El monto informado no es un numero valido.", status.HTTP_400_BAD_REQUEST, pedido)
 
@@ -116,6 +120,9 @@ class LinkifyNotificacionView(APIView):
         except APIException:  # JSON mal formado o tipo de contenido no admitido
             raise _Rechazo("CUERPO_INVALIDO", "El cuerpo de la peticion no es valido.", status.HTTP_400_BAD_REQUEST)
 
+        if not isinstance(datos, Mapping):
+            raise _Rechazo("CUERPO_INVALIDO", "El cuerpo debe ser un objeto.", status.HTTP_400_BAD_REQUEST)
+
         pedido = self._pedido(_dato(datos, *CAMPOS_ID_PAGO))
         self._verificar_firma(request, pedido, cuerpo)
 
@@ -157,7 +164,7 @@ class LinkifyNotificacionView(APIView):
     def _pago_recibido(self, pedido, monto):
         if (pedido.medio_pago or pedido.metodo_pago or "").strip().lower() != "linkify":
             raise _Rechazo("PEDIDO_NO_LINKIFY", "El pedido no fue creado con Linkify.", status.HTTP_409_CONFLICT, pedido)
-        if monto is not None and _a_entero(monto, pedido) != int(pedido.monto_total):
+        if monto is not None and _a_entero(monto, pedido) != pedido.monto_total:
             raise _Rechazo("MONTO_NO_COINCIDE", "El monto pagado no coincide con el del pedido.", status.HTTP_409_CONFLICT, pedido)
 
         with transaction.atomic():
@@ -173,6 +180,8 @@ class LinkifyNotificacionView(APIView):
         return Response({"exito": True, "mensaje": "Pago registrado.", "estado": pedido.estado})
 
     def _pago_anulado(self, pedido):
+        if (pedido.medio_pago or pedido.metodo_pago or "").strip().lower() != "linkify":
+            raise _Rechazo("PEDIDO_NO_LINKIFY", "El pedido no fue creado con Linkify.", status.HTTP_409_CONFLICT, pedido)
         with transaction.atomic():
             pedido = Pedido.objects.select_for_update().get(pk=pedido.pk)
             if pedido.estado == "enviado":

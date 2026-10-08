@@ -74,7 +74,6 @@ type TransferDetails = {
 };
 
 const ADMIN_STORAGE_KEY = 'ua-entrepreneur-demo-v1';
-const API_URL = (import.meta as any).env.VITE_API_URL || 'http://localhost:8000';
 
 type AuthSettings = {
   emailPassword: boolean;
@@ -190,23 +189,6 @@ function readCheckoutOptions() {
       requiresAuth:
         config?.requiresAuth ?? defaultAuthSettings.requiresAuth,
     };
-
-    const paymentMap: Record<string, string> = {
-      Transbank: 'transbank',
-      MercadoPago: 'mercadopago',
-      PayPal: 'paypal',
-      Linkify: 'linkify',
-      Transferencia: 'transfer',
-    };
-
-    let paymentOptions = paymentPresentation;
-    const paymentConfig = config?.paymentConfiguration;
-    if (paymentConfig) {
-      paymentOptions = paymentPresentation.filter((option) => {
-        const key = paymentMap[option.id];
-        return key ? !!paymentConfig[key]?.enabled : false;
-      });
-    }
 
     return {
       authSettings,
@@ -461,11 +443,6 @@ export default function Checkout() {
       email: 'demo@example.com',
     });
 
-  const [paypal, setPaypal] = useState({
-    email: 'demo@example.com',
-    password: 'demostracion',
-  });
-
   const [paymentOptions, setPaymentOptions] = useState<PaymentOption[]>([]);
   const [paymentsLoading, setPaymentsLoading] = useState(true);
   const [paymentsError, setPaymentsError] = useState('');
@@ -693,6 +670,13 @@ export default function Checkout() {
       const orderNumber = String(order.identificador || order.id_pedido);
 
       if (paymentMethod === 'Transbank') {
+        try {
+          sessionStorage.setItem(`order-tracking:${orderNumber}`, JSON.stringify({
+            identificador: order.identificador, email: contact.email.trim(),
+          }));
+        } catch {
+          // Sin almacenamiento, Seguimiento conserva la búsqueda manual.
+        }
         const returnUrl = `${window.location.origin}${route('pedido-confirmado')}?orderNumber=${orderNumber}&tienda=${order.tienda_id}`;
         const result = await transbankPaymentService.iniciarPago(
           order.tienda_id, orderNumber, Number(order.monto_total), returnUrl,
@@ -732,7 +716,7 @@ export default function Checkout() {
       
       await clearCart();
       navigate(route('pedido-confirmado'), {
-        state: {orderNumber, email: contact.email.trim()}, replace: true,
+        state: {orderNumber, identificador: order.identificador, email: contact.email.trim()}, replace: true,
       });
     } catch (error) {
       setErrors({payment: error instanceof Error ? error.message : 'No se pudo registrar el pedido. Intenta nuevamente.'});

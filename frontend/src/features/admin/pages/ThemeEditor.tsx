@@ -68,7 +68,6 @@ export default function ThemeEditor() {
   const {
     config,
     setConfig,
-    updateTemplate,
   } = useAdmin();
 
   const [params] = useSearchParams();

@@ -301,16 +301,22 @@ class ConfiguracionPagoSerializer(serializers.Serializer):
 
         for method_id, method_data in data.items():
             if not isinstance(method_data, dict):
-                continue
+                raise serializers.ValidationError({method_id: 'La configuración del método debe ser un objeto.'})
                 
             is_enabled = method_data.get('enabled')
+            if not isinstance(is_enabled, bool):
+                raise serializers.ValidationError({method_id: 'enabled debe ser un booleano.'})
+            fields = method_data.get('fields', {})
+            if not isinstance(fields, dict):
+                raise serializers.ValidationError({method_id: 'fields debe ser un objeto.'})
             # Solo validamos si intentan guardarlo como habilitado
             if str(is_enabled).lower() == 'true' or is_enabled is True:
                 fields = method_data.get('fields', {})
                 required_fields = self.REQUIRED_FIELDS_BY_METHOD.get(method_id, [])
 
                 # Buscamos campos vacíos o inexistentes
-                missing = [key for key in required_fields if not str(fields.get(key, '')).strip()]
+                missing = [key for key in required_fields
+                           if not isinstance(fields.get(key), str) or not fields[key].strip()]
 
                 if missing:
                     errores_metodos[method_id] = f"Faltan campos obligatorios para habilitarlo: {', '.join(missing)}."

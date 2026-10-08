@@ -1,4 +1,5 @@
 from apps.core.presentation.customer_orders import CustomerOrdersAPIView
+from apps.core.presentation.order_tracking import OrderTrackingAPIView
 from apps.core.presentation.checkout import CheckoutOrderAPIView
 from apps.core.presentation.linkify_notificacion import LinkifyNotificacionView
 from django.urls import path
@@ -21,6 +22,7 @@ from apps.core.presentation.views import (
 urlpatterns = [
     path('pedidos/registrar/', RegistrarCompraView.as_view(), name='pedidos-registrar'),
     path('checkout/pedidos/', CheckoutOrderAPIView.as_view(), name='checkout-order'),
+    path('pedidos/seguimiento/', OrderTrackingAPIView.as_view(), name='order-tracking'),
     path('mi-cuenta/pedidos/', CustomerOrdersAPIView.as_view(), name='customer-orders'),
     path('mi-cuenta/pedidos/<int:pedido_id>/', CustomerOrdersAPIView.as_view(), name='customer-order-detail'),
     path('', views.home, name='home'),

@@ -10,7 +10,7 @@ function load(file, req) {
   const code = ts.transpileModule(fs.readFileSync(path.join(root, file), 'utf8'), {
     compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020, jsx: ts.JsxEmit.ReactJSX },
   }).outputText;
-  vm.runInNewContext(code, { module, exports: module.exports, require: req });
+  vm.runInNewContext(code, { module, exports: module.exports, require: req, localStorage: {getItem: () => null}, sessionStorage: {getItem: () => null} });
   return module.exports;
 }
 const jsx = (type, props) => typeof type === 'function' ? type(props) : ({ type, props });
@@ -30,7 +30,7 @@ function hooks(initial = []) {
   const state = initial;
   let cursor = 0;
   return { reset: () => { cursor = 0; }, react: {
-    createContext: () => ({ Provider: 'Provider' }), useEffect: () => {},
+    createContext: () => ({ Provider: 'Provider' }), useEffect: () => {}, useCallback: fn => fn,
     useState: value => {
       const index = cursor++;
       if (!(index in state)) state[index] = typeof value === 'function' ? value() : value;

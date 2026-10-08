@@ -7,8 +7,9 @@ import {
 import { Button, Icon } from '../components/ui';
 import { useStorefrontTemplate } from '../hooks/useStorefrontTemplate';
 import TransbankReturnResult from './TransbankReturnResult';
+import type { CreatedOrder } from '../services/orderService';
 
-interface ConfirmationState {
+interface ConfirmationState extends Pick<CreatedOrder, 'identificador'> {
   orderNumber?: string;
   email?: string;
 }
@@ -50,7 +51,10 @@ export default function OrderConfirmation() {
 
   const orderNumber = state.orderNumber;
   const email = state.email ?? 'tu correo';
-  const hasAccount = !!localStorage.getItem('token');
+  const identificador = state.identificador?.trim();
+  const trackingRoute = identificador
+    ? `${route('seguimiento')}?orden=${encodeURIComponent(identificador)}`
+    : route('seguimiento');
 
   /*
    * ==========================================================
@@ -95,7 +99,7 @@ export default function OrderConfirmation() {
             {[
               ['1', 'Pedido registrado', 'Tu pedido quedó registrado con estado pendiente.'],
               ['2', 'Pago pendiente', 'El registro del pedido no confirma su pago.'],
-              ['3', 'Sigue tu pedido', 'Con tu cuenta puedes consultar el estado en Mis pedidos.'],
+              ['3', 'Sigue tu pedido', 'Puedes consultar el estado desde Seguimiento.'],
             ].map(([number, title, description]) => (
               <div key={number}>
                 <span className="w-8 h-8 rounded-full bg-[#1683ff] text-white flex items-center justify-center text-[11px] font-black">
@@ -110,11 +114,11 @@ export default function OrderConfirmation() {
 
         <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-3">
           <Link
-            to={route(hasAccount ? 'mis-pedidos' : 'catalogo')}
-            state={{ orderNumber, email }}
+            to={trackingRoute}
+            state={{ email: state.email ?? '' }}
             className="h-12 rounded-[9px] bg-[#1683ff] text-white text-[12px] font-bold flex items-center justify-center hover:bg-[#3194f5] transition-colors"
           >
-            {hasAccount ? 'Ver mis pedidos' : 'Seguir comprando'}
+            Ver mi pedido
           </Link>
 
           <Link
@@ -233,14 +237,11 @@ export default function OrderConfirmation() {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full max-w-lg mt-6">
               <Link
-                to={route(hasAccount ? 'mis-pedidos' : 'catalogo')}
-                state={{
-                  orderNumber,
-                  email,
-                }}
+                to={trackingRoute}
+                state={{ email: state.email ?? '' }}
                 className="h-12 rounded-[8px] bg-black text-white text-[12px] font-semibold flex items-center justify-center hover:opacity-80 transition-opacity"
               >
-                {hasAccount ? 'Ver mis pedidos →' : 'Seguir comprando →'}
+                Ver mi pedido
               </Link>
 
               <Link
@@ -368,14 +369,11 @@ export default function OrderConfirmation() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full mt-6">
             <Link
-              to={route(hasAccount ? 'mis-pedidos' : 'catalogo')}
-              state={{
-                orderNumber,
-                email,
-              }}
+              to={trackingRoute}
+              state={{ email: state.email ?? '' }}
               className="h-12 rounded-full bg-[#17213b] text-white text-sm font-semibold flex items-center justify-center hover:bg-[#0f2a56] transition-colors"
             >
-              {hasAccount ? 'Ver mis pedidos' : 'Seguir comprando'}
+              Ver mi pedido
             </Link>
 
             <Link
@@ -466,18 +464,15 @@ export default function OrderConfirmation() {
 
       <div className="flex flex-col sm:flex-row gap-3 w-full">
         <Link
-          to={route(hasAccount ? 'mis-pedidos' : 'catalogo')}
-          state={{
-            orderNumber,
-            email,
-          }}
+          to={trackingRoute}
+          state={{ email: state.email ?? '' }}
           className="flex-1"
         >
           <Button
             variant="primary"
             fullWidth
           >
-            {hasAccount ? 'Ver mis pedidos' : 'Seguir comprando'}
+            Ver mi pedido
           </Button>
         </Link>
 

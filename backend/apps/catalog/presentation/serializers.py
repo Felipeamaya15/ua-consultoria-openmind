@@ -294,7 +294,13 @@ class ProductCreateSerializer(serializers.Serializer):
             raise serializers.ValidationError(
                 "Los SKU de las variantes deben ser únicos."
             )
-        return value        
+        schemas = [{attribute['clave'] for attribute in variant['atributos_variante']}
+                   for variant in value]
+        if any(schema != schemas[0] for schema in schemas[1:]):
+            raise serializers.ValidationError(
+                "Todas las variantes deben definir los mismos atributos del producto."
+            )
+        return value
 
 class ModificarCantidadRequestSerializer(serializers.Serializer):
     cantidad = serializers.IntegerField(min_value=1, error_messages={

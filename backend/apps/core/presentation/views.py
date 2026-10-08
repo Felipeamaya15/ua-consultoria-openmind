@@ -1,6 +1,7 @@
 # Vistas del módulo Core (PostgreSQL)
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.views import APIView
+from rest_framework.exceptions import APIException
 from django.db import transaction
 
 from apps.core.delivery import delivery_data, delivery_for_store
@@ -14,6 +15,7 @@ from apps.core.models import (
     Tienda,
 )
 from apps.core.presentation.checkout import GuestCheckoutOrderAPIView
+from apps.core.presentation.linkify_notificacion import LinkifyNotificacionView
 from apps.core.presentation.responses import error_response, success_response
 from apps.core.presentation.serializers import ConfiguracionPagoSerializer, ShippingConfigurationSerializer
 from apps.core.models import Pedido
@@ -104,64 +106,16 @@ class AlternativasEntregaAPIView(APIView):
 class MetodosPagoActivosAPIView(APIView):
     """Endpoint público para checkout."""
     permission_classes = [AllowAny]
-    TRANSFER_PUBLIC_FIELDS = {"bank_name", "account_type", "account_number", "holder_rut", "holder_name", "confirmation_email"}
-
     def get(self, request):
-        try:
-            tienda_id = resolver_tienda_id(request)
-            metodos_activos = {}
-
-            if ConfiguracionTransbank.objects.filter(id_tienda_id=tienda_id, activo=True).exists():
-                metodos_activos["transbank"] = {"enabled": True}
-
-            if ConfiguracionPayPal.objects.filter(id_tienda_id=tienda_id, activo=True).exists():
-                metodos_activos["paypal"] = {"enabled": True}
-
-            if ConfiguracionMercadoPago.objects.filter(id_tienda_id=tienda_id, activo=True).exists():
-                metodos_activos["mercadopago"] = {"enabled": True}
-
-            try:
-                config_pago = ConfiguracionPago.objects.get(tienda_id=tienda_id)
-                datos = config_pago.datos or {}
-            except ConfiguracionPago.DoesNotExist:
-                datos = {}
-
-            transferencia = datos.get("transfer", {})
-            linkify = datos.get("linkify", {})
-
-            # Validación y exposición de Linkify para el frontend
-            linkify_data = datos.get("linkify", {})
-            if isinstance(linkify_data, dict) and linkify_data.get('enabled') is True:
-                metodos_activos["linkify"] = {"enabled": True}
-
-            transferencia = datos.get("transfer", {})
-            if isinstance(transferencia, dict) and transferencia.get("enabled") is True:
-                fields = transferencia.get("fields", {})
-                metodos_activos["transfer"] = {
-                    "enabled": True,
-                    "fields": {f: fields.get(f, "") for f in self.TRANSFER_PUBLIC_FIELDS}
-                }
-
-                        # Linkify se lista solo si esta habilitado y con credenciales; nunca se exponen.
-            campos_linkify = (linkify.get("fields") or {}) if isinstance(linkify, dict) else {}
-            if (
-                isinstance(linkify, dict)
-                and linkify.get("enabled") is True
-                and campos_linkify.get("idCuenta")
-                and campos_linkify.get("clavePrivada")
-            ):
-                metodos_activos["linkify"] = {"enabled": True}
-
-            return success_response(data=metodos_activos)
-        except Exception as e:
-            return error_response(mensaje=str(e), codigo="ERROR_METODOS_PAGO", status=getattr(e, "status_code", 400))
+        from apps.core.payments import payment_methods_for_store
+        return success_response(data=payment_methods_for_store(resolver_tienda(request)))
 
 class IniciarPagoPayPalView(APIView):
     """Inicia una transacción en PayPal."""
     permission_classes = [AllowAny]
 
     def post(self, request):
-        tienda_id = request.data.get('tienda_id')
+        tienda_id = resolver_tienda(request).pk
         order_number = request.data.get('order_number')
         amount = request.data.get('amount')
         return_url = request.data.get('return_url')
@@ -181,7 +135,7 @@ class IniciarPagoPayPalView(APIView):
             return success_response(data=resultado)
             
         except ConfiguracionPayPal.DoesNotExist:
-            return error_response(mensaje="PayPal no configurado para esta tienda.", status=400)
+            return error_response(mensaje="PayPal no configurado para esta tienda.", codigo="PAYPAL_NO_CONFIGURADO", status=400)
         except Exception as e:
             return error_response(mensaje=f"Error conectando con PayPal: {str(e)}", codigo="ERROR_PAYPAL_INICIO", status=500)
 
@@ -190,7 +144,7 @@ class CapturarPagoPayPalView(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
-        tienda_id = request.data.get('tienda_id')
+        tienda_id = resolver_tienda(request).pk
         order_id = request.data.get('order_id')
 
         try:
@@ -209,38 +163,28 @@ class CapturarPagoPayPalView(APIView):
         except Exception as e:
             return error_response(mensaje=f"Error capturando PayPal: {str(e)}", codigo="ERROR_PAYPAL_CAPTURA", status=500)
 
-class WebhookLinkifyAPIView(APIView):
-    """
-    Endpoint pasivo (Webhook) para recibir notificaciones automáticas de Linkify 
-    cuando detectan una transferencia en la cuenta del vendedor.
-    """
-    permission_classes = [AllowAny]
+class WebhookLinkifyAPIView(LinkifyNotificacionView):
+    """Compatibilidad del webhook antiguo con la firma y estados de SCRUM-316/317."""
 
-    def post(self, request):
+    def _avisar(self, request, cuerpo):
         try:
             datos = request.data
-            reference_id = datos.get('buy_order') or datos.get('reference')
-            estado = datos.get('status')
-
-            if not reference_id:
-                return error_response(mensaje="Falta identificador (reference)", status=400)
-
-            # Buscamos el pedido en PostgreSQL
-            try:
-                pedido = Pedido.objects.get(identificador=reference_id)
-            except Pedido.DoesNotExist:
-                return error_response(mensaje="Pedido no encontrado", status=404)
-
-            # Si el banco de Linkify confirmó el ingreso del dinero
-            if estado in ['PAID', 'VERIFIED', 'COMPLETED']:
-                pedido.estado = 'pagado'
-                pedido.save()
-                return success_response(mensaje="Transferencia detectada automáticamente. Pedido pagado.")
-
-            return success_response(mensaje="Notificación recibida, estado pendiente.")
-            
-        except Exception as e:
-            return error_response(mensaje=f"Error procesando webhook Linkify: {str(e)}", status=500)
+        except APIException:
+            return error_response('El cuerpo no es válido.', 'CUERPO_INVALIDO', status=400)
+        if not isinstance(datos, dict):
+            return error_response('El cuerpo debe ser un objeto.', 'CUERPO_INVALIDO', status=400)
+        if any(key in datos for key in ('id_pago', 'idPago', 'payment_id', 'id')):
+            return super()._avisar(request, cuerpo)
+        reference = datos.get('buy_order') or datos.get('reference')
+        if not reference:
+            return error_response('Falta identificador (reference).', 'CUERPO_INVALIDO', status=400)
+        pedido = Pedido.objects.filter(identificador=reference).first()
+        if not pedido:
+            return error_response('Pedido no encontrado.', 'PEDIDO_NO_ENCONTRADO', status=404)
+        self._verificar_firma(request, pedido, cuerpo)
+        if datos.get('status') in ('PAID', 'VERIFIED', 'COMPLETED'):
+            return self._pago_recibido(pedido, datos.get('monto', datos.get('amount')))
+        return success_response(mensaje='Notificación recibida, estado pendiente.')
 
 
 class VerificarTransferenciaLinkifyAPIView(APIView):
@@ -255,6 +199,10 @@ class VerificarTransferenciaLinkifyAPIView(APIView):
         try:
             tienda = resolver_tienda(request, exigir_propietario=True)
             pedido = Pedido.objects.get(id_pedido=pedido_id, tienda=tienda)
+            if (pedido.medio_pago or pedido.metodo_pago or '').strip().lower() != 'linkify':
+                return error_response('El pedido no corresponde a Linkify.', 'PEDIDO_NO_LINKIFY', status=409)
+            if pedido.estado in ('cancelado', 'enviado'):
+                return error_response('El pedido requiere revisión manual.', 'ESTADO_PEDIDO_INVALIDO', status=409)
             
             config_pago = ConfiguracionPago.objects.get(tienda=tienda)
             linkify_config = (config_pago.datos or {}).get("linkify", {})
@@ -264,7 +212,7 @@ class VerificarTransferenciaLinkifyAPIView(APIView):
             api_key = fields.get("clavePrivada") or fields.get("apiKey") or linkify_config.get("api_key")
 
             if not api_key:
-                return error_response(mensaje="La tienda no tiene configurado Linkify correctamente.", status=400)
+                return error_response(mensaje="La tienda no tiene configurado Linkify correctamente.", codigo="LINKIFY_NO_CONFIGURADO", status=400)
 
             from apps.catalog.infrastructure.adapters.linkify_adapter import LinkifyAdapter
             adapter = LinkifyAdapter(api_key=api_key)
@@ -273,20 +221,25 @@ class VerificarTransferenciaLinkifyAPIView(APIView):
             resultado = adapter.verificar_transferencia(identificador, float(pedido.monto_total))
             
             if resultado.get("verificado"):
-                pedido.estado = 'pagado'
-                pedido.save()
+                with transaction.atomic():
+                    pedido = Pedido.objects.select_for_update().get(pk=pedido.pk, tienda=tienda)
+                    if pedido.estado == 'pendiente':
+                        pedido.estado = 'pagado'
+                        pedido.save(update_fields=['estado'])
+                    elif pedido.estado != 'pagado':
+                        return error_response('El pedido requiere revisión manual.', 'ESTADO_PEDIDO_INVALIDO', status=409)
                 return success_response(mensaje="¡Match exitoso! Transferencia encontrada y pedido actualizado.")
             else:
                 return error_response(
-                    mensaje="Aún no se detecta la transferencia en el banco.", 
+                    mensaje="Aún no se detecta la transferencia en el banco.", codigo="TRANSFERENCIA_NO_ENCONTRADA",
                     detalles=resultado.get("mensaje"),
                     status=400
                 )
                 
         except Pedido.DoesNotExist:
-            return error_response(mensaje="Pedido no encontrado", status=404)
+            return error_response(mensaje="Pedido no encontrado", codigo="PEDIDO_NO_ENCONTRADO", status=404)
         except Exception as e:
-            return error_response(mensaje=f"Error en validación Linkify: {str(e)}", status=500)
+            return error_response(mensaje="No se pudo validar la transferencia.", codigo="ERROR_LINKIFY", status=getattr(e, "status_code", 500))
 
 class TransferenciasPendientesAPIView(APIView):
     """Consulta manual de transferencias; Pedido mantiene el único estado del pago."""
@@ -308,6 +261,5 @@ class TiendaPedidosAPIView(generics.ListAPIView):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        return Pedido.objects.filter(
-            tienda__id_usuario_propietario=self.request.user
-        ).order_by('-fecha_creacion')
+        tienda = resolver_tienda(self.request, exigir_propietario=True)
+        return Pedido.objects.filter(tienda=tienda).prefetch_related('itempedido_set').order_by('-fecha_creacion')
