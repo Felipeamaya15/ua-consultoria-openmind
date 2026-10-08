@@ -11,7 +11,7 @@ interface CartState {
   promoCode: string;
   applyPromo: (code: string) => boolean;
   discount: number;
-  shipping: number;
+  shipping: number | null;
   total: number;
   shippingMethod: string;
   setShippingMethod: (method: string) => void;
@@ -207,8 +207,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
       : 0
   );
   const shipping =
-    !items.length || shippingMethod === 'Retiro' || subtotal > 50000 ? 0 : 3490;
-  const total = subtotal - discount + shipping;
+    !items.length || shippingMethod === 'Retiro' ? 0 : null;
+  const total = subtotal - discount + (shipping ?? 0);
 
   return (
     <CartContext.Provider

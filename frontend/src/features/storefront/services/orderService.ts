@@ -16,6 +16,7 @@ export type CheckoutInput = {
   key: string; items: CartItem[]; contact: {name: string; email: string; phone: string};
   paymentMethod: string; shippingMethod: string; promoCode: string;
   address: {street: string; number: string; apt: string; city: string; region: string};
+  shippingQuote?: string;
 };
 
 export type TrackedOrder = Omit<CustomerOrder, 'items'>
@@ -72,6 +73,7 @@ export const orderService = {
         contacto: {nombre: input.contact.name, email: input.contact.email.trim(), telefono: input.contact.phone},
         medio_pago: input.paymentMethod, metodo_entrega: input.shippingMethod,
         direccion: input.address, codigo_promocional: input.promoCode,
+        ...(input.shippingMethod !== 'Retiro' && input.shippingQuote ? {cotizacion: input.shippingQuote} : {}),
       }),
     });
     const body = await response.json();

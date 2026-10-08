@@ -21,6 +21,7 @@ from apps.core.models import Pedido, ItemPedido, Tienda, Producto, Configuracion
 from apps.core.presentation.responses import success_response
 from apps.core.infrastructure.linkify_client import LinkifyAdapter
 from apps.core.delivery import DELIVERY_METHODS, delivery_for_store
+from apps.core.shipping import validate_quote
 from apps.core.payments import PAYMENT_METHODS, payment_methods_for_store
 
 logger = logging.getLogger(__name__)
@@ -59,6 +60,7 @@ class CheckoutSerializer(StrictSerializer):
     medio_pago = serializers.ChoiceField(choices=['Transbank', 'PayPal', 'MercadoPago', 'Linkify', 'Transferencia'])
     metodo_entrega = serializers.ChoiceField(choices=['Chilexpress', 'Starken', 'Retiro'])
     direccion = AddressSerializer(required=False)
+    cotizacion = serializers.CharField(max_length=4096, required=False)
     codigo_promocional = serializers.ChoiceField(choices=['', 'VERANO20', 'NUEVO5000'], default='', allow_blank=True)
 
     def validate(self, data):
@@ -84,7 +86,8 @@ class CheckoutOrderAPIView(APIView):
         serializer = CheckoutSerializer(data=self.order_data(request, tienda))
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
-        fingerprint = sha256(json.dumps(data, sort_keys=True, default=str).encode()).hexdigest()
+        fingerprint = sha256(json.dumps({key: value for key, value in data.items() if key != 'cotizacion'},
+                                       sort_keys=True, default=str).encode()).hexdigest()
         with transaction.atomic():
             Tienda.objects.select_for_update().get(pk=tienda.pk)
             previous = Pedido.objects.filter(clave_checkout=data['clave_checkout']).first()
@@ -98,8 +101,17 @@ class CheckoutOrderAPIView(APIView):
                 raise ValidationError({'medio_pago': f"{data['medio_pago']} no está disponible en esta tienda. "
                                                      'Elige otro medio de pago o contacta a la tienda.'})
             method = DELIVERY_METHODS[data['metodo_entrega']]
-            if not delivery_for_store(tienda)[method]['enabled']:
+            delivery = delivery_for_store(tienda)
+            if not delivery[method]['enabled']:
                 raise ValidationError({'metodo_entrega': 'El método de entrega no está habilitado en esta tienda.'})
+            quote = (validate_quote(tienda, data['metodo_entrega'], data.get('direccion', {}), data.get('cotizacion'))
+                     if method != 'pickup' else None)
+            shipping = Decimal(quote['monto']) if quote else Decimal(0)
+            delivery_snapshot = {'metodo': data['metodo_entrega'], 'direccion': data.get('direccion', {})}
+            if quote:
+                delivery_snapshot['cotizacion'] = quote
+            else:
+                delivery_snapshot['retiro'] = {key: delivery['pickup'][key] for key in ('address', 'schedule')}
             repository = ProductRepository()
             lines = {}
             for item in data['items']:
@@ -141,7 +153,6 @@ class CheckoutOrderAPIView(APIView):
             promo = data['codigo_promocional']
             discount = min(subtotal, (subtotal * Decimal('.2')).quantize(Decimal('1'), rounding=ROUND_HALF_UP)
                            if promo == 'VERANO20' else Decimal(5000) if promo == 'NUEVO5000' else Decimal(0))
-            shipping = Decimal(0) if data['metodo_entrega'] == 'Retiro' or subtotal > 50000 else Decimal(3490)
             total = subtotal - discount + shipping
             if total > Decimal('9999999999.99'):
                 raise ValidationError({'items': 'El importe del pedido excede el maximo permitido.'})
@@ -151,7 +162,7 @@ class CheckoutOrderAPIView(APIView):
                 contacto=data['contacto'], medio_pago=data['medio_pago'],
                 nombre_contacto=data['contacto']['nombre'], correo_contacto=data['contacto']['email'],
                 telefono_contacto=data['contacto'].get('telefono', ''), metodo_pago=data['medio_pago'],
-                entrega={'metodo': data['metodo_entrega'], 'direccion': data.get('direccion', {})},
+                entrega=delivery_snapshot,
                 costo_envio=shipping, descuento=discount,
             )
             ItemPedido.objects.bulk_create([ItemPedido(id_pedido=order, **line) for line in lines.values()])

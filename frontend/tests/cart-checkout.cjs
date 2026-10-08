@@ -32,6 +32,20 @@ const result = {id_pedido: 42, identificador: 'PEDIDO-BACKEND-42', tienda_id: 9,
   assert.equal(calls[0].url, 'http://localhost:8000/api/checkout/pedidos/');
   assert.equal(calls[0].options.headers.Authorization, 'Token buyer-token');
   const payload = JSON.parse(calls[0].options.body);
+  input.address = {street: 'Providencia', number: '123', apt: '', city: 'Providencia', region: 'Metropolitana'};
+  await orderService.create(input);
+  assert.deepEqual(JSON.parse(calls.at(-1).options.body).direccion, input.address);
+  assert.equal(JSON.parse(calls.at(-1).options.body).metodo_entrega, 'Retiro');
+  input.shippingMethod = 'Chilexpress'; input.shippingQuote = 'signed-backend-quote';
+  await orderService.create(input);
+  const quotedPayload = JSON.parse(calls.at(-1).options.body);
+  assert.equal(quotedPayload.cotizacion, 'signed-backend-quote');
+  assert.equal(quotedPayload.metodo_entrega, 'Chilexpress');
+  assert.deepEqual(quotedPayload.direccion, input.address);
+  assert.ok(!('costo_envio' in quotedPayload) && !('monto_total' in quotedPayload));
+  input.shippingMethod = 'Retiro';
+  await orderService.create(input);
+  assert.ok(!('cotizacion' in JSON.parse(calls.at(-1).options.body)));
   assert.equal(payload.items[0].producto_id, items[0].productId);
   assert.equal(payload.items[0].sku, 'QA-M');
   assert.equal(payload.contacto.email, 'buyer@example.com');
@@ -67,7 +81,10 @@ const result = {id_pedido: 42, identificador: 'PEDIDO-BACKEND-42', tienda_id: 9,
     if (name.includes('useStorefrontTemplate')) return {useStorefrontTemplate: () => ({route: p => `/plantilla/1/${p}`, isCatalog: template === 'catalog', isVisual: template === 'visual', isMinimal: template === 'minimal'})};
     if (name.includes('mockData')) return {formatPrice: n => `CLP ${n}`};
     if (name.includes('orderService')) return {orderService: {create: async data => {createCalls.push(data); if (pending) await pending; if (fail) throw Error('Stock insuficiente'); return result;}}};
-    if (name.includes('shippingService')) return {getDeliveryAlternatives: async () => ({pickup: {enabled: true}, chilexpress: {enabled: false}, starken: {enabled: false}})};
+    if (name.includes('shippingService')) return {getDeliveryAlternatives: async () => ({pickup: {enabled: true}, chilexpress: {enabled: false}, starken: {enabled: false}}), getShippingQuotes: async () => []};
+    if (name.includes('comunasChile')) return load('src/features/storefront/data/comunasChile.ts', {
+      require: () => ({default: require('../src/features/admin/data/chileTerritory.json')}),
+    });
     if (name.includes('paypalPaymentService')) return {paypalPaymentService: {}};
     if (name.includes('transbankPaymentService')) return {transbankPaymentService: {iniciarPago: async (...args) => {assert.equal(args[0], 9); assert.equal(args[1], result.identificador); assert.equal(args[2], 30000); return {exito: true, data: {url: 'webpay', token: 'token'}};}, redirigirAWebpay() {}}};
     if (name.includes('StockFeedback')) return {StockFeedback: 'StockFeedback'};
@@ -164,6 +181,12 @@ const result = {id_pedido: 42, identificador: 'PEDIDO-BACKEND-42', tienda_id: 9,
     assert.ok(tree.includes('CLP 30000'));
     assert.equal(tree.filter(value => value === ' por unidad').length, 2);
     assert.ok(tree.some(node => node.props?.to === '/plantilla/1/compra' || node.props?.onClick));
+    cart.shipping = null; cart.shippingMethod = 'Chilexpress';
+    const pendingTree = render(Cart);
+    assert.ok(pendingTree.includes('Se calcula en checkout'));
+    assert.ok(pendingTree.includes('Total sin envío'));
+    assert.ok(!pendingTree.some(value => typeof value === 'string' && value.includes('Envío gratis sobre')));
+    cart.shipping = 0; cart.shippingMethod = 'Retiro';
   }
   let contextStates = [], cursor = 0, addedToSql = [], deleted = [];
   const Provider = load('src/features/storefront/context/CartContext.tsx', {
@@ -182,6 +205,12 @@ const result = {id_pedido: 42, identificador: 'PEDIDO-BACKEND-42', tienda_id: 9,
   const context = () => {cursor = 0; return Provider({children: null}).props.value;};
   await context().addItem(items[0]);
   await context().addItem(items[1]);
+  assert.equal(context().shipping, null);
+  assert.equal(context().total, context().subtotal - context().discount);
+  context().setShippingMethod('Retiro');
+  assert.equal(context().shipping, 0);
+  context().setShippingMethod('Chilexpress');
+  assert.equal(context().shipping, null);
   assert.deepEqual(addedToSql, [items[0].productId, items[1].productId], 'El backend recibe el identificador Mongo completo, sin parseInt');
   await context().updateQuantity(items[0].productId, 'QA-M', 8);
   assert.equal(context().items[0].quantity, 7);

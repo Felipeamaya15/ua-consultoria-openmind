@@ -253,8 +253,23 @@ class PickupConfigurationSerializer(StrictSerializer):
     schedule = DeliveryStringField(allow_blank=True, max_length=500)
 
 
+class ShippingRateSerializer(StrictSerializer):
+    region = DeliveryStringField(max_length=100)
+    comuna = DeliveryStringField(max_length=100)
+    monto = serializers.IntegerField(min_value=0, max_value=9999999999)
+    plazo_dias = serializers.IntegerField(min_value=1, max_value=365, allow_null=True, default=None)
+
+    def validate(self, data):
+        from apps.core.shipping import validate_destination
+        if any(key not in data for key in ('region', 'comuna', 'monto')):
+            raise serializers.ValidationError('Cada tarifa requiere región, comuna y monto, también en PATCH.')
+        data['region'] = validate_destination(data['region'], data['comuna'])
+        return data
+
+
 class CarrierConfigurationSerializer(StrictSerializer):
     enabled = DeliveryBooleanField()
+    tarifas = ShippingRateSerializer(many=True, required=False, max_length=1000)
     # Reservados para compatibilidad de forma; las credenciales reales quedan fuera de este sprint.
     accountId = DeliveryStringField(allow_blank=True, max_length=200, required=False)
     apiKey = DeliveryStringField(allow_blank=True, max_length=500, required=False)
@@ -263,6 +278,9 @@ class CarrierConfigurationSerializer(StrictSerializer):
     def validate(self, data):
         if data.get('accountId') or data.get('apiKey'):
             raise serializers.ValidationError('El guardado de credenciales de transportistas todavía no está disponible.')
+        destinations = [(rate['region'], rate['comuna']) for rate in data.get('tarifas', [])]
+        if len(destinations) != len(set(destinations)):
+            raise serializers.ValidationError({'tarifas': 'Solo puede existir una tarifa por región y comuna.'})
         return data
 
 

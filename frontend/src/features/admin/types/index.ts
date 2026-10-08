@@ -11,11 +11,19 @@ import type {
 } from '../../storefront/data/legalContent';
 import type { EmailTemplates } from '../data/emailTemplates';
 
+export interface ShippingRate {
+  region: string;
+  comuna: string;
+  monto: number;
+  plazo_dias: number | null;
+}
+
 export interface CarrierConnection {
   enabled: boolean;
   accountId: string;
   apiKey: string;
   status: 'not_configured' | 'credentials_saved';
+  tarifas?: ShippingRate[];
 }
 
 export interface ThemeImageSetting {

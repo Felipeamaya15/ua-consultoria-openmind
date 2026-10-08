@@ -200,13 +200,21 @@ class CheckoutOrderTests(TestCase):
         self.assertEqual(Pedido.objects.count(), 0)
 
     def test_shipping_discount_and_offer_are_computed_on_server(self):
+        config = ConfiguracionEntrega.objects.get(tienda=self.store)
+        config.datos['chilexpress']['tarifas'] = [
+            {'region': 'Metropolitana', 'comuna': 'Santiago', 'monto': 4500, 'plazo_dias': None}]
+        config.save()
+        quote = self.api.post('/api/entregas/cotizacion/', {
+            'operador': 'Chilexpress', 'region': 'Metropolitana', 'comuna': 'Santiago'}, format='json')
+        self.assertEqual(quote.status_code, 200, quote.data)
         data = dict(self.payload, metodo_entrega='Chilexpress', codigo_promocional='VERANO20',
-                    direccion={'street': 'Calle', 'number': '1', 'apt': '', 'city': 'Santiago', 'region': ''})
+                    cotizacion=quote.data['data']['tarifas'][0]['cotizacion'],
+                    direccion={'street': 'Calle', 'number': '1', 'apt': '', 'city': 'Santiago', 'region': 'Metropolitana'})
         self.assertEqual(self.create(data).status_code, 201)
         order = Pedido.objects.get()
-        self.assertEqual(order.costo_envio, Decimal(3490))
+        self.assertEqual(order.costo_envio, Decimal(4500))
         self.assertEqual(order.descuento, Decimal(6000))
-        self.assertEqual(order.monto_total, Decimal(27490))
+        self.assertEqual(order.monto_total, Decimal(28500))
 
     def test_delivery_requires_real_address_and_invalid_token_is_rejected(self):
         self.assertEqual(self.create(dict(self.payload, metodo_entrega='Starken')).status_code, 400)
