@@ -10,7 +10,7 @@ from rest_framework.test import APIClient
 
 from apps.authentication.infrastructure.models import ConfiguracionAutenticacion
 from apps.catalog.infrastructure.repositories import ProductRepository
-from apps.core.models import Tienda, Pedido, ItemPedido, Usuario, Producto, Carrito, ItemCarrito, ConfiguracionPago, ConfiguracionEntrega
+from apps.core.models import Tienda, Pedido, ItemPedido, Usuario, Producto, Carrito, ItemCarrito, ConfiguracionPago
 
 
 class CheckoutOrderTests(TestCase):
@@ -21,9 +21,6 @@ class CheckoutOrderTests(TestCase):
         self.buyer = users.objects.create_user(username='checkout-buyer', email='buyer@example.com')
         self.owner = users.objects.create_user(username='checkout-owner')
         self.store = Tienda.objects.create(nombre='Checkout store', id_usuario_propietario=self.owner)
-        ConfiguracionEntrega.objects.create(tienda=self.store, datos={
-            'pickup': {'enabled': True}, 'chilexpress': {'enabled': True}, 'starken': {'enabled': True},
-        })
         # Colección real y aislada: jamás utiliza ni borra productos de la tienda.
         self.repo = ProductRepository()
         self.repo.collection = self.repo.db.get_collection('test_checkout_' + uuid4().hex)

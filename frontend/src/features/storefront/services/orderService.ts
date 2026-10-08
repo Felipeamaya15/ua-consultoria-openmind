@@ -1,16 +1,7 @@
 import type { CartItem } from '../context/CartContext';
 
 const API_BASE = (import.meta.env.VITE_API_URL || 'http://localhost:8000').replace(/\/+$/, '');
-export type CreatedOrder = {
-  id_pedido: number;
-  identificador?: string;
-  tienda_id: number;
-  estado: string;
-  monto_total: string;
-  descuento: string;
-  costo_envio: string;
-  url_pago?: string;
-};
+export type CreatedOrder = { id_pedido: number; tienda_id: number; estado: string; monto_total: string; descuento: string; costo_envio: string; url_pago?: string };
 export type CheckoutInput = {
   key: string; items: CartItem[]; contact: {name: string; email: string; phone: string};
   paymentMethod: string; shippingMethod: string; promoCode: string;

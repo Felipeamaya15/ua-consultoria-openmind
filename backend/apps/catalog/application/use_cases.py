@@ -552,39 +552,7 @@ class ConfirmarPagoTransbankUseCase:
             ambiente=config.ambiente,
         )
 
-        resultado = adaptador.confirmar_transaccion(token_ws=token_ws)
-        self._registrar_pago_aprobado(tienda_pk, resultado)
-        return resultado
-
-    @staticmethod
-    def _registrar_pago_aprobado(tienda_pk: Any, resultado: Dict[str, Any]) -> None:
-        """Marca el pedido como pagado cuando Webpay autoriza el cobro.
-
-        El monto cobrado se compara con el del pedido: el monto con que se
-        inicia el pago viaja desde el navegador y podría haber sido alterado.
-        """
-        from apps.core.models import Pedido
-
-        orden_compra = str(resultado.get("orden_compra") or "")
-        if not orden_compra:
-            return
-
-        pedido = Pedido.objects.filter(
-            identificador=orden_compra, tienda_id=tienda_pk
-        ).first()
-        if pedido is None:
-            return
-
-        if int(pedido.monto_total) != int(resultado.get("monto") or 0):
-            raise TransbankTransaccionException(
-                "El pago fue autorizado pero su monto no coincide con el del pedido "
-                f"{orden_compra}. Contacta a la tienda con el código de autorización "
-                f"{resultado.get('codigo_autorizacion')}."
-            )
-
-        if pedido.estado == "pendiente":
-            pedido.estado = "pagado"
-            pedido.save(update_fields=["estado"])
+        return adaptador.confirmar_transaccion(token_ws=token_ws)
 
     def ejecutar(self, *args, **kwargs) -> Dict[str, Any]:
         return self.execute(*args, **kwargs)

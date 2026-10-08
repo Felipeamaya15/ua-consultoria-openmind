@@ -308,20 +308,3 @@ class ConfiguracionPago(models.Model):
 
     class Meta:
         db_table = 'configuracion_pago'
-
-class ConfiguracionEntrega(models.Model):
-    tienda = models.OneToOneField(
-        'core.Tienda',
-        on_delete=models.CASCADE,
-        related_name='configuracion_entrega'
-    )
-
-    datos = models.JSONField(default=dict, blank=True)
-
-    fecha_actualizacion = models.DateTimeField(auto_now=True)
-
-    class Meta:
-        db_table = 'configuracion_entrega'
-
-    def __str__(self):
-        return f"Configuración de entrega - Tienda {self.tienda_id}"
