@@ -175,10 +175,14 @@ function readCheckoutOptions() {
     if (!raw) {
       return {
         authSettings: defaultAuthSettings,
+        shippingOptions: defaultShippingOptions,
+        paymentOptions: paymentPresentation,
       };
     }
 
     const config = JSON.parse(raw)?.config;
+
+    // 1. Configuración de Autenticación
     const authConfig = config?.authenticationConfiguration;
     const authSettings: AuthSettings = {
       emailPassword:
@@ -192,6 +196,33 @@ function readCheckoutOptions() {
         config?.requiresAuth ?? defaultAuthSettings.requiresAuth,
     };
 
+    // 2. Configuración de Entregas (SCRUM 328)
+    const shippingConfig = config?.shippingConfiguration;
+    let shippingOptions = defaultShippingOptions;
+    
+    if (shippingConfig) {
+      shippingOptions = defaultShippingOptions.filter((option) => {
+        if (option.id === 'Chilexpress') return !!shippingConfig.chilexpress?.enabled;
+        if (option.id === 'Starken') return !!shippingConfig.starken?.enabled;
+        if (option.id === 'Retiro') return !!shippingConfig.pickup?.enabled;
+        return true;
+      }).map((option) =>
+        option.id === 'Retiro'
+          ? {
+              ...option,
+              desc:
+                shippingConfig.pickup?.schedule || shippingConfig.pickup?.address
+                  ? `Sin costo · ${[
+                      shippingConfig.pickup?.schedule,
+                      shippingConfig.pickup?.address,
+                    ].filter(Boolean).join(' · ')}`
+                  : option.desc,
+            }
+          : option
+      );
+    }
+
+    // 3. Configuración de Pagos
     const paymentMap: Record<string, string> = {
       Transbank: 'transbank',
       MercadoPago: 'mercadopago',
@@ -202,6 +233,7 @@ function readCheckoutOptions() {
 
     let paymentOptions = paymentPresentation;
     const paymentConfig = config?.paymentConfiguration;
+    
     if (paymentConfig) {
       paymentOptions = paymentPresentation.filter((option) => {
         const key = paymentMap[option.id];
@@ -209,12 +241,19 @@ function readCheckoutOptions() {
       });
     }
 
+    // Retornamos las 3 propiedades necesarias para que el Checkout funcione bien
     return {
       authSettings,
+      shippingOptions: shippingOptions.length > 0 ? shippingOptions : defaultShippingOptions,
+      paymentOptions,
     };
+    
   } catch {
+    // Si hay un error al parsear el JSON, retornamos los valores por defecto
     return {
       authSettings: defaultAuthSettings,
+      shippingOptions: defaultShippingOptions,
+      paymentOptions: paymentPresentation,
     };
   }
 }
