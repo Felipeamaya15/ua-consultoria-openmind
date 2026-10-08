@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 
 import { orderService } from '../services/orderService';
-import { getDeliveryAlternatives } from '../services/shippingService';
+import { getDeliveryAlternatives, getShippingQuotes, type ShippingQuote } from '../services/shippingService';
 import { useCart } from '../context/CartContext';
 import { formatPrice } from '../data/mockData';
 import { comunasDeRegion, esComunaDeRegion } from '../data/comunasChile';
@@ -546,6 +546,22 @@ export default function Checkout() {
     void loadPayments();
     return () => {active = false;};
   }, []);
+
+  const [shippingQuotes, setShippingQuotes] = useState<Record<string, ShippingQuote>>({});
+
+  useEffect(() => {
+    if (!esComunaDeRegion(address.city, address.region)) {
+      setShippingQuotes({});
+      return;
+    }
+    const controller = new AbortController();
+    getShippingQuotes(address.city, controller.signal)
+      .then((quotes) => setShippingQuotes(Object.fromEntries(quotes.map((quote) => [quote.operador, quote]))))
+      .catch(() => {
+        if (!controller.signal.aborted) setShippingQuotes({});
+      });
+    return () => controller.abort();
+  }, [address.city, address.region]);
 
   const selectedShippingOption =
     shippingOptions.find(
@@ -1174,12 +1190,18 @@ export default function Checkout() {
                       </p>
 
                       <p className="text-xs text-[#667085] mt-0.5">
-                        {method.desc}
+                        {shippingQuotes[method.id]
+                          ? shippingQuotes[method.id].plazo_dias
+                            ? `${shippingQuotes[method.id].plazo_dias} dias habiles`
+                            : 'Despacho a domicilio'
+                          : method.desc}
                       </p>
                     </div>
 
                     <span className="text-sm font-semibold">
-                      {method.priceLabel}
+                      {shippingQuotes[method.id]
+                        ? formatPrice(shippingQuotes[method.id].monto)
+                        : method.priceLabel}
                     </span>
                   </label>
                 ))}
