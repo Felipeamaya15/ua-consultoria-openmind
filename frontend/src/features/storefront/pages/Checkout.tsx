@@ -2,9 +2,10 @@ import { useEffect, useMemo, useState, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 
 import { orderService } from '../services/orderService';
-import { getDeliveryAlternatives } from '../services/shippingService';
+import { getDeliveryAlternatives, getShippingQuotes, type ShippingQuote } from '../services/shippingService';
 import { useCart } from '../context/CartContext';
 import { formatPrice } from '../data/mockData';
+import { comunasDeRegion, esComunaDeRegion } from '../data/comunasChile';
 import {
   Stepper,
   Button,
@@ -546,6 +547,22 @@ export default function Checkout() {
     return () => {active = false;};
   }, []);
 
+  const [shippingQuotes, setShippingQuotes] = useState<Record<string, ShippingQuote>>({});
+
+  useEffect(() => {
+    if (!esComunaDeRegion(address.city, address.region)) {
+      setShippingQuotes({});
+      return;
+    }
+    const controller = new AbortController();
+    getShippingQuotes(address.city, controller.signal)
+      .then((quotes) => setShippingQuotes(Object.fromEntries(quotes.map((quote) => [quote.operador, quote]))))
+      .catch(() => {
+        if (!controller.signal.aborted) setShippingQuotes({});
+      });
+    return () => controller.abort();
+  }, [address.city, address.region]);
+
   const selectedShippingOption =
     shippingOptions.find(
       (option) => option.id === shippingMethod,
@@ -628,6 +645,12 @@ export default function Checkout() {
       ) {
         newErrors.address =
           'Dirección requerida';
+      } else if (
+        selectedShippingOption?.requiresAddress &&
+        !esComunaDeRegion(address.city, address.region)
+      ) {
+        newErrors.address =
+          'Selecciona una comuna de la región elegida';
       }
 
       if (shippingLoading || shippingError || !selectedShippingOption) {
@@ -1167,12 +1190,18 @@ export default function Checkout() {
                       </p>
 
                       <p className="text-xs text-[#667085] mt-0.5">
-                        {method.desc}
+                        {shippingQuotes[method.id]
+                          ? shippingQuotes[method.id].plazo_dias
+                            ? `${shippingQuotes[method.id].plazo_dias} dias habiles`
+                            : 'Despacho a domicilio'
+                          : method.desc}
                       </p>
                     </div>
 
                     <span className="text-sm font-semibold">
-                      {method.priceLabel}
+                      {shippingQuotes[method.id]
+                        ? formatPrice(shippingQuotes[method.id].monto)
+                        : method.priceLabel}
                     </span>
                   </label>
                 ))}
@@ -1235,8 +1264,25 @@ export default function Checkout() {
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <Input
-                        label="Ciudad / Comuna"
+                      <Select
+                        label="Región"
+                        value={address.region}
+                        onChange={(event) =>
+                          setAddress(
+                            (current) => ({
+                              ...current,
+                              region:
+                                event.target
+                                  .value,
+                              city: '',
+                            }),
+                          )
+                        }
+                        options={REGIONES}
+                      />
+
+                      <Select
+                        label="Comuna"
                         value={address.city}
                         onChange={(event) =>
                           setAddress(
@@ -1248,23 +1294,15 @@ export default function Checkout() {
                             }),
                           )
                         }
-                        placeholder="Santiago"
-                      />
-
-                      <Select
-                        label="Región"
-                        value={address.region}
-                        onChange={(event) =>
-                          setAddress(
-                            (current) => ({
-                              ...current,
-                              region:
-                                event.target
-                                  .value,
+                        options={[
+                          { value: '', label: 'Selecciona una comuna' },
+                          ...comunasDeRegion(address.region).map(
+                            (comuna) => ({
+                              value: comuna,
+                              label: comuna,
                             }),
-                          )
-                        }
-                        options={REGIONES}
+                          ),
+                        ]}
                       />
                     </div>
                   </div>

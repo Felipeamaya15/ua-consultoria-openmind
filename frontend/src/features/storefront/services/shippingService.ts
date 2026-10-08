@@ -51,3 +51,21 @@ export async function saveShippingConfiguration(configuration: ShippingConfigura
 export async function getDeliveryAlternatives(signal?: AbortSignal): Promise<ShippingConfiguration> {
   return readConfiguration(await fetchInitialLoad(`${API_BASE_URL}/api/entregas/alternativas/`, { signal }));
 }
+
+export type ShippingQuote = { operador: string; monto: number; plazo_dias: number | null };
+
+export async function getShippingQuotes(comuna: string, signal?: AbortSignal): Promise<ShippingQuote[]> {
+  const response = await fetch(`${API_BASE_URL}/api/entregas/cotizacion/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ comuna }),
+    signal,
+  });
+  const body = await response.json();
+  if (!response.ok || body.exito !== true) throw new Error(body.mensaje || 'No se pudo cotizar el envío.');
+  return body.data.tarifas.map((tarifa: { operador: string; monto: string; plazo_dias: number | null }) => ({
+    operador: tarifa.operador,
+    monto: Number(tarifa.monto),
+    plazo_dias: tarifa.plazo_dias,
+  }));
+}
