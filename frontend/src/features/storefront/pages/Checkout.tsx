@@ -2,8 +2,10 @@ import { useEffect, useMemo, useState, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 
 import { orderService } from '../services/orderService';
+import { getDeliveryAlternatives, getShippingQuotes, type ShippingQuote } from '../services/shippingService';
 import { useCart } from '../context/CartContext';
 import { formatPrice } from '../data/mockData';
+import { comunasDeRegion, esComunaDeRegion } from '../data/comunasChile';
 import {
   Stepper,
   Button,
@@ -128,7 +130,7 @@ const defaultShippingOptions: ShippingOption[] = [
     id: 'Retiro',
     label: 'Retiro en tienda',
     icon: 'store',
-    desc: 'Sin costo · Lun-Sab 9:00-18:00',
+    desc: 'Sin costo',
     priceLabel: 'Gratis',
     requiresAddress: false,
   },
@@ -172,13 +174,15 @@ function readCheckoutOptions() {
     const raw = localStorage.getItem(ADMIN_STORAGE_KEY);
     if (!raw) {
       return {
-        shippingOptions: defaultShippingOptions,
         authSettings: defaultAuthSettings,
+        shippingOptions: defaultShippingOptions,
+        paymentOptions: paymentPresentation,
       };
     }
 
     const config = JSON.parse(raw)?.config;
-    const shippingConfig = config?.shippingConfiguration;
+
+    // 1. Configuración de Autenticación
     const authConfig = config?.authenticationConfiguration;
     const authSettings: AuthSettings = {
       emailPassword:
@@ -192,7 +196,10 @@ function readCheckoutOptions() {
         config?.requiresAuth ?? defaultAuthSettings.requiresAuth,
     };
 
+    // 2. Configuración de Entregas (SCRUM 328)
+    const shippingConfig = config?.shippingConfiguration;
     let shippingOptions = defaultShippingOptions;
+    
     if (shippingConfig) {
       shippingOptions = defaultShippingOptions.filter((option) => {
         if (option.id === 'Chilexpress') return !!shippingConfig.chilexpress?.enabled;
@@ -211,10 +218,11 @@ function readCheckoutOptions() {
                     ].filter(Boolean).join(' · ')}`
                   : option.desc,
             }
-          : option,
+          : option
       );
     }
 
+    // 3. Configuración de Pagos
     const paymentMap: Record<string, string> = {
       Transbank: 'transbank',
       MercadoPago: 'mercadopago',
@@ -225,6 +233,7 @@ function readCheckoutOptions() {
 
     let paymentOptions = paymentPresentation;
     const paymentConfig = config?.paymentConfiguration;
+    
     if (paymentConfig) {
       paymentOptions = paymentPresentation.filter((option) => {
         const key = paymentMap[option.id];
@@ -232,14 +241,19 @@ function readCheckoutOptions() {
       });
     }
 
+    // Retornamos las 3 propiedades necesarias para que el Checkout funcione bien
     return {
-      shippingOptions,
       authSettings,
+      shippingOptions: shippingOptions.length > 0 ? shippingOptions : defaultShippingOptions,
+      paymentOptions,
     };
+    
   } catch {
+    // Si hay un error al parsear el JSON, retornamos los valores por defecto
     return {
-      shippingOptions: defaultShippingOptions,
       authSettings: defaultAuthSettings,
+      shippingOptions: defaultShippingOptions,
+      paymentOptions: paymentPresentation,
     };
   }
 }
@@ -383,10 +397,40 @@ export default function Checkout() {
   const { route, isMinimal, isVisual, isCatalog } =
     useStorefrontTemplate();
 
-  const { shippingOptions, authSettings } = useMemo(
+  const { authSettings } = useMemo(
     readCheckoutOptions,
     [],
   );
+  const [shippingOptions, setShippingOptions] = useState<ShippingOption[]>([]);
+  const [shippingLoading, setShippingLoading] = useState(true);
+  const [shippingError, setShippingError] = useState('');
+  const [shippingLoadAttempt, setShippingLoadAttempt] = useState(0);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    setShippingLoading(true);
+    setShippingError('');
+    getDeliveryAlternatives(controller.signal).then(configuration => {
+      if (controller.signal.aborted) return;
+      const enabled = defaultShippingOptions.filter(option => {
+        if (option.id === 'Chilexpress') return configuration.chilexpress.enabled;
+        if (option.id === 'Starken') return configuration.starken.enabled;
+        return configuration.pickup.enabled;
+      }).map(option => option.id === 'Retiro' ? {
+        ...option,
+        desc: ['Sin costo', configuration.pickup.schedule, configuration.pickup.address].filter(Boolean).join(' · '),
+      } : option);
+      setShippingOptions(enabled);
+    }).catch(cause => {
+      if (!controller.signal.aborted) {
+        setShippingOptions([]);
+        setShippingError(cause instanceof Error ? cause.message : 'No se pudieron cargar las alternativas de entrega.');
+      }
+    }).finally(() => {
+      if (!controller.signal.aborted) setShippingLoading(false);
+    });
+    return () => controller.abort();
+  }, [shippingLoadAttempt]);
   const availableAuthModes = useMemo(
     () => getAvailableAuthModes(authSettings),
     [authSettings],
@@ -542,6 +586,22 @@ export default function Checkout() {
     return () => {active = false;};
   }, []);
 
+  const [shippingQuotes, setShippingQuotes] = useState<Record<string, ShippingQuote>>({});
+
+  useEffect(() => {
+    if (!esComunaDeRegion(address.city, address.region)) {
+      setShippingQuotes({});
+      return;
+    }
+    const controller = new AbortController();
+    getShippingQuotes(address.city, controller.signal)
+      .then((quotes) => setShippingQuotes(Object.fromEntries(quotes.map((quote) => [quote.operador, quote]))))
+      .catch(() => {
+        if (!controller.signal.aborted) setShippingQuotes({});
+      });
+    return () => controller.abort();
+  }, [address.city, address.region]);
+
   const selectedShippingOption =
     shippingOptions.find(
       (option) => option.id === shippingMethod,
@@ -624,9 +684,15 @@ export default function Checkout() {
       ) {
         newErrors.address =
           'Dirección requerida';
+      } else if (
+        selectedShippingOption?.requiresAddress &&
+        !esComunaDeRegion(address.city, address.region)
+      ) {
+        newErrors.address =
+          'Selecciona una comuna de la región elegida';
       }
 
-      if (!shippingMethod) {
+      if (shippingLoading || shippingError || !selectedShippingOption) {
         newErrors.shipping =
           'Selecciona un método de entrega';
       }
@@ -689,7 +755,7 @@ export default function Checkout() {
       const orderNumber = String(order.identificador || order.id_pedido);
 
       if (paymentMethod === 'Transbank') {
-        const returnUrl = `${window.location.origin}${route('pedido-confirmado')}?orderNumber=${orderNumber}`;
+        const returnUrl = `${window.location.origin}${route('pedido-confirmado')}?orderNumber=${orderNumber}&tienda=${order.tienda_id}`;
         const result = await transbankPaymentService.iniciarPago(
           order.tienda_id, orderNumber, Number(order.monto_total), returnUrl,
         );
@@ -717,7 +783,10 @@ export default function Checkout() {
         return;
       }
 
-      if (paymentMethod === 'Linkify' && order.url_pago) {
+      if (paymentMethod === 'Linkify') {
+        if (!order.url_pago) {
+          throw new Error(`Pedido #${orderNumber} registrado, pero no pudimos iniciar el pago con Linkify. Contacta a la tienda para completarlo.`);
+        }
         await clearCart();
         window.location.href = order.url_pago;
         return;
@@ -1114,6 +1183,10 @@ export default function Checkout() {
                 </Alert>
               )}
 
+              {shippingLoading && <Alert variant="info">Cargando alternativas de entrega…</Alert>}
+              {shippingError && <><Alert variant="error">{shippingError}</Alert><Button variant="outline" onClick={() => setShippingLoadAttempt(value => value + 1)}>Reintentar carga</Button></>}
+              {!shippingLoading && !shippingError && !shippingOptions.length && <Alert variant="info">La tienda todavía no tiene alternativas de entrega habilitadas.</Alert>}
+
               <div className="flex flex-col gap-3">
                 {shippingOptions.map((method) => (
                   <label
@@ -1156,12 +1229,18 @@ export default function Checkout() {
                       </p>
 
                       <p className="text-xs text-[#667085] mt-0.5">
-                        {method.desc}
+                        {shippingQuotes[method.id]
+                          ? shippingQuotes[method.id].plazo_dias
+                            ? `${shippingQuotes[method.id].plazo_dias} dias habiles`
+                            : 'Despacho a domicilio'
+                          : method.desc}
                       </p>
                     </div>
 
                     <span className="text-sm font-semibold">
-                      {method.priceLabel}
+                      {shippingQuotes[method.id]
+                        ? formatPrice(shippingQuotes[method.id].monto)
+                        : method.priceLabel}
                     </span>
                   </label>
                 ))}
@@ -1224,8 +1303,25 @@ export default function Checkout() {
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <Input
-                        label="Ciudad / Comuna"
+                      <Select
+                        label="Región"
+                        value={address.region}
+                        onChange={(event) =>
+                          setAddress(
+                            (current) => ({
+                              ...current,
+                              region:
+                                event.target
+                                  .value,
+                              city: '',
+                            }),
+                          )
+                        }
+                        options={REGIONES}
+                      />
+
+                      <Select
+                        label="Comuna"
                         value={address.city}
                         onChange={(event) =>
                           setAddress(
@@ -1237,23 +1333,15 @@ export default function Checkout() {
                             }),
                           )
                         }
-                        placeholder="Santiago"
-                      />
-
-                      <Select
-                        label="Región"
-                        value={address.region}
-                        onChange={(event) =>
-                          setAddress(
-                            (current) => ({
-                              ...current,
-                              region:
-                                event.target
-                                  .value,
+                        options={[
+                          { value: '', label: 'Selecciona una comuna' },
+                          ...comunasDeRegion(address.region).map(
+                            (comuna) => ({
+                              value: comuna,
+                              label: comuna,
                             }),
-                          )
-                        }
-                        options={REGIONES}
+                          ),
+                        ]}
                       />
                     </div>
                   </div>

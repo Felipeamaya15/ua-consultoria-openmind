@@ -6,6 +6,7 @@ import {
 
 import { Button, Icon } from '../components/ui';
 import { useStorefrontTemplate } from '../hooks/useStorefrontTemplate';
+import TransbankReturnResult from './TransbankReturnResult';
 
 interface ConfirmationState {
   orderNumber?: string;
@@ -17,6 +18,23 @@ export default function OrderConfirmation() {
 
   const { route, isMinimal, isVisual, isCatalog } =
     useStorefrontTemplate();
+
+  // Retorno desde Webpay: el resultado llega por la URL (?token_ws=... o
+  // ?TBK_TOKEN=... si el cliente cancela), no por navegación interna.
+  const query = new URLSearchParams(location.search);
+  const tokenWs = query.get('token_ws') ?? '';
+  const tbkToken = query.get('TBK_TOKEN') ?? '';
+
+  if (tokenWs || tbkToken) {
+    return (
+      <TransbankReturnResult
+        orderNumber={query.get('orderNumber') ?? query.get('TBK_ORDEN_COMPRA') ?? ''}
+        tokenWs={tokenWs}
+        tbkToken={tbkToken}
+        tiendaId={Number(query.get('tienda')) || 1}
+      />
+    );
+  }
 
   const state =
     location.state as ConfirmationState | null;

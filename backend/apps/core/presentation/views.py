@@ -1,18 +1,24 @@
 # Vistas del módulo Core (PostgreSQL)
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.views import APIView
+from django.db import transaction
 
+from apps.core.delivery import delivery_data, delivery_for_store
 from apps.core.infrastructure.tenant import resolver_tienda, resolver_tienda_id
 from apps.core.models import (
     ConfiguracionMercadoPago,
     ConfiguracionPago,
     ConfiguracionPayPal,
     ConfiguracionTransbank,
+    ConfiguracionEntrega,
+    Tienda,
 )
 from apps.core.presentation.checkout import GuestCheckoutOrderAPIView
 from apps.core.presentation.responses import error_response, success_response
-from apps.core.presentation.serializers import ConfiguracionPagoSerializer
+from apps.core.presentation.serializers import ConfiguracionPagoSerializer, ShippingConfigurationSerializer
 from apps.core.models import Pedido
+from rest_framework import generics
+from .serializers import PedidoTiendaSerializer, TransferenciaPendienteSerializer
 
 class RegistrarCompraView(GuestCheckoutOrderAPIView):
     """Compatibilidad SCRUM-289: reutiliza la creación y seguridad de SCRUM-291."""
@@ -57,6 +63,44 @@ class ConfiguracionPagoAPIView(APIView):
     def patch(self, request):
         return self.put(request)
 
+class ConfiguracionEntregaAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        tienda = resolver_tienda(request, exigir_propietario=True)
+        return success_response(data=delivery_for_store(tienda))
+
+    def put(self, request):
+        return self.save_configuration(request, partial=False)
+
+    def patch(self, request):
+        return self.save_configuration(request, partial=True)
+
+    def save_configuration(self, request, *, partial):
+        tienda = resolver_tienda(request, exigir_propietario=True)
+        serializer = ShippingConfigurationSerializer(data=request.data, partial=partial)
+        if not serializer.is_valid():
+            return error_response('Configuración de entrega inválida.', 'ERROR_VALIDACION',
+                                  serializer.errors, status=400)
+        with transaction.atomic():
+            # Serializa PATCH concurrentes, incluso antes de existir la configuración.
+            Tienda.objects.select_for_update().get(pk=tienda.pk)
+            config, _ = ConfiguracionEntrega.objects.get_or_create(tienda=tienda)
+            datos = delivery_data(config.datos)
+            for method, changes in serializer.validated_data.items():
+                datos[method].update(changes)
+            config.datos = datos
+            config.save(update_fields=['datos', 'fecha_actualizacion'])
+        return success_response(data=datos, mensaje='Configuración de entregas guardada.')
+
+
+class AlternativasEntregaAPIView(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        return success_response(data=delivery_for_store(resolver_tienda(request)))
+
+
 class MetodosPagoActivosAPIView(APIView):
     """Endpoint público para checkout."""
     permission_classes = [AllowAny]
@@ -78,16 +122,35 @@ class MetodosPagoActivosAPIView(APIView):
 
             try:
                 config_pago = ConfiguracionPago.objects.get(tienda_id=tienda_id)
-                transferencia = (config_pago.datos or {}).get("transfer", {})
+                datos = config_pago.datos or {}
             except ConfiguracionPago.DoesNotExist:
-                transferencia = {}
+                datos = {}
 
+            transferencia = datos.get("transfer", {})
+            linkify = datos.get("linkify", {})
+
+            # Validación y exposición de Linkify para el frontend
+            linkify_data = datos.get("linkify", {})
+            if isinstance(linkify_data, dict) and linkify_data.get('enabled') is True:
+                metodos_activos["linkify"] = {"enabled": True}
+
+            transferencia = datos.get("transfer", {})
             if isinstance(transferencia, dict) and transferencia.get("enabled") is True:
                 fields = transferencia.get("fields", {})
                 metodos_activos["transfer"] = {
                     "enabled": True,
                     "fields": {f: fields.get(f, "") for f in self.TRANSFER_PUBLIC_FIELDS}
                 }
+
+                        # Linkify se lista solo si esta habilitado y con credenciales; nunca se exponen.
+            campos_linkify = (linkify.get("fields") or {}) if isinstance(linkify, dict) else {}
+            if (
+                isinstance(linkify, dict)
+                and linkify.get("enabled") is True
+                and campos_linkify.get("idCuenta")
+                and campos_linkify.get("clavePrivada")
+            ):
+                metodos_activos["linkify"] = {"enabled": True}
 
             return success_response(data=metodos_activos)
         except Exception as e:
@@ -120,7 +183,7 @@ class IniciarPagoPayPalView(APIView):
         except ConfiguracionPayPal.DoesNotExist:
             return error_response(mensaje="PayPal no configurado para esta tienda.", status=400)
         except Exception as e:
-            return error_response(mensaje=f"Error conectando con PayPal: {str(e)}", status=500)
+            return error_response(mensaje=f"Error conectando con PayPal: {str(e)}", codigo="ERROR_PAYPAL_INICIO", status=500)
 
 class CapturarPagoPayPalView(APIView):
     """Captura los fondos."""
@@ -141,10 +204,10 @@ class CapturarPagoPayPalView(APIView):
             if resultado.get("exito"):
                 return success_response(mensaje="Pago capturado", data=resultado)
             else:
-                return error_response(mensaje="No se pudo capturar el pago", status=400)
+                return error_response(mensaje="No se pudo capturar el pago", codigo="ERROR_CAPTURA", status=400)
                 
         except Exception as e:
-            return error_response(mensaje=f"Error capturando PayPal: {str(e)}", status=500)
+            return error_response(mensaje=f"Error capturando PayPal: {str(e)}", codigo="ERROR_PAYPAL_CAPTURA", status=500)
 
 class WebhookLinkifyAPIView(APIView):
     """
@@ -195,10 +258,13 @@ class VerificarTransferenciaLinkifyAPIView(APIView):
             
             config_pago = ConfiguracionPago.objects.get(tienda=tienda)
             linkify_config = (config_pago.datos or {}).get("linkify", {})
-            api_key = linkify_config.get("api_key")
+            
+            # Buscamos de forma flexible la clave privada o api_key
+            fields = linkify_config.get("fields", {})
+            api_key = fields.get("clavePrivada") or fields.get("apiKey") or linkify_config.get("api_key")
 
             if not api_key:
-                return error_response(mensaje="La tienda no tiene configurado Linkify.", status=400)
+                return error_response(mensaje="La tienda no tiene configurado Linkify correctamente.", status=400)
 
             from apps.catalog.infrastructure.adapters.linkify_adapter import LinkifyAdapter
             adapter = LinkifyAdapter(api_key=api_key)
@@ -221,3 +287,27 @@ class VerificarTransferenciaLinkifyAPIView(APIView):
             return error_response(mensaje="Pedido no encontrado", status=404)
         except Exception as e:
             return error_response(mensaje=f"Error en validación Linkify: {str(e)}", status=500)
+
+class TransferenciasPendientesAPIView(APIView):
+    """Consulta manual de transferencias; Pedido mantiene el único estado del pago."""
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        tienda = resolver_tienda(request, exigir_propietario=True)
+        pendientes = Pedido.objects.filter(
+            tienda=tienda, medio_pago='Transferencia', estado='pendiente',
+        ).order_by('-fecha_creacion', '-id_pedido')
+        return success_response(
+            data=TransferenciaPendienteSerializer(pendientes, many=True).data,
+            mensaje='Transferencias pendientes obtenidas correctamente.',
+        )
+
+
+class TiendaPedidosAPIView(generics.ListAPIView):
+    serializer_class = PedidoTiendaSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return Pedido.objects.filter(
+            tienda__id_usuario_propietario=self.request.user
+        ).order_by('-fecha_creacion')

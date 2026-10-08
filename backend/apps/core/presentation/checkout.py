@@ -16,10 +16,10 @@ from apps.authentication.presentation.profile import IsCustomer, StrictSerialize
 from apps.catalog.domain.stock import validate_stock
 from apps.catalog.infrastructure.repositories import ProductRepository
 from apps.core.infrastructure.tenant import resolver_tienda
-from apps.core.models import Pedido, ItemPedido, Tienda
+from apps.core.models import Pedido, ItemPedido, Tienda, Producto, ConfiguracionPago
 from apps.core.presentation.responses import success_response
-from apps.core.models import ConfiguracionPago
 from apps.core.infrastructure.linkify_client import LinkifyAdapter
+from apps.core.delivery import DELIVERY_METHODS, delivery_for_store
 
 
 class CheckoutItemSerializer(StrictSerializer):
@@ -81,6 +81,10 @@ class CheckoutOrderAPIView(APIView):
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
         fingerprint = sha256(json.dumps(data, sort_keys=True, default=str).encode()).hexdigest()
+        if data['medio_pago'].strip().lower() == 'linkify' and not self._credenciales_linkify(tienda):
+            # Se rechaza antes de crear el pedido: asi no queda un pedido sin forma de pago ni stock descontado.
+            raise ValidationError({'medio_pago': 'Linkify no está disponible en esta tienda. '
+                                                 'Elige otro medio de pago o contacta a la tienda.'})
         with transaction.atomic():
             Tienda.objects.select_for_update().get(pk=tienda.pk)
             previous = Pedido.objects.filter(clave_checkout=data['clave_checkout']).first()
@@ -88,7 +92,11 @@ class CheckoutOrderAPIView(APIView):
                 if (previous.tienda_id != tienda.pk or previous.comprador_id != (buyer.pk if buyer else None)
                         or previous.huella_checkout != fingerprint):
                     raise ValidationError('Esta clave de checkout ya fue utilizada para otra solicitud.')
-                return success_response(data=self.result(previous), mensaje='Pedido ya registrado.')
+                return success_response(data=self.result(previous, self._url_pago(previous, tienda)),
+                                        mensaje='Pedido ya registrado.')
+            method = DELIVERY_METHODS[data['metodo_entrega']]
+            if not delivery_for_store(tienda)[method]['enabled']:
+                raise ValidationError({'metodo_entrega': 'El método de entrega no está habilitado en esta tienda.'})
             repository = ProductRepository()
             lines = {}
             for item in data['items']:
@@ -115,11 +123,17 @@ class CheckoutOrderAPIView(APIView):
                         raise ValueError(f"Stock insuficiente para {item['sku']}.")
                 except (ValueError, InvalidOperation, KeyError) as exc:
                     raise ValidationError({'items': str(exc)}) from exc
-                lines[key] = dict(producto_mongo_id=key[0], nombre_producto=product['nombre'], sku=item['sku'],
-                                  atributos_variante=variant.get('atributos_variante', []), cantidad=quantity,
-                                  atributos={a.get('etiqueta') or a.get('clave'): a.get('valor')
-                                             for a in variant.get('atributos_variante', [])},
-                                  precio_unitario=price.quantize(Decimal('.01'), rounding=ROUND_HALF_UP))
+                lines[key] = dict(
+                    producto_mongo_id=key[0], 
+                    id_producto_id=product.get('id_producto'),
+                    nombre_producto=product['nombre'], 
+                    sku=item['sku'],
+                    atributos_variante=variant.get('atributos_variante', []), 
+                    cantidad=quantity,
+                    atributos={a.get('etiqueta') or a.get('clave'): a.get('valor')
+                               for a in variant.get('atributos_variante', [])},
+                    precio_unitario=price.quantize(Decimal('.01'), rounding=ROUND_HALF_UP)
+                )
             subtotal = sum((line['precio_unitario'] * line['cantidad'] for line in lines.values()), Decimal(0))
             promo = data['codigo_promocional']
             discount = min(subtotal, (subtotal * Decimal('.2')).quantize(Decimal('1'), rounding=ROUND_HALF_UP)
@@ -140,18 +154,38 @@ class CheckoutOrderAPIView(APIView):
             ItemPedido.objects.bulk_create([ItemPedido(id_pedido=order, **line) for line in lines.values()])
             for line in lines.values():
                 repository.decrease_stock(str(tienda.pk), line['sku'], line['cantidad'])
+                id_prod_pg = line.get('id_producto_id')
+                if id_prod_pg:
+                    try:
+                        prod_pg = Producto.objects.get(pk=id_prod_pg, id_tienda=tienda)
+                        prod_pg.stock -= line['cantidad']
+                        prod_pg.save(update_fields=['stock'])
+                    except Producto.DoesNotExist:
+                        pass
 
-        es_linkify = data['medio_pago'].strip().lower() == 'linkify'
-        url_pago = None
-        if es_linkify:
-            config_pago = ConfiguracionPago.objects.filter(tienda=tienda).first()
-            datos_linkify = config_pago.datos.get('linkify', {}).get('fields', {}) if config_pago else {}
-            id_cuenta = datos_linkify.get('idCuenta', '')
-            if id_cuenta:
-                adapter = LinkifyAdapter(id_cuenta=id_cuenta, clave_privada=datos_linkify.get('clavePrivada', ''))
-                url_pago = adapter.url_de_pago(str(order.pk))
+                return success_response(data=self.result(order, self._url_pago(order, tienda)),
+                                mensaje='Pedido creado correctamente.', status=201)
 
-        return success_response(data=self.result(order, url_pago), mensaje='Pedido creado correctamente.', status=201)
+    @staticmethod
+    def _credenciales_linkify(tienda):
+        """(id_cuenta, clave_privada) si Linkify esta habilitado y configurado en la tienda; si no, None."""
+        config_pago = ConfiguracionPago.objects.filter(tienda=tienda).first()
+        linkify = ((config_pago.datos or {}).get('linkify') or {}) if config_pago else {}
+        campos = linkify.get('fields') or {}
+        id_cuenta = str(campos.get('idCuenta') or '').strip()
+        clave = str(campos.get('clavePrivada') or '').strip()
+        if linkify.get('enabled') is True and id_cuenta and clave:
+            return id_cuenta, clave
+        return None
+
+    def _url_pago(self, order, tienda):
+        """URL de pago de Linkify del pedido; None si el pedido no es de Linkify o no se puede generar."""
+        if (order.medio_pago or '').strip().lower() != 'linkify':
+            return None
+        credenciales = self._credenciales_linkify(tienda)
+        if not credenciales:
+            return None
+        return LinkifyAdapter(*credenciales).url_de_pago(str(order.pk))
 
     def order_data(self, request, tienda):
         return request.data
@@ -166,7 +200,7 @@ class CheckoutOrderAPIView(APIView):
         if url_pago:
             data['url_pago'] = url_pago
         return data
-  
+        
 
 class GuestCheckoutOrderAPIView(CheckoutOrderAPIView):
     def order_data(self, request, tienda):

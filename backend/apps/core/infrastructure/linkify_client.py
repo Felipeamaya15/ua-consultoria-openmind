@@ -12,8 +12,10 @@ notificacion no pudieron confirmarse con la documentacion publica disponible
 al momento de escribir esto -- deben validarse con Linkify (ventas@linkify.cl)
 o con una cuenta de prueba real antes de salir a produccion.
 """
+import base64
 import hashlib
 import hmac
+from urllib.parse import quote
 
 
 class LinkifyAdapter:
@@ -25,22 +27,35 @@ class LinkifyAdapter:
 
     def url_de_pago(self, id_pago: str) -> str:
         """URL a la que se redirige al comprador para pagar via Linkify."""
-        return f"https://app.linkify.cl/pay/{self.id_cuenta}/remote/{id_pago}"
+        cuenta = quote(str(self.id_cuenta).strip(), safe="")
+        pago = quote(str(id_pago).strip(), safe="")
+        return f"https://app.linkify.cl/pay/{cuenta}/remote/{pago}"
 
     def firma_valida(self, cuerpo: bytes, firma_recibida: str) -> bool:
         """
-        Verifica que una peticion entrante (GET o POST) realmente viene de
-        Linkify, comparando la firma HMAC-SHA256 del cuerpo con la clave
-        privada del comercio.
+        Verifica que una peticion entrante realmente viene de Linkify,
+        comparando la firma HMAC-SHA256 con la clave privada del comercio.
 
-        TODO: confirmar con Linkify si la firma se codifica en hexadecimal
-        (como se asume aqui) o en base64, y que incluye exactamente el
-        'cuerpo' firmado cuando la peticion es un GET sin body.
+        Acepta la firma codificada en hexadecimal o en base64.
+        Sin clave privada o sin firma nunca es valida: un HMAC calculado con
+        una clave vacia lo podria reproducir cualquiera.
+
+        TODO: confirmar con Linkify la codificacion exacta y que se firma
+        cuando la peticion es un GET sin cuerpo.
         """
-        firma_calculada = hmac.new(
-            self.clave_privada.encode("utf-8"),
-            cuerpo,
-            hashlib.sha256,
-        ).hexdigest()
+        if not self.clave_privada or not firma_recibida:
+            return False
 
-        return hmac.compare_digest(firma_calculada, firma_recibida)
+        digest = hmac.new(
+            self.clave_privada.encode("utf-8"),
+            cuerpo or b"",
+            hashlib.sha256,
+        ).digest()
+        firma = firma_recibida.strip()
+
+        try:
+            return hmac.compare_digest(digest.hex(), firma.lower()) or hmac.compare_digest(
+                base64.b64encode(digest).decode("ascii"), firma
+            )
+        except TypeError:  # firma con caracteres no ASCII
+            return False

@@ -1,16 +1,21 @@
 from apps.core.presentation.customer_orders import CustomerOrdersAPIView
 from apps.core.presentation.checkout import CheckoutOrderAPIView
+from apps.core.presentation.linkify_notificacion import LinkifyNotificacionView
 from django.urls import path
 from . import views
 from apps.core.presentation.views import (
     ConfiguracionPagoAPIView,
+    ConfiguracionEntregaAPIView,
+    AlternativasEntregaAPIView,
     MetodosPagoActivosAPIView,
     RegistrarCompraView,
     TiendaPagoActualAPIView,
     IniciarPagoPayPalView, 
     CapturarPagoPayPalView,
     WebhookLinkifyAPIView, 
-    VerificarTransferenciaLinkifyAPIView
+    VerificarTransferenciaLinkifyAPIView,
+    TransferenciasPendientesAPIView,
+    TiendaPedidosAPIView
 )
 
 urlpatterns = [
@@ -23,9 +28,14 @@ urlpatterns = [
     path('main_admin/', views.main_admin, name='main_admin'),
     path('pagos/mi-tienda/', TiendaPagoActualAPIView.as_view(), name='pagos-mi-tienda'),
     path('pagos/configuracion/', ConfiguracionPagoAPIView.as_view(), name='pagos-configuracion'),
+    path('entregas/configuracion/', ConfiguracionEntregaAPIView.as_view(), name='entregas-configuracion'),
+    path('entregas/alternativas/', AlternativasEntregaAPIView.as_view(), name='entregas-alternativas'),
     path('pagos/activos/', MetodosPagoActivosAPIView.as_view(), name='pagos-activos'),
     path('pagos/paypal/iniciar/', IniciarPagoPayPalView.as_view(), name='paypal_iniciar'),
     path('pagos/paypal/capturar/', CapturarPagoPayPalView.as_view(), name='paypal_capturar'),
+    path('pagos/linkify/notificacion/', LinkifyNotificacionView.as_view(), name='linkify_notificacion'),
     path('pagos/linkify/webhook/', WebhookLinkifyAPIView.as_view(), name='linkify_webhook'),
     path('pagos/linkify/verificar/', VerificarTransferenciaLinkifyAPIView.as_view(), name='linkify_verificar'),
+    path('pagos/transferencias/pendientes/', TransferenciasPendientesAPIView.as_view(), name='transferencias-pendientes'),
+    path('tienda/pedidos/', TiendaPedidosAPIView.as_view(), name='tienda-pedidos'),
 ]
