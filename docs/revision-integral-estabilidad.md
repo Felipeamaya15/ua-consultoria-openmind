@@ -369,3 +369,146 @@ Cada fila corresponde a un archivo cambiado/nuevo respecto al estado inicial. La
 | `frontend/tests/stock-feedback.cjs` | D: hooks/storage previos | Mocks de useCallback/storages | Mantiene límites por SKU y avisos | node tests/stock-feedback.cjs |
 | `frontend/tests/storefront-variants.cjs` | D: etiqueta vieja de agotado | Busca XL con etiqueta actual | Conserva assertion disabled y selección L | node tests/storefront-variants.cjs |
 | `docs/revision-integral-estabilidad.md` (nuevo) | Documentación requerida | Diagnóstico, resultados, límites e inventario | Revisión manual informada antes de commit | Cotejo con Git, logs y diff completo |
+
+## Auditoría final posterior a integración con develop
+
+Fecha: 8 de octubre de 2026. Rama: `chore/revision-integral-estabilidad`. HEAD conservado: `fe412b1`; anterior: `551c19a`. Esta sección actualiza el diagnóstico y los recuentos históricos anteriores. No se realizó commit, push, cambio de rama, merge, rebase ni reset durante esta auditoría.
+
+### Alcance y evidencia
+
+Se revisaron landing, catálogo público, detalle/atributos/SKU Mongo, carrito, checkout multiítem, stock SQL/Mongo, contacto/destino, entregas/cotizaciones, pagos, confirmación, historial del comprador, seguimiento público, normalizadores logísticos, administración, autenticación, tenant y migraciones. Se cruzaron llamadas `fetch`/`fetchInitialLoad`, payloads, Token, métodos y rutas con los `urls.py` realmente incluidos en `config.urls`; se ejecutaron las suites completas existentes y regresiones nuevas.
+
+Commits integrados revisados: `6aa9b0a`/PR93 (activación de entregas), `05af2b1`/PR89 (normalizadores de tarifas), `6e80cf4`/PR90 (seguimiento logístico), `0ce0666` (configuración de despacho), `febe967`/SCRUM-362 (estados logísticos), `e3c6122`/SCRUM-361 (respuesta logística), `511eef5` (Chilexpress), `f037fe2` (Starken), `5029682`/PR88 (regiones/cotización), `1ede2a2` (tarifas), `ddeaff5` (transferencias), `9868967` (regiones/comunas), `ee2db79` (identificador) y `153729d` (configuración de entrega). Se contrastaron con los arreglos integrados en `551c19a` y `fe412b1`.
+
+Hubo navegación de lectura en el navegador local por landing y catálogo real. No se creó un pedido real ni se ejecutaron cobros, llamadas comerciales de transportistas o modificaciones manuales de la BD operativa. Las comprobaciones de checkout/pagos utilizan fixtures aisladas y adaptadores simulados donde corresponde: no equivalen a una compra sandbox del proveedor.
+
+### Bugs demostrados y correcciones
+
+| Hallazgo | Corrección y efecto |
+| --- | --- |
+| La suite completa descubría 414 tests pero abortaba creando `configuracion_pago` por segunda vez. También se duplicaba la creación de `variante_producto`. | Se convirtió únicamente la rama duplicada `0006_configuracionpago_varianteproducto` a operaciones de estado; la rama canónica conserva la creación física. Las pruebas completas ya construyen una BD desde cero. |
+| CartContext enviaba ObjectId en `slug`, pero el backend solo buscaba slug; al refrescar devolvía slug/ID SQL y cambiaba la identidad. | La búsqueda acepta ID Mongo o slug dentro de la tienda actual. La respuesta conserva `producto_mongo_id` y `slug`; CartContext usa primero el ID Mongo y evita duplicar la misma variante al sincronizar. |
+| Las operaciones de carrito con ID SQL y el historial de cliente no pasaban siempre por el resolver actual. | GET/POST/PATCH/DELETE de carrito resuelven tienda; los casos de uso filtran por producto/tienda además del comprador. Historial resuelve tienda y filtra pedidos actuales; los legados sin tienda conservan exclusivamente el vínculo explícito al comprador. |
+| Webpay iniciaba el cobro usando el monto del navegador; la confirmación comparaba importes con `int()`. | El inicio exige pedido pendiente Transbank de la tienda actual e identificador + correo, toma `Pedido.monto_total` y exige CLP positivo entero. El checkout rechaza totales incompatibles antes de crear/reservar. La confirmación usa Decimal exacto, método/tienda/referencia/estado y bloqueo transaccional. |
+| El inicio Webpay aceptaba un retorno arbitrario y ciertos errores devolvían detalles del transporte/proveedor. | El origen de retorno debe estar en `CORS_ALLOWED_ORIGINS`; los errores de inicio/conexión son públicos y genéricos. El correo se envía en el cuerpo, nunca en la URL. |
+| Las rutas de compatibilidad `comprar/` y `compra/` podían descontar stock anónimamente sin Pedido. | Se conservan como operación privilegiada: requieren autenticación y propietario mediante `VariantTenantMixin`. Visitantes y clientes no pueden usarlas; la compra pública usa el checkout de pedidos. |
+| PayPal enviaba el importe CLP como USD y capturaba IDs remotos sin vínculo/conciliación con Pedido. | Se bloqueó temporalmente el checkout PayPal y sus dos endpoints de cobro/captura, con respuesta controlada. Se conservaron configuración y adaptador. No se introdujo conversión monetaria. |
+| MercadoPago llegaba al final genérico del checkout y mostraba confirmación sin iniciar cobro. | Se declara no disponible para compras. El frontend rechaza el método antes de crear el pedido y el backend exige `enabled is True` en vez de solo existencia de la clave. Se conservaron credenciales, administración y adaptador. |
+| El login Google no exigía `email_verified`. | Solo acepta booleano `True` antes de buscar/crear una cuenta; añade timeout y errores de transporte/JSON controlados. |
+| GET firmado de Linkify truncaba fracciones y aceptaba pedidos de otro método. | Mantiene entero para montos enteros y representa exactamente dos decimales cuando existen; verifica método Linkify y estado permitido después de la firma. La notificación POST y el webhook legado siguen conciliando firma/monto/estado. |
+| Respuestas logísticas con eventos no objeto o estado no textual generaban errores de tipo. | Se rechazan con `ValueError` controlado; se conserva la separación entre estado logístico y comercial. |
+| Seguimiento solo marcaba `no-store` en respuestas exitosas. | `finalize_response` aplica `no-store` también a errores y throttling. |
+| Once serializers estaban declarados dos veces y las declaraciones finales sobrescribían las primeras. | Se retiraron únicamente las declaraciones eclipsadas y se conservaron las definiciones efectivas, incorporando los campos/validaciones anteriores. |
+
+### Migración: explicación exacta
+
+Archivo modificado: `backend/apps/core/migrations/0006_configuracionpago_varianteproducto.py`. No se modificó ninguna otra migración en esta auditoría.
+
+Antes contenía dos `migrations.CreateModel(...)` como operaciones de base de datos: `ConfiguracionPago` y `VarianteProducto`. Ahora esos mismos `CreateModel` están dentro de `migrations.SeparateDatabaseAndState(state_operations=[...])`; `database_operations` queda vacío por defecto. Se mantienen campos, restricciones, nombre de migración y dependencia de `0005_producto_activo`.
+
+La creación física ya pertenece a `0006_configuracionpago_varianteproducto_and_more`, dependiente de `0011_checkout_order_snapshots`. `0010_configuracionpago_varianteproducto` ya tenía conciliación solo de estado. La rama duplicada no debe repetir SQL ni eliminar tablas al revertirse.
+
+El grafo conserva sus dos extremos y su unión existente:
+
+```text
+0005_producto_activo -> 0006_configuracionpago_varianteproducto (solo estado) ---+
+                                                                           |
+... -> 0010 (solo estado) -> 0011 -> 0006_*_and_more (SQL) -> ... -> 0018 ------+-> 0019_merge_20261008_1504
+```
+
+`0019` conserva exactamente sus dependencias de la nueva `0006` y de `0018_configuracionentrega`, y no tiene operaciones. Una instalación nueva que aplica el grafo completo crea las tablas una sola vez mediante la rama canónica: la construcción de las bases temporales y todos los tests finales comprueban este recorrido. No se certifica un despliegue que aplique exclusivamente una rama intermedia en lugar de la hoja final.
+
+La corrección del código no necesita ejecutar SQL sobre la BD local. `showmigrations core` mostró `[X]` en la rama canónica hasta `0018`, pero `[ ]` en `0006_configuracionpago_varianteproducto` y `[ ]` en `0019_merge_20261008_1504`; ese estado se conserva. Por tanto, no se afirma que la BD operativa tenga aplicado `0019`. Su conciliación futura deberá hacerse como operación de despliegue autorizada, sin `--fake` ni borrado de datos. No se ejecutó `migrate` sobre la BD local.
+
+Resultado final de `python manage.py makemigrations --check --dry-run`: **No changes detected**, exit 0.
+
+### Estado de los flujos
+
+- **Carrito autenticado:** conserva ObjectId + slug + SKU; precio efectivo y stock salen de la variante real; precio 0 y stock 0 conservan su valor; respuesta incluye atributos e imagen al consultar. El bridge SQL permanece para la FK del carrito, no sustituye al catálogo Mongo. Refresh usa la misma identidad y no duplica las variantes persistidas. El carrito invitado sigue siendo memoria de sesión React: no se añadió persistencia tras recarga completa.
+- **Checkout/stock:** procesa todos los SKU, valida precios y stock de servidor, calcula total y envío, genera identificador backend, conserva clave/huella de idempotencia, bloquea tienda durante reserva y compensa Mongo ante fallos de reserva con rollback SQL. Los callbacks no descuentan nuevamente. Se verificó rechazo de Webpay con total cero/fraccionario antes de reservar.
+- **Webpay:** monto del Pedido, pedido/método/tienda/correo/estado correctos, credenciales mínimas, retorno de origen permitido y conciliación Decimal. Una confirmación repetida no vuelve a cambiar estado ni crear pedidos. No se probó un cobro sandbox real.
+- **PayPal/MercadoPago:** temporalmente indisponibles para comprar aun con credenciales completas. `/api/pagos/activos/` devuelve `enabled: false` y motivo cuando están configurados. Las configuraciones siguen guardándose y la pantalla administrativa explica la limitación. El checkout directo también los rechaza antes de tocar catálogo/stock. PayPal iniciar/capturar conserva rutas con 400 si no configurado y 409 si configurado pero indisponible.
+- **Linkify:** firma HMAC, Decimal exacto, método y estado; webhook legado reutiliza handler seguro. No se hizo callback remoto desde el proveedor.
+- **Transferencia:** `medio_pago == Transferencia`, `estado == pendiente`; Pedido es fuente de verdad. Panel de pendientes con auth/propietario y aislamiento de tienda.
+- **Entregas/cotización:** Chilexpress/Starken/Retiro solo habilitados; región/comuna coherentes; referencia firmada con caducidad; revalidación de tarifa actual antes de reservar; cambio de destino/operador invalida cotización; respuestas tardías no sustituyen la actual. Retiro cuesta 0. Las tarifas son manuales configuradas y documentadas, sin API comercial ni tarifa demo de respaldo.
+- **Seguimiento pedido:** confirmación -> Ver mi pedido -> consulta automática con identificador y correo disponibles, sin pedirlos de nuevo. Desde menú sigue la búsqueda manual. POST exige ambos, correo en cuerpo, tenant, 404 uniforme, 20/min y no-store; respuesta excluye dirección/teléfono/credenciales. Webpay conserva el comprobante de consulta en sessionStorage para el retorno.
+- **Seguimiento logístico:** normalizadores SCRUM-361/362 preservados y reforzados. `En origen`, `En tránsito`, `En reparto` son estados del transportista; no se escriben en `Pedido.estado`. No existe aquí un flujo comercial de consulta periódica al transportista ni se inventó un número/evento logístico.
+- **Productos/admin:** se conservan CRUD Mongo, revisión de edición, atributos/SKU, filtros, stock real y permisos. Orders, Products, Shipping, ThemeEditor y pagos mantienen sus contratos. Los localhost encontrados corresponden al fallback configurable `VITE_API_URL` de desarrollo. El antiguo PayPalConfigForm no tiene consumidores de ruta; no se presentó como pantalla funcional vigente.
+- **Endpoints:** las llamadas conectadas de catálogo/atributos, carrito, checkout, historial cliente/admin, seguimiento, perfiles/auth, configuración visual/landing, entregas y pagos tienen rutas incluidas y métodos correspondientes. PayPal conserva sus rutas con bloqueo explícito; no se inventó un endpoint MercadoPago para aparentar integración.
+- **Tenant/seguridad:** el cliente no elige tienda en los flujos revisados; el resolver contrasta identificadores admitidos y falla ante una instalación con múltiples tiendas. Carrito/historial incorporan ese resolver. Google exige correo verificado; callbacks validan credenciales/firma según pasarela. No se añadió `any`, `@ts-ignore`, `@ts-expect-error`, secreto o cambio a `.env`.
+
+### Pruebas nuevas y recuentos
+
+El total cambió de **414 a 435 tests Django: 21 regresiones nuevas**.
+
+- `backend/apps/core/test_final_audit.py`: **17** tests nuevos. Incluyen monto Webpay manipulado; pedido/método/estado/correo y monto CLP inválidos; credenciales incompletas; retorno externo; confirmación con fracciones/NaN/Infinity/monto mal formado; método/tienda/referencia correctos; confirmación HTTP idempotente; PayPal/MP indisponibles y rechazo del checkout directo sin reserva; decremento de stock anónimo/cliente bloqueado; historial con selector de tienda ajena; GET Linkify firmado con fracción exacta/método; no-store también en errores; eventos/estado logístico mal formado; Google no verificado/timeout/usuario válido; errores Webpay sin datos sensibles.
+- `backend/apps/catalog/test_cart.py`: **3** tests nuevos: ObjectId enviado como referencia y round trip de ID/slug/SKU/precio/stock/atributos/imagen; selector de tienda ajena rechazado en los cuatro verbos; ID SQL sin bypass del scope del caso de uso. El fake de repositorio ahora implementa lookup Mongo o SQL igual que el contrato real.
+- `backend/apps/core/test_checkout.py`: **1** test nuevo: total CLP cero/fraccionario con Webpay rechazado antes de crear Pedido/ItemPedido o descontar stock.
+- `backend/apps/core/test_pending_transfers.py`: se actualizó la expectativa vigente: Transbank crea pedido y no aparece como transferencia; PayPal/MP devuelven 400 sin nuevo pedido ni reserva. La prueba existente de exclusión del panel conserva los cinco métodos mediante fixtures directas.
+- `backend/apps/core/test_tenant_sql.py`: el test existente del endpoint privilegiado se autentica como propietario para seguir verificando el rechazo de un SKU de otro producto; no se relajó el rechazo de visitantes/clientes.
+- `frontend/tests/cart-checkout.cjs`: nuevas assertions para correo Webpay en cuerpo; rechazo de PayPal/MP antes de crear, vaciar carrito o navegar; refresh sin duplicados con ObjectId y preservación de ceros. Se mantiene la cobertura previa de reintentos, doble clic, cuatro plantillas y stock.
+
+Resultados finales del cierre:
+
+| Validación | Resultado |
+| --- | --- |
+| Suite backend completa, incluyendo regresiones | **435/435**, 0 fallos, 0 errores, 0 skips; ejecución final 54.640 s |
+| Frontend completo, todos los `.cjs` | **13/13 archivos; 66/66 entradas del runner**, 0 fallos/skips |
+| TypeScript app y node, strict/noEmit | **0 errores**, exit 0 |
+| `npm run build` en contenedor frontend existente | **OK**, exit 0; 146 módulos |
+| `python manage.py check` | **0 issues**, exit 0 |
+| `python manage.py makemigrations --check --dry-run` | **No changes detected**, exit 0 |
+| `git diff --check` | Sin errores |
+
+Los 66 del runner frontend no representan 66 casos independientes homogéneos: `checkout-shipping.cjs` informa 54 entradas (incluye 4 grupos con subtests) y los otros 12 archivos son scripts de assertions que Node contabiliza como una entrada cada uno. No se infló el recuento por cada assertion.
+
+La ejecución literal inicial de `docker compose exec -T backend python manage.py test` falló en setup por la tabla duplicada y no ejecutó los 414 tests. El cierre usa el mismo comando Django completo mediante `call_command('test')`, sin limitar etiquetas ni sustituir migraciones, con `TEST.NAME=test_audit_<uuid>` cambiado solo en memoria. Así evita reutilizar o borrar manualmente la BD de prueba parcial dejada por aquel setup. El runner crea y destruye exclusivamente sus BD temporales; las fixtures Mongo usan colecciones aisladas con cleanup. No se usó SQLite, `--fake`, desactivación de migraciones ni alteración del modelo para obtener verde.
+
+Comando de cierre reproducible (equivalente a `manage.py test`, con nombre aislado):
+
+```powershell
+docker compose exec -T backend python -c "import os,uuid; os.environ.setdefault('DJANGO_SETTINGS_MODULE','config.settings'); import django; django.setup(); from django.conf import settings; from django.db import connections; name='test_audit_'+uuid.uuid4().hex[:12]; settings.DATABASES['default'].setdefault('TEST',{})['NAME']=name; connections['default'].settings_dict['TEST']['NAME']=name; from django.core.management import call_command; call_command('test',verbosity=1)"
+```
+
+### Warnings, riesgos y recomendación
+
+- Docker Compose advierte `PAYMENT_CREDENTIALS_KEY` ausente. El cifrado utiliza la derivación existente desde SECRET_KEY; no se alteraron claves ni credenciales. Antes de producción se requiere una clave gestionada y estable, con plan de rotación; cambiarla improvisadamente impediría descifrar datos existentes.
+- Build: dos advertencias del optimizador CSS por selectores arbitrarios de color y bundle JS de **664.90 kB** (gzip **181.65 kB**), superior a 500 kB. No bloquean build; no se reescribió UI por preferencia.
+- Los logs Linkify de firma/monto/estado rechazados son pruebas negativas esperadas. Git puede avisar conversión LF/CRLF en Windows; `diff --check` no detecta errores.
+- PayPal y MercadoPago requieren completar y validar la integración antes de habilitarlos para compras. El bloqueo evita cobros en moneda equivocada y falsas confirmaciones; no los convierte en integraciones terminadas.
+- Webpay/Linkify requieren validación sandbox con credenciales y retornos accesibles. El inicio remoto Webpay no tiene persistencia durable de intentos: una respuesta de red incierta exige reconciliar con el proveedor antes de reintentar. No se certifica ausencia de doble cobro remoto ante ese escenario.
+- SQL/Mongo no comparten transacción distribuida. La compensación de excepciones está probada; una caída del proceso entre commits o un fallo de compensación necesita reconciliación operativa. Las reservas de pedidos pendientes/abandonados no tienen liberación automática certificada aquí.
+- Carrito invitado permanece en memoria y se pierde en recarga completa. La persistencia reparada y comprobada corresponde al carrito autenticado.
+- No se aplicaron las dos migraciones locales pendientes. Las opciones de desarrollo existentes (`DEBUG`, hosts abiertos, fallbacks de claves/credenciales) necesitan configuración de producción; no se cambiaron `.env` ni la política de despliegue.
+- La cotización manual es una limitación aceptada y documentada. Los normalizadores logísticos no equivalen a tracking comercial conectado.
+
+Recomendación: los arreglos quedan aptos para revisión e integración en develop **con PayPal y MercadoPago explícitamente indisponibles**. No declarar el sistema completo ni todas sus pasarelas listos para producción hasta resolver los riesgos anteriores, conciliar las migraciones pendientes en un despliegue autorizado y validar proveedores en sandbox. Esta auditoría no ejecuta merge ni commit.
+
+### Archivos de esta auditoría
+
+- `backend/apps/authentication/application/use_cases.py`
+- `backend/apps/catalog/application/use_cases.py`
+- `backend/apps/catalog/domain/seguimiento.py`
+- `backend/apps/catalog/infrastructure/adapters/seguimiento_response.py`
+- `backend/apps/catalog/infrastructure/adapters/transbank_adapter.py`
+- `backend/apps/catalog/presentation/serializers.py`
+- `backend/apps/catalog/presentation/views.py`
+- `backend/apps/catalog/test_cart.py`
+- `backend/apps/core/migrations/0006_configuracionpago_varianteproducto.py`
+- `backend/apps/core/payments.py`
+- `backend/apps/core/presentation/checkout.py`
+- `backend/apps/core/presentation/customer_orders.py`
+- `backend/apps/core/presentation/linkify_notificacion.py`
+- `backend/apps/core/presentation/order_tracking.py`
+- `backend/apps/core/presentation/views.py`
+- `backend/apps/core/test_checkout.py`
+- `backend/apps/core/test_final_audit.py`
+- `backend/apps/core/test_pending_transfers.py`
+- `backend/apps/core/test_tenant_sql.py`
+- `docs/revision-integral-estabilidad.md`
+- `frontend/src/features/admin/pages/Payments.tsx`
+- `frontend/src/features/checkout/services/transbankPaymentService.ts`
+- `frontend/src/features/storefront/context/CartContext.tsx`
+- `frontend/src/features/storefront/pages/Checkout.tsx`
+- `frontend/src/features/storefront/services/cartService.ts`
+- `frontend/tests/cart-checkout.cjs`

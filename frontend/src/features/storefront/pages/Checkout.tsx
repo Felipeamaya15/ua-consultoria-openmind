@@ -693,6 +693,9 @@ export default function Checkout() {
       checkoutAttempt.current = {signature, key: crypto.randomUUID()};
     }
     try {
+      if (!['Transbank', 'Linkify', 'Transferencia'].includes(paymentMethod)) {
+        throw new Error('Este medio de pago todavía no está disponible para completar la compra.');
+      }
       const order = await orderService.create({
         key: checkoutAttempt.current.key, items, contact, paymentMethod, shippingMethod, address, promoCode,
         shippingQuote: selectedQuote?.cotizacion,
@@ -710,7 +713,7 @@ export default function Checkout() {
         }
         const returnUrl = `${window.location.origin}${route('pedido-confirmado')}?orderNumber=${orderNumber}&tienda=${order.tienda_id}`;
         const result = await transbankPaymentService.iniciarPago(
-          order.tienda_id, orderNumber, Number(order.monto_total), returnUrl,
+          order.tienda_id, orderNumber, Number(order.monto_total), returnUrl, contact.email.trim(),
         );
         if (!result.exito || !result.data?.url || !result.data?.token) {
           throw new Error(result.mensaje || `Pedido #${orderNumber} registrado; no se pudo iniciar Webpay. Puedes reintentar.`);

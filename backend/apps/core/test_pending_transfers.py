@@ -245,9 +245,16 @@ class RegistroTransferenciasTests(TransferFixtureMixin, TestCase):
         ConfiguracionMercadoPago.objects.create(id_tienda=self.store, activo=True, public_key='qa', access_token='qa')
         for method in ('Transbank', 'PayPal', 'MercadoPago'):
             data = {**self.payload, 'clave_checkout': str(uuid4()), 'medio_pago': method}
+            order_count = Pedido.objects.count()
+            discounts = list(self.repository.descuentos)
             response = self.api.post(self.checkout_url, data, format='json')
-            self.assertEqual(response.status_code, 201, response.data)
-            order = Pedido.objects.get(pk=response.data['data']['id_pedido'])
-            self.assertEqual(order.medio_pago, method)
+            if method in ('PayPal', 'MercadoPago'):
+                self.assertEqual(response.status_code, 400, response.data)
+                self.assertEqual(Pedido.objects.count(), order_count)
+                self.assertEqual(self.repository.descuentos, discounts)
+            else:
+                self.assertEqual(response.status_code, 201, response.data)
+                order = Pedido.objects.get(pk=response.data['data']['id_pedido'])
+                self.assertEqual(order.medio_pago, method)
         self.api.force_authenticate(self.owner)
         self.assertEqual(self.api.get(self.url).data['data'], [])

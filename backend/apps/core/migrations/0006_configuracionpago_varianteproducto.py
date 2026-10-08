@@ -10,7 +10,9 @@ class Migration(migrations.Migration):
         ('core', '0005_producto_activo'),
     ]
 
-    operations = [
+    # The parallel 0006_*_and_more branch creates these tables and constraints.
+    # Preserve this branch's model state without issuing duplicate CREATE TABLE statements.
+    operations = [migrations.SeparateDatabaseAndState(state_operations=[
         migrations.CreateModel(
             name='ConfiguracionPago',
             fields=[
@@ -40,4 +42,4 @@ class Migration(migrations.Migration):
                 'constraints': [models.CheckConstraint(condition=models.Q(('precio__gte', 0)), name='chk_variante_precio_valido'), models.CheckConstraint(condition=models.Q(('stock__gte', 0)), name='chk_variante_stock_valido')],
             },
         ),
-    ]
+    ])]

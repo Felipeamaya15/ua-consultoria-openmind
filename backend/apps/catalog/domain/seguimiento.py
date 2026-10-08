@@ -22,6 +22,8 @@ def _normalizar(texto: str) -> str:
 
 
 def estandarizar_estado(estado_operador: str) -> Optional[EstadoSeguimiento]:
+    if estado_operador is not None and not isinstance(estado_operador, str):
+        raise ValueError("El estado logístico debe ser texto.")
     texto = _normalizar(estado_operador or "")
     for estado, palabras in _PALABRAS:
         if any(palabra in texto for palabra in palabras):

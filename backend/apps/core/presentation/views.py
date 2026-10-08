@@ -111,57 +111,20 @@ class MetodosPagoActivosAPIView(APIView):
         return success_response(data=payment_methods_for_store(resolver_tienda(request)))
 
 class IniciarPagoPayPalView(APIView):
-    """Inicia una transacción en PayPal."""
+    """El checkout CLP no puede cobrar su total como USD sin conciliación de moneda."""
     permission_classes = [AllowAny]
 
     def post(self, request):
-        tienda_id = resolver_tienda(request).pk
-        order_number = request.data.get('order_number')
-        amount = request.data.get('amount')
-        return_url = request.data.get('return_url')
-        cancel_url = request.data.get('cancel_url')
-
-        try:
-            # Importación LAZY para evitar caídas de servidor al arrancar
-            from apps.catalog.infrastructure.adapters.paypal_adapter import PayPalAdapter
-            
-            config = ConfiguracionPayPal.objects.get(id_tienda_id=tienda_id, activo=True)
-            adapter = PayPalAdapter(client_id=config.client_id, client_secret=config.client_secret, ambiente=config.ambiente)
-            
-            resultado = adapter.create_order(
-                amount=float(amount), currency='USD', return_url=return_url, 
-                cancel_url=cancel_url, reference_id=order_number
-            )
-            return success_response(data=resultado)
-            
-        except ConfiguracionPayPal.DoesNotExist:
+        tienda = resolver_tienda(request)
+        if not ConfiguracionPayPal.objects.filter(id_tienda=tienda, activo=True).exists():
             return error_response(mensaje="PayPal no configurado para esta tienda.", codigo="PAYPAL_NO_CONFIGURADO", status=400)
-        except Exception as e:
-            return error_response(mensaje=f"Error conectando con PayPal: {str(e)}", codigo="ERROR_PAYPAL_INICIO", status=500)
+        from apps.core.payments import UNAVAILABLE_CHECKOUT_METHODS
+        return error_response(mensaje=UNAVAILABLE_CHECKOUT_METHODS["paypal"], codigo="PAYPAL_NO_DISPONIBLE", status=409)
 
-class CapturarPagoPayPalView(APIView):
-    """Captura los fondos."""
-    permission_classes = [AllowAny]
 
-    def post(self, request):
-        tienda_id = resolver_tienda(request).pk
-        order_id = request.data.get('order_id')
+class CapturarPagoPayPalView(IniciarPagoPayPalView):
+    """Mantiene la ruta sin capturar órdenes remotas que no están vinculadas a un Pedido."""
 
-        try:
-            # Importación LAZY
-            from apps.catalog.infrastructure.adapters.paypal_adapter import PayPalAdapter
-            
-            config = ConfiguracionPayPal.objects.get(id_tienda_id=tienda_id, activo=True)
-            adapter = PayPalAdapter(client_id=config.client_id, client_secret=config.client_secret, ambiente=config.ambiente)
-            
-            resultado = adapter.capture_order(order_id)
-            if resultado.get("exito"):
-                return success_response(mensaje="Pago capturado", data=resultado)
-            else:
-                return error_response(mensaje="No se pudo capturar el pago", codigo="ERROR_CAPTURA", status=400)
-                
-        except Exception as e:
-            return error_response(mensaje=f"Error capturando PayPal: {str(e)}", codigo="ERROR_PAYPAL_CAPTURA", status=500)
 
 class WebhookLinkifyAPIView(LinkifyNotificacionView):
     """Compatibilidad del webhook antiguo con la firma y estados de SCRUM-316/317."""

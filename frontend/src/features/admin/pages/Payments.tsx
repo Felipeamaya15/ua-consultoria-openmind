@@ -964,7 +964,7 @@ export default function Payments() {
 
       <Alert variant="info">
 
-        Configura las pasarelas de pago de tu tienda. Webpay Plus, PayPal y Mercado Pago se encuentran conectados a tu backend y base de datos real.
+        Configura y guarda las credenciales de tus medios de pago. La disponibilidad para comprar se valida por separado.
 
       </Alert>
 
@@ -1183,7 +1183,7 @@ export default function Payments() {
 
               <p className="text-xs text-[var(--muted-foreground)]">
 
-                Tarjetas, saldo de Mercado Pago y checkout Pro
+                Configuración disponible. Las compras estarán habilitadas cuando se complete la confirmación del pago.
 
               </p>
 
@@ -1359,7 +1359,7 @@ export default function Payments() {
 
               <p className="text-xs text-[var(--muted-foreground)]">
 
-                PayPal y tarjetas internacionales
+                Configuración disponible. Las compras en CLP requieren completar la moneda y captura del pago.
 
               </p>
 

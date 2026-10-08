@@ -97,7 +97,8 @@ class CheckoutOrderAPIView(APIView):
                     raise ValidationError('Esta clave de checkout ya fue utilizada para otra solicitud.')
                 return success_response(data=self.result(previous, self._url_pago(previous, tienda)),
                                         mensaje='Pedido ya registrado.')
-            if PAYMENT_METHODS[data['medio_pago']] not in payment_methods_for_store(tienda):
+            payment = payment_methods_for_store(tienda).get(PAYMENT_METHODS[data['medio_pago']], {})
+            if payment.get('enabled') is not True:
                 raise ValidationError({'medio_pago': f"{data['medio_pago']} no está disponible en esta tienda. "
                                                      'Elige otro medio de pago o contacta a la tienda.'})
             method = DELIVERY_METHODS[data['metodo_entrega']]
@@ -154,6 +155,8 @@ class CheckoutOrderAPIView(APIView):
             discount = min(subtotal, (subtotal * Decimal('.2')).quantize(Decimal('1'), rounding=ROUND_HALF_UP)
                            if promo == 'VERANO20' else Decimal(5000) if promo == 'NUEVO5000' else Decimal(0))
             total = subtotal - discount + shipping
+            if data['medio_pago'] == 'Transbank' and (total <= 0 or total != total.to_integral_value()):
+                raise ValidationError({'medio_pago': 'Webpay requiere un total positivo en pesos enteros.'})
             if total > Decimal('9999999999.99'):
                 raise ValidationError({'items': 'El importe del pedido excede el maximo permitido.'})
             order = Pedido.objects.create(

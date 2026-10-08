@@ -289,3 +289,20 @@ class CheckoutOrderTests(TestCase):
         self.assertEqual(order.correo_contacto, order.contacto['email'])
         self.assertEqual(order.metodo_pago, order.medio_pago)
         self.assertEqual(order.itempedido_set.get(sku='QA-M').atributos, {'Talla': 'M'})
+
+    def test_webpay_invalid_clp_total_is_rejected_before_order_or_stock_reservation(self):
+        from apps.core.models import ConfiguracionTransbank
+        ConfiguracionTransbank.objects.create(id_tienda=self.store, activo=True,
+            codigo_comercio='audit', api_key='audit-key')
+        data = {**self.payload, 'medio_pago': 'Transbank'}
+        for price in (0, 0.5):
+            product = self.repo.get_by_id(str(self.store.pk), self.product_id)
+            for variant in product['variantes']:
+                variant['precio'] = price
+                variant.pop('precio_oferta', None)
+            self.repo.update(str(self.store.pk), self.product_id, {'variantes': product['variantes']})
+            response = self.create(data)
+            self.assertEqual(response.status_code, 400, response.data)
+            self.assertFalse(Pedido.objects.exists())
+            self.assertFalse(ItemPedido.objects.exists())
+            self.assertEqual([v['stock'] for v in self.repo.get_by_id(str(self.store.pk), self.product_id)['variantes']], [7, 8])

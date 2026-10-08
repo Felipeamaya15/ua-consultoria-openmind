@@ -55,18 +55,11 @@ class TransbankWebpayAdapter(TransbankGatewayPort):
             )
         except requests.exceptions.RequestException as e:
             raise TransbankTransaccionException(
-                f"Fallo de conexión al contactar a Transbank: {str(e)}"
+                "No se pudo contactar a Transbank. Reintenta más tarde."
             )
 
         if response.status_code != 200:
-            detalle = response.text
-            try:
-                detalle = response.json().get("error_message", detalle)
-            except Exception:
-                pass
-            raise TransbankTransaccionException(
-                f"Transbank rechazó la inicialización de pago (Status {response.status_code}): {detalle}"
-            )
+            raise TransbankTransaccionException("Transbank no pudo iniciar el pago. Reintenta más tarde.")
 
         datos = response.json()
         return {
@@ -85,7 +78,7 @@ class TransbankWebpayAdapter(TransbankGatewayPort):
             )
         except requests.exceptions.RequestException as e:
             raise TransbankTransaccionException(
-                f"Fallo de conexión al confirmar el pago en Transbank: {str(e)}"
+                "No se pudo confirmar el pago con Transbank. Reintenta más tarde."
             )
 
         if response.status_code != 200:

@@ -4,6 +4,7 @@ export interface CartItemDTO {
   id_item_carrito: number;
   id_producto: number;
   slug?: string | null;
+  producto_mongo_id?: string | null;
   nombre_producto?: string;
   nombre?: string;
   precio_unitario?: string | number;

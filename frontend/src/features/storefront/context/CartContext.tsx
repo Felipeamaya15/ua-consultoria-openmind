@@ -49,7 +49,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
       const persistedItems: CartItem[] = itemsList.map((it: any) => ({
         id_item_carrito: it.id_item_carrito ?? it.id,
-        productId: it.slug || String(it.id_producto),
+        productId: it.producto_mongo_id || it.slug || String(it.id_producto),
         variantId: it.sku || `item-${it.id_item_carrito ?? it.id_producto}`,
         sku: it.sku ?? '',
         name: it.nombre_producto ?? it.nombre ?? '',

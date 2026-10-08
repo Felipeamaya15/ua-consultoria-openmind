@@ -151,6 +151,7 @@ class TiendaSQLHTTPTests(TestCase):
         self.assertEqual(self.repo.get_by_id('999', foreign)['variantes'][0]['stock'], 8)
 
     def test_compra_directa_no_descuenta_sku_de_otro_producto(self):
+        self.api.force_authenticate(self.propietario)
         foreign = self.foreign_product()
         response = self.api.post(self.lista_url + 'AJENA/comprar/', {'cantidad': 1}, format='json')
         self.assertEqual(response.status_code, 404, response.data)

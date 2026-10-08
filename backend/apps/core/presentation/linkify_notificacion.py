@@ -109,8 +109,11 @@ class LinkifyNotificacionView(APIView):
         pedido = self._pedido(_dato(request.query_params, *CAMPOS_ID_PAGO))
         # Sin cuerpo en un GET: se acepta la firma del cuerpo vacio o de la query string.
         self._verificar_firma(request, pedido, request.body, request.META.get("QUERY_STRING", "").encode())
+        if pedido.medio_pago != "Linkify" or pedido.estado not in ("pendiente", "pagado", "enviado"):
+            raise _Rechazo("PEDIDO_NO_DISPONIBLE", "El pedido no admite este cobro.", status.HTTP_409_CONFLICT, pedido)
+        monto = pedido.monto_total
         return Response({
-            "monto": int(pedido.monto_total),
+            "monto": int(monto) if monto == monto.to_integral_value() else format(monto, ".2f"),
             "detalle": f"Pedido {pedido.identificador or pedido.pk}",
         })
 

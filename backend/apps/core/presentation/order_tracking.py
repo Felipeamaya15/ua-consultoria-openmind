@@ -32,6 +32,11 @@ class OrderTrackingAPIView(APIView):
     permission_classes = [AllowAny]
     throttle_classes = [TrackingLookupThrottle]
 
+    def finalize_response(self, request, response, *args, **kwargs):
+        response = super().finalize_response(request, response, *args, **kwargs)
+        response["Cache-Control"] = "no-store"
+        return response
+
     def post(self, request):
         tienda = resolver_tienda(request)
         lookup = TrackingLookupSerializer(data=request.data)

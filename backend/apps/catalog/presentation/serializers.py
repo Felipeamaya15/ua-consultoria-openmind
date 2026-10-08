@@ -302,167 +302,9 @@ class ProductCreateSerializer(serializers.Serializer):
             )
         return value
 
-class ModificarCantidadRequestSerializer(serializers.Serializer):
-    cantidad = serializers.IntegerField(min_value=1, error_messages={
-        'min_value': 'La cantidad mínima permitida es 1.',
-        'invalid': 'Debe ingresar un número entero válido.'
-    })
 
-class ItemCarritoResponseSerializer(serializers.Serializer):
-    id_item_carrito = serializers.IntegerField()
-    id_producto = serializers.IntegerField(source='id_producto.id_producto')
-    nombre_producto = serializers.CharField(source='id_producto.nombre')
-    precio_unitario = serializers.SerializerMethodField()
-    cantidad = serializers.IntegerField()
-    subtotal = serializers.SerializerMethodField()
-    sku = serializers.CharField(allow_null=True, required=False)
-    stock_disponible = serializers.SerializerMethodField()
-    slug = serializers.SerializerMethodField()
-
-    @staticmethod
-    def _precio(obj):
-        precio = getattr(obj, 'precio_calculado', None)
-        return precio if precio is not None else obj.id_producto.precio
-
-    def get_precio_unitario(self, obj):
-        return f"{self._precio(obj):.2f}"
-
-    def get_subtotal(self, obj):
-        return obj.cantidad * self._precio(obj)
-
-    def get_stock_disponible(self, obj):
-        # Los casos de uso calculan el stock real (variante o producto base).
-        return getattr(obj, 'stock_disponible_calculado', obj.id_producto.stock)
-
-    def get_slug(self, obj):
-        return getattr(obj, 'slug_calculado', None)
-
-class AgregarItemCarritoRequestSerializer(serializers.Serializer):
-    id_producto = serializers.IntegerField(
-        required=False,
-        min_value=1,
-        error_messages={
-            "invalid": "El 'id_producto' debe ser un número entero válido."
-        }
-    )
-    slug = serializers.SlugField(
-        required=False,
-        allow_blank=False,
-        error_messages={
-            "invalid": "El 'slug' del producto no es válido.",
-            "blank": "El 'slug' del producto no puede estar vacío."
-        }
-    )
-    cantidad = serializers.IntegerField(
-        required=False,
-        default=1,
-        min_value=1,
-        error_messages={
-            "min_value": "La cantidad debe ser mayor a 0.",
-            "invalid": "La cantidad debe ser un número entero válido."
-        }
-    )
-    sku = serializers.CharField(
-        required=False,
-        allow_null=True,
-        allow_blank=True,
-        default=None
-    )
-
-    def validate(self, attrs):
-        if attrs.get("id_producto") is None and not attrs.get("slug"):
-            raise serializers.ValidationError(
-                {"id_producto": "Debes indicar el 'id_producto' o el 'slug' del producto."}
-            )
-        return attrs
-
-class ConfiguracionTransbankInputSerializer(serializers.Serializer):
-    codigo_comercio = serializers.CharField(
-        max_length=64,
-        required=True,
-        error_messages={"required": "El código de comercio es obligatorio."}
-    )
-    api_key = serializers.CharField(
-        max_length=255,
-        required=True,
-        error_messages={"required": "La API Key o Secret es obligatoria."}
-    )
-    ambiente = serializers.ChoiceField(
-        choices=["INTEGRACION", "PRODUCCION"],
-        default="INTEGRACION"
-    )
-    activo = serializers.BooleanField(default=True)
-
-
-class ConfiguracionTransbankResponseSerializer(serializers.Serializer):
-    id_tienda = serializers.SerializerMethodField()
-    codigo_comercio = serializers.CharField()
-    ambiente = serializers.CharField()
-    activo = serializers.BooleanField()
-    api_key_enmascarada = serializers.CharField(allow_blank=True, required=False)
-    fecha_actualizacion = serializers.DateTimeField(allow_null=True, required=False)
-    configurado = serializers.BooleanField(default=True)
-
-    def get_id_tienda(self, obj):
-        val = obj.get("id_tienda") if isinstance(obj, dict) else getattr(obj, "id_tienda", None)
-        return getattr(val, "id_tienda", val)
     
 
-class IniciarPagoTransbankSerializer(serializers.Serializer):
-    id_tienda = serializers.IntegerField(required=True)
-    orden_compra = serializers.CharField(max_length=64, required=True)
-    monto = serializers.IntegerField(min_value=1, required=True)
-    session_id = serializers.CharField(max_length=64, required=True)
-    return_url = serializers.URLField(required=True)
-
-
-class ConfirmarPagoTransbankSerializer(serializers.Serializer):
-    id_tienda = serializers.IntegerField(required=True)
-    token_ws = serializers.CharField(max_length=255, required=True)
-
-class ConfiguracionPayPalInputSerializer(serializers.Serializer):
-    client_id = serializers.CharField(max_length=255, required=False, allow_blank=True)
-    client_secret = serializers.CharField(max_length=255, required=False, allow_blank=True)
-    ambiente = serializers.ChoiceField(choices=['SANDBOX', 'LIVE'], default='SANDBOX')
-    activo = serializers.BooleanField(default=False)
-
-
-class ConfiguracionPayPalResponseSerializer(serializers.Serializer):
-    id_tienda = serializers.SerializerMethodField()
-    client_id = serializers.CharField(allow_blank=True)
-    ambiente = serializers.CharField()
-    activo = serializers.BooleanField()
-    client_secret_enmascarado = serializers.CharField(allow_blank=True, required=False)
-    fecha_actualizacion = serializers.DateTimeField(allow_null=True, required=False)
-    configurado = serializers.BooleanField(default=False)
-
-    def get_id_tienda(self, obj):
-        val = obj.get("id_tienda") if isinstance(obj, dict) else getattr(obj, "id_tienda", None)
-        return getattr(val, "id_tienda", val)
-
-class ConfiguracionMercadoPagoInputSerializer(serializers.Serializer):
-    public_key = serializers.CharField(max_length=255, required=False, allow_blank=True)
-    access_token = serializers.CharField(max_length=255, required=False, allow_blank=True)
-    ambiente = serializers.ChoiceField(choices=['SANDBOX', 'PRODUCCION'], default='SANDBOX')
-    activo = serializers.BooleanField(default=False)
-
-
-class ConfiguracionMercadoPagoResponseSerializer(serializers.Serializer):
-    id_tienda = serializers.SerializerMethodField()
-    public_key = serializers.CharField(allow_blank=True)
-    ambiente = serializers.CharField()
-    activo = serializers.BooleanField()
-    access_token_enmascarado = serializers.CharField(allow_blank=True, required=False)
-    fecha_actualizacion = serializers.DateTimeField(allow_null=True, required=False)
-    configurado = serializers.BooleanField(default=False)
-
-    def get_id_tienda(self, obj):
-        val = obj.get("id_tienda") if isinstance(obj, dict) else getattr(obj, "id_tienda", None)
-        return getattr(val, "id_tienda", val)
-        schemas = [{a['clave'] for a in v['atributos_variante']} for v in value]
-        if any(schema != schemas[0] for schema in schemas):
-            raise serializers.ValidationError("Todas las variantes deben tener las mismas claves de atributos.")
-        return value
 
 class ModificarCantidadRequestSerializer(serializers.Serializer):
     cantidad = serializers.IntegerField(min_value=1, error_messages={
@@ -480,6 +322,9 @@ class ItemCarritoResponseSerializer(serializers.Serializer):
     sku = serializers.CharField(allow_null=True, required=False)
     stock_disponible = serializers.SerializerMethodField()
     slug = serializers.SerializerMethodField()
+    producto_mongo_id = serializers.SerializerMethodField()
+    imagen = serializers.SerializerMethodField()
+    atributos = serializers.SerializerMethodField()
 
     @staticmethod
     def _precio(obj):
@@ -495,6 +340,15 @@ class ItemCarritoResponseSerializer(serializers.Serializer):
     def get_stock_disponible(self, obj):
         # Los casos de uso calculan el stock real (variante o producto base).
         return getattr(obj, 'stock_disponible_calculado', obj.id_producto.stock)
+
+    def get_imagen(self, obj):
+        return getattr(obj, "imagen_calculada", "")
+
+    def get_atributos(self, obj):
+        return getattr(obj, "atributos_calculados", {})
+
+    def get_producto_mongo_id(self, obj):
+        return getattr(obj, "producto_mongo_id_calculado", None)
 
     def get_slug(self, obj):
         # La consulta del carrito lo resuelve desde el catálogo; puede ser None.
@@ -574,9 +428,22 @@ class ConfiguracionTransbankResponseSerializer(serializers.Serializer):
 class IniciarPagoTransbankSerializer(serializers.Serializer):
     id_tienda = serializers.IntegerField(required=True)
     orden_compra = serializers.CharField(max_length=64, required=True)
+    email = serializers.EmailField(required=True)
     monto = serializers.IntegerField(min_value=1, required=True)
     session_id = serializers.CharField(max_length=64, required=True)
     return_url = serializers.URLField(required=True)
+
+
+    def validate_return_url(self, value):
+        from urllib.parse import urlsplit
+        from django.conf import settings
+        target = urlsplit(value)
+        allowed = {urlsplit(origin)._replace(path="", query="", fragment="").geturl().rstrip("/")
+                   for origin in settings.CORS_ALLOWED_ORIGINS}
+        origin = f"{target.scheme}://{target.netloc}"
+        if target.username or target.password or origin not in allowed:
+            raise serializers.ValidationError("El retorno debe pertenecer a la tienda configurada.")
+        return value
 
 
 class ConfirmarPagoTransbankSerializer(serializers.Serializer):

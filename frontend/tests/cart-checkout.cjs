@@ -21,6 +21,13 @@ const items = [
 ];
 const result = {id_pedido: 42, identificador: 'PEDIDO-BACKEND-42', tienda_id: 9, estado: 'pendiente', monto_total: '30000.00', descuento: '0.00', costo_envio: '0.00'};
 (async () => {
+  const webpayRequests = [];
+  const {transbankPaymentService} = load('src/features/checkout/services/transbankPaymentService.ts', {
+    fetch: async (url, options) => {webpayRequests.push({url, options}); return {json: async () => ({exito: true})};},
+  });
+  await transbankPaymentService.iniciarPago(9, 'ORDER', 100, 'http://localhost:5173/return', ' buyer@example.com ');
+  assert.equal(JSON.parse(webpayRequests[0].options.body).email, 'buyer@example.com');
+  assert.ok(!webpayRequests[0].url.includes('buyer@example.com'));
   let token = 'buyer-token', calls = [], response = {ok: true, json: async () => ({exito: true, data: result})};
   const {orderService} = load('src/features/storefront/services/orderService.ts', {
     localStorage: {getItem: () => token}, require: () => ({authService: {getToken: () => token}}),
@@ -136,6 +143,14 @@ const result = {id_pedido: 42, identificador: 'PEDIDO-BACKEND-42', tienda_id: 9,
   assert.deepEqual(JSON.parse(receiptStorage.get(`order-tracking:${result.identificador}`)), {
     identificador: result.identificador, email: 'buyer@example.com',
   });
+  for (const method of ['PayPal', 'MercadoPago']) {
+    reset(); states[8] = method; states[13] = [{id: method, label: method}];
+    await confirm()();
+    assert.equal(createCalls.length, 0, 'Un medio incompleto no puede crear pedidos ni descontar stock');
+    assert.equal(clearCount, 0);
+    assert.equal(navigateCalls.length, 0);
+    assert.match(states[10].payment, /todavía no está disponible/);
+  }
   reset(); states[6].email = 'invalid';
   await confirm()();
   assert.equal(createCalls.length, 0);
@@ -189,6 +204,7 @@ const result = {id_pedido: 42, identificador: 'PEDIDO-BACKEND-42', tienda_id: 9,
     cart.shipping = 0; cart.shippingMethod = 'Retiro';
   }
   let contextStates = [], cursor = 0, addedToSql = [], deleted = [];
+  let persistedCart = [{id_item_carrito: 99, id_producto: 123, nombre_producto: 'Legado', precio_unitario: 0, cantidad: 1, stock_disponible: 0}];
   const Provider = load('src/features/storefront/context/CartContext.tsx', {
     localStorage: {getItem: () => 'buyer-token'}, sessionStorage: {getItem: () => null},
     require: name => {
@@ -196,7 +212,7 @@ const result = {id_pedido: 42, identificador: 'PEDIDO-BACKEND-42', tienda_id: 9,
       if (name === 'react') return {createContext: () => ({Provider: 'Provider'}), useContext() {}, useEffect() {}, useCallback: fn => fn,
         useState(initial) {const i = cursor++; if (!(i in contextStates)) contextStates[i] = initial; return [contextStates[i], next => {contextStates[i] = typeof next === 'function' ? next(contextStates[i]) : next;}];}};
       if (name.includes('cartService')) return {cartService: {
-        obtenerCarrito: async () => [{id_item_carrito: 99, id_producto: 123, nombre_producto: 'Legado', precio_unitario: 0, cantidad: 1, stock_disponible: 0}],
+        obtenerCarrito: async () => persistedCart,
         agregarItem: async id => {addedToSql.push(id);}, eliminarItem: async id => {deleted.push(id);},
       }};
       throw Error(name);
@@ -227,5 +243,14 @@ const result = {id_pedido: 42, identificador: 'PEDIDO-BACKEND-42', tienda_id: 9,
   await context().clearCart();
   assert.equal(context().items.length, 0);
   assert.deepEqual(deleted, [99]);
+  contextStates[0] = [{...items[0]}];
+  persistedCart = [{id_item_carrito: 100, id_producto: 123, producto_mongo_id: items[0].productId,
+    slug: 'polera', sku: 'QA-M', cantidad: 1, precio_unitario: 0, stock_disponible: 0}];
+  await context().refreshCart();
+  assert.equal(context().items.length, 1, 'El carrito persistido y el local deben compartir la identidad Mongo');
+  assert.equal(context().items[0].productId, items[0].productId);
+  assert.equal(context().items[0].id_item_carrito, 100);
+  assert.equal(context().items[0].price, 0);
+  assert.equal(context().items[0].maxStock, 0);
   console.log('OK: contrato real, Token/invitado, errores, doble envío, reintento, Webpay, cuatro plantillas, stock independiente y limpieza del carrito');
 })().catch(error => {console.error(error); process.exitCode = 1;});

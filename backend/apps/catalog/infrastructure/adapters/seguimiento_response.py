@@ -30,6 +30,9 @@ def procesar_respuesta_seguimiento(operador: str, respuesta: dict) -> list[dict]
     if not isinstance(eventos, list):
         raise ValueError(f"Respuesta de seguimiento de {operador} inválida: no trae eventos.")
 
+    if any(not isinstance(evento, dict) for evento in eventos):
+        raise ValueError(f"Respuesta de seguimiento de {operador} inválida: evento no es un objeto.")
+
     return [
         {
             "fecha": evento.get(campos["fecha"], ""),

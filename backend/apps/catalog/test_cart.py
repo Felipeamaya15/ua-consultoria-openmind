@@ -12,7 +12,8 @@ URL = '/api/catalog/carrito/items/'
 class FakeVariantService:
     """Reemplaza a VariantService para no depender de MongoDB en estos tests."""
     VARIANTES = {
-        'QA-M': {'sku': 'QA-M', 'stock': 5, 'precio': 12000, 'precio_oferta': 9000},
+        'QA-M': {'sku': 'QA-M', 'stock': 5, 'precio': 12000, 'precio_oferta': 9000,
+                 'atributos_variante': [{'clave': 'talla', 'valor': 'M'}]},
         'QA-L': {'sku': 'QA-L', 'stock': 2},
     }
 
@@ -40,7 +41,7 @@ class FakeProductRepository:
 
     def get_by_id(self, tienda_id, product_id):
         for slug, documento in self.documentos.items():
-            if str(documento.get('id_producto')) == str(product_id):
+            if str(documento.get('id_producto')) == str(product_id) or str(documento.get('_id')) == str(product_id):
                 return {**documento, 'slug': slug}
         return None
 
@@ -55,7 +56,7 @@ class CarritoVariantesTests(TestCase):
         patcher.start()
         self.addCleanup(patcher.stop)
         documentos = {
-            'polera': {'_id': 'mongo-1', 'slug': 'polera', 'id_producto': self.product.pk},
+            'polera': {'_id': 'mongo-1', 'slug': 'polera', 'id_producto': self.product.pk, 'imagenes': ['/media/qa.png']},
             'sin-variantes': {'_id': 'mongo-2', 'slug': 'sin-variantes', 'nombre': 'Sin variantes'},
             'solo-mongo': {
                 '_id': 'mongo-3', 'slug': 'solo-mongo', 'nombre': 'Solo Mongo',
@@ -198,3 +199,36 @@ class CarritoVariantesTests(TestCase):
         self.assertEqual(self.api.delete(f'{URL}99999/').status_code, 404)
         self.api.force_authenticate(None)
         self.assertEqual(self.api.delete(f'{URL}1/').status_code, 401)
+
+    def test_catalog_object_id_persists_and_round_trips_in_cart(self):
+        response = self.add_by_slug(slug='mongo-1', sku='QA-M')
+        self.assertEqual(response.status_code, 201, response.data)
+        saved = self.api.get(URL).data['data'][0]
+        self.assertEqual((saved['producto_mongo_id'], saved['slug'], saved['sku']), ('mongo-1', 'polera', 'QA-M'))
+        self.assertEqual((saved['precio_unitario'], saved['stock_disponible']), ('9000.00', 5))
+        self.assertEqual(saved['atributos'], {'talla': 'M'})
+        self.assertEqual(saved['imagen'], '/media/qa.png')
+        self.assertEqual(ItemCarrito.objects.count(), 1)
+
+    def test_every_cart_verb_rejects_foreign_tenant_selector(self):
+        self.add()
+        item = ItemCarrito.objects.get()
+        before = item.cantidad
+        calls = (
+            lambda: self.api.get(URL, HTTP_X_TIENDA_ID='999'),
+            lambda: self.api.post(URL, {'id_producto': self.product.pk, 'tienda_id': 999}, format='json'),
+            lambda: self.api.patch(f'{URL}{item.pk}/', {'cantidad': 2}, format='json', HTTP_X_TIENDA_ID='999'),
+            lambda: self.api.delete(f'{URL}{item.pk}/?tienda_id=999'),
+        )
+        for call in calls:
+            self.assertEqual(call().status_code, 400)
+        item.refresh_from_db()
+        self.assertEqual(item.cantidad, before)
+
+    def test_numeric_product_id_cannot_bypass_use_case_store_scope(self):
+        from apps.catalog.application.use_cases import AgregarItemCarritoDTO, AgregarItemCarritoUseCase
+        from apps.catalog.domain.exceptions import ProductoNoEncontradoException
+        with self.assertRaises(ProductoNoEncontradoException):
+            AgregarItemCarritoUseCase().execute(AgregarItemCarritoDTO(
+                usuario_id=self.user.pk, id_producto=self.product.pk, tienda_id='999'))
+        self.assertFalse(ItemCarrito.objects.exists())

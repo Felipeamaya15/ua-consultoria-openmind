@@ -74,15 +74,18 @@ class GoogleLoginUseCase:
 
     def execute(self, token: str) -> UserEntity:
         # Consultamos el perfil del usuario en Google usando el Access Token
-        response = requests.get(
-            "https://www.googleapis.com/oauth2/v3/userinfo",
-            headers={"Authorization": f"Bearer {token}"}
-        )
-
-        if not response.ok:
-            raise InvalidCredentialsException("Token de Google inválido o expirado.")
-
-        idinfo = response.json()
+        try:
+            response = requests.get(
+                "https://www.googleapis.com/oauth2/v3/userinfo",
+                headers={"Authorization": f"Bearer {token}"}, timeout=10,
+            )
+            if not response.ok:
+                raise InvalidCredentialsException("Token de Google inválido o expirado.")
+            idinfo = response.json()
+        except (requests.RequestException, ValueError):
+            raise InvalidCredentialsException("No se pudo validar el token de Google.") from None
+        if not isinstance(idinfo, dict) or idinfo.get("email_verified") is not True:
+            raise InvalidCredentialsException("Google debe confirmar que el correo está verificado.")
 
         email = idinfo.get('email')
         first_name = idinfo.get('given_name', '')
