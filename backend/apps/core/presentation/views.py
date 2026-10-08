@@ -18,7 +18,7 @@ from apps.core.presentation.responses import error_response, success_response
 from apps.core.presentation.serializers import ConfiguracionPagoSerializer, ShippingConfigurationSerializer
 from apps.core.models import Pedido
 from rest_framework import generics
-from .serializers import PedidoTiendaSerializer
+from .serializers import PedidoTiendaSerializer, TransferenciaPendienteSerializer
 
 class RegistrarCompraView(GuestCheckoutOrderAPIView):
     """Compatibilidad SCRUM-289: reutiliza la creación y seguridad de SCRUM-291."""
@@ -287,6 +287,21 @@ class VerificarTransferenciaLinkifyAPIView(APIView):
             return error_response(mensaje="Pedido no encontrado", status=404)
         except Exception as e:
             return error_response(mensaje=f"Error en validación Linkify: {str(e)}", status=500)
+
+class TransferenciasPendientesAPIView(APIView):
+    """Consulta manual de transferencias; Pedido mantiene el único estado del pago."""
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        tienda = resolver_tienda(request, exigir_propietario=True)
+        pendientes = Pedido.objects.filter(
+            tienda=tienda, medio_pago='Transferencia', estado='pendiente',
+        ).order_by('-fecha_creacion', '-id_pedido')
+        return success_response(
+            data=TransferenciaPendienteSerializer(pendientes, many=True).data,
+            mensaje='Transferencias pendientes obtenidas correctamente.',
+        )
+
 
 class TiendaPedidosAPIView(generics.ListAPIView):
     serializer_class = PedidoTiendaSerializer

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 
 import { useAdminForm } from '../hooks/useAdminForm';
 import { AdminCard, Alert, Input, Toggle, Button, Icon, Select, Textarea } from '../components/ui';
+import { PendingTransfers } from '../components/PendingTransfers';
 
 
 
@@ -1588,6 +1589,7 @@ export default function Payments() {
                     </Button>
                   </div>
                 </div>
+                <PendingTransfers />
               </>
             )}
           </AdminCard>

@@ -14,6 +14,7 @@ from apps.core.presentation.views import (
     CapturarPagoPayPalView,
     WebhookLinkifyAPIView, 
     VerificarTransferenciaLinkifyAPIView,
+    TransferenciasPendientesAPIView,
     TiendaPedidosAPIView
 )
 
@@ -35,5 +36,6 @@ urlpatterns = [
     path('pagos/linkify/notificacion/', LinkifyNotificacionView.as_view(), name='linkify_notificacion'),
     path('pagos/linkify/webhook/', WebhookLinkifyAPIView.as_view(), name='linkify_webhook'),
     path('pagos/linkify/verificar/', VerificarTransferenciaLinkifyAPIView.as_view(), name='linkify_verificar'),
+    path('pagos/transferencias/pendientes/', TransferenciasPendientesAPIView.as_view(), name='transferencias-pendientes'),
     path('tienda/pedidos/', TiendaPedidosAPIView.as_view(), name='tienda-pedidos'),
 ]

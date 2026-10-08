@@ -337,6 +337,16 @@ class PedidoSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['identificador']
 
+class TransferenciaPendienteSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Pedido
+        fields = [
+            'id_pedido', 'identificador', 'fecha_creacion', 'nombre_contacto',
+            'correo_contacto', 'monto_total', 'medio_pago', 'estado',
+        ]
+        read_only_fields = fields
+
+
 class ItemPedidoTiendaSerializer(serializers.ModelSerializer):
     class Meta:
         model = ItemPedido
