@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from apps.core.models import Producto, Tienda, Usuario, VarianteProducto, Pedido, ItemPedido
+from apps.core.models import Producto, Tienda, Usuario, VarianteProducto, Pedido
 
 class ProductoSerializer(serializers.ModelSerializer):
     class Meta:
@@ -233,45 +233,6 @@ class RegistrarCompraSerializer(StrictSerializer):
         return items
 
 
-class DeliveryBooleanField(serializers.BooleanField):
-    def to_internal_value(self, data):
-        if not isinstance(data, bool):
-            self.fail('invalid', input=data)
-        return super().to_internal_value(data)
-
-
-class DeliveryStringField(serializers.CharField):
-    def to_internal_value(self, data):
-        if not isinstance(data, str):
-            self.fail('invalid')
-        return super().to_internal_value(data)
-
-
-class PickupConfigurationSerializer(StrictSerializer):
-    enabled = DeliveryBooleanField()
-    address = DeliveryStringField(allow_blank=True, max_length=500)
-    schedule = DeliveryStringField(allow_blank=True, max_length=500)
-
-
-class CarrierConfigurationSerializer(StrictSerializer):
-    enabled = DeliveryBooleanField()
-    # Reservados para compatibilidad de forma; las credenciales reales quedan fuera de este sprint.
-    accountId = DeliveryStringField(allow_blank=True, max_length=200, required=False)
-    apiKey = DeliveryStringField(allow_blank=True, max_length=500, required=False)
-    status = serializers.ChoiceField(choices=['not_configured'], required=False)
-
-    def validate(self, data):
-        if data.get('accountId') or data.get('apiKey'):
-            raise serializers.ValidationError('El guardado de credenciales de transportistas todavía no está disponible.')
-        return data
-
-
-class ShippingConfigurationSerializer(StrictSerializer):
-    chilexpress = CarrierConfigurationSerializer()
-    starken = CarrierConfigurationSerializer()
-    pickup = PickupConfigurationSerializer()
-
-
 class ConfiguracionPagoSerializer(serializers.Serializer):
     """ Valida que no se habiliten medios de pago sin sus campos obligatorios (SCRUM-306) """
 
@@ -279,7 +240,7 @@ class ConfiguracionPagoSerializer(serializers.Serializer):
         'transbank': ['api_key', 'codigo_comercio'],
         'mercadopago': ['public_key', 'access_token'],
         'paypal': ['client_id', 'client_secret'],
-        'linkify': ['idCuenta', 'clavePrivada'],
+        'linkify': ['accountName', 'publicUrl', 'apiKey', 'webhookSecret'],
         'transfer': [
             'bank_name',
             'account_type',
@@ -336,29 +297,3 @@ class PedidoSerializer(serializers.ModelSerializer):
             'fecha_creacion'
         ]
         read_only_fields = ['identificador']
-
-class TransferenciaPendienteSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Pedido
-        fields = [
-            'id_pedido', 'identificador', 'fecha_creacion', 'nombre_contacto',
-            'correo_contacto', 'monto_total', 'medio_pago', 'estado',
-        ]
-        read_only_fields = fields
-
-
-class ItemPedidoTiendaSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = ItemPedido
-        fields = ['nombre_producto', 'cantidad', 'precio_unitario']
-
-class PedidoTiendaSerializer(serializers.ModelSerializer):
-    items = ItemPedidoTiendaSerializer(source='itempedido_set', many=True, read_only=True)
-    
-    class Meta:
-        model = Pedido
-        fields = [
-            'id_pedido', 'identificador', 'nombre_contacto', 'correo_contacto', 
-            'monto_total', 'estado', 'fecha_creacion', 'metodo_pago', 
-            'costo_envio', 'descuento', 'items'
-        ]

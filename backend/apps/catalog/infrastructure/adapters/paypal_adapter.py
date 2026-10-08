@@ -5,7 +5,9 @@ import json
 import base64
 from typing import Dict, Any
 
-class PayPalAdapter:
+from apps.catalog.domain.ports.payment_gateway import PaymentGateway
+
+class PayPalAdapter(PaymentGateway):
     def __init__(self, client_id: str, client_secret: str, ambiente: str = 'SANDBOX'):
         self.client_id = client_id
         self.client_secret = client_secret

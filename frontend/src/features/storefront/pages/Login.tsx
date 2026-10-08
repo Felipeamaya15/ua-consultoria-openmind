@@ -47,7 +47,6 @@ export default function Login() {
   });
 
   // 2. Formulario tradicional conectado a la API
-  // 2. Formulario tradicional conectado a la API
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
     setLoading(true);
@@ -58,47 +57,26 @@ export default function Login() {
       if (mode === 'login') {
         data = await authService.login({ username: email, password });
       } else {
-        // VALIDACIÓN FRONTEND: Exigir al menos nombre y un apellido
-        const nameParts = name.trim().split(' ');
-        if (nameParts.length < 2) {
-          setMessage('Nombre incompleto: Escribe tu nombre y apellido separados por un espacio.');
-          setLoading(false);
-          return; // Detenemos la petición antes de que viaje al backend
-        }
-
-        const first_name = nameParts[0];
-        const last_name = nameParts.slice(1).join(' ');
-
+        const [first_name, ...last_name_arr] = name.split(' ');
         data = await authService.register({
           username: email.split('@')[0],
           email,
           password,
-          first_name: first_name,
-          last_name: last_name
+          first_name: first_name || '',
+          last_name: last_name_arr.join(' ') || ''
         });
       }
       
-      localStorage.setItem('token', data.data.token);
+      authService.setSession(data.data.token);
       
       // Redirección condicional según el correo
-      if (data.data.user.email === 'emprendedor@gmail.com') {
+      if (data.data.user.is_store_owner === true) {
         navigate('/emprendedor');
       } else {
-        navigate(route()); 
+        navigate(route()); // Envía al usuario a la vista pública de la tienda
       }
     } catch (err: any) {
-      const errorString = JSON.stringify(err).toLowerCase();
-      const detalles = err?.error?.detalles || {};
-
-      if (err?.password || detalles?.password || errorString.includes('password') || errorString.includes('8 caracteres')) {
-        setMessage('Contraseña inválida: Debe tener mínimo 8 caracteres, 1 mayúscula y 1 carácter especial.');
-      } else if (err?.last_name || detalles?.last_name || errorString.includes('last_name') || errorString.includes('blank')) {
-        setMessage('Nombre incompleto: Escribe tu nombre y apellido separados por un espacio.');
-      } else if (err?.email || detalles?.email || errorString.includes('email')) {
-        setMessage('Error en el correo: El formato es inválido o ya está registrado.');
-      } else {
-        setMessage(err?.mensaje || err?.message || 'Error al procesar la solicitud. Revisa tus credenciales.');
-      }
+      setMessage(err.mensaje || 'Error al procesar la solicitud. Revisa tus credenciales.');
     } finally {
       setLoading(false);
     }
@@ -215,24 +193,21 @@ export default function Login() {
                 required
               />
 
-              <div className="flex flex-col gap-1">
-                <Input
-                  label="Contraseña"
-                  type="password"
-                  value={password}
-                  onChange={(event) => setPassword(event.target.value)}
-                  placeholder="••••••••"
-                  autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
-                  required
-                  minLength={mode === 'login' ? undefined : 8}
-                  pattern={mode === 'login' ? undefined : "(?=.*[A-Z])(?=.*[^a-zA-Z0-9]).*"}
-                />
-                {mode === 'register' && (
-                  <p className="text-[11px] text-[#77716e] ml-1">
-                    * Mínimo 8 caracteres, 1 mayúscula y 1 carácter especial (ej. !@#$%).
-                  </p>
-                )}
-              </div>
+              <Input
+                label="Contraseña"
+                type="password"
+                value={password}
+                onChange={(event) =>
+                  setPassword(event.target.value)
+                }
+                placeholder="••••••••"
+                autoComplete={
+                  mode === 'login'
+                    ? 'current-password'
+                    : 'new-password'
+                }
+                required
+              />
 
               {mode === 'login' && (
                 <div className="text-right -mt-2">

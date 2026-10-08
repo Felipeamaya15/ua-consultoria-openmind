@@ -3,16 +3,15 @@ import urllib.parse
 import urllib.error
 import json
 from typing import Dict, Any
-from django.conf import settings
 
 class LinkifyAdapter:
     """
     Adaptador para verificar transferencias bancarias a través de Linkify.
     Implementado con librerías nativas (urllib) para evitar errores de dependencias en Docker.
     """
-    def __init__(self, api_key: str, base_url: str = None):
+    def __init__(self, api_key: str):
         self.api_key = api_key
-        self.base_url = base_url or getattr(settings, "LINKIFY_BASE_URL", "https://api.linkify.cl/v1")
+        self.base_url = "https://api.linkify.cl/v1"
 
     def verificar_transferencia(self, order_number: str, amount: float) -> Dict[str, Any]:
         """Consulta si una transferencia por un monto específico ha sido recibida en el banco."""
@@ -34,14 +33,6 @@ class LinkifyAdapter:
                     "data": data_resp
                 }
         except urllib.error.HTTPError as e:
-            return {
-                "exito": False, 
-                "verificado": False, 
-                "mensaje": f"Linkify no pudo verificar la transferencia (HTTP {e.code}): {e.reason}"
-            }
+            return {"exito": False, "verificado": False, "mensaje": f"Error Linkify: {e.reason}"}
         except Exception as e:
-            return {
-                "exito": False, 
-                "verificado": False, 
-                "mensaje": f"Entorno Sandbox simulado: No se encontró el endpoint de Linkify ({str(e)}). Verificación rechazada controladamente."
-            }
+            return {"exito": False, "verificado": False, "mensaje": f"Falla de conexión: {str(e)}"}
