@@ -157,6 +157,8 @@ export default function Tracking() {
 
     const isDirectTracking =
       term.toUpperCase().startsWith('CHILEX') ||
+      term.toUpperCase().startsWith('STK') ||
+      term.toUpperCase().startsWith('STARKEN') ||
       term.toUpperCase().startsWith('TRK');
 
     // 1. Si es formato de tracking directo o no se ingresó email, consultar API de logística
@@ -350,8 +352,8 @@ export default function Tracking() {
               event.target.value,
             )
           }
-          placeholder="Ej: ORD-2025-0001 o CHILEX-ABC123XYZ"
-          hint="Número de orden o código de transporte (Chilexpress / Standard)"
+          placeholder="Ej: ORD-2025-0001, CHILEX-..., STK-..."
+          hint="Número de orden o código de flete (Chilexpress, Starken, Standard)"
         />
 
         <Input
@@ -421,12 +423,7 @@ export default function Tracking() {
                 : 'text-center text-xs text-[var(--muted-foreground)]'
           }
         >
-          Demo: usa{' '}
-          <strong>
-            ORD-2025-0001
-          </strong>{' '}
-          con <strong>maria@email.com</strong>, o código Chilexpress{' '}
-          <strong>CHILEX-DEMO12345</strong>
+          Demo: usa <strong>ORD-2025-0001</strong> con <strong>maria@email.com</strong>, o tracking <strong>CHILEX-DEMO12345</strong> / <strong>STK-DEMO12345</strong>
         </p>
       </div>
 
@@ -443,7 +440,7 @@ export default function Tracking() {
       )}
 
       {/* =====================================================
-          SEGUIMIENTO EN VIVO (CHILEXPRESS / CENTRAL)
+          SEGUIMIENTO EN VIVO (CHILEXPRESS / STARKEN / CENTRAL)
       ====================================================== */}
       {liveTracking && (
         <div className={isCatalog
@@ -459,10 +456,20 @@ export default function Tracking() {
             <div className="flex items-start justify-between flex-wrap gap-3 mb-5">
               <div>
                 <div className="flex items-center gap-2 mb-1">
-                  <span className="text-xs font-semibold px-2 py-0.5 rounded bg-blue-100 text-blue-800 uppercase tracking-wide">
-                    {liveTracking.proveedor === 'CHILEXPRESS' ? '🇨🇱 Chilexpress' : liveTracking.proveedor}
+                  <span className={`text-xs font-semibold px-2 py-0.5 rounded uppercase tracking-wide ${
+                    liveTracking.proveedor === 'CHILEXPRESS'
+                      ? 'bg-blue-100 text-blue-800'
+                      : liveTracking.proveedor === 'STARKEN'
+                        ? 'bg-amber-100 text-amber-900'
+                        : 'bg-indigo-100 text-indigo-800'
+                  }`}>
+                    {liveTracking.proveedor === 'CHILEXPRESS'
+                      ? '🇨🇱 Chilexpress'
+                      : liveTracking.proveedor === 'STARKEN'
+                        ? '📦 Starken'
+                        : liveTracking.proveedor}
                   </span>
-                  <span className="text-xs text-[var(--muted-foreground)]">Orden de Transporte</span>
+                  <span className="text-xs text-[var(--muted-foreground)]">Orden de Flete / Transporte</span>
                 </div>
 
                 <p

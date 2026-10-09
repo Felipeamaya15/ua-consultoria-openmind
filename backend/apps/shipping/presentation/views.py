@@ -8,6 +8,7 @@ from apps.shipping.presentation.serializers import (
 from apps.shipping.infrastructure.adapters import (
     StandardLogisticsAdapter,
     ChilexpressAdapter,
+    StarkenAdapter,
     MultiCarrierLogisticsAdapter,
     get_logistics_adapter,
 )
@@ -81,7 +82,9 @@ class CotizacionEnvioView(APIView):
 
         try:
             proveedor_param = str(serializer.validated_data.get("proveedor", "todos")).strip().lower()
-            if proveedor_param in ["chilexpress", "chilex"]:
+            if proveedor_param in ["starken", "stk"]:
+                adaptador_logistico = StarkenAdapter()
+            elif proveedor_param in ["chilexpress", "chilex"]:
                 adaptador_logistico = ChilexpressAdapter()
             elif proveedor_param in ["standard", "central"]:
                 adaptador_logistico = StandardLogisticsAdapter()
