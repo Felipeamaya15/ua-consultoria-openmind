@@ -3,6 +3,12 @@ import React, { useState, useEffect } from 'react';
 import { useAdminForm } from '../hooks/useAdminForm';
 import { AdminCard, Alert, Input, Toggle, Button, Icon, Select, Textarea } from '../components/ui';
 import { PendingTransfers } from '../components/PendingTransfers';
+import {
+  transferFieldLabels,
+  transferRequiredFields,
+  hasTransferConfigurationData,
+  validateTransferFields,
+} from '../services/transferValidation';
 
 
 
@@ -11,15 +17,6 @@ const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 
 // Métodos de demostración secundarios restantes
-
-const transferFieldLabels: Record<string, string> = {
-  bank_name: 'Banco',
-  account_type: 'Tipo de cuenta',
-  account_number: 'N° de cuenta',
-  holder_rut: 'RUT del titular',
-  holder_name: 'Nombre del titular',
-  confirmation_email: 'Correo para comprobantes',
-};
 
 const otherMethods = [
 { 
@@ -46,15 +43,6 @@ const otherMethods = [
 ];
 
 const linkifyRequiredFields = ['idCuenta', 'clavePrivada'];
-const transferRequiredFields = [
-  'bank_name',
-  'account_type',
-  'account_number',
-  'holder_rut',
-  'holder_name',
-  'confirmation_email',
-];
-
 const boolValue = (value?: string) => value === 'true';
 
 export default function Payments() {
@@ -130,6 +118,7 @@ export default function Payments() {
   const [transferLoading, setTransferLoading] = useState(true);
   const [transferSaving, setTransferSaving] = useState(false);
   const [transferFeedback, setTransferFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [transferFieldErrors, setTransferFieldErrors] = useState<Record<string, string>>({});
   const [tiendaId, setTiendaId] = useState<number | null>(null);
   const [tiendaError, setTiendaError] = useState<string | null>(null);
 
@@ -622,28 +611,14 @@ export default function Payments() {
     setTransferFeedback(null);
 
     const current = form.transfer ?? { enabled: false, fields: {} };
-    const requiredFields = [
-      'bank_name',
-      'account_type',
-      'account_number',
-      'holder_rut',
-      'holder_name',
-      'confirmation_email',
-    ];
-
-    if (current.enabled) {
-      const missing = requiredFields.filter(
-        (field) => !String(current.fields?.[field] ?? '').trim(),
-      );
-      if (missing.length) {
-        setTransferFeedback({
-          type: 'error',
-          message: 'Completa todos los datos bancarios antes de habilitar la transferencia.',
-        });
-        setTransferSaving(false);
-        return false;
-      }
+    const validation = validateTransferFields(current.fields);
+    setTransferFieldErrors(validation.errors);
+    if ((current.enabled || hasTransferConfigurationData(current.fields)) && validation.missing.length) {
+      setTransferFeedback({ type: 'error', message: validation.message });
+      setTransferSaving(false);
+      return false;
     }
+    setTransferFieldErrors({});
 
     try {
       const currentResponse = await fetch(`${API_BASE}/api/pagos/configuracion/`, {
@@ -707,9 +682,18 @@ export default function Payments() {
           return; 
         }
       } else {
-        const missing = requiredKeysFor(id).filter((key) => !current.fields?.[key]?.trim());
-        if (missing.length > 0) {
-          setValidationError(`Completa todos los campos obligatorios de ${methodName(id)} antes de habilitarlo.`);
+        const validation = id === 'transfer'
+          ? validateTransferFields(current.fields)
+          : {
+              missing: requiredKeysFor(id).filter((key) => !current.fields?.[key]?.trim()),
+              errors: {},
+              message: '',
+            };
+        if (validation.missing.length > 0) {
+          if (id === 'transfer') setTransferFieldErrors(validation.errors);
+          setValidationError(id === 'transfer'
+            ? validation.message
+            : `Completa todos los campos obligatorios de ${methodName(id)} antes de habilitarlo.`);
           return;
         }
       }
@@ -742,6 +726,17 @@ export default function Payments() {
         fields: { ...current.fields, [field]: value },
       },
     });
+
+    if (id === 'transfer' && value.trim()) {
+      setTransferFieldErrors((currentErrors) => {
+        const nextErrors = { ...currentErrors };
+        delete nextErrors[field];
+        return nextErrors;
+      });
+      setTransferFeedback((currentFeedback) =>
+        currentFeedback?.type === 'error' ? null : currentFeedback,
+      );
+    }
 
     if (shouldDisable) {
       setValidationError(`El medio de pago ${methodName(id)} fue desactivado porque se borró un campo obligatorio.`);
@@ -1550,6 +1545,8 @@ export default function Payments() {
                     type={/key|token|secret/i.test(field) ? 'password' : (field === 'confirmation_email' ? 'email' : 'text')}
                     value={current.fields?.[field] ?? ''}
                     placeholder={method.id === 'transfer' ? 'Dato bancario real de la tienda' : 'Credencial demo'}
+                    required={method.id === 'transfer'}
+                    error={method.id === 'transfer' ? transferFieldErrors[field] : undefined}
                     onChange={(e: any) =>
                        updateField(method.id, field, e.target.value)}
                   />
