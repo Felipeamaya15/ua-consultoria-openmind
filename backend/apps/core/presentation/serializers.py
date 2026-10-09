@@ -307,6 +307,14 @@ class ConfiguracionPagoSerializer(serializers.Serializer):
             'confirmation_email',
         ],
     }
+    TRANSFER_FIELD_LABELS = {
+        'bank_name': 'Banco',
+        'account_type': 'Tipo de cuenta',
+        'account_number': 'N° de cuenta',
+        'holder_rut': 'RUT del titular',
+        'holder_name': 'Nombre del titular',
+        'confirmation_email': 'Correo para comprobantes',
+    }
 
     def to_internal_value(self, data):
         return data  # Permitimos la estructura dinámica del JSON
@@ -327,17 +335,20 @@ class ConfiguracionPagoSerializer(serializers.Serializer):
             fields = method_data.get('fields', {})
             if not isinstance(fields, dict):
                 raise serializers.ValidationError({method_id: 'fields debe ser un objeto.'})
-            # Solo validamos si intentan guardarlo como habilitado
-            if str(is_enabled).lower() == 'true' or is_enabled is True:
-                fields = method_data.get('fields', {})
-                required_fields = self.REQUIRED_FIELDS_BY_METHOD.get(method_id, [])
+            # Una transferencia parcialmente completada tampoco puede persistirse deshabilitada.
+            required_fields = self.REQUIRED_FIELDS_BY_METHOD.get(method_id, [])
+            has_transfer_data = method_id == 'transfer' and any(
+                isinstance(value, str) and value.strip() for value in fields.values()
+            )
+            if is_enabled is True or has_transfer_data:
 
                 # Buscamos campos vacíos o inexistentes
                 missing = [key for key in required_fields
                            if not isinstance(fields.get(key), str) or not fields[key].strip()]
 
                 if missing:
-                    errores_metodos[method_id] = f"Faltan campos obligatorios para habilitarlo: {', '.join(missing)}."
+                    labels = [self.TRANSFER_FIELD_LABELS.get(key, key) for key in missing]
+                    errores_metodos[method_id] = f"Faltan campos obligatorios: {', '.join(labels)}."
 
         if errores_metodos:
             raise serializers.ValidationError(errores_metodos)
