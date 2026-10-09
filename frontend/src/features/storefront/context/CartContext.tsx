@@ -15,6 +15,7 @@ interface CartState {
   total: number;
   shippingMethod: string;
   setShippingMethod: (method: string) => void;
+  setCustomShipping: (cost: number | null) => void;
   items: CartItem[];
   count: number;
   subtotal: number;
@@ -31,6 +32,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
   const [promoCode, setPromoCode] = useState('');
   const [shippingMethod, setShippingMethod] = useState('');
+  const [customShipping, setCustomShipping] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
 
   // 1. Sincronizar el carrito real desde PostgreSQL
@@ -107,6 +109,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
     setItems([]);
     setPromoCode('');
     setShippingMethod('');
+    setCustomShipping(null);
     await Promise.allSettled(persisted.map(item => cartService.eliminarItem(item.id_item_carrito!)));
   };
 
@@ -226,7 +229,13 @@ export function CartProvider({ children }: { children: ReactNode }) {
       : 0
   );
   const shipping =
-    !items.length || shippingMethod === 'Retiro' || subtotal > 50000 ? 0 : 3490;
+    !items.length || shippingMethod === 'Retiro'
+      ? 0
+      : customShipping !== null
+      ? customShipping
+      : subtotal > 50000
+      ? 0
+      : 3490;
   const total = subtotal - discount + shipping;
 
   return (
@@ -240,6 +249,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         total,
         shippingMethod,
         setShippingMethod,
+        setCustomShipping,
         items,
         addItem,
         removeItem,

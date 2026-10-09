@@ -70,8 +70,9 @@ class CotizacionEnvioView(APIView):
     """
     Servicio de cotizacion de envios para el flujo de Checkout del e-commerce.
     """
+    proveedor_fijo = None
 
-    def post(self, request):
+    def post(self, request, *args, **kwargs):
         serializer = CotizacionEnvioSerializer(data=request.data)
         if not serializer.is_valid():
             return Response({
@@ -81,7 +82,11 @@ class CotizacionEnvioView(APIView):
             }, status=status.HTTP_400_BAD_REQUEST)
 
         try:
-            proveedor_param = str(serializer.validated_data.get("proveedor", "todos")).strip().lower()
+            proveedor_param = str(
+                self.proveedor_fijo or
+                kwargs.get("proveedor") or
+                serializer.validated_data.get("proveedor", "todos")
+            ).strip().lower()
             if proveedor_param in ["starken", "stk"]:
                 adaptador_logistico = StarkenAdapter()
             elif proveedor_param in ["chilexpress", "chilex"]:

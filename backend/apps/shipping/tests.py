@@ -246,6 +246,50 @@ class ShippingAPITestCase(SimpleTestCase):
         self.assertIn("STARKEN_ESTANDAR_DOMICILIO", servicios)
         self.assertIn("STARKEN_SUCURSAL", servicios)
 
+    def test_cotizar_endpoint_dedicado_chilexpress(self):
+        payload = {
+            "region": "Valparaíso",
+            "comuna": "Viña del Mar",
+            "total_carrito": "22000.00",
+            "total_items": 1
+        }
+        response = self.client.post("/api/logistica/cotizar/chilexpress/", data=payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        body = response.json()
+        self.assertTrue(body["exito"])
+        opciones = body["data"]["opciones"]
+        self.assertTrue(all(op["proveedor"] == "CHILEXPRESS" for op in opciones))
+        self.assertEqual(body["data"]["destino"]["region"], "VALPARAISO")
+
+    def test_cotizar_endpoint_dedicado_starken(self):
+        payload = {
+            "region": "Biobío",
+            "comuna": "Concepción",
+            "total_carrito": "18000.00",
+            "total_items": 2
+        }
+        response = self.client.post("/api/logistica/cotizar/starken/", data=payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        body = response.json()
+        self.assertTrue(body["exito"])
+        opciones = body["data"]["opciones"]
+        self.assertTrue(all(op["proveedor"] == "STARKEN" for op in opciones))
+        self.assertEqual(body["data"]["destino"]["region"], "BIOBIO")
+
+    def test_cotizar_regiones_con_acentos_y_alias(self):
+        payload = {
+            "region": "Araucanía",
+            "comuna": "Temuco",
+            "total_carrito": "10000.00",
+            "total_items": 1,
+            "proveedor": "chilexpress"
+        }
+        response = self.client.post("/api/logistica/cotizar/", data=payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        body = response.json()
+        self.assertTrue(body["exito"])
+        self.assertEqual(body["data"]["destino"]["region"], "LA ARAUCANIA")
+
     def test_seguimiento_endpoint_starken_exitoso(self):
         response = self.client.get("/api/logistica/seguimiento/STK-DEMO1234567/")
         self.assertEqual(response.status_code, status.HTTP_200_OK)

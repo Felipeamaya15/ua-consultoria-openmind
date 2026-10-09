@@ -36,6 +36,17 @@ export interface ResultadoCotizacion {
   opciones: OpcionCotizacion[];
 }
 
+export interface CotizacionParams {
+  region: string;
+  comuna: string;
+  total_carrito: number;
+  total_items: number;
+  peso_kg?: number;
+  calle?: string;
+  numero?: string;
+  proveedor?: string;
+}
+
 export const shippingService = {
   async getTracking(numeroSeguimiento: string): Promise<DetalleSeguimiento> {
     const cleanTracking = numeroSeguimiento.trim();
@@ -47,14 +58,7 @@ export const shippingService = {
     return data.data;
   },
 
-  async quote(params: {
-    region: string;
-    comuna: string;
-    total_carrito: number;
-    total_items: number;
-    peso_kg?: number;
-    proveedor?: string;
-  }): Promise<ResultadoCotizacion> {
+  async quote(params: CotizacionParams): Promise<ResultadoCotizacion> {
     const response = await fetch(`${API_BASE}/api/logistica/cotizar/`, {
       method: 'POST',
       headers: {
@@ -62,13 +66,57 @@ export const shippingService = {
       },
       body: JSON.stringify({
         ...params,
-        total_carrito: params.total_carrito.toFixed(2),
-        proveedor: params.proveedor || 'chilexpress',
+        total_carrito: Number(params.total_carrito || 0).toFixed(2),
+        proveedor: params.proveedor || 'todos',
       }),
     });
     const data = await response.json();
     if (!response.ok || !data.exito) {
       throw new Error(data.mensaje || 'Error al cotizar envío.');
+    }
+    return data.data;
+  },
+
+  /**
+   * Implementa la solicitud de cotización a Chilexpress
+   */
+  async quoteChilexpress(params: Omit<CotizacionParams, 'proveedor'>): Promise<ResultadoCotizacion> {
+    const response = await fetch(`${API_BASE}/api/logistica/cotizar/chilexpress/`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        ...params,
+        total_carrito: Number(params.total_carrito || 0).toFixed(2),
+        proveedor: 'chilexpress',
+      }),
+    });
+    const data = await response.json();
+    if (!response.ok || !data.exito) {
+      throw new Error(data.mensaje || 'Error al cotizar con Chilexpress.');
+    }
+    return data.data;
+  },
+
+  /**
+   * Implementa la solicitud de cotización a Starken
+   */
+  async quoteStarken(params: Omit<CotizacionParams, 'proveedor'>): Promise<ResultadoCotizacion> {
+    const response = await fetch(`${API_BASE}/api/logistica/cotizar/starken/`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        ...params,
+        total_carrito: Number(params.total_carrito || 0).toFixed(2),
+        proveedor: 'starken',
+      }),
+    });
+    const data = await response.json();
+    if (!response.ok || !data.exito) {
+      throw new Error(data.mensaje || 'Error al cotizar con Starken.');
     }
     return data.data;
   },

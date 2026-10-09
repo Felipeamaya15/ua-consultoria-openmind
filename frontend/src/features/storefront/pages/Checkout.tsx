@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState, useRef } from 'react';
+import { useEffect, useMemo, useState, useRef, useCallback } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 
 import { orderService } from '../services/orderService';
+import { shippingService } from '../services/shippingService';
 import { useCart } from '../context/CartContext';
 import { formatPrice } from '../data/mockData';
 import {
@@ -375,6 +376,7 @@ export default function Checkout() {
     promoCode,
     shippingMethod,
     setShippingMethod,
+    setCustomShipping,
   } = useCart();
 
   const submitting = useRef(false);
@@ -412,6 +414,138 @@ export default function Checkout() {
     city: '',
     region: 'Metropolitana',
   });
+
+  type QuotedCarrierRate = {
+    costo: number;
+    dias_habiles_entrega: number;
+    servicio: string;
+    es_gratis: boolean;
+  };
+
+  const [shippingRates, setShippingRates] = useState<Record<string, QuotedCarrierRate>>({});
+  const [shippingQuoting, setShippingQuoting] = useState(false);
+  const [shippingQuoteError, setShippingQuoteError] = useState('');
+
+  const requestShippingQuotes = useCallback(async (comuna: string, region: string) => {
+    if (!comuna.trim() || !region.trim() || items.length === 0) return;
+    setShippingQuoting(true);
+    setShippingQuoteError('');
+
+    const totalCarrito = subtotal;
+    const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
+
+    try {
+      const results = await Promise.allSettled([
+        shippingService.quoteChilexpress({
+          region,
+          comuna,
+          total_carrito: totalCarrito,
+          total_items: totalItems,
+        }),
+        shippingService.quoteStarken({
+          region,
+          comuna,
+          total_carrito: totalCarrito,
+          total_items: totalItems,
+        }),
+      ]);
+
+      const newRates: Record<string, QuotedCarrierRate> = {};
+
+      if (results[0].status === 'fulfilled') {
+        const cxData = results[0].value;
+        const opt = cxData.opcion_recomendada || cxData.opciones[0];
+        if (opt) {
+          newRates['Chilexpress'] = {
+            costo: opt.costo,
+            dias_habiles_entrega: opt.dias_habiles_entrega,
+            servicio: opt.servicio,
+            es_gratis: opt.es_gratis,
+          };
+        }
+      }
+
+      if (results[1].status === 'fulfilled') {
+        const stkData = results[1].value;
+        const opt = stkData.opcion_recomendada || stkData.opciones[0];
+        if (opt) {
+          newRates['Starken'] = {
+            costo: opt.costo,
+            dias_habiles_entrega: opt.dias_habiles_entrega,
+            servicio: opt.servicio,
+            es_gratis: opt.es_gratis,
+          };
+        }
+      }
+
+      setShippingRates((prev) => ({ ...prev, ...newRates }));
+
+      if (results[0].status === 'rejected' && results[1].status === 'rejected') {
+        const err0 = (results[0] as PromiseRejectedResult).reason?.message;
+        const err1 = (results[1] as PromiseRejectedResult).reason?.message;
+        setShippingQuoteError(err0 || err1 || 'No se pudieron calcular tarifas para la dirección ingresada.');
+      }
+    } catch {
+      setShippingQuoteError('Error al cotizar costos de despacho.');
+    } finally {
+      setShippingQuoting(false);
+    }
+  }, [items, subtotal]);
+
+  useEffect(() => {
+    if (address.city.trim() && address.region.trim() && items.length > 0) {
+      const timer = setTimeout(() => {
+        void requestShippingQuotes(address.city, address.region);
+      }, 400);
+      return () => clearTimeout(timer);
+    }
+  }, [address.city, address.region, items.length, requestShippingQuotes]);
+
+  useEffect(() => {
+    if (shippingMethod === 'Retiro') {
+      setCustomShipping(0);
+    } else if (shippingRates[shippingMethod]) {
+      setCustomShipping(shippingRates[shippingMethod].costo);
+    } else {
+      setCustomShipping(null);
+    }
+  }, [shippingMethod, shippingRates, setCustomShipping]);
+
+  const effectiveShippingOptions = useMemo(() => {
+    return shippingOptions.map((option) => {
+      if (option.id === 'Retiro') return option;
+
+      const rate = shippingRates[option.id];
+      if (shippingQuoting) {
+        return {
+          ...option,
+          desc: `Calculando tarifa en tiempo real con ${option.label}...`,
+          priceLabel: 'Cotizando...',
+        };
+      }
+
+      if (rate) {
+        const dias = rate.dias_habiles_entrega;
+        const diasTxt = dias === 1 ? '1 día hábil' : `${dias} días hábiles`;
+        const priceLabel = rate.es_gratis || rate.costo === 0 ? 'Gratis' : formatPrice(rate.costo);
+        return {
+          ...option,
+          desc: `${diasTxt} · ${rate.servicio.replace(/_/g, ' ')}`,
+          priceLabel,
+        };
+      }
+
+      if (!address.city.trim()) {
+        return {
+          ...option,
+          desc: 'Ingresa tu comuna para cotizar tarifa',
+          priceLabel: 'Por calcular',
+        };
+      }
+
+      return option;
+    });
+  }, [shippingOptions, shippingRates, shippingQuoting, address.city]);
 
   const [paymentMethod, setPaymentMethod] =
     useState('');
@@ -543,20 +677,20 @@ export default function Checkout() {
   }, []);
 
   const selectedShippingOption =
-    shippingOptions.find(
+    effectiveShippingOptions.find(
       (option) => option.id === shippingMethod,
     );
 
   useEffect(() => {
     if (
       shippingMethod &&
-      !shippingOptions.some(
+      !effectiveShippingOptions.some(
         (option) => option.id === shippingMethod,
       )
     ) {
       setShippingMethod('');
     }
-  }, [shippingMethod, shippingOptions, setShippingMethod]);
+  }, [shippingMethod, effectiveShippingOptions, setShippingMethod]);
 
   useEffect(() => {
     if (
@@ -1114,8 +1248,14 @@ export default function Checkout() {
                 </Alert>
               )}
 
+              {shippingQuoteError && (
+                <Alert variant="warning">
+                  {shippingQuoteError}
+                </Alert>
+              )}
+
               <div className="flex flex-col gap-3">
-                {shippingOptions.map((method) => (
+                {effectiveShippingOptions.map((method) => (
                   <label
                     key={method.id}
                     className={`
@@ -1237,22 +1377,29 @@ export default function Checkout() {
                             }),
                           )
                         }
+                        onBlur={() => {
+                          if (address.city.trim() && address.region.trim()) {
+                            void requestShippingQuotes(address.city, address.region);
+                          }
+                        }}
                         placeholder="Santiago"
                       />
 
                       <Select
                         label="Región"
                         value={address.region}
-                        onChange={(event) =>
+                        onChange={(event) => {
+                          const newRegion = event.target.value;
                           setAddress(
                             (current) => ({
                               ...current,
-                              region:
-                                event.target
-                                  .value,
+                              region: newRegion,
                             }),
-                          )
-                        }
+                          );
+                          if (address.city.trim() && newRegion.trim()) {
+                            void requestShippingQuotes(address.city, newRegion);
+                          }
+                        }}
                         options={REGIONES}
                       />
                     </div>

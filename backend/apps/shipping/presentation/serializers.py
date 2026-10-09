@@ -1,3 +1,4 @@
+import unicodedata
 from rest_framework import serializers
 from decimal import Decimal
 
@@ -7,6 +8,19 @@ REGIONES_VALIDAS = [
     "VALPARAISO", "METROPOLITANA", "O'HIGGINS", "MAULE", "NUBLE",
     "BIOBIO", "LA ARAUCANIA", "LOS RIOS", "LOS LAGOS", "AYSEN", "MAGALLANES"
 ]
+
+def _normalizar_clave_region(texto: str) -> str:
+    t = unicodedata.normalize("NFKD", texto or "").encode("ASCII", "ignore").decode("utf-8")
+    return t.strip().upper().replace("'", "").replace("-", "").replace(" ", "")
+
+MAPA_CANONICO_REGIONES = {
+    _normalizar_clave_region(r): r for r in REGIONES_VALIDAS
+}
+MAPA_CANONICO_REGIONES[_normalizar_clave_region("RM")] = "METROPOLITANA"
+MAPA_CANONICO_REGIONES[_normalizar_clave_region("REGION METROPOLITANA")] = "METROPOLITANA"
+MAPA_CANONICO_REGIONES[_normalizar_clave_region("OHIGGINS")] = "O'HIGGINS"
+MAPA_CANONICO_REGIONES[_normalizar_clave_region("ARAUCANIA")] = "LA ARAUCANIA"
+MAPA_CANONICO_REGIONES[_normalizar_clave_region("ARICA")] = "ARICA Y PARINACOTA"
 
 class CotizacionEnvioSerializer(serializers.Serializer):
     calle = serializers.CharField(max_length=150, required=False, allow_blank=True, default="")
@@ -41,13 +55,17 @@ class CotizacionEnvioSerializer(serializers.Serializer):
     )
 
     def validate_region(self, value):
-        region_limpia = value.strip().upper()
-        # Verificar coincidencia parcial o completa
-        if not any(r in region_limpia for r in REGIONES_VALIDAS):
-            raise serializers.ValidationError(
-                f"La region '{value}' no es valida dentro del territorio nacional cubierto."
-            )
-        return region_limpia
+        norm = _normalizar_clave_region(value)
+        if norm in MAPA_CANONICO_REGIONES:
+            return MAPA_CANONICO_REGIONES[norm]
+
+        for reg_norm, reg_canon in MAPA_CANONICO_REGIONES.items():
+            if reg_norm in norm or norm in reg_norm:
+                return reg_canon
+
+        raise serializers.ValidationError(
+            f"La region '{value}' no es valida dentro del territorio nacional cubierto."
+        )
 
 
 class EventoSeguimientoResponseSerializer(serializers.Serializer):
