@@ -17,6 +17,11 @@ class TrackingLookupSerializer(StrictSerializer):
     identificador = serializers.CharField(max_length=20)
     email = serializers.EmailField(max_length=320)
 
+    def validate_email(self, value):
+        # La comparacion es insensible a mayusculas; conservar una forma canonica
+        # evita diferencias entre clientes antes de buscar la orden asociada.
+        return value.casefold()
+
 
 class TrackingLookupThrottle(AnonRateThrottle):
     scope = 'order_tracking'
@@ -38,9 +43,9 @@ class OrderTrackingAPIView(APIView):
         return response
 
     def post(self, request):
-        tienda = resolver_tienda(request)
         lookup = TrackingLookupSerializer(data=request.data)
         lookup.is_valid(raise_exception=True)
+        tienda = resolver_tienda(request)
         # Ambos datos son obligatorios: nunca se consulta solo por número/ID.
         matches = list(Pedido.objects.filter(
             tienda=tienda,
