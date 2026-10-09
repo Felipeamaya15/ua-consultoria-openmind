@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Alert, Button } from './ui';
 import { formatPrice } from '../data/mockAdminData';
-import { getPendingTransfers, type PendingTransfer } from '../services/pendingTransfersService';
+import { getPendingTransfers, rejectManualTransfer, type PendingTransfer } from '../services/pendingTransfersService';
 
 const dateFormat = new Intl.DateTimeFormat('es-CL', { dateStyle: 'short', timeStyle: 'short' });
 
@@ -10,6 +10,8 @@ export function PendingTransfers() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [refresh, setRefresh] = useState(0);
+  const [rejectingId, setRejectingId] = useState<number | null>(null);
+  const [feedback, setFeedback] = useState('');
 
   useEffect(() => {
     const controller = new AbortController();
@@ -27,6 +29,24 @@ export function PendingTransfers() {
     return () => controller.abort();
   }, [refresh]);
 
+  const reject = async (transfer: PendingTransfer) => {
+    const orderLabel = transfer.identificador || `#${transfer.id_pedido}`;
+    if (!window.confirm(`¿Confirmas que deseas rechazar la transferencia del pedido ${orderLabel}? El pedido será cancelado.`)) return;
+
+    setRejectingId(transfer.id_pedido);
+    setError('');
+    setFeedback('');
+    try {
+      const result = await rejectManualTransfer(transfer.id_pedido);
+      setTransfers(current => current.filter(item => item.id_pedido !== transfer.id_pedido));
+      setFeedback(result.mensaje);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'No se pudo rechazar la transferencia.');
+    } finally {
+      setRejectingId(null);
+    }
+  };
+
   return <section className="border-t border-[var(--border)] pt-3 mt-4" aria-label="Transferencias pendientes" aria-busy={loading}>
     <div className="flex items-center justify-between gap-3 mb-3">
       <div>
@@ -39,6 +59,7 @@ export function PendingTransfers() {
     </div>
     {loading && <p className="text-sm text-[var(--muted-foreground)]" role="status">Cargando transferencias pendientes…</p>}
     {!loading && error && <Alert variant="error">{error}</Alert>}
+    {!loading && feedback && <Alert variant="success">{feedback}</Alert>}
     {!loading && !error && (transfers.length === 0
       ? <p className="text-sm text-[var(--muted-foreground)]">No hay transferencias pendientes de verificación.</p>
       : <div className="overflow-x-auto">
@@ -49,12 +70,27 @@ export function PendingTransfers() {
             <th scope="col" className="py-2 pr-3">Cliente</th>
             <th scope="col" className="py-2 pr-3">Monto</th>
             <th scope="col" className="py-2">Fecha</th>
+            <th scope="col" className="py-2 pl-3 text-right">Acción</th>
           </tr></thead>
           <tbody>{transfers.map(transfer => <tr key={transfer.id_pedido} className="border-b border-[var(--border)] last:border-0">
             <td className="py-3 pr-3 whitespace-nowrap">{transfer.identificador || `Pedido #${transfer.id_pedido}`}</td>
             <td className="py-3 pr-3"><p>{transfer.nombre_contacto || 'Cliente sin nombre'}</p><p className="text-xs text-[var(--muted-foreground)]">{transfer.correo_contacto}</p></td>
             <td className="py-3 pr-3 whitespace-nowrap">{formatPrice(Number(transfer.monto_total))}</td>
             <td className="py-3 whitespace-nowrap"><time dateTime={transfer.fecha_creacion}>{dateFormat.format(new Date(transfer.fecha_creacion))}</time></td>
+            <td className="py-3 pl-3 text-right">
+              {transfer.medio_pago === 'Transferencia' ? (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="danger"
+                  disabled={rejectingId !== null}
+                  loading={rejectingId === transfer.id_pedido}
+                  onClick={() => reject(transfer)}
+                >
+                  Rechazar
+                </Button>
+              ) : <span className="text-xs text-[var(--muted-foreground)]">Automática</span>}
+            </td>
           </tr>)}</tbody>
         </table>
       </div>)}
