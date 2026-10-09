@@ -53,6 +53,9 @@ const result = {id_pedido: 42, identificador: 'PEDIDO-BACKEND-42', tienda_id: 9,
   input.shippingMethod = 'Retiro';
   await orderService.create(input);
   assert.ok(!('cotizacion' in JSON.parse(calls.at(-1).options.body)));
+  response = {ok: true, json: async () => ({exito: true, data: {...result, costo_envio: '3490.00'}})};
+  await assert.rejects(orderService.create(input), /respuesta del pedido es invÃ¡lida/);
+  response = {ok: true, json: async () => ({exito: true, data: result})};
   assert.equal(payload.items[0].producto_id, items[0].productId);
   assert.equal(payload.items[0].sku, 'QA-M');
   assert.equal(payload.contacto.email, 'buyer@example.com');

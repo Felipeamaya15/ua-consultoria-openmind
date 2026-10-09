@@ -92,7 +92,8 @@ export const orderService = {
       || !(data.identificador === undefined || data.identificador === null || typeof data.identificador === 'string')
       || !(data.url_pago === undefined || typeof data.url_pago === 'string')
       || !['monto_total', 'descuento', 'costo_envio'].every(key => typeof data[key] === 'string'
-        && String(data[key]).trim() !== '' && Number.isFinite(Number(data[key])) && Number(data[key]) >= 0)) {
+        && String(data[key]).trim() !== '' && Number.isFinite(Number(data[key])) && Number(data[key]) >= 0)
+      || (input.shippingMethod === 'Retiro' && Number(data.costo_envio) !== 0)) {
       throw new Error('La respuesta del pedido es inválida.');
     }
     return order as CreatedOrder;
