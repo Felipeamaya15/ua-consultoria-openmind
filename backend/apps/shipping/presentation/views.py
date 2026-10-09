@@ -27,10 +27,13 @@ class SeguimientoLogisticoView(APIView):
     """
     Endpoint para consultar el estado en tiempo real de un envío en el e-commerce.
     """
+    proveedor_fijo = None
 
     def get(self, request, numero_seguimiento):
         try:
-            adaptador = get_logistics_adapter(numero_seguimiento)
+            # La ruta dedicada evita confundir ordenes de transporte numericas
+            # con codigos numericos aceptados por otros operadores.
+            adaptador = get_logistics_adapter(self.proveedor_fijo or numero_seguimiento)
             caso_uso = ConsultarSeguimientoUseCase(logistics_port=adaptador)
 
             resultado = caso_uso.execute(numero_seguimiento=numero_seguimiento)

@@ -53,13 +53,50 @@ export interface CotizacionParams {
   proveedor?: string;
 }
 
+function isChilexpressTrackingDetail(value: unknown, expectedTracking: string): value is DetalleSeguimiento {
+  if (!value || typeof value !== 'object') return false;
+  const detail = value as Record<string, unknown>;
+  return detail.proveedor === 'CHILEXPRESS'
+    && typeof detail.numero_seguimiento === 'string'
+    && detail.numero_seguimiento.trim().toUpperCase() === expectedTracking.toUpperCase()
+    && typeof detail.estado_actual === 'string'
+    && typeof detail.descripcion_estado === 'string'
+    && typeof detail.fecha_estimada_entrega === 'string'
+    && Array.isArray(detail.historial)
+    && detail.historial.every(event => event && typeof event === 'object'
+      && ['fecha_hora', 'estado', 'descripcion', 'ubicacion'].every(
+        field => typeof (event as Record<string, unknown>)[field] === 'string',
+      ));
+}
+
 export const shippingService = {
   async getTracking(numeroSeguimiento: string): Promise<DetalleSeguimiento> {
     const cleanTracking = numeroSeguimiento.trim();
-    const response = await fetch(`${API_BASE}/api/logistica/seguimiento/${encodeURIComponent(cleanTracking)}/`);
+    if (!cleanTracking) throw new Error('Ingresa un número de seguimiento.');
+    const providerPath = cleanTracking.toUpperCase().startsWith('CHILEX') ? '/chilexpress' : '';
+    const response = await fetch(`${API_BASE}/api/logistica/seguimiento${providerPath}/${encodeURIComponent(cleanTracking)}/`);
     const data = await response.json();
     if (!response.ok || !data.exito) {
       throw new Error(data.mensaje || 'No se encontró información de seguimiento para este código.');
+    }
+    if (providerPath && !isChilexpressTrackingDetail(data.data, cleanTracking)) {
+      throw new Error('La información de seguimiento de Chilexpress recibida es inválida.');
+    }
+    return data.data;
+  },
+
+  async getChilexpressTracking(numeroSeguimiento: string): Promise<DetalleSeguimiento> {
+    const cleanTracking = numeroSeguimiento.trim();
+    if (!cleanTracking) throw new Error('Ingresa una orden de transporte de Chilexpress.');
+    const response = await fetch(
+      `${API_BASE}/api/logistica/seguimiento/chilexpress/${encodeURIComponent(cleanTracking)}/`,
+    );
+    const data = await response.json();
+    if (!response.ok || !data.exito) {
+      throw new Error(data.mensaje || 'No se encontró información de seguimiento en Chilexpress.');
+    }
+    if (!isChilexpressTrackingDetail(data.data, cleanTracking)) {
+      throw new Error('La información de seguimiento de Chilexpress recibida es inválida.');
     }
     return data.data;
   },

@@ -207,6 +207,22 @@ class ShippingAPITestCase(SimpleTestCase):
         self.assertEqual(body["data"]["proveedor"], "CHILEXPRESS")
         self.assertEqual(body["data"]["estado_actual"], "EN_DISTRIBUCION")
 
+    def test_seguimiento_endpoint_chilexpress_acepta_orden_transporte_numerica(self):
+        response = self.client.get("/api/logistica/seguimiento/chilexpress/12345678/")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        body = response.json()
+        self.assertTrue(body["exito"])
+        self.assertEqual(body["data"]["numero_seguimiento"], "12345678")
+        self.assertEqual(body["data"]["proveedor"], "CHILEXPRESS")
+        self.assertGreaterEqual(len(body["data"]["historial"]), 3)
+
+    def test_seguimiento_endpoint_chilexpress_dedicado_valida_formato(self):
+        response = self.client.get("/api/logistica/seguimiento/chilexpress/INVALIDO/")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        body = response.json()
+        self.assertFalse(body["exito"])
+        self.assertEqual(body["error"]["codigo"], "FORMATO_TRACKING_INVALIDO")
+
     def test_seguimiento_endpoint_chilexpress_invalido(self):
         response = self.client.get("/api/logistica/seguimiento/INVALIDO/")
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
