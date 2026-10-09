@@ -8,7 +8,7 @@ export type PendingTransfer = {
   nombre_contacto: string;
   correo_contacto: string;
   monto_total: string;
-  medio_pago: 'Transferencia';
+  medio_pago: 'Transferencia' | 'Linkify'; // <-- Agregamos Linkify
   estado: 'pendiente';
 };
 
@@ -20,7 +20,8 @@ function isPendingTransfer(value: unknown): value is PendingTransfer {
     && typeof item.fecha_creacion === 'string' && !Number.isNaN(Date.parse(item.fecha_creacion))
     && typeof item.nombre_contacto === 'string' && typeof item.correo_contacto === 'string'
     && typeof item.monto_total === 'string' && Number.isFinite(Number(item.monto_total))
-    && item.medio_pago === 'Transferencia' && item.estado === 'pendiente';
+    && (item.medio_pago === 'Transferencia' || item.medio_pago === 'Linkify') // <-- Agregamos Linkify
+    && item.estado === 'pendiente';
 }
 
 export async function getPendingTransfers(signal?: AbortSignal): Promise<PendingTransfer[]> {
@@ -37,4 +38,26 @@ export async function getPendingTransfers(signal?: AbortSignal): Promise<Pending
     throw new Error('El listado de transferencias recibido es inválido.');
   }
   return body.data;
+}
+
+// Nueva función de verificación hacia el backend
+export async function verifyTransfer(pedido_id: number, signal?: AbortSignal): Promise<{ exito: boolean; mensaje: string }> {
+  const token = authService.getToken();
+  if (!token) throw new Error('Inicia sesión como propietario para verificar transferencias.');
+  
+  const response = await fetch(`${API_BASE_URL}/api/pagos/linkify/verificar/`, {
+    method: 'POST',
+    headers: { 
+      Authorization: `Token ${token}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ pedido_id }),
+    signal,
+  });
+  
+  const body = await response.json();
+  if (!response.ok) {
+    throw new Error(body.mensaje || body.detail || 'Error al verificar la transferencia.');
+  }
+  return { exito: body.exito, mensaje: body.mensaje };
 }
