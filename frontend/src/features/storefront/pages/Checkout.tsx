@@ -129,8 +129,8 @@ const defaultShippingOptions: ShippingOption[] = [
     id: 'Retiro',
     label: 'Retiro en tienda',
     icon: 'store',
-    desc: 'Sin costo',
-    priceLabel: 'Gratis',
+    desc: 'Retira tu compra presencialmente',
+    priceLabel: '0',
     requiresAddress: false,
   },
 ];
@@ -172,10 +172,16 @@ function readCheckoutOptions() {
   try {
     const raw = localStorage.getItem(ADMIN_STORAGE_KEY);
     if (!raw) {
-      return { authSettings: defaultAuthSettings };
+      return { 
+        authSettings: defaultAuthSettings,
+        shippingOptions: defaultShippingOptions,
+        paymentOptions: paymentPresentation, // <-- Actualizado aquí
+      };
     }
 
     const config = JSON.parse(raw)?.config;
+
+    // 1. Configuración de Autenticación
     const authConfig = config?.authenticationConfiguration;
     const authSettings: AuthSettings = {
       emailPassword: authConfig?.emailPassword ?? defaultAuthSettings.emailPassword,
@@ -184,9 +190,66 @@ function readCheckoutOptions() {
       requiresAuth: config?.requiresAuth ?? defaultAuthSettings.requiresAuth,
     };
 
-    return { authSettings };
+    // 2. Configuración de Entregas (Incluye el Costo $0 para Retiro)
+    const shippingConfig = config?.shippingConfiguration;
+    let shippingOptions = defaultShippingOptions;
+    
+    if (shippingConfig) {
+      shippingOptions = defaultShippingOptions.filter((option) => {
+        if (option.id === 'Chilexpress') return !!shippingConfig.chilexpress?.enabled;
+        if (option.id === 'Starken') return !!shippingConfig.starken?.enabled;
+        if (option.id === 'Retiro') return !!shippingConfig.pickup?.enabled;
+        return true;
+      }).map((option) =>
+        option.id === 'Retiro'
+          ? {
+              ...option,
+              desc:
+                shippingConfig.pickup?.schedule || shippingConfig.pickup?.address
+                  ? `Costo $0 · ${[
+                      shippingConfig.pickup?.schedule,
+                      shippingConfig.pickup?.address,
+                    ].filter(Boolean).join(' · ')}`
+                  : option.desc,
+              priceLabel: '$0',
+              requiresAddress: false,
+            }
+          : option
+      );
+    }
+
+    // 3. Configuración de Pagos (SCRUM 30)
+    const paymentMap: Record<string, string> = {
+      Transbank: 'transbank',
+      MercadoPago: 'mercadopago',
+      PayPal: 'paypal',
+      Linkify: 'linkify',
+      Transferencia: 'transfer',
+    };
+
+    let paymentOptions = paymentPresentation; // <-- Actualizado aquí
+    const paymentConfig = config?.paymentConfiguration;
+    
+    if (paymentConfig) {
+      paymentOptions = paymentPresentation.filter((option) => { // <-- Actualizado aquí
+        const key = paymentMap[option.id];
+        return key ? !!paymentConfig[key]?.enabled : false;
+      });
+    }
+
+    // Retornamos las 3 propiedades consolidadas
+    return {
+      authSettings,
+      shippingOptions: shippingOptions.length > 0 ? shippingOptions : defaultShippingOptions,
+      paymentOptions,
+    };
+    
   } catch {
-    return { authSettings: defaultAuthSettings };
+    return { 
+      authSettings: defaultAuthSettings,
+      shippingOptions: defaultShippingOptions,
+      paymentOptions: paymentPresentation, // <-- Actualizado aquí y corregido el typo de mayúscula
+    };
   }
 }
 
