@@ -21,8 +21,29 @@ export default function Login() {
     useState(false);
   const [message, setMessage] =
     useState('');
+  const [passwordErrors, setPasswordErrors] =
+    useState<string[]>([]);
 
-  // 1. Hook oficial de Google
+  const getPasswordValidationErrors = (pwd: string): string[] => {
+    const errors: string[] = [];
+    if (!pwd || pwd.length < 8) {
+      errors.push('Tener al menos 8 caracteres.');
+    }
+    if (!/[A-Z]/.test(pwd)) {
+      errors.push('Incluir al menos una letra mayúscula (A-Z).');
+    }
+    if (!/\d/.test(pwd)) {
+      errors.push('Incluir al menos un número (0-9).');
+    }
+    if (!/[@$!%*?&#/._\-]/.test(pwd)) {
+      errors.push('Incluir al menos un carácter especial (@, $, !, %, *, #, etc.).');
+    }
+    if (!/[a-z]/.test(pwd)) {
+      errors.push('Incluir al menos una letra minúscula (a-z).');
+    }
+    return errors;
+  };
+
   // 1. Hook oficial de Google
   const loginConGoogle = useGoogleLogin({
     onSuccess: async (tokenResponse) => {
@@ -53,6 +74,15 @@ export default function Login() {
     setLoading(true);
     setMessage('');
 
+    if (mode === 'register') {
+      const pErrors = getPasswordValidationErrors(password);
+      if (pErrors.length > 0) {
+        setPasswordErrors(pErrors);
+        setLoading(false);
+        return;
+      }
+    }
+
     try {
       let data;
       if (mode === 'login') {
@@ -80,13 +110,23 @@ export default function Login() {
       
       localStorage.setItem('token', data.data.token);
       
-      // Redirección condicional según el correo
-      if (data.data.user.email === 'emprendedor@gmail.com') {
+      // Redirección condicional según el correo o rol
+      if (data.data.user.email === 'emprendedor@gmail.com' || data.data.user.is_store_owner === true) {
         navigate('/emprendedor');
       } else {
         navigate(route()); 
       }
     } catch (err: any) {
+      if (err?.password) {
+        const backendPwdErrors = Array.isArray(err.password) ? err.password : [String(err.password)];
+        setPasswordErrors(backendPwdErrors);
+      } else if (err?.error?.detalles?.password) {
+        const backendPwdErrors = Array.isArray(err.error.detalles.password)
+          ? err.error.detalles.password
+          : [String(err.error.detalles.password)];
+        setPasswordErrors(backendPwdErrors);
+      }
+
       const errorString = JSON.stringify(err).toLowerCase();
       const detalles = err?.error?.detalles || {};
 
@@ -113,6 +153,7 @@ export default function Login() {
 
     setMessage('');
     setPassword('');
+    setPasswordErrors([]);
   };
 
 
@@ -215,24 +256,42 @@ export default function Login() {
                 required
               />
 
-              <div className="flex flex-col gap-1">
-                <Input
-                  label="Contraseña"
-                  type="password"
-                  value={password}
-                  onChange={(event) => setPassword(event.target.value)}
-                  placeholder="••••••••"
-                  autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
-                  required
-                  minLength={mode === 'login' ? undefined : 8}
-                  pattern={mode === 'login' ? undefined : "(?=.*[A-Z])(?=.*[^a-zA-Z0-9]).*"}
-                />
-                {mode === 'register' && (
-                  <p className="text-[11px] text-[#77716e] ml-1">
-                    * Mínimo 8 caracteres, 1 mayúscula y 1 carácter especial (ej. !@#$%).
+              <Input
+                label="Contraseña"
+                type="password"
+                value={password}
+                onChange={(event) => {
+                  const val = event.target.value;
+                  setPassword(val);
+                  if (passwordErrors.length > 0) {
+                    setPasswordErrors(getPasswordValidationErrors(val));
+                  }
+                }}
+                placeholder="••••••••"
+                autoComplete={
+                  mode === 'login'
+                    ? 'current-password'
+                    : 'new-password'
+                }
+                required
+              />
+
+              {mode === 'register' && (
+                <div className="flex flex-col gap-2 -mt-2">
+                  <p className="text-xs text-[#151515]/70">
+                    La contraseña debe contener al menos 8 caracteres, números, caracteres especiales y mayúsculas.
                   </p>
-                )}
-              </div>
+                  {passwordErrors.length > 0 && (
+                    <Alert variant="error" title="La contraseña no cumple los requisitos:">
+                      <ul className="list-disc list-inside space-y-0.5 text-xs mt-1">
+                        {passwordErrors.map((err, idx) => (
+                          <li key={idx}>{err}</li>
+                        ))}
+                      </ul>
+                    </Alert>
+                  )}
+                </div>
+              )}
 
               {mode === 'login' && (
                 <div className="text-right -mt-2">
@@ -381,9 +440,13 @@ export default function Login() {
                 label="Contraseña"
                 type="password"
                 value={password}
-                onChange={(event) =>
-                  setPassword(event.target.value)
-                }
+                onChange={(event) => {
+                  const val = event.target.value;
+                  setPassword(val);
+                  if (passwordErrors.length > 0) {
+                    setPasswordErrors(getPasswordValidationErrors(val));
+                  }
+                }}
                 placeholder="••••••••"
                 autoComplete={
                   mode === 'login'
@@ -392,6 +455,23 @@ export default function Login() {
                 }
                 required
               />
+
+              {mode === 'register' && (
+                <div className="flex flex-col gap-2 -mt-2">
+                  <p className="text-xs text-[#77716e]">
+                    La contraseña debe contener al menos 8 caracteres, números, caracteres especiales y mayúsculas.
+                  </p>
+                  {passwordErrors.length > 0 && (
+                    <Alert variant="error" title="La contraseña no cumple los requisitos:">
+                      <ul className="list-disc list-inside space-y-0.5 text-xs mt-1">
+                        {passwordErrors.map((err, idx) => (
+                          <li key={idx}>{err}</li>
+                        ))}
+                      </ul>
+                    </Alert>
+                  )}
+                </div>
+              )}
 
               {mode === 'login' && (
                 <div className="text-right -mt-2">
@@ -577,9 +657,13 @@ export default function Login() {
               label="Contraseña"
               type="password"
               value={password}
-              onChange={(event) =>
-                setPassword(event.target.value)
-              }
+              onChange={(event) => {
+                const val = event.target.value;
+                setPassword(val);
+                if (passwordErrors.length > 0) {
+                  setPasswordErrors(getPasswordValidationErrors(val));
+                }
+              }}
               placeholder="••••••••"
               autoComplete={
                 mode === 'login'
@@ -588,6 +672,23 @@ export default function Login() {
               }
               required
             />
+
+            {mode === 'register' && (
+              <div className="flex flex-col gap-2 -mt-2">
+                <p className="text-xs text-[var(--muted-foreground)]">
+                  La contraseña debe contener al menos 8 caracteres, números, caracteres especiales y mayúsculas.
+                </p>
+                {passwordErrors.length > 0 && (
+                  <Alert variant="error" title="La contraseña no cumple los requisitos:">
+                    <ul className="list-disc list-inside space-y-0.5 text-xs mt-1">
+                      {passwordErrors.map((err, idx) => (
+                        <li key={idx}>{err}</li>
+                      ))}
+                    </ul>
+                  </Alert>
+                )}
+              </div>
+            )}
 
             {mode === 'login' && (
               <div className="text-right -mt-2">

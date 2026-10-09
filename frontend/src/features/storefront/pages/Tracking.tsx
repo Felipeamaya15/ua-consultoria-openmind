@@ -11,6 +11,7 @@ import {
   Icon,
 } from '../components/ui';
 import { useStorefrontTemplate } from '../hooks/useStorefrontTemplate';
+import { shippingService, type DetalleSeguimiento } from '../services/shippingService';
 
 const STATUS_STEPS = [
   {
@@ -98,17 +99,33 @@ export default function Tracking() {
   const [error, setError] = useState('');
   const requestRef = useRef<AbortController | null>(null);
 
+  const [liveTracking, setLiveTracking] = useState<DetalleSeguimiento | null>(null);
+
   const search = useCallback(async (number: string, customerEmail: string) => {
     requestRef.current?.abort();
     const controller = new AbortController();
     requestRef.current = controller;
     setLoading(true);
     setOrder(null);
+    setLiveTracking(null);
     setError('');
+
+    const term = number.trim();
+    const isDirect =
+      term.toUpperCase().startsWith('CHILEX') ||
+      term.toUpperCase().startsWith('STK') ||
+      term.toUpperCase().startsWith('STARKEN') ||
+      term.toUpperCase().startsWith('TRK');
+
     try {
-      const found = await orderService.track(number, customerEmail, controller.signal);
-      if (!controller.signal.aborted) setOrder(found);
-    } catch (err) {
+      if (isDirect) {
+        const live = await shippingService.getTracking(term);
+        if (!controller.signal.aborted) setLiveTracking(live);
+      } else {
+        const found = await orderService.track(number, customerEmail, controller.signal);
+        if (!controller.signal.aborted) setOrder(found);
+      }
+    } catch (err: any) {
       if (!controller.signal.aborted) {
         setError(err instanceof Error ? err.message : 'No se pudo consultar el pedido.');
       }
@@ -117,8 +134,16 @@ export default function Tracking() {
     }
   }, []);
 
+  const isDirectTracking =
+    orderNumber.trim().toUpperCase().startsWith('CHILEX') ||
+    orderNumber.trim().toUpperCase().startsWith('STK') ||
+    orderNumber.trim().toUpperCase().startsWith('STARKEN') ||
+    orderNumber.trim().toUpperCase().startsWith('TRK');
+
   const handleSearch = () => {
-    if (orderNumber.trim() && email.trim()) void search(orderNumber, email);
+    if (orderNumber.trim() && (email.trim() || isDirectTracking)) {
+      void search(orderNumber, email);
+    }
   };
 
   useEffect(() => {
@@ -242,7 +267,7 @@ export default function Tracking() {
             )
           }
           placeholder="ORD-20261008-AB12"
-          hint="El número que aparece al confirmar tu compra"
+          hint="El número que aparece al confirmar tu compra, o código CHILEX / STK"
         />
 
         <Input
@@ -260,26 +285,26 @@ export default function Tracking() {
           <button
             type="button"
             onClick={handleSearch}
-            disabled={loading || !orderNumber.trim() || !email.trim()}
+            disabled={loading || !orderNumber.trim() || (!isDirectTracking && !email.trim())}
             className="w-full h-12 rounded-[9px] bg-[#1683ff] text-white text-[12px] font-bold hover:bg-[#3194f5] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
           >
-            Consultar pedido →
+            {loading ? 'Consultando...' : 'Consultar pedido →'}
           </button>
         ) : isVisual ? (
           <button
             type="button"
             onClick={handleSearch}
-            disabled={loading || !orderNumber.trim() || !email.trim()}
+            disabled={loading || !orderNumber.trim() || (!isDirectTracking && !email.trim())}
             className="w-full h-12 rounded-[8px] bg-black text-white text-[12px] font-semibold hover:opacity-80 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity"
           >
-            Consultar pedido →
+            {loading ? 'Consultando...' : 'Consultar pedido →'}
           </button>
         ) : isMinimal ? (
           <button
             type="button"
             onClick={handleSearch}
             disabled={
-              loading || !orderNumber.trim() || !email.trim()
+              loading || !orderNumber.trim() || (!isDirectTracking && !email.trim())
             }
             className="
               w-full h-12 rounded-full
@@ -291,7 +316,7 @@ export default function Tracking() {
               transition-colors
             "
           >
-            Consultar pedido
+            {loading ? 'Consultando...' : 'Consultar pedido'}
           </button>
         ) : (
           <Button
@@ -300,13 +325,24 @@ export default function Tracking() {
             fullWidth
             onClick={handleSearch}
             disabled={
-              loading || !orderNumber.trim() || !email.trim()
+              loading || !orderNumber.trim() || (!isDirectTracking && !email.trim())
             }
           >
-            Consultar pedido
+            {loading ? 'Consultando...' : 'Consultar pedido'}
           </Button>
         )}
 
+        <p
+          className={
+            isCatalog
+              ? 'text-center text-[10px] text-black/40'
+              : isVisual
+                ? 'text-center text-[10px] text-[#8c8683]'
+                : 'text-center text-xs text-[var(--muted-foreground)]'
+          }
+        >
+          Demo: usa <strong>ORD-2025-0001</strong> con <strong>maria@email.com</strong>, o tracking <strong>CHILEX-DEMO12345</strong> / <strong>STK-DEMO12345</strong>
+        </p>
       </div>}
 
       {/* =====================================================
@@ -322,6 +358,106 @@ export default function Tracking() {
             </button>
           )}
         </Alert>
+      )}
+
+      {/* =====================================================
+          SEGUIMIENTO EN VIVO (CHILEXPRESS / STARKEN / CENTRAL)
+      ====================================================== */}
+      {liveTracking && (
+        <div className={isCatalog
+          ? 'flex flex-col gap-5 animate-fade-in text-[#151515] [&_.text-\[var\(--muted-foreground\)\]]:text-black/45 [&_.text-\[var\(--foreground\)\]]:text-[#151515]'
+          : 'flex flex-col gap-5 animate-fade-in'
+        }>
+          <div
+            className={`
+              ${panelClass}
+              ${isCatalog ? 'p-6 md:p-7' : isVisual ? 'p-6 md:p-7' : isMinimal ? 'p-6' : 'p-5'}
+            `}
+          >
+            <div className="flex items-start justify-between flex-wrap gap-3 mb-5">
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <span className={`text-xs font-semibold px-2 py-0.5 rounded uppercase tracking-wide ${
+                    liveTracking.proveedor === 'CHILEXPRESS'
+                      ? 'bg-blue-100 text-blue-800'
+                      : liveTracking.proveedor === 'STARKEN'
+                        ? 'bg-amber-100 text-amber-900'
+                        : 'bg-indigo-100 text-indigo-800'
+                  }`}>
+                    {liveTracking.proveedor === 'CHILEXPRESS'
+                      ? '🇨🇱 Chilexpress'
+                      : liveTracking.proveedor === 'STARKEN'
+                        ? '📦 Starken'
+                        : liveTracking.proveedor}
+                  </span>
+                  <span className="text-xs text-[var(--muted-foreground)]">Orden de Flete / Transporte</span>
+                </div>
+
+                <p
+                  className={
+                    isVisual
+                      ? 'font-serif text-[24px] leading-none'
+                      : isMinimal
+                        ? 'font-semibold text-xl tracking-tight'
+                        : 'font-bold text-lg'
+                  }
+                >
+                  {liveTracking.numero_seguimiento}
+                </p>
+              </div>
+
+              <Badge variant="info">
+                {liveTracking.estado_actual.replace(/_/g, ' ')}
+              </Badge>
+            </div>
+
+            <div className="rounded-xl bg-blue-50/70 border border-blue-100 p-4 mb-6">
+              <p className="text-sm font-medium text-blue-950">
+                {liveTracking.descripcion_estado}
+              </p>
+              {liveTracking.fecha_estimada_entrega && (
+                <p className="text-xs text-blue-700 mt-1">
+                  Entrega estimada: {new Date(liveTracking.fecha_estimada_entrega).toLocaleDateString('es-CL', {
+                    weekday: 'long',
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
+                  })}
+                </p>
+              )}
+            </div>
+
+            {/* Historial de eventos */}
+            <div>
+              <h4 className="text-xs font-bold uppercase tracking-wider text-[var(--muted-foreground)] mb-4">
+                Historial de Movimientos
+              </h4>
+
+              <div className="relative pl-6 border-l-2 border-blue-200 ml-2 space-y-6">
+                {liveTracking.historial.map((evento, idx) => (
+                  <div key={idx} className="relative">
+                    <div className="absolute -left-[31px] top-1 w-3.5 h-3.5 rounded-full border-2 border-white bg-blue-600 shadow-sm" />
+                    
+                    <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-1">
+                      <p className="text-sm font-semibold text-[var(--foreground)]">
+                        {evento.descripcion}
+                      </p>
+                      <span className="text-xs text-[var(--muted-foreground)] shrink-0">
+                        {new Date(evento.fecha_hora).toLocaleDateString('es-CL', {
+                          day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit'
+                        })}
+                      </span>
+                    </div>
+                    
+                    <p className="text-xs text-[var(--muted-foreground)] mt-0.5">
+                      📍 {evento.ubicacion} · <span className="font-mono text-[11px] font-medium">{evento.estado}</span>
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* =====================================================

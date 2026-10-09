@@ -37,6 +37,8 @@ urlpatterns = [
         VariantPurchaseView.as_view(),
         name='qa-variante-compra'
     ),
+
+    path("api/logistica/", include("apps.shipping.presentation.urls")),
 ]
 
 # Servir las imágenes de landing durante desarrollo local.

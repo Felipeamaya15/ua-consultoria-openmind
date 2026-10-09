@@ -73,6 +73,7 @@ const real = {id_pedido: 42, identificador: identifier, fecha_creacion: '2026-10
     if (name.includes('transbankPaymentService')) return {transbankPaymentService: {confirmarPago: async () => ({exito: true, data: {orden_compra: identifier}})}};
     if (name.includes('mockData')) return {formatPrice: String};
     if (name.includes('TransbankReturnResult')) return {default: 'WebpayResult'};
+    if (name.includes('shippingService')) return {shippingService: {getTracking: async () => ({historial: []})}};
     if (name.includes('components/ui')) return Object.fromEntries(['Button','Input','Badge','Alert','Icon'].map(type => [type, type]));
     throw Error(name);
   };
