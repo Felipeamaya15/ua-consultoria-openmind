@@ -53,15 +53,55 @@ export interface CotizacionParams {
   proveedor?: string;
 }
 
+function isTrackingDetail(value: unknown, expectedTracking: string): value is DetalleSeguimiento {
+  if (!value || typeof value !== 'object') return false;
+  const detail = value as Record<string, unknown>;
+  const events = detail.historial;
+  return typeof detail.numero_seguimiento === 'string'
+    && detail.numero_seguimiento.trim().toUpperCase() === expectedTracking.toUpperCase()
+    && ['CHILEXPRESS', 'STARKEN', 'LOGISTICA_CENTRAL'].includes(String(detail.proveedor))
+    && typeof detail.estado_actual === 'string'
+    && typeof detail.descripcion_estado === 'string'
+    && typeof detail.fecha_estimada_entrega === 'string'
+    && Array.isArray(events)
+    && events.every(event => event && typeof event === 'object'
+      && ['fecha_hora', 'estado', 'descripcion', 'ubicacion'].every(
+        field => typeof (event as Record<string, unknown>)[field] === 'string',
+      ));
+}
+
+async function requestTracking(path: string, tracking: string, signal?: AbortSignal): Promise<DetalleSeguimiento> {
+  const response = await fetch(`${API_BASE}${path}`, { signal });
+  const data = await response.json();
+  if (!response.ok || !data.exito) {
+    throw new Error(data.mensaje || 'No se encontró información de seguimiento para este código.');
+  }
+  if (!isTrackingDetail(data.data, tracking)) {
+    throw new Error('La información de seguimiento recibida es inválida.');
+  }
+  return data.data;
+}
+
 export const shippingService = {
-  async getTracking(numeroSeguimiento: string): Promise<DetalleSeguimiento> {
+  async getTracking(numeroSeguimiento: string, signal?: AbortSignal): Promise<DetalleSeguimiento> {
     const cleanTracking = numeroSeguimiento.trim();
-    const response = await fetch(`${API_BASE}/api/logistica/seguimiento/${encodeURIComponent(cleanTracking)}/`);
-    const data = await response.json();
-    if (!response.ok || !data.exito) {
-      throw new Error(data.mensaje || 'No se encontró información de seguimiento para este código.');
-    }
-    return data.data;
+    if (!cleanTracking) throw new Error('Ingresa un número de seguimiento.');
+    const providerPath = /^(STK-|STARKEN-)/i.test(cleanTracking) ? '/starken' : '';
+    return requestTracking(
+      `/api/logistica/seguimiento${providerPath}/${encodeURIComponent(cleanTracking)}/`,
+      cleanTracking,
+      signal,
+    );
+  },
+
+  async getStarkenTracking(numeroSeguimiento: string, signal?: AbortSignal): Promise<DetalleSeguimiento> {
+    const cleanTracking = numeroSeguimiento.trim();
+    if (!cleanTracking) throw new Error('Ingresa una orden de flete de Starken.');
+    return requestTracking(
+      `/api/logistica/seguimiento/starken/${encodeURIComponent(cleanTracking)}/`,
+      cleanTracking,
+      signal,
+    );
   },
 
   async quote(params: CotizacionParams): Promise<ResultadoCotizacion> {
