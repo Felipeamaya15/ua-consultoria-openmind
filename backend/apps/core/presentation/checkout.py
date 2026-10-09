@@ -34,7 +34,7 @@ class CheckoutItemSerializer(StrictSerializer):
 
     def to_internal_value(self, data):
         if isinstance(data, dict) and (isinstance(data.get('cantidad'), bool)
-                                     or not isinstance(data.get('cantidad'), int)):
+                                       or not isinstance(data.get('cantidad'), int)):
             raise serializers.ValidationError({'cantidad': 'La cantidad debe ser un entero positivo.'})
         return super().to_internal_value(data)
 
@@ -107,7 +107,10 @@ class CheckoutOrderAPIView(APIView):
                 raise ValidationError({'metodo_entrega': 'El método de entrega no está habilitado en esta tienda.'})
             quote = (validate_quote(tienda, data['metodo_entrega'], data.get('direccion', {}), data.get('cotizacion'))
                      if method != 'pickup' else None)
+            
+
             shipping = Decimal(quote['monto']) if quote else Decimal(0)
+            
             delivery_snapshot = {'metodo': data['metodo_entrega'], 'direccion': data.get('direccion', {})}
             if quote:
                 delivery_snapshot['cotizacion'] = quote
@@ -150,11 +153,13 @@ class CheckoutOrderAPIView(APIView):
                                for a in variant.get('atributos_variante', [])},
                     precio_unitario=price.quantize(Decimal('.01'), rounding=ROUND_HALF_UP)
                 )
+                
             subtotal = sum((line['precio_unitario'] * line['cantidad'] for line in lines.values()), Decimal(0))
             promo = data['codigo_promocional']
             discount = min(subtotal, (subtotal * Decimal('.2')).quantize(Decimal('1'), rounding=ROUND_HALF_UP)
                            if promo == 'VERANO20' else Decimal(5000) if promo == 'NUEVO5000' else Decimal(0))
             total = subtotal - discount + shipping
+
             if data['medio_pago'] == 'Transbank' and (total <= 0 or total != total.to_integral_value()):
                 raise ValidationError({'medio_pago': 'Webpay requiere un total positivo en pesos enteros.'})
             if total > Decimal('9999999999.99'):

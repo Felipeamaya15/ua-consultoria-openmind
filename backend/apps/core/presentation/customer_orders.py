@@ -42,7 +42,7 @@ class OrderSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Pedido
-        fields = ['id_pedido', 'fecha_creacion', 'estado', 'estado_etiqueta', 'monto_total', 'cantidad_productos']
+        fields = ['id_pedido', 'identificador', 'fecha_creacion', 'estado', 'estado_etiqueta', 'monto_total', 'cantidad_productos']
 
     def get_cantidad_productos(self, order):
         return sum(item.cantidad for item in order.itempedido_set.all())

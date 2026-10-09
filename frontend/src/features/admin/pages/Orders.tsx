@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react"
-import { formatPrice } from "../data/mockAdminData" // Mantenemos formatPrice
+import { formatPrice } from "../data/mockAdminData"
 import { Badge, Icon } from "../components/ui"
 import { API_BASE_URL } from "../../../api"
 import { authService } from "../../auth/services/authService"
+import { verifyTransfer } from "../services/pendingTransfersService" // Importamos el servicio
 
 type StoreOrder = {
   id_pedido: number; identificador: string | null; nombre_contacto: string; correo_contacto: string;
@@ -43,6 +44,11 @@ export default function Orders() {
   const [selectedId, setSelectedId] = useState<number | null>(null)
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState('')
+  const [refreshKey, setRefreshKey] = useState(0)
+
+  // Estados para la validación activa de Linkify
+  const [verifying, setVerifying] = useState(false)
+  const [verifyMessage, setVerifyMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null)
 
   useEffect(() => {
     const fetchPedidos = async () => {
@@ -50,7 +56,6 @@ export default function Orders() {
         const token = authService.getToken();
         if (!token) throw new Error('Inicia sesión para consultar los pedidos.');
         
-        // Asumiendo que el emprendedor tiene un token válido
         const response = await fetch(`${API_BASE_URL}/api/tienda/pedidos/`, {
           method: 'GET',
           headers: {
@@ -74,7 +79,23 @@ export default function Orders() {
     };
 
     fetchPedidos();
-  }, []);
+  }, [refreshKey]);
+
+  // Manejador del botón verificar
+  const handleVerify = async (pedido_id: number) => {
+    setVerifying(true);
+    setVerifyMessage(null);
+    try {
+      const result = await verifyTransfer(pedido_id);
+      setVerifyMessage({ type: 'success', text: result.mensaje });
+      // Recargamos la lista para que cambie el estado visual a "Pagado"
+      setRefreshKey(prev => prev + 1);
+    } catch (cause) {
+      setVerifyMessage({ type: 'error', text: cause instanceof Error ? cause.message : 'Error al verificar el pago.' });
+    } finally {
+      setVerifying(false);
+    }
+  };
 
   const filtered = filter === "all"
     ? pedidos
@@ -84,10 +105,18 @@ export default function Orders() {
     ? pedidos.find((p) => p.id_pedido === selectedId)
     : null
 
+  // Limpiamos el mensaje de verificación si se cambia de pedido
+  useEffect(() => {
+    setVerifyMessage(null);
+  }, [selectedId]);
+
   if (cargando) {
     return <div className="p-10 text-center">Cargando pedidos...</div>
   }
   if (error) return <p role="alert" className="p-5 text-red-700">{error}</p>
+
+  // Verifica si el método de pago aplica para verificación
+  const isVerifiableMethod = selectedOrder?.metodo_pago?.toLowerCase() === 'transferencia' || selectedOrder?.metodo_pago?.toLowerCase() === 'linkify';
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-5 gap-5">
@@ -122,53 +151,55 @@ export default function Orders() {
               No hay pedidos en esta categoría.
             </div>
           ) : (
-            filtered.map((order) => {
-              // Mapeo seguro del estado
-              const statusKey = order.estado ? order.estado.toLowerCase() : "pendiente"
-              const st = STATUS_BADGE[statusKey] || STATUS_BADGE["pendiente"]
-              const isSelected = selectedId === order.id_pedido
+            <div className="divide-y divide-[var(--border)]">
+              {filtered.map((order) => {
+                // Mapeo seguro del estado
+                const statusKey = order.estado ? order.estado.toLowerCase() : "pendiente"
+                const st = STATUS_BADGE[statusKey] || STATUS_BADGE["pendiente"]
+                const isSelected = selectedId === order.id_pedido
 
-              return (
-                <div
-                  key={order.id_pedido}
-                  role="button" tabIndex={0} aria-label={`Ver pedido ${order.identificador}`}
-                  onKeyDown={event => {if(event.key === "Enter" || event.key === " "){event.preventDefault();setSelectedId(isSelected ? null : order.id_pedido);}}}
-                  onClick={() => setSelectedId(isSelected ? null : order.id_pedido)}
-                  className={`p-4 border-b border-[var(--border)] last:border-0 cursor-pointer transition-colors ${
-                    isSelected
-                      ? "bg-[var(--secondary)]"
-                      : "hover:bg-[var(--muted)]/30"
-                  }`}
-                >
-                  <div className="flex items-start justify-between gap-3 flex-wrap">
-                    <div>
-                      <p className="font-mono text-xs text-[var(--muted-foreground)]">
-                        {order.identificador}
-                      </p>
-                      <p className="font-semibold text-sm mt-0.5">
-                        {order.nombre_contacto || "Sin nombre"}
-                      </p>
-                      <p className="text-xs text-[var(--muted-foreground)]">
-                        {order.correo_contacto || "Sin correo"}
-                      </p>
+                return (
+                  <div
+                    key={order.id_pedido}
+                    role="button" tabIndex={0} aria-label={`Ver pedido ${order.identificador}`}
+                    onKeyDown={event => {if(event.key === "Enter" || event.key === " "){event.preventDefault();setSelectedId(isSelected ? null : order.id_pedido);}}}
+                    onClick={() => setSelectedId(isSelected ? null : order.id_pedido)}
+                    className={`p-4 border-b border-[var(--border)] last:border-0 cursor-pointer transition-colors ${
+                      isSelected
+                        ? "bg-[var(--secondary)]"
+                        : "hover:bg-[var(--muted)]/30"
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-3 flex-wrap">
+                      <div>
+                        <p className="font-mono text-xs text-[var(--muted-foreground)]">
+                          {order.identificador}
+                        </p>
+                        <p className="font-semibold text-sm mt-0.5">
+                          {order.nombre_contacto || "Sin nombre"}
+                        </p>
+                        <p className="text-xs text-[var(--muted-foreground)]">
+                          {order.correo_contacto || "Sin correo"}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-bold">{formatPrice(Number(order.monto_total))}</p>
+                        <Badge variant={st.variant} className="mt-1">
+                          {st.label}
+                        </Badge>
+                      </div>
                     </div>
-                    <div className="text-right">
-                      <p className="font-bold">{formatPrice(Number(order.monto_total))}</p>
-                      <Badge variant={st.variant} className="mt-1">
-                        {st.label}
-                      </Badge>
+                    <div className="flex items-center gap-3 mt-2 text-xs text-[var(--muted-foreground)]">
+                      <span>{order.metodo_pago || "No especificado"}</span>
+                      <span>·</span>
+                      <span>
+                        {new Date(order.fecha_creacion).toLocaleDateString("es-CL")}
+                      </span>
                     </div>
                   </div>
-                  <div className="flex items-center gap-3 mt-2 text-xs text-[var(--muted-foreground)]">
-                    <span>{order.metodo_pago || "No especificado"}</span>
-                    <span>·</span>
-                    <span>
-                      {new Date(order.fecha_creacion).toLocaleDateString("es-CL")}
-                    </span>
-                  </div>
-                </div>
-              )
-            })
+                )
+              })}
+            </div>
           )}
         </div>
       </div>
@@ -192,6 +223,12 @@ export default function Orders() {
               </button>
             </div>
 
+            {verifyMessage && (
+              <div className={`p-3 rounded-lg text-xs font-medium ${verifyMessage.type === 'success' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700 border border-red-200'}`}>
+                {verifyMessage.text}
+              </div>
+            )}
+
             <div className="grid grid-cols-2 gap-3 text-xs">
               <div className="bg-[var(--muted)] rounded-lg p-3">
                 <p className="text-[var(--muted-foreground)] mb-1">Pedido</p>
@@ -199,12 +236,23 @@ export default function Orders() {
                   {STATUS_BADGE[selectedOrder.estado?.toLowerCase() || "pendiente"]?.label || "Pendiente"}
                 </Badge>
               </div>
-              <div className="bg-[var(--muted)] rounded-lg p-3">
+              
+              <div className="bg-[var(--muted)] rounded-lg p-3 flex flex-col items-start justify-center">
                 <p className="text-[var(--muted-foreground)] mb-1">Pago</p>
-                {/* En tu modelo no tienes un estado de pago separado, puedes ajustarlo después si es necesario */}
                 <span className="font-medium text-xs text-[var(--muted-foreground)]">
                     {selectedOrder.metodo_pago || "No especificado"}
                 </span>
+                
+                {/* BOTÓN DE VERIFICACIÓN: Aparece si es Transferencia o Linkify y está Pendiente */}
+                {isVerifiableMethod && selectedOrder.estado?.toLowerCase() === 'pendiente' && (
+                  <button 
+                    onClick={() => handleVerify(selectedOrder.id_pedido)}
+                    disabled={verifying}
+                    className="mt-2 text-xs bg-[var(--primary)] hover:opacity-90 text-white py-1.5 px-3 rounded shadow-sm transition-opacity disabled:opacity-50"
+                  >
+                    {verifying ? "Consultando..." : "Verificar Pago"}
+                  </button>
+                )}
               </div>
             </div>
 

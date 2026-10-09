@@ -175,7 +175,7 @@ function readCheckoutOptions() {
       return { 
         authSettings: defaultAuthSettings,
         shippingOptions: defaultShippingOptions,
-        paymentOptions: paymentPresentation, // <-- Actualizado aquí
+        paymentOptions: paymentPresentation,
       };
     }
 
@@ -190,7 +190,7 @@ function readCheckoutOptions() {
       requiresAuth: config?.requiresAuth ?? defaultAuthSettings.requiresAuth,
     };
 
-    // 2. Configuración de Entregas (Incluye el Costo $0 para Retiro)
+    // 2. Configuración de Entregas
     const shippingConfig = config?.shippingConfiguration;
     let shippingOptions = defaultShippingOptions;
     
@@ -218,7 +218,7 @@ function readCheckoutOptions() {
       );
     }
 
-    // 3. Configuración de Pagos (SCRUM 30)
+    // 3. Configuración de Pagos
     const paymentMap: Record<string, string> = {
       Transbank: 'transbank',
       MercadoPago: 'mercadopago',
@@ -227,17 +227,16 @@ function readCheckoutOptions() {
       Transferencia: 'transfer',
     };
 
-    let paymentOptions = paymentPresentation; // <-- Actualizado aquí
+    let paymentOptions = paymentPresentation;
     const paymentConfig = config?.paymentConfiguration;
     
     if (paymentConfig) {
-      paymentOptions = paymentPresentation.filter((option) => { // <-- Actualizado aquí
+      paymentOptions = paymentPresentation.filter((option) => { 
         const key = paymentMap[option.id];
         return key ? !!paymentConfig[key]?.enabled : false;
       });
     }
 
-    // Retornamos las 3 propiedades consolidadas
     return {
       authSettings,
       shippingOptions: shippingOptions.length > 0 ? shippingOptions : defaultShippingOptions,
@@ -248,7 +247,7 @@ function readCheckoutOptions() {
     return { 
       authSettings: defaultAuthSettings,
       shippingOptions: defaultShippingOptions,
-      paymentOptions: paymentPresentation, // <-- Actualizado aquí y corregido el typo de mayúscula
+      paymentOptions: paymentPresentation, 
     };
   }
 }
@@ -574,17 +573,27 @@ export default function Checkout() {
     return () => {active = false;};
   }, []);
 
+  /*
+   * ==========================================================
+   * LÓGICA DE ACTUALIZACIÓN DEL TOTAL Y DESPACHO
+   * ==========================================================
+   */
   const [shippingQuotes, setShippingQuotes] = useState<Record<string, ShippingQuote & {destino: string}>>({});
   const [quoteLoading, setQuoteLoading] = useState(false);
   const [quoteError, setQuoteError] = useState('');
   const [quoteAttempt, setQuoteAttempt] = useState(0);
+  
   const destinationKey = JSON.stringify([shippingMethod, address.region, address.city]);
   const selectedShippingOption = shippingOptions.find(option => option.id === shippingMethod);
   const candidateQuote = shippingQuotes[shippingMethod];
   const selectedQuote = candidateQuote?.destino === destinationKey && candidateQuote.vence_en > Date.now() / 1000
     ? candidateQuote : undefined;
+    
+  // => CÁLCULO DEL TOTAL DEL PEDIDO SUMANDO EL COSTO DE DESPACHO <=
   const shipping = shippingMethod === 'Retiro' ? 0 : selectedQuote?.monto ?? null;
   const total = subtotal - discount + (shipping ?? 0);
+  
+  // Validamos que exista un costo real de despacho, o sea retiro en tienda.
   const deliveryReady = !shippingLoading && !shippingError && !!selectedShippingOption
     && (shippingMethod === 'Retiro' || (!!selectedQuote && !quoteLoading && !quoteError));
 
@@ -900,6 +909,9 @@ export default function Checkout() {
     : isMinimal
       ? 'bg-white border border-black/5 rounded-[24px] p-5 sm:p-6 flex flex-col gap-5'
       : 'bg-white border border-[var(--border)] rounded-2xl p-6 flex flex-col gap-5';
+
+
+  const isPaymentDisabled = loading || !deliveryReady || (shipping === null && shippingMethod !== 'Retiro');
 
   return (
     <div
@@ -1849,7 +1861,7 @@ export default function Checkout() {
               isVisual ? (
                 <button
                   type="button"
-                  disabled={loading || !deliveryReady}
+                  disabled={isPaymentDisabled}
                   onClick={handleConfirm}
                   className="min-h-12 px-6 rounded-[8px] bg-black text-white text-[12px] font-semibold hover:opacity-80 disabled:opacity-50 transition-opacity"
                 >
@@ -1858,7 +1870,7 @@ export default function Checkout() {
               ) : isMinimal ? (
                 <button
                   type="button"
-                  disabled={loading || !deliveryReady}
+                  disabled={isPaymentDisabled}
                   onClick={handleConfirm}
                   className="min-h-12 px-6 rounded-full bg-[#17213b] text-white text-sm font-semibold hover:bg-[#0f2a56] disabled:opacity-50 transition-colors"
                 >
@@ -1871,7 +1883,7 @@ export default function Checkout() {
                   variant="primary"
                   size="lg"
                   loading={loading}
-                  disabled={!deliveryReady}
+                  disabled={isPaymentDisabled}
                   onClick={handleConfirm}
                 >
                   {loading ? 'Registrando pedido...' : `Confirmar y pagar ${formatPrice(total)}`}
@@ -1997,36 +2009,15 @@ export default function Checkout() {
                 </div>
               )}
 
-              <div className="flex justify-between">
-                <span className="text-[#667085]">
-                  Envío
-                </span>
-
-                <span>
-                  {shipping === null ? 'Por cotizar' : shipping === 0 ? (
-                    <span className="text-[var(--success)]">
-                      Gratis
-                    </span>
-                  ) : (
-                    formatPrice(shipping)
-                  )}
+              <div className="flex justify-between text-sm">
+                <span className="text-[var(--muted-foreground)]">Envío</span>
+                <span className="font-medium">
+                  {shipping === null ? 'Por cotizar' : shipping === 0 ? 'Gratis' : formatPrice(shipping)}
                 </span>
               </div>
-
-              <div
-                className={
-                  isVisual
-                    ? 'flex justify-between font-serif text-[22px] border-t border-black/10 pt-4 mt-1'
-                    : isMinimal
-                      ? 'flex justify-between font-semibold text-lg border-t border-[var(--border)] pt-4 mt-1'
-                      : 'flex justify-between font-bold text-base border-t border-[var(--border)] pt-2 mt-1'
-                }
-              >
-                <span>{shipping === null ? 'Total sin envío' : 'Total'}</span>
-
-                <span>
-                  {formatPrice(total)}
-                </span>
+              <div className="flex justify-between font-bold text-lg pt-2 border-t border-[var(--border)]">
+                <span>{shipping === null ? 'Total parcial' : 'Total'}</span>
+                <span>{formatPrice(total)}</span>
               </div>
             </div>
 

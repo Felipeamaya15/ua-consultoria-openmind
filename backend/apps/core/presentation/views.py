@@ -162,15 +162,18 @@ class VerificarTransferenciaLinkifyAPIView(APIView):
         try:
             tienda = resolver_tienda(request, exigir_propietario=True)
             pedido = Pedido.objects.get(id_pedido=pedido_id, tienda=tienda)
-            if (pedido.medio_pago or pedido.metodo_pago or '').strip().lower() != 'linkify':
-                return error_response('El pedido no corresponde a Linkify.', 'PEDIDO_NO_LINKIFY', status=409)
+            
+            metodo = (pedido.medio_pago or pedido.metodo_pago or '').strip().lower()
+            if metodo not in ['linkify', 'transferencia']:
+                return error_response('El pedido no corresponde a Linkify ni a Transferencia.', 'PEDIDO_NO_LINKIFY', status=409)
+            
             if pedido.estado in ('cancelado', 'enviado'):
                 return error_response('El pedido requiere revisión manual.', 'ESTADO_PEDIDO_INVALIDO', status=409)
             
             config_pago = ConfiguracionPago.objects.get(tienda=tienda)
             linkify_config = (config_pago.datos or {}).get("linkify", {})
             
-            # Buscamos de forma flexible la clave privada o api_key
+
             fields = linkify_config.get("fields", {})
             api_key = fields.get("clavePrivada") or fields.get("apiKey") or linkify_config.get("api_key")
 
@@ -211,7 +214,7 @@ class TransferenciasPendientesAPIView(APIView):
     def get(self, request):
         tienda = resolver_tienda(request, exigir_propietario=True)
         pendientes = Pedido.objects.filter(
-            tienda=tienda, medio_pago='Transferencia', estado='pendiente',
+            tienda=tienda, medio_pago__in=['Transferencia', 'Linkify'], estado='pendiente',
         ).order_by('-fecha_creacion', '-id_pedido')
         return success_response(
             data=TransferenciaPendienteSerializer(pendientes, many=True).data,
