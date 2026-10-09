@@ -3,7 +3,7 @@ import { formatPrice } from "../data/mockAdminData"
 import { Badge, Icon } from "../components/ui"
 import { API_BASE_URL } from "../../../api"
 import { authService } from "../../auth/services/authService"
-import { verifyTransfer } from "../services/pendingTransfersService" // Importamos el servicio
+import { approveManualTransfer, verifyTransfer } from "../services/pendingTransfersService"
 
 type StoreOrder = {
   id_pedido: number; identificador: string | null; nombre_contacto: string; correo_contacto: string;
@@ -82,11 +82,15 @@ export default function Orders() {
   }, [refreshKey]);
 
   // Manejador del botón verificar
-  const handleVerify = async (pedido_id: number) => {
+  const handlePaymentConfirmation = async (order: StoreOrder) => {
+    const isManualTransfer = order.metodo_pago.trim().toLowerCase() === 'transferencia';
+    if (isManualTransfer && !window.confirm(`¿Confirmas que recibiste el pago del pedido ${order.identificador || `#${order.id_pedido}`}?`)) return;
     setVerifying(true);
     setVerifyMessage(null);
     try {
-      const result = await verifyTransfer(pedido_id);
+      const result = isManualTransfer
+        ? await approveManualTransfer(order.id_pedido)
+        : await verifyTransfer(order.id_pedido);
       setVerifyMessage({ type: 'success', text: result.mensaje });
       // Recargamos la lista para que cambie el estado visual a "Pagado"
       setRefreshKey(prev => prev + 1);
@@ -246,11 +250,13 @@ export default function Orders() {
                 {/* BOTÓN DE VERIFICACIÓN: Aparece si es Transferencia o Linkify y está Pendiente */}
                 {isVerifiableMethod && selectedOrder.estado?.toLowerCase() === 'pendiente' && (
                   <button 
-                    onClick={() => handleVerify(selectedOrder.id_pedido)}
+                    onClick={() => handlePaymentConfirmation(selectedOrder)}
                     disabled={verifying}
                     className="mt-2 text-xs bg-[var(--primary)] hover:opacity-90 text-white py-1.5 px-3 rounded shadow-sm transition-opacity disabled:opacity-50"
                   >
-                    {verifying ? "Consultando..." : "Verificar Pago"}
+                    {verifying
+                      ? (selectedOrder.metodo_pago.toLowerCase() === 'transferencia' ? "Aprobando..." : "Consultando...")
+                      : (selectedOrder.metodo_pago.toLowerCase() === 'transferencia' ? "Aprobar pago" : "Verificar pago")}
                   </button>
                 )}
               </div>
