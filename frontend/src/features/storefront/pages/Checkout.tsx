@@ -130,7 +130,7 @@ const defaultShippingOptions: ShippingOption[] = [
     label: 'Retiro en tienda',
     icon: 'store',
     desc: 'Retira tu compra presencialmente',
-    priceLabel: '0',
+    priceLabel: 'Gratis',
     requiresAddress: false,
   },
 ];
@@ -411,6 +411,7 @@ export default function Checkout() {
       }).map(option => option.id === 'Retiro' ? {
         ...option,
         desc: ['Sin costo', configuration.pickup.schedule, configuration.pickup.address].filter(Boolean).join(' · '),
+        priceLabel: 'Gratis',
       } : option);
       setShippingOptions(enabled);
     }).catch(cause => {

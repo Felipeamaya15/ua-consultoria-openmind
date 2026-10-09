@@ -228,6 +228,7 @@ for (const template of [1,2,3,4]) test(`Plantilla ${template}: checkout y despac
   await t.test('Retiro usa cero, dirección/horario y no cotiza con o sin destino', async () => {
     h.reset(); h.render(); await h.settle(); h.cart.shippingMethod='Retiro'; h.states[8]='Transferencia'; let tree=await h.settle();
     assert.ok(tree.some(value=>typeof value==='string' && value.includes('Local 123') && value.includes('9 a 18')));
+    assert.ok(tree.includes('Gratis'));
     assert.equal(h.calls.length,0); assert.ok(!tree.some(node=>node.props?.label==='Región'));
     h.setAddress({city:'Providencia'}); tree=await h.settle(); assert.equal(h.calls.length,0);
     tree=h.toConfirm(); assert.ok(tree.includes('CLP 48000')); assert.equal(h.confirm(tree).props.disabled,false);
