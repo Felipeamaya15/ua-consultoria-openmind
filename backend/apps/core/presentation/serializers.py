@@ -307,6 +307,10 @@ class ConfiguracionPagoSerializer(serializers.Serializer):
             'confirmation_email',
         ],
     }
+    FIELD_LABELS = {
+        'idCuenta': 'ID de cuenta',
+        'clavePrivada': 'Clave privada',
+    }
 
     def to_internal_value(self, data):
         return data  # Permitimos la estructura dinámica del JSON
@@ -327,9 +331,63 @@ class ConfiguracionPagoSerializer(serializers.Serializer):
             fields = method_data.get('fields', {})
             if not isinstance(fields, dict):
                 raise serializers.ValidationError({method_id: 'fields debe ser un objeto.'})
-            # Solo validamos si intentan guardarlo como habilitado
-            if str(is_enabled).lower() == 'true' or is_enabled is True:
-                fields = method_data.get('fields', {})
+            if method_id == 'linkify':
+                field_errors = []
+                string_fields = (
+                    'idCuenta', 'clavePrivada', 'environment', 'expirationHours',
+                    'returnUrl', 'notificationEmail', 'syncApprovedPayments',
+                    'emailCustomer', 'autoExpireLinks',
+                )
+                for field in string_fields:
+                    if field in fields and not isinstance(fields[field], str):
+                        field_errors.append(f'{field} debe ser texto.')
+
+                environment = fields.get('environment')
+                if isinstance(environment, str) and environment not in ('sandbox', 'production'):
+                    field_errors.append('Ambiente no es válido.')
+
+                id_cuenta = fields.get('idCuenta')
+                if isinstance(id_cuenta, str) and len(id_cuenta) > 200:
+                    field_errors.append('ID de cuenta no puede superar 200 caracteres.')
+
+                clave_privada = fields.get('clavePrivada')
+                if isinstance(clave_privada, str) and len(clave_privada) > 500:
+                    field_errors.append('Clave privada no puede superar 500 caracteres.')
+
+                expiration = fields.get('expirationHours')
+                if isinstance(expiration, str) and (
+                    not expiration.isdigit() or not 1 <= int(expiration) <= 8760
+                ):
+                    field_errors.append('Vencimiento del link debe ser un entero entre 1 y 8760 horas.')
+
+                return_url = fields.get('returnUrl')
+                if isinstance(return_url, str) and return_url:
+                    try:
+                        serializers.URLField().run_validation(return_url)
+                        if not return_url.startswith('https://'):
+                            field_errors.append('URL de retorno debe usar HTTPS.')
+                    except serializers.ValidationError:
+                        field_errors.append('URL de retorno no es válida.')
+
+                notification_email = fields.get('notificationEmail')
+                if isinstance(notification_email, str) and notification_email:
+                    try:
+                        serializers.EmailField().run_validation(notification_email)
+                    except serializers.ValidationError:
+                        field_errors.append('Correo de notificaciones no es válido.')
+
+                for field in ('syncApprovedPayments', 'emailCustomer', 'autoExpireLinks'):
+                    value = fields.get(field)
+                    if isinstance(value, str) and value not in ('true', 'false'):
+                        field_errors.append(f'{field} debe ser verdadero o falso.')
+
+                if field_errors:
+                    errores_metodos[method_id] = ' '.join(field_errors)
+            # Las credenciales parciales tampoco pueden persistirse con Linkify deshabilitado.
+            has_linkify_data = method_id == 'linkify' and any(
+                fields.get(field) not in (None, '') for field in ('idCuenta', 'clavePrivada')
+            )
+            if is_enabled is True or has_linkify_data:
                 required_fields = self.REQUIRED_FIELDS_BY_METHOD.get(method_id, [])
 
                 # Buscamos campos vacíos o inexistentes
@@ -337,7 +395,11 @@ class ConfiguracionPagoSerializer(serializers.Serializer):
                            if not isinstance(fields.get(key), str) or not fields[key].strip()]
 
                 if missing:
-                    errores_metodos[method_id] = f"Faltan campos obligatorios para habilitarlo: {', '.join(missing)}."
+                    labels = [self.FIELD_LABELS.get(key, key) for key in missing]
+                    missing_error = f"Faltan campos obligatorios: {', '.join(labels)}."
+                    errores_metodos[method_id] = ' '.join(
+                        filter(None, [errores_metodos.get(method_id), missing_error])
+                    )
 
         if errores_metodos:
             raise serializers.ValidationError(errores_metodos)

@@ -3,6 +3,11 @@ import React, { useState, useEffect } from 'react';
 import { useAdminForm } from '../hooks/useAdminForm';
 import { AdminCard, Alert, Input, Toggle, Button, Icon, Select, Textarea } from '../components/ui';
 import { PendingTransfers } from '../components/PendingTransfers';
+import {
+  hasLinkifyCredentialData,
+  linkifyRequiredFields,
+  validateLinkifyFields,
+} from '../services/linkifyValidation';
 
 
 
@@ -45,7 +50,6 @@ const otherMethods = [
   },
 ];
 
-const linkifyRequiredFields = ['idCuenta', 'clavePrivada'];
 const transferRequiredFields = [
   'bank_name',
   'account_type',
@@ -130,6 +134,7 @@ export default function Payments() {
   const [transferLoading, setTransferLoading] = useState(true);
   const [transferSaving, setTransferSaving] = useState(false);
   const [transferFeedback, setTransferFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [linkifyFieldErrors, setLinkifyFieldErrors] = useState<Record<string, string>>({});
   const [tiendaId, setTiendaId] = useState<number | null>(null);
   const [tiendaError, setTiendaError] = useState<string | null>(null);
 
@@ -701,9 +706,10 @@ export default function Payments() {
     
     if (enabled) {
       if (id === 'linkify') {
-        const missing = linkifyRequiredFields.filter((field) => !current.fields?.[field]?.trim());
-        if (missing.length > 0) {
-          setValidationError('Completa todos los campos obligatorios de Linkify antes de habilitarlo.');
+        const validation = validateLinkifyFields(current.fields);
+        setLinkifyFieldErrors(validation.errors);
+        if (validation.invalidFields.length > 0) {
+          setValidationError(validation.message);
           return; 
         }
       } else {
@@ -720,6 +726,7 @@ export default function Payments() {
       ...form,
       [id]: { ...current, enabled }
     });
+
   };
 
   const updateField = (id: string, field: string, value: string) => {
@@ -743,6 +750,16 @@ export default function Payments() {
       },
     });
 
+    if (id === 'linkify') {
+      const validation = validateLinkifyFields({ ...current.fields, [field]: value });
+      setLinkifyFieldErrors((currentErrors) => {
+        const nextErrors = { ...currentErrors };
+        if (validation.errors[field]) nextErrors[field] = validation.errors[field];
+        else delete nextErrors[field];
+        return nextErrors;
+      });
+    }
+
     if (shouldDisable) {
       setValidationError(`El medio de pago ${methodName(id)} fue desactivado porque se borró un campo obligatorio.`);
     } else {
@@ -752,18 +769,20 @@ export default function Payments() {
 
   const validate = () => {
     const enabledSecondary = otherMethods.filter((method) => form[method.id]?.enabled);
+    const linkifyFields = form.linkify?.fields ?? {};
+    if (form.linkify?.enabled || hasLinkifyCredentialData(linkifyFields)) {
+      const linkifyValidation = validateLinkifyFields(linkifyFields);
+      setLinkifyFieldErrors(linkifyValidation.errors);
+      if (linkifyValidation.invalidFields.length) return linkifyValidation.message;
+    }
+
     if (!enabledSecondary.length && !tbActivo && !ppActivo && !mpActivo) {
       return 'Activa al menos un metodo de pago.';
     }
 
     for (const method of enabledSecondary) {
       const fields = form[method.id]?.fields ?? {};
-      if (method.id === 'linkify') {
-        const missingLinkify = linkifyRequiredFields.filter((field) => !fields[field]?.trim());
-        if (missingLinkify.length) {
-          return 'Completa la cuenta y clave privada de Linkify.';
-        }
-      } else if (requiredKeysFor(method.id).some((key) => !fields[key]?.trim())) {
+      if (method.id !== 'linkify' && requiredKeysFor(method.id).some((key) => !fields[key]?.trim())) {
         return `Completa los campos obligatorios de ${method.name}.`;
       }
     }
@@ -831,21 +850,28 @@ export default function Payments() {
         <div className="grid sm:grid-cols-2 gap-3">
           <Input
             label="ID de cuenta *"
+            required
+            maxLength={200}
             value={current.fields.idCuenta ?? ''}
+            error={linkifyFieldErrors.idCuenta}
             placeholder="Lo encuentras en tu panel de Linkify"
             onChange={(event) => updateField('linkify', 'idCuenta', event.target.value)}
           />
           <Input
             label="Clave privada *"
             type="password"
+            required
+            maxLength={500}
             autoComplete="off"
             value={current.fields.clavePrivada ?? ''}
+            error={linkifyFieldErrors.clavePrivada}
             placeholder="Clave secreta de integración"
             onChange={(event) => updateField('linkify', 'clavePrivada', event.target.value)}
           />
           <Select
             label="Ambiente"
             value={current.fields.environment ?? 'sandbox'}
+            error={linkifyFieldErrors.environment}
             onChange={(event) => updateField('linkify', 'environment', event.target.value)}
             options={[
               { value: 'sandbox', label: 'Sandbox' },
@@ -856,7 +882,10 @@ export default function Payments() {
             label="Vencimiento del link (horas)"
             type="number"
             min="1"
+            max="8760"
+            step="1"
             value={current.fields.expirationHours ?? '48'}
+            error={linkifyFieldErrors.expirationHours}
             placeholder="48"
             onChange={(event) => updateField('linkify', 'expirationHours', event.target.value)}
           />
@@ -864,6 +893,7 @@ export default function Payments() {
             label="URL de retorno"
             type="url"
             value={current.fields.returnUrl ?? ''}
+            error={linkifyFieldErrors.returnUrl}
             placeholder="https://mitienda.cl/pedido-confirmado"
             onChange={(event) => updateField('linkify', 'returnUrl', event.target.value)}
           />
@@ -871,6 +901,7 @@ export default function Payments() {
             label="Correo de notificaciones"
             type="email"
             value={current.fields.notificationEmail ?? ''}
+            error={linkifyFieldErrors.notificationEmail}
             placeholder="pagos@mitienda.cl"
             onChange={(event) => updateField('linkify', 'notificationEmail', event.target.value)}
           />
@@ -899,6 +930,11 @@ export default function Payments() {
 
   const syncLinkify = async () => {
     const current = form.linkify ?? { enabled: false, fields: {} };
+    if (current.enabled || hasLinkifyCredentialData(current.fields)) {
+      const validation = validateLinkifyFields(current.fields);
+      setLinkifyFieldErrors(validation.errors);
+      if (validation.invalidFields.length) throw new Error(validation.message);
+    }
 
     const currentResponse = await fetch(`${API_BASE}/api/pagos/configuracion/`, {
       method: 'GET',
