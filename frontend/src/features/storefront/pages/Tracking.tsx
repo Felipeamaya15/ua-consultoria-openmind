@@ -2,7 +2,12 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 
 import { formatPrice } from '../data/mockData';
-import { orderService, type TrackedOrder } from '../services/orderService';
+import {
+  isValidOrderNumber,
+  ORDER_NUMBER_FORMAT_MESSAGE,
+  orderService,
+  type TrackedOrder,
+} from '../services/orderService';
 import {
   Button,
   Input,
@@ -84,6 +89,14 @@ interface TrackingState {
   email?: string;
 }
 
+function isDirectTrackingNumber(value: string): boolean {
+  const normalized = value.trim().toUpperCase();
+  return normalized.startsWith('CHILEX')
+    || normalized.startsWith('STK')
+    || normalized.startsWith('STARKEN')
+    || normalized.startsWith('TRK');
+}
+
 export default function Tracking() {
   const location = useLocation();
   const { isMinimal, isVisual, isCatalog } = useStorefrontTemplate();
@@ -111,11 +124,13 @@ export default function Tracking() {
     setError('');
 
     const term = number.trim();
-    const isDirect =
-      term.toUpperCase().startsWith('CHILEX') ||
-      term.toUpperCase().startsWith('STK') ||
-      term.toUpperCase().startsWith('STARKEN') ||
-      term.toUpperCase().startsWith('TRK');
+    const isDirect = isDirectTrackingNumber(term);
+
+    if (!isDirect && !isValidOrderNumber(term)) {
+      setError(ORDER_NUMBER_FORMAT_MESSAGE);
+      setLoading(false);
+      return;
+    }
 
     try {
       if (isDirect) {
@@ -134,14 +149,13 @@ export default function Tracking() {
     }
   }, []);
 
-  const isDirectTracking =
-    orderNumber.trim().toUpperCase().startsWith('CHILEX') ||
-    orderNumber.trim().toUpperCase().startsWith('STK') ||
-    orderNumber.trim().toUpperCase().startsWith('STARKEN') ||
-    orderNumber.trim().toUpperCase().startsWith('TRK');
+  const isDirectTracking = isDirectTrackingNumber(orderNumber);
+  const invalidOrderNumber = Boolean(
+    orderNumber.trim() && !isDirectTracking && !isValidOrderNumber(orderNumber),
+  );
 
   const handleSearch = () => {
-    if (orderNumber.trim() && (email.trim() || isDirectTracking)) {
+    if (orderNumber.trim() && !invalidOrderNumber && (email.trim() || isDirectTracking)) {
       void search(orderNumber, email);
     }
   };
@@ -268,6 +282,7 @@ export default function Tracking() {
           }
           placeholder="ORD-20261008-AB12"
           hint="El número que aparece al confirmar tu compra, o código CHILEX / STK"
+          error={invalidOrderNumber ? ORDER_NUMBER_FORMAT_MESSAGE : undefined}
         />
 
         <Input
@@ -285,7 +300,7 @@ export default function Tracking() {
           <button
             type="button"
             onClick={handleSearch}
-            disabled={loading || !orderNumber.trim() || (!isDirectTracking && !email.trim())}
+            disabled={loading || !orderNumber.trim() || invalidOrderNumber || (!isDirectTracking && !email.trim())}
             className="w-full h-12 rounded-[9px] bg-[#1683ff] text-white text-[12px] font-bold hover:bg-[#3194f5] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
           >
             {loading ? 'Consultando...' : 'Consultar pedido →'}
@@ -294,7 +309,7 @@ export default function Tracking() {
           <button
             type="button"
             onClick={handleSearch}
-            disabled={loading || !orderNumber.trim() || (!isDirectTracking && !email.trim())}
+            disabled={loading || !orderNumber.trim() || invalidOrderNumber || (!isDirectTracking && !email.trim())}
             className="w-full h-12 rounded-[8px] bg-black text-white text-[12px] font-semibold hover:opacity-80 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity"
           >
             {loading ? 'Consultando...' : 'Consultar pedido →'}
@@ -304,7 +319,7 @@ export default function Tracking() {
             type="button"
             onClick={handleSearch}
             disabled={
-              loading || !orderNumber.trim() || (!isDirectTracking && !email.trim())
+              loading || !orderNumber.trim() || invalidOrderNumber || (!isDirectTracking && !email.trim())
             }
             className="
               w-full h-12 rounded-full
@@ -325,7 +340,7 @@ export default function Tracking() {
             fullWidth
             onClick={handleSearch}
             disabled={
-              loading || !orderNumber.trim() || (!isDirectTracking && !email.trim())
+              loading || !orderNumber.trim() || invalidOrderNumber || (!isDirectTracking && !email.trim())
             }
           >
             {loading ? 'Consultando...' : 'Consultar pedido'}
@@ -341,7 +356,7 @@ export default function Tracking() {
                 : 'text-center text-xs text-[var(--muted-foreground)]'
           }
         >
-          Demo: usa <strong>ORD-2025-0001</strong> con <strong>maria@email.com</strong>, o tracking <strong>CHILEX-DEMO12345</strong> / <strong>STK-DEMO12345</strong>
+          Formato de orden: <strong>ORD-AAAAMMDD-XXXX</strong>. También puedes usar tracking <strong>CHILEX-DEMO12345</strong> / <strong>STK-DEMO12345</strong>
         </p>
       </div>}
 

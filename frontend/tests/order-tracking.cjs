@@ -25,16 +25,21 @@ const real = {id_pedido: 42, identificador: identifier, fecha_creacion: '2026-10
 (async () => {
   // Contrato HTTP: consulta real, correo en el cuerpo, errores y cancelación.
   let calls = [], reply = {ok: true, json: async () => ({exito: true, data: real})};
-  const {orderService} = load('src/features/storefront/services/orderService.ts', {
+  const {orderService, isValidOrderNumber, ORDER_NUMBER_FORMAT_MESSAGE} = load('src/features/storefront/services/orderService.ts', {
     require: () => ({authService: {getToken: () => null}}),
     fetch: async (url, options) => {calls.push({url, options}); return reply;},
   });
   const controller = new AbortController();
-  assert.equal((await orderService.track(` ${identifier} `, ` ${email} `, controller.signal)).identificador, identifier);
+  assert.equal((await orderService.track(` ${identifier.toLowerCase()} `, ` ${email} `, controller.signal)).identificador, identifier);
   assert.equal(calls[0].url, 'http://localhost:8000/api/pedidos/seguimiento/');
   assert.equal(calls[0].options.method, 'POST');
   assert.deepEqual(JSON.parse(calls[0].options.body), {identificador: identifier, email});
   assert.equal(calls[0].options.signal, controller.signal);
+  const callsBeforeInvalidFormat = calls.length;
+  for (const invalidIdentifier of ['42', 'ORD-20260230-AB12', 'ORD-20261008-AB!2']) {
+    await assert.rejects(orderService.track(invalidIdentifier, email), /formato ORD-AAAAMMDD-XXXX/);
+  }
+  assert.equal(calls.length, callsBeforeInvalidFormat, 'Un número inválido no debe llegar al backend');
   for (const invalid of [null, {...real, identificador: 'OTHER'}, {...real, items: null}, {...real, monto_total: 'NaN'}]) {
     reply = {ok: true, json: async () => ({exito: true, data: invalid})};
     await assert.rejects(orderService.track(identifier, email), /respuesta del pedido es inválida/);
@@ -69,7 +74,11 @@ const real = {id_pedido: 42, identificador: identifier, fecha_creacion: '2026-10
     if (name === 'react-router-dom') return {Link: 'Link', Navigate: 'Navigate', useLocation: () => location};
     if (name.includes('useStorefrontTemplate')) return {useStorefrontTemplate: () => ({route: p => `/plantilla/${template}/${p}`,
       isMinimal: template === 2, isVisual: template === 3, isCatalog: template === 4})};
-    if (name.includes('orderService')) return {orderService: {track: (...args) => {trackCalls.push(args); return request(...args);}}};
+    if (name.includes('orderService')) return {
+      isValidOrderNumber,
+      ORDER_NUMBER_FORMAT_MESSAGE,
+      orderService: {track: (...args) => {trackCalls.push(args); return request(...args);}},
+    };
     if (name.includes('transbankPaymentService')) return {transbankPaymentService: {confirmarPago: async () => ({exito: true, data: {orden_compra: identifier}})}};
     if (name.includes('mockData')) return {formatPrice: String};
     if (name.includes('TransbankReturnResult')) return {default: 'WebpayResult'};
@@ -113,6 +122,10 @@ const real = {id_pedido: 42, identificador: identifier, fecha_creacion: '2026-10
     tree = render(Tracking);
     assert.equal(trackCalls.length, 0);
     assert.equal(tree.find(node => node.type === 'Input' && node.props.label === 'Número de orden').props.value, '');
+    tree.find(node => node.type === 'Input' && node.props.label === 'Número de orden').props.onChange({target: {value: 'ORD-INVALIDA'}});
+    tree = render(Tracking);
+    assert.match(tree.find(node => node.type === 'Input' && node.props.label === 'Número de orden').props.error, /formato ORD-AAAAMMDD-XXXX/);
+    assert.equal(tree.find(node => node.props?.onClick && nodes(node).some(value => typeof value === 'string' && value.startsWith('Consultar pedido'))).props.disabled, true);
     tree.find(node => node.type === 'Input' && node.props.label === 'Número de orden').props.onChange({target: {value: identifier}});
     tree.find(node => node.type === 'Input' && node.props.label === 'Correo electrónico').props.onChange({target: {value: email}});
     tree = render(Tracking);
