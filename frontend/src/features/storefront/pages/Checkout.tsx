@@ -1,10 +1,11 @@
-import { useEffect, useMemo, useState, useRef, useCallback } from 'react';
+import { useEffect, useMemo, useState, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 
 import { orderService } from '../services/orderService';
-import { shippingService } from '../services/shippingService';
+import { getDeliveryAlternatives, getShippingQuotes, type ShippingQuote } from '../services/shippingService';
 import { useCart } from '../context/CartContext';
 import { formatPrice } from '../data/mockData';
+import { comunasDeRegion, esComunaDeRegion } from '../data/comunasChile';
 import {
   Stepper,
   Button,
@@ -74,7 +75,6 @@ type TransferDetails = {
 };
 
 const ADMIN_STORAGE_KEY = 'ua-entrepreneur-demo-v1';
-const API_URL = (import.meta as any).env.VITE_API_URL || 'http://localhost:8000';
 
 type AuthSettings = {
   emailPassword: boolean;
@@ -113,23 +113,23 @@ const defaultShippingOptions: ShippingOption[] = [
     id: 'Chilexpress',
     label: 'Chilexpress',
     icon: 'box',
-    desc: '3-5 dias habiles · $3.490',
-    priceLabel: '$3.490',
+    desc: 'Tarifa de despacho configurada por la tienda',
+    priceLabel: 'Por cotizar',
     requiresAddress: true,
   },
   {
     id: 'Starken',
     label: 'Starken',
     icon: 'truck',
-    desc: '3-5 dias habiles · $3.490',
-    priceLabel: '$3.490',
+    desc: 'Tarifa de despacho configurada por la tienda',
+    priceLabel: 'Por cotizar',
     requiresAddress: true,
   },
   {
     id: 'Retiro',
     label: 'Retiro en tienda',
     icon: 'store',
-    desc: 'Sin costo · Lun-Sab 9:00-18:00',
+    desc: 'Sin costo',
     priceLabel: 'Gratis',
     requiresAddress: false,
   },
@@ -172,76 +172,21 @@ function readCheckoutOptions() {
   try {
     const raw = localStorage.getItem(ADMIN_STORAGE_KEY);
     if (!raw) {
-      return {
-        shippingOptions: defaultShippingOptions,
-        authSettings: defaultAuthSettings,
-      };
+      return { authSettings: defaultAuthSettings };
     }
 
     const config = JSON.parse(raw)?.config;
-    const shippingConfig = config?.shippingConfiguration;
     const authConfig = config?.authenticationConfiguration;
     const authSettings: AuthSettings = {
-      emailPassword:
-        authConfig?.emailPassword ??
-        defaultAuthSettings.emailPassword,
+      emailPassword: authConfig?.emailPassword ?? defaultAuthSettings.emailPassword,
       google: authConfig?.google ?? defaultAuthSettings.google,
-      guestCheckout:
-        authConfig?.guestCheckout ??
-        defaultAuthSettings.guestCheckout,
-      requiresAuth:
-        config?.requiresAuth ?? defaultAuthSettings.requiresAuth,
+      guestCheckout: authConfig?.guestCheckout ?? defaultAuthSettings.guestCheckout,
+      requiresAuth: config?.requiresAuth ?? defaultAuthSettings.requiresAuth,
     };
 
-    let shippingOptions = defaultShippingOptions;
-    if (shippingConfig) {
-      shippingOptions = defaultShippingOptions.filter((option) => {
-        if (option.id === 'Chilexpress') return !!shippingConfig.chilexpress?.enabled;
-        if (option.id === 'Starken') return !!shippingConfig.starken?.enabled;
-        if (option.id === 'Retiro') return !!shippingConfig.pickup?.enabled;
-        return true;
-      }).map((option) =>
-        option.id === 'Retiro'
-          ? {
-              ...option,
-              desc:
-                shippingConfig.pickup?.schedule || shippingConfig.pickup?.address
-                  ? `Sin costo · ${[
-                      shippingConfig.pickup?.schedule,
-                      shippingConfig.pickup?.address,
-                    ].filter(Boolean).join(' · ')}`
-                  : option.desc,
-            }
-          : option,
-      );
-    }
-
-    const paymentMap: Record<string, string> = {
-      Transbank: 'transbank',
-      MercadoPago: 'mercadopago',
-      PayPal: 'paypal',
-      Linkify: 'linkify',
-      Transferencia: 'transfer',
-    };
-
-    let paymentOptions = paymentPresentation;
-    const paymentConfig = config?.paymentConfiguration;
-    if (paymentConfig) {
-      paymentOptions = paymentPresentation.filter((option) => {
-        const key = paymentMap[option.id];
-        return key ? !!paymentConfig[key]?.enabled : false;
-      });
-    }
-
-    return {
-      shippingOptions,
-      authSettings,
-    };
+    return { authSettings };
   } catch {
-    return {
-      shippingOptions: defaultShippingOptions,
-      authSettings: defaultAuthSettings,
-    };
+    return { authSettings: defaultAuthSettings };
   }
 }
 
@@ -370,13 +315,10 @@ export default function Checkout() {
     items,
     subtotal,
     discount,
-    shipping,
-    total,
     clearCart,
     promoCode,
     shippingMethod,
     setShippingMethod,
-    setCustomShipping,
   } = useCart();
 
   const submitting = useRef(false);
@@ -385,10 +327,40 @@ export default function Checkout() {
   const { route, isMinimal, isVisual, isCatalog } =
     useStorefrontTemplate();
 
-  const { shippingOptions, authSettings } = useMemo(
+  const { authSettings } = useMemo(
     readCheckoutOptions,
     [],
   );
+  const [shippingOptions, setShippingOptions] = useState<ShippingOption[]>([]);
+  const [shippingLoading, setShippingLoading] = useState(true);
+  const [shippingError, setShippingError] = useState('');
+  const [shippingLoadAttempt, setShippingLoadAttempt] = useState(0);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    setShippingLoading(true);
+    setShippingError('');
+    getDeliveryAlternatives(controller.signal).then(configuration => {
+      if (controller.signal.aborted) return;
+      const enabled = defaultShippingOptions.filter(option => {
+        if (option.id === 'Chilexpress') return configuration.chilexpress.enabled;
+        if (option.id === 'Starken') return configuration.starken.enabled;
+        return configuration.pickup.enabled;
+      }).map(option => option.id === 'Retiro' ? {
+        ...option,
+        desc: ['Sin costo', configuration.pickup.schedule, configuration.pickup.address].filter(Boolean).join(' · '),
+      } : option);
+      setShippingOptions(enabled);
+    }).catch(cause => {
+      if (!controller.signal.aborted) {
+        setShippingOptions([]);
+        setShippingError(cause instanceof Error ? cause.message : 'No se pudieron cargar las alternativas de entrega.');
+      }
+    }).finally(() => {
+      if (!controller.signal.aborted) setShippingLoading(false);
+    });
+    return () => controller.abort();
+  }, [shippingLoadAttempt]);
   const availableAuthModes = useMemo(
     () => getAvailableAuthModes(authSettings),
     [authSettings],
@@ -414,138 +386,6 @@ export default function Checkout() {
     city: '',
     region: 'Metropolitana',
   });
-
-  type QuotedCarrierRate = {
-    costo: number;
-    dias_habiles_entrega: number;
-    servicio: string;
-    es_gratis: boolean;
-  };
-
-  const [shippingRates, setShippingRates] = useState<Record<string, QuotedCarrierRate>>({});
-  const [shippingQuoting, setShippingQuoting] = useState(false);
-  const [shippingQuoteError, setShippingQuoteError] = useState('');
-
-  const requestShippingQuotes = useCallback(async (comuna: string, region: string) => {
-    if (!comuna.trim() || !region.trim() || items.length === 0) return;
-    setShippingQuoting(true);
-    setShippingQuoteError('');
-
-    const totalCarrito = subtotal;
-    const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
-
-    try {
-      const results = await Promise.allSettled([
-        shippingService.quoteChilexpress({
-          region,
-          comuna,
-          total_carrito: totalCarrito,
-          total_items: totalItems,
-        }),
-        shippingService.quoteStarken({
-          region,
-          comuna,
-          total_carrito: totalCarrito,
-          total_items: totalItems,
-        }),
-      ]);
-
-      const newRates: Record<string, QuotedCarrierRate> = {};
-
-      if (results[0].status === 'fulfilled') {
-        const cxData = results[0].value;
-        const opt = cxData.opcion_recomendada || cxData.opciones[0];
-        if (opt) {
-          newRates['Chilexpress'] = {
-            costo: opt.costo,
-            dias_habiles_entrega: opt.dias_habiles_entrega,
-            servicio: opt.servicio,
-            es_gratis: opt.es_gratis,
-          };
-        }
-      }
-
-      if (results[1].status === 'fulfilled') {
-        const stkData = results[1].value;
-        const opt = stkData.opcion_recomendada || stkData.opciones[0];
-        if (opt) {
-          newRates['Starken'] = {
-            costo: opt.costo,
-            dias_habiles_entrega: opt.dias_habiles_entrega,
-            servicio: opt.servicio,
-            es_gratis: opt.es_gratis,
-          };
-        }
-      }
-
-      setShippingRates((prev) => ({ ...prev, ...newRates }));
-
-      if (results[0].status === 'rejected' && results[1].status === 'rejected') {
-        const err0 = (results[0] as PromiseRejectedResult).reason?.message;
-        const err1 = (results[1] as PromiseRejectedResult).reason?.message;
-        setShippingQuoteError(err0 || err1 || 'No se pudieron calcular tarifas para la dirección ingresada.');
-      }
-    } catch {
-      setShippingQuoteError('Error al cotizar costos de despacho.');
-    } finally {
-      setShippingQuoting(false);
-    }
-  }, [items, subtotal]);
-
-  useEffect(() => {
-    if (address.city.trim() && address.region.trim() && items.length > 0) {
-      const timer = setTimeout(() => {
-        void requestShippingQuotes(address.city, address.region);
-      }, 400);
-      return () => clearTimeout(timer);
-    }
-  }, [address.city, address.region, items.length, requestShippingQuotes]);
-
-  useEffect(() => {
-    if (shippingMethod === 'Retiro') {
-      setCustomShipping(0);
-    } else if (shippingRates[shippingMethod]) {
-      setCustomShipping(shippingRates[shippingMethod].costo);
-    } else {
-      setCustomShipping(null);
-    }
-  }, [shippingMethod, shippingRates, setCustomShipping]);
-
-  const effectiveShippingOptions = useMemo(() => {
-    return shippingOptions.map((option) => {
-      if (option.id === 'Retiro') return option;
-
-      const rate = shippingRates[option.id];
-      if (shippingQuoting) {
-        return {
-          ...option,
-          desc: `Calculando tarifa en tiempo real con ${option.label}...`,
-          priceLabel: 'Cotizando...',
-        };
-      }
-
-      if (rate) {
-        const dias = rate.dias_habiles_entrega;
-        const diasTxt = dias === 1 ? '1 día hábil' : `${dias} días hábiles`;
-        const priceLabel = rate.es_gratis || rate.costo === 0 ? 'Gratis' : formatPrice(rate.costo);
-        return {
-          ...option,
-          desc: `${diasTxt} · ${rate.servicio.replace(/_/g, ' ')}`,
-          priceLabel,
-        };
-      }
-
-      if (!address.city.trim()) {
-        return {
-          ...option,
-          desc: 'Ingresa tu comuna para cotizar tarifa',
-          priceLabel: 'Por calcular',
-        };
-      }
-
-      return option;
-    });
-  }, [shippingOptions, shippingRates, shippingQuoting, address.city]);
 
   const [paymentMethod, setPaymentMethod] =
     useState('');
@@ -590,11 +430,6 @@ export default function Checkout() {
       installments: '1',
       email: 'demo@example.com',
     });
-
-  const [paypal, setPaypal] = useState({
-    email: 'demo@example.com',
-    password: 'demostracion',
-  });
 
   const [paymentOptions, setPaymentOptions] = useState<PaymentOption[]>([]);
   const [paymentsLoading, setPaymentsLoading] = useState(true);
@@ -676,21 +511,55 @@ export default function Checkout() {
     return () => {active = false;};
   }, []);
 
-  const selectedShippingOption =
-    effectiveShippingOptions.find(
-      (option) => option.id === shippingMethod,
-    );
+  const [shippingQuotes, setShippingQuotes] = useState<Record<string, ShippingQuote & {destino: string}>>({});
+  const [quoteLoading, setQuoteLoading] = useState(false);
+  const [quoteError, setQuoteError] = useState('');
+  const [quoteAttempt, setQuoteAttempt] = useState(0);
+  const destinationKey = JSON.stringify([shippingMethod, address.region, address.city]);
+  const selectedShippingOption = shippingOptions.find(option => option.id === shippingMethod);
+  const candidateQuote = shippingQuotes[shippingMethod];
+  const selectedQuote = candidateQuote?.destino === destinationKey && candidateQuote.vence_en > Date.now() / 1000
+    ? candidateQuote : undefined;
+  const shipping = shippingMethod === 'Retiro' ? 0 : selectedQuote?.monto ?? null;
+  const total = subtotal - discount + (shipping ?? 0);
+  const deliveryReady = !shippingLoading && !shippingError && !!selectedShippingOption
+    && (shippingMethod === 'Retiro' || (!!selectedQuote && !quoteLoading && !quoteError));
+
+  useEffect(() => {
+    setShippingQuotes({});
+    setQuoteError('');
+    setQuoteLoading(false);
+    if (!selectedShippingOption?.requiresAddress || !esComunaDeRegion(address.city, address.region)) return;
+    const controller = new AbortController();
+    let expiry: ReturnType<typeof setTimeout>;
+    setQuoteLoading(true);
+    getShippingQuotes(shippingMethod, address.region, address.city, controller.signal)
+      .then((quotes) => {
+        if (controller.signal.aborted) return;
+        const quote = quotes.find(item => item.operador === shippingMethod);
+        if (!quote) throw new Error('No hay una tarifa disponible para este envío.');
+        setShippingQuotes({[shippingMethod]: {...quote, destino: destinationKey}});
+        expiry = setTimeout(() => {
+          setShippingQuotes({});
+          setQuoteError('La cotización venció. Vuelve a cotizar el envío.');
+        }, Math.max(0, quote.vence_en * 1000 - Date.now()));
+      })
+      .catch(cause => {
+        if (!controller.signal.aborted) setQuoteError(cause instanceof Error ? cause.message : 'No se pudo cotizar el envío.');
+      }).finally(() => { if (!controller.signal.aborted) setQuoteLoading(false); });
+    return () => { controller.abort(); clearTimeout(expiry); };
+  }, [address.city, address.region, shippingMethod, selectedShippingOption, quoteAttempt, destinationKey]);
 
   useEffect(() => {
     if (
       shippingMethod &&
-      !effectiveShippingOptions.some(
+      !shippingOptions.some(
         (option) => option.id === shippingMethod,
       )
     ) {
       setShippingMethod('');
     }
-  }, [shippingMethod, effectiveShippingOptions, setShippingMethod]);
+  }, [shippingMethod, shippingOptions, setShippingMethod]);
 
   useEffect(() => {
     if (
@@ -758,11 +627,19 @@ export default function Checkout() {
       ) {
         newErrors.address =
           'Dirección requerida';
+      } else if (
+        selectedShippingOption?.requiresAddress &&
+        !esComunaDeRegion(address.city, address.region)
+      ) {
+        newErrors.address =
+          'Selecciona una comuna de la región elegida';
       }
 
-      if (!shippingMethod) {
+      if (shippingLoading || shippingError || !selectedShippingOption) {
         newErrors.shipping =
           'Selecciona un método de entrega';
+      } else if (selectedShippingOption.requiresAddress && !deliveryReady) {
+        newErrors.shipping = quoteError || 'Espera una cotización válida para continuar.';
       }
     }
 
@@ -816,16 +693,27 @@ export default function Checkout() {
       checkoutAttempt.current = {signature, key: crypto.randomUUID()};
     }
     try {
+      if (!['Transbank', 'Linkify', 'Transferencia'].includes(paymentMethod)) {
+        throw new Error('Este medio de pago todavía no está disponible para completar la compra.');
+      }
       const order = await orderService.create({
         key: checkoutAttempt.current.key, items, contact, paymentMethod, shippingMethod, address, promoCode,
+        shippingQuote: selectedQuote?.cotizacion,
       });
 
       const orderNumber = String(order.identificador || order.id_pedido);
 
       if (paymentMethod === 'Transbank') {
-        const returnUrl = `${window.location.origin}${route('pedido-confirmado')}?orderNumber=${orderNumber}`;
+        try {
+          sessionStorage.setItem(`order-tracking:${orderNumber}`, JSON.stringify({
+            identificador: order.identificador, email: contact.email.trim(),
+          }));
+        } catch {
+          // Sin almacenamiento, Seguimiento conserva la búsqueda manual.
+        }
+        const returnUrl = `${window.location.origin}${route('pedido-confirmado')}?orderNumber=${orderNumber}&tienda=${order.tienda_id}`;
         const result = await transbankPaymentService.iniciarPago(
-          order.tienda_id, orderNumber, Number(order.monto_total), returnUrl,
+          order.tienda_id, orderNumber, Number(order.monto_total), returnUrl, contact.email.trim(),
         );
         if (!result.exito || !result.data?.url || !result.data?.token) {
           throw new Error(result.mensaje || `Pedido #${orderNumber} registrado; no se pudo iniciar Webpay. Puedes reintentar.`);
@@ -851,7 +739,10 @@ export default function Checkout() {
         return;
       }
 
-      if (paymentMethod === 'Linkify' && order.url_pago) {
+      if (paymentMethod === 'Linkify') {
+        if (!order.url_pago) {
+          throw new Error(`Pedido #${orderNumber} registrado, pero no pudimos iniciar el pago con Linkify. Contacta a la tienda para completarlo.`);
+        }
         await clearCart();
         window.location.href = order.url_pago;
         return;
@@ -859,7 +750,7 @@ export default function Checkout() {
       
       await clearCart();
       navigate(route('pedido-confirmado'), {
-        state: {orderNumber, email: contact.email.trim()}, replace: true,
+        state: {orderNumber, identificador: order.identificador, email: contact.email.trim()}, replace: true,
       });
     } catch (error) {
       setErrors({payment: error instanceof Error ? error.message : 'No se pudo registrar el pedido. Intenta nuevamente.'});
@@ -1248,14 +1139,14 @@ export default function Checkout() {
                 </Alert>
               )}
 
-              {shippingQuoteError && (
-                <Alert variant="warning">
-                  {shippingQuoteError}
-                </Alert>
-              )}
+              {shippingLoading && <Alert variant="info">Cargando alternativas de entrega…</Alert>}
+              {shippingError && <><Alert variant="error">{shippingError}</Alert><Button variant="outline" onClick={() => setShippingLoadAttempt(value => value + 1)}>Reintentar carga</Button></>}
+              {!shippingLoading && !shippingError && !shippingOptions.length && <Alert variant="info">La tienda todavía no tiene alternativas de entrega habilitadas.</Alert>}
+              {quoteLoading && <Alert variant="info">Cotizando envío…</Alert>}
+              {quoteError && shippingMethod !== 'Retiro' && <><Alert variant="error">{quoteError}</Alert><Button variant="outline" onClick={() => setQuoteAttempt(value => value + 1)}>Volver a cotizar</Button></>}
 
               <div className="flex flex-col gap-3">
-                {effectiveShippingOptions.map((method) => (
+                {shippingOptions.map((method) => (
                   <label
                     key={method.id}
                     className={`
@@ -1296,12 +1187,18 @@ export default function Checkout() {
                       </p>
 
                       <p className="text-xs text-[#667085] mt-0.5">
-                        {method.desc}
+                        {method.id === shippingMethod && selectedQuote
+                          ? selectedQuote.plazo_dias
+                            ? `${selectedQuote.plazo_dias} dias habiles · Tarifa de la tienda`
+                            : 'Despacho a domicilio'
+                          : method.desc}
                       </p>
                     </div>
 
                     <span className="text-sm font-semibold">
-                      {method.priceLabel}
+                      {method.id === shippingMethod && selectedQuote
+                        ? formatPrice(selectedQuote.monto)
+                        : method.priceLabel}
                     </span>
                   </label>
                 ))}
@@ -1364,8 +1261,25 @@ export default function Checkout() {
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <Input
-                        label="Ciudad / Comuna"
+                      <Select
+                        label="Región"
+                        value={address.region}
+                        onChange={(event) =>
+                          setAddress(
+                            (current) => ({
+                              ...current,
+                              region:
+                                event.target
+                                  .value,
+                              city: '',
+                            }),
+                          )
+                        }
+                        options={REGIONES}
+                      />
+
+                      <Select
+                        label="Comuna"
                         value={address.city}
                         onChange={(event) =>
                           setAddress(
@@ -1377,30 +1291,15 @@ export default function Checkout() {
                             }),
                           )
                         }
-                        onBlur={() => {
-                          if (address.city.trim() && address.region.trim()) {
-                            void requestShippingQuotes(address.city, address.region);
-                          }
-                        }}
-                        placeholder="Santiago"
-                      />
-
-                      <Select
-                        label="Región"
-                        value={address.region}
-                        onChange={(event) => {
-                          const newRegion = event.target.value;
-                          setAddress(
-                            (current) => ({
-                              ...current,
-                              region: newRegion,
+                        options={[
+                          { value: '', label: 'Selecciona una comuna' },
+                          ...comunasDeRegion(address.region).map(
+                            (comuna) => ({
+                              value: comuna,
+                              label: comuna,
                             }),
-                          );
-                          if (address.city.trim() && newRegion.trim()) {
-                            void requestShippingQuotes(address.city, newRegion);
-                          }
-                        }}
-                        options={REGIONES}
+                          ),
+                        ]}
                       />
                     </div>
                   </div>
@@ -1752,6 +1651,7 @@ export default function Checkout() {
               {errors.submit && (
                 <Alert variant="error">{errors.submit}</Alert>
               )}
+              {!deliveryReady && <Alert variant="error">{quoteError || 'Vuelve a entrega para obtener una cotización válida.'}</Alert>}
 
               {errors.payment && (
                 <Alert variant="error">
@@ -1886,7 +1786,7 @@ export default function Checkout() {
               isVisual ? (
                 <button
                   type="button"
-                  disabled={loading}
+                  disabled={loading || !deliveryReady}
                   onClick={handleConfirm}
                   className="min-h-12 px-6 rounded-[8px] bg-black text-white text-[12px] font-semibold hover:opacity-80 disabled:opacity-50 transition-opacity"
                 >
@@ -1895,7 +1795,7 @@ export default function Checkout() {
               ) : isMinimal ? (
                 <button
                   type="button"
-                  disabled={loading}
+                  disabled={loading || !deliveryReady}
                   onClick={handleConfirm}
                   className="min-h-12 px-6 rounded-full bg-[#17213b] text-white text-sm font-semibold hover:bg-[#0f2a56] disabled:opacity-50 transition-colors"
                 >
@@ -1908,6 +1808,7 @@ export default function Checkout() {
                   variant="primary"
                   size="lg"
                   loading={loading}
+                  disabled={!deliveryReady}
                   onClick={handleConfirm}
                 >
                   {loading ? 'Registrando pedido...' : `Confirmar y pagar ${formatPrice(total)}`}
@@ -2039,7 +1940,7 @@ export default function Checkout() {
                 </span>
 
                 <span>
-                  {shipping === 0 ? (
+                  {shipping === null ? 'Por cotizar' : shipping === 0 ? (
                     <span className="text-[var(--success)]">
                       Gratis
                     </span>
@@ -2058,7 +1959,7 @@ export default function Checkout() {
                       : 'flex justify-between font-bold text-base border-t border-[var(--border)] pt-2 mt-1'
                 }
               >
-                <span>Total</span>
+                <span>{shipping === null ? 'Total sin envío' : 'Total'}</span>
 
                 <span>
                   {formatPrice(total)}

@@ -319,7 +319,7 @@ class ConfiguracionTransbankView(StorePaymentConfigurationView):
             )
         except Exception as e:
             return Response(
-                {"exito": False, "mensaje": f"Error interno: {str(e)}", "error": {"codigo": "ERROR_INTERNO", "detalles": None}},
+                {"exito": False, "mensaje": "No se pudo guardar la configuración de Webpay.", "error": {"codigo": "ERROR_INTERNO", "detalles": None}},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
@@ -337,7 +337,7 @@ class CarritoItemsView(APIView):
 
     def get(self, request, *args, **kwargs):
         """Recupera los ítems del carrito del usuario autenticado."""
-        items = ConsultarCarritoUseCase().execute(request.user.id)
+        items = ConsultarCarritoUseCase().execute(request.user.id, resolver_tienda_id(request))
         data = ItemCarritoResponseSerializer(items, many=True).data
         return success_response(
             data=data,
@@ -369,7 +369,7 @@ class CarritoItemsView(APIView):
             cantidad=serializer.validated_data.get("cantidad", 1),
             sku=serializer.validated_data.get("sku"),
             slug=slug,
-            tienda_id=resolver_tienda_id(request) if id_producto is None else None,
+            tienda_id=resolver_tienda_id(request),
         )
 
         use_case = AgregarItemCarritoUseCase()
@@ -402,7 +402,7 @@ class CarritoItemsView(APIView):
             )
         except Exception as e:
             return Response(
-                {"exito": False, "mensaje": f"Error interno: {str(e)}", "error": {"codigo": "ERROR_INTERNO", "detalles": None}},
+                {"exito": False, "mensaje": "No se pudo procesar el carrito.", "error": {"codigo": "ERROR_INTERNO", "detalles": None}},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
@@ -420,7 +420,8 @@ class ModificarCantidadItemAPIView(APIView):
         dto = ModificarCantidadDTO(
             id_item_carrito=id_item_carrito,
             nueva_cantidad=serializer.validated_data['cantidad'],
-            usuario_id=request.user.id
+            usuario_id=request.user.id,
+            tienda_id=resolver_tienda_id(request),
         )
 
         use_case = ModificarCantidadItemUseCase()
@@ -451,7 +452,8 @@ class ModificarCantidadItemAPIView(APIView):
         """
         dto = EliminarItemCarritoDTO(
             usuario_id=request.user.id,
-            id_item_carrito=id_item_carrito
+            id_item_carrito=id_item_carrito,
+            tienda_id=resolver_tienda_id(request),
         )
 
         use_case = EliminarItemCarritoUseCase()
@@ -929,7 +931,24 @@ class ValidarDisponibilidadAPIView(APIView):
 
             )
 
-class ProductVariantsView(APIView):
+class VariantTenantMixin:
+    def initial(self, request, *args, **kwargs):
+        super().initial(request, *args, **kwargs)
+        from apps.catalog.domain.stock import validate_stock
+        from rest_framework.exceptions import ValidationError
+        tienda_id = resolver_tienda_id(request, exigir_propietario=request.method in ('PUT', 'PATCH', 'DELETE')
+                                       or request.method == 'POST')
+        if request.method in ('POST', 'PUT', 'PATCH'):
+            for field in ('stock', 'cantidad'):
+                if field in request.data:
+                    try:
+                        validate_stock(request.data[field])
+                    except ValueError as error:
+                        raise ValidationError({field: str(error)}) from error
+        self.service = VariantService(tienda_id=tienda_id)
+
+
+class ProductVariantsView(VariantTenantMixin, APIView):
 
     """
 
@@ -1461,7 +1480,7 @@ class ProductVariantsView(APIView):
 
             )
 
-class VariantPurchaseView(APIView):
+class VariantPurchaseView(VariantTenantMixin, APIView):
 
     """
 
@@ -1469,7 +1488,7 @@ class VariantPurchaseView(APIView):
 
     """
 
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
 
 
     def __init__(self, **kwargs):
@@ -1564,6 +1583,7 @@ class IniciarPagoTransbankView(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
+        resolver_tienda(request)
         serializer = IniciarPagoTransbankSerializer(data=request.data)
         if not serializer.is_valid():
             return Response(
@@ -1581,6 +1601,7 @@ class IniciarPagoTransbankView(APIView):
             monto=serializer.validated_data["monto"],
             session_id=serializer.validated_data["session_id"],
             return_url=serializer.validated_data["return_url"],
+            email=serializer.validated_data["email"],
         )
 
         use_case = IniciarPagoTransbankUseCase()
@@ -1594,6 +1615,8 @@ class IniciarPagoTransbankView(APIView):
                 },
                 status=status.HTTP_200_OK,
             )
+        except ConfiguracionPagoInvalidaException as e:
+            return error_response(mensaje=str(e), codigo="DATOS_INVALIDOS", status=status.HTTP_400_BAD_REQUEST)
         except TransbankConfiguracionFaltanteException as e:
             return Response(
                 {"exito": False, "mensaje": str(e), "error": {"codigo": "PASARELA_NO_DISPONIBLE", "detalles": None}},
@@ -1614,6 +1637,7 @@ class ConfirmarPagoTransbankView(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
+        resolver_tienda(request)
         serializer = ConfirmarPagoTransbankSerializer(data=request.data)
         if not serializer.is_valid():
             return Response(

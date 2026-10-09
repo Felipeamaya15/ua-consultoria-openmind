@@ -53,7 +53,7 @@ export async function fetchLandingConfig(options?: InitialLoadOptions): Promise<
 }
 
 export async function saveLandingConfig(config: LandingInput): Promise<LandingConfig> {
-  const token = localStorage.getItem('token');
+  const token = (localStorage.getItem('token') || sessionStorage.getItem('token'));
   if (!token) throw new Error('Inicia sesión como propietario para guardar la landing.');
   const body = new FormData();
   body.append('titulo', config.titulo);

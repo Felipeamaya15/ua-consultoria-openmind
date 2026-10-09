@@ -20,6 +20,7 @@ export default function Cart() {
     count,
     loading,
   } = useCart();
+  const shippingLabel = shipping === null ? 'Se calcula en checkout' : shipping === 0 ? 'Gratis' : formatPrice(shipping);
 
   const { route, isMinimal, isVisual, isCatalog } = useStorefrontTemplate();
   const navigate = useNavigate();
@@ -307,15 +308,9 @@ export default function Cart() {
                   <div className="flex justify-between gap-4">
                     <span className="text-black/50">Envío</span>
                     <span className="font-semibold">
-                      {shipping === 0 ? 'Gratis' : formatPrice(shipping)}
+                      {shippingLabel}
                     </span>
                   </div>
-
-                  {shipping > 0 && (
-                    <p className="text-[10px] text-black/35">
-                      Envío gratis sobre $50.000
-                    </p>
-                  )}
                 </div>
 
                 <div className="border-b border-black/10 py-5">
@@ -360,7 +355,7 @@ export default function Cart() {
 
                 <div className="flex items-end justify-between gap-4 pt-5">
                   <div>
-                    <p className="text-[10px] text-black/45">Total</p>
+                    <p className="text-[10px] text-black/45">{shipping === null ? 'Total sin envío' : 'Total'}</p>
                     <p className="mt-1 text-[9px] text-black/30">Impuestos incluidos</p>
                   </div>
 
@@ -561,14 +556,8 @@ export default function Cart() {
 
                   <div className="flex justify-between gap-4">
                     <span className="text-[#77716e]">Envío</span>
-                    <span>{shipping === 0 ? 'Gratis' : formatPrice(shipping)}</span>
+                    <span>{shippingLabel}</span>
                   </div>
-
-                  {shipping > 0 && (
-                    <p className="text-[10px] leading-4 text-[#918b88]">
-                      Envío gratis sobre $50.000
-                    </p>
-                  )}
                 </div>
 
                 <div className="border-t border-black/10 my-6" />
@@ -613,7 +602,7 @@ export default function Cart() {
                 <div className="border-t border-black/10 my-6" />
 
                 <div className="flex items-baseline justify-between gap-4 mb-6">
-                  <span className="font-serif text-[24px]">Total</span>
+                  <span className="font-serif text-[24px]">{shipping === null ? 'Total sin envío' : 'Total'}</span>
                   <span className="text-[20px] font-semibold">{formatPrice(total)}</span>
                 </div>
 
@@ -769,14 +758,8 @@ export default function Cart() {
 
               <div className="flex justify-between">
                 <span className="text-[var(--muted-foreground)]">Envío</span>
-                <span>{shipping === 0 ? 'Gratis' : formatPrice(shipping)}</span>
+                <span>{shippingLabel}</span>
               </div>
-
-              {shipping > 0 && (
-                <p className="text-xs text-[var(--muted-foreground)]">
-                  Envío gratis sobre $50.000
-                </p>
-              )}
             </div>
 
             <div className="border-t border-[var(--border)] my-5" />
@@ -814,7 +797,7 @@ export default function Cart() {
             <div className="border-t border-[var(--border)] my-5" />
 
             <div className="flex justify-between items-baseline font-semibold text-xl mb-6">
-              <span>Total</span>
+              <span>{shipping === null ? 'Total sin envío' : 'Total'}</span>
               <span>{formatPrice(total)}</span>
             </div>
 

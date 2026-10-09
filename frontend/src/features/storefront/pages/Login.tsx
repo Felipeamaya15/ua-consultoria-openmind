@@ -68,6 +68,7 @@ export default function Login() {
   });
 
   // 2. Formulario tradicional conectado a la API
+  // 2. Formulario tradicional conectado a la API
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
     setLoading(true);
@@ -87,35 +88,57 @@ export default function Login() {
       if (mode === 'login') {
         data = await authService.login({ username: email, password });
       } else {
-        const [first_name, ...last_name_arr] = name.split(' ');
+        // VALIDACIÓN FRONTEND: Exigir al menos nombre y un apellido
+        const nameParts = name.trim().split(' ');
+        if (nameParts.length < 2) {
+          setMessage('Nombre incompleto: Escribe tu nombre y apellido separados por un espacio.');
+          setLoading(false);
+          return; // Detenemos la petición antes de que viaje al backend
+        }
+
+        const first_name = nameParts[0];
+        const last_name = nameParts.slice(1).join(' ');
+
         data = await authService.register({
           username: email.split('@')[0],
           email,
           password,
-          first_name: first_name || '',
-          last_name: last_name_arr.join(' ') || ''
+          first_name: first_name,
+          last_name: last_name
         });
       }
       
-      authService.setSession(data.data.token);
+      localStorage.setItem('token', data.data.token);
       
-      // Redirección condicional según el correo
-      if (data.data.user.is_store_owner === true) {
+      // Redirección condicional según el correo o rol
+      if (data.data.user.email === 'emprendedor@gmail.com' || data.data.user.is_store_owner === true) {
         navigate('/emprendedor');
       } else {
-        navigate(route()); // Envía al usuario a la vista pública de la tienda
+        navigate(route()); 
       }
     } catch (err: any) {
-      if (err.password) {
+      if (err?.password) {
         const backendPwdErrors = Array.isArray(err.password) ? err.password : [String(err.password)];
         setPasswordErrors(backendPwdErrors);
-      } else if (err.error?.detalles?.password) {
+      } else if (err?.error?.detalles?.password) {
         const backendPwdErrors = Array.isArray(err.error.detalles.password)
           ? err.error.detalles.password
           : [String(err.error.detalles.password)];
         setPasswordErrors(backendPwdErrors);
       }
-      setMessage(err.mensaje || 'Error al procesar la solicitud. Revisa tus credenciales.');
+
+      const errorString = JSON.stringify(err).toLowerCase();
+      const detalles = err?.error?.detalles || {};
+
+      if (err?.password || detalles?.password || errorString.includes('password') || errorString.includes('8 caracteres')) {
+        setMessage('Contraseña inválida: Debe tener mínimo 8 caracteres, 1 mayúscula y 1 carácter especial.');
+      } else if (err?.last_name || detalles?.last_name || errorString.includes('last_name') || errorString.includes('blank')) {
+        setMessage('Nombre incompleto: Escribe tu nombre y apellido separados por un espacio.');
+      } else if (err?.email || detalles?.email || errorString.includes('email')) {
+        setMessage('Error en el correo: El formato es inválido o ya está registrado.');
+      } else {
+        setMessage(err?.mensaje || err?.message || 'Error al procesar la solicitud. Revisa tus credenciales.');
+      }
     } finally {
       setLoading(false);
     }

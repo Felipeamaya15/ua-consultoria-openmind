@@ -5,7 +5,7 @@ function load(file, globals) {
   const module = { exports: {} };
   const source = fs.readFileSync(path.join(root, file), 'utf8').replace('import.meta.env.VITE_API_URL', 'undefined');
   const code = ts.transpileModule(source, { compilerOptions: { target: ts.ScriptTarget.ES2020, module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX } }).outputText;
-  vm.runInNewContext(code, { module, exports: module.exports, Error, ...globals });
+  vm.runInNewContext(code, { module, exports: module.exports, Error, sessionStorage: {getItem: () => null}, ...globals });
   return module.exports;
 }
 async function run() {

@@ -4,7 +4,7 @@ const root = path.resolve(__dirname, '..');
 function load(file, globals) {
   const module = {exports: {}};
   const source = fs.readFileSync(path.join(root, file), 'utf8').replace('import.meta.env.VITE_API_URL', 'undefined');
-  vm.runInNewContext(ts.transpileModule(source, {compilerOptions: {target: ts.ScriptTarget.ES2020, module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX}}).outputText, {module, exports: module.exports, Error, ...globals});
+  vm.runInNewContext(ts.transpileModule(source, {compilerOptions: {target: ts.ScriptTarget.ES2020, module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX}}).outputText, {module, exports: module.exports, Error, sessionStorage: {getItem: () => null}, ...globals});
   return module.exports;
 }
 (async () => {
@@ -23,11 +23,11 @@ function load(file, globals) {
 
   let states = [], index = 0, effects = [], deny = false, token = 'token';
   const jsx = (type, props) => ({type, props});
-  const service = {getEntrepreneurProfile: async () => {if (deny) throw Error('Denied'); return {email: 'owner@example.com'};}};
+  const service = {hasSession: () => !!token, getEntrepreneurProfile: async () => {if (deny) throw Error('Denied'); return {email: 'owner@example.com'};}};
   const {RequireAdmin} = load('src/features/admin/auth/RequireAdmin.tsx', {localStorage: {getItem: () => token}, require: id => {
     if (id === 'react/jsx-runtime') return {jsx, jsxs: jsx};
     if (id === 'react') return {useState: initial => {const i = index++; if (!(i in states)) states[i] = initial; return [states[i], value => {states[i] = value;}];}, useEffect: effect => effects.push(effect)};
-    if (id === 'react-router-dom') return {Navigate: 'Navigate', Outlet: 'Outlet'};
+    if (id === 'react-router-dom') return {Navigate: 'Navigate', Outlet: 'Outlet', useLocation: () => ({pathname: '/admin'})};
     if (id.includes('authService')) return {authService: service};
     throw Error(id);
   }});
@@ -44,8 +44,11 @@ function load(file, globals) {
 
   // Vista emprendedor: datos remotos, persistencia confirmada y errores visibles.
   let fail = false, savedEmail, changedPassword;
-  Object.assign(service, {updateEntrepreneurProfile: async email => {if (fail) throw Error('No guardado'); savedEmail = email; return {email};}, changeEntrepreneurPassword: async (old, next) => {changedPassword = [old, next];}});
+  Object.assign(service, {getSessionStartedAt: () => null, updateEntrepreneurProfile: async email => {if (fail) throw Error('No guardado'); savedEmail = email; return {email};}, changeEntrepreneurPassword: async (old, next) => {changedPassword = [old, next];}});
   const {default: Profile} = load('src/features/admin/pages/Profile.tsx', {require: id => {
+    if (id === 'react-router-dom') return {useNavigate: () => () => {}};
+    if (id.includes('AdminContext')) return {useAdmin: () => ({config: {template: 'editorial'}})};
+    if (id.includes('navigation')) return {templatePaths: {editorial: '/plantilla/1'}};
     if (id === 'react/jsx-runtime') return {jsx, jsxs: jsx, Fragment: 'Fragment'};
     if (id === 'react') return {useState: initial => {const i = index++; if (!(i in states)) states[i] = initial; return [states[i], value => {states[i] = value;}];}, useEffect: effect => effects.push(effect)};
     if (id.includes('authService')) return {authService: service};
@@ -64,6 +67,6 @@ function load(file, globals) {
   tree = renderProfile(); const inputs = tree.filter(x => x.type === 'Input');
   inputs[1].props.onChange({target: {value: 'old'}}); inputs[2].props.onChange({target: {value: 'new'}});
   await renderProfile().filter(x => x.type === 'form')[1].props.onSubmit({preventDefault() {}});
-  assert.deepEqual(changedPassword, ['old', 'new']); assert.ok(renderProfile().includes('Contraseña actualizada.'));
+  assert.deepEqual(changedPassword, ['old', 'new']); assert.ok(renderProfile().includes('Contrasena actualizada.'));
   console.log('OK: contrato Token emprendedor, guard propietario/cliente/visitante y formulario remoto con errores.');
 })().catch(error => {console.error(error); process.exitCode = 1;});

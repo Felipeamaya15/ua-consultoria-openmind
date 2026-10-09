@@ -149,7 +149,7 @@ async function main() {
     const render = () => { cursor = 0; return detail.default(); };
     let tree = render();
     assert.ok(text(tree).includes('Talla'));
-    assert.equal(walk(tree, n => n.type === 'button' && text(n) === 'XL')[0].props.disabled, true);
+    assert.equal(walk(tree, n => n.type === 'button' && text(n).startsWith('XL'))[0].props.disabled, true);
     walk(tree, n => n.type === 'button' && text(n) === 'L')[0].props.onClick();
     tree = render();
     assert.ok(text(tree).includes('QA-PANT-L'));

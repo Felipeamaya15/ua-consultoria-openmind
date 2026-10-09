@@ -4,7 +4,7 @@ const root = path.resolve(__dirname, '..');
 function load(file, globals) {
   const module = {exports: {}};
   const source = fs.readFileSync(path.join(root, file), 'utf8').replace('import.meta.env.VITE_API_URL', 'undefined');
-  vm.runInNewContext(ts.transpileModule(source, {compilerOptions: {target: ts.ScriptTarget.ES2020, module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX}}).outputText, {module, exports: module.exports, Error, ...globals});
+  vm.runInNewContext(ts.transpileModule(source, {compilerOptions: {target: ts.ScriptTarget.ES2020, module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX}}).outputText, {module, exports: module.exports, Error, sessionStorage: {getItem: () => null}, ...globals});
   return module.exports;
 }
 (async () => {
@@ -57,5 +57,40 @@ function load(file, globals) {
   assert.ok(nodes(CustomerAccountNavigation()).includes('Mis pedidos'));
   const routes = fs.readFileSync(path.join(root, 'src/app/router/index.tsx'), 'utf8');
   for (const route of ['mis-pedidos', 'mis-pedidos/:id']) assert.ok(routes.includes(`path: '${route}', element: <RequireCustomer>`));
-  console.log('OK: datos remotos, vacío, listado/detalle, Token, errores y navegación en cuatro plantillas protegidas.');
+
+  // Pedidos del propietario: mismo array del backend, base configurada y errores visibles.
+  const storeOrder = {id_pedido: 42, identificador: 'PEDIDO-42', nombre_contacto: 'Comprador', correo_contacto: 'buyer@example.test',
+    monto_total: '40.00', estado: 'pendiente', fecha_creacion: '2026-10-02T12:00:00Z', metodo_pago: 'Transferencia',
+    costo_envio: '0.00', descuento: '0.00', items: [{nombre_producto: 'Producto real', cantidad: 2, precio_unitario: '20.00'}]};
+  let storeReply = {ok: true, json: async () => [storeOrder]}, storeToken = 'session-owner', storeCalls = [];
+  const {default: StoreOrders} = load('src/features/admin/pages/Orders.tsx', {
+    fetch: async (url, options) => {storeCalls.push({url, options}); return storeReply;},
+    require: name => {
+      if (name === 'react/jsx-runtime') return {jsx, jsxs: jsx};
+      if (name === 'react') return requireMock(name);
+      if (name.endsWith('/api')) return {API_BASE_URL: 'https://configured.example.test'};
+      if (name.includes('authService')) return {authService: {getToken: () => storeToken}};
+      if (name.includes('mockAdminData')) return {formatPrice: String};
+      if (name.includes('components/ui')) return {Badge: 'Badge', Icon: 'Icon'};
+      throw Error(name);
+    },
+  });
+  async function renderStore() {
+    states = []; index = 0; effects = []; StoreOrders(); effects[0]();
+    await new Promise(setImmediate); index = 0; return nodes(StoreOrders());
+  }
+  assert.ok((await renderStore()).includes('Comprador'));
+  assert.equal(storeCalls[0].url, 'https://configured.example.test/api/tienda/pedidos/');
+  assert.equal(storeCalls[0].options.headers.Authorization, 'Token session-owner');
+  for (const invalid of [{...storeOrder, fecha_creacion: 'invalid'}, {...storeOrder, monto_total: 'NaN'}, {...storeOrder, items: null}, {data: [storeOrder]}]) {
+    storeReply = {ok: true, json: async () => Array.isArray(invalid.data) ? invalid : [invalid]};
+    assert.ok((await renderStore()).some(node => node.props?.role === 'alert'));
+  }
+  storeReply = {ok: false};
+  assert.ok((await renderStore()).includes('No se pudieron consultar los pedidos.'));
+  storeToken = null;
+  const beforeStore = storeCalls.length;
+  assert.ok((await renderStore()).includes('Inicia sesión para consultar los pedidos.'));
+  assert.equal(storeCalls.length, beforeStore);
+  console.log('OK: pedidos cliente y propietario, contratos, Token, errores y navegación en cuatro plantillas protegidas.');
 })().catch(error => {console.error(error); process.exitCode = 1;});

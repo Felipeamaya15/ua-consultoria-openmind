@@ -1,43 +1,93 @@
-import { useState } from "react"
-import { formatPrice, Order } from "../data/mockAdminData"
-import { useAdmin } from "../context/AdminContext";
+import { useState, useEffect } from "react"
+import { formatPrice } from "../data/mockAdminData" // Mantenemos formatPrice
 import { Badge, Icon } from "../components/ui"
+import { API_BASE_URL } from "../../../api"
+import { authService } from "../../auth/services/authService"
+
+type StoreOrder = {
+  id_pedido: number; identificador: string | null; nombre_contacto: string; correo_contacto: string;
+  monto_total: string; estado: string; fecha_creacion: string; metodo_pago: string;
+  costo_envio: string; descuento: string;
+  items: { nombre_producto: string; cantidad: number; precio_unitario: string }[];
+}
+
+function isStoreOrder(value: unknown): value is StoreOrder {
+  if (!value || typeof value !== 'object') return false
+  const order = value as Record<string, unknown>
+  return typeof order.id_pedido === 'number'
+    && (typeof order.identificador === 'string' || order.identificador === null)
+    && ['nombre_contacto', 'correo_contacto', 'estado', 'metodo_pago'].every(key => typeof order[key] === 'string')
+    && typeof order.fecha_creacion === 'string' && Number.isFinite(Date.parse(order.fecha_creacion))
+    && ['monto_total', 'costo_envio', 'descuento'].every(key => typeof order[key] === 'string'
+      && String(order[key]).trim() !== '' && Number.isFinite(Number(order[key])))
+    && Array.isArray(order.items) && order.items.every(item => item && typeof item === 'object'
+      && typeof item.nombre_producto === 'string' && Number.isInteger(item.cantidad) && item.cantidad > 0
+      && typeof item.precio_unitario === 'string' && item.precio_unitario.trim() !== ''
+      && Number.isFinite(Number(item.precio_unitario)))
+}
 
 const STATUS_BADGE: Record<string, {
   label: string
   variant: "default" | "info" | "warning" | "success" | "error"
 }> = {
-  pending: { label: "Pendiente", variant: "warning" },
-  paid: { label: "Pagado", variant: "info" },
-  preparing: { label: "Preparando", variant: "info" },
-  shipped: { label: "Despachado", variant: "info" },
-  delivered: { label: "Entregado", variant: "success" },
-  refunded: { label: "Reembolsado", variant: "default" },
-  cancelled: { label: "Cancelado", variant: "error" },
-}
-
-const PAYMENT_BADGE: Record<string, {
-  label: string
-  variant: "default" | "info" | "warning" | "success" | "error"
-}> = {
-  paid: { label: "Pagado", variant: "success" },
-  pending: { label: "Pendiente", variant: "warning" },
-  refunded: { label: "Reembolsado", variant: "default" },
-  rejected: { label: "Rechazado", variant: "error" },
+  pendiente: { label: "Pendiente", variant: "warning" },
+  pagado: { label: "Pagado", variant: "info" },
+  enviado: { label: "Enviado", variant: "info" },
+  entregado: { label: "Entregado", variant: "success" },
+  cancelado: { label: "Cancelado", variant: "error" },
 }
 
 export default function Orders() {
-  const { config, setConfig } = useAdmin(); const mockOrders = config.orders;
+  const [pedidos, setPedidos] = useState<StoreOrder[]>([])
   const [filter, setFilter] = useState("all")
-  const [selected, setSelected] = useState<string | null>(null)
+  const [selectedId, setSelectedId] = useState<number | null>(null)
+  const [cargando, setCargando] = useState(true)
+  const [error, setError] = useState('')
 
-  const filtered =
-    filter === "all"
-      ? mockOrders
-      : mockOrders.filter((o) => o.status === filter)
-  const selectedOrder = selected
-    ? mockOrders.find((o) => o.id === selected)
+  useEffect(() => {
+    const fetchPedidos = async () => {
+      try {
+        const token = authService.getToken();
+        if (!token) throw new Error('Inicia sesión para consultar los pedidos.');
+        
+        // Asumiendo que el emprendedor tiene un token válido
+        const response = await fetch(`${API_BASE_URL}/api/tienda/pedidos/`, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Token ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          if (!Array.isArray(data) || !data.every(isStoreOrder)) throw new Error('El listado de pedidos recibido es inválido.');
+          setPedidos(data);
+        } else {
+          throw new Error('No se pudieron consultar los pedidos.');
+        }
+      } catch (error) {
+        setError(error instanceof Error ? error.message : 'No se pudieron consultar los pedidos.');
+      } finally {
+        setCargando(false);
+      }
+    };
+
+    fetchPedidos();
+  }, []);
+
+  const filtered = filter === "all"
+    ? pedidos
+    : pedidos.filter((p) => p.estado === filter)
+
+  const selectedOrder = selectedId
+    ? pedidos.find((p) => p.id_pedido === selectedId)
     : null
+
+  if (cargando) {
+    return <div className="p-10 text-center">Cargando pedidos...</div>
+  }
+  if (error) return <p role="alert" className="p-5 text-red-700">{error}</p>
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-5 gap-5">
@@ -46,10 +96,11 @@ export default function Orders() {
         <div className="flex gap-2 mb-4 overflow-x-auto pb-1">
           {[
             ["all", "Todos"],
-            ["pending", "Pendientes"],
-            ["preparing", "Preparando"],
-            ["shipped", "Despachados"],
-            ["delivered", "Entregados"],
+            ["pendiente", "Pendientes"],
+            ["pagado", "Pagados"],
+            ["enviado", "Enviados"],
+            ["entregado", "Entregados"],
+            ["cancelado", "Cancelados"]
           ].map(([val, label]) => (
             <button
               key={val}
@@ -72,14 +123,17 @@ export default function Orders() {
             </div>
           ) : (
             filtered.map((order) => {
-              const st = STATUS_BADGE[order.status]
-              const isSelected = selected === order.id
+              // Mapeo seguro del estado
+              const statusKey = order.estado ? order.estado.toLowerCase() : "pendiente"
+              const st = STATUS_BADGE[statusKey] || STATUS_BADGE["pendiente"]
+              const isSelected = selectedId === order.id_pedido
+
               return (
                 <div
-                  key={order.id}
-                  role="button" tabIndex={0} aria-label={`Ver pedido ${order.number}`}
-                  onKeyDown={event => {if(event.key === "Enter" || event.key === " "){event.preventDefault();setSelected(isSelected ? null : order.id);}}}
-                  onClick={() => setSelected(isSelected ? null : order.id)}
+                  key={order.id_pedido}
+                  role="button" tabIndex={0} aria-label={`Ver pedido ${order.identificador}`}
+                  onKeyDown={event => {if(event.key === "Enter" || event.key === " "){event.preventDefault();setSelectedId(isSelected ? null : order.id_pedido);}}}
+                  onClick={() => setSelectedId(isSelected ? null : order.id_pedido)}
                   className={`p-4 border-b border-[var(--border)] last:border-0 cursor-pointer transition-colors ${
                     isSelected
                       ? "bg-[var(--secondary)]"
@@ -89,29 +143,27 @@ export default function Orders() {
                   <div className="flex items-start justify-between gap-3 flex-wrap">
                     <div>
                       <p className="font-mono text-xs text-[var(--muted-foreground)]">
-                        {order.number}
+                        {order.identificador}
                       </p>
                       <p className="font-semibold text-sm mt-0.5">
-                        {order.customer.name}
+                        {order.nombre_contacto || "Sin nombre"}
                       </p>
                       <p className="text-xs text-[var(--muted-foreground)]">
-                        {order.customer.email}
+                        {order.correo_contacto || "Sin correo"}
                       </p>
                     </div>
                     <div className="text-right">
-                      <p className="font-bold">{formatPrice(order.total)}</p>
+                      <p className="font-bold">{formatPrice(Number(order.monto_total))}</p>
                       <Badge variant={st.variant} className="mt-1">
                         {st.label}
                       </Badge>
                     </div>
                   </div>
                   <div className="flex items-center gap-3 mt-2 text-xs text-[var(--muted-foreground)]">
-                    <span>{order.paymentMethod}</span>
-                    <span>·</span>
-                    <span>{order.shippingMethod}</span>
+                    <span>{order.metodo_pago || "No especificado"}</span>
                     <span>·</span>
                     <span>
-                      {new Date(order.createdAt).toLocaleDateString("es-CL")}
+                      {new Date(order.fecha_creacion).toLocaleDateString("es-CL")}
                     </span>
                   </div>
                 </div>
@@ -128,12 +180,12 @@ export default function Orders() {
             <div className="flex items-start justify-between">
               <div>
                 <p className="font-mono text-xs text-[var(--muted-foreground)]">
-                  {selectedOrder.number}
+                  {selectedOrder.identificador}
                 </p>
-                <p className="font-bold">{selectedOrder.customer.name}</p>
+                <p className="font-bold">{selectedOrder.nombre_contacto || "Sin nombre"}</p>
               </div>
               <button
-                onClick={() => setSelected(null)}
+                onClick={() => setSelectedId(null)}
                 className="text-[var(--muted-foreground)] hover:text-[var(--foreground)] p-1"
               >
                 ✕
@@ -143,21 +195,16 @@ export default function Orders() {
             <div className="grid grid-cols-2 gap-3 text-xs">
               <div className="bg-[var(--muted)] rounded-lg p-3">
                 <p className="text-[var(--muted-foreground)] mb-1">Pedido</p>
-                <Badge variant={STATUS_BADGE[selectedOrder.status].variant}>
-                  {STATUS_BADGE[selectedOrder.status].label}
+                <Badge variant={STATUS_BADGE[selectedOrder.estado?.toLowerCase() || "pendiente"]?.variant || "warning"}>
+                  {STATUS_BADGE[selectedOrder.estado?.toLowerCase() || "pendiente"]?.label || "Pendiente"}
                 </Badge>
               </div>
               <div className="bg-[var(--muted)] rounded-lg p-3">
                 <p className="text-[var(--muted-foreground)] mb-1">Pago</p>
-                <Badge
-                  variant={
-                    PAYMENT_BADGE[selectedOrder.paymentStatus]?.variant ??
-                    "default"
-                  }
-                >
-                  {PAYMENT_BADGE[selectedOrder.paymentStatus]?.label ??
-                    selectedOrder.paymentStatus}
-                </Badge>
+                {/* En tu modelo no tienes un estado de pago separado, puedes ajustarlo después si es necesario */}
+                <span className="font-medium text-xs text-[var(--muted-foreground)]">
+                    {selectedOrder.metodo_pago || "No especificado"}
+                </span>
               </div>
             </div>
 
@@ -166,69 +213,37 @@ export default function Orders() {
                 Productos
               </p>
               {selectedOrder.items.map((item, i) => (
-                <div key={i} className="flex items-center gap-2">
-                  <img
-                    src={item.image}
-                    alt=""
-                    className="w-8 h-8 rounded object-cover"
-                  />
+                <div key={i} className="flex items-center justify-between gap-2 border-b border-gray-100 pb-2 mb-2 last:border-0">
                   <div className="flex-1 text-xs">
-                    <p className="font-medium">{item.name}</p>
+                    <p className="font-medium">{item.nombre_producto}</p>
                     <p className="text-[var(--muted-foreground)]">
-                      x{item.quantity}
+                      Cantidad: {item.cantidad}
                     </p>
                   </div>
                   <p className="text-xs font-semibold">
-                    {formatPrice(item.price * item.quantity)}
+                    {formatPrice(Number(item.precio_unitario) * item.cantidad)}
                   </p>
                 </div>
               ))}
             </div>
 
             <div className="border-t border-[var(--border)] pt-3 text-sm space-y-1">
-              <div className="flex justify-between text-[var(--muted-foreground)]">
-                <span>Subtotal</span>
-                <span>{formatPrice(selectedOrder.subtotal)}</span>
-              </div>
-              {selectedOrder.discount > 0 && (
+              {Number(selectedOrder.descuento) > 0 && (
                 <div className="flex justify-between text-[var(--success)]">
                   <span>Descuento</span>
-                  <span>−{formatPrice(selectedOrder.discount)}</span>
+                  <span>−{formatPrice(Number(selectedOrder.descuento))}</span>
                 </div>
               )}
               <div className="flex justify-between text-[var(--muted-foreground)]">
                 <span>Envío</span>
-                <span>{formatPrice(selectedOrder.shipping)}</span>
+                <span>{formatPrice(Number(selectedOrder.costo_envio))}</span>
               </div>
               <div className="flex justify-between font-bold">
                 <span>Total</span>
-                <span>{formatPrice(selectedOrder.total)}</span>
+                <span>{formatPrice(Number(selectedOrder.monto_total))}</span>
               </div>
             </div>
 
-            {selectedOrder.trackingCode && (
-              <div className="bg-[var(--muted)] rounded-xl p-3 text-xs">
-                <p className="font-semibold mb-1">
-                  Seguimiento {selectedOrder.carrier}
-                </p>
-                <p className="font-mono text-[var(--primary)]">
-                  {selectedOrder.trackingCode}
-                </p>
-              </div>
-            )}
-
-            <div>
-              <p className="text-xs font-semibold text-[var(--muted-foreground)] uppercase tracking-wider mb-2">
-                Cambiar estado
-              </p>
-              <select aria-label="Cambiar estado del pedido" value={selectedOrder.status} onChange={event => setConfig({...config,orders:config.orders.map(order => order.id === selectedOrder.id ? {...order,status:event.target.value as Order["status"],updatedAt:new Date().toISOString()} : order)})} className="w-full h-8 text-sm border border-[var(--border)] rounded-lg px-2 bg-white focus:outline-none">
-                {Object.entries(STATUS_BADGE).map(([val, { label }]) => (
-                  <option key={val} value={val}>
-                    {label}
-                  </option>
-                ))}
-              </select>
-            </div>
           </div>
         ) : (
           <div className="bg-white border border-[var(--border)] rounded-xl p-10 text-center text-[var(--muted-foreground)]">

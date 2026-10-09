@@ -9,11 +9,11 @@ from rest_framework.exceptions import NotAuthenticated, PermissionDenied, Valida
 from rest_framework.test import APIClient, APIRequestFactory
 from rest_framework.request import Request
 
-from apps.core.admin import ProductoAdmin, VarianteProductoAdmin, TiendaAdmin
+from apps.core.admin import ProductoAdmin, PedidoAdmin, TiendaAdmin
 from apps.core.infrastructure.tenant import (
     ConfiguracionTiendaInvalida, TiendaNoConfigurada, resolver_tienda, resolver_tienda_id,
 )
-from apps.core.models import Producto, Tienda, VarianteProducto
+from apps.core.models import Producto, Tienda, Pedido
 
 
 class ResolverTiendaTests(TestCase):
@@ -37,7 +37,7 @@ class ResolverTiendaTests(TestCase):
             resolver_tienda(self.request)
         response = self.api.get('/api/catalog/productos/')
         self.assertEqual(response.status_code, 503)
-        self.assertEqual(response.data['error']['codigo'], 'TIENDA_NO_CONFIGURADA')
+        self.assertEqual(response.data['detail'].code, 'TIENDA_NO_CONFIGURADA')
         self.assertFalse(Tienda.objects.exists())
 
     def test_varias_tiendas_no_elige_la_primera_ni_la_del_propietario(self):
@@ -48,7 +48,7 @@ class ResolverTiendaTests(TestCase):
                 resolver_tienda(self.request, exigir_propietario=privada)
         response = self.api.get('/api/catalog/productos/')
         self.assertEqual(response.status_code, 503)
-        self.assertEqual(response.data['error']['codigo'], 'CONFIGURACION_TIENDA_INVALIDA')
+        self.assertEqual(response.data['detail'].code, 'CONFIGURACION_TIENDA_INVALIDA')
         self.assertEqual(Tienda.objects.count(), 2)
 
     def test_propietario_activo_puede_resolver_operacion_privada(self):
@@ -89,9 +89,10 @@ class ResolverTiendaTests(TestCase):
         request = RequestFactory().get('/?tienda_id=37', HTTP_X_TIENDA_ID='37')
         self.assertEqual(resolver_tienda(request), self.shop)
 
-    def test_alias_catalog_delega_en_la_misma_implementacion(self):
-        from apps.catalog.application.infrastructure.tenant import resolver_tienda_id as alias
-        self.assertIs(alias, resolver_tienda_id)
+    def test_catalog_usa_repositorio_canonico(self):
+        from apps.catalog.application.services import ProductRepository as service_repository
+        from apps.catalog.infrastructure.repositories import ProductRepository
+        self.assertIs(service_repository, ProductRepository)
 
     def test_catalogo_publico_anonimo_y_comprador_reciben_id_resuelto(self):
         with patch('apps.catalog.presentation.views.ProductRepository') as repository:
@@ -100,7 +101,7 @@ class ResolverTiendaTests(TestCase):
                 self.api.force_authenticate(user=usuario)
                 response = self.api.get('/api/catalog/productos/')
                 self.assertEqual(response.status_code, 200)
-                repository.return_value.list_by_store.assert_called_with('37', activo=True)
+                repository.return_value.list_by_store.assert_called_with('37', activo=True, atributos={})
 
     def test_catalogo_rechaza_manipulacion_antes_de_consultar_mongo(self):
         with patch('apps.catalog.presentation.views.ProductRepository') as repository:
@@ -117,10 +118,10 @@ class ResolverTiendaTests(TestCase):
 
     def test_admin_conserva_acceso_propietario_y_rechaza_otra_cuenta(self):
         producto = Producto.objects.create(nombre='P', precio=1, id_tienda=self.shop)
-        variante = VarianteProducto.objects.create(id_producto=producto, sku='SKU', precio=1)
+        pedido = Pedido.objects.create(tienda=self.shop, monto_total=1, correo_contacto='qa@example.test')
         self.request.user = self.owner
         for model, admin_class, obj in (
-            (Producto, ProductoAdmin, producto), (VarianteProducto, VarianteProductoAdmin, variante),
+            (Producto, ProductoAdmin, producto), (Pedido, PedidoAdmin, pedido),
         ):
             admin = admin_class(model, AdminSite())
             self.assertEqual(list(admin.get_queryset(self.request)), [obj])
@@ -133,7 +134,7 @@ class ResolverTiendaTests(TestCase):
         otra = Tienda.objects.create(nombre='Otra', id_usuario_propietario=self.customer)
         propio = Producto.objects.create(nombre='Propio', precio=1, id_tienda=self.shop)
         ajeno = Producto.objects.create(nombre='Ajeno', precio=1, id_tienda=otra)
-        VarianteProducto.objects.create(id_producto=ajeno, sku='AJENO', precio=1)
+        Pedido.objects.create(tienda=otra, monto_total=1, correo_contacto='qa@example.test')
         self.request.user = self.owner
         # Aísla los filtros del Admin de la regla global que rechaza varias tiendas.
         with patch('apps.core.admin.resolver_tienda', return_value=self.shop):
@@ -141,10 +142,10 @@ class ResolverTiendaTests(TestCase):
             self.assertEqual(list(admin.get_queryset(self.request)), [propio])
             field = admin.formfield_for_foreignkey(Producto._meta.get_field('id_tienda'), self.request)
             self.assertEqual(list(field.queryset), [self.shop])
-            admin = VarianteProductoAdmin(VarianteProducto, AdminSite())
+            admin = PedidoAdmin(Pedido, AdminSite())
             self.assertFalse(admin.get_queryset(self.request).exists())
-            field = admin.formfield_for_foreignkey(VarianteProducto._meta.get_field('id_producto'), self.request)
-            self.assertEqual(list(field.queryset), [propio])
+            field = admin.formfield_for_foreignkey(Pedido._meta.get_field('tienda'), self.request)
+            self.assertEqual(list(field.queryset), [self.shop])
 
     def test_admin_configuracion_inicial_sigue_disponible_sin_tienda(self):
         self.shop.delete()

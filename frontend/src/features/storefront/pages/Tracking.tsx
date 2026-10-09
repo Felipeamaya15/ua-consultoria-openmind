@@ -1,8 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 
-import { useOrders } from '../context/OrderContext';
-import { formatPrice, type Order } from '../data/mockData';
+import { formatPrice } from '../data/mockData';
+import { orderService, type TrackedOrder } from '../services/orderService';
 import {
   Button,
   Input,
@@ -15,27 +15,27 @@ import { shippingService, type DetalleSeguimiento } from '../services/shippingSe
 
 const STATUS_STEPS = [
   {
-    id: 'pending',
+    id: 'pendiente',
     label: 'Pedido recibido',
     icon: 'orders',
   },
   {
-    id: 'paid',
+    id: 'pagado',
     label: 'Pago confirmado',
     icon: 'card',
   },
   {
-    id: 'preparing',
+    id: 'preparando',
     label: 'En preparación',
     icon: 'box',
   },
   {
-    id: 'shipped',
+    id: 'enviado',
     label: 'En tránsito',
     icon: 'truck',
   },
   {
-    id: 'delivered',
+    id: 'entregado',
     label: 'Entregado',
     icon: 'checkCircle',
   },
@@ -53,27 +53,27 @@ const ORDER_STATUS_MAP: Record<
       | 'error';
   }
 > = {
-  pending: {
+  pendiente: {
     label: 'Pendiente',
     variant: 'warning',
   },
-  paid: {
+  pagado: {
     label: 'Pagado',
     variant: 'info',
   },
-  preparing: {
+  preparando: {
     label: 'En preparación',
     variant: 'info',
   },
-  shipped: {
+  enviado: {
     label: 'Despachado',
     variant: 'info',
   },
-  delivered: {
+  entregado: {
     label: 'Entregado',
     variant: 'success',
   },
-  cancelled: {
+  cancelado: {
     label: 'Cancelado',
     variant: 'error',
   },
@@ -86,168 +86,82 @@ interface TrackingState {
 
 export default function Tracking() {
   const location = useLocation();
-  const { orders } = useOrders();
   const { isMinimal, isVisual, isCatalog } = useStorefrontTemplate();
+  const locationState = location.state as TrackingState | null;
+  const incomingNumber = new URLSearchParams(location.search).get('orden')
+    ?? locationState?.orderNumber ?? '';
+  const incomingEmail = locationState?.email ?? '';
+  const isAutomaticLookup = Boolean(incomingNumber.trim() && incomingEmail.trim());
+  const [orderNumber, setOrderNumber] = useState(incomingNumber);
+  const [email, setEmail] = useState(incomingEmail);
+  const [order, setOrder] = useState<TrackedOrder | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const requestRef = useRef<AbortController | null>(null);
 
-  const locationState =
-    location.state as TrackingState | null;
+  const [liveTracking, setLiveTracking] = useState<DetalleSeguimiento | null>(null);
 
-  const [orderNumber, setOrderNumber] =
-    useState(locationState?.orderNumber ?? '');
-
-  const [email, setEmail] = useState(
-    locationState?.email ?? '',
-  );
-
-  const [searched, setSearched] =
-    useState(false);
-
-  const [order, setOrder] =
-    useState<Order | null>(null);
-
-  const [notFound, setNotFound] =
-    useState(false);
-
-  const [liveTracking, setLiveTracking] =
-    useState<DetalleSeguimiento | null>(null);
-
-  const [isLoading, setIsLoading] =
-    useState(false);
-
-  const [errorMessage, setErrorMessage] =
-    useState<string | null>(null);
-
-  /*
-   * ==========================================================
-   * BÚSQUEDA
-   * ==========================================================
-   */
-  const findOrder = (
-    number: string,
-    customerEmail: string,
-  ) => {
-    const normalizedNumber = number
-      .trim()
-      .toLowerCase();
-
-    const normalizedEmail = customerEmail
-      .trim()
-      .toLowerCase();
-
-    return orders.find(
-      (candidate) =>
-        candidate.number
-          .trim()
-          .toLowerCase() === normalizedNumber &&
-        candidate.customer.email
-          .trim()
-          .toLowerCase() === normalizedEmail,
-    );
-  };
-
-  const handleSearch = async () => {
-    setSearched(true);
-    setNotFound(false);
-    setErrorMessage(null);
-    setLiveTracking(null);
+  const search = useCallback(async (number: string, customerEmail: string) => {
+    requestRef.current?.abort();
+    const controller = new AbortController();
+    requestRef.current = controller;
+    setLoading(true);
     setOrder(null);
+    setLiveTracking(null);
+    setError('');
 
-    const term = orderNumber.trim();
-    if (!term) return;
-
-    const isDirectTracking =
+    const term = number.trim();
+    const isDirect =
       term.toUpperCase().startsWith('CHILEX') ||
       term.toUpperCase().startsWith('STK') ||
       term.toUpperCase().startsWith('STARKEN') ||
       term.toUpperCase().startsWith('TRK');
 
-    // 1. Si es formato de tracking directo o no se ingresó email, consultar API de logística
-    if (isDirectTracking || !email.trim()) {
-      setIsLoading(true);
-      try {
-        const live = await shippingService.getTracking(term);
-        setLiveTracking(live);
-        setIsLoading(false);
-        return;
-      } catch (err: any) {
-        setIsLoading(false);
-        if (!email.trim()) {
-          setNotFound(true);
-          setErrorMessage(err?.message || 'Código de seguimiento no encontrado.');
-          return;
-        }
-      }
-    }
-
-    // 2. Búsqueda local por orden y correo
-    const found = findOrder(orderNumber, email);
-    if (found) {
-      setOrder(found);
-      return;
-    }
-
-    // 3. Fallback a la API de logística
-    setIsLoading(true);
     try {
-      const live = await shippingService.getTracking(term);
-      setLiveTracking(live);
+      if (isDirect) {
+        const live = await shippingService.getTracking(term);
+        if (!controller.signal.aborted) setLiveTracking(live);
+      } else {
+        const found = await orderService.track(number, customerEmail, controller.signal);
+        if (!controller.signal.aborted) setOrder(found);
+      }
     } catch (err: any) {
-      setNotFound(true);
-      setErrorMessage(
-        err?.message ||
-          'No encontramos un pedido con ese número y correo.',
-      );
+      if (!controller.signal.aborted) {
+        setError(err instanceof Error ? err.message : 'No se pudo consultar el pedido.');
+      }
     } finally {
-      setIsLoading(false);
+      if (!controller.signal.aborted) setLoading(false);
+    }
+  }, []);
+
+  const isDirectTracking =
+    orderNumber.trim().toUpperCase().startsWith('CHILEX') ||
+    orderNumber.trim().toUpperCase().startsWith('STK') ||
+    orderNumber.trim().toUpperCase().startsWith('STARKEN') ||
+    orderNumber.trim().toUpperCase().startsWith('TRK');
+
+  const handleSearch = () => {
+    if (orderNumber.trim() && (email.trim() || isDirectTracking)) {
+      void search(orderNumber, email);
     }
   };
 
-  /*
-   * Si venimos directamente desde Pedido confirmado,
-   * intentamos mostrar el pedido automáticamente.
-   *
-   * También esperamos a que "orders" cambie, por si la orden
-   * acaba de ser agregada al contexto.
-   */
   useEffect(() => {
-    if (
-      !locationState?.orderNumber ||
-      !locationState?.email
-    ) {
-      return;
+    setOrderNumber(incomingNumber);
+    setEmail(incomingEmail);
+    setOrder(null);
+    setError('');
+    setLoading(false);
+    if (incomingNumber.trim() && incomingEmail.trim()) {
+      void search(incomingNumber, incomingEmail);
     }
-
-    const found = orders.find(
-      (candidate) =>
-        candidate.number
-          .trim()
-          .toLowerCase() ===
-          locationState.orderNumber!
-            .trim()
-            .toLowerCase() &&
-        candidate.customer.email
-          .trim()
-          .toLowerCase() ===
-          locationState.email!
-            .trim()
-            .toLowerCase(),
-    );
-
-    if (found) {
-      setOrder(found);
-      setSearched(true);
-      setNotFound(false);
-    }
-  }, [
-    orders,
-    locationState?.orderNumber,
-    locationState?.email,
-  ]);
+    return () => {requestRef.current?.abort();};
+  }, [incomingNumber, incomingEmail, search]);
 
   const currentStepIdx = order
     ? STATUS_STEPS.findIndex(
         (status) =>
-          status.id === order.status,
+          status.id === order.estado,
       )
     : -1;
 
@@ -330,7 +244,7 @@ export default function Tracking() {
       {/* =====================================================
           BUSCADOR
       ====================================================== */}
-      <div
+      {!isAutomaticLookup && <div
         className={`
           ${panelClass}
           ${
@@ -345,15 +259,15 @@ export default function Tracking() {
         `}
       >
         <Input
-          label="Número de orden o código de seguimiento"
+          label="Número de orden"
           value={orderNumber}
           onChange={(event) =>
             setOrderNumber(
               event.target.value,
             )
           }
-          placeholder="Ej: ORD-2025-0001, CHILEX-..., STK-..."
-          hint="Número de orden o código de flete (Chilexpress, Starken, Standard)"
+          placeholder="ORD-20261008-AB12"
+          hint="El número que aparece al confirmar tu compra, o código CHILEX / STK"
         />
 
         <Input
@@ -364,32 +278,34 @@ export default function Tracking() {
             setEmail(event.target.value)
           }
           placeholder="correo@ejemplo.com"
-          hint="Requerido para órdenes locales (opcional para tracking directo)"
+          hint="El correo que usaste al comprar"
         />
 
         {isCatalog ? (
           <button
             type="button"
             onClick={handleSearch}
-            disabled={!orderNumber.trim() || isLoading}
+            disabled={loading || !orderNumber.trim() || (!isDirectTracking && !email.trim())}
             className="w-full h-12 rounded-[9px] bg-[#1683ff] text-white text-[12px] font-bold hover:bg-[#3194f5] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
           >
-            {isLoading ? 'Consultando...' : 'Consultar pedido →'}
+            {loading ? 'Consultando...' : 'Consultar pedido →'}
           </button>
         ) : isVisual ? (
           <button
             type="button"
             onClick={handleSearch}
-            disabled={!orderNumber.trim() || isLoading}
+            disabled={loading || !orderNumber.trim() || (!isDirectTracking && !email.trim())}
             className="w-full h-12 rounded-[8px] bg-black text-white text-[12px] font-semibold hover:opacity-80 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity"
           >
-            {isLoading ? 'Consultando...' : 'Consultar pedido →'}
+            {loading ? 'Consultando...' : 'Consultar pedido →'}
           </button>
         ) : isMinimal ? (
           <button
             type="button"
             onClick={handleSearch}
-            disabled={!orderNumber.trim() || isLoading}
+            disabled={
+              loading || !orderNumber.trim() || (!isDirectTracking && !email.trim())
+            }
             className="
               w-full h-12 rounded-full
               bg-[#17213b] text-white
@@ -400,7 +316,7 @@ export default function Tracking() {
               transition-colors
             "
           >
-            {isLoading ? 'Consultando...' : 'Consultar pedido'}
+            {loading ? 'Consultando...' : 'Consultar pedido'}
           </button>
         ) : (
           <Button
@@ -408,9 +324,11 @@ export default function Tracking() {
             size="lg"
             fullWidth
             onClick={handleSearch}
-            disabled={!orderNumber.trim() || isLoading}
+            disabled={
+              loading || !orderNumber.trim() || (!isDirectTracking && !email.trim())
+            }
           >
-            {isLoading ? 'Consultando...' : 'Consultar pedido'}
+            {loading ? 'Consultando...' : 'Consultar pedido'}
           </Button>
         )}
 
@@ -425,17 +343,20 @@ export default function Tracking() {
         >
           Demo: usa <strong>ORD-2025-0001</strong> con <strong>maria@email.com</strong>, o tracking <strong>CHILEX-DEMO12345</strong> / <strong>STK-DEMO12345</strong>
         </p>
-      </div>
+      </div>}
 
       {/* =====================================================
           NO ENCONTRADO
       ====================================================== */}
-      {searched && notFound && (
-        <Alert
-          variant="error"
-          title="Seguimiento no encontrado"
-        >
-          {errorMessage || 'No encontramos un pedido con esos datos. Verifica e intenta de nuevo.'}
+      {loading && <p role="status">Consultando pedido…</p>}
+      {error && (
+        <Alert variant="error" title="No se pudo consultar el pedido">
+          {error}
+          {isAutomaticLookup && (
+            <button type="button" className="block mt-3 underline" onClick={handleSearch}>
+              Volver a consultar
+            </button>
+          )}
         </Alert>
       )}
 
@@ -572,20 +493,20 @@ export default function Tracking() {
                         : 'font-bold text-lg'
                   }
                 >
-                  {order.number}
+                  {order.identificador}
                 </p>
               </div>
 
               <Badge
                 variant={
                   ORDER_STATUS_MAP[
-                    order.status
+                    order.estado
                   ]?.variant ?? 'default'
                 }
               >
                 {ORDER_STATUS_MAP[
-                  order.status
-                ]?.label ?? order.status}
+                  order.estado
+                ]?.label ?? order.estado}
               </Badge>
             </div>
 
@@ -604,7 +525,7 @@ export default function Tracking() {
                 </p>
 
                 <p className="font-medium mt-1">
-                  {order.customer.name}
+                  {order.nombre_contacto}
                 </p>
               </div>
 
@@ -614,7 +535,7 @@ export default function Tracking() {
                 </p>
 
                 <p className="font-medium mt-1">
-                  {order.shippingMethod}
+                  {order.entrega.metodo || 'Sin especificar'}
                 </p>
               </div>
 
@@ -624,7 +545,7 @@ export default function Tracking() {
                 </p>
 
                 <p className="font-medium mt-1">
-                  {order.paymentMethod}
+                  {order.medio_pago}
                 </p>
               </div>
 
@@ -634,22 +555,10 @@ export default function Tracking() {
                 </p>
 
                 <p className="font-semibold mt-1">
-                  {formatPrice(order.total)}
+                  {formatPrice(Number(order.monto_total))}
                 </p>
               </div>
 
-              {order.trackingCode && (
-                <div className="sm:col-span-2">
-                  <p className="text-xs text-[var(--muted-foreground)]">
-                    Código de seguimiento{' '}
-                    {order.carrier}
-                  </p>
-
-                  <p className="font-mono font-bold text-[var(--primary)] mt-1">
-                    {order.trackingCode}
-                  </p>
-                </div>
-              )}
             </div>
           </div>
 
@@ -849,46 +758,39 @@ export default function Tracking() {
               {order.items.map(
                 (item, index) => (
                   <div
-                    key={`${item.productId}-${item.variantId}-${index}`}
+                    key={`${item.producto_id}-${item.sku}-${index}`}
                     className={
                       isVisual
                         ? 'flex items-center gap-4 border-b border-black/10 pb-4 last:border-b-0 last:pb-0'
                         : 'flex items-center gap-3'
                     }
                   >
-                    <img
-                      src={item.image}
-                      alt={item.name}
-                      className={
-                        isVisual
-                          ? 'w-16 h-16 rounded-[8px] object-cover bg-[#e7e7e4]'
-                          : isMinimal
-                            ? 'w-14 h-14 rounded-xl object-cover'
-                            : 'w-12 h-12 rounded-lg object-cover'
-                      }
-                    />
+                    <div
+                      className={`${isVisual ? 'w-16 h-16 rounded-[8px]' : isMinimal ? 'w-14 h-14 rounded-xl' : 'w-12 h-12 rounded-lg'} bg-black/5 flex items-center justify-center flex-shrink-0`}
+                      aria-hidden="true"
+                    >
+                      <Icon name="box" className="w-6 h-6" />
+                    </div>
 
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium truncate">
-                        {item.name}
+                        {item.nombre}
                       </p>
 
                       <p className="text-xs text-[var(--muted-foreground)] mt-0.5">
-                        {Object.values(
-                          item.attributes,
-                        ).join(' / ')}
+                        {item.atributos_variante?.map(attribute => attribute.valor).join(' / ')}
                       </p>
 
                       <p className="text-xs text-[var(--muted-foreground)]">
                         Cantidad:{' '}
-                        {item.quantity}
+                        {item.cantidad}
                       </p>
                     </div>
 
                     <p className="text-sm font-semibold">
                       {formatPrice(
-                        item.price *
-                          item.quantity,
+                        Number(item.precio_unitario) *
+                          item.cantidad,
                       )}
                     </p>
                   </div>

@@ -48,7 +48,7 @@ function toBackendPayload(product: AdminProduct) {
 export async function createPublicProduct(
   product: Product,
 ): Promise<string> {
-  const token = localStorage.getItem("token");
+  const token = (localStorage.getItem("token") || sessionStorage.getItem("token"));
   if (!token) throw new Error("Inicia sesión para crear productos.");
   const response = await fetch(`${API_URL}/api/catalog/productos/crear/`, {
     method: "POST",
@@ -68,7 +68,7 @@ export async function createPublicProduct(
 }
 
 export async function deleteCatalogProduct(productId: string): Promise<void> {
-  const token = localStorage.getItem("token");
+  const token = (localStorage.getItem("token") || sessionStorage.getItem("token"));
   if (!token) throw new Error("Inicia sesión para eliminar productos.");
   const response = await fetch(`${API_URL}/api/catalog/productos/${productId}/eliminar/`, {
     method: "DELETE",
@@ -111,7 +111,7 @@ function adaptAdminProduct(item: any): AdminProduct {
 }
 
 async function adminRequest(path: string, options: RequestInit = {}): Promise<any> {
-  const token = localStorage.getItem('token');
+  const token = (localStorage.getItem('token') || sessionStorage.getItem('token'));
   if (!token) throw new Error('Inicia sesión para administrar productos.');
   const response = await fetch(`${API_URL}/api/catalog/productos/${path}`, {
     ...options,

@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from apps.core.models import Producto, Tienda, Usuario, VarianteProducto, Pedido
+from apps.core.models import Producto, Tienda, Usuario, VarianteProducto, Pedido, ItemPedido
 
 class ProductoSerializer(serializers.ModelSerializer):
     class Meta:
@@ -233,6 +233,63 @@ class RegistrarCompraSerializer(StrictSerializer):
         return items
 
 
+class DeliveryBooleanField(serializers.BooleanField):
+    def to_internal_value(self, data):
+        if not isinstance(data, bool):
+            self.fail('invalid', input=data)
+        return super().to_internal_value(data)
+
+
+class DeliveryStringField(serializers.CharField):
+    def to_internal_value(self, data):
+        if not isinstance(data, str):
+            self.fail('invalid')
+        return super().to_internal_value(data)
+
+
+class PickupConfigurationSerializer(StrictSerializer):
+    enabled = DeliveryBooleanField()
+    address = DeliveryStringField(allow_blank=True, max_length=500)
+    schedule = DeliveryStringField(allow_blank=True, max_length=500)
+
+
+class ShippingRateSerializer(StrictSerializer):
+    region = DeliveryStringField(max_length=100)
+    comuna = DeliveryStringField(max_length=100)
+    monto = serializers.IntegerField(min_value=0, max_value=9999999999)
+    plazo_dias = serializers.IntegerField(min_value=1, max_value=365, allow_null=True, default=None)
+
+    def validate(self, data):
+        from apps.core.shipping import validate_destination
+        if any(key not in data for key in ('region', 'comuna', 'monto')):
+            raise serializers.ValidationError('Cada tarifa requiere región, comuna y monto, también en PATCH.')
+        data['region'] = validate_destination(data['region'], data['comuna'])
+        return data
+
+
+class CarrierConfigurationSerializer(StrictSerializer):
+    enabled = DeliveryBooleanField()
+    tarifas = ShippingRateSerializer(many=True, required=False, max_length=1000)
+    # Reservados para compatibilidad de forma; las credenciales reales quedan fuera de este sprint.
+    accountId = DeliveryStringField(allow_blank=True, max_length=200, required=False)
+    apiKey = DeliveryStringField(allow_blank=True, max_length=500, required=False)
+    status = serializers.ChoiceField(choices=['not_configured'], required=False)
+
+    def validate(self, data):
+        if data.get('accountId') or data.get('apiKey'):
+            raise serializers.ValidationError('El guardado de credenciales de transportistas todavía no está disponible.')
+        destinations = [(rate['region'], rate['comuna']) for rate in data.get('tarifas', [])]
+        if len(destinations) != len(set(destinations)):
+            raise serializers.ValidationError({'tarifas': 'Solo puede existir una tarifa por región y comuna.'})
+        return data
+
+
+class ShippingConfigurationSerializer(StrictSerializer):
+    chilexpress = CarrierConfigurationSerializer()
+    starken = CarrierConfigurationSerializer()
+    pickup = PickupConfigurationSerializer()
+
+
 class ConfiguracionPagoSerializer(serializers.Serializer):
     """ Valida que no se habiliten medios de pago sin sus campos obligatorios (SCRUM-306) """
 
@@ -240,7 +297,7 @@ class ConfiguracionPagoSerializer(serializers.Serializer):
         'transbank': ['api_key', 'codigo_comercio'],
         'mercadopago': ['public_key', 'access_token'],
         'paypal': ['client_id', 'client_secret'],
-        'linkify': ['accountName', 'publicUrl', 'apiKey', 'webhookSecret'],
+        'linkify': ['idCuenta', 'clavePrivada'],
         'transfer': [
             'bank_name',
             'account_type',
@@ -262,16 +319,22 @@ class ConfiguracionPagoSerializer(serializers.Serializer):
 
         for method_id, method_data in data.items():
             if not isinstance(method_data, dict):
-                continue
+                raise serializers.ValidationError({method_id: 'La configuración del método debe ser un objeto.'})
                 
             is_enabled = method_data.get('enabled')
+            if not isinstance(is_enabled, bool):
+                raise serializers.ValidationError({method_id: 'enabled debe ser un booleano.'})
+            fields = method_data.get('fields', {})
+            if not isinstance(fields, dict):
+                raise serializers.ValidationError({method_id: 'fields debe ser un objeto.'})
             # Solo validamos si intentan guardarlo como habilitado
             if str(is_enabled).lower() == 'true' or is_enabled is True:
                 fields = method_data.get('fields', {})
                 required_fields = self.REQUIRED_FIELDS_BY_METHOD.get(method_id, [])
 
                 # Buscamos campos vacíos o inexistentes
-                missing = [key for key in required_fields if not str(fields.get(key, '')).strip()]
+                missing = [key for key in required_fields
+                           if not isinstance(fields.get(key), str) or not fields[key].strip()]
 
                 if missing:
                     errores_metodos[method_id] = f"Faltan campos obligatorios para habilitarlo: {', '.join(missing)}."
@@ -297,3 +360,29 @@ class PedidoSerializer(serializers.ModelSerializer):
             'fecha_creacion'
         ]
         read_only_fields = ['identificador']
+
+class TransferenciaPendienteSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Pedido
+        fields = [
+            'id_pedido', 'identificador', 'fecha_creacion', 'nombre_contacto',
+            'correo_contacto', 'monto_total', 'medio_pago', 'estado',
+        ]
+        read_only_fields = fields
+
+
+class ItemPedidoTiendaSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ItemPedido
+        fields = ['nombre_producto', 'cantidad', 'precio_unitario']
+
+class PedidoTiendaSerializer(serializers.ModelSerializer):
+    items = ItemPedidoTiendaSerializer(source='itempedido_set', many=True, read_only=True)
+    
+    class Meta:
+        model = Pedido
+        fields = [
+            'id_pedido', 'identificador', 'nombre_contacto', 'correo_contacto', 
+            'monto_total', 'estado', 'fecha_creacion', 'metodo_pago', 
+            'costo_envio', 'descuento', 'items'
+        ]

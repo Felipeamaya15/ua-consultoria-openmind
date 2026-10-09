@@ -5,8 +5,9 @@ from apps.catalog.domain.stock import validate_stock
 
 
 class VariantService:
-    def __init__(self, repository=None):
+    def __init__(self, repository=None, tienda_id=None):
         self.repo = repository if repository is not None else ProductRepository()
+        self.tienda_id = tienda_id
 
     @staticmethod
     def _normalizar_atributos_variante(atributos):
@@ -161,9 +162,10 @@ class VariantService:
         producto = None
 
         if hasattr(self.repo, "get_by_id"):
-            producto = self.repo.get_by_id(product_id)
+            producto = (self.repo.get_by_id(self.tienda_id, product_id) if self.tienda_id is not None
+                        else self.repo.get_by_id(product_id))
 
-        if not producto and hasattr(self.repo, "collection"):
+        if not producto and self.tienda_id is None and hasattr(self.repo, "collection"):
             id_query = (
                 self.repo._build_id_query(product_id)
                 if hasattr(self.repo, "_build_id_query")
@@ -226,6 +228,8 @@ class VariantService:
                 else {"_id": product_id}
             )
 
+            if self.tienda_id is not None:
+                id_query = {'$and': [id_query, {'tienda_id': self.tienda_id}]}
             if soft_delete:
                 result = self.repo.collection.update_one(
                     {"$and": [id_query, {"variantes.sku": sku_real}]},
@@ -265,7 +269,7 @@ class VariantService:
         - create_variant(tienda_id, product_id, variant_data)
         """
         if variant_data is None:
-            tienda_id = None
+            tienda_id = self.tienda_id
             product_id = str(tienda_id_or_product_id)
             data = dict(product_id_or_variant_data)
         else:
@@ -317,7 +321,7 @@ class VariantService:
         - update_variant(tienda_id, product_id, sku, update_data)
         """
         if update_data is None:
-            tienda_id = None
+            tienda_id = self.tienda_id
             product_id = str(tienda_id_or_product_id)
             sku = str(product_id_or_sku)
             data = dict(sku_or_update_data)
@@ -400,6 +404,8 @@ class VariantService:
         try:
             variante = self.get_variant_by_sku(product_or_store_id, sku)
         except ValueError:
+            if self.tienda_id is not None:
+                raise
             # Compatibilidad con el flujo anterior: primer argumento = tienda_id.
             actualizado = self.repo.decrease_stock(
                 product_or_store_id,
@@ -426,7 +432,8 @@ class VariantService:
                 f"Stock disponible: {stock_actual}, solicitado: {cantidad}."
             )
 
-        actualizado = self.repo.decrease_stock(sku_real, cantidad)
+        actualizado = (self.repo.decrease_stock(self.tienda_id, sku_real, cantidad)
+                       if self.tienda_id is not None else self.repo.decrease_stock(sku_real, cantidad))
         if not actualizado:
             raise ValueError(
                 f"Operación rechazada: La variante '{sku_real}' no tiene stock "

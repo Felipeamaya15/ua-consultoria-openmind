@@ -2,8 +2,6 @@ import CustomerOrders from '../../features/storefront/pages/CustomerOrders';
 import { RequireCustomer } from '../../features/storefront/components/store/AccountNavigation';
 import Profile from '../../features/storefront/pages/Profile';
 
-import { CheckoutSummaryPage } from '../../features/checkout/pages/CheckoutSummaryPage';
-import { LinkifyConfigPage } from '../../features/integrations/pages/LinkifyConfigPage';
 import { adminRoute } from '../../features/admin/routes';
 import {
   createBrowserRouter,

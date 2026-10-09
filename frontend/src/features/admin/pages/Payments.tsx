@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 
 import { useAdminForm } from '../hooks/useAdminForm';
 import { AdminCard, Alert, Input, Toggle, Button, Icon, Select, Textarea } from '../components/ui';
+import { PendingTransfers } from '../components/PendingTransfers';
 
 
 
@@ -800,6 +801,31 @@ export default function Payments() {
             tu cuenta, copia tu "ID de cuenta" y "Clave privada" desde su panel
             (Mi Linkify → Cuentas → Ver datos de integración) y pégalos aquí abajo.
           </p>
+               </div>
+
+        <div className="grid gap-2">
+          <p className="text-xs font-semibold text-[var(--muted-foreground)]">
+            URL de integración: pégala en Linkify (Mi Linkify → Cuentas → Editar → Cobros remotos)
+          </p>
+          <div className="flex items-center gap-2">
+            <input
+              readOnly
+              value={`${API_BASE}/api/pagos/linkify/notificacion/`}
+              className="flex-1 rounded-lg border border-[var(--border)] bg-[var(--muted)] px-3 py-2 text-xs"
+              onFocus={(event) => event.target.select()}
+            />
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => navigator.clipboard?.writeText(`${API_BASE}/api/pagos/linkify/notificacion/`)}
+            >
+              Copiar
+            </Button>
+          </div>
+          <p className="text-[10px] text-[var(--muted-foreground)]">
+            Linkify avisará a esta dirección cuando confirme una transferencia y el pedido pasará a «Pagado».
+            Debe ser una dirección pública con HTTPS: desde localhost Linkify no puede alcanzarla.
+          </p>
         </div>
 
         <div className="grid sm:grid-cols-2 gap-3">
@@ -938,7 +964,7 @@ export default function Payments() {
 
       <Alert variant="info">
 
-        Configura las pasarelas de pago de tu tienda. Webpay Plus, PayPal y Mercado Pago se encuentran conectados a tu backend y base de datos real.
+        Configura y guarda las credenciales de tus medios de pago. La disponibilidad para comprar se valida por separado.
 
       </Alert>
 
@@ -1157,7 +1183,7 @@ export default function Payments() {
 
               <p className="text-xs text-[var(--muted-foreground)]">
 
-                Tarjetas, saldo de Mercado Pago y checkout Pro
+                Configuración disponible. Las compras estarán habilitadas cuando se complete la confirmación del pago.
 
               </p>
 
@@ -1333,7 +1359,7 @@ export default function Payments() {
 
               <p className="text-xs text-[var(--muted-foreground)]">
 
-                PayPal y tarjetas internacionales
+                Configuración disponible. Las compras en CLP requieren completar la moneda y captura del pago.
 
               </p>
 
@@ -1563,6 +1589,7 @@ export default function Payments() {
                     </Button>
                   </div>
                 </div>
+                <PendingTransfers />
               </>
             )}
           </AdminCard>

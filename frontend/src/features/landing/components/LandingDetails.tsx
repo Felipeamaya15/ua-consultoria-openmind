@@ -10,7 +10,7 @@ const webLink = (url: string) => /^https?:\/\//i.test(url) ? url : undefined;
 export function LandingDetails({ includeBenefits = false }: { includeBenefits?: boolean }) {
   const { content } = useLandingContent();
   const visible = useLandingSectionVisibility();
-  const { template = 'editorial', isCatalog, isVisual } = useStorefrontTemplate();
+  const { template = 'editorial', isCatalog } = useStorefrontTemplate();
   const tone = isCatalog ? 'border-white/15 text-white' : 'border-black/10 text-[#151515]';
   const c = content.contacto, u = content.ubicacion;
   const locality = [...new Set([u.comuna, u.ciudad].filter(Boolean))].join(' / ');
@@ -24,7 +24,6 @@ export function LandingDetails({ includeBenefits = false }: { includeBenefits?: 
     { label: 'Facebook', icon: 'facebook', text: c.facebook, href: webLink(c.facebook) },
     { label: 'Sitio web', icon: 'globe', text: c.sitio_web, href: webLink(c.sitio_web) },
   ].filter(item => item.text);
-  const titleClass = isVisual ? 'font-serif text-3xl' : 'font-semibold text-2xl';
   return <>
     {includeBenefits && visible('Beneficios') && content.beneficios.length > 0 && <section className={`max-w-6xl mx-auto px-5 py-12 border-t ${tone}`} aria-label="Beneficios">
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">{content.beneficios.map((b, i) => <div key={i}><Icon name={b.icono} className="w-6 h-6" /><h2 className="font-semibold mt-4">{b.titulo}</h2>{b.descripcion && <p className="text-sm opacity-70 mt-2">{b.descripcion}</p>}</div>)}</div>

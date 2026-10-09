@@ -14,13 +14,14 @@ function load(file, globals) {
   const module = { exports: {} };
   const source = fs.readFileSync(path.join(root, file), 'utf8').replace('(import.meta as any).env.VITE_API_URL', '"http://test"');
   const code = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020, jsx: ts.JsxEmit.ReactJSX } }).outputText;
-  vm.runInNewContext(code, { module, exports: module.exports, Error, ...globals });
+  vm.runInNewContext(code, { module, exports: module.exports, Error, sessionStorage: {getItem: () => null}, ...globals });
   return module.exports;
 }
 async function main() {
-  let token = 'owner-token', request, reply;
+  let token = 'owner-token', sessionToken = null, request, reply;
   const service = load('src/features/admin/services/productService.ts', {
     localStorage: { getItem: () => token },
+    sessionStorage: { getItem: () => sessionToken },
     fetch: async (url, options) => { request = { url, options }; return reply; },
   });
   reply = { ok: true, json: async () => ({ exito: true, data: { id: 'mongo-id' } }) };
@@ -44,6 +45,10 @@ async function main() {
   }
   token = null;
   await assert.rejects(() => service.createPublicProduct(product), /Inicia sesión/);
+  sessionToken = 'session-owner';
+  reply = {ok: true, json: async () => ({exito: true, data: {id: 'mongo-id'}})};
+  await service.createPublicProduct(product);
+  assert.equal(request.options.headers.Authorization, 'Token session-owner');
 
   // Creación y edición solo marcan Guardado tras éxito backend, sin AdminContext.
   for (const editing of [false, true]) for (const fails of [true, false]) {

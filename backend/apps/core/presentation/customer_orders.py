@@ -1,5 +1,5 @@
 from django.shortcuts import get_object_or_404
-from django.db.models import Prefetch
+from django.db.models import Prefetch, Q
 from rest_framework import serializers
 from rest_framework.authentication import TokenAuthentication
 from rest_framework.permissions import IsAuthenticated
@@ -7,6 +7,7 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.views import APIView
 from apps.authentication.presentation.profile import IsCustomer
 from apps.core.models import Pedido, ItemPedido
+from apps.core.infrastructure.tenant import resolver_tienda
 from apps.core.presentation.responses import success_response
 
 
@@ -68,8 +69,9 @@ class CustomerOrdersAPIView(APIView):
     def get(self, request, pedido_id=None):
         if any(key in request.query_params for key in ('user_id', 'id_usuario', 'comprador', 'comprador_id')):
             raise ValidationError('El comprador se determina exclusivamente desde la sesión autenticada.')
-        # Sin vínculo explícito, el pedido legado no pertenece a la sesión actual.
-        orders = Pedido.objects.filter(comprador=request.user).prefetch_related(
+        tienda = resolver_tienda(request)
+        # Los pedidos anteriores al snapshot conservan su vínculo explícito al comprador.
+        orders = Pedido.objects.filter(Q(tienda=tienda) | Q(tienda__isnull=True), comprador=request.user).prefetch_related(
             Prefetch('itempedido_set', queryset=ItemPedido.objects.select_related('id_producto'))
         ).order_by('-fecha_creacion', '-id_pedido')
         if pedido_id is not None:

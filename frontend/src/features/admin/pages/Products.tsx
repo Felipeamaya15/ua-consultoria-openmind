@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react"
 import { Link, useNavigate, useParams } from "react-router-dom"
 import { formatPrice, Product, ProductVariant } from "../data/mockAdminData"
 import { createPublicProduct, deleteCatalogProduct, fetchAdminProducts, fetchAdminProduct, updateCatalogProduct, type AdminProduct } from "../services/productService"
-import { Alert, Badge, Button, Input, Select, Tabs, Textarea, Toggle } from "../components/ui"
+import { Alert, Badge, Button, Input, Tabs, Textarea, Toggle } from "../components/ui"
 
 const productStatus = (status: Product["status"]) => ({
   active: <Badge variant="success">Activo</Badge>, archived: <Badge variant="default">Archivado</Badge>, draft: <Badge variant="warning">Borrador</Badge>,
@@ -149,7 +149,7 @@ export function ProductEditor({ initial, editing }: { initial: AdminProduct; edi
     return sku
   }
   const findDuplicatedSku = () => { const seen = new Set<string>(); for (const variant of product.variants) { const sku = variant.sku.trim().toUpperCase(); if (!sku) continue; if (seen.has(sku)) return sku; seen.add(sku); } const currentProductId = product.id; const usedByOtherProduct = new Set(products.filter((item) => item.id !== currentProductId).flatMap((item) => item.variants.map((variant) => variant.sku.trim().toUpperCase()).filter(Boolean))); return [...seen].find((sku) => usedByOtherProduct.has(sku)); }
-  const setField = <K extends keyof Product>(key: K, value: Product[K]) => setProduct((current) => ({ ...current, [key]: value }))
+  const setField = <K extends keyof AdminProduct>(key: K, value: AdminProduct[K]) => setProduct((current) => ({ ...current, [key]: value }))
   const updateVariant = (variantId: string, change: Partial<ProductVariant>) => setProduct((current) => ({ ...current, variants: current.variants.map((variant) => variant.id === variantId ? { ...variant, ...change } : variant) }))
   const updateAttribute = (name: string, values: string) => setProduct((current) => ({ ...current, attributes: { ...current.attributes, [name]: values.split(",").map((value) => value.trim()).filter(Boolean) } }))
   const addAttribute = () => {

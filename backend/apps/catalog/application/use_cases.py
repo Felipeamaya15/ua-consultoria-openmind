@@ -1,4 +1,4 @@
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 from typing import List, Dict, Any, Optional
 from dataclasses import dataclass
 from django.db import transaction
@@ -471,6 +471,7 @@ class IniciarPagoTransbankDTO:
     monto: int
     session_id: str
     return_url: str
+    email: str = ""
 
 
 class IniciarPagoTransbankUseCase:
@@ -486,20 +487,19 @@ class IniciarPagoTransbankUseCase:
             orden_compra = dto.get("orden_compra")
             session_id = dto.get("session_id")
             return_url = dto.get("return_url")
+            email = str(dto.get("email") or "").strip()
         else:
             monto = getattr(dto, "monto", 0)
             id_tienda = getattr(dto, "id_tienda", None)
             orden_compra = getattr(dto, "orden_compra", "")
             session_id = getattr(dto, "session_id", "")
             return_url = getattr(dto, "return_url", "")
-
-        if monto <= 0:
-            raise ConfiguracionPagoInvalidaException("El monto a pagar debe ser mayor a 0.")
+            email = str(getattr(dto, "email", "") or "").strip()
 
         tienda_pk = getattr(id_tienda, "id_tienda", None) or getattr(id_tienda, "pk", None) or id_tienda
 
         config = ConfiguracionTransbank.objects.filter(id_tienda_id=tienda_pk).first()
-        if not config or not config.activo:
+        if not config or not config.activo or not config.codigo_comercio.strip() or not config.api_key.strip():
             raise TransbankConfiguracionFaltanteException(
                 "La tienda no tiene habilitada la pasarela de pagos Transbank Webpay."
             )
@@ -509,6 +509,15 @@ class IniciarPagoTransbankUseCase:
             api_key=config.api_key,
             ambiente=config.ambiente,
         )
+
+        from apps.core.models import Pedido
+        pedido = (Pedido.objects.filter(identificador=orden_compra, tienda_id=tienda_pk,
+                                        correo_contacto__iexact=email).first() if email else None)
+        if not pedido or pedido.medio_pago != "Transbank" or pedido.estado != "pendiente":
+            raise ConfiguracionPagoInvalidaException("El pedido no está disponible para pagar con Webpay.")
+        monto = pedido.monto_total
+        if not monto.is_finite() or monto <= 0 or monto != monto.to_integral_value():
+            raise ConfiguracionPagoInvalidaException("Webpay requiere un total positivo en pesos enteros.")
 
         return adaptador.iniciar_transaccion(
             orden_compra=orden_compra,
@@ -552,7 +561,34 @@ class ConfirmarPagoTransbankUseCase:
             ambiente=config.ambiente,
         )
 
-        return adaptador.confirmar_transaccion(token_ws=token_ws)
+        resultado = adaptador.confirmar_transaccion(token_ws=token_ws)
+        self._registrar_pago_aprobado(tienda_pk, resultado)
+        return resultado
+
+    @staticmethod
+    def _registrar_pago_aprobado(tienda_pk: Any, resultado: Dict[str, Any]) -> None:
+        """Conciliación exacta y atómica del pedido de esta tienda con el cobro autorizado."""
+        from apps.core.models import Pedido
+
+        try:
+            monto = Decimal(str(resultado.get("monto")))
+        except (InvalidOperation, TypeError, ValueError):
+            raise TransbankTransaccionException("Webpay devolvió un monto inválido.") from None
+        if not monto.is_finite() or monto <= 0:
+            raise TransbankTransaccionException("Webpay devolvió un monto inválido.")
+        with transaction.atomic():
+            pedido = Pedido.objects.select_for_update().filter(
+                identificador=str(resultado.get("orden_compra") or ""), tienda_id=tienda_pk
+            ).first()
+            if not pedido or pedido.medio_pago != "Transbank":
+                raise TransbankTransaccionException("El pago no corresponde a un pedido Webpay de esta tienda.")
+            if pedido.estado not in ("pendiente", "pagado", "enviado"):
+                raise TransbankTransaccionException("El pedido no admite este pago.")
+            if pedido.monto_total != monto:
+                raise TransbankTransaccionException("El monto autorizado no coincide con el total del pedido. Contacta a la tienda.")
+            if pedido.estado == "pendiente":
+                pedido.estado = "pagado"
+                pedido.save(update_fields=["estado"])
 
     def ejecutar(self, *args, **kwargs) -> Dict[str, Any]:
         return self.execute(*args, **kwargs)
@@ -819,6 +855,7 @@ class ModificarCantidadDTO:
     id_item_carrito: int
     nueva_cantidad: int
     usuario_id: int
+    tienda_id: Optional[str] = None
 
 
 def precio_efectivo_variante(variante: Dict[str, Any]) -> Optional[Decimal]:
@@ -836,10 +873,13 @@ def resolver_datos_item(item: ItemCarrito, variant_service: Optional[VariantServ
     if not item.sku:
         return item.id_producto.stock, item.id_producto.precio
     service = variant_service or VariantService()
+    service.tienda_id = str(item.id_producto.id_tienda_id)
     try:
         variante = service.get_variant_by_sku(str(item.id_producto_id), item.sku)
     except ValueError:
         return 0, item.id_producto.precio
+    item.atributos_calculados = {a.get("clave"): a.get("valor")
+                                 for a in variante.get("atributos_variante", []) if isinstance(a, dict) and a.get("clave")}
     precio = precio_efectivo_variante(variante)
     return int(variante.get("stock", 0)), precio if precio is not None else item.id_producto.precio
 
@@ -866,12 +906,17 @@ class ConsultarCarritoUseCase:
             )
         except Exception:
             return None
-        return (documento or {}).get("slug")
+        documento = documento or {}
+        item.producto_mongo_id_calculado = str(documento["_id"]) if documento.get("_id") else None
+        imagenes = documento.get("imagenes") or []
+        item.imagen_calculada = imagenes[0] if imagenes else (documento.get("imagen") or "")
+        return documento.get("slug")
 
-    def execute(self, usuario_id: int) -> List[ItemCarrito]:
+    def execute(self, usuario_id: int, tienda_id: Optional[str] = None) -> List[ItemCarrito]:
+        scope = {"id_producto__id_tienda_id": tienda_id} if tienda_id is not None else {}
         items = list(
             ItemCarrito.objects
-            .filter(id_carrito__id_usuario_id=usuario_id)
+            .filter(id_carrito__id_usuario_id=usuario_id, **scope)
             .select_related("id_producto")
             .order_by("id_item_carrito")
         )
@@ -897,10 +942,11 @@ class ModificarCantidadItemUseCase:
         if dto.nueva_cantidad <= 0:
             raise CantidadInvalidaException("La cantidad debe ser mayor a 0.")
 
+        scope = {'id_producto__id_tienda_id': dto.tienda_id} if dto.tienda_id is not None else {}
         try:
             item = ItemCarrito.objects.select_related('id_producto', 'id_carrito').get(
                 pk=dto.id_item_carrito,
-                id_carrito__id_usuario_id=dto.usuario_id
+                id_carrito__id_usuario_id=dto.usuario_id, **scope
             )
         except ItemCarrito.DoesNotExist:
             raise ItemCarritoNoEncontradoException("El producto no existe en tu carrito.")
@@ -960,7 +1006,8 @@ class AgregarItemCarritoUseCase:
             raise ProductoNoEncontradoException("Debes indicar el id o el slug del producto.")
 
         repositorio = self._product_repository or ProductRepository()
-        documento = repositorio.get_by_slug(str(dto.tienda_id), slug)
+        documento = (repositorio.get_by_id(str(dto.tienda_id), slug)
+                     or repositorio.get_by_slug(str(dto.tienda_id), slug))
         if not documento or documento.get("activo") is False:
             raise ProductoNoEncontradoException(
                 f"El producto '{slug}' no existe o no está disponible para la compra."
@@ -1021,7 +1068,8 @@ class AgregarItemCarritoUseCase:
         carrito, _ = Carrito.objects.get_or_create(id_usuario=usuario_core)
 
         try:
-            producto = Producto.objects.get(pk=id_producto, activo=True)
+            scope = {"id_tienda_id": dto.tienda_id} if dto.tienda_id is not None else {}
+            producto = Producto.objects.get(pk=id_producto, activo=True, **scope)
         except Producto.DoesNotExist:
             raise ProductoNoEncontradoException(
                 f"El producto con ID '{id_producto}' no existe o no se encuentra activo."
@@ -1029,6 +1077,7 @@ class AgregarItemCarritoUseCase:
 
         sku_normalizado = str(dto.sku).strip().upper() if dto.sku else None
 
+        self.variant_service.tienda_id = str(producto.id_tienda_id)
         if sku_normalizado:
             try:
                 variante = self.variant_service.get_variant_by_sku(str(producto.id_producto), sku_normalizado)
@@ -1086,6 +1135,7 @@ class AgregarItemCarritoUseCase:
 class EliminarItemCarritoDTO:
     usuario_id: int
     id_item_carrito: int
+    tienda_id: Optional[str] = None
 
 
 class EliminarItemCarritoUseCase:
@@ -1097,10 +1147,11 @@ class EliminarItemCarritoUseCase:
     """
 
     def execute(self, dto: EliminarItemCarritoDTO) -> None:
+        scope = {"id_producto__id_tienda_id": dto.tienda_id} if dto.tienda_id is not None else {}
         try:
             item = ItemCarrito.objects.select_related("id_carrito").get(
                 pk=dto.id_item_carrito,
-                id_carrito__id_usuario_id=dto.usuario_id
+                id_carrito__id_usuario_id=dto.usuario_id, **scope
             )
         except ItemCarrito.DoesNotExist:
             raise ItemCarritoNoEncontradoException(
