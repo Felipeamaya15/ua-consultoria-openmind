@@ -93,8 +93,8 @@ class CotizarDespachoEcommerceUseCase:
             servicio = cotizacion.servicio
             es_gratis = False
 
-            # Se subsidia el servicio estándar si cumple las condiciones comerciales
-            if aplica_envio_gratis and "ESTANDAR" in servicio:
+            # Se subsidia el servicio estándar/extendido si cumple las condiciones comerciales
+            if aplica_envio_gratis and ("ESTANDAR" in servicio or "EXTENDIDO" in servicio):
                 costo = Decimal("0.00")
                 servicio = f"{cotizacion.servicio} (ENVÍO GRATIS)"
                 es_gratis = True

@@ -33,6 +33,12 @@ class CotizacionEnvioSerializer(serializers.Serializer):
         required=False, 
         default=Decimal("1.0")
     )
+    proveedor = serializers.CharField(
+        max_length=50, 
+        required=False, 
+        allow_blank=True, 
+        default="todos"
+    )
 
     def validate_region(self, value):
         region_limpia = value.strip().upper()

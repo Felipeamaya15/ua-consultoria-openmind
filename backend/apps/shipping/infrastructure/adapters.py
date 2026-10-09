@@ -122,3 +122,205 @@ class StandardLogisticsAdapter(LogisticsPort):
             fecha_estimada_entrega="2026-10-07T19:00:00Z",
             historial_eventos=eventos
         )
+
+
+class ChilexpressAdapter(LogisticsPort):
+    """
+    Adaptador concreto para la integración logística con Chilexpress.
+    Implementa el contrato LogisticsPort según la arquitectura hexagonal.
+    """
+
+    TARIFAS_BASE_CHILEXPRESS = {
+        "METROPOLITANA": {"express": Decimal("3990"), "extendido": Decimal("3290")},
+        "VALPARAISO": {"express": Decimal("4690"), "extendido": Decimal("3990")},
+        "O'HIGGINS": {"express": Decimal("4690"), "extendido": Decimal("3990")},
+        "OHIGGINS": {"express": Decimal("4690"), "extendido": Decimal("3990")},
+        "COQUIMBO": {"express": Decimal("5490"), "extendido": Decimal("4790")},
+        "MAULE": {"express": Decimal("5490"), "extendido": Decimal("4790")},
+        "NUBLE": {"express": Decimal("5490"), "extendido": Decimal("4790")},
+        "BIOBIO": {"express": Decimal("5490"), "extendido": Decimal("4790")},
+        "LA ARAUCANIA": {"express": Decimal("5890"), "extendido": Decimal("5190")},
+        "LOS RIOS": {"express": Decimal("5890"), "extendido": Decimal("5190")},
+        "LOS LAGOS": {"express": Decimal("6290"), "extendido": Decimal("5490")},
+        "ATACAMA": {"express": Decimal("7990"), "extendido": Decimal("6990")},
+        "ANTOFAGASTA": {"express": Decimal("8990"), "extendido": Decimal("7990")},
+        "TARAPACA": {"express": Decimal("8990"), "extendido": Decimal("7990")},
+        "ARICA Y PARINACOTA": {"express": Decimal("9990"), "extendido": Decimal("8490")},
+        "AYSEN": {"express": Decimal("10990"), "extendido": Decimal("9490")},
+        "MAGALLANES": {"express": Decimal("10990"), "extendido": Decimal("9490")},
+    }
+
+    TARIFA_DEFECTO_EXPRESS = Decimal("6990")
+    TARIFA_DEFECTO_EXTENDIDO = Decimal("5990")
+    LIMITE_PESO_BASE_KG = Decimal("1.5")
+    RECARGO_POR_KG_EXTRA = Decimal("950")
+
+    def _obtener_tarifas_region(self, region_normalizada: str) -> dict:
+        for reg_key, tarifas in self.TARIFAS_BASE_CHILEXPRESS.items():
+            if reg_key in region_normalizada:
+                return tarifas
+        return {"express": self.TARIFA_DEFECTO_EXPRESS, "extendido": self.TARIFA_DEFECTO_EXTENDIDO}
+
+    def _calcular_recargo_peso(self, peso_total: Decimal) -> Decimal:
+        if peso_total > self.LIMITE_PESO_BASE_KG:
+            kilos_extra = peso_total - self.LIMITE_PESO_BASE_KG
+            return (kilos_extra * self.RECARGO_POR_KG_EXTRA).quantize(Decimal("1"))
+        return Decimal("0")
+
+    def cotizar_envio(
+        self, 
+        origen: DireccionDespachoDTO, 
+        destino: DireccionDespachoDTO, 
+        paquetes: List[PaqueteDTO]
+    ) -> List[CotizacionEnvioDTO]:
+        region_normalizada = destino.region.strip().upper() if destino.region else ""
+        comuna_normalizada = destino.comuna.strip() if destino.comuna else ""
+        if not region_normalizada or not comuna_normalizada:
+            raise DireccionFueraDeCoberturaException(
+                "La región y comuna de destino son obligatorias para cotizar con Chilexpress."
+            )
+
+        peso_total = sum((p.peso_kg for p in paquetes), Decimal("0")) or Decimal("1.0")
+        recargo_peso = self._calcular_recargo_peso(peso_total)
+        tarifas_base = self._obtener_tarifas_region(region_normalizada)
+
+        costo_express = tarifas_base["express"] + recargo_peso
+        costo_extendido = tarifas_base["extendido"] + recargo_peso
+
+        es_rm = "METROPOLITANA" in region_normalizada or "RM" in region_normalizada
+
+        return [
+            CotizacionEnvioDTO(
+                proveedor="CHILEXPRESS",
+                servicio="CHILEXPRESS_EXPRESS",
+                costo=costo_express,
+                dias_habiles_entrega=1 if es_rm else 2,
+                es_cobertura_valida=True
+            ),
+            CotizacionEnvioDTO(
+                proveedor="CHILEXPRESS",
+                servicio="CHILEXPRESS_EXTENDIDO",
+                costo=costo_extendido,
+                dias_habiles_entrega=2 if es_rm else 4,
+                es_cobertura_valida=True
+            )
+        ]
+
+    def generar_despacho(
+        self, 
+        orden_id: str, 
+        origen: DireccionDespachoDTO, 
+        destino: DireccionDespachoDTO, 
+        paquetes: List[PaqueteDTO]
+    ) -> GuiaDespachoDTO:
+        codigo_tracking = f"CHILEX-{uuid.uuid4().hex[:10].upper()}"
+        return GuiaDespachoDTO(
+            numero_seguimiento=codigo_tracking,
+            proveedor="CHILEXPRESS",
+            url_etiqueta=f"https://envios.chilexpress.cl/etiquetas/{codigo_tracking}.pdf",
+            estado="EMITIDO"
+        )
+
+    def consultar_seguimiento(self, numero_seguimiento: str) -> DetalleSeguimientoDTO:
+        codigo = (numero_seguimiento or "").strip().upper()
+
+        if not codigo.startswith("CHILEX-") and not (codigo.isdigit() and len(codigo) >= 8):
+            raise FormatoSeguimientoInvalidoException(
+                "El número de seguimiento de Chilexpress debe comenzar con 'CHILEX-' o contener al menos 8 dígitos de orden de transporte."
+            )
+
+        if codigo.endswith("0000") or "NOTFOUND" in codigo:
+            raise NumeroSeguimientoNoEncontradoException(
+                f"No se registraron envíos en Chilexpress para el seguimiento '{codigo}'."
+            )
+
+        eventos = [
+            EventoSeguimientoDTO(
+                fecha_hora="2026-10-07T09:00:00Z",
+                estado="RECEPCION_EN_SUCURSAL",
+                descripcion="Envío admitido en sucursal Chilexpress origen.",
+                ubicacion="Sucursal Santiago Centro"
+            ),
+            EventoSeguimientoDTO(
+                fecha_hora="2026-10-07T18:30:00Z",
+                estado="CLASIFICACION_HUB_CENTRAL",
+                descripcion="Paquete clasificado en Centro de Distribución Enea.",
+                ubicacion="Hub Enea Pudahuel"
+            ),
+            EventoSeguimientoDTO(
+                fecha_hora="2026-10-08T06:15:00Z",
+                estado="EN_TRANSITO_REGIONAL",
+                descripcion="Carga despachada hacia el centro de distribución de destino.",
+                ubicacion="Centro Operativo Regional"
+            ),
+            EventoSeguimientoDTO(
+                fecha_hora="2026-10-08T11:45:00Z",
+                estado="EN_DISTRIBUCION",
+                descripcion="Envío asignado a móvil para entrega final en domicilio.",
+                ubicacion="Ruta Última Milla"
+            )
+        ]
+
+        return DetalleSeguimientoDTO(
+            numero_seguimiento=codigo,
+            proveedor="CHILEXPRESS",
+            estado_actual="EN_DISTRIBUCION",
+            descripcion_estado="Tu envío Chilexpress va en camino con el transportista para entrega final.",
+            fecha_estimada_entrega="2026-10-08T19:00:00Z",
+            historial_eventos=eventos
+        )
+
+
+class MultiCarrierLogisticsAdapter(LogisticsPort):
+    """
+    Adaptador compuesto que orquesta cotizaciones y seguimientos
+    a través de múltiples couriers soportados (Chilexpress y Central/Estándar).
+    """
+
+    def __init__(self, adapters: List[LogisticsPort] = None):
+        self.adapters = adapters or [ChilexpressAdapter(), StandardLogisticsAdapter()]
+
+    def cotizar_envio(
+        self, 
+        origen: DireccionDespachoDTO, 
+        destino: DireccionDespachoDTO, 
+        paquetes: List[PaqueteDTO]
+    ) -> List[CotizacionEnvioDTO]:
+        todas_las_cotizaciones = []
+        for adapter in self.adapters:
+            try:
+                cotizaciones = adapter.cotizar_envio(origen, destino, paquetes)
+                todas_las_cotizaciones.extend(cotizaciones)
+            except Exception:
+                continue
+        if not todas_las_cotizaciones:
+            raise DireccionFueraDeCoberturaException("No hay cobertura disponible para el destino indicado.")
+        return todas_las_cotizaciones
+
+    def generar_despacho(
+        self, 
+        orden_id: str, 
+        origen: DireccionDespachoDTO, 
+        destino: DireccionDespachoDTO, 
+        paquetes: List[PaqueteDTO]
+    ) -> GuiaDespachoDTO:
+        return self.adapters[0].generar_despacho(orden_id, origen, destino, paquetes)
+
+    def consultar_seguimiento(self, numero_seguimiento: str) -> DetalleSeguimientoDTO:
+        target_adapter = get_logistics_adapter(numero_seguimiento)
+        return target_adapter.consultar_seguimiento(numero_seguimiento)
+
+
+def get_logistics_adapter(provider_or_tracking: str = None) -> LogisticsPort:
+    """
+    Resuelve el adaptador logístico adecuado según el proveedor solicitado
+    o el formato del número de seguimiento.
+    """
+    if not provider_or_tracking:
+        return ChilexpressAdapter()
+    token = provider_or_tracking.strip().upper()
+    if token.startswith("CHILEX") or "CHILEXPRESS" in token:
+        return ChilexpressAdapter()
+    elif token.startswith("TRK-") or "STANDARD" in token or "CENTRAL" in token:
+        return StandardLogisticsAdapter()
+    return ChilexpressAdapter()

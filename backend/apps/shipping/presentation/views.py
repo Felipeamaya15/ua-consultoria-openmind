@@ -5,7 +5,12 @@ from apps.shipping.presentation.serializers import (
     CotizacionEnvioSerializer,
     DetalleSeguimientoResponseSerializer
 )
-from apps.shipping.infrastructure.adapters import StandardLogisticsAdapter
+from apps.shipping.infrastructure.adapters import (
+    StandardLogisticsAdapter,
+    ChilexpressAdapter,
+    MultiCarrierLogisticsAdapter,
+    get_logistics_adapter,
+)
 from apps.shipping.application.use_cases import (
     ShippingQuotationService,
     ConsultarSeguimientoUseCase
@@ -24,7 +29,7 @@ class SeguimientoLogisticoView(APIView):
 
     def get(self, request, numero_seguimiento):
         try:
-            adaptador = StandardLogisticsAdapter()
+            adaptador = get_logistics_adapter(numero_seguimiento)
             caso_uso = ConsultarSeguimientoUseCase(logistics_port=adaptador)
 
             resultado = caso_uso.execute(numero_seguimiento=numero_seguimiento)
@@ -75,8 +80,14 @@ class CotizacionEnvioView(APIView):
             }, status=status.HTTP_400_BAD_REQUEST)
 
         try:
-            # Resolucion del adaptador e inyeccion al servicio de cotizacion
-            adaptador_logistico = StandardLogisticsAdapter()
+            proveedor_param = str(serializer.validated_data.get("proveedor", "todos")).strip().lower()
+            if proveedor_param in ["chilexpress", "chilex"]:
+                adaptador_logistico = ChilexpressAdapter()
+            elif proveedor_param in ["standard", "central"]:
+                adaptador_logistico = StandardLogisticsAdapter()
+            else:
+                adaptador_logistico = MultiCarrierLogisticsAdapter()
+
             servicio_cotizacion = ShippingQuotationService(logistics_port=adaptador_logistico)
 
             resultado = servicio_cotizacion.cotizar(serializer.validated_data)
