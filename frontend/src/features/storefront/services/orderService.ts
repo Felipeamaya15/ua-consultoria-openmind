@@ -45,7 +45,7 @@ export const orderService = {
     if (!Number.isSafeInteger(data.id_pedido)
       || typeof data.identificador !== 'string'
       || data.identificador.toLowerCase() !== identificador.trim().toLowerCase()
-      || !['pendiente', 'pagado', 'enviado', 'cancelado'].includes(String(data.estado))
+      || !['pendiente', 'pagado', 'preparando', 'en_origen', 'enviado', 'entregado', 'cancelado'].includes(String(data.estado))
       || !['nombre_contacto', 'medio_pago', 'fecha_creacion', 'estado_etiqueta'].every(key => typeof data[key] === 'string')
       || !['monto_total', 'descuento', 'costo_envio'].every(key => typeof data[key] === 'string'
         && String(data[key]).trim() !== '' && Number.isFinite(Number(data[key])) && Number(data[key]) >= 0)
@@ -88,7 +88,7 @@ export const orderService = {
     if (!order || typeof order !== 'object') throw new Error('La respuesta del pedido es inválida.');
     const data = order as Record<string, unknown>;
     if (!Number.isSafeInteger(data.id_pedido) || !Number.isSafeInteger(data.tienda_id)
-      || !['pendiente', 'pagado', 'enviado', 'cancelado'].includes(String(data.estado))
+      || !['pendiente', 'pagado', 'preparando', 'en_origen', 'enviado', 'entregado', 'cancelado'].includes(String(data.estado))
       || !(data.identificador === undefined || data.identificador === null || typeof data.identificador === 'string')
       || !(data.url_pago === undefined || typeof data.url_pago === 'string')
       || !['monto_total', 'descuento', 'costo_envio'].every(key => typeof data[key] === 'string'

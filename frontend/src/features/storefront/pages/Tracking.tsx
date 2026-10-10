@@ -30,6 +30,11 @@ const STATUS_STEPS = [
     icon: 'box',
   },
   {
+    id: 'en_origen',
+    label: 'En origen',
+    icon: 'store',
+  },
+  {
     id: 'enviado',
     label: 'En tránsito',
     icon: 'truck',
@@ -63,6 +68,10 @@ const ORDER_STATUS_MAP: Record<
   },
   preparando: {
     label: 'En preparación',
+    variant: 'info',
+  },
+  en_origen: {
+    label: 'En origen',
     variant: 'info',
   },
   enviado: {
@@ -365,7 +374,7 @@ export default function Tracking() {
       ====================================================== */}
       {liveTracking && (
         <div className={isCatalog
-          ? 'flex flex-col gap-5 animate-fade-in text-[#151515] [&_.text-\[var\(--muted-foreground\)\]]:text-black/45 [&_.text-\[var\(--foreground\)\]]:text-[#151515]'
+          ? 'flex flex-col gap-5 animate-fade-in text-[#151515] [&_.text-[var\(--muted-foreground\)]]:text-black/45 [&_.text-[var\(--foreground\)]]:text-[#151515]'
           : 'flex flex-col gap-5 animate-fade-in'
         }>
           <div
@@ -465,7 +474,7 @@ export default function Tracking() {
       ====================================================== */}
       {order && (
         <div className={isCatalog
-          ? 'flex flex-col gap-5 animate-fade-in text-[#151515] [&_.text-\[var\(--muted-foreground\)\]]:text-black/45 [&_.text-\[var\(--foreground\)\]]:text-[#151515]'
+          ? 'flex flex-col gap-5 animate-fade-in text-[#151515] [&_.text-[var\(--muted-foreground\)]]:text-black/45 [&_.text-[var\(--foreground\)]]:text-[#151515]'
           : 'flex flex-col gap-5 animate-fade-in'
         }>
 

@@ -106,7 +106,10 @@ class Pedido(models.Model):
     ESTADO_CHOICES = [
         ('pendiente', 'Pendiente'),
         ('pagado', 'Pagado'),
-        ('enviado', 'Enviado'),
+        ('preparando', 'En preparación'),
+        ('en_origen', 'En origen'),
+        ('enviado', 'Enviado/En tránsito'),
+        ('entregado', 'Entregado'),
         ('cancelado', 'Cancelado'),
     ]
     id_pedido = models.BigAutoField(primary_key=True)
