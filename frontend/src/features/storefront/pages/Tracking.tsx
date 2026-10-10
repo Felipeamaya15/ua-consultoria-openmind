@@ -93,6 +93,12 @@ interface TrackingState {
   email?: string;
 }
 
+const isDirectTrackingCode = (term: string) => {
+  const upper = term.trim().toUpperCase();
+  if (!upper) return false;
+  return /^(CHILEX|STK|STARKEN|TRK)/.test(upper) || /^\d{8,15}$/.test(upper) || !upper.startsWith('ORD-');
+};
+
 export default function Tracking() {
   const location = useLocation();
   const { isMinimal, isVisual, isCatalog } = useStorefrontTemplate();
@@ -120,11 +126,7 @@ export default function Tracking() {
     setError('');
 
     const term = number.trim();
-    const isDirect =
-      term.toUpperCase().startsWith('CHILEX') ||
-      term.toUpperCase().startsWith('STK') ||
-      term.toUpperCase().startsWith('STARKEN') ||
-      term.toUpperCase().startsWith('TRK');
+    const isDirect = isDirectTrackingCode(term);
 
     try {
       if (isDirect) {
@@ -143,11 +145,7 @@ export default function Tracking() {
     }
   }, []);
 
-  const isDirectTracking =
-    orderNumber.trim().toUpperCase().startsWith('CHILEX') ||
-    orderNumber.trim().toUpperCase().startsWith('STK') ||
-    orderNumber.trim().toUpperCase().startsWith('STARKEN') ||
-    orderNumber.trim().toUpperCase().startsWith('TRK');
+  const isDirectTracking = isDirectTrackingCode(orderNumber);
 
   const handleSearch = () => {
     if (orderNumber.trim() && (email.trim() || isDirectTracking)) {
@@ -276,7 +274,7 @@ export default function Tracking() {
             )
           }
           placeholder="ORD-20261008-AB12"
-          hint="El número que aparece al confirmar tu compra, o código CHILEX / STK"
+          hint="El número que aparece al confirmar tu compra, o el código de tu transportista."
         />
 
         <Input
@@ -287,7 +285,7 @@ export default function Tracking() {
             setEmail(event.target.value)
           }
           placeholder="correo@ejemplo.com"
-          hint="El correo que usaste al comprar"
+          hint="El correo que usaste al comprar (no requerido para tracking directo de paquetería)"
         />
 
         {isCatalog ? (
