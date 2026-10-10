@@ -35,6 +35,11 @@ const STATUS_STEPS = [
     icon: 'box',
   },
   {
+    id: 'en_origen',
+    label: 'En origen',
+    icon: 'store',
+  },
+  {
     id: 'enviado',
     label: 'En tránsito',
     icon: 'truck',
@@ -68,6 +73,10 @@ const ORDER_STATUS_MAP: Record<
   },
   preparando: {
     label: 'En preparación',
+    variant: 'info',
+  },
+  en_origen: {
+    label: 'En origen',
     variant: 'info',
   },
   enviado: {
@@ -281,7 +290,7 @@ export default function Tracking() {
             )
           }
           placeholder="ORD-20261008-AB12"
-          hint="El número que aparece al confirmar tu compra, o código CHILEX / STK"
+          hint="El número que aparece al confirmar tu compra, o el código de tu transportista."
           error={invalidOrderNumber ? ORDER_NUMBER_FORMAT_MESSAGE : undefined}
         />
 
@@ -293,7 +302,7 @@ export default function Tracking() {
             setEmail(event.target.value)
           }
           placeholder="correo@ejemplo.com"
-          hint="El correo que usaste al comprar"
+          hint="El correo que usaste al comprar (no requerido para tracking directo de paquetería)"
         />
 
         {isCatalog ? (
@@ -380,7 +389,7 @@ export default function Tracking() {
       ====================================================== */}
       {liveTracking && (
         <div className={isCatalog
-          ? 'flex flex-col gap-5 animate-fade-in text-[#151515] [&_.text-\[var\(--muted-foreground\)\]]:text-black/45 [&_.text-\[var\(--foreground\)\]]:text-[#151515]'
+          ? 'flex flex-col gap-5 animate-fade-in text-[#151515] [&_.text-[var\(--muted-foreground\)]]:text-black/45 [&_.text-[var\(--foreground\)]]:text-[#151515]'
           : 'flex flex-col gap-5 animate-fade-in'
         }>
           <div
@@ -480,7 +489,7 @@ export default function Tracking() {
       ====================================================== */}
       {order && (
         <div className={isCatalog
-          ? 'flex flex-col gap-5 animate-fade-in text-[#151515] [&_.text-\[var\(--muted-foreground\)\]]:text-black/45 [&_.text-\[var\(--foreground\)\]]:text-[#151515]'
+          ? 'flex flex-col gap-5 animate-fade-in text-[#151515] [&_.text-[var\(--muted-foreground\)]]:text-black/45 [&_.text-[var\(--foreground\)]]:text-[#151515]'
           : 'flex flex-col gap-5 animate-fade-in'
         }>
 
