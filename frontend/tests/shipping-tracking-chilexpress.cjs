@@ -58,7 +58,7 @@ const detail = tracking => ({
   assert.equal(calls[1], 'http://localhost:8000/api/logistica/seguimiento/chilexpress/12345678/');
 
   responseBody = {exito: true, data: {...detail('CHILEX-DEMO123'), proveedor: 'STARKEN'}};
-  await assert.rejects(service.getTracking('CHILEX-DEMO123'), /seguimiento de Chilexpress recibida es inválida/);
+  await assert.rejects(service.getTracking('CHILEX-DEMO123'), /información de seguimiento recibida es inválida/);
 
   responseOk = false;
   responseBody = {exito: false, mensaje: 'Orden de transporte no encontrada'};

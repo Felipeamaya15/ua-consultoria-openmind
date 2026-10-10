@@ -31,8 +31,8 @@ class SeguimientoLogisticoView(APIView):
 
     def get(self, request, numero_seguimiento):
         try:
-            # La ruta dedicada evita confundir ordenes de transporte numericas
-            # con codigos numericos aceptados por otros operadores.
+            # La ruta dedicada permite consultar ordenes de flete numericas sin
+            # confundirlas con numeros de transporte de otros operadores.
             adaptador = get_logistics_adapter(self.proveedor_fijo or numero_seguimiento)
             caso_uso = ConsultarSeguimientoUseCase(logistics_port=adaptador)
 

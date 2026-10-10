@@ -70,6 +70,21 @@ class OrderTrackingTests(TestCase):
             with self.subTest(payload=payload):
                 self.assertEqual(self.api.post(self.url, payload, format='json').status_code, 400)
 
+    def test_order_number_rejects_invalid_format_and_calendar_dates(self):
+        invalid_identifiers = (
+            '42',
+            'PEDIDO-20261008-YOXM',
+            'ORD-20261008',
+            'ORD-20261008-YO!M',
+            'ORD-20260230-YOXM',
+            'ORD-20261301-YOXM',
+        )
+        for identifier in invalid_identifiers:
+            with self.subTest(identifier=identifier):
+                response = self.lookup(identificador=identifier)
+                self.assertEqual(response.status_code, 400, response.data)
+                self.assertIn('identificador', response.data['error']['detalles'])
+
     def test_orders_outside_installation_are_not_returned(self):
         self.order.tienda = None
         self.order.save(update_fields=['tienda'])

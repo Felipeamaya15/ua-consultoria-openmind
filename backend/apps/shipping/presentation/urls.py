@@ -9,6 +9,8 @@ urlpatterns = [
     path("cotizar/starken", CotizacionEnvioView.as_view(proveedor_fijo="starken")),
     path("seguimiento/chilexpress/<str:numero_seguimiento>/", SeguimientoLogisticoView.as_view(proveedor_fijo="chilexpress"), name="shipping-seguimiento-chilexpress"),
     path("seguimiento/chilexpress/<str:numero_seguimiento>", SeguimientoLogisticoView.as_view(proveedor_fijo="chilexpress")),
+    path("seguimiento/starken/<str:numero_seguimiento>/", SeguimientoLogisticoView.as_view(proveedor_fijo="starken"), name="shipping-seguimiento-starken"),
+    path("seguimiento/starken/<str:numero_seguimiento>", SeguimientoLogisticoView.as_view(proveedor_fijo="starken")),
     path("seguimiento/<str:numero_seguimiento>/", SeguimientoLogisticoView.as_view(), name="shipping-seguimiento"),
     path("seguimiento/<str:numero_seguimiento>", SeguimientoLogisticoView.as_view()),  # Soporte sin barra final
 ]
