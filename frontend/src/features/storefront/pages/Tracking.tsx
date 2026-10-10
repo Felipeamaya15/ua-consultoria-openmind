@@ -119,7 +119,7 @@ export default function Tracking() {
 
     try {
       if (isDirect) {
-        const live = await shippingService.getTracking(term);
+        const live = await shippingService.getTracking(term, controller.signal);
         if (!controller.signal.aborted) setLiveTracking(live);
       } else {
         const found = await orderService.track(number, customerEmail, controller.signal);
