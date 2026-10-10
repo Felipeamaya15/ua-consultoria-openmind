@@ -36,6 +36,7 @@ const STATUS_BADGE: Record<string, {
   preparando: { label: "En preparación", variant: "info" },
   en_origen: { label: "En origen", variant: "info" },
   enviado: { label: "En tránsito", variant: "info" },
+  en_reparto: { label: "En reparto", variant: "info" },
   entregado: { label: "Entregado", variant: "success" },
   cancelado: { label: "Cancelado", variant: "error" },
 }
@@ -136,6 +137,7 @@ export default function Orders() {
             ["preparando", "Preparando"],
             ["en_origen", "En origen"],
             ["enviado", "En tránsito"],
+            ["en_reparto", "En reparto"],
             ["entregado", "Entregados"],
             ["cancelado", "Cancelados"]
           ].map(([val, label]) => (

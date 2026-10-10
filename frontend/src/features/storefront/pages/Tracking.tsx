@@ -17,6 +17,7 @@ import {
 } from '../components/ui';
 import { useStorefrontTemplate } from '../hooks/useStorefrontTemplate';
 import { shippingService, type DetalleSeguimiento } from '../services/shippingService';
+import { describeTrackingState } from '../data/trackingStates';
 
 const STATUS_STEPS = [
   {
@@ -43,6 +44,11 @@ const STATUS_STEPS = [
     id: 'enviado',
     label: 'En tránsito',
     icon: 'truck',
+  },
+  {
+    id: 'en_reparto',
+    label: 'En reparto',
+    icon: 'home',
   },
   {
     id: 'entregado',
@@ -80,7 +86,11 @@ const ORDER_STATUS_MAP: Record<
     variant: 'info',
   },
   enviado: {
-    label: 'Despachado',
+    label: 'En tránsito',
+    variant: 'info',
+  },
+  en_reparto: {
+    label: 'En reparto',
     variant: 'info',
   },
   entregado: {
@@ -430,8 +440,8 @@ export default function Tracking() {
                 </p>
               </div>
 
-              <Badge variant="info">
-                {liveTracking.estado_actual.replace(/_/g, ' ')}
+              <Badge variant={describeTrackingState(liveTracking.estado_actual).variant}>
+                {describeTrackingState(liveTracking.estado_actual).label}
               </Badge>
             </div>
 
@@ -474,7 +484,7 @@ export default function Tracking() {
                     </div>
                     
                     <p className="text-xs text-[var(--muted-foreground)] mt-0.5">
-                      📍 {evento.ubicacion} · <span className="font-mono text-[11px] font-medium">{evento.estado}</span>
+                      📍 {evento.ubicacion} · <span className="text-[11px] font-medium">{describeTrackingState(evento.estado).label}</span>
                     </p>
                   </div>
                 ))}
