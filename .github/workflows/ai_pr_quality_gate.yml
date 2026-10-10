@@ -1,0 +1,170 @@
+name: AI PR Quality Gate and Auto Reviewer
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches:
+      - develop
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+jobs:
+  quality_gate_and_ai_review:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_DB: consultoria_db
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgrespassword
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      mongodb:
+        image: mongo:6-jammy
+        env:
+          MONGO_INITDB_ROOT_USERNAME: mongoadmin
+          MONGO_INITDB_ROOT_PASSWORD: secretpassword
+          MONGO_INITDB_DATABASE: logs_db
+        ports:
+          - 27017:27017
+
+    env:
+      SECRET_KEY: "ci-secret-key-12345"
+      PAYMENT_CREDENTIALS_KEY: "pu6z3yKO3xTch4cM74k0gIj7-Rt9_PJsqXUOY_Yv-vU="
+      DB_NAME: "consultoria_db"
+      DB_USER: "postgres"
+      DB_PASSWORD: "postgrespassword"
+      DB_HOST: "127.0.0.1"
+      DB_PORT: "5432"
+      MONGO_HOST: "127.0.0.1"
+      MONGO_PORT: "27017"
+      MONGO_USER: "mongoadmin"
+      MONGO_PASSWORD: "secretpassword"
+      MONGO_DB_NAME: "logs_db"
+      PYTHONPATH: "backend"
+
+    steps:
+      - name: Checkout de la rama del PR
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+          fetch-depth: 0
+
+      - name: Configurar Git Identity
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git fetch origin develop:refs/remotes/origin/develop
+
+      - name: Configurar Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: 'backend/requirements.txt'
+
+      - name: Configurar Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: 'frontend/package-lock.json'
+
+      - name: Preparar entorno y dependencias de CI
+        run: |
+          mkdir -p ci_logs
+          touch ci_logs/conflicts.log
+          touch ci_logs/backend.log
+          touch ci_logs/frontend.log
+          python -m pip install --upgrade pip
+          pip install -r backend/scripts/requirements-ci.txt
+          pip install -r backend/requirements.txt
+
+      - name: Detección y Resolución de Conflictos contra develop
+        id: merge_check
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "Verificando capacidad de fusion con origin/develop..."
+          # Intento de merge sin commit
+          if git merge origin/develop --no-commit --no-ff; then
+            echo "has_conflicts=false" >> $GITHUB_OUTPUT
+            echo "Sin conflictos de fusion contra develop." > ci_logs/conflicts.log
+            # Abortar el merge simulado para dejar la rama limpia para pruebas
+            git merge --abort || true
+          else
+            echo "has_conflicts=true" >> $GITHUB_OUTPUT
+            echo "CONFLICTOS DETECTADOS al intentar fusionar origin/develop." > ci_logs/conflicts.log
+            git diff --name-only --diff-filter=U >> ci_logs/conflicts.log
+
+            # Ejecutar auto-resolución con IA si está disponible
+            if [ -n "$GEMINI_API_KEY" ]; then
+              echo "Invocando Agente IA para resolver conflictos automáticamente..."
+              python backend/scripts/ai_pr_agent.py \
+                --mode resolve \
+                --target-branch "develop" \
+                --has-conflicts "true" \
+                --conflicts-log "ci_logs/conflicts.log" || true
+            else
+              echo "GEMINI_API_KEY no presente. Abortando merge simulado."
+              git merge --abort || true
+            fi
+          fi
+
+      - name: Validar Backend (Django check y pruebas unitarias)
+        id: backend_validation
+        run: |
+          echo "=== REVISION DEL SISTEMA DJANGO ===" > ci_logs/backend.log
+          python backend/manage.py check >> ci_logs/backend.log 2>&1
+
+          echo "=== PRUEBAS UNITARIAS DJANGO ===" >> ci_logs/backend.log
+          python backend/manage.py test \
+            apps.authentication \
+            apps.catalog \
+            apps.core \
+            apps.landing \
+            apps.shipping \
+            apps.visual_config >> ci_logs/backend.log 2>&1
+        continue-on-error: true
+
+      - name: Validar Frontend (TypeScript, Build y Pruebas)
+        id: frontend_validation
+        run: |
+          cd frontend
+          npm install --prefer-offline --no-audit
+
+          echo "=== COMPILACION Y TIPADO TYPESCRIPT / VITE ===" > ../ci_logs/frontend.log
+          npm run build >> ../ci_logs/frontend.log 2>&1
+
+          echo "=== PRUEBAS AUTOMATIZADAS FRONTEND ===" >> ../ci_logs/frontend.log
+          npm test >> ../ci_logs/frontend.log 2>&1
+          cd ..
+        continue-on-error: true
+
+      - name: Ejecutar Agente IA Auditor y Compuerta de Calidad (Quality Gate)
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          TARGET_BRANCH: "develop"
+          HAS_CONFLICTS: ${{ steps.merge_check.outputs.has_conflicts }}
+        run: |
+          python backend/scripts/ai_pr_agent.py \
+            --mode review \
+            --pr-number "$PR_NUMBER" \
+            --target-branch "develop" \
+            --has-conflicts "$HAS_CONFLICTS" \
+            --conflicts-log "ci_logs/conflicts.log" \
+            --backend-log "ci_logs/backend.log" \
+            --frontend-log "ci_logs/frontend.log"
