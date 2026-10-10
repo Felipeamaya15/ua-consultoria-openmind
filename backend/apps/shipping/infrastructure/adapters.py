@@ -1,3 +1,4 @@
+import logging
 import uuid
 from decimal import Decimal
 from typing import List
@@ -13,8 +14,11 @@ from apps.shipping.domain.dtos import (
 from apps.shipping.domain.exceptions import (
     DireccionFueraDeCoberturaException,
     NumeroSeguimientoNoEncontradoException,
-    FormatoSeguimientoInvalidoException
+    FormatoSeguimientoInvalidoException,
+    ProveedorLogisticoError,
 )
+
+logger = logging.getLogger(__name__)
 
 class StandardLogisticsAdapter(LogisticsPort):
     """Adaptador logístico estándar con soporte de cotización, despacho y seguimiento."""
@@ -441,13 +445,22 @@ class MultiCarrierLogisticsAdapter(LogisticsPort):
         paquetes: List[PaqueteDTO]
     ) -> List[CotizacionEnvioDTO]:
         todas_las_cotizaciones = []
+        fallos_de_proveedor = 0
         for adapter in self.adapters:
             try:
                 cotizaciones = adapter.cotizar_envio(origen, destino, paquetes)
                 todas_las_cotizaciones.extend(cotizaciones)
-            except Exception:
-                continue
+            except DireccionFueraDeCoberturaException:
+                continue  # Ese transportista no cubre el destino; otro puede hacerlo.
+            except Exception:  # noqa: BLE001 - un transportista caido no debe tumbar a los demas
+                fallos_de_proveedor += 1
+                logger.exception("Cotizacion: fallo el transportista %s", type(adapter).__name__)
         if not todas_las_cotizaciones:
+            if fallos_de_proveedor:
+                # Distinto de "sin cobertura": los transportistas fallaron y reintentar puede funcionar.
+                raise ProveedorLogisticoError(
+                    "No pudimos obtener tarifas de los transportistas en este momento. Intenta nuevamente."
+                )
             raise DireccionFueraDeCoberturaException("No hay cobertura disponible para el destino indicado.")
         return todas_las_cotizaciones
 

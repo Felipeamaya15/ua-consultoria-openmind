@@ -1,4 +1,4 @@
-import type { CartItem } from '../context/CartContext';
+﻿import type { CartItem } from '../context/CartContext';
 import { authService, type CustomerOrder, type CustomerOrderItem } from '../../auth/services/authService';
 
 const API_BASE = (import.meta.env.VITE_API_URL || 'http://localhost:8000').replace(/\/+$/, '');
@@ -26,6 +26,17 @@ export type TrackedOrder = Omit<CustomerOrder, 'items'>
     entrega: {metodo?: string};
     items: CustomerOrderItem[];
   };
+
+/** Error al registrar el pedido; `code` es el código estable que informa el backend (por ejemplo, COTIZACION_VENCIDA). */
+export class OrderError extends Error {
+  code?: string;
+
+  constructor(message: string, code?: string) {
+    super(message);
+    this.name = 'OrderError';
+    this.code = code;
+  }
+}
 
 export const orderService = {
   async track(identificador: string, email: string, signal?: AbortSignal): Promise<TrackedOrder> {
@@ -64,25 +75,40 @@ export const orderService = {
   },
   async create(input: CheckoutInput): Promise<CreatedOrder> {
     const token = authService.getToken();
-    const response = await fetch(`${API_BASE}/api/checkout/pedidos/`, {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json', ...(token ? {Authorization: `Token ${token}`} : {})},
-      body: JSON.stringify({
-        clave_checkout: input.key,
-        items: input.items.map(item => ({producto_id: item.productId, sku: item.sku, cantidad: item.quantity})),
-        contacto: {nombre: input.contact.name, email: input.contact.email.trim(), telefono: input.contact.phone},
-        medio_pago: input.paymentMethod, metodo_entrega: input.shippingMethod,
-        direccion: input.address, codigo_promocional: input.promoCode,
-        ...(input.shippingMethod !== 'Retiro' && input.shippingQuote ? {cotizacion: input.shippingQuote} : {}),
-      }),
-    });
-    const body = await response.json();
+    let response: Response;
+    try {
+      response = await fetch(`${API_BASE}/api/checkout/pedidos/`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json', ...(token ? {Authorization: `Token ${token}`} : {})},
+        body: JSON.stringify({
+          clave_checkout: input.key,
+          items: input.items.map(item => ({producto_id: item.productId, sku: item.sku, cantidad: item.quantity})),
+          contacto: {nombre: input.contact.name, email: input.contact.email.trim(), telefono: input.contact.phone},
+          medio_pago: input.paymentMethod, metodo_entrega: input.shippingMethod,
+          direccion: input.address, codigo_promocional: input.promoCode,
+          ...(input.shippingMethod !== 'Retiro' && input.shippingQuote ? {cotizacion: input.shippingQuote} : {}),
+        }),
+      });
+    } catch {
+      // Es seguro reintentar: la clave de checkout evita duplicar el pedido.
+      throw new OrderError('No pudimos conectar con el servidor. Revisa tu conexión e intenta nuevamente.');
+    }
+    let body: any = null;
+    try {
+      body = await response.json();
+    } catch {
+      body = null; // El servidor respondió algo que no es JSON (por ejemplo, una página de error).
+    }
+    if (!body || typeof body !== 'object') {
+      throw new OrderError('No pudimos registrar tu pedido en este momento. Intenta nuevamente.');
+    }
     if (!response.ok || body.exito !== true) {
       const messages = (value: unknown): string[] => typeof value === 'string' ? [value]
         : value && typeof value === 'object' ? Object.values(value).flatMap(messages) : [];
       const details = body.error?.detalles;
       const message = (details ? messages(details).join(' ') : '') || body.mensaje || body.detail || messages(body).join(' ');
-      throw new Error(message || 'No se pudo registrar el pedido.');
+      throw new OrderError(message || 'No se pudo registrar el pedido.',
+        typeof body.error?.codigo === 'string' ? body.error.codigo : undefined);
     }
     const order: unknown = body.data;
     if (!order || typeof order !== 'object') throw new Error('La respuesta del pedido es inválida.');
