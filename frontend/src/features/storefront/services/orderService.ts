@@ -27,6 +27,23 @@ export type TrackedOrder = Omit<CustomerOrder, 'items'>
     items: CustomerOrderItem[];
   };
 
+export const ORDER_NUMBER_FORMAT_MESSAGE = 'El número de orden debe tener el formato ORD-AAAAMMDD-XXXX.';
+
+export function normalizeOrderNumber(value: string): string {
+  return value.trim().toUpperCase();
+}
+
+export function isValidOrderNumber(value: string): boolean {
+  const normalized = normalizeOrderNumber(value);
+  const match = /^ORD-(\d{4})(\d{2})(\d{2})-[A-Z0-9]{4}$/.exec(normalized);
+  if (!match) return false;
+  const [, year, month, day] = match;
+  const date = new Date(Date.UTC(Number(year), Number(month) - 1, Number(day)));
+  return date.getUTCFullYear() === Number(year)
+    && date.getUTCMonth() === Number(month) - 1
+    && date.getUTCDate() === Number(day);
+}
+
 export const TRACKING_EMAIL_FORMAT_MESSAGE = 'Ingresa un correo electrónico válido.';
 
 export function normalizeTrackingEmail(value: string): string {
@@ -50,12 +67,14 @@ export function isValidTrackingEmail(value: string): boolean {
 
 export const orderService = {
   async track(identificador: string, email: string, signal?: AbortSignal): Promise<TrackedOrder> {
+    const orderNumber = normalizeOrderNumber(identificador);
+    if (!isValidOrderNumber(orderNumber)) throw new Error(ORDER_NUMBER_FORMAT_MESSAGE);
     const normalizedEmail = normalizeTrackingEmail(email);
     if (!isValidTrackingEmail(normalizedEmail)) throw new Error(TRACKING_EMAIL_FORMAT_MESSAGE);
     const response = await fetch(`${API_BASE}/api/pedidos/seguimiento/`, {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({identificador: identificador.trim(), email: normalizedEmail}),
+      body: JSON.stringify({identificador: orderNumber, email: normalizedEmail}),
       signal,
     });
     const body = await response.json();
@@ -67,7 +86,7 @@ export const orderService = {
     const data = order as Record<string, unknown>;
     if (!Number.isSafeInteger(data.id_pedido)
       || typeof data.identificador !== 'string'
-      || data.identificador.toLowerCase() !== identificador.trim().toLowerCase()
+      || normalizeOrderNumber(data.identificador) !== orderNumber
       || !['pendiente', 'pagado', 'enviado', 'cancelado'].includes(String(data.estado))
       || !['nombre_contacto', 'medio_pago', 'fecha_creacion', 'estado_etiqueta'].every(key => typeof data[key] === 'string')
       || !['monto_total', 'descuento', 'costo_envio'].every(key => typeof data[key] === 'string'

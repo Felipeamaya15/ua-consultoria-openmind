@@ -1,4 +1,7 @@
 """Consulta de solo lectura para compradores con o sin cuenta."""
+import re
+from datetime import datetime
+
 from django.db.models import Prefetch
 from rest_framework import serializers
 from rest_framework.exceptions import NotFound
@@ -14,8 +17,23 @@ from apps.core.presentation.responses import success_response
 
 
 class TrackingLookupSerializer(StrictSerializer):
-    identificador = serializers.CharField(max_length=20)
+    identificador = serializers.CharField(min_length=17, max_length=17)
     email = serializers.EmailField(max_length=320)
+
+    def validate_identificador(self, value):
+        identifier = value.upper()
+        match = re.fullmatch(r'ORD-(\d{8})-([A-Z0-9]{4})', identifier)
+        if not match:
+            raise serializers.ValidationError(
+                'El número de orden debe tener el formato ORD-AAAAMMDD-XXXX.'
+            )
+        try:
+            datetime.strptime(match.group(1), '%Y%m%d')
+        except ValueError as error:
+            raise serializers.ValidationError(
+                'La fecha incluida en el número de orden no es válida.'
+            ) from error
+        return identifier
 
     def validate_email(self, value):
         # La comparacion es insensible a mayusculas; conservar una forma canonica
