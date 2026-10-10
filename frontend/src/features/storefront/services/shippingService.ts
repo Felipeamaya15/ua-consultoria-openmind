@@ -114,13 +114,19 @@ function isTrackingDetail(value: unknown, expectedTracking: string): value is De
       ));
 }
 
-async function requestTracking(path: string, tracking: string, signal?: AbortSignal): Promise<DetalleSeguimiento> {
+async function requestTracking(
+  path: string,
+  tracking: string,
+  signal?: AbortSignal,
+  expectedProvider?: DetalleSeguimiento['proveedor'],
+): Promise<DetalleSeguimiento> {
   const response = await fetch(`${API_BASE}${path}`, { signal });
   const data = await response.json();
   if (!response.ok || !data.exito) {
     throw new Error(data.mensaje || 'No se encontró información de seguimiento para este código.');
   }
-  if (!isTrackingDetail(data.data, tracking)) {
+  if (!isTrackingDetail(data.data, tracking)
+    || (expectedProvider && data.data.proveedor !== expectedProvider)) {
     throw new Error('La información de seguimiento recibida es inválida.');
   }
   return data.data;
@@ -130,11 +136,26 @@ export const shippingService = {
   async getTracking(numeroSeguimiento: string, signal?: AbortSignal): Promise<DetalleSeguimiento> {
     const cleanTracking = numeroSeguimiento.trim();
     if (!cleanTracking) throw new Error('Ingresa un número de seguimiento.');
-    const providerPath = /^(STK-|STARKEN-)/i.test(cleanTracking) ? '/starken' : '';
+    const isChilexpress = /^CHILEX/i.test(cleanTracking);
+    const isStarken = /^(STK-|STARKEN-)/i.test(cleanTracking);
+    const providerPath = isChilexpress ? '/chilexpress' : isStarken ? '/starken' : '';
+    const expectedProvider = isChilexpress ? 'CHILEXPRESS' : isStarken ? 'STARKEN' : undefined;
     return requestTracking(
       `/api/logistica/seguimiento${providerPath}/${encodeURIComponent(cleanTracking)}/`,
       cleanTracking,
       signal,
+      expectedProvider,
+    );
+  },
+
+  async getChilexpressTracking(numeroSeguimiento: string, signal?: AbortSignal): Promise<DetalleSeguimiento> {
+    const cleanTracking = numeroSeguimiento.trim();
+    if (!cleanTracking) throw new Error('Ingresa una orden de transporte de Chilexpress.');
+    return requestTracking(
+      `/api/logistica/seguimiento/chilexpress/${encodeURIComponent(cleanTracking)}/`,
+      cleanTracking,
+      signal,
+      'CHILEXPRESS',
     );
   },
 
@@ -145,6 +166,7 @@ export const shippingService = {
       `/api/logistica/seguimiento/starken/${encodeURIComponent(cleanTracking)}/`,
       cleanTracking,
       signal,
+      'STARKEN',
     );
   },
 
