@@ -25,16 +25,21 @@ const real = {id_pedido: 42, identificador: identifier, fecha_creacion: '2026-10
 (async () => {
   // Contrato HTTP: consulta real, correo en el cuerpo, errores y cancelación.
   let calls = [], reply = {ok: true, json: async () => ({exito: true, data: real})};
-  const {orderService} = load('src/features/storefront/services/orderService.ts', {
+  const {orderService, isValidOrderNumber, ORDER_NUMBER_FORMAT_MESSAGE} = load('src/features/storefront/services/orderService.ts', {
     require: () => ({authService: {getToken: () => null}}),
     fetch: async (url, options) => {calls.push({url, options}); return reply;},
   });
   const controller = new AbortController();
-  assert.equal((await orderService.track(` ${identifier} `, ` ${email} `, controller.signal)).identificador, identifier);
+  assert.equal((await orderService.track(` ${identifier.toLowerCase()} `, ` ${email} `, controller.signal)).identificador, identifier);
   assert.equal(calls[0].url, 'http://localhost:8000/api/pedidos/seguimiento/');
   assert.equal(calls[0].options.method, 'POST');
   assert.deepEqual(JSON.parse(calls[0].options.body), {identificador: identifier, email});
   assert.equal(calls[0].options.signal, controller.signal);
+  const callsBeforeInvalidFormat = calls.length;
+  for (const invalidIdentifier of ['42', 'ORD-20260230-AB12', 'ORD-20261008-AB!2']) {
+    await assert.rejects(orderService.track(invalidIdentifier, email), /formato ORD-AAAAMMDD-XXXX/);
+  }
+  assert.equal(calls.length, callsBeforeInvalidFormat, 'Un número inválido no debe llegar al backend');
   for (const invalid of [null, {...real, identificador: 'OTHER'}, {...real, items: null}, {...real, monto_total: 'NaN'}]) {
     reply = {ok: true, json: async () => ({exito: true, data: invalid})};
     await assert.rejects(orderService.track(identifier, email), /respuesta del pedido es inválida/);
@@ -43,7 +48,7 @@ const real = {id_pedido: 42, identificador: identifier, fecha_creacion: '2026-10
   await assert.rejects(orderService.track(identifier, email), /Pedido no encontrado/);
 
   let template = 1, location = {search: '', state: {orderNumber: identifier, identificador: identifier, email}};
-  let hooks = [], cursor = 0, pending = [], trackCalls = [], request = async () => real;
+  let hooks = [], cursor = 0, pending = [], trackCalls = [], request = async () => real, liveReply = async () => ({historial: []});
   const receiptStorage = new Map();
   const same = (a, b) => a && b && a.length === b.length && a.every((value, i) => Object.is(value, b[i]));
   const react = {
@@ -69,11 +74,16 @@ const real = {id_pedido: 42, identificador: identifier, fecha_creacion: '2026-10
     if (name === 'react-router-dom') return {Link: 'Link', Navigate: 'Navigate', useLocation: () => location};
     if (name.includes('useStorefrontTemplate')) return {useStorefrontTemplate: () => ({route: p => `/plantilla/${template}/${p}`,
       isMinimal: template === 2, isVisual: template === 3, isCatalog: template === 4})};
-    if (name.includes('orderService')) return {orderService: {track: (...args) => {trackCalls.push(args); return request(...args);}}};
+    if (name.includes('orderService')) return {
+      isValidOrderNumber,
+      ORDER_NUMBER_FORMAT_MESSAGE,
+      orderService: {track: (...args) => {trackCalls.push(args); return request(...args);}},
+    };
     if (name.includes('transbankPaymentService')) return {transbankPaymentService: {confirmarPago: async () => ({exito: true, data: {orden_compra: identifier}})}};
     if (name.includes('mockData')) return {formatPrice: String};
     if (name.includes('TransbankReturnResult')) return {default: 'WebpayResult'};
-    if (name.includes('shippingService')) return {shippingService: {getTracking: async () => ({historial: []})}};
+    if (name.includes('shippingService')) return {shippingService: {getTracking: async (...args) => liveReply(...args)}};
+    if (name.includes('trackingStates')) return load('src/features/storefront/data/trackingStates.ts', {});
     if (name.includes('components/ui')) return Object.fromEntries(['Button','Input','Badge','Alert','Icon'].map(type => [type, type]));
     throw Error(name);
   };
@@ -106,13 +116,17 @@ const real = {id_pedido: 42, identificador: identifier, fecha_creacion: '2026-10
     assert.equal(trackCalls[0][1], email);
     let tree = await settle();
     assert.ok(!tree.some(node => node.type === 'Input'), 'El enlace muestra directamente el detalle');
-    for (const value of [identifier, 'Producto real', 'Comprador real', 'Despachado', '15000']) assert.ok(tree.includes(value), value);
+    for (const value of [identifier, 'Producto real', 'Comprador real', 'En tránsito', '15000']) assert.ok(tree.includes(value), value);
 
     // Entrada directa: conserva el formulario y consulta solo al pulsar.
     resetTracking(); location = {search: '', state: null};
     tree = render(Tracking);
     assert.equal(trackCalls.length, 0);
     assert.equal(tree.find(node => node.type === 'Input' && node.props.label === 'Número de orden').props.value, '');
+    tree.find(node => node.type === 'Input' && node.props.label === 'Número de orden').props.onChange({target: {value: 'ORD-INVALIDA'}});
+    tree = render(Tracking);
+    assert.match(tree.find(node => node.type === 'Input' && node.props.label === 'Número de orden').props.error, /formato ORD-AAAAMMDD-XXXX/);
+    assert.equal(tree.find(node => node.props?.onClick && nodes(node).some(value => typeof value === 'string' && value.startsWith('Consultar pedido'))).props.disabled, true);
     tree.find(node => node.type === 'Input' && node.props.label === 'Número de orden').props.onChange({target: {value: identifier}});
     tree.find(node => node.type === 'Input' && node.props.label === 'Correo electrónico').props.onChange({target: {value: email}});
     tree = render(Tracking);
@@ -150,7 +164,7 @@ const real = {id_pedido: 42, identificador: identifier, fecha_creacion: '2026-10
   // Una respuesta anterior o tras desmontar no sustituye la orden seleccionada.
   resetTracking(); let resolveOld;
   request = () => new Promise(resolve => {resolveOld = resolve;});
-  location = {search: '?orden=OLD', state: {email}}; render(Tracking);
+  location = {search: '?orden=ORD-20261008-OLD1', state: {email}}; render(Tracking);
   const oldSignal = trackCalls[0][2];
   request = async () => real;
   location = {search: `?orden=${identifier}`, state: {email}}; render(Tracking);
@@ -177,4 +191,32 @@ const real = {id_pedido: 42, identificador: identifier, fecha_creacion: '2026-10
     assert.equal(result.find(node => node.type === 'Link' && nodes(node).includes('Ver mi pedido')).props.to, `/plantilla/${template}/seguimiento`);
   }
   console.log('OK: confirmación y seguimiento real, seis casos requeridos en cuatro plantillas, contrato, errores y cancelación de consultas.');
+  // SCRUM-355 y SCRUM-356: En tránsito y En reparto, sin códigos crudos del transportista.
+  const carrier = (estado_actual, historial) => ({numero_seguimiento: 'STK1234567', proveedor: 'Starken', estado_actual,
+    descripcion_estado: 'Detalle del operador', fecha_estimada_entrega: '', historial});
+  for (template of [1, 2, 3, 4]) {
+    for (const [code, label] of [['EMITIDO', 'En origen'], ['EN_TRANSITO_INTERURBANO', 'En tránsito'],
+      ['EN_CENTRO_DISTRIBUCION', 'En tránsito'], ['EN_REPARTO_DOMICILIO', 'En reparto'], ['EN_DISTRIBUCION', 'En reparto']]) {
+      resetTracking(); location = {search: '?orden=STK1234567', state: {email}};
+      liveReply = async () => carrier(code, [{fecha_hora: '2026-10-08T12:00:00Z', estado: code, descripcion: 'Evento', ubicacion: 'Hub'}]);
+      render(Tracking); const tree = await settle();
+      assert.ok(tree.includes(label), `${code} debe mostrarse como ${label}`);
+      assert.ok(!tree.includes(code) && !tree.includes(code.replaceAll('_', ' ')), `${code} no debe mostrarse crudo`);
+      assert.ok(tree.some(node => node.type === 'Badge' && nodes(node).includes(label)), 'La insignia usa la etapa estandarizada');
+    }
+  }
+  liveReply = async () => ({historial: []});
+  // Estado del pedido: "En tránsito" y "En reparto" coherentes en la insignia y en los pasos.
+  for (template of [1, 2, 3, 4]) {
+    for (const [estado, label] of [['enviado', 'En tránsito'], ['en_reparto', 'En reparto']]) {
+      resetTracking(); request = async () => ({...real, estado}); location = {search: `?orden=${identifier}`, state: {email}};
+      render(Tracking); const tree = await settle();
+      assert.ok(tree.some(node => node.type === 'Badge' && nodes(node).includes(label)), `${estado}: la insignia dice ${label}`);
+      assert.ok(tree.filter(value => value === label).length >= 2, `${estado}: tambien aparece en los pasos`);
+      assert.ok(!tree.includes('Despachado'), 'Ya no se usa "Despachado"');
+    }
+  }
+  // El servicio acepta el estado En reparto.
+  reply = {ok: true, json: async () => ({exito: true, data: {...real, estado: 'en_reparto'}})};
+  assert.equal((await orderService.track(identifier, email)).estado, 'en_reparto');
 })().catch(error => {console.error(error); process.exitCode = 1;});

@@ -209,7 +209,23 @@ class ShippingQuoteTests(TestCase):
         quote.assert_not_called()
         saved = Pedido.objects.get()
         self.assertEqual(saved.costo_envio, 0)
+        self.assertEqual(saved.monto_total, 60000)
+        self.assertEqual(response.data['data']['costo_envio'], '0.00')
         self.assertEqual(saved.entrega['retiro'], {'address': 'Local 123', 'schedule': '9 a 18'})
+
+    def test_pickup_ignores_a_forged_shipping_quote_and_remains_free(self):
+        carrier_quote = self.token()
+        response = self.submit(
+            clave_checkout=str(uuid4()),
+            metodo_entrega='Retiro',
+            cotizacion=carrier_quote,
+        )
+
+        self.assertEqual(response.status_code, 201, response.data)
+        saved = Pedido.objects.get()
+        self.assertEqual(saved.costo_envio, Decimal('0.00'))
+        self.assertEqual(saved.monto_total, Decimal('60000.00'))
+        self.assertNotIn('cotizacion', saved.entrega)
 
     def test_retry_preserves_original_price_without_second_reservation(self):
         token = self.token()

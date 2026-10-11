@@ -130,7 +130,7 @@ const defaultShippingOptions: ShippingOption[] = [
     label: 'Retiro en tienda',
     icon: 'store',
     desc: 'Retira tu compra presencialmente',
-    priceLabel: '0',
+    priceLabel: 'Gratis',
     requiresAddress: false,
   },
 ];
@@ -411,6 +411,7 @@ export default function Checkout() {
       }).map(option => option.id === 'Retiro' ? {
         ...option,
         desc: ['Sin costo', configuration.pickup.schedule, configuration.pickup.address].filter(Boolean).join(' · '),
+        priceLabel: 'Gratis',
       } : option);
       setShippingOptions(enabled);
     }).catch(cause => {
@@ -582,6 +583,7 @@ export default function Checkout() {
   const [quoteLoading, setQuoteLoading] = useState(false);
   const [quoteError, setQuoteError] = useState('');
   const [quoteAttempt, setQuoteAttempt] = useState(0);
+  const [quoteErrorKind, setQuoteErrorKind] = useState('');
   
   const destinationKey = JSON.stringify([shippingMethod, address.region, address.city]);
   const selectedShippingOption = shippingOptions.find(option => option.id === shippingMethod);
@@ -597,9 +599,15 @@ export default function Checkout() {
   const deliveryReady = !shippingLoading && !shippingError && !!selectedShippingOption
     && (shippingMethod === 'Retiro' || (!!selectedQuote && !quoteLoading && !quoteError));
 
+  // Si no hay tarifa para el destino, reintentar no sirve: se ofrece cambiar de alternativa o de comuna.
+  const quoteNeedsOtherOption = ['sin_tarifa', 'no_disponible', 'destino'].includes(quoteErrorKind);
+  const quoteUnavailable = ['sin_tarifa', 'no_disponible'].includes(quoteErrorKind);
+  const otherShippingOptions = shippingOptions.filter(option => option.id !== shippingMethod);
+
   useEffect(() => {
     setShippingQuotes({});
     setQuoteError('');
+    setQuoteErrorKind('');
     setQuoteLoading(false);
     if (!selectedShippingOption?.requiresAddress || !esComunaDeRegion(address.city, address.region)) return;
     const controller = new AbortController();
@@ -614,10 +622,13 @@ export default function Checkout() {
         expiry = setTimeout(() => {
           setShippingQuotes({});
           setQuoteError('La cotización venció. Vuelve a cotizar el envío.');
+          setQuoteErrorKind('vencida');
         }, Math.max(0, quote.vence_en * 1000 - Date.now()));
       })
       .catch(cause => {
-        if (!controller.signal.aborted) setQuoteError(cause instanceof Error ? cause.message : 'No se pudo cotizar el envío.');
+        if (controller.signal.aborted) return;
+        setQuoteError(cause instanceof Error ? cause.message : 'No se pudo cotizar el envío.');
+        setQuoteErrorKind((cause as {kind?: string} | null)?.kind ?? 'temporal');
       }).finally(() => { if (!controller.signal.aborted) setQuoteLoading(false); });
     return () => { controller.abort(); clearTimeout(expiry); };
   }, [address.city, address.region, shippingMethod, selectedShippingOption, quoteAttempt, destinationKey]);
@@ -825,7 +836,15 @@ export default function Checkout() {
         state: {orderNumber, identificador: order.identificador, email: contact.email.trim()}, replace: true,
       });
     } catch (error) {
-      setErrors({payment: error instanceof Error ? error.message : 'No se pudo registrar el pedido. Intenta nuevamente.'});
+      const code = (error as {code?: string} | null)?.code;
+      if (typeof code === 'string' && code.startsWith('COTIZACION_')) {
+        // La tarifa venció o cambió: se vuelve a cotizar y se devuelve al comprador a Entrega.
+        setQuoteAttempt(value => value + 1);
+        setStep('delivery');
+        setErrors({shipping: 'La tarifa de envío venció o cambió. La actualizamos: revisa el total y continúa.'});
+      } else {
+        setErrors({payment: error instanceof Error ? error.message : 'No se pudo registrar el pedido. Intenta nuevamente.'});
+      }
     } finally {
       submitting.current = false;
       setLoading(false);
@@ -1218,9 +1237,35 @@ export default function Checkout() {
               {shippingError && <><Alert variant="error">{shippingError}</Alert><Button variant="outline" onClick={() => setShippingLoadAttempt(value => value + 1)}>Reintentar carga</Button></>}
               {!shippingLoading && !shippingError && !shippingOptions.length && <Alert variant="info">La tienda todavía no tiene alternativas de entrega habilitadas.</Alert>}
               {quoteLoading && <Alert variant="info">Cotizando envío…</Alert>}
-              {quoteError && shippingMethod !== 'Retiro' && <><Alert variant="error">{quoteError}</Alert><Button variant="outline" onClick={() => setQuoteAttempt(value => value + 1)}>Volver a cotizar</Button></>}
+              {quoteError && shippingMethod !== 'Retiro' && (
+                <div className="flex flex-col gap-3" aria-live="polite">
+                  <Alert variant="error">{quoteError}</Alert>
+                  {quoteNeedsOtherOption ? (
+                    <>
+                      <p className="text-xs text-[#667085]">
+                        {quoteErrorKind === 'destino'
+                          ? 'Revisa la región y la comuna de tu dirección.'
+                          : otherShippingOptions.length
+                            ? 'Puedes elegir otra alternativa de entrega o cambiar la comuna de tu dirección.'
+                            : 'Puedes cambiar la comuna de tu dirección o contactar a la tienda.'}
+                      </p>
+                      {quoteErrorKind !== 'destino' && otherShippingOptions.length > 0 && (
+                        <div className="flex flex-wrap gap-2">
+                          {otherShippingOptions.map(option => (
+                            <Button key={option.id} variant="outline" onClick={() => setShippingMethod(option.id)}>
+                              Usar {option.label}
+                            </Button>
+                          ))}
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <Button variant="outline" onClick={() => setQuoteAttempt(value => value + 1)}>Volver a cotizar</Button>
+                  )}
+                </div>
+              )}
 
-              <div className="flex flex-col gap-3">
+              <div className="flex flex-col gap-3" role="radiogroup" aria-label="Alternativas de entrega">
                 {shippingOptions.map((method) => (
                   <label
                     key={method.id}
@@ -1273,7 +1318,9 @@ export default function Checkout() {
                     <span className="text-sm font-semibold">
                       {method.id === shippingMethod && selectedQuote
                         ? formatPrice(selectedQuote.monto)
-                        : method.priceLabel}
+                        : method.id === shippingMethod && quoteUnavailable
+                          ? 'Sin tarifa'
+                          : method.priceLabel}
                     </span>
                   </label>
                 ))}

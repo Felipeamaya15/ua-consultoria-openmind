@@ -1,3 +1,5 @@
+import logging
+
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
@@ -18,19 +20,26 @@ from apps.shipping.application.use_cases import (
 )
 from apps.shipping.domain.exceptions import (
     LogisticaException,
+    DireccionFueraDeCoberturaException,
+    ProveedorLogisticoError,
     NumeroSeguimientoNoEncontradoException,
     FormatoSeguimientoInvalidoException
 )
+
+logger = logging.getLogger(__name__)
 
 
 class SeguimientoLogisticoView(APIView):
     """
     Endpoint para consultar el estado en tiempo real de un envío en el e-commerce.
     """
+    proveedor_fijo = None
 
     def get(self, request, numero_seguimiento):
         try:
-            adaptador = get_logistics_adapter(numero_seguimiento)
+            # La ruta dedicada permite consultar ordenes de flete numericas sin
+            # confundirlas con numeros de transporte de otros operadores.
+            adaptador = get_logistics_adapter(self.proveedor_fijo or numero_seguimiento)
             caso_uso = ConsultarSeguimientoUseCase(logistics_port=adaptador)
 
             resultado = caso_uso.execute(numero_seguimiento=numero_seguimiento)
@@ -106,15 +115,30 @@ class CotizacionEnvioView(APIView):
                 "data": resultado
             }, status=status.HTTP_200_OK)
 
+        except DireccionFueraDeCoberturaException as e:
+            return Response({
+                "exito": False,
+                "mensaje": str(e),
+                "error": {"codigo": "SIN_COBERTURA"}
+            }, status=status.HTTP_400_BAD_REQUEST)
+        except ProveedorLogisticoError:
+            logger.warning("Cotizacion: los transportistas no respondieron", exc_info=True)
+            return Response({
+                "exito": False,
+                "mensaje": "Los transportistas no están disponibles en este momento. Intenta nuevamente.",
+                "error": {"codigo": "PROVEEDOR_NO_DISPONIBLE"}
+            }, status=status.HTTP_502_BAD_GATEWAY)
         except LogisticaException as e:
             return Response({
                 "exito": False,
                 "mensaje": str(e),
                 "error": {"codigo": "ERROR_LOGISTICA_CALCULO"}
             }, status=status.HTTP_400_BAD_REQUEST)
-        except Exception as e:
+        except Exception:
+            # No se expone el texto del error: puede contener datos internos.
+            logger.exception("Cotizacion: error inesperado")
             return Response({
                 "exito": False,
                 "mensaje": "Error interno al procesar la cotizacion.",
-                "error": {"detalle": str(e)}
+                "error": {"codigo": "ERROR_INTERNO"}
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

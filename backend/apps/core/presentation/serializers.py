@@ -310,6 +310,12 @@ class ConfiguracionPagoSerializer(serializers.Serializer):
     FIELD_LABELS = {
         'idCuenta': 'ID de cuenta',
         'clavePrivada': 'Clave privada',
+        'bank_name': 'Banco',
+        'account_type': 'Tipo de cuenta',
+        'account_number': 'N° de cuenta',
+        'holder_rut': 'RUT del titular',
+        'holder_name': 'Nombre del titular',
+        'confirmation_email': 'Correo para comprobantes',
     }
 
     def to_internal_value(self, data):
@@ -383,12 +389,18 @@ class ConfiguracionPagoSerializer(serializers.Serializer):
 
                 if field_errors:
                     errores_metodos[method_id] = ' '.join(field_errors)
+
             # Las credenciales parciales tampoco pueden persistirse con Linkify deshabilitado.
             has_linkify_data = method_id == 'linkify' and any(
                 fields.get(field) not in (None, '') for field in ('idCuenta', 'clavePrivada')
             )
-            if is_enabled is True or has_linkify_data:
-                required_fields = self.REQUIRED_FIELDS_BY_METHOD.get(method_id, [])
+
+            # Una transferencia parcialmente completada tampoco puede persistirse deshabilitada.
+            required_fields = self.REQUIRED_FIELDS_BY_METHOD.get(method_id, [])
+            has_transfer_data = method_id == 'transfer' and any(
+                isinstance(value, str) and value.strip() for value in fields.values()
+            )
+            if is_enabled is True or has_linkify_data or has_transfer_data:
 
                 # Buscamos campos vacíos o inexistentes
                 missing = [key for key in required_fields
