@@ -35,6 +35,11 @@ class TrackingLookupSerializer(StrictSerializer):
             ) from error
         return identifier
 
+    def validate_email(self, value):
+        # La comparacion es insensible a mayusculas; conservar una forma canonica
+        # evita diferencias entre clientes antes de buscar la orden asociada.
+        return value.casefold()
+
 
 class TrackingLookupThrottle(AnonRateThrottle):
     scope = 'order_tracking'

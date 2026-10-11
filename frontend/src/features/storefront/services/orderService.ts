@@ -44,6 +44,27 @@ export function isValidOrderNumber(value: string): boolean {
     && date.getUTCDate() === Number(day);
 }
 
+export const TRACKING_EMAIL_FORMAT_MESSAGE = 'Ingresa un correo electrónico válido.';
+
+export function normalizeTrackingEmail(value: string): string {
+  return value.trim().toLowerCase();
+}
+
+export function isValidTrackingEmail(value: string): boolean {
+  const email = normalizeTrackingEmail(value);
+  if (!email || email.length > 320 || /\s/.test(email)) return false;
+  const separator = email.lastIndexOf('@');
+  if (separator <= 0 || separator !== email.indexOf('@')) return false;
+  const local = email.slice(0, separator);
+  const domain = email.slice(separator + 1);
+  if (local.length > 64 || local.startsWith('.') || local.endsWith('.') || local.includes('..')) return false;
+  if (!/^[a-z0-9.!#$%&'*+/=?^_`{|}~-]+$/i.test(local) || domain.length > 255) return false;
+  const labels = domain.split('.');
+  return labels.length >= 2
+    && labels[labels.length - 1].length >= 2
+    && labels.every(label => label.length <= 63 && /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/i.test(label));
+}
+
 /** Error al registrar el pedido; `code` es el código estable que informa el backend (por ejemplo, COTIZACION_VENCIDA). */
 export class OrderError extends Error {
   code?: string;
@@ -59,10 +80,12 @@ export const orderService = {
   async track(identificador: string, email: string, signal?: AbortSignal): Promise<TrackedOrder> {
     const orderNumber = normalizeOrderNumber(identificador);
     if (!isValidOrderNumber(orderNumber)) throw new Error(ORDER_NUMBER_FORMAT_MESSAGE);
+    const normalizedEmail = normalizeTrackingEmail(email);
+    if (!isValidTrackingEmail(normalizedEmail)) throw new Error(TRACKING_EMAIL_FORMAT_MESSAGE);
     const response = await fetch(`${API_BASE}/api/pedidos/seguimiento/`, {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({identificador: orderNumber, email: email.trim()}),
+      body: JSON.stringify({identificador: orderNumber, email: normalizedEmail}),
       signal,
     });
     const body = await response.json();

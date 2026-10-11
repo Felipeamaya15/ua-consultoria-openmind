@@ -1,3 +1,5 @@
+from unittest.mock import patch
+
 from django.contrib.auth import get_user_model
 from django.core.cache import cache
 from django.test import TestCase
@@ -84,6 +86,23 @@ class OrderTrackingTests(TestCase):
                 response = self.lookup(identificador=identifier)
                 self.assertEqual(response.status_code, 400, response.data)
                 self.assertIn('identificador', response.data['error']['detalles'])
+
+    def test_invalid_email_is_rejected_before_resolving_store(self):
+        invalid_emails = (
+            '',
+            'buyer',
+            'buyer@',
+            '@example.com',
+            'buyer @example.com',
+            'buyer@example',
+        )
+        with patch('apps.core.presentation.order_tracking.resolver_tienda') as resolver:
+            for email in invalid_emails:
+                with self.subTest(email=email):
+                    response = self.lookup(email=email)
+                    self.assertEqual(response.status_code, 400, response.data)
+                    self.assertIn('email', response.data['error']['detalles'])
+            resolver.assert_not_called()
 
     def test_orders_outside_installation_are_not_returned(self):
         self.order.tienda = None

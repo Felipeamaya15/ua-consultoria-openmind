@@ -4,8 +4,10 @@ import { useLocation } from 'react-router-dom';
 import { formatPrice } from '../data/mockData';
 import {
   isValidOrderNumber,
+  isValidTrackingEmail,
   ORDER_NUMBER_FORMAT_MESSAGE,
   orderService,
+  TRACKING_EMAIL_FORMAT_MESSAGE,
   type TrackedOrder,
 } from '../services/orderService';
 import {
@@ -151,6 +153,12 @@ export default function Tracking() {
       return;
     }
 
+    if (!isDirect && !isValidTrackingEmail(customerEmail)) {
+      setError(TRACKING_EMAIL_FORMAT_MESSAGE);
+      setLoading(false);
+      return;
+    }
+
     try {
       if (isDirect) {
         const live = await shippingService.getTracking(term, controller.signal);
@@ -172,9 +180,12 @@ export default function Tracking() {
   const invalidOrderNumber = Boolean(
     orderNumber.trim() && !isDirectTracking && !isValidOrderNumber(orderNumber),
   );
+  const invalidEmail = Boolean(
+    !isDirectTracking && email.trim() && !isValidTrackingEmail(email),
+  );
 
   const handleSearch = () => {
-    if (orderNumber.trim() && !invalidOrderNumber && (email.trim() || isDirectTracking)) {
+    if (orderNumber.trim() && !invalidOrderNumber && !invalidEmail && (email.trim() || isDirectTracking)) {
       void search(orderNumber, email);
     }
   };
@@ -313,13 +324,14 @@ export default function Tracking() {
           }
           placeholder="correo@ejemplo.com"
           hint="El correo que usaste al comprar (no requerido para tracking directo de paquetería)"
+          error={invalidEmail ? TRACKING_EMAIL_FORMAT_MESSAGE : undefined}
         />
 
         {isCatalog ? (
           <button
             type="button"
             onClick={handleSearch}
-            disabled={loading || !orderNumber.trim() || invalidOrderNumber || (!isDirectTracking && !email.trim())}
+            disabled={loading || !orderNumber.trim() || invalidOrderNumber || invalidEmail || (!isDirectTracking && !email.trim())}
             className="w-full h-12 rounded-[9px] bg-[#1683ff] text-white text-[12px] font-bold hover:bg-[#3194f5] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
           >
             {loading ? 'Consultando...' : 'Consultar pedido →'}
@@ -328,7 +340,7 @@ export default function Tracking() {
           <button
             type="button"
             onClick={handleSearch}
-            disabled={loading || !orderNumber.trim() || invalidOrderNumber || (!isDirectTracking && !email.trim())}
+            disabled={loading || !orderNumber.trim() || invalidOrderNumber || invalidEmail || (!isDirectTracking && !email.trim())}
             className="w-full h-12 rounded-[8px] bg-black text-white text-[12px] font-semibold hover:opacity-80 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity"
           >
             {loading ? 'Consultando...' : 'Consultar pedido →'}
@@ -338,7 +350,7 @@ export default function Tracking() {
             type="button"
             onClick={handleSearch}
             disabled={
-              loading || !orderNumber.trim() || invalidOrderNumber || (!isDirectTracking && !email.trim())
+              loading || !orderNumber.trim() || invalidOrderNumber || invalidEmail || (!isDirectTracking && !email.trim())
             }
             className="
               w-full h-12 rounded-full
@@ -359,7 +371,7 @@ export default function Tracking() {
             fullWidth
             onClick={handleSearch}
             disabled={
-              loading || !orderNumber.trim() || invalidOrderNumber || (!isDirectTracking && !email.trim())
+              loading || !orderNumber.trim() || invalidOrderNumber || invalidEmail || (!isDirectTracking && !email.trim())
             }
           >
             {loading ? 'Consultando...' : 'Consultar pedido'}
