@@ -27,7 +27,35 @@ class LinkifyConfiguracionTests(TestCase):
         incompleto = {'linkify': {'enabled': True, 'fields': {'idCuenta': 'CUENTA-QA'}}}
         respuesta = self.api.put(CONFIG_URL, incompleto, format='json')
         self.assertEqual(respuesta.status_code, 400)
-        self.assertIn('clavePrivada', str(respuesta.json()))
+        self.assertIn('Clave privada', str(respuesta.json()))
+
+    def test_no_guarda_credenciales_parciales_aunque_linkify_este_desactivado(self):
+        incompleto = {'linkify': {'enabled': False, 'fields': {'idCuenta': 'CUENTA-QA', 'clavePrivada': ' '}}}
+        respuesta = self.api.put(CONFIG_URL, incompleto, format='json')
+        self.assertEqual(respuesta.status_code, 400, respuesta.content)
+        self.assertIn('Clave privada', str(respuesta.json()))
+        self.assertFalse(ConfiguracionPago.objects.filter(tienda=self.tienda).exists())
+
+    def test_rechaza_formatos_invalidos_de_linkify(self):
+        campos = {
+            'idCuenta': 'CUENTA-QA',
+            'clavePrivada': 'clave-privada-qa',
+            'environment': 'otro',
+            'expirationHours': 'tres',
+            'returnUrl': 'texto',
+            'notificationEmail': 'correo-invalido',
+        }
+        respuesta = self.api.put(
+            CONFIG_URL,
+            {'linkify': {'enabled': True, 'fields': campos}},
+            format='json',
+        )
+        self.assertEqual(respuesta.status_code, 400, respuesta.content)
+        contenido = str(respuesta.json())
+        self.assertIn('Ambiente', contenido)
+        self.assertIn('Vencimiento', contenido)
+        self.assertIn('URL de retorno', contenido)
+        self.assertIn('Correo', contenido)
 
     def test_el_checkout_lista_linkify_cuando_esta_habilitado(self):
         ConfiguracionPago.objects.create(tienda=self.tienda, datos=LINKIFY)
