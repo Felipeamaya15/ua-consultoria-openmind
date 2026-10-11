@@ -109,7 +109,7 @@ class LinkifyNotificacionView(APIView):
         pedido = self._pedido(_dato(request.query_params, *CAMPOS_ID_PAGO))
         # Sin cuerpo en un GET: se acepta la firma del cuerpo vacio o de la query string.
         self._verificar_firma(request, pedido, request.body, request.META.get("QUERY_STRING", "").encode())
-        if pedido.medio_pago != "Linkify" or pedido.estado not in ("pendiente", "pagado", "enviado"):
+        if pedido.medio_pago != "Linkify" or pedido.estado not in ("pendiente", *Pedido.ESTADOS_PAGADOS):
             raise _Rechazo("PEDIDO_NO_DISPONIBLE", "El pedido no admite este cobro.", status.HTTP_409_CONFLICT, pedido)
         monto = pedido.monto_total
         return Response({
@@ -179,7 +179,7 @@ class LinkifyNotificacionView(APIView):
                 pedido.estado = "pagado"
                 pedido.save(update_fields=["estado"])
                 logger.info("Linkify: pedido %s marcado como pagado", pedido.pk)
-            # "pagado" o "enviado": el aviso ya se habia procesado (es idempotente).
+            # Ya pagado (o en despacho): el aviso ya se habia procesado (es idempotente).
         return Response({"exito": True, "mensaje": "Pago registrado.", "estado": pedido.estado})
 
     def _pago_anulado(self, pedido):
@@ -187,8 +187,8 @@ class LinkifyNotificacionView(APIView):
             raise _Rechazo("PEDIDO_NO_LINKIFY", "El pedido no fue creado con Linkify.", status.HTTP_409_CONFLICT, pedido)
         with transaction.atomic():
             pedido = Pedido.objects.select_for_update().get(pk=pedido.pk)
-            if pedido.estado == "enviado":
-                raise _Rechazo("PEDIDO_YA_ENVIADO", "El pedido ya fue enviado: la anulacion del pago requiere revision manual.",
+            if pedido.estado in Pedido.ESTADOS_EN_DESPACHO:
+                raise _Rechazo("PEDIDO_YA_ENVIADO", "El pedido ya esta en preparacion o despacho: la anulacion del pago requiere revision manual.",
                                status.HTTP_409_CONFLICT, pedido)
             if pedido.estado == "pagado":
                 pedido.estado = "pendiente"

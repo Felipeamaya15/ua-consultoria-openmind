@@ -106,9 +106,17 @@ class Pedido(models.Model):
     ESTADO_CHOICES = [
         ('pendiente', 'Pendiente'),
         ('pagado', 'Pagado'),
-        ('enviado', 'Enviado'),
+        ('preparando', 'En preparación'),
+        ('en_origen', 'En origen'),
+        ('enviado', 'Enviado/En tránsito'),
+        ('en_reparto', 'En reparto'),
+        ('entregado', 'Entregado'),
         ('cancelado', 'Cancelado'),
     ]
+    # Ya pagado: un aviso o una confirmacion repetida del pago es inofensiva.
+    ESTADOS_PAGADOS = ('pagado', 'preparando', 'en_origen', 'enviado', 'en_reparto', 'entregado')
+    # Ya se empezo a preparar o despachar: revertir o reconciliar el pago exige revision manual.
+    ESTADOS_EN_DESPACHO = ('preparando', 'en_origen', 'enviado', 'en_reparto', 'entregado')
     id_pedido = models.BigAutoField(primary_key=True)
     
     identificador = models.CharField(

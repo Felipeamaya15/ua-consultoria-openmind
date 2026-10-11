@@ -21,6 +21,7 @@ from apps.core.models import Pedido, ItemPedido, Tienda, Producto, Configuracion
 from apps.core.presentation.responses import success_response
 from apps.core.infrastructure.linkify_client import LinkifyAdapter
 from apps.core.delivery import DELIVERY_METHODS, delivery_for_store
+from apps.core.presentation.shipping import ErroresDeCotizacionMixin
 from apps.core.shipping import validate_quote
 from apps.core.payments import PAYMENT_METHODS, payment_methods_for_store
 
@@ -72,7 +73,7 @@ class CheckoutSerializer(StrictSerializer):
         return data
 
 
-class CheckoutOrderAPIView(APIView):
+class CheckoutOrderAPIView(ErroresDeCotizacionMixin, APIView):
     authentication_classes = [TokenAuthentication]
     permission_classes = [AllowAny]
 

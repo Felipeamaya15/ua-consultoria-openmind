@@ -33,7 +33,10 @@ const STATUS_BADGE: Record<string, {
 }> = {
   pendiente: { label: "Pendiente", variant: "warning" },
   pagado: { label: "Pagado", variant: "info" },
-  enviado: { label: "Enviado", variant: "info" },
+  preparando: { label: "En preparación", variant: "info" },
+  en_origen: { label: "En origen", variant: "info" },
+  enviado: { label: "En tránsito", variant: "info" },
+  en_reparto: { label: "En reparto", variant: "info" },
   entregado: { label: "Entregado", variant: "success" },
   cancelado: { label: "Cancelado", variant: "error" },
 }
@@ -131,7 +134,10 @@ export default function Orders() {
             ["all", "Todos"],
             ["pendiente", "Pendientes"],
             ["pagado", "Pagados"],
-            ["enviado", "Enviados"],
+            ["preparando", "Preparando"],
+            ["en_origen", "En origen"],
+            ["enviado", "En tránsito"],
+            ["en_reparto", "En reparto"],
             ["entregado", "Entregados"],
             ["cancelado", "Cancelados"]
           ].map(([val, label]) => (

@@ -167,7 +167,7 @@ class VerificarTransferenciaLinkifyAPIView(APIView):
             if metodo not in ['linkify', 'transferencia']:
                 return error_response('El pedido no corresponde a Linkify ni a Transferencia.', 'PEDIDO_NO_LINKIFY', status=409)
             
-            if pedido.estado in ('cancelado', 'enviado'):
+            if pedido.estado in ('cancelado', *Pedido.ESTADOS_EN_DESPACHO):
                 return error_response('El pedido requiere revisión manual.', 'ESTADO_PEDIDO_INVALIDO', status=409)
             
             config_pago = ConfiguracionPago.objects.get(tienda=tienda)
