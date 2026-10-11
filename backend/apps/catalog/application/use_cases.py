@@ -582,7 +582,7 @@ class ConfirmarPagoTransbankUseCase:
             ).first()
             if not pedido or pedido.medio_pago != "Transbank":
                 raise TransbankTransaccionException("El pago no corresponde a un pedido Webpay de esta tienda.")
-            if pedido.estado not in ("pendiente", "pagado", "enviado"):
+            if pedido.estado not in ("pendiente", *Pedido.ESTADOS_PAGADOS):
                 raise TransbankTransaccionException("El pedido no admite este pago.")
             if pedido.monto_total != monto:
                 raise TransbankTransaccionException("El monto autorizado no coincide con el total del pedido. Contacta a la tienda.")

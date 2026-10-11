@@ -22,7 +22,7 @@ const tick = () => new Promise(setImmediate);
 const same = (a,b) => a && b && a.length === b.length && a.every((value, i) => Object.is(value, b[i]));
 function harness(template) {
   let states, cursor, refs, refCursor, effects, effectCursor, pending, config, failConfig;
-  let quoteCalls, created, request, timerId, timers, now, networkReply;
+  let quoteCalls, created, request, timerId, timers, now, networkReply, createError;
   class Clock extends Date {static now() {return now;}}
   const cart = {items: [{productId: 'real-product', variantId: 'SKU', sku: 'SKU', name: 'Real', attributes: {}, price: 60000, quantity: 1, image: ''}],
     subtotal: 60000, discount: 12000, shipping: 3490, total: 51490, promoCode: 'VERANO20', shippingMethod: 'Retiro',
@@ -73,7 +73,7 @@ function harness(template) {
         getDeliveryAlternatives: async () => {if (failConfig) throw Error('Error de alternativas'); return config;},
         getShippingQuotes: realShipping.getShippingQuotes,
       };
-      if (name.includes('orderService')) return {orderService: {create: async data => {created.push(data); throw Error('Stop after payload');}}};
+      if (name.includes('orderService')) return {orderService: {create: async data => {created.push(data); throw createError || Error('Stop after payload');}}};
       if (name.includes('PaymentService')) return {};
       if (name.includes('components/ui')) return Object.fromEntries(['Stepper','Button','Input','Select','Alert','Icon'].map(type => [type,type]));
       throw Error(name);
@@ -84,7 +84,7 @@ function harness(template) {
     now = 1800000000000; timerId = 0; timers = new Map();
     states = [[], true, '', 0, 'delivery', 'guest', {name: 'Buyer', email: 'buyer@example.com', phone: ''},
       {street: 'Street', number: '1', apt: '', city: '', region: 'Metropolitana'}, 'Transferencia', false, {}];
-    refs = []; effects = []; pending = []; failConfig = false; created = []; quoteCalls = []; request = null;
+    refs = []; effects = []; pending = []; failConfig = false; created = []; quoteCalls = []; request = null; createError = null;
     cart.shippingMethod = 'Retiro';
     config = {chilexpress: {enabled: true}, starken: {enabled: true}, pickup: {enabled: true, address: 'Local 123', schedule: '9 a 18'}};
     networkReply = {ok: true, json: async () => ({exito: true, data: {transfer: {enabled: true, fields: Object.fromEntries(['bank_name','account_type','account_number','holder_rut','holder_name','confirmation_email'].map(key=>[key,'qa']))}}})};
@@ -109,7 +109,7 @@ function harness(template) {
   reset();
   return {reset, render, settle, ready, confirm, toConfirm, setAddress, response,
     get states() {return states;}, get calls() {return quoteCalls;}, get created() {return created;}, get cart() {return cart;},
-    get config() {return config;}, set fail(value) {failConfig = value;}, set request(value) {request = value;},
+    get config() {return config;}, set fail(value) {failConfig = value;}, set request(value) {request = value;}, set createError(value) {createError = value;},
     get shipping() {return realShipping;}, expire() {now += 901000; [...timers.values()].forEach(timer => {if(timer.due <= now) timer.callback();});},
   };
 }
@@ -228,6 +228,7 @@ for (const template of [1,2,3,4]) test(`Plantilla ${template}: checkout y despac
   await t.test('Retiro usa cero, dirección/horario y no cotiza con o sin destino', async () => {
     h.reset(); h.render(); await h.settle(); h.cart.shippingMethod='Retiro'; h.states[8]='Transferencia'; let tree=await h.settle();
     assert.ok(tree.some(value=>typeof value==='string' && value.includes('Local 123') && value.includes('9 a 18')));
+    assert.ok(tree.includes('Gratis'));
     assert.equal(h.calls.length,0); assert.ok(!tree.some(node=>node.props?.label==='Región'));
     h.setAddress({city:'Providencia'}); tree=await h.settle(); assert.equal(h.calls.length,0);
     tree=h.toConfirm(); assert.ok(tree.includes('CLP 48000')); assert.equal(h.confirm(tree).props.disabled,false);
@@ -242,4 +243,112 @@ for (const template of [1,2,3,4]) test(`Plantilla ${template}: checkout y despac
     assert.ok(!('costo_envio' in data) && !('total' in data));
   });
   h.reset();
+});
+
+
+// ── SCRUM-341 y SCRUM-349: mensajes y manejo de errores de cotización ─────────────────────────────
+const textOf = node => nodes(node).filter(value => typeof value === 'string').join('');
+const buttonWith = (tree, text) => tree.find(node => node.props?.onClick && textOf(node).includes(text));
+const quoteFailure = (codigo, mensaje) => async () => ({ok: false, status: 400, json: async () => ({exito: false,
+  mensaje: 'Los datos enviados contienen errores', error: {codigo, detalles: {cotizacion: [mensaje]}}})});
+
+test('Servicio: los errores de cotización se clasifican por código y no filtran textos técnicos', async () => {
+  const h = harness(1), quote = () => h.shipping.getShippingQuotes('Chilexpress', 'Metropolitana', 'Providencia');
+  const kinds = {TARIFA_NO_DISPONIBLE: 'sin_tarifa', TRANSPORTISTA_NO_HABILITADO: 'no_disponible', OPERADOR_INVALIDO: 'no_disponible',
+    DESTINO_INVALIDO: 'destino', COTIZACION_VENCIDA: 'vencida', COTIZACION_INVALIDA: 'vencida', COTIZACION_CAMBIO: 'vencida',
+    ERROR_COTIZACION: 'temporal', CODIGO_DESCONOCIDO: 'temporal'};
+  for (const [code, kind] of Object.entries(kinds)) {
+    h.request = quoteFailure(code, `Mensaje ${code}`);
+    await assert.rejects(quote(), error => error.kind === kind && error.code === code && error.message === `Mensaje ${code}`, code);
+  }
+  h.request = async () => ({ok: false, json: async () => ({mensaje: 'Cotización no disponible'})});   // servidor sin códigos
+  await assert.rejects(quote(), error => error.kind === 'temporal' && error.message === 'Cotización no disponible');
+  h.request = async () => {throw new TypeError('Failed to fetch');};
+  await assert.rejects(quote(), error => error.kind === 'temporal' && /No pudimos conectar/.test(error.message) && !/Failed/.test(error.message));
+  h.request = async () => ({ok: false, status: 502, json: async () => {throw new SyntaxError("Unexpected token '<', \"<!DOCTYPE \"...");}});
+  await assert.rejects(quote(), error => error.kind === 'temporal' && /No pudimos obtener la tarifa/.test(error.message) && !/Unexpected token/.test(error.message));
+  const abort = Object.assign(new Error('cancelado'), {name: 'AbortError'});
+  h.request = async () => {throw abort;};
+  await assert.rejects(quote(), error => error === abort);   // la cancelación se propaga para que la pantalla la ignore
+});
+
+test('Entrega: sin tarifa para el destino ofrece otras alternativas en vez de reintentar', async () => {
+  const h = harness(1), mensaje = 'No hay una tarifa disponible para este destino. Contacta a la tienda.';
+  h.request = quoteFailure('TARIFA_NO_DISPONIBLE', mensaje);
+  let tree = await h.ready('Chilexpress');
+  assert.ok(tree.includes(mensaje));
+  assert.ok(tree.includes('Puedes elegir otra alternativa de entrega o cambiar la comuna de tu dirección.'));
+  assert.ok(tree.includes('Sin tarifa'));
+  assert.ok(buttonWith(tree, 'Usar Starken') && buttonWith(tree, 'Usar Retiro en tienda'));
+  assert.ok(!buttonWith(tree, 'Usar Chilexpress') && !buttonWith(tree, 'Volver a cotizar'));
+  assert.equal(h.confirm(h.toConfirm()).props.disabled, true);
+  h.reset(); h.request = quoteFailure('TARIFA_NO_DISPONIBLE', mensaje); await h.ready('Chilexpress');
+  buttonWith(h.render(), 'Usar Starken').props.onClick();
+  h.request = null; tree = await h.settle();
+  assert.equal(h.cart.shippingMethod, 'Starken'); assert.ok(tree.includes('CLP 6900'));
+  assert.ok(!tree.includes(mensaje));
+});
+
+test('Entrega: sin otras alternativas se sugiere cambiar la comuna o contactar a la tienda', async () => {
+  const h = harness(1); h.config.starken.enabled = false; h.config.pickup.enabled = false;
+  h.request = quoteFailure('TRANSPORTISTA_NO_HABILITADO', 'El transportista no está habilitado en esta tienda.');
+  const tree = await h.ready('Chilexpress');
+  assert.ok(tree.includes('Puedes cambiar la comuna de tu dirección o contactar a la tienda.'));
+  assert.ok(!tree.some(node => node.props?.onClick && textOf(node).startsWith('Usar ')));
+});
+
+test('Entrega: destino inválido pide revisar la dirección y no ofrece otras alternativas', async () => {
+  const h = harness(1);
+  h.request = quoteFailure('DESTINO_INVALIDO', 'Selecciona una comuna de la región elegida.');
+  const tree = await h.ready('Chilexpress');
+  assert.ok(tree.includes('Revisa la región y la comuna de tu dirección.'));
+  assert.ok(!buttonWith(tree, 'Usar Starken') && !buttonWith(tree, 'Volver a cotizar'));
+});
+
+test('Entrega: un fallo técnico o una cotización vencida sí permiten volver a cotizar', async () => {
+  const h = harness(1);
+  h.request = async () => ({ok: false, status: 502, json: async () => {throw new SyntaxError('<html>');}});
+  let tree = await h.ready('Chilexpress');
+  assert.ok(tree.includes('No pudimos obtener la tarifa de envío en este momento. Intenta nuevamente.'));
+  assert.ok(buttonWith(tree, 'Volver a cotizar') && !buttonWith(tree, 'Usar Starken'));
+  const calls = h.calls.length; h.request = null;
+  buttonWith(tree, 'Volver a cotizar').props.onClick();
+  tree = await h.settle();
+  assert.equal(h.calls.length, calls + 1); assert.ok(tree.includes('CLP 4500'));
+  h.expire(); tree = await h.settle();
+  assert.ok(tree.includes('La cotización venció. Vuelve a cotizar el envío.') && buttonWith(tree, 'Volver a cotizar'));
+});
+
+test('Confirmar: si la tarifa venció o cambió vuelve a Entrega y vuelve a cotizar', async () => {
+  const h = harness(1); await h.ready('Chilexpress');
+  const before = h.calls.length;
+  h.createError = Object.assign(new Error('La cotización cambió. Vuelve a cotizar el envío.'), {code: 'COTIZACION_CAMBIO'});
+  await h.confirm(h.toConfirm()).props.onClick();
+  assert.equal(h.states[4], 'delivery');
+  const tree = await h.settle();
+  assert.ok(tree.includes('La tarifa de envío venció o cambió. La actualizamos: revisa el total y continúa.'));
+  assert.equal(h.calls.length, before + 1); assert.ok(tree.includes('CLP 4500'));
+  h.reset(); await h.ready('Chilexpress'); h.createError = new Error('Producto sin stock');
+  await h.confirm(h.toConfirm()).props.onClick();
+  assert.equal(h.states[4], 'confirm'); assert.ok(h.render().includes('Producto sin stock'));
+});
+
+test('Pedido: los errores conservan su código y no muestran textos técnicos', async () => {
+  let reply;
+  const {orderService, OrderError} = load('src/features/storefront/services/orderService.ts', {
+    require: name => name.includes('authService') ? {authService: {getToken() {}}} : {}, fetch: async () => reply(),
+  });
+  const create = () => orderService.create({key: 'k', items: [], contact: {name: 'A', email: 'a@b.cl', phone: ''},
+    paymentMethod: 'Transferencia', shippingMethod: 'Chilexpress', promoCode: '', shippingQuote: 'token',
+    address: {street: 's', number: '1', apt: '', city: 'Providencia', region: 'Metropolitana'}});
+  reply = async () => ({ok: false, json: async () => ({exito: false, mensaje: 'x', error: {codigo: 'COTIZACION_VENCIDA',
+    detalles: {cotizacion: ['La cotización venció. Vuelve a cotizar el envío.']}}})});
+  await assert.rejects(create(), error => error instanceof OrderError && error.code === 'COTIZACION_VENCIDA'
+    && error.message === 'La cotización venció. Vuelve a cotizar el envío.');
+  reply = async () => ({ok: false, json: async () => ({detail: 'Credenciales inválidas'})});
+  await assert.rejects(create(), error => error instanceof OrderError && error.code === undefined && error.message === 'Credenciales inválidas');
+  reply = async () => ({ok: false, json: async () => {throw new SyntaxError("Unexpected token '<'");}});
+  await assert.rejects(create(), error => /No pudimos registrar tu pedido/.test(error.message) && !/Unexpected/.test(error.message));
+  reply = async () => {throw new TypeError('Failed to fetch');};
+  await assert.rejects(create(), error => /No pudimos conectar/.test(error.message) && !/Failed/.test(error.message));
 });

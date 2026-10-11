@@ -150,6 +150,62 @@ class TransferenciasPendientesTests(TransferFixtureMixin, TestCase):
         self.assertEqual(Pedido.objects.count(), 1)
 
 
+class AprobarTransferenciaManualTests(TransferFixtureMixin, TestCase):
+    def approval_url(self, order):
+        return f'/api/pagos/transferencias/{order.pk}/aprobar/'
+
+    def test_owner_approves_pending_transfer_and_it_leaves_pending_list(self):
+        order = self.create_order()
+        response = self.api.post(self.approval_url(order), format='json')
+        self.assertEqual(response.status_code, 200, response.data)
+        self.assertTrue(response.data['exito'])
+        self.assertEqual(response.data['data'], {'id_pedido': order.pk, 'estado': 'pagado'})
+        order.refresh_from_db()
+        self.assertEqual(order.estado, 'pagado')
+        self.assertEqual(self.api.get(self.url).data['data'], [])
+
+    def test_repeated_approval_is_idempotent(self):
+        order = self.create_order()
+        self.assertEqual(self.api.post(self.approval_url(order)).status_code, 200)
+        response = self.api.post(self.approval_url(order))
+        self.assertEqual(response.status_code, 200, response.data)
+        self.assertIn('ya estaba aprobada', response.data['mensaje'])
+
+    def test_linkify_and_other_payment_methods_cannot_be_manually_approved(self):
+        for method in ('Linkify', 'Transbank', 'PayPal'):
+            order = self.create_order(medio_pago=method, metodo_pago=method)
+            response = self.api.post(self.approval_url(order))
+            self.assertEqual(response.status_code, 409, response.data)
+            order.refresh_from_db()
+            self.assertEqual(order.estado, 'pendiente')
+
+    def test_non_pending_transfer_cannot_be_approved(self):
+        for state in ('enviado', 'cancelado'):
+            order = self.create_order(estado=state)
+            response = self.api.post(self.approval_url(order))
+            self.assertEqual(response.status_code, 409, response.data)
+            order.refresh_from_db()
+            self.assertEqual(order.estado, state)
+
+    def test_other_store_order_is_not_disclosed_or_changed(self):
+        foreign_store = Tienda.objects.create(nombre='Foreign', id_usuario_propietario=self.other)
+        order = self.create_order(tienda=foreign_store)
+        with patch('apps.core.presentation.views.resolver_tienda', return_value=self.store):
+            response = self.api.post(self.approval_url(order))
+        self.assertEqual(response.status_code, 404, response.data)
+        order.refresh_from_db()
+        self.assertEqual(order.estado, 'pendiente')
+
+    def test_non_owner_and_anonymous_cannot_approve(self):
+        order = self.create_order()
+        self.api.force_authenticate(self.buyer)
+        self.assertEqual(self.api.post(self.approval_url(order)).status_code, 403)
+        self.api.force_authenticate(user=None)
+        self.assertEqual(self.api.post(self.approval_url(order)).status_code, 401)
+        order.refresh_from_db()
+        self.assertEqual(order.estado, 'pendiente')
+
+
 class RechazarTransferenciaManualTests(TransferFixtureMixin, TestCase):
     def rejection_url(self, order):
         return f'/api/pagos/transferencias/{order.pk}/rechazar/'

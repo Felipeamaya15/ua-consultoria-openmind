@@ -40,6 +40,28 @@ export async function getPendingTransfers(signal?: AbortSignal): Promise<Pending
   return body.data;
 }
 
+export async function approveManualTransfer(
+  pedidoId: number,
+  signal?: AbortSignal,
+): Promise<{ id_pedido: number; estado: 'pagado'; mensaje: string }> {
+  const token = authService.getToken();
+  if (!token) throw new Error('Inicia sesión como propietario para aprobar transferencias.');
+
+  const response = await fetch(`${API_BASE_URL}/api/pagos/transferencias/${pedidoId}/aprobar/`, {
+    method: 'POST',
+    headers: { Authorization: `Token ${token}` },
+    signal,
+  });
+  const body = await response.json();
+  if (!response.ok || body.exito !== true) {
+    throw new Error(body.mensaje || body.detail || 'No se pudo aprobar la transferencia.');
+  }
+  if (body.data?.id_pedido !== pedidoId || body.data?.estado !== 'pagado') {
+    throw new Error('La confirmación de la transferencia recibida es inválida.');
+  }
+  return { ...body.data, mensaje: body.mensaje };
+}
+
 export async function rejectManualTransfer(
   pedidoId: number,
   signal?: AbortSignal,

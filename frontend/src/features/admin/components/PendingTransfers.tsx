@@ -1,7 +1,12 @@
 import { useEffect, useState } from 'react';
 import { Alert, Button } from './ui';
 import { formatPrice } from '../data/mockAdminData';
-import { getPendingTransfers, rejectManualTransfer, type PendingTransfer } from '../services/pendingTransfersService';
+import {
+  approveManualTransfer,
+  getPendingTransfers,
+  rejectManualTransfer,
+  type PendingTransfer,
+} from '../services/pendingTransfersService';
 
 const dateFormat = new Intl.DateTimeFormat('es-CL', { dateStyle: 'short', timeStyle: 'short' });
 
@@ -10,6 +15,7 @@ export function PendingTransfers() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [refresh, setRefresh] = useState(0);
+  const [approvingId, setApprovingId] = useState<number | null>(null);
   const [rejectingId, setRejectingId] = useState<number | null>(null);
   const [feedback, setFeedback] = useState('');
 
@@ -28,6 +34,22 @@ export function PendingTransfers() {
     });
     return () => controller.abort();
   }, [refresh]);
+
+  const approve = async (transfer: PendingTransfer) => {
+    if (!window.confirm(`¿Confirmas que recibiste el pago del pedido ${transfer.identificador || `#${transfer.id_pedido}`}?`)) return;
+    setApprovingId(transfer.id_pedido);
+    setError('');
+    setFeedback('');
+    try {
+      const result = await approveManualTransfer(transfer.id_pedido);
+      setTransfers(current => current.filter(item => item.id_pedido !== transfer.id_pedido));
+      setFeedback(result.mensaje);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'No se pudo aprobar la transferencia.');
+    } finally {
+      setApprovingId(null);
+    }
+  };
 
   const reject = async (transfer: PendingTransfer) => {
     const orderLabel = transfer.identificador || `#${transfer.id_pedido}`;
@@ -78,18 +100,27 @@ export function PendingTransfers() {
             <td className="py-3 pr-3 whitespace-nowrap">{formatPrice(Number(transfer.monto_total))}</td>
             <td className="py-3 whitespace-nowrap"><time dateTime={transfer.fecha_creacion}>{dateFormat.format(new Date(transfer.fecha_creacion))}</time></td>
             <td className="py-3 pl-3 text-right">
-              {transfer.medio_pago === 'Transferencia' ? (
+              {transfer.medio_pago === 'Transferencia' ? <div className="flex justify-end gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  disabled={approvingId !== null || rejectingId !== null}
+                  loading={approvingId === transfer.id_pedido}
+                  onClick={() => approve(transfer)}
+                >
+                  Aprobar pago
+                </Button>
                 <Button
                   type="button"
                   size="sm"
                   variant="danger"
-                  disabled={rejectingId !== null}
+                  disabled={approvingId !== null || rejectingId !== null}
                   loading={rejectingId === transfer.id_pedido}
                   onClick={() => reject(transfer)}
                 >
                   Rechazar
                 </Button>
-              ) : <span className="text-xs text-[var(--muted-foreground)]">Automática</span>}
+              </div> : <span className="text-xs text-[var(--muted-foreground)]">Automática</span>}
             </td>
           </tr>)}</tbody>
         </table>
