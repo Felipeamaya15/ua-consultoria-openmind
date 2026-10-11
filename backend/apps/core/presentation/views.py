@@ -272,6 +272,56 @@ class AprobarTransferenciaManualAPIView(APIView):
         )
 
 
+class RechazarTransferenciaManualAPIView(APIView):
+    """Rechaza una transferencia bancaria pendiente sin afectar otros medios de pago."""
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pedido_id):
+        tienda = resolver_tienda(request, exigir_propietario=True)
+
+        with transaction.atomic():
+            try:
+                pedido = Pedido.objects.select_for_update().get(
+                    id_pedido=pedido_id,
+                    tienda=tienda,
+                )
+            except Pedido.DoesNotExist:
+                return error_response(
+                    'Pedido no encontrado.',
+                    'PEDIDO_NO_ENCONTRADO',
+                    status=404,
+                )
+
+            metodo = (pedido.medio_pago or pedido.metodo_pago or '').strip().lower()
+            if metodo != 'transferencia':
+                return error_response(
+                    'El pedido no corresponde a una transferencia bancaria manual.',
+                    'METODO_PAGO_INVALIDO',
+                    status=409,
+                )
+
+            if pedido.estado == 'cancelado':
+                return success_response(
+                    data={'id_pedido': pedido.pk, 'estado': pedido.estado},
+                    mensaje='La transferencia ya estaba rechazada.',
+                )
+
+            if pedido.estado != 'pendiente':
+                return error_response(
+                    'Solo se pueden rechazar transferencias de pedidos pendientes.',
+                    'ESTADO_PEDIDO_INVALIDO',
+                    status=409,
+                )
+
+            pedido.estado = 'cancelado'
+            pedido.save(update_fields=['estado'])
+
+        return success_response(
+            data={'id_pedido': pedido.pk, 'estado': pedido.estado},
+            mensaje='Transferencia rechazada y pedido cancelado.',
+        )
+
+
 class TiendaPedidosAPIView(generics.ListAPIView):
     serializer_class = PedidoTiendaSerializer
     permission_classes = [IsAuthenticated]

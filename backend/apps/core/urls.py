@@ -18,6 +18,7 @@ from apps.core.presentation.views import (
     VerificarTransferenciaLinkifyAPIView,
     TransferenciasPendientesAPIView,
     AprobarTransferenciaManualAPIView,
+    RechazarTransferenciaManualAPIView,
     TiendaPedidosAPIView
 )
 
@@ -43,5 +44,6 @@ urlpatterns = [
     path('pagos/linkify/verificar/', VerificarTransferenciaLinkifyAPIView.as_view(), name='linkify_verificar'),
     path('pagos/transferencias/pendientes/', TransferenciasPendientesAPIView.as_view(), name='transferencias-pendientes'),
     path('pagos/transferencias/<int:pedido_id>/aprobar/', AprobarTransferenciaManualAPIView.as_view(), name='aprobar-transferencia-manual'),
+    path('pagos/transferencias/<int:pedido_id>/rechazar/', RechazarTransferenciaManualAPIView.as_view(), name='rechazar-transferencia-manual'),
     path('tienda/pedidos/', TiendaPedidosAPIView.as_view(), name='tienda-pedidos'),
 ]

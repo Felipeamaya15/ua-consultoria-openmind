@@ -62,6 +62,28 @@ export async function approveManualTransfer(
   return { ...body.data, mensaje: body.mensaje };
 }
 
+export async function rejectManualTransfer(
+  pedidoId: number,
+  signal?: AbortSignal,
+): Promise<{ id_pedido: number; estado: 'cancelado'; mensaje: string }> {
+  const token = authService.getToken();
+  if (!token) throw new Error('Inicia sesión como propietario para rechazar transferencias.');
+
+  const response = await fetch(`${API_BASE_URL}/api/pagos/transferencias/${pedidoId}/rechazar/`, {
+    method: 'POST',
+    headers: { Authorization: `Token ${token}` },
+    signal,
+  });
+  const body = await response.json();
+  if (!response.ok || body.exito !== true) {
+    throw new Error(body.mensaje || body.detail || 'No se pudo rechazar la transferencia.');
+  }
+  if (body.data?.id_pedido !== pedidoId || body.data?.estado !== 'cancelado') {
+    throw new Error('La confirmación del rechazo recibida es inválida.');
+  }
+  return { ...body.data, mensaje: body.mensaje };
+}
+
 // Nueva función de verificación hacia el backend
 export async function verifyTransfer(pedido_id: number, signal?: AbortSignal): Promise<{ exito: boolean; mensaje: string }> {
   const token = authService.getToken();
