@@ -50,7 +50,7 @@ export const TransbankConfigForm: React.FC<Props> = ({ idTienda = 1 }) => {
       .catch(() => {
         setAlertState({
           variant: 'error',
-          message: 'Error de conexión con el backend de pagos.',
+          message: 'No pudimos cargar la configuración de pagos. Intenta nuevamente.',
         });
       })
       .finally(() => setLoading(false));
@@ -168,12 +168,13 @@ export const TransbankConfigForm: React.FC<Props> = ({ idTienda = 1 }) => {
         />
 
         <Input
-          label="API Key Secret"
+          label="Clave secreta de Transbank"
           type="password"
           value={formData.api_key}
           onChange={(e) => setFormData((c) => ({ ...c, api_key: e.target.value }))}
           placeholder={maskedKey ? `Clave actual: ${maskedKey}` : 'Ingresa tu secreto de Transbank'}
           required={!isConfigured}
+          persistentHint
           hint={
             maskedKey
               ? `Clave guardada: ${maskedKey}. Déjalo en blanco si no deseas modificarla.`

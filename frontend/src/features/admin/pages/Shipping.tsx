@@ -99,11 +99,11 @@ export default function Shipping() {
                     </p>
                   </div>
                 </div>
-                <Badge variant="default">Integración pendiente</Badge>
+                <Badge variant="default">Conexión automática pendiente</Badge>
               </div>
               <div className="border-t border-[var(--border)] pt-3 grid gap-3">
                 <Input id={`${carrier}-account`} label="ID de cliente / número de cuenta" placeholder="Entregado por el transportista" value={loaded ? current.accountId || '' : ''} disabled />
-                <Input id={`${carrier}-api`} label="API key" type="password" autoComplete="off" placeholder="Disponible próximamente" hint="El guardado de credenciales no está disponible." value="" disabled />
+                <Input id={`${carrier}-api`} label="Clave del transportista" type="password" autoComplete="off" placeholder="Disponible próximamente" persistentHint hint="El guardado de credenciales no está disponible." value="" disabled />
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <Toggle
                     checked={loaded && !!current.enabled}

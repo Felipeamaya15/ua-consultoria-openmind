@@ -14,7 +14,7 @@ function load(relative, mocks = {}) {
     const target = path.resolve(path.dirname(file), id), resolved = ['.ts','.tsx'].map(ext => target + ext).find(fs.existsSync);
     return load(resolved || path.join(target, 'index.ts'), mocks);
   };
-  vm.runInNewContext(code, { module, exports: module.exports, require: req, structuredClone, URLSearchParams, localStorage, Event, CustomEvent, window: { dispatchEvent() {}, confirm: () => true }, ResizeObserver: undefined });
+  vm.runInNewContext(code, { module, exports: module.exports, require: req, requestAnimationFrame: callback => callback(), structuredClone, URLSearchParams, localStorage, Event, CustomEvent, window: { dispatchEvent() {}, confirm: () => true }, ResizeObserver: undefined });
   if (!Object.keys(mocks).length) cache.set(file, module.exports); return module.exports;
 }
 const plain = value => JSON.parse(JSON.stringify(value));
@@ -101,7 +101,7 @@ test('ThemeEditor save failure keeps dirty and success clears it; discard restor
   function flatten(node,list=[]){if(Array.isArray(node))node.forEach(n=>flatten(n,list));else if(node&&typeof node==='object'){list.push(node);flatten(node.props?.children,list);}return list;}
   const render=()=>{index=0;refIndex=0;return flatten(Editor());};
   let tree=render();let inspector=tree.find(n=>typeof n.type==='function'&&n.type.name==='VisualInspector');inspector.props.onEdit('hero.horizontalAlign','center');tree=render();assert(tree.some(n=>n.props?.children==='Cambios sin guardar'));
-  const save=()=>tree.find(n=>n.type==='button'&&n.props.children==='Guardar y publicar').props.onClick();save();tree=render();assert(tree.some(n=>n.props?.children==='Cambios sin guardar'));ok=true;save();tree=render();assert(tree.some(n=>n.props?.children==='✓ Guardado'));
+  const save=()=>tree.find(n=>n.type==='button'&&n.props.children==='Guardar cambios').props.onClick();save();tree=render();assert(tree.some(n=>n.props?.children==='No se pudo guardar')); assert(blockerCallback({currentLocation:{pathname:'/editor',search:''},nextLocation:{pathname:'/other',search:''}}));ok=true;save();tree=render();assert(tree.some(n=>n.props?.children==='✓ Guardado'));
   inspector=tree.find(n=>typeof n.type==='function'&&n.type.name==='VisualInspector');inspector.props.onEdit('hero.horizontalAlign','right');tree=render();assert(blockerCallback({currentLocation:{pathname:'/editor',search:''},nextLocation:{pathname:'/other',search:''}}));tree.find(n=>n.type==='button'&&n.props.children==='Descartar cambios').props.onClick();tree=render();inspector=tree.find(n=>typeof n.type==='function'&&n.type.name==='VisualInspector');assert.equal(inspector.props.effective.hero.horizontalAlign,'center');assert(!tree.some(n=>n.props?.children==='Cambios sin guardar'));
 });
 test('catalog card and grid selection edit and reset catalog branches only', () => {
@@ -117,7 +117,7 @@ test('catalog card and grid selection edit and reset catalog branches only', () 
 });
 test('legacy image restoration uses the original before saved customizations', () => {
   const {captureOriginalImage}=load('src/features/storefront/visual/imageSettings.ts');
-  const img={dataset:{},style:{objectPosition:'',transform:'',transformOrigin:'',borderRadius:''},src:'original.png',getAttribute(){return this.src;},setAttribute(k,v){this.src=v;},removeAttribute(){this.src=null;},hasAttribute(){return false;},closest(){return null;}};
+  const img={dataset:{},style:{objectPosition:'',transform:'',transformOrigin:'',borderRadius:''},src:'original.png',getAttribute(key){return key === 'src' ? this.src : null;},setAttribute(k,v){if(k === 'src')this.src=v;},removeAttribute(key){if(key === 'src')this.src=null;},hasAttribute(){return false;},closest(){return null;}};
   captureOriginalImage(img); img.src='published.png'; img.style.borderRadius='15px';
   const {connectVisualPreview}=load('src/features/admin/visualEditor/preview.ts');
   const doc={body:{},head:{appendChild(){}},createElement:()=>({remove(){}}),querySelectorAll:selector=>selector==='img'?[img]:[],addEventListener(){},removeEventListener(){},defaultView:{}};
@@ -200,7 +200,7 @@ test('category navigation lives in the existing landing category section',()=>{
 });
 test('main editor section names are friendly without changing shared IDs',()=>{
   const labels=Object.fromEntries(sections.VISUAL_SECTIONS);
-  for(const [id,label] of Object.entries({hero:'Portada principal',heroCta:'Botón principal',header:'Encabezado',productGrid:'Distribución de productos',productCard:'Diseño de productos',footer:'Parte final de la página'})) assert.equal(labels[id],label);
+  for(const [id,label] of Object.entries({hero:'Banner principal',heroCta:'Botón principal',header:'Encabezado',productGrid:'Distribución de productos',productCard:'Tarjeta de producto',footer:'Pie de página'})) assert.equal(labels[id],label);
 });
 test('help opens on hover, focus and click and closes with Escape and blur',()=>{
   let state=[],cursor=0;

@@ -3,6 +3,7 @@ import type { TemplateId } from '../../storefront/data/mockData';
 import type { AdminConfig } from '../types';
 import { adminRepository } from '../data/adminRepository';
 import { useStoreIdentity } from '../../storefront/context/StoreIdentityContext';
+import { humanizeAdminError } from '../utils/humanizeError';
 import { getStoreConfigKey, isStoreConfigChange, STORE_CONFIG_CHANGED_EVENT, type StoreIdentity } from '../../storefront/visual/storage';
 interface AdminContextValue {
   config: AdminConfig; setConfig: (next: AdminConfig) => boolean;
@@ -35,9 +36,9 @@ function ScopedAdminProvider({children, identity}: {children:ReactNode; identity
   return <AdminContext.Provider value={{config,setConfig,previewTemplate,setPreviewTemplate,updateTemplate,storageError}}>{children}</AdminContext.Provider>;
 }
 export function AdminProvider({children}: {children:ReactNode}) {
-  const { identity, loading, error } = useStoreIdentity();
+  const { identity, loading, error, retry } = useStoreIdentity();
   if (loading) return <p role="status">Confirmando tienda...</p>;
-  if (!identity) return <p role="alert">{error || 'No se pudo identificar la tienda.'}</p>;
+  if (!identity) return <div className="admin-identity-error"><h1>No pudimos abrir tu tienda</h1><p role="alert">{humanizeAdminError(error, 'No pudimos cargar tu tienda. Intenta nuevamente en unos momentos.')}</p><button type="button" onClick={retry}>Intentar nuevamente</button></div>;
   return <ScopedAdminProvider key={getStoreConfigKey(identity)} identity={identity}>{children}</ScopedAdminProvider>;
 }
 export function useAdmin() { const value = useContext(AdminContext); if (!value) throw new Error('AdminProvider requerido'); return value; }

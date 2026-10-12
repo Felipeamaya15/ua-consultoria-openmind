@@ -87,9 +87,6 @@ export default function EntrepreneurProfile() {
         <h2 className="font-semibold text-xl">
           Mi cuenta / Emprendedor
         </h2>
-        <p className="mt-1 text-sm text-[var(--muted-foreground)]">
-          Gestiona tus datos de acceso y la sesion activa del panel.
-        </p>
       </div>
 
       {error && <Alert variant="error">{error}</Alert>}

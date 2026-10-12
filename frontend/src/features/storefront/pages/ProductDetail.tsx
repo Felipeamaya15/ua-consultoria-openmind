@@ -7,20 +7,23 @@ import { useCart } from '../context/CartContext';
 import { StockFeedback } from '../components/store/StockFeedback';
 import { ProductCard } from '../components/store/ProductCard';
 import { ProductAttributes } from '../components/store/ProductAttributes';
+import { QuantityControl } from '../components/store/QuantityControl';
 import { useStorefrontTemplate } from '../hooks/useStorefrontTemplate';
 import {
   fetchPublicProductDetail,
   fetchPublicProducts,
 } from '../services/catalogService';
 
-export default function ProductDetail() {
+const previewAttributes = [{ clave: 'material', etiqueta: 'Material', valor: '100% algodón' }, { clave: 'medidas', etiqueta: 'Medidas', valor: '38 × 42 cm' }, { clave: 'cuidados', etiqueta: 'Cuidados', valor: 'Lavado a mano' }];
+
+export default function ProductDetail({ previewProduct }: { previewProduct?: Product } = {}) {
   const { id } = useParams();
   const { addItem, items } = useCart();
   const { route, isMinimal, isVisual, isCatalog } = useStorefrontTemplate();
 
-  const [product, setProduct] = useState<Product | null>(null);
+  const [product, setProduct] = useState<Product | null>(previewProduct ?? null);
   const [related, setRelated] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!previewProduct);
   const [notFound, setNotFound] = useState(false);
 
   const [selectedAttrs, setSelectedAttrs] = useState<Record<string, string>>({});
@@ -36,6 +39,14 @@ export default function ProductDetail() {
     setLoading(true);
     setNotFound(false);
     setProduct(null);
+
+    // Editor sample uses the public presentation without fetching or writing real products/cart.
+    if (previewProduct) {
+      setProduct(previewProduct);
+      setSelectedAttrs(previewProduct.variants[0]?.attributes ?? {});
+      setLoading(false);
+      return;
+    }
 
     if (!id) {
       setNotFound(true);
@@ -86,7 +97,7 @@ export default function ProductDetail() {
     return () => {
       cancelled = true;
     };
-  }, [id]);
+  }, [id, previewProduct]);
 
   /*
    * ==========================================================
@@ -208,7 +219,7 @@ export default function ProductDetail() {
   const variantOptionLabel = (value: string, available: boolean) =>
     available ? value : `${value} - Agotado`;
 
-  const inCart =
+  const inCart = previewProduct ? 0 :
     items.find(
       (item) =>
         item.productId === (product.catalogId || product.id) &&
@@ -216,7 +227,7 @@ export default function ProductDetail() {
     )?.quantity ?? 0;
 
   const remaining = Math.max(0, stock - inCart);
-  const hasCartItems = items.length > 0;
+  const hasCartItems = previewProduct ? true : items.length > 0;
   /*
    * ==========================================================
    * AGREGAR AL CARRITO
@@ -231,6 +242,8 @@ export default function ProductDetail() {
     ) {
       return;
     }
+
+    if (previewProduct) { setAdded(true); return; }
 
     addItem({
       productId: product.catalogId || product.id,
@@ -356,7 +369,7 @@ export default function ProductDetail() {
                 {product.description}
               </p>
 
-              <ProductAttributes slug={product.id} />
+              <ProductAttributes slug={product.id} previewAttributes={previewProduct ? previewAttributes : undefined} />
 
               {/* VARIANTES */}
               {Object.entries(product.attributes).map(([attrName, values]) => (
@@ -424,30 +437,7 @@ export default function ProductDetail() {
                 </p>
 
                 <div className="flex flex-col sm:flex-row gap-3">
-                  <div data-page-quantity className="flex h-12 w-[132px] flex-shrink-0 items-center overflow-hidden rounded-[9px] bg-[var(--visual-page-panel-background)] text-[var(--visual-page-color)]">
-                    <button data-page-action="ghost"
-                      type="button"
-                      onClick={() => setQty((current) => Math.max(1, current - 1))}
-                      className="h-full w-11 text-lg transition-colors hover:bg-[var(--visual-page-panel-background)]/[0.05]"
-                    >
-                      −
-                    </button>
-
-                    <span className="flex h-full flex-1 items-center justify-center border-x border-[var(--visual-global-border)]/10 text-sm font-black">
-                      {qty}
-                    </span>
-
-                    <button data-page-action="ghost"
-                      type="button"
-                      onClick={() =>
-                        setQty((current) => Math.max(1, Math.min(remaining, current + 1)))
-                      }
-                      disabled={!inStock || !completeSelection || qty >= remaining}
-                      className="h-full w-11 text-lg transition-colors hover:bg-[var(--visual-page-panel-background)]/[0.05] disabled:opacity-30"
-                    >
-                      +
-                    </button>
-                  </div>
+                  <QuantityControl value={qty} onDecrease={() => setQty(current => Math.max(1, current - 1))} onIncrease={() => setQty(current => Math.max(1, Math.min(remaining, current + 1)))} increaseDisabled={!inStock || !completeSelection || qty >= remaining} />
 
                   <button data-page-action="primary"
                     type="button"
@@ -642,7 +632,7 @@ export default function ProductDetail() {
                 {product.description}
               </p>
 
-              <ProductAttributes slug={product.id} />
+              <ProductAttributes slug={product.id} previewAttributes={previewProduct ? previewAttributes : undefined} />
 
               {/* Variantes */}
               {Object.entries(product.attributes).map(([attrName, values]) => (
@@ -709,30 +699,7 @@ export default function ProductDetail() {
                 </p>
 
                 <div className="flex flex-col sm:flex-row gap-3">
-                  <div data-page-quantity className="flex h-12 w-[132px] flex-shrink-0 items-center overflow-hidden rounded-[8px] border border-[var(--visual-global-border)]/15 bg-[var(--visual-page-panel-background)]">
-                    <button data-page-action="ghost"
-                      type="button"
-                      onClick={() => setQty((current) => Math.max(1, current - 1))}
-                      className="h-full w-11 text-lg transition-colors hover:bg-[var(--visual-page-panel-background)]"
-                    >
-                      −
-                    </button>
-
-                    <span className="flex h-full flex-1 items-center justify-center border-x border-[var(--visual-global-border)]/10 text-sm font-semibold">
-                      {qty}
-                    </span>
-
-                    <button data-page-action="ghost"
-                      type="button"
-                      onClick={() =>
-                        setQty((current) => Math.max(1, Math.min(remaining, current + 1)))
-                      }
-                      disabled={!inStock || !completeSelection || qty >= remaining}
-                      className="h-full w-11 text-lg transition-colors hover:bg-[var(--visual-page-panel-background)] disabled:opacity-30"
-                    >
-                      +
-                    </button>
-                  </div>
+                  <QuantityControl value={qty} onDecrease={() => setQty(current => Math.max(1, current - 1))} onIncrease={() => setQty(current => Math.max(1, Math.min(remaining, current + 1)))} increaseDisabled={!inStock || !completeSelection || qty >= remaining} />
 
                   <button data-page-action="primary"
                     type="button"
@@ -1117,60 +1084,7 @@ export default function ProductDetail() {
                 : 'flex gap-3'
             }
           >
-            <div data-page-panel data-page-quantity
-              className={`
-                flex border border-[var(--border)]
-                overflow-hidden bg-[var(--visual-page-panel-background)]
-                ${
-                  isMinimal
-                    ? 'rounded-full h-12 self-start'
-                    : 'rounded-lg'
-                }
-              `}
-            >
-              <button data-page-action="outline"
-                type="button"
-                onClick={() =>
-                  setQty((current) =>
-                    Math.max(1, current - 1),
-                  )
-                }
-                className={
-                  isMinimal
-                    ? 'w-11 hover:bg-[var(--muted)] transition-colors text-lg'
-                    : 'px-3 py-2 hover:bg-[var(--muted)] transition-colors text-lg'
-                }
-              >
-                −
-              </button>
-
-              <span
-                className={
-                  isMinimal
-                    ? 'w-10 text-sm font-semibold flex items-center justify-center'
-                    : 'px-4 py-2 text-sm font-semibold border-x border-[var(--border)] flex items-center'
-                }
-              >
-                {qty}
-              </span>
-
-              <button data-page-action="outline"
-                type="button"
-                onClick={() =>
-                  setQty((current) =>
-                    Math.max(1, Math.min(remaining, current + 1)),
-                  )
-                }
-                disabled={!inStock || !completeSelection || qty >= remaining}
-                className={
-                  isMinimal
-                    ? 'w-11 hover:bg-[var(--muted)] transition-colors text-lg disabled:opacity-40'
-                    : 'px-3 py-2 hover:bg-[var(--muted)] transition-colors text-lg disabled:opacity-40'
-                }
-              >
-                +
-              </button>
-            </div>
+            <QuantityControl value={qty} onDecrease={() => setQty(current => Math.max(1, current - 1))} onIncrease={() => setQty(current => Math.max(1, Math.min(remaining, current + 1)))} increaseDisabled={!inStock || !completeSelection || qty >= remaining} />
 
             <div className="flex-1 flex flex-col gap-2">
               <button data-page-action="primary"
@@ -1252,7 +1166,7 @@ export default function ProductDetail() {
             </p>
           </div>
 
-          <ProductAttributes slug={product.id} />
+          <ProductAttributes slug={product.id} previewAttributes={previewProduct ? previewAttributes : undefined} />
 
           {/* =================================================
               ENTREGA

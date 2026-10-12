@@ -6,7 +6,7 @@ function load(relative,mocks={}) {
   const file=path.resolve(root,relative);if(!Object.keys(mocks).length&&cache.has(file))return cache.get(file);
   const module={exports:{}};const code=ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2020,jsx:ts.JsxEmit.ReactJSX}}).outputText;
   const req=id=>{if(id in mocks)return mocks[id];if(id.endsWith('.css'))return {};if(!id.startsWith('.'))return require(id);const p=path.resolve(path.dirname(file),id);return load(['.ts','.tsx'].map(ext=>p+ext).find(fs.existsSync)||path.join(p,'index.ts'),mocks);};
-  vm.runInNewContext(code,{module,exports:module.exports,require:req,structuredClone,URLSearchParams,localStorage,window:{dispatchEvent(){}},Event,CustomEvent:class extends Event{},ResizeObserver:undefined});
+  vm.runInNewContext(code,{module,exports:module.exports,require:req,requestAnimationFrame: callback => callback(), structuredClone,URLSearchParams,localStorage,window:{dispatchEvent(){}},Event,CustomEvent:class extends Event{},ResizeObserver:undefined});
   if(!Object.keys(mocks).length)cache.set(file,module.exports);return module.exports;
 }
 const model=load('src/features/admin/visualEditor/model.ts'),resolver=load('src/features/storefront/visual/resolveVisualConfig.ts'),css=load('src/features/storefront/visual/cssVariables.ts').visualConfigToCssVariables;
@@ -36,18 +36,18 @@ test('selector actually changes the iframe, page inspector, history and sparse p
     if(page==='product')assert(tree.find(n=>n.type==='iframe').props.src.includes('/producto/ejemplo-editor'));
     const inspector=tree.find(n=>n.type?.name==='VisualInspector');assert.equal(inspector.props.page,page);inspector.props.onEdit('pages.'+page+'.layout.titleSize',49);tree=render();
     button(tree,'Deshacer').props.onClick();tree=render();assert.notEqual(tree.find(n=>n.type?.name==='VisualInspector').props.effective.pages[page].layout.titleSize,49);
-    button(tree,'Rehacer').props.onClick();tree=render();button(tree,'Guardar y publicar').props.onClick();tree=render();assert.equal(resolver.resolveStoreVisualConfig(storeApi.readStoredStoreConfig(identity),'editorial').pages[page].layout.titleSize,49);
+    button(tree,'Rehacer').props.onClick();tree=render();button(tree,'Guardar cambios').props.onClick();tree=render();assert.equal(resolver.resolveStoreVisualConfig(storeApi.readStoredStoreConfig(identity),'editorial').pages[page].layout.titleSize,49);
     assert(!tree.some(n=>n.props?.children==='Cambios sin guardar'));
     if(page==='checkout'){const select=tree.find(n=>n.type==='select'&&n.props['aria-label']==='Etapa de compra');for(const step of ['contact','delivery','payment','confirm']){select.props.onChange({target:{value:step}});tree=render();assert(tree.find(n=>n.type==='iframe').props.src.includes('visualStep='+step));assert.equal(tree.find(n=>n.type?.name==='VisualInspector').props.page,step==='confirm'?'confirmation':'checkout');}}
   }
   for(const [label,width] of [['Computadora',1440],['Tablet',768],['Móvil',375]]) { button(tree,label).props.onClick(); tree=render(); assert.equal(tree.find(n=>n.type==='iframe').props.style.width,width); assert(!tree.some(n=>n.props?.children==='Cambios sin guardar')); }
-  button(tree,'Inspector').props.onClick();tree=render();assert.equal(tree.find(n=>n.props?.id==='ve-properties').props.hidden,true);button(tree,'Inspector').props.onClick();
+  button(tree,'Opciones').props.onClick();tree=render();assert.equal(tree.find(n=>n.props?.id==='ve-properties').props.hidden,true);button(tree,'Opciones').props.onClick();
   slots.length=refs.length=0;tree=render();for(const page of ['product','cart','login','checkout','tracking','profile','orders'])assert.equal(tree.find(n=>n.type?.name==='VisualInspector').props.effective.pages[page].layout.titleSize,49);assert.equal(button(tree,'Deshacer').props.disabled,true);
   assert.equal(storeApi.readStoredStoreConfig(identity).history,undefined);
 });
 test('safe examples render complete pages without mounting public business children',()=>{
   const React=require('react'),{renderToStaticMarkup}=require('react-dom/server'),pages=load('src/features/storefront/visual/pages.ts');let embedded=true,location={pathname:'',search:'?visualExample=1'},mounted=0;
-  const Component=load('src/features/storefront/components/store/StorePageContent.tsx',{'react-router-dom':{useLocation:()=>location},'../../visual/pages':{...pages,isActiveEditorPreview:()=>embedded}}).StorePageContent;
+  const Component=load('src/features/storefront/components/store/StorePageContent.tsx',{react:{...React,lazy:()=>({previewProduct})=>React.createElement('p',null,previewProduct.name)},'react-router-dom':{useLocation:()=>location},'../../visual/pages':{...pages,isActiveEditorPreview:()=>embedded}}).StorePageContent;
   function Business(){mounted++;return React.createElement('p',null,'REAL');}
   for(const [page,text]of [['product','Bolso de algodón'],['cart','Tu carrito'],['login','Iniciar sesión'],['checkout','Datos de contacto'],['confirmation','Ver mi pedido'],['tracking','Preparando tu pedido'],['profile','Datos personales'],['orders','Pedidos recientes']]){
     location={pathname:'/plantilla/1/'+pages.STORE_PAGES.find(p=>p.id===page).path+(page==='product'?'/ejemplo-editor':''),search:'?visualExample=1'};
@@ -63,7 +63,7 @@ test('safe examples render complete pages without mounting public business child
 test('product geometry and cart/form properties reach responsive public variables',()=>{
   let document=base;for(const [path,value]of Object.entries({'pages.product.content.imageRatio':1.5,'pages.product.content.imageSize':380,'pages.product.content.imageWidth':60,'pages.cart.content.imageSize':80,'pages.login.content.formWidth':440,'responsive.mobile.pages.product.content.imageSize':240}))document=model.editProperty(document,path,value);
   const config=model.resolveEditorDocument(document,'editorial'),vars=css(config);assert.equal(vars['--visual-page-product-image-size-desktop'],'380px');assert.equal(vars['--visual-page-product-image-size-mobile'],'240px');assert.equal(vars['--visual-page-product-content-columns-desktop'],'minmax(0,60fr) minmax(0,40fr)');assert.equal(vars['--visual-page-cart-image-size-desktop'],'80px');assert.equal(config.pages.profile.content.formWidth,560);
-  const productSource=fs.readFileSync(path.join(root,'src/features/storefront/pages/ProductDetail.tsx'),'utf8');assert.equal((productSource.match(/data-page-main-image/g)||[]).length,3);assert.equal((productSource.match(/data-page-quantity/g)||[]).length,3);
+  const productSource=fs.readFileSync(path.join(root,'src/features/storefront/pages/ProductDetail.tsx'),'utf8');assert.equal((productSource.match(/data-page-main-image/g)||[]).length,3);assert.equal((productSource.match(/<QuantityControl /g)||[]).length,3);assert(fs.readFileSync(path.join(root,'src/features/storefront/components/store/QuantityControl.tsx'),'utf8').includes('data-page-quantity'));
   const {getInspectorGroups}=load('src/features/admin/visualEditor/inspector.tsx');for(const page of ['product','cart','login','checkout','tracking','profile','orders'])for(const section of ['pageLayout','pagePanel','pageField','pageButton'])for(const group of getInspectorGroups(section,false,page))for(const field of group.fields)assert.notEqual(model.readPath(config,field.path),undefined,field.path);
 });
 test('stable image keys survive reordered DOM and replacements while reading old keys',()=>{
