@@ -1,3 +1,4 @@
+import { VISUAL_SECTION } from '../../../visual/sectionIds';
 import { AccountNavigation } from '../AccountNavigation';
 import { useStore } from '../../../context/StoreContext';
 import { Link } from 'react-router-dom';
@@ -10,10 +11,10 @@ export function VisualHeader() {
   const { route } = useStorefrontTemplate();
 
   return (
-       <header className="bg-white border-t-4 border-[var(--primary)] border-b border-black/10">
-      <div className="max-w-6xl mx-auto px-5 min-h-16 flex items-center justify-between gap-5">
+       <header data-visual-section={VISUAL_SECTION.header} className="bg-white border-t-4 border-[var(--primary)] border-b border-black/10">
+      <div data-visual-part="headerLayout" className="max-w-6xl mx-auto px-5 min-h-16 flex items-center justify-between gap-5">
 
-        <Link
+        <Link data-visual-part="logo"
           to={route()}
           className="flex items-center gap-3 flex-shrink-0"
         >
@@ -41,7 +42,7 @@ export function VisualHeader() {
           </span>
         </div>
 
-        <nav className="flex items-center gap-4 md:gap-6 text-sm">
+        <nav data-visual-part="navigation" className="flex items-center gap-4 md:gap-6 text-sm">
           <Link
             to={route('catalogo')}
             className="hover:opacity-50 transition-opacity"

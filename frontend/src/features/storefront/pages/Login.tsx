@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useGoogleLogin } from '@react-oauth/google';
 import { authService } from '../../auth/services/authService';
 import { Button, Input, Alert, InstitutionalBadge } from '../components/ui';
@@ -7,11 +7,12 @@ import { useStorefrontTemplate } from '../hooks/useStorefrontTemplate';
 
 export default function Login() {
   const navigate = useNavigate();
+  const [params] = useSearchParams();
   const { route, isMinimal, isVisual, isCatalog } =
     useStorefrontTemplate();
 
   const [mode, setMode] =
-    useState<'login' | 'register'>('login');
+    useState<'login' | 'register'>(() => params.get('modo') === 'registro' ? 'register' : 'login');
 
   const [email, setEmail] = useState('');
   const [password, setPassword] =
@@ -159,14 +160,14 @@ export default function Login() {
 
   if (isCatalog) {
     return (
-      <div className="min-h-[76vh] bg-[#050505] text-white flex items-center justify-center px-5 py-14 md:py-20">
+      <div className="min-h-[76vh] bg-[var(--visual-page-panel-background)] text-[var(--visual-page-color)] flex items-center justify-center px-5 py-14 md:py-20">
         <div className="w-full max-w-[460px]">
           <div className="text-center mb-8">
             <div className="flex justify-center mb-5">
               <InstitutionalBadge />
             </div>
 
-            <p className="text-[#ff5a1f] text-[10px] font-black uppercase tracking-[0.16em]">
+            <p className="text-[var(--primary)] text-[10px] font-black uppercase tracking-[0.16em]">
               Mi Tienda · Tu cuenta
             </p>
 
@@ -176,15 +177,15 @@ export default function Login() {
                 : 'Crear cuenta'}
             </h1>
 
-            <p className="mt-4 text-[13px] text-white/45">
+            <p className="mt-4 text-[13px] text-[var(--visual-page-color)]/45">
               {mode === 'login'
                 ? '¿No tienes cuenta?'
                 : '¿Ya tienes cuenta?'}{' '}
 
-              <button
+              <button data-page-action="ghost"
                 type="button"
                 onClick={changeMode}
-                className="font-semibold text-[#1683ff] hover:opacity-70 transition-opacity"
+                className="font-semibold text-[var(--primary)] hover:opacity-70 transition-opacity"
               >
                 {mode === 'login'
                   ? 'Regístrate'
@@ -193,21 +194,21 @@ export default function Login() {
             </p>
           </div>
 
-          <div className="rounded-[16px] bg-[#f5f5f3] p-6 md:p-8 text-[#151515] flex flex-col gap-5">
+          <div data-page-panel className="rounded-[16px] bg-[var(--visual-page-panel-background)] p-6 md:p-8 text-[var(--visual-page-color)] flex flex-col gap-5">
             {message && (
               <Alert variant="info">
                 {message}
               </Alert>
             )}
 
-            <button
+            <button data-page-action="outline"
               type="button"
               onClick={() =>
                 setMessage(
                   'Acceso con Google simulado. No se conecta a una cuenta real.',
                 )
               }
-              className="h-12 flex items-center justify-center gap-3 border border-black/10 bg-white rounded-[9px] text-[12px] font-semibold hover:border-black/30 transition-colors"
+              className="h-12 flex items-center justify-center gap-3 border border-[var(--visual-global-border)]/10 bg-[var(--visual-page-panel-background)] rounded-[9px] text-[12px] font-semibold hover:border-[var(--visual-global-border)]/30 transition-colors"
             >
               <svg
                 className="w-5 h-5"
@@ -224,12 +225,12 @@ export default function Login() {
             </button>
 
             <div className="flex items-center gap-3">
-              <div className="flex-1 h-px bg-black/10" />
-              <span className="text-[10px] text-black/35">o</span>
-              <div className="flex-1 h-px bg-black/10" />
+              <div className="flex-1 h-px bg-[var(--visual-page-panel-background)]/10" />
+              <span className="text-[10px] text-[var(--visual-page-color)]/35">o</span>
+              <div className="flex-1 h-px bg-[var(--visual-page-panel-background)]/10" />
             </div>
 
-            <form
+            <form data-page-form data-visual-section="pagePanel" data-page-panel
               onSubmit={handleSubmit}
               className="flex flex-col gap-4 [&_label]:text-[#151515] [&_input]:text-[#151515]"
             >
@@ -278,7 +279,7 @@ export default function Login() {
 
               {mode === 'register' && (
                 <div className="flex flex-col gap-2 -mt-2">
-                  <p className="text-xs text-[#151515]/70">
+                  <p className="text-xs text-[var(--visual-page-color)]">
                     La contraseña debe contener al menos 8 caracteres, números, caracteres especiales y mayúsculas.
                   </p>
                   {passwordErrors.length > 0 && (
@@ -295,10 +296,10 @@ export default function Login() {
 
               {mode === 'login' && (
                 <div className="text-right -mt-2">
-                  <button
+                  <button data-page-action="outline"
               type="button"
               onClick={() => loginConGoogle()}
-              className="h-12 flex items-center justify-center gap-3 border border-black/10 bg-white rounded-[9px] text-[12px] font-semibold hover:border-black/30 transition-colors"
+              className="h-12 flex items-center justify-center gap-3 border border-[var(--visual-global-border)]/10 bg-[var(--visual-page-panel-background)] rounded-[9px] text-[12px] font-semibold hover:border-[var(--visual-global-border)]/30 transition-colors"
             >
               <svg
                 className="w-5 h-5"
@@ -311,10 +312,10 @@ export default function Login() {
                 </div>
               )}
 
-              <button
+              <button data-visual-section="pageButton" data-page-action="primary"
                 type="submit"
                 disabled={loading}
-                className="w-full h-12 rounded-[9px] bg-[#1683ff] text-white text-[12px] font-bold hover:bg-[#3194f5] disabled:opacity-50 disabled:cursor-wait transition-colors"
+                className="w-full h-12 rounded-[9px] bg-[var(--primary)] text-[var(--visual-page-color)] text-[12px] font-bold hover:bg-[var(--primary)] disabled:opacity-50 disabled:cursor-wait transition-colors"
               >
                 {loading
                   ? 'Procesando...'
@@ -325,16 +326,16 @@ export default function Login() {
             </form>
 
             <div className="text-center pt-1">
-              <Link
+              <Link data-page-action="ghost"
                 to={route()}
-                className="text-[10px] uppercase tracking-[0.12em] text-black/45 hover:text-[#1683ff] transition-colors"
+                className="text-[10px] uppercase tracking-[0.12em] text-[var(--visual-page-color)]/45 hover:text-[var(--primary)] transition-colors"
               >
                 Continuar como invitado →
               </Link>
             </div>
           </div>
 
-          <p className="text-center text-[10px] text-white/30 mt-5">
+          <p className="text-center text-[10px] text-[var(--visual-page-color)]/30 mt-5">
             Compra de forma segura y sencilla.
           </p>
         </div>
@@ -344,10 +345,10 @@ export default function Login() {
 
   if (isVisual) {
     return (
-      <div className="min-h-[72vh] bg-white text-[#111111] flex items-center justify-center px-5 md:px-8 py-14 md:py-20">
+      <div className="min-h-[72vh] bg-[var(--visual-page-panel-background)] text-[var(--visual-page-color)] flex items-center justify-center px-5 md:px-8 py-14 md:py-20">
         <div className="w-full max-w-[460px]">
           <div className="text-center mb-8">
-            <p className="mb-3 text-[9px] font-medium uppercase tracking-[0.18em] text-[#77716e]">
+            <p className="mb-3 text-[9px] font-medium uppercase tracking-[0.18em] text-[var(--visual-page-color)]">
               Velta · Tu cuenta
             </p>
 
@@ -357,15 +358,15 @@ export default function Login() {
                 : 'Crear cuenta'}
             </h1>
 
-            <p className="mt-4 text-[13px] text-[#77716e]">
+            <p className="mt-4 text-[13px] text-[var(--visual-page-color)]">
               {mode === 'login'
                 ? '¿No tienes cuenta?'
                 : '¿Ya tienes cuenta?'}{' '}
 
-              <button
+              <button data-page-action="outline"
                 type="button"
                 onClick={changeMode}
-                className="font-semibold text-black border-b border-black hover:opacity-50 transition-opacity"
+                className="font-semibold text-[var(--visual-page-color)] border-b border-[var(--visual-global-border)] hover:opacity-50 transition-opacity"
               >
                 {mode === 'login'
                   ? 'Regístrate'
@@ -374,18 +375,18 @@ export default function Login() {
             </p>
           </div>
 
-          <div className="rounded-[10px] bg-[#f1f1f0] p-6 md:p-8 flex flex-col gap-5">
+          <div data-page-panel className="rounded-[10px] bg-[var(--visual-page-panel-background)] p-6 md:p-8 flex flex-col gap-5">
             {message && (
               <Alert variant="info">
                 {message}
               </Alert>
             )}
 
-            <button
+            <button data-page-action="outline"
               type="button"
               onClick={() => loginConGoogle()}
                 
-              className="h-12 flex items-center justify-center gap-3 border border-black/15 bg-white rounded-[8px] text-[12px] font-semibold hover:border-black transition-colors"
+              className="h-12 flex items-center justify-center gap-3 border border-[var(--visual-global-border)]/15 bg-[var(--visual-page-panel-background)] rounded-[8px] text-[12px] font-semibold hover:border-[var(--visual-global-border)] transition-colors"
             >
               <svg
                 className="w-5 h-5"
@@ -402,14 +403,14 @@ export default function Login() {
             </button>
 
             <div className="flex items-center gap-3">
-              <div className="flex-1 h-px bg-black/10" />
-              <span className="text-[10px] text-[#8c8683]">
+              <div className="flex-1 h-px bg-[var(--visual-page-panel-background)]/10" />
+              <span className="text-[10px] text-[var(--visual-page-color)]">
                 o
               </span>
-              <div className="flex-1 h-px bg-black/10" />
+              <div className="flex-1 h-px bg-[var(--visual-page-panel-background)]/10" />
             </div>
 
-            <form
+            <form data-page-form data-visual-section="pagePanel" data-page-panel
               onSubmit={handleSubmit}
               className="flex flex-col gap-4"
             >
@@ -475,24 +476,24 @@ export default function Login() {
 
               {mode === 'login' && (
                 <div className="text-right -mt-2">
-                  <button
+                  <button data-page-action="ghost"
                     type="button"
                     onClick={() => 
                       setMessage(
                         'Recuperación de contraseña de demostración. No se envían correos.',
                       )
                     }
-                    className="text-[10px] text-[#77716e] hover:text-black transition-colors"
+                    className="text-[10px] text-[var(--visual-page-color)] hover:text-[var(--visual-page-color)] transition-colors"
                   >
                     ¿Olvidaste tu contraseña?
                   </button>
                 </div>
               )}
 
-              <button
+              <button data-visual-section="pageButton" data-page-action="primary"
                 type="submit"
                 disabled={loading}
-                className="w-full h-12 rounded-[8px] bg-black text-white text-[12px] font-semibold hover:opacity-80 disabled:opacity-50 disabled:cursor-wait transition-opacity"
+                className="w-full h-12 rounded-[8px] bg-[var(--visual-page-panel-background)] text-[var(--visual-page-color)] text-[12px] font-semibold hover:opacity-80 disabled:opacity-50 disabled:cursor-wait transition-opacity"
               >
                 {loading
                   ? 'Procesando...'
@@ -503,16 +504,16 @@ export default function Login() {
             </form>
 
             <div className="text-center pt-1">
-              <Link
+              <Link data-page-action="ghost"
                 to={route()}
-                className="text-[10px] uppercase tracking-[0.12em] text-[#77716e] hover:text-black transition-colors"
+                className="text-[10px] uppercase tracking-[0.12em] text-[var(--visual-page-color)] hover:text-[var(--visual-page-color)] transition-colors"
               >
                 Continuar como invitado →
               </Link>
             </div>
           </div>
 
-          <p className="text-center text-[10px] text-[#9a9491] mt-5">
+          <p className="text-center text-[10px] text-[var(--visual-page-color)] mt-5">
             Compra de forma segura y sencilla.
           </p>
         </div>
@@ -543,7 +544,7 @@ export default function Login() {
           )}
 
           {isMinimal && (
-            <p className="text-xs text-gray-400 mb-2">
+            <p className="text-xs text-[var(--visual-page-color)] mb-2">
               Mi Tienda.
             </p>
           )}
@@ -551,7 +552,7 @@ export default function Login() {
           <h1
             className={
               isMinimal
-                ? 'text-3xl md:text-4xl font-semibold tracking-tight text-[#171717]'
+                ? 'text-3xl md:text-4xl font-semibold tracking-tight text-[var(--visual-page-color)]'
                 : 'text-2xl font-bold'
             }
           >
@@ -565,12 +566,12 @@ export default function Login() {
               ? '¿No tienes cuenta?'
               : '¿Ya tienes cuenta?'}{' '}
 
-            <button
+            <button data-page-action="ghost"
               type="button"
               onClick={changeMode}
               className={
                 isMinimal
-                  ? 'text-[#17213b] font-semibold hover:opacity-60 transition-opacity'
+                  ? 'text-[var(--primary)] font-semibold hover:opacity-60 transition-opacity'
                   : 'text-[var(--primary)] font-semibold hover:underline'
               }
             >
@@ -581,11 +582,11 @@ export default function Login() {
           </p>
         </div>
 
-        <div
+        <div data-page-panel
           className={
             isMinimal
-              ? 'bg-white border border-black/5 rounded-[28px] p-6 md:p-8 flex flex-col gap-5'
-              : 'bg-white border border-[var(--border)] rounded-2xl p-6 flex flex-col gap-4'
+              ? 'bg-[var(--visual-page-panel-background)] border border-[var(--visual-global-border)]/5 rounded-[28px] p-6 md:p-8 flex flex-col gap-5'
+              : 'bg-[var(--visual-page-panel-background)] border border-[var(--border)] rounded-2xl p-6 flex flex-col gap-4'
           }
         >
           {message && (
@@ -594,13 +595,13 @@ export default function Login() {
             </Alert>
           )}
 
-          <button
+          <button data-page-action="outline"
             type="button"
             onClick={() => loginConGoogle()}
               
             className={
               isMinimal
-                ? 'h-12 flex items-center justify-center gap-3 border border-black/10 rounded-full text-sm font-medium hover:bg-gray-50 transition-colors'
+                ? 'h-12 flex items-center justify-center gap-3 border border-[var(--visual-global-border)]/10 rounded-full text-sm font-medium hover:bg-[var(--visual-page-panel-background)] transition-colors'
                 : 'flex items-center justify-center gap-3 border border-[var(--border)] rounded-xl py-2.5 text-sm font-medium hover:bg-[var(--muted)] transition-colors'
             }
           >
@@ -626,7 +627,7 @@ export default function Login() {
             <div className="flex-1 h-px bg-[var(--border)]" />
           </div>
 
-          <form
+          <form data-page-form data-visual-section="pagePanel" data-page-panel
             onSubmit={handleSubmit}
             className="flex flex-col gap-4"
           >
@@ -692,7 +693,7 @@ export default function Login() {
 
             {mode === 'login' && (
               <div className="text-right -mt-2">
-                <button
+                <button data-page-action="ghost"
                   type="button"
                   onClick={() =>
                     setMessage(
@@ -701,7 +702,7 @@ export default function Login() {
                   }
                   className={
                     isMinimal
-                      ? 'text-xs text-[#17213b] hover:opacity-60 transition-opacity'
+                      ? 'text-xs text-[var(--primary)] hover:opacity-60 transition-opacity'
                       : 'text-xs text-[var(--primary)] hover:underline'
                   }
                 >
@@ -711,10 +712,10 @@ export default function Login() {
             )}
 
             {isMinimal ? (
-              <button
+              <button data-visual-section="pageButton" data-page-action="primary"
                 type="submit"
                 disabled={loading}
-                className="w-full h-12 rounded-full bg-[#17213b] text-white text-sm font-semibold hover:bg-[#0f2a56] disabled:opacity-60 disabled:cursor-wait transition-colors"
+                className="w-full h-12 rounded-full bg-[var(--primary)] text-[var(--visual-page-color)] text-sm font-semibold hover:bg-[var(--primary)] disabled:opacity-60 disabled:cursor-wait transition-colors"
               >
                 {loading
                   ? 'Procesando...'
@@ -738,11 +739,11 @@ export default function Login() {
           </form>
 
           <div className="text-center pt-1">
-            <Link
+            <Link data-page-action="ghost"
               to={route()}
               className={
                 isMinimal
-                  ? 'text-xs text-gray-500 hover:text-[#17213b] transition-colors'
+                  ? 'text-xs text-[var(--visual-page-color)] hover:text-[var(--primary)] transition-colors'
                   : 'text-xs text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition-colors'
               }
             >
@@ -752,7 +753,7 @@ export default function Login() {
         </div>
 
         {isMinimal && (
-          <p className="text-center text-[11px] text-gray-400 mt-5">
+          <p className="text-center text-[11px] text-[var(--visual-page-color)] mt-5">
             Compra de forma segura y sencilla.
           </p>
         )}

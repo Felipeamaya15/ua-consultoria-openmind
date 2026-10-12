@@ -10,6 +10,9 @@ import type {
   LegalPage,
 } from '../../storefront/data/legalContent';
 import type { EmailTemplates } from '../data/emailTemplates';
+import type { VisualConfigOverrides } from '../../storefront/visual/types';
+import type { ThemeImageSetting } from '../../storefront/visual/imageSettings';
+export type { ThemeImageSetting } from '../../storefront/visual/imageSettings';
 
 export interface ShippingRate {
   region: string;
@@ -26,15 +29,8 @@ export interface CarrierConnection {
   tarifas?: ShippingRate[];
 }
 
-export interface ThemeImageSetting {
-  src: string;
-  scale: number;
-  x: number;
-  y: number;
-  radius: number;
-}
-
 export interface ThemeTemplateCustomization {
+  visualConfig?: VisualConfigOverrides;
   primaryColor: string;
   secondaryColor: string;
   accentColor: string;

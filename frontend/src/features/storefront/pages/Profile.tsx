@@ -43,26 +43,26 @@ export default function Profile() {
     {loading && <p role="status">Cargando perfil…</p>}
     {error && <p role="alert" className="text-red-700">{error}</p>}
     {success && <p role="status" className="text-green-700">{success}</p>}
-    {!loading && !profile && <Link to={route('ingresar')} className="underline">Iniciar sesión</Link>}
+    {!loading && !profile && <Link data-page-action="ghost" to={route('ingresar')} className="underline">Iniciar sesión</Link>}
     {profile && <>
-      <form onSubmit={event => save(event)} className="space-y-4">
+      <form data-page-form data-visual-section="pagePanel" data-page-panel onSubmit={event => save(event)} className="space-y-4">
         <fieldset disabled={busy} className="space-y-4">
           {(['first_name', 'last_name', 'email', 'phone'] as const).map(field => <label key={field} className="block">
             {{first_name: 'Nombre', last_name: 'Apellido', email: 'Email', phone: 'Teléfono'}[field]}
-            <input className={inputClass} type={field === 'email' ? 'email' : field === 'phone' ? 'tel' : 'text'}
+            <input data-visual-section="pageField" className={inputClass} type={field === 'email' ? 'email' : field === 'phone' ? 'tel' : 'text'}
               autoComplete={{first_name: 'given-name', last_name: 'family-name', email: 'email', phone: 'tel'}[field]}
               maxLength={field === 'phone' ? 20 : field === 'email' ? 254 : 150} required={field === 'email'}
               value={profile[field]} onChange={event => { setProfile({...profile, [field]: event.target.value}); setSuccess(''); }} />
           </label>)}
-          <button className="border rounded px-4 py-2" type="submit">{busy ? 'Guardando…' : 'Guardar perfil'}</button>
+          <button data-page-action="outline" className="border rounded px-4 py-2" type="submit">{busy ? 'Guardando…' : 'Guardar perfil'}</button>
         </fieldset>
       </form>
-      <form onSubmit={event => save(event, true)} className="space-y-4">
+      <form data-page-form data-visual-section="pagePanel" data-page-panel onSubmit={event => save(event, true)} className="space-y-4">
         <h2 className="text-xl font-semibold">Cambiar contraseña</h2>
         <fieldset disabled={busy} className="space-y-4">
-          <label className="block">Contraseña actual<input className={inputClass} type="password" autoComplete="current-password" required value={currentPassword} onChange={e => setCurrentPassword(e.target.value)} /></label>
-          <label className="block">Nueva contraseña<input className={inputClass} type="password" autoComplete="new-password" required value={newPassword} onChange={e => setNewPassword(e.target.value)} /></label>
-          <button className="border rounded px-4 py-2" type="submit">Cambiar contraseña</button>
+          <label className="block">Contraseña actual<input data-visual-section="pageField" className={inputClass} type="password" autoComplete="current-password" required value={currentPassword} onChange={e => setCurrentPassword(e.target.value)} /></label>
+          <label className="block">Nueva contraseña<input data-visual-section="pageField" className={inputClass} type="password" autoComplete="new-password" required value={newPassword} onChange={e => setNewPassword(e.target.value)} /></label>
+          <button data-page-action="outline" className="border rounded px-4 py-2" type="submit">Cambiar contraseña</button>
         </fieldset>
       </form>
     </>}

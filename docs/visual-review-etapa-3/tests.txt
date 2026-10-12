@@ -1,0 +1,15 @@
+PASS account-navigation.cjs
+PASS cart-checkout.cjs
+PASS checkout-shipping.cjs
+PASS customer-orders.cjs
+PASS entrepreneur-profile.cjs
+PASS landing-content.cjs
+PASS landing-editor.cjs
+PASS order-tracking.cjs
+PASS product-creation.cjs
+PASS product-editing.cjs
+PASS profile.cjs
+PASS stock-feedback.cjs
+PASS storefront-variants.cjs
+PASS visual-config.cjs
+PASS visual-editor.cjs

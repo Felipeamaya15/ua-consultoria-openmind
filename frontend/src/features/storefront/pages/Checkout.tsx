@@ -1,3 +1,4 @@
+import { checkoutPreviewStep } from '../visual/pages';
 import { useEffect, useMemo, useState, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 
@@ -15,6 +16,8 @@ import {
   Icon,
 } from '../components/ui';
 import { useStorefrontTemplate } from '../hooks/useStorefrontTemplate';
+import { useStoreIdentity } from '../context/StoreIdentityContext';
+import { readCheckoutAuthSettings, type CheckoutAuthSettings as AuthSettings } from '../services/storePreferences';
 import { transbankPaymentService } from '../../checkout/services/transbankPaymentService';
 import { paypalPaymentService } from '../../checkout/services/paypalPaymentService';
 
@@ -72,22 +75,6 @@ type TransferDetails = {
   holder_rut: string;
   holder_name: string;
   confirmation_email: string;
-};
-
-const ADMIN_STORAGE_KEY = 'ua-entrepreneur-demo-v1';
-
-type AuthSettings = {
-  emailPassword: boolean;
-  google: boolean;
-  guestCheckout: boolean;
-  requiresAuth: 'none' | 'optional' | 'required';
-};
-
-const defaultAuthSettings: AuthSettings = {
-  emailPassword: true,
-  google: true,
-  guestCheckout: true,
-  requiresAuth: 'optional',
 };
 
 function getAvailableAuthModes(settings: AuthSettings): AuthMode[] {
@@ -167,90 +154,6 @@ const paymentPresentation: PaymentOption[] = [
     desc: 'Verificacion manual en 24-48h',
   },
 ];
-
-function readCheckoutOptions() {
-  try {
-    const raw = localStorage.getItem(ADMIN_STORAGE_KEY);
-    if (!raw) {
-      return { 
-        authSettings: defaultAuthSettings,
-        shippingOptions: defaultShippingOptions,
-        paymentOptions: paymentPresentation,
-      };
-    }
-
-    const config = JSON.parse(raw)?.config;
-
-    // 1. Configuración de Autenticación
-    const authConfig = config?.authenticationConfiguration;
-    const authSettings: AuthSettings = {
-      emailPassword: authConfig?.emailPassword ?? defaultAuthSettings.emailPassword,
-      google: authConfig?.google ?? defaultAuthSettings.google,
-      guestCheckout: authConfig?.guestCheckout ?? defaultAuthSettings.guestCheckout,
-      requiresAuth: config?.requiresAuth ?? defaultAuthSettings.requiresAuth,
-    };
-
-    // 2. Configuración de Entregas
-    const shippingConfig = config?.shippingConfiguration;
-    let shippingOptions = defaultShippingOptions;
-    
-    if (shippingConfig) {
-      shippingOptions = defaultShippingOptions.filter((option) => {
-        if (option.id === 'Chilexpress') return !!shippingConfig.chilexpress?.enabled;
-        if (option.id === 'Starken') return !!shippingConfig.starken?.enabled;
-        if (option.id === 'Retiro') return !!shippingConfig.pickup?.enabled;
-        return true;
-      }).map((option) =>
-        option.id === 'Retiro'
-          ? {
-              ...option,
-              desc:
-                shippingConfig.pickup?.schedule || shippingConfig.pickup?.address
-                  ? `Costo $0 · ${[
-                      shippingConfig.pickup?.schedule,
-                      shippingConfig.pickup?.address,
-                    ].filter(Boolean).join(' · ')}`
-                  : option.desc,
-              priceLabel: '$0',
-              requiresAddress: false,
-            }
-          : option
-      );
-    }
-
-    // 3. Configuración de Pagos
-    const paymentMap: Record<string, string> = {
-      Transbank: 'transbank',
-      MercadoPago: 'mercadopago',
-      PayPal: 'paypal',
-      Linkify: 'linkify',
-      Transferencia: 'transfer',
-    };
-
-    let paymentOptions = paymentPresentation;
-    const paymentConfig = config?.paymentConfiguration;
-    
-    if (paymentConfig) {
-      paymentOptions = paymentPresentation.filter((option) => { 
-        const key = paymentMap[option.id];
-        return key ? !!paymentConfig[key]?.enabled : false;
-      });
-    }
-
-    return {
-      authSettings,
-      shippingOptions: shippingOptions.length > 0 ? shippingOptions : defaultShippingOptions,
-      paymentOptions,
-    };
-    
-  } catch {
-    return { 
-      authSettings: defaultAuthSettings,
-      shippingOptions: defaultShippingOptions,
-      paymentOptions: paymentPresentation, 
-    };
-  }
-}
 
 const fmtCardNumber = (value: string) =>
   value
@@ -389,9 +292,10 @@ export default function Checkout() {
   const { route, isMinimal, isVisual, isCatalog } =
     useStorefrontTemplate();
 
-  const { authSettings } = useMemo(
-    readCheckoutOptions,
-    [],
+  const { identity } = useStoreIdentity();
+  const authSettings = useMemo(
+    () => readCheckoutAuthSettings(identity),
+    [identity],
   );
   const [shippingOptions, setShippingOptions] = useState<ShippingOption[]>([]);
   const [shippingLoading, setShippingLoading] = useState(true);
@@ -431,7 +335,10 @@ export default function Checkout() {
 
   const navigate = useNavigate();
 
-  const [step, setStep] = useState('contact');
+  const [step, setStep] = useState(() => {
+    try { return checkoutPreviewStep(window.location.search, window.parent !== window, window.parent.location.pathname); }
+    catch { return 'contact'; }
+  });
 
   const [authMode, setAuthMode] =
     useState<AuthMode>(() => availableAuthModes[0]);
@@ -870,7 +777,7 @@ export default function Checkout() {
         <p>
           Tu carrito está vacío.{' '}
 
-          <Link
+          <Link data-page-action="ghost"
             to={route('catalogo')}
             className="text-[var(--primary)] hover:underline"
           >
@@ -936,7 +843,7 @@ export default function Checkout() {
     <div
       className={
         isVisual
-          ? 'max-w-[1180px] mx-auto px-5 md:px-8 pt-10 pb-14 text-[#111111]'
+          ? 'max-w-[1180px] mx-auto px-5 md:px-8 pt-10 pb-14 text-[var(--visual-page-color)]'
           : isMinimal
             ? 'max-w-6xl mx-auto px-4 md:px-8 pt-10 pb-8'
             : 'max-w-5xl mx-auto px-4 py-8'
@@ -944,7 +851,7 @@ export default function Checkout() {
     >
       {isVisual && (
         <div className="mb-8">
-          <p className="mb-3 text-[9px] font-medium uppercase tracking-[0.18em] text-[#77716e]">
+          <p className="mb-3 text-[9px] font-medium uppercase tracking-[0.18em] text-[var(--visual-page-color)]">
             Finaliza tu compra
           </p>
           <h1 className="font-serif text-[42px] md:text-[52px] leading-none tracking-[-0.025em]">
@@ -955,10 +862,10 @@ export default function Checkout() {
 
       {isCatalog && (
         <div className="mb-8">
-          <p className="text-[#ff5a1f] text-[10px] font-black uppercase tracking-[0.16em]">
+          <p className="text-[var(--primary)] text-[10px] font-black uppercase tracking-[0.16em]">
             Finaliza tu compra
           </p>
-          <h1 className="mt-3 text-[42px] md:text-[52px] leading-none tracking-[-0.045em] font-black text-white">
+          <h1 className="mt-3 text-[42px] md:text-[52px] leading-none tracking-[-0.045em] font-black text-[var(--visual-page-color)]">
             Checkout.
           </h1>
         </div>
@@ -969,11 +876,11 @@ export default function Checkout() {
       ====================================================== */}
       {isMinimal && (
         <div className="mb-7">
-          <p className="text-xs text-gray-400 mb-2">
+          <p className="text-xs text-[var(--visual-page-color)] mb-2">
             Finaliza tu compra
           </p>
 
-          <h1 className="text-3xl md:text-4xl font-semibold tracking-tight text-[#171717]">
+          <h1 className="text-3xl md:text-4xl font-semibold tracking-tight text-[var(--visual-page-color)]">
             Checkout
           </h1>
         </div>
@@ -982,12 +889,12 @@ export default function Checkout() {
       {/* =====================================================
           STEPPER
       ====================================================== */}
-      <div
+      <div data-page-panel
         className={
           isVisual
-            ? 'mb-8 overflow-x-auto rounded-[10px] bg-[#f1f1f0] px-4 py-4'
+            ? 'mb-8 overflow-x-auto rounded-[10px] bg-[var(--visual-page-panel-background)] px-4 py-4'
             : isMinimal
-              ? 'mb-8 overflow-x-auto pb-2 bg-white border border-black/5 rounded-[20px] px-4 py-4'
+              ? 'mb-8 overflow-x-auto pb-2 bg-[var(--visual-page-panel-background)] border border-[var(--visual-global-border)]/5 rounded-[20px] px-4 py-4'
               : 'mb-8 overflow-x-auto pb-2'
         }
       >
@@ -1018,10 +925,10 @@ export default function Checkout() {
               CONTACTO
           ================================================ */}
           {step === 'contact' && (
-            <div className={panelClass}>
+            <div data-visual-section="pagePanel" data-page-panel className={panelClass}>
               <div>
                 {isMinimal && (
-                  <p className="text-xs text-gray-400 mb-1">
+                  <p className="text-xs text-[var(--visual-page-color)] mb-1">
                     Paso 1 de 4
                   </p>
                 )}
@@ -1037,15 +944,15 @@ export default function Checkout() {
                 </h2>
               </div>
 
-              <div
+              <div data-page-panel
                 className={
                   isMinimal
-                    ? 'flex gap-1 p-1 bg-[#f4f4f2] rounded-full'
+                    ? 'flex gap-1 p-1 bg-[var(--visual-page-panel-background)] rounded-full'
                     : 'flex gap-2 p-1 bg-[var(--muted)] rounded-xl'
                 }
               >
                 {availableAuthModes.map((mode) => (
-                  <button
+                  <button data-page-action="choice" aria-pressed={authMode === mode}
                     type="button"
                     key={mode}
                     onClick={() =>
@@ -1063,8 +970,8 @@ export default function Checkout() {
                       }
                       ${
                         authMode === mode
-                          ? 'bg-white shadow-sm text-[#151515]'
-                          : 'text-[#667085] hover:text-[#151515]'
+                          ? 'bg-[var(--visual-page-panel-background)] shadow-sm text-[var(--visual-page-color)]'
+                          : 'text-[var(--visual-page-color)] hover:text-[var(--visual-page-color)]'
                       }
                     `}
                   >
@@ -1099,7 +1006,7 @@ export default function Checkout() {
               )}
 
               {authMode === 'google' && (
-                <button
+                <button data-page-action="outline"
                   type="button"
                   onClick={() => {
                     setContact({
@@ -1206,10 +1113,10 @@ export default function Checkout() {
               ENTREGA
           ================================================ */}
           {step === 'delivery' && (
-            <div className={panelClass}>
+            <div data-visual-section="pagePanel" data-page-panel className={panelClass}>
               <div>
                 {isMinimal && (
-                  <p className="text-xs text-gray-400 mb-1">
+                  <p className="text-xs text-[var(--visual-page-color)] mb-1">
                     Paso 2 de 4
                   </p>
                 )}
@@ -1217,7 +1124,7 @@ export default function Checkout() {
                 <h2
                   className={
                     isCatalog
-                      ? 'text-lg font-semibold text-[#151515]'
+                      ? 'text-lg font-semibold text-[var(--visual-page-color)]'
                       : isMinimal
                         ? 'text-xl font-semibold tracking-tight'
                         : 'text-lg font-semibold'
@@ -1294,7 +1201,7 @@ export default function Checkout() {
                       className="sr-only"
                     />
 
-                    <div className="w-10 h-10 rounded-full bg-[var(--muted)] flex items-center justify-center text-[#667085]">
+                    <div className="w-10 h-10 rounded-full bg-[var(--muted)] flex items-center justify-center text-[var(--visual-page-color)]">
                       <Icon
                         name={method.icon}
                         className="w-5 h-5"
@@ -1302,11 +1209,11 @@ export default function Checkout() {
                     </div>
 
                     <div className="flex-1">
-                      <p className={isCatalog ? "font-semibold text-sm text-[#151515]" : "font-semibold text-sm"}>
+                      <p className={isCatalog ? "font-semibold text-sm text-[var(--visual-page-color)]" : "font-semibold text-sm"}>
                         {method.label}
                       </p>
 
-                      <p className="text-xs text-[#667085] mt-0.5">
+                      <p className="text-xs text-[var(--visual-page-color)] mt-0.5">
                         {method.id === shippingMethod && selectedQuote
                           ? selectedQuote.plazo_dias
                             ? `${selectedQuote.plazo_dias} dias habiles · Tarifa de la tienda`
@@ -1433,10 +1340,10 @@ export default function Checkout() {
               PAGO
           ================================================ */}
           {step === 'payment' && (
-            <div className={panelClass}>
+            <div data-visual-section="pagePanel" data-page-panel className={panelClass}>
               <div>
                 {isMinimal && (
-                  <p className="text-xs text-gray-400 mb-1">
+                  <p className="text-xs text-[var(--visual-page-color)] mb-1">
                     Paso 3 de 4
                   </p>
                 )}
@@ -1444,7 +1351,7 @@ export default function Checkout() {
                 <h2
                   className={
                     isCatalog
-                      ? 'text-lg font-semibold text-[#151515]'
+                      ? 'text-lg font-semibold text-[var(--visual-page-color)]'
                       : isMinimal
                         ? 'text-xl font-semibold tracking-tight'
                         : 'text-lg font-semibold'
@@ -1489,17 +1396,17 @@ export default function Checkout() {
                         onChange={() => setPaymentMethod(payment.id)}
                         className="sr-only"
                       />
-                      <span className="w-10 h-10 rounded-full bg-[var(--muted)] flex items-center justify-center text-[#667085]">
+                      <span className="w-10 h-10 rounded-full bg-[var(--muted)] flex items-center justify-center text-[var(--visual-page-color)]">
                         <Icon name={payment.icon} className="w-5 h-5" />
                       </span>
                       <div className="flex-1">
-                        <p className={isCatalog ? "font-semibold text-sm text-[#151515]" : "font-semibold text-sm"}>
+                        <p className={isCatalog ? "font-semibold text-sm text-[var(--visual-page-color)]" : "font-semibold text-sm"}>
                           {payment.label}
                         </p>
-                        <p className="text-xs text-[#667085] mt-0.5">{payment.desc}</p>
+                        <p className="text-xs text-[var(--visual-page-color)] mt-0.5">{payment.desc}</p>
                       </div>
                       {paymentMethod === payment.id && (
-                        <span className={isCatalog ? "text-[#1683ff] text-lg" : "text-[var(--primary)] text-lg"}>OK</span>
+                        <span className={isCatalog ? "text-[var(--primary)] text-lg" : "text-[var(--primary)] text-lg"}>OK</span>
                       )}
                     </label>
                   ))}
@@ -1508,15 +1415,15 @@ export default function Checkout() {
 
               {/* TRANSBANK */}
               {paymentMethod === 'Transbank' && (
-                <div
+                <div data-page-panel
                   className={
                     isMinimal
-                      ? 'border border-[var(--border)] rounded-[18px] p-5 bg-[#f7f7f5] flex flex-col gap-4 animate-fade-in'
+                      ? 'border border-[var(--border)] rounded-[18px] p-5 bg-[var(--visual-page-panel-background)] flex flex-col gap-4 animate-fade-in'
                       : 'border border-[var(--border)] rounded-xl p-5 bg-[var(--muted)]/40 flex flex-col gap-4 animate-fade-in'
                   }
                 >
                   <div className="flex items-center gap-2">
-                    <span className="w-8 h-8 rounded-lg bg-[var(--primary)] text-white flex items-center justify-center">
+                    <span className="w-8 h-8 rounded-lg bg-[var(--primary)] text-[var(--visual-page-color)] flex items-center justify-center">
                       <Icon
                         name="card"
                         className="w-4 h-4"
@@ -1528,7 +1435,7 @@ export default function Checkout() {
                         Pagar con Webpay Plus
                       </p>
 
-                      <p className="text-xs text-[#667085]">
+                      <p className="text-xs text-[var(--visual-page-color)]">
                         Redirección al portal seguro de Transbank · Débito, Crédito y Prepago
                       </p>
                     </div>
@@ -1571,7 +1478,7 @@ export default function Checkout() {
                     error={errors.tbRut}
                   />
 
-                  <p className="flex items-center gap-1.5 text-xs text-[#667085]">
+                  <p className="flex items-center gap-1.5 text-xs text-[var(--visual-page-color)]">
                     <Icon
                       name="lock"
                       className="w-3.5 h-3.5"
@@ -1583,15 +1490,15 @@ export default function Checkout() {
 
               {/* MERCADO PAGO */}
               {paymentMethod === 'MercadoPago' && (
-                <div
+                <div data-page-panel
                   className={
                     isMinimal
-                      ? 'border border-[var(--border)] rounded-[18px] p-5 bg-[#f7f7f5] flex flex-col gap-4 animate-fade-in'
+                      ? 'border border-[var(--border)] rounded-[18px] p-5 bg-[var(--visual-page-panel-background)] flex flex-col gap-4 animate-fade-in'
                       : 'border border-[var(--border)] rounded-xl p-5 bg-[var(--muted)]/40 flex flex-col gap-4 animate-fade-in'
                   }
                 >
                   <div className="flex items-center gap-2">
-                    <span className="w-8 h-8 rounded-lg bg-[#009ee3] text-white flex items-center justify-center">
+                    <span className="w-8 h-8 rounded-lg bg-[var(--visual-page-panel-background)] text-[var(--visual-page-color)] flex items-center justify-center">
                       <Icon
                         name="wallet"
                         className="w-4 h-4"
@@ -1603,7 +1510,7 @@ export default function Checkout() {
                         Pagar con Mercado Pago
                       </p>
 
-                      <p className="text-xs text-[#667085]">
+                      <p className="text-xs text-[var(--visual-page-color)]">
                         Tarjeta o saldo de tu cuenta Mercado Pago
                       </p>
                     </div>
@@ -1649,7 +1556,7 @@ export default function Checkout() {
                     />
                   </div>
 
-                  <p className="flex items-center gap-1.5 text-xs text-[#667085]">
+                  <p className="flex items-center gap-1.5 text-xs text-[var(--visual-page-color)]">
                     <Icon
                       name="lock"
                       className="w-3.5 h-3.5"
@@ -1661,15 +1568,15 @@ export default function Checkout() {
 
               {/* PAYPAL */}
               {paymentMethod === 'PayPal' && (
-                <div
+                <div data-page-panel
                   className={
                     isMinimal
-                      ? 'border border-[var(--border)] rounded-[18px] p-5 bg-[#f7f7f5] flex flex-col gap-4 animate-fade-in'
+                      ? 'border border-[var(--border)] rounded-[18px] p-5 bg-[var(--visual-page-panel-background)] flex flex-col gap-4 animate-fade-in'
                       : 'border border-[var(--border)] rounded-xl p-5 bg-[var(--muted)]/40 flex flex-col gap-4 animate-fade-in'
                   }
                 >
                   <div className="flex items-center gap-2">
-                    <span className="w-8 h-8 rounded-lg bg-[#003087] text-white flex items-center justify-center">
+                    <span className="w-8 h-8 rounded-lg bg-[var(--visual-page-panel-background)] text-[var(--visual-page-color)] flex items-center justify-center">
                       <Icon
                         name="card"
                         className="w-4 h-4"
@@ -1681,13 +1588,13 @@ export default function Checkout() {
                         Pagar con PayPal
                       </p>
 
-                      <p className="text-xs text-[#667085]">
+                      <p className="text-xs text-[var(--visual-page-color)]">
                         Serás redirigido a PayPal de forma segura para autorizar el pago
                       </p>
                     </div>
                   </div>
 
-                  <p className="flex items-center gap-1.5 text-xs text-[#667085]">
+                  <p className="flex items-center gap-1.5 text-xs text-[var(--visual-page-color)]">
                     <Icon
                       name="lock"
                       className="w-3.5 h-3.5"
@@ -1699,7 +1606,7 @@ export default function Checkout() {
 
               {/* TRANSFERENCIA */}
               {paymentMethod === 'Transferencia' && transferDetails && (
-                <div
+                <div data-page-panel
                   className={
                     isMinimal
                       ? 'bg-[var(--info-bg)] border border-[var(--info)] rounded-[18px] p-5 text-sm space-y-3'
@@ -1710,32 +1617,32 @@ export default function Checkout() {
                     <p className="font-semibold text-[var(--info)]">
                       Datos para realizar la transferencia
                     </p>
-                    <p className="text-xs text-[#667085] mt-1">
+                    <p className="text-xs text-[var(--visual-page-color)] mt-1">
                       Transfiere el monto exacto a la cuenta configurada por esta tienda.
                     </p>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-x-3 gap-y-2 text-xs text-[#151515]">
-                    <span className="text-[#667085]">Banco:</span>
+                  <div className="grid grid-cols-2 gap-x-3 gap-y-2 text-xs text-[var(--visual-page-color)]">
+                    <span className="text-[var(--visual-page-color)]">Banco:</span>
                     <span>{transferDetails.bank_name}</span>
 
-                    <span className="text-[#667085]">Tipo de cuenta:</span>
+                    <span className="text-[var(--visual-page-color)]">Tipo de cuenta:</span>
                     <span>{transferDetails.account_type}</span>
 
-                    <span className="text-[#667085]">N° de cuenta:</span>
+                    <span className="text-[var(--visual-page-color)]">N° de cuenta:</span>
                     <span>{transferDetails.account_number}</span>
 
-                    <span className="text-[#667085]">Titular:</span>
+                    <span className="text-[var(--visual-page-color)]">Titular:</span>
                     <span>{transferDetails.holder_name}</span>
 
-                    <span className="text-[#667085]">RUT:</span>
+                    <span className="text-[var(--visual-page-color)]">RUT:</span>
                     <span>{transferDetails.holder_rut}</span>
 
-                    <span className="text-[#667085]">Correo comprobante:</span>
+                    <span className="text-[var(--visual-page-color)]">Correo comprobante:</span>
                     <span>{transferDetails.confirmation_email}</span>
 
-                    <span className="text-[#667085]">Monto:</span>
-                    <span className="font-bold">{formatPrice(total)}</span>
+                    <span className="text-[var(--visual-page-color)]">Monto:</span>
+                    <span data-page-price className="font-bold">{formatPrice(total)}</span>
                   </div>
 
                   <Alert variant="info">
@@ -1751,10 +1658,10 @@ export default function Checkout() {
               CONFIRMAR
           ================================================ */}
           {step === 'confirm' && (
-            <div className={panelClass}>
+            <div data-visual-section="pagePanel" data-page-panel className={panelClass}>
               <div>
                 {isMinimal && (
-                  <p className="text-xs text-gray-400 mb-1">
+                  <p className="text-xs text-[var(--visual-page-color)] mb-1">
                     Paso 4 de 4
                   </p>
                 )}
@@ -1782,43 +1689,43 @@ export default function Checkout() {
               )}
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
-                <div
+                <div data-page-panel
                   className={
                     isMinimal
-                      ? 'bg-[#f7f7f5] rounded-[18px] p-4'
+                      ? 'bg-[var(--visual-page-panel-background)] rounded-[18px] p-4'
                       : 'bg-[var(--muted)] rounded-xl p-4'
                   }
                 >
-                  <p className="text-xs font-semibold uppercase tracking-wider text-[#667085] mb-2">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-[var(--visual-page-color)] mb-2">
                     Contacto
                   </p>
 
-                  <p className={isCatalog ? "font-medium text-[#151515]" : "font-medium"}>
+                  <p className={isCatalog ? "font-medium text-[var(--visual-page-color)]" : "font-medium"}>
                     {contact.name}
                   </p>
 
-                  <p className="text-[#667085]">
+                  <p className="text-[var(--visual-page-color)]">
                     {contact.email}
                   </p>
                 </div>
 
-                <div
+                <div data-page-panel
                   className={
                     isMinimal
-                      ? 'bg-[#f7f7f5] rounded-[18px] p-4'
+                      ? 'bg-[var(--visual-page-panel-background)] rounded-[18px] p-4'
                       : 'bg-[var(--muted)] rounded-xl p-4'
                   }
                 >
-                  <p className="text-xs font-semibold uppercase tracking-wider text-[#667085] mb-2">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-[var(--visual-page-color)] mb-2">
                     Entrega
                   </p>
 
-                  <p className={isCatalog ? "font-medium text-[#151515]" : "font-medium"}>
+                  <p className={isCatalog ? "font-medium text-[var(--visual-page-color)]" : "font-medium"}>
                     {shippingMethod}
                   </p>
 
                   {selectedShippingOption?.requiresAddress && (
-                    <p className="text-[#667085] text-xs mt-0.5">
+                    <p className="text-[var(--visual-page-color)] text-xs mt-0.5">
                       {address.street}{' '}
                       {address.number},{' '}
                       {address.city}
@@ -1827,23 +1734,23 @@ export default function Checkout() {
                 </div>
               </div>
 
-              <div
+              <div data-page-panel
                 className={
                   isMinimal
-                    ? 'bg-[#f7f7f5] rounded-[18px] p-4 text-sm'
+                    ? 'bg-[var(--visual-page-panel-background)] rounded-[18px] p-4 text-sm'
                     : 'bg-[var(--muted)] rounded-xl p-4 text-sm'
                 }
               >
-                <p className="text-xs font-semibold uppercase tracking-wider text-[#667085] mb-2">
+                <p className="text-xs font-semibold uppercase tracking-wider text-[var(--visual-page-color)] mb-2">
                   Pago
                 </p>
 
-                <p className={isCatalog ? "font-medium text-[#151515]" : "font-medium"}>
+                <p className={isCatalog ? "font-medium text-[var(--visual-page-color)]" : "font-medium"}>
                   {paymentLabel}
                 </p>
 
                 {paymentDetail && (
-                  <p className="text-[#667085] text-xs mt-0.5">
+                  <p className="text-[var(--visual-page-color)] text-xs mt-0.5">
                     {paymentDetail}
                   </p>
                 )}
@@ -1851,7 +1758,7 @@ export default function Checkout() {
 
               <Alert variant="info">
                 Al confirmar aceptas nuestras{' '}
-                <Link
+                <Link data-page-action="ghost"
                   to={route('legal/terms')}
                   className="font-semibold underline"
                   target="_blank"
@@ -1859,7 +1766,7 @@ export default function Checkout() {
                   condiciones de uso
                 </Link>{' '}
                 y{' '}
-                <Link
+                <Link data-page-action="ghost"
                   to={route('legal/privacy')}
                   className="font-semibold underline"
                   target="_blank"
@@ -1877,18 +1784,18 @@ export default function Checkout() {
           <div className="flex justify-between items-center gap-3 mt-5">
             {step !== 'contact' ? (
               isVisual ? (
-                <button
+                <button data-page-action="primary"
                   type="button"
                   onClick={prev}
-                  className="h-11 px-5 rounded-[8px] border border-black bg-white text-[11px] font-semibold hover:bg-black hover:text-white transition-colors"
+                  className="h-11 px-5 rounded-[8px] border border-[var(--visual-global-border)] bg-[var(--visual-page-panel-background)] text-[11px] font-semibold hover:bg-[var(--visual-page-panel-background)] hover:text-[var(--visual-page-color)] transition-colors"
                 >
                   ← Volver
                 </button>
               ) : isMinimal ? (
-                <button
+                <button data-page-action="outline"
                   type="button"
                   onClick={prev}
-                  className="h-11 px-5 rounded-full border border-[var(--border)] bg-white text-sm font-semibold hover:bg-[var(--muted)] transition-colors"
+                  className="h-11 px-5 rounded-full border border-[var(--border)] bg-[var(--visual-page-panel-background)] text-sm font-semibold hover:bg-[var(--muted)] transition-colors"
                 >
                   ← Volver
                 </button>
@@ -1906,20 +1813,20 @@ export default function Checkout() {
 
             {step === 'confirm' ? (
               isVisual ? (
-                <button
+                <button data-page-action="primary"
                   type="button"
                   disabled={isPaymentDisabled}
                   onClick={handleConfirm}
-                  className="min-h-12 px-6 rounded-[8px] bg-black text-white text-[12px] font-semibold hover:opacity-80 disabled:opacity-50 transition-opacity"
+                  className="min-h-12 px-6 rounded-[8px] bg-[var(--visual-page-panel-background)] text-[var(--visual-page-color)] text-[12px] font-semibold hover:opacity-80 disabled:opacity-50 transition-opacity"
                 >
                   {loading ? 'Registrando pedido...' : `Confirmar y pagar ${formatPrice(total)}`}
                 </button>
               ) : isMinimal ? (
-                <button
+                <button data-page-action="primary"
                   type="button"
                   disabled={isPaymentDisabled}
                   onClick={handleConfirm}
-                  className="min-h-12 px-6 rounded-full bg-[#17213b] text-white text-sm font-semibold hover:bg-[#0f2a56] disabled:opacity-50 transition-colors"
+                  className="min-h-12 px-6 rounded-full bg-[var(--primary)] text-[var(--visual-page-color)] text-sm font-semibold hover:bg-[var(--primary)] disabled:opacity-50 transition-colors"
                 >
                   {loading
                     ? 'Registrando pedido...'
@@ -1937,18 +1844,18 @@ export default function Checkout() {
                 </Button>
               )
             ) : isVisual ? (
-              <button
+              <button data-page-action="primary"
                 type="button"
                 onClick={next}
-                className="h-11 px-6 rounded-[8px] bg-black text-white text-[12px] font-semibold hover:opacity-80 transition-opacity"
+                className="h-11 px-6 rounded-[8px] bg-[var(--visual-page-panel-background)] text-[var(--visual-page-color)] text-[12px] font-semibold hover:opacity-80 transition-opacity"
               >
                 Continuar →
               </button>
             ) : isMinimal ? (
-              <button
+              <button data-page-action="primary"
                 type="button"
                 onClick={next}
-                className="h-11 px-6 rounded-full bg-[#17213b] text-white text-sm font-semibold hover:bg-[#0f2a56] transition-colors"
+                className="h-11 px-6 rounded-full bg-[var(--primary)] text-[var(--visual-page-color)] text-sm font-semibold hover:bg-[var(--primary)] transition-colors"
               >
                 Continuar →
               </button>
@@ -1966,21 +1873,21 @@ export default function Checkout() {
         {/* =================================================
             RESUMEN DEL PEDIDO
         ================================================== */}
-        <aside className="lg:col-span-2">
-          <div
+        <aside data-visual-section="pagePanel" className="lg:col-span-2">
+          <div data-page-panel
             className={
               isVisual
-                ? 'bg-[#f1f1f0] rounded-[10px] p-5 md:p-6 sticky top-24'
+                ? 'bg-[var(--visual-page-panel-background)] rounded-[10px] p-5 md:p-6 sticky top-24'
                 : isMinimal
-                  ? 'bg-white border border-black/5 rounded-[24px] p-5 sticky top-24'
-                  : 'bg-white border border-[var(--border)] rounded-2xl p-5 sticky top-24'
+                  ? 'bg-[var(--visual-page-panel-background)] border border-[var(--visual-global-border)]/5 rounded-[24px] p-5 sticky top-24'
+                  : 'bg-[var(--visual-page-panel-background)] border border-[var(--border)] rounded-2xl p-5 sticky top-24'
             }
           >
             <h3
               className={
                 isMinimal
                   ? 'font-semibold text-lg tracking-tight mb-5'
-                  : 'font-semibold mb-4 text-sm uppercase tracking-wider text-[#667085]'
+                  : 'font-semibold mb-4 text-sm uppercase tracking-wider text-[var(--visual-page-color)]'
               }
             >
               Tu pedido
@@ -2005,8 +1912,8 @@ export default function Checkout() {
                       }
                     />
 
-                    <span className={`absolute -top-1.5 -right-1.5 w-5 h-5 text-white text-[10px] rounded-full flex items-center justify-center font-bold ${
-                        isVisual ? 'bg-black' : 'bg-[#17213b]'
+                    <span className={`absolute -top-1.5 -right-1.5 w-5 h-5 text-[var(--visual-page-color)] text-[10px] rounded-full flex items-center justify-center font-bold ${
+                        isVisual ? 'bg-[var(--visual-page-panel-background)]' : 'bg-[var(--primary)]'
                       }`}>
                       {item.quantity}
                     </span>
@@ -2023,12 +1930,12 @@ export default function Checkout() {
                       {item.name}
                     </p>
 
-                    <p className="text-xs text-[#667085] mt-0.5">
+                    <p className="text-xs text-[var(--visual-page-color)] mt-0.5">
                       {Object.values(item.attributes).join(' / ')}
                     </p>
                   </div>
 
-                  <p className="text-xs font-semibold">
+                  <p data-page-price className="text-xs font-semibold">
                     {formatPrice(item.price * item.quantity)}
                   </p>
                 </div>
@@ -2037,11 +1944,11 @@ export default function Checkout() {
 
             <div className="border-t border-[var(--border)] pt-4 flex flex-col gap-3 text-sm">
               <div className="flex justify-between">
-                <span className="text-[#667085]">
+                <span className="text-[var(--visual-page-color)]">
                   Subtotal
                 </span>
 
-                <span>
+                <span data-page-price>
                   {formatPrice(subtotal)}
                 </span>
               </div>
@@ -2057,24 +1964,24 @@ export default function Checkout() {
               )}
 
               <div className="flex justify-between text-sm">
-                <span className="text-[var(--muted-foreground)]">Envío</span>
+                <span className="text-[var(--visual-page-color)]">Envío</span>
                 <span className="font-medium">
                   {shipping === null ? 'Por cotizar' : shipping === 0 ? 'Gratis' : formatPrice(shipping)}
                 </span>
               </div>
               <div className="flex justify-between font-bold text-lg pt-2 border-t border-[var(--border)]">
                 <span>{shipping === null ? 'Total parcial' : 'Total'}</span>
-                <span>{formatPrice(total)}</span>
+                <span data-page-price>{formatPrice(total)}</span>
               </div>
             </div>
 
             {(isMinimal || isVisual) && (
-              <Link
+              <Link data-page-action="ghost"
                 to={route('carrito')}
                 className={
                   isVisual
-                    ? 'block text-center text-[10px] uppercase tracking-[0.12em] text-[#77716e] hover:text-black mt-5 transition-colors'
-                    : 'block text-center text-xs text-gray-400 hover:text-[#17213b] mt-5 transition-colors'
+                    ? 'block text-center text-[10px] uppercase tracking-[0.12em] text-[var(--visual-page-color)] hover:text-[var(--visual-page-color)] mt-5 transition-colors'
+                    : 'block text-center text-xs text-[var(--visual-page-color)] hover:text-[var(--primary)] mt-5 transition-colors'
                 }
               >
                 ← Editar carrito

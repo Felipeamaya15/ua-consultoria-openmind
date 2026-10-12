@@ -5,6 +5,7 @@ import { TemplateId } from "../data/mockAdminData"
 import { templatePaths } from "../config/navigation"
 import { openAdminWindow } from "../auth/demoSession"
 import { Button, Alert, Badge } from "../components/ui"
+import { loadThemeCustomization, patchThemeCustomization } from '../data/themeCustomization';
 
 const TEMPLATES: {
   id: TemplateId
@@ -68,14 +69,7 @@ export default function Design() {
   const [saved, setSaved] = useState(false)
   const [colorsSaved, setColorsSaved] = useState(false)
   const activeTemplate = previewTemplate ?? config.template
-  const activeTheme =
-    config.themeEditor?.[activeTemplate] ?? {
-      primaryColor: config.primaryColor,
-      secondaryColor: config.secondaryColor,
-      accentColor: config.accentColor,
-      paletteName: "Original",
-      images: {},
-    }
+  const activeTheme = loadThemeCustomization(activeTemplate, config.themeEditor?.[activeTemplate], config, config.visualConfig)
 
   const palettes = [
     { name: "Original", primaryColor: "#1a3a6b", secondaryColor: "#eef1f8", accentColor: "#e04b1a" },
@@ -87,17 +81,10 @@ export default function Design() {
   const updateColors = (
     patch: Partial<typeof activeTheme>,
   ) => {
-    const nextTheme = {
-      ...activeTheme,
-      ...patch,
-      images: activeTheme.images,
-    }
+    const nextTheme = patchThemeCustomization(activeTheme, patch)
 
     const ok = setConfig({
       ...config,
-      primaryColor: nextTheme.primaryColor,
-      secondaryColor: nextTheme.secondaryColor,
-      accentColor: nextTheme.accentColor,
       themeEditor: {
         ...config.themeEditor,
         [activeTemplate]: nextTheme,

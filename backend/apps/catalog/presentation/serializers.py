@@ -2,7 +2,7 @@ from rest_framework import serializers
 # CAMBIO: Importamos el validador de Base64 que creamos para MongoDB
 from apps.core.domain.validators import validate_base64_image
 from apps.core.models import Producto
-from apps.catalog.domain.stock import validate_stock
+from apps.catalog.domain.stock import validate_stock, is_variant_active
 
 
 class StockValidationMixin:
@@ -28,18 +28,19 @@ class ProductPublicListItemSerializer(serializers.Serializer):
         return imagenes[0] if imagenes else None
 
     def _variantes(self, producto):
-        return producto.get("variantes") or []
+        return [variant for variant in producto.get("variantes", []) if is_variant_active(variant)]
+
+    def _price_variant(self, producto):
+        variants = [v for v in self._variantes(producto) if v.get('precio') is not None]
+        return min(variants, key=lambda v: min(v['precio'], v.get('precio_oferta') if v.get('precio_oferta') is not None else v['precio']), default=None)
 
     def get_precio(self, producto):
-        precios = [v["precio"] for v in self._variantes(producto) if v.get("precio") is not None]
-        return min(precios) if precios else None
+        variant = self._price_variant(producto)
+        return variant['precio'] if variant else None
 
     def get_precio_oferta(self, producto):
-        ofertas = [
-            v["precio_oferta"] for v in self._variantes(producto)
-            if v.get("precio_oferta") is not None
-        ]
-        return min(ofertas) if ofertas else None
+        variant = self._price_variant(producto)
+        return variant.get('precio_oferta') if variant else None
 
     def get_disponible(self, producto):
         return any((v.get("stock") or 0) > 0 for v in self._variantes(producto))

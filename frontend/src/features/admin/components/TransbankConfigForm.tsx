@@ -89,23 +89,7 @@ export const TransbankConfigForm: React.FC<Props> = ({ idTienda = 1 }) => {
         setFormData((prev) => ({ ...prev, api_key: '' }));
         setIsConfigured(true);
 
-        // Sincronizar con el storage local si el Checkout depende de él
-        try {
-          const raw = localStorage.getItem('ua-entrepreneur-demo-v1');
-          if (raw) {
-            const parsed = JSON.parse(raw);
-            if (!parsed.config) parsed.config = {};
-            if (!parsed.config.paymentConfiguration) parsed.config.paymentConfiguration = {};
-            parsed.config.paymentConfiguration.transbank = {
-              enabled: formData.activo,
-              commerceCode: formData.codigo_comercio,
-              environment: formData.ambiente,
-            };
-            localStorage.setItem('ua-entrepreneur-demo-v1', JSON.stringify(parsed));
-          }
-        } catch {
-          // Ignorar si no existe la estructura local
-        }
+        // Checkout obtiene los métodos activos del backend; no duplica pagos en storage.
       } else {
         const errorDetail = res.error?.detalles
           ? Object.values(res.error.detalles).flat().join(' ')

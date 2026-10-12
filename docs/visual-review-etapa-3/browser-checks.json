@@ -1,0 +1,1896 @@
+{
+  "pages": [
+    {
+      "bodyFont": "Arial, Helvetica, sans-serif",
+      "brands": 2,
+      "heading": "Tu próxima historia",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "Cambria, Georgia, serif",
+      "url": "/plantilla/1/",
+      "width": 375
+    },
+    {
+      "bodyFont": "Arial, Helvetica, sans-serif",
+      "brands": 2,
+      "heading": "Catálogo",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "Cambria, Georgia, serif",
+      "url": "/plantilla/1/catalogo",
+      "width": 375
+    },
+    {
+      "bodyFont": "Arial, Helvetica, sans-serif",
+      "brands": 2,
+      "heading": "Producto de prueba 1",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "Cambria, Georgia, serif",
+      "url": "/plantilla/1/producto/prueba-1",
+      "width": 375
+    },
+    {
+      "bodyFont": "Arial, Helvetica, sans-serif",
+      "brands": 3,
+      "heading": "Bienvenido de nuevo",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "Cambria, Georgia, serif",
+      "url": "/plantilla/1/ingresar",
+      "width": 375
+    },
+    {
+      "bodyFont": "Arial, Helvetica, sans-serif",
+      "brands": 3,
+      "heading": "Crear cuenta",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "Cambria, Georgia, serif",
+      "url": "/plantilla/1/ingresar?modo=registro",
+      "width": 375
+    },
+    {
+      "bodyFont": "Arial, Helvetica, sans-serif",
+      "brands": 2,
+      "heading": "Mi carrito",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "Cambria, Georgia, serif",
+      "url": "/plantilla/1/carrito",
+      "width": 375
+    },
+    {
+      "bodyFont": "Arial, Helvetica, sans-serif",
+      "brands": 2,
+      "heading": "Datos de contacto",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "Cambria, Georgia, serif",
+      "url": "/plantilla/1/compra",
+      "width": 375
+    },
+    {
+      "bodyFont": "Arial, Helvetica, sans-serif",
+      "brands": 2,
+      "heading": "Seguimiento de pedido",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "Cambria, Georgia, serif",
+      "url": "/plantilla/1/seguimiento",
+      "width": 375
+    },
+    {
+      "bodyFont": "Arial, Helvetica, sans-serif",
+      "brands": 2,
+      "heading": "Mi cuenta · Perfil",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "Cambria, Georgia, serif",
+      "url": "/plantilla/1/perfil",
+      "width": 375
+    },
+    {
+      "bodyFont": "Arial, Helvetica, sans-serif",
+      "brands": 2,
+      "heading": "Mis pedidos",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "Cambria, Georgia, serif",
+      "url": "/plantilla/1/mis-pedidos",
+      "width": 375
+    },
+    {
+      "bodyFont": "Arial, Helvetica, sans-serif",
+      "brands": 2,
+      "heading": "Términos y Condiciones",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "Cambria, Georgia, serif",
+      "url": "/plantilla/1/legal/terms",
+      "width": 375
+    },
+    {
+      "bodyFont": "Arial, Helvetica, sans-serif",
+      "brands": 2,
+      "heading": "Política de Privacidad",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "Cambria, Georgia, serif",
+      "url": "/plantilla/1/legal/privacy",
+      "width": 375
+    },
+    {
+      "bodyFont": "Arial, Helvetica, sans-serif",
+      "brands": 2,
+      "heading": "Política de Reembolso",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "Cambria, Georgia, serif",
+      "url": "/plantilla/1/legal/refund",
+      "width": 375
+    },
+    {
+      "bodyFont": "Arial, Helvetica, sans-serif",
+      "brands": 2,
+      "heading": "Tu próxima historia",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "Cambria, Georgia, serif",
+      "url": "/plantilla/1/",
+      "width": 768
+    },
+    {
+      "bodyFont": "Arial, Helvetica, sans-serif",
+      "brands": 2,
+      "heading": "Catálogo",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "Cambria, Georgia, serif",
+      "url": "/plantilla/1/catalogo",
+      "width": 768
+    },
+    {
+      "bodyFont": "Arial, Helvetica, sans-serif",
+      "brands": 2,
+      "heading": "Producto de prueba 1",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "Cambria, Georgia, serif",
+      "url": "/plantilla/1/producto/prueba-1",
+      "width": 768
+    },
+    {
+      "bodyFont": "Arial, Helvetica, sans-serif",
+      "brands": 3,
+      "heading": "Bienvenido de nuevo",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "Cambria, Georgia, serif",
+      "url": "/plantilla/1/ingresar",
+      "width": 768
+    },
+    {
+      "bodyFont": "Arial, Helvetica, sans-serif",
+      "brands": 3,
+      "heading": "Crear cuenta",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "Cambria, Georgia, serif",
+      "url": "/plantilla/1/ingresar?modo=registro",
+      "width": 768
+    },
+    {
+      "bodyFont": "Arial, Helvetica, sans-serif",
+      "brands": 2,
+      "heading": "Mi carrito",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "Cambria, Georgia, serif",
+      "url": "/plantilla/1/carrito",
+      "width": 768
+    },
+    {
+      "bodyFont": "Arial, Helvetica, sans-serif",
+      "brands": 2,
+      "heading": "Datos de contacto",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "Cambria, Georgia, serif",
+      "url": "/plantilla/1/compra",
+      "width": 768
+    },
+    {
+      "bodyFont": "Arial, Helvetica, sans-serif",
+      "brands": 2,
+      "heading": "Seguimiento de pedido",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "Cambria, Georgia, serif",
+      "url": "/plantilla/1/seguimiento",
+      "width": 768
+    },
+    {
+      "bodyFont": "Arial, Helvetica, sans-serif",
+      "brands": 2,
+      "heading": "Mi cuenta · Perfil",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "Cambria, Georgia, serif",
+      "url": "/plantilla/1/perfil",
+      "width": 768
+    },
+    {
+      "bodyFont": "Arial, Helvetica, sans-serif",
+      "brands": 2,
+      "heading": "Mis pedidos",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "Cambria, Georgia, serif",
+      "url": "/plantilla/1/mis-pedidos",
+      "width": 768
+    },
+    {
+      "bodyFont": "Arial, Helvetica, sans-serif",
+      "brands": 2,
+      "heading": "Términos y Condiciones",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "Cambria, Georgia, serif",
+      "url": "/plantilla/1/legal/terms",
+      "width": 768
+    },
+    {
+      "bodyFont": "Arial, Helvetica, sans-serif",
+      "brands": 2,
+      "heading": "Política de Privacidad",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "Cambria, Georgia, serif",
+      "url": "/plantilla/1/legal/privacy",
+      "width": 768
+    },
+    {
+      "bodyFont": "Arial, Helvetica, sans-serif",
+      "brands": 2,
+      "heading": "Política de Reembolso",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "Cambria, Georgia, serif",
+      "url": "/plantilla/1/legal/refund",
+      "width": 768
+    },
+    {
+      "bodyFont": "Arial, Helvetica, sans-serif",
+      "brands": 2,
+      "heading": "Tu próxima historia",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "Cambria, Georgia, serif",
+      "url": "/plantilla/1/",
+      "width": 1440
+    },
+    {
+      "bodyFont": "Arial, Helvetica, sans-serif",
+      "brands": 2,
+      "heading": "Catálogo",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "Cambria, Georgia, serif",
+      "url": "/plantilla/1/catalogo",
+      "width": 1440
+    },
+    {
+      "bodyFont": "Arial, Helvetica, sans-serif",
+      "brands": 2,
+      "heading": "Producto de prueba 1",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "Cambria, Georgia, serif",
+      "url": "/plantilla/1/producto/prueba-1",
+      "width": 1440
+    },
+    {
+      "bodyFont": "Arial, Helvetica, sans-serif",
+      "brands": 3,
+      "heading": "Bienvenido de nuevo",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "Cambria, Georgia, serif",
+      "url": "/plantilla/1/ingresar",
+      "width": 1440
+    },
+    {
+      "bodyFont": "Arial, Helvetica, sans-serif",
+      "brands": 3,
+      "heading": "Crear cuenta",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "Cambria, Georgia, serif",
+      "url": "/plantilla/1/ingresar?modo=registro",
+      "width": 1440
+    },
+    {
+      "bodyFont": "Arial, Helvetica, sans-serif",
+      "brands": 2,
+      "heading": "Mi carrito",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "Cambria, Georgia, serif",
+      "url": "/plantilla/1/carrito",
+      "width": 1440
+    },
+    {
+      "bodyFont": "Arial, Helvetica, sans-serif",
+      "brands": 2,
+      "heading": "Datos de contacto",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "Cambria, Georgia, serif",
+      "url": "/plantilla/1/compra",
+      "width": 1440
+    },
+    {
+      "bodyFont": "Arial, Helvetica, sans-serif",
+      "brands": 2,
+      "heading": "Seguimiento de pedido",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "Cambria, Georgia, serif",
+      "url": "/plantilla/1/seguimiento",
+      "width": 1440
+    },
+    {
+      "bodyFont": "Arial, Helvetica, sans-serif",
+      "brands": 2,
+      "heading": "Mi cuenta · Perfil",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "Cambria, Georgia, serif",
+      "url": "/plantilla/1/perfil",
+      "width": 1440
+    },
+    {
+      "bodyFont": "Arial, Helvetica, sans-serif",
+      "brands": 2,
+      "heading": "Mis pedidos",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "Cambria, Georgia, serif",
+      "url": "/plantilla/1/mis-pedidos",
+      "width": 1440
+    },
+    {
+      "bodyFont": "Arial, Helvetica, sans-serif",
+      "brands": 2,
+      "heading": "Términos y Condiciones",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "Cambria, Georgia, serif",
+      "url": "/plantilla/1/legal/terms",
+      "width": 1440
+    },
+    {
+      "bodyFont": "Arial, Helvetica, sans-serif",
+      "brands": 2,
+      "heading": "Política de Privacidad",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "Cambria, Georgia, serif",
+      "url": "/plantilla/1/legal/privacy",
+      "width": 1440
+    },
+    {
+      "bodyFont": "Arial, Helvetica, sans-serif",
+      "brands": 2,
+      "heading": "Política de Reembolso",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "Cambria, Georgia, serif",
+      "url": "/plantilla/1/legal/refund",
+      "width": 1440
+    },
+    {
+      "bodyFont": "\"Plus Jakarta Sans\", sans-serif",
+      "brands": 2,
+      "heading": "Tu próxima historia",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "\"Plus Jakarta Sans\", sans-serif",
+      "url": "/plantilla/2/",
+      "width": 375
+    },
+    {
+      "bodyFont": "\"Plus Jakarta Sans\", sans-serif",
+      "brands": 2,
+      "heading": "Catálogo",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "\"Plus Jakarta Sans\", sans-serif",
+      "url": "/plantilla/2/catalogo",
+      "width": 375
+    },
+    {
+      "bodyFont": "\"Plus Jakarta Sans\", sans-serif",
+      "brands": 2,
+      "heading": "Producto de prueba 1",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "\"Plus Jakarta Sans\", sans-serif",
+      "url": "/plantilla/2/producto/prueba-1",
+      "width": 375
+    },
+    {
+      "bodyFont": "\"Plus Jakarta Sans\", sans-serif",
+      "brands": 2,
+      "heading": "Bienvenido de nuevo",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "\"Plus Jakarta Sans\", sans-serif",
+      "url": "/plantilla/2/ingresar",
+      "width": 375
+    },
+    {
+      "bodyFont": "\"Plus Jakarta Sans\", sans-serif",
+      "brands": 2,
+      "heading": "Crear cuenta",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "\"Plus Jakarta Sans\", sans-serif",
+      "url": "/plantilla/2/ingresar?modo=registro",
+      "width": 375
+    },
+    {
+      "bodyFont": "\"Plus Jakarta Sans\", sans-serif",
+      "brands": 2,
+      "heading": "Mi carrito",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "\"Plus Jakarta Sans\", sans-serif",
+      "url": "/plantilla/2/carrito",
+      "width": 375
+    },
+    {
+      "bodyFont": "\"Plus Jakarta Sans\", sans-serif",
+      "brands": 2,
+      "heading": "Checkout",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "\"Plus Jakarta Sans\", sans-serif",
+      "url": "/plantilla/2/compra",
+      "width": 375
+    },
+    {
+      "bodyFont": "\"Plus Jakarta Sans\", sans-serif",
+      "brands": 2,
+      "heading": "Seguimiento de pedido",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "\"Plus Jakarta Sans\", sans-serif",
+      "url": "/plantilla/2/seguimiento",
+      "width": 375
+    },
+    {
+      "bodyFont": "\"Plus Jakarta Sans\", sans-serif",
+      "brands": 2,
+      "heading": "Mi cuenta · Perfil",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "\"Plus Jakarta Sans\", sans-serif",
+      "url": "/plantilla/2/perfil",
+      "width": 375
+    },
+    {
+      "bodyFont": "\"Plus Jakarta Sans\", sans-serif",
+      "brands": 2,
+      "heading": "Mis pedidos",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "\"Plus Jakarta Sans\", sans-serif",
+      "url": "/plantilla/2/mis-pedidos",
+      "width": 375
+    },
+    {
+      "bodyFont": "\"Plus Jakarta Sans\", sans-serif",
+      "brands": 2,
+      "heading": "Términos y Condiciones",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "\"Plus Jakarta Sans\", sans-serif",
+      "url": "/plantilla/2/legal/terms",
+      "width": 375
+    },
+    {
+      "bodyFont": "\"Plus Jakarta Sans\", sans-serif",
+      "brands": 2,
+      "heading": "Política de Privacidad",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "\"Plus Jakarta Sans\", sans-serif",
+      "url": "/plantilla/2/legal/privacy",
+      "width": 375
+    },
+    {
+      "bodyFont": "\"Plus Jakarta Sans\", sans-serif",
+      "brands": 2,
+      "heading": "Política de Reembolso",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "\"Plus Jakarta Sans\", sans-serif",
+      "url": "/plantilla/2/legal/refund",
+      "width": 375
+    },
+    {
+      "bodyFont": "\"Plus Jakarta Sans\", sans-serif",
+      "brands": 2,
+      "heading": "Tu próxima historia",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "\"Plus Jakarta Sans\", sans-serif",
+      "url": "/plantilla/2/",
+      "width": 768
+    },
+    {
+      "bodyFont": "\"Plus Jakarta Sans\", sans-serif",
+      "brands": 2,
+      "heading": "Catálogo",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "\"Plus Jakarta Sans\", sans-serif",
+      "url": "/plantilla/2/catalogo",
+      "width": 768
+    },
+    {
+      "bodyFont": "\"Plus Jakarta Sans\", sans-serif",
+      "brands": 2,
+      "heading": "Producto de prueba 1",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "\"Plus Jakarta Sans\", sans-serif",
+      "url": "/plantilla/2/producto/prueba-1",
+      "width": 768
+    },
+    {
+      "bodyFont": "\"Plus Jakarta Sans\", sans-serif",
+      "brands": 2,
+      "heading": "Bienvenido de nuevo",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "\"Plus Jakarta Sans\", sans-serif",
+      "url": "/plantilla/2/ingresar",
+      "width": 768
+    },
+    {
+      "bodyFont": "\"Plus Jakarta Sans\", sans-serif",
+      "brands": 2,
+      "heading": "Crear cuenta",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "\"Plus Jakarta Sans\", sans-serif",
+      "url": "/plantilla/2/ingresar?modo=registro",
+      "width": 768
+    },
+    {
+      "bodyFont": "\"Plus Jakarta Sans\", sans-serif",
+      "brands": 2,
+      "heading": "Mi carrito",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "\"Plus Jakarta Sans\", sans-serif",
+      "url": "/plantilla/2/carrito",
+      "width": 768
+    },
+    {
+      "bodyFont": "\"Plus Jakarta Sans\", sans-serif",
+      "brands": 2,
+      "heading": "Checkout",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "\"Plus Jakarta Sans\", sans-serif",
+      "url": "/plantilla/2/compra",
+      "width": 768
+    },
+    {
+      "bodyFont": "\"Plus Jakarta Sans\", sans-serif",
+      "brands": 2,
+      "heading": "Seguimiento de pedido",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "\"Plus Jakarta Sans\", sans-serif",
+      "url": "/plantilla/2/seguimiento",
+      "width": 768
+    },
+    {
+      "bodyFont": "\"Plus Jakarta Sans\", sans-serif",
+      "brands": 2,
+      "heading": "Mi cuenta · Perfil",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "\"Plus Jakarta Sans\", sans-serif",
+      "url": "/plantilla/2/perfil",
+      "width": 768
+    },
+    {
+      "bodyFont": "\"Plus Jakarta Sans\", sans-serif",
+      "brands": 2,
+      "heading": "Mis pedidos",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "\"Plus Jakarta Sans\", sans-serif",
+      "url": "/plantilla/2/mis-pedidos",
+      "width": 768
+    },
+    {
+      "bodyFont": "\"Plus Jakarta Sans\", sans-serif",
+      "brands": 2,
+      "heading": "Términos y Condiciones",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "\"Plus Jakarta Sans\", sans-serif",
+      "url": "/plantilla/2/legal/terms",
+      "width": 768
+    },
+    {
+      "bodyFont": "\"Plus Jakarta Sans\", sans-serif",
+      "brands": 2,
+      "heading": "Política de Privacidad",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "\"Plus Jakarta Sans\", sans-serif",
+      "url": "/plantilla/2/legal/privacy",
+      "width": 768
+    },
+    {
+      "bodyFont": "\"Plus Jakarta Sans\", sans-serif",
+      "brands": 2,
+      "heading": "Política de Reembolso",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "\"Plus Jakarta Sans\", sans-serif",
+      "url": "/plantilla/2/legal/refund",
+      "width": 768
+    },
+    {
+      "bodyFont": "\"Plus Jakarta Sans\", sans-serif",
+      "brands": 2,
+      "heading": "Tu próxima historia",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "\"Plus Jakarta Sans\", sans-serif",
+      "url": "/plantilla/2/",
+      "width": 1440
+    },
+    {
+      "bodyFont": "\"Plus Jakarta Sans\", sans-serif",
+      "brands": 2,
+      "heading": "Catálogo",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "\"Plus Jakarta Sans\", sans-serif",
+      "url": "/plantilla/2/catalogo",
+      "width": 1440
+    },
+    {
+      "bodyFont": "\"Plus Jakarta Sans\", sans-serif",
+      "brands": 2,
+      "heading": "Producto de prueba 1",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "\"Plus Jakarta Sans\", sans-serif",
+      "url": "/plantilla/2/producto/prueba-1",
+      "width": 1440
+    },
+    {
+      "bodyFont": "\"Plus Jakarta Sans\", sans-serif",
+      "brands": 2,
+      "heading": "Bienvenido de nuevo",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "\"Plus Jakarta Sans\", sans-serif",
+      "url": "/plantilla/2/ingresar",
+      "width": 1440
+    },
+    {
+      "bodyFont": "\"Plus Jakarta Sans\", sans-serif",
+      "brands": 2,
+      "heading": "Crear cuenta",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "\"Plus Jakarta Sans\", sans-serif",
+      "url": "/plantilla/2/ingresar?modo=registro",
+      "width": 1440
+    },
+    {
+      "bodyFont": "\"Plus Jakarta Sans\", sans-serif",
+      "brands": 2,
+      "heading": "Mi carrito",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "\"Plus Jakarta Sans\", sans-serif",
+      "url": "/plantilla/2/carrito",
+      "width": 1440
+    },
+    {
+      "bodyFont": "\"Plus Jakarta Sans\", sans-serif",
+      "brands": 2,
+      "heading": "Checkout",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "\"Plus Jakarta Sans\", sans-serif",
+      "url": "/plantilla/2/compra",
+      "width": 1440
+    },
+    {
+      "bodyFont": "\"Plus Jakarta Sans\", sans-serif",
+      "brands": 2,
+      "heading": "Seguimiento de pedido",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "\"Plus Jakarta Sans\", sans-serif",
+      "url": "/plantilla/2/seguimiento",
+      "width": 1440
+    },
+    {
+      "bodyFont": "\"Plus Jakarta Sans\", sans-serif",
+      "brands": 2,
+      "heading": "Mi cuenta · Perfil",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "\"Plus Jakarta Sans\", sans-serif",
+      "url": "/plantilla/2/perfil",
+      "width": 1440
+    },
+    {
+      "bodyFont": "\"Plus Jakarta Sans\", sans-serif",
+      "brands": 2,
+      "heading": "Mis pedidos",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "\"Plus Jakarta Sans\", sans-serif",
+      "url": "/plantilla/2/mis-pedidos",
+      "width": 1440
+    },
+    {
+      "bodyFont": "\"Plus Jakarta Sans\", sans-serif",
+      "brands": 2,
+      "heading": "Términos y Condiciones",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "\"Plus Jakarta Sans\", sans-serif",
+      "url": "/plantilla/2/legal/terms",
+      "width": 1440
+    },
+    {
+      "bodyFont": "\"Plus Jakarta Sans\", sans-serif",
+      "brands": 2,
+      "heading": "Política de Privacidad",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "\"Plus Jakarta Sans\", sans-serif",
+      "url": "/plantilla/2/legal/privacy",
+      "width": 1440
+    },
+    {
+      "bodyFont": "\"Plus Jakarta Sans\", sans-serif",
+      "brands": 2,
+      "heading": "Política de Reembolso",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "\"Plus Jakarta Sans\", sans-serif",
+      "url": "/plantilla/2/legal/refund",
+      "width": 1440
+    },
+    {
+      "bodyFont": "\"Plus Jakarta Sans\", sans-serif",
+      "brands": 2,
+      "heading": "Tu próxima historia",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "\"DM Serif Display\", Georgia, serif",
+      "url": "/plantilla/3/",
+      "width": 375
+    },
+    {
+      "bodyFont": "\"Plus Jakarta Sans\", sans-serif",
+      "brands": 2,
+      "heading": "Nuestra colección",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "\"DM Serif Display\", Georgia, serif",
+      "url": "/plantilla/3/catalogo",
+      "width": 375
+    },
+    {
+      "bodyFont": "\"Plus Jakarta Sans\", sans-serif",
+      "brands": 2,
+      "heading": "Producto de prueba 1",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "\"DM Serif Display\", Georgia, serif",
+      "url": "/plantilla/3/producto/prueba-1",
+      "width": 375
+    },
+    {
+      "bodyFont": "\"Plus Jakarta Sans\", sans-serif",
+      "brands": 2,
+      "heading": "Bienvenido de nuevo",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "\"DM Serif Display\", Georgia, serif",
+      "url": "/plantilla/3/ingresar",
+      "width": 375
+    },
+    {
+      "bodyFont": "\"Plus Jakarta Sans\", sans-serif",
+      "brands": 2,
+      "heading": "Crear cuenta",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "\"DM Serif Display\", Georgia, serif",
+      "url": "/plantilla/3/ingresar?modo=registro",
+      "width": 375
+    },
+    {
+      "bodyFont": "\"Plus Jakarta Sans\", sans-serif",
+      "brands": 2,
+      "heading": "Tu carrito",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "\"DM Serif Display\", Georgia, serif",
+      "url": "/plantilla/3/carrito",
+      "width": 375
+    },
+    {
+      "bodyFont": "\"Plus Jakarta Sans\", sans-serif",
+      "brands": 2,
+      "heading": "Checkout",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "\"DM Serif Display\", Georgia, serif",
+      "url": "/plantilla/3/compra",
+      "width": 375
+    },
+    {
+      "bodyFont": "\"Plus Jakarta Sans\", sans-serif",
+      "brands": 2,
+      "heading": "Seguimiento de pedido",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "\"DM Serif Display\", Georgia, serif",
+      "url": "/plantilla/3/seguimiento",
+      "width": 375
+    },
+    {
+      "bodyFont": "\"Plus Jakarta Sans\", sans-serif",
+      "brands": 2,
+      "heading": "Mi cuenta · Perfil",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "\"DM Serif Display\", Georgia, serif",
+      "url": "/plantilla/3/perfil",
+      "width": 375
+    },
+    {
+      "bodyFont": "\"Plus Jakarta Sans\", sans-serif",
+      "brands": 2,
+      "heading": "Mis pedidos",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "\"DM Serif Display\", Georgia, serif",
+      "url": "/plantilla/3/mis-pedidos",
+      "width": 375
+    },
+    {
+      "bodyFont": "\"Plus Jakarta Sans\", sans-serif",
+      "brands": 2,
+      "heading": "Términos y Condiciones",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "\"DM Serif Display\", Georgia, serif",
+      "url": "/plantilla/3/legal/terms",
+      "width": 375
+    },
+    {
+      "bodyFont": "\"Plus Jakarta Sans\", sans-serif",
+      "brands": 2,
+      "heading": "Política de Privacidad",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "\"DM Serif Display\", Georgia, serif",
+      "url": "/plantilla/3/legal/privacy",
+      "width": 375
+    },
+    {
+      "bodyFont": "\"Plus Jakarta Sans\", sans-serif",
+      "brands": 2,
+      "heading": "Política de Reembolso",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "\"DM Serif Display\", Georgia, serif",
+      "url": "/plantilla/3/legal/refund",
+      "width": 375
+    },
+    {
+      "bodyFont": "\"Plus Jakarta Sans\", sans-serif",
+      "brands": 2,
+      "heading": "Tu próxima historia",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "\"DM Serif Display\", Georgia, serif",
+      "url": "/plantilla/3/",
+      "width": 768
+    },
+    {
+      "bodyFont": "\"Plus Jakarta Sans\", sans-serif",
+      "brands": 2,
+      "heading": "Nuestra colección",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "\"DM Serif Display\", Georgia, serif",
+      "url": "/plantilla/3/catalogo",
+      "width": 768
+    },
+    {
+      "bodyFont": "\"Plus Jakarta Sans\", sans-serif",
+      "brands": 2,
+      "heading": "Producto de prueba 1",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "\"DM Serif Display\", Georgia, serif",
+      "url": "/plantilla/3/producto/prueba-1",
+      "width": 768
+    },
+    {
+      "bodyFont": "\"Plus Jakarta Sans\", sans-serif",
+      "brands": 2,
+      "heading": "Bienvenido de nuevo",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "\"DM Serif Display\", Georgia, serif",
+      "url": "/plantilla/3/ingresar",
+      "width": 768
+    },
+    {
+      "bodyFont": "\"Plus Jakarta Sans\", sans-serif",
+      "brands": 2,
+      "heading": "Crear cuenta",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "\"DM Serif Display\", Georgia, serif",
+      "url": "/plantilla/3/ingresar?modo=registro",
+      "width": 768
+    },
+    {
+      "bodyFont": "\"Plus Jakarta Sans\", sans-serif",
+      "brands": 2,
+      "heading": "Tu carrito",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "\"DM Serif Display\", Georgia, serif",
+      "url": "/plantilla/3/carrito",
+      "width": 768
+    },
+    {
+      "bodyFont": "\"Plus Jakarta Sans\", sans-serif",
+      "brands": 2,
+      "heading": "Checkout",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "\"DM Serif Display\", Georgia, serif",
+      "url": "/plantilla/3/compra",
+      "width": 768
+    },
+    {
+      "bodyFont": "\"Plus Jakarta Sans\", sans-serif",
+      "brands": 2,
+      "heading": "Seguimiento de pedido",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "\"DM Serif Display\", Georgia, serif",
+      "url": "/plantilla/3/seguimiento",
+      "width": 768
+    },
+    {
+      "bodyFont": "\"Plus Jakarta Sans\", sans-serif",
+      "brands": 2,
+      "heading": "Mi cuenta · Perfil",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "\"DM Serif Display\", Georgia, serif",
+      "url": "/plantilla/3/perfil",
+      "width": 768
+    },
+    {
+      "bodyFont": "\"Plus Jakarta Sans\", sans-serif",
+      "brands": 2,
+      "heading": "Mis pedidos",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "\"DM Serif Display\", Georgia, serif",
+      "url": "/plantilla/3/mis-pedidos",
+      "width": 768
+    },
+    {
+      "bodyFont": "\"Plus Jakarta Sans\", sans-serif",
+      "brands": 2,
+      "heading": "Términos y Condiciones",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "\"DM Serif Display\", Georgia, serif",
+      "url": "/plantilla/3/legal/terms",
+      "width": 768
+    },
+    {
+      "bodyFont": "\"Plus Jakarta Sans\", sans-serif",
+      "brands": 2,
+      "heading": "Política de Privacidad",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "\"DM Serif Display\", Georgia, serif",
+      "url": "/plantilla/3/legal/privacy",
+      "width": 768
+    },
+    {
+      "bodyFont": "\"Plus Jakarta Sans\", sans-serif",
+      "brands": 2,
+      "heading": "Política de Reembolso",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "\"DM Serif Display\", Georgia, serif",
+      "url": "/plantilla/3/legal/refund",
+      "width": 768
+    },
+    {
+      "bodyFont": "\"Plus Jakarta Sans\", sans-serif",
+      "brands": 2,
+      "heading": "Tu próxima historia",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "\"DM Serif Display\", Georgia, serif",
+      "url": "/plantilla/3/",
+      "width": 1440
+    },
+    {
+      "bodyFont": "\"Plus Jakarta Sans\", sans-serif",
+      "brands": 2,
+      "heading": "Nuestra colección",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "\"DM Serif Display\", Georgia, serif",
+      "url": "/plantilla/3/catalogo",
+      "width": 1440
+    },
+    {
+      "bodyFont": "\"Plus Jakarta Sans\", sans-serif",
+      "brands": 2,
+      "heading": "Producto de prueba 1",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "\"DM Serif Display\", Georgia, serif",
+      "url": "/plantilla/3/producto/prueba-1",
+      "width": 1440
+    },
+    {
+      "bodyFont": "\"Plus Jakarta Sans\", sans-serif",
+      "brands": 2,
+      "heading": "Bienvenido de nuevo",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "\"DM Serif Display\", Georgia, serif",
+      "url": "/plantilla/3/ingresar",
+      "width": 1440
+    },
+    {
+      "bodyFont": "\"Plus Jakarta Sans\", sans-serif",
+      "brands": 2,
+      "heading": "Crear cuenta",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "\"DM Serif Display\", Georgia, serif",
+      "url": "/plantilla/3/ingresar?modo=registro",
+      "width": 1440
+    },
+    {
+      "bodyFont": "\"Plus Jakarta Sans\", sans-serif",
+      "brands": 2,
+      "heading": "Tu carrito",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "\"DM Serif Display\", Georgia, serif",
+      "url": "/plantilla/3/carrito",
+      "width": 1440
+    },
+    {
+      "bodyFont": "\"Plus Jakarta Sans\", sans-serif",
+      "brands": 2,
+      "heading": "Checkout",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "\"DM Serif Display\", Georgia, serif",
+      "url": "/plantilla/3/compra",
+      "width": 1440
+    },
+    {
+      "bodyFont": "\"Plus Jakarta Sans\", sans-serif",
+      "brands": 2,
+      "heading": "Seguimiento de pedido",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "\"DM Serif Display\", Georgia, serif",
+      "url": "/plantilla/3/seguimiento",
+      "width": 1440
+    },
+    {
+      "bodyFont": "\"Plus Jakarta Sans\", sans-serif",
+      "brands": 2,
+      "heading": "Mi cuenta · Perfil",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "\"DM Serif Display\", Georgia, serif",
+      "url": "/plantilla/3/perfil",
+      "width": 1440
+    },
+    {
+      "bodyFont": "\"Plus Jakarta Sans\", sans-serif",
+      "brands": 2,
+      "heading": "Mis pedidos",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "\"DM Serif Display\", Georgia, serif",
+      "url": "/plantilla/3/mis-pedidos",
+      "width": 1440
+    },
+    {
+      "bodyFont": "\"Plus Jakarta Sans\", sans-serif",
+      "brands": 2,
+      "heading": "Términos y Condiciones",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "\"DM Serif Display\", Georgia, serif",
+      "url": "/plantilla/3/legal/terms",
+      "width": 1440
+    },
+    {
+      "bodyFont": "\"Plus Jakarta Sans\", sans-serif",
+      "brands": 2,
+      "heading": "Política de Privacidad",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "\"DM Serif Display\", Georgia, serif",
+      "url": "/plantilla/3/legal/privacy",
+      "width": 1440
+    },
+    {
+      "bodyFont": "\"Plus Jakarta Sans\", sans-serif",
+      "brands": 2,
+      "heading": "Política de Reembolso",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "\"DM Serif Display\", Georgia, serif",
+      "url": "/plantilla/3/legal/refund",
+      "width": 1440
+    },
+    {
+      "bodyFont": "\"Plus Jakarta Sans\", sans-serif",
+      "brands": 2,
+      "heading": "Tu próxima historia",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "\"Plus Jakarta Sans\", sans-serif",
+      "url": "/plantilla/4/",
+      "width": 375
+    },
+    {
+      "bodyFont": "\"Plus Jakarta Sans\", sans-serif",
+      "brands": 2,
+      "heading": "Catálogo.",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "\"Plus Jakarta Sans\", sans-serif",
+      "url": "/plantilla/4/catalogo",
+      "width": 375
+    },
+    {
+      "bodyFont": "\"Plus Jakarta Sans\", sans-serif",
+      "brands": 2,
+      "heading": "Producto de prueba 1",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "\"Plus Jakarta Sans\", sans-serif",
+      "url": "/plantilla/4/producto/prueba-1",
+      "width": 375
+    },
+    {
+      "bodyFont": "\"Plus Jakarta Sans\", sans-serif",
+      "brands": 3,
+      "heading": "Bienvenido de nuevo",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "\"Plus Jakarta Sans\", sans-serif",
+      "url": "/plantilla/4/ingresar",
+      "width": 375
+    },
+    {
+      "bodyFont": "\"Plus Jakarta Sans\", sans-serif",
+      "brands": 3,
+      "heading": "Crear cuenta",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "\"Plus Jakarta Sans\", sans-serif",
+      "url": "/plantilla/4/ingresar?modo=registro",
+      "width": 375
+    },
+    {
+      "bodyFont": "\"Plus Jakarta Sans\", sans-serif",
+      "brands": 2,
+      "heading": "Carrito.",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "\"Plus Jakarta Sans\", sans-serif",
+      "url": "/plantilla/4/carrito",
+      "width": 375
+    },
+    {
+      "bodyFont": "\"Plus Jakarta Sans\", sans-serif",
+      "brands": 2,
+      "heading": "Checkout.",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "\"Plus Jakarta Sans\", sans-serif",
+      "url": "/plantilla/4/compra",
+      "width": 375
+    },
+    {
+      "bodyFont": "\"Plus Jakarta Sans\", sans-serif",
+      "brands": 2,
+      "heading": "Seguimiento de pedido",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "\"Plus Jakarta Sans\", sans-serif",
+      "url": "/plantilla/4/seguimiento",
+      "width": 375
+    },
+    {
+      "bodyFont": "\"Plus Jakarta Sans\", sans-serif",
+      "brands": 2,
+      "heading": "Mi cuenta · Perfil",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "\"Plus Jakarta Sans\", sans-serif",
+      "url": "/plantilla/4/perfil",
+      "width": 375
+    },
+    {
+      "bodyFont": "\"Plus Jakarta Sans\", sans-serif",
+      "brands": 2,
+      "heading": "Mis pedidos",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "\"Plus Jakarta Sans\", sans-serif",
+      "url": "/plantilla/4/mis-pedidos",
+      "width": 375
+    },
+    {
+      "bodyFont": "\"Plus Jakarta Sans\", sans-serif",
+      "brands": 2,
+      "heading": "Términos y Condiciones",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "\"Plus Jakarta Sans\", sans-serif",
+      "url": "/plantilla/4/legal/terms",
+      "width": 375
+    },
+    {
+      "bodyFont": "\"Plus Jakarta Sans\", sans-serif",
+      "brands": 2,
+      "heading": "Política de Privacidad",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "\"Plus Jakarta Sans\", sans-serif",
+      "url": "/plantilla/4/legal/privacy",
+      "width": 375
+    },
+    {
+      "bodyFont": "\"Plus Jakarta Sans\", sans-serif",
+      "brands": 2,
+      "heading": "Política de Reembolso",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "\"Plus Jakarta Sans\", sans-serif",
+      "url": "/plantilla/4/legal/refund",
+      "width": 375
+    },
+    {
+      "bodyFont": "\"Plus Jakarta Sans\", sans-serif",
+      "brands": 2,
+      "heading": "Tu próxima historia",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "\"Plus Jakarta Sans\", sans-serif",
+      "url": "/plantilla/4/",
+      "width": 768
+    },
+    {
+      "bodyFont": "\"Plus Jakarta Sans\", sans-serif",
+      "brands": 2,
+      "heading": "Catálogo.",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "\"Plus Jakarta Sans\", sans-serif",
+      "url": "/plantilla/4/catalogo",
+      "width": 768
+    },
+    {
+      "bodyFont": "\"Plus Jakarta Sans\", sans-serif",
+      "brands": 2,
+      "heading": "Producto de prueba 1",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "\"Plus Jakarta Sans\", sans-serif",
+      "url": "/plantilla/4/producto/prueba-1",
+      "width": 768
+    },
+    {
+      "bodyFont": "\"Plus Jakarta Sans\", sans-serif",
+      "brands": 3,
+      "heading": "Bienvenido de nuevo",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "\"Plus Jakarta Sans\", sans-serif",
+      "url": "/plantilla/4/ingresar",
+      "width": 768
+    },
+    {
+      "bodyFont": "\"Plus Jakarta Sans\", sans-serif",
+      "brands": 3,
+      "heading": "Crear cuenta",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "\"Plus Jakarta Sans\", sans-serif",
+      "url": "/plantilla/4/ingresar?modo=registro",
+      "width": 768
+    },
+    {
+      "bodyFont": "\"Plus Jakarta Sans\", sans-serif",
+      "brands": 2,
+      "heading": "Carrito.",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "\"Plus Jakarta Sans\", sans-serif",
+      "url": "/plantilla/4/carrito",
+      "width": 768
+    },
+    {
+      "bodyFont": "\"Plus Jakarta Sans\", sans-serif",
+      "brands": 2,
+      "heading": "Checkout.",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "\"Plus Jakarta Sans\", sans-serif",
+      "url": "/plantilla/4/compra",
+      "width": 768
+    },
+    {
+      "bodyFont": "\"Plus Jakarta Sans\", sans-serif",
+      "brands": 2,
+      "heading": "Seguimiento de pedido",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "\"Plus Jakarta Sans\", sans-serif",
+      "url": "/plantilla/4/seguimiento",
+      "width": 768
+    },
+    {
+      "bodyFont": "\"Plus Jakarta Sans\", sans-serif",
+      "brands": 2,
+      "heading": "Mi cuenta · Perfil",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "\"Plus Jakarta Sans\", sans-serif",
+      "url": "/plantilla/4/perfil",
+      "width": 768
+    },
+    {
+      "bodyFont": "\"Plus Jakarta Sans\", sans-serif",
+      "brands": 2,
+      "heading": "Mis pedidos",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "\"Plus Jakarta Sans\", sans-serif",
+      "url": "/plantilla/4/mis-pedidos",
+      "width": 768
+    },
+    {
+      "bodyFont": "\"Plus Jakarta Sans\", sans-serif",
+      "brands": 2,
+      "heading": "Términos y Condiciones",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "\"Plus Jakarta Sans\", sans-serif",
+      "url": "/plantilla/4/legal/terms",
+      "width": 768
+    },
+    {
+      "bodyFont": "\"Plus Jakarta Sans\", sans-serif",
+      "brands": 2,
+      "heading": "Política de Privacidad",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "\"Plus Jakarta Sans\", sans-serif",
+      "url": "/plantilla/4/legal/privacy",
+      "width": 768
+    },
+    {
+      "bodyFont": "\"Plus Jakarta Sans\", sans-serif",
+      "brands": 2,
+      "heading": "Política de Reembolso",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "\"Plus Jakarta Sans\", sans-serif",
+      "url": "/plantilla/4/legal/refund",
+      "width": 768
+    },
+    {
+      "bodyFont": "\"Plus Jakarta Sans\", sans-serif",
+      "brands": 2,
+      "heading": "Tu próxima historia",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "\"Plus Jakarta Sans\", sans-serif",
+      "url": "/plantilla/4/",
+      "width": 1440
+    },
+    {
+      "bodyFont": "\"Plus Jakarta Sans\", sans-serif",
+      "brands": 2,
+      "heading": "Catálogo.",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "\"Plus Jakarta Sans\", sans-serif",
+      "url": "/plantilla/4/catalogo",
+      "width": 1440
+    },
+    {
+      "bodyFont": "\"Plus Jakarta Sans\", sans-serif",
+      "brands": 2,
+      "heading": "Producto de prueba 1",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "\"Plus Jakarta Sans\", sans-serif",
+      "url": "/plantilla/4/producto/prueba-1",
+      "width": 1440
+    },
+    {
+      "bodyFont": "\"Plus Jakarta Sans\", sans-serif",
+      "brands": 3,
+      "heading": "Bienvenido de nuevo",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "\"Plus Jakarta Sans\", sans-serif",
+      "url": "/plantilla/4/ingresar",
+      "width": 1440
+    },
+    {
+      "bodyFont": "\"Plus Jakarta Sans\", sans-serif",
+      "brands": 3,
+      "heading": "Crear cuenta",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "\"Plus Jakarta Sans\", sans-serif",
+      "url": "/plantilla/4/ingresar?modo=registro",
+      "width": 1440
+    },
+    {
+      "bodyFont": "\"Plus Jakarta Sans\", sans-serif",
+      "brands": 2,
+      "heading": "Carrito.",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "\"Plus Jakarta Sans\", sans-serif",
+      "url": "/plantilla/4/carrito",
+      "width": 1440
+    },
+    {
+      "bodyFont": "\"Plus Jakarta Sans\", sans-serif",
+      "brands": 2,
+      "heading": "Checkout.",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "\"Plus Jakarta Sans\", sans-serif",
+      "url": "/plantilla/4/compra",
+      "width": 1440
+    },
+    {
+      "bodyFont": "\"Plus Jakarta Sans\", sans-serif",
+      "brands": 2,
+      "heading": "Seguimiento de pedido",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "\"Plus Jakarta Sans\", sans-serif",
+      "url": "/plantilla/4/seguimiento",
+      "width": 1440
+    },
+    {
+      "bodyFont": "\"Plus Jakarta Sans\", sans-serif",
+      "brands": 2,
+      "heading": "Mi cuenta · Perfil",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "\"Plus Jakarta Sans\", sans-serif",
+      "url": "/plantilla/4/perfil",
+      "width": 1440
+    },
+    {
+      "bodyFont": "\"Plus Jakarta Sans\", sans-serif",
+      "brands": 2,
+      "heading": "Mis pedidos",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "\"Plus Jakarta Sans\", sans-serif",
+      "url": "/plantilla/4/mis-pedidos",
+      "width": 1440
+    },
+    {
+      "bodyFont": "\"Plus Jakarta Sans\", sans-serif",
+      "brands": 2,
+      "heading": "Términos y Condiciones",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "\"Plus Jakarta Sans\", sans-serif",
+      "url": "/plantilla/4/legal/terms",
+      "width": 1440
+    },
+    {
+      "bodyFont": "\"Plus Jakarta Sans\", sans-serif",
+      "brands": 2,
+      "heading": "Política de Privacidad",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "\"Plus Jakarta Sans\", sans-serif",
+      "url": "/plantilla/4/legal/privacy",
+      "width": 1440
+    },
+    {
+      "bodyFont": "\"Plus Jakarta Sans\", sans-serif",
+      "brands": 2,
+      "heading": "Política de Reembolso",
+      "overflow": false,
+      "priceClipped": false,
+      "titleFont": "\"Plus Jakarta Sans\", sans-serif",
+      "url": "/plantilla/4/legal/refund",
+      "width": 1440
+    }
+  ],
+  "checkout": [
+    {
+      "brands": 2,
+      "heading": "Datos de contacto",
+      "overflow": false,
+      "width": 1440
+    },
+    {
+      "brands": 2,
+      "heading": "Método de entrega",
+      "overflow": false,
+      "width": 1440
+    },
+    {
+      "brands": 2,
+      "heading": "Método de pago",
+      "overflow": false,
+      "width": 1440
+    },
+    {
+      "brands": 2,
+      "heading": "Confirmar pedido",
+      "overflow": false,
+      "width": 1440
+    },
+    {
+      "brands": 2,
+      "heading": "Datos de contacto",
+      "overflow": false,
+      "width": 758
+    },
+    {
+      "brands": 2,
+      "heading": "Método de entrega",
+      "overflow": false,
+      "width": 758
+    },
+    {
+      "brands": 2,
+      "heading": "Método de pago",
+      "overflow": false,
+      "width": 758
+    },
+    {
+      "brands": 2,
+      "heading": "Confirmar pedido",
+      "overflow": false,
+      "width": 758
+    },
+    {
+      "brands": 2,
+      "heading": "Datos de contacto",
+      "overflow": false,
+      "width": 365
+    },
+    {
+      "brands": 2,
+      "heading": "Método de entrega",
+      "overflow": false,
+      "width": 365
+    },
+    {
+      "brands": 2,
+      "heading": "Método de pago",
+      "overflow": false,
+      "width": 365
+    },
+    {
+      "brands": 2,
+      "heading": "Confirmar pedido",
+      "overflow": false,
+      "width": 365
+    }
+  ],
+  "confirmation": [
+    {
+      "brands": 2,
+      "example": true,
+      "heading": "¡Pedido confirmado!",
+      "overflow": false,
+      "width": 1440
+    },
+    {
+      "brands": 2,
+      "example": true,
+      "heading": "¡Pedido confirmado!",
+      "overflow": false,
+      "width": 758
+    },
+    {
+      "brands": 2,
+      "example": true,
+      "heading": "¡Pedido confirmado!",
+      "overflow": false,
+      "width": 365
+    },
+    {
+      "brands": 2,
+      "example": true,
+      "heading": "¡Pedido confirmado!",
+      "overflow": false,
+      "width": 1423
+    },
+    {
+      "brands": 2,
+      "example": true,
+      "heading": "¡Pedido confirmado!",
+      "overflow": false,
+      "width": 758
+    },
+    {
+      "brands": 2,
+      "example": true,
+      "heading": "¡Pedido confirmado!",
+      "overflow": false,
+      "width": 365
+    },
+    {
+      "brands": 2,
+      "example": true,
+      "heading": "¡Pedido confirmado!",
+      "overflow": false,
+      "width": 1423
+    },
+    {
+      "brands": 2,
+      "example": true,
+      "heading": "¡Pedido confirmado!",
+      "overflow": false,
+      "width": 758
+    },
+    {
+      "brands": 2,
+      "example": true,
+      "heading": "¡Pedido confirmado!",
+      "overflow": false,
+      "width": 365
+    },
+    {
+      "brands": 2,
+      "example": true,
+      "heading": "¡Pedido confirmado!",
+      "overflow": false,
+      "width": 1423
+    },
+    {
+      "brands": 2,
+      "example": true,
+      "heading": "¡Pedido confirmado!",
+      "overflow": false,
+      "width": 758
+    },
+    {
+      "brands": 2,
+      "example": true,
+      "heading": "¡Pedido confirmado!",
+      "overflow": false,
+      "width": 365
+    }
+  ],
+  "veltaFilters": [
+    {
+      "direction": "column",
+      "filter": "none",
+      "overflow": false,
+      "width": 375
+    },
+    {
+      "direction": "column",
+      "filter": "block",
+      "overflow": false,
+      "width": 768
+    },
+    {
+      "direction": "column",
+      "filter": "block",
+      "overflow": false,
+      "width": 1440
+    },
+    {
+      "direction": "column",
+      "filter": "none",
+      "overflow": false,
+      "width": 375
+    },
+    {
+      "direction": "column",
+      "filter": "none",
+      "overflow": false,
+      "width": 768
+    },
+    {
+      "direction": "column",
+      "filter": "none",
+      "overflow": false,
+      "width": 1440
+    },
+    {
+      "direction": "column",
+      "filter": "none",
+      "overflow": false,
+      "width": 375
+    },
+    {
+      "direction": "row",
+      "filter": "block",
+      "overflow": false,
+      "width": 768
+    },
+    {
+      "direction": "row",
+      "filter": "block",
+      "overflow": false,
+      "width": 1440
+    }
+  ],
+  "additional": [
+    {
+      "brands": 2,
+      "overflow": false,
+      "rows": 1,
+      "url": "/plantilla/1/mis-pedidos/7001",
+      "width": 375
+    },
+    {
+      "brands": 2,
+      "overflow": false,
+      "rows": 1,
+      "url": "/plantilla/1/mis-pedidos/7001",
+      "width": 768
+    },
+    {
+      "brands": 2,
+      "overflow": false,
+      "rows": 1,
+      "url": "/plantilla/1/mis-pedidos/7001",
+      "width": 1440
+    },
+    {
+      "brands": 2,
+      "overflow": false,
+      "rows": 1,
+      "url": "/plantilla/2/mis-pedidos/7001",
+      "width": 375
+    },
+    {
+      "brands": 2,
+      "overflow": false,
+      "rows": 1,
+      "url": "/plantilla/2/mis-pedidos/7001",
+      "width": 768
+    },
+    {
+      "brands": 2,
+      "overflow": false,
+      "rows": 1,
+      "url": "/plantilla/2/mis-pedidos/7001",
+      "width": 1440
+    },
+    {
+      "brands": 2,
+      "overflow": false,
+      "rows": 1,
+      "url": "/plantilla/3/mis-pedidos/7001",
+      "width": 375
+    },
+    {
+      "brands": 2,
+      "overflow": false,
+      "rows": 1,
+      "url": "/plantilla/3/mis-pedidos/7001",
+      "width": 768
+    },
+    {
+      "brands": 2,
+      "overflow": false,
+      "rows": 1,
+      "url": "/plantilla/3/mis-pedidos/7001",
+      "width": 1440
+    },
+    {
+      "brands": 2,
+      "overflow": false,
+      "rows": 1,
+      "url": "/plantilla/4/mis-pedidos/7001",
+      "width": 375
+    },
+    {
+      "brands": 2,
+      "overflow": false,
+      "rows": 1,
+      "url": "/plantilla/4/mis-pedidos/7001",
+      "width": 768
+    },
+    {
+      "brands": 2,
+      "overflow": false,
+      "rows": 1,
+      "url": "/plantilla/4/mis-pedidos/7001",
+      "width": 1440
+    },
+    {
+      "brands": 2,
+      "heading": "Nacido de una idea,construido con criterio",
+      "overflow": false,
+      "url": "/plantilla/3/nuestra-historia",
+      "width": 375
+    },
+    {
+      "brands": 2,
+      "heading": "Nacido de una idea,construido con criterio",
+      "overflow": false,
+      "url": "/plantilla/3/nuestra-historia",
+      "width": 768
+    },
+    {
+      "brands": 2,
+      "heading": "Nacido de una idea,construido con criterio",
+      "overflow": false,
+      "url": "/plantilla/3/nuestra-historia",
+      "width": 1440
+    }
+  ],
+  "persistence": {
+    "bg": "rgb(250, 245, 255)",
+    "font": "Arial, Helvetica, sans-serif",
+    "footer": "rgb(35, 69, 103)",
+    "title": "Cambria, Georgia, serif",
+    "top": "rgb(59, 40, 100)"
+  },
+  "publicConfirmationWithoutOrder": "http://127.0.0.1:5175/plantilla/1/catalogo",
+  "navigation": "Inicio → Ropa → Catálogo → Producto → Carrito → Contacto → Retiro → Transferencia sintética → Confirmación QA-7001 → Ver mi pedido → Seguimiento → Recarga. API interceptada; sin pagos ni pedidos reales."
+}

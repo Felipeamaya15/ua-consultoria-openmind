@@ -210,9 +210,9 @@ export default function Tracking() {
     : -1;
 
   const panelClass = isCatalog
-    ? 'bg-[#f5f5f3] text-[#151515] rounded-[16px]'
+    ? 'bg-[var(--visual-page-panel-background)] text-[var(--visual-page-color)] rounded-[16px]'
     : isVisual
-      ? 'bg-[#f1f1f0] rounded-[10px]'
+      ? 'bg-[var(--visual-page-panel-background)] rounded-[10px]'
       : isMinimal
         ? 'bg-white border border-black/5 rounded-[24px]'
         : 'bg-white border border-[var(--border)] rounded-2xl';
@@ -221,9 +221,9 @@ export default function Tracking() {
     <div
       className={
         isCatalog
-          ? 'max-w-[760px] mx-auto px-5 py-12 md:py-16 text-white'
+          ? 'max-w-[760px] mx-auto px-5 py-12 md:py-16 text-[var(--visual-page-color)]'
           : isVisual
-            ? 'max-w-[900px] mx-auto px-5 md:px-8 py-12 md:py-16 text-[#111111]'
+            ? 'max-w-[900px] mx-auto px-5 md:px-8 py-12 md:py-16 text-[var(--visual-page-color)]'
             : isMinimal
               ? 'max-w-3xl mx-auto px-4 md:px-8 py-12'
               : 'max-w-2xl mx-auto px-4 py-12'
@@ -247,10 +247,10 @@ export default function Tracking() {
           <p
             className={
               isCatalog
-                ? 'mb-3 text-[10px] font-black uppercase tracking-[0.16em] text-[#ff5a1f]'
+                ? 'mb-3 text-[10px] font-black uppercase tracking-[0.16em] text-[var(--primary)]'
                 : isVisual
-                  ? 'mb-3 text-[9px] font-medium uppercase tracking-[0.18em] text-[#77716e]'
-                  : 'text-xs text-gray-400 mb-2'
+                  ? 'mb-3 text-[9px] font-medium uppercase tracking-[0.18em] text-[var(--visual-page-color)]'
+                  : 'text-xs text-[var(--visual-page-color)] mb-2'
             }
           >
             ¿Dónde está mi compra?
@@ -260,11 +260,11 @@ export default function Tracking() {
         <h1
           className={
             isCatalog
-              ? 'text-[42px] md:text-[52px] leading-none tracking-[-0.045em] font-black text-white mb-4'
+              ? 'text-[42px] md:text-[52px] leading-none tracking-[-0.045em] font-black text-[var(--visual-page-color)] mb-4'
               : isVisual
                 ? 'font-serif text-[42px] md:text-[52px] leading-none tracking-[-0.025em] mb-4'
                 : isMinimal
-                  ? 'text-3xl md:text-4xl font-semibold tracking-tight text-[#171717] mb-3'
+                  ? 'text-3xl md:text-4xl font-semibold tracking-tight text-[var(--visual-page-color)] mb-3'
                   : 'text-3xl font-bold text-[var(--foreground)] mb-2'
           }
         >
@@ -274,9 +274,9 @@ export default function Tracking() {
         <p
           className={
             isCatalog
-              ? 'text-[13px] leading-6 text-white/45'
+              ? 'text-[13px] leading-6 text-[var(--visual-page-color)]/45'
               : isVisual
-                ? 'text-[14px] leading-6 text-[#77716e]'
+                ? 'text-[14px] leading-6 text-[var(--visual-page-color)]'
                 : 'text-[var(--muted-foreground)]'
           }
         >
@@ -288,12 +288,12 @@ export default function Tracking() {
       {/* =====================================================
           BUSCADOR
       ====================================================== */}
-      {!isAutomaticLookup && <div
+      {!isAutomaticLookup && <div data-page-form data-page-panel
         className={`
           ${panelClass}
           ${
             isCatalog
-              ? 'p-6 md:p-7 flex flex-col gap-4 mb-8 [&_input]:text-[#151515] [&_label]:text-[#151515]'
+              ? 'p-6 md:p-7 flex flex-col gap-4 mb-8 [&_input]:text-[var(--visual-page-color)] [&_label]:text-[var(--visual-page-color)]'
               : isVisual
                 ? 'p-6 md:p-7 flex flex-col gap-4 mb-8'
                 : isMinimal
@@ -328,25 +328,25 @@ export default function Tracking() {
         />
 
         {isCatalog ? (
-          <button
+          <button data-page-action="primary"
             type="button"
             onClick={handleSearch}
             disabled={loading || !orderNumber.trim() || invalidOrderNumber || invalidEmail || (!isDirectTracking && !email.trim())}
-            className="w-full h-12 rounded-[9px] bg-[#1683ff] text-white text-[12px] font-bold hover:bg-[#3194f5] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            className="w-full h-12 rounded-[9px] bg-[var(--primary)] text-[var(--visual-page-color)] text-[12px] font-bold hover:bg-[var(--primary)] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
           >
             {loading ? 'Consultando...' : 'Consultar pedido →'}
           </button>
         ) : isVisual ? (
-          <button
+          <button data-page-action="primary"
             type="button"
             onClick={handleSearch}
             disabled={loading || !orderNumber.trim() || invalidOrderNumber || invalidEmail || (!isDirectTracking && !email.trim())}
-            className="w-full h-12 rounded-[8px] bg-black text-white text-[12px] font-semibold hover:opacity-80 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity"
+            className="w-full h-12 rounded-[8px] bg-[var(--visual-page-panel-background)] text-[var(--visual-page-color)] text-[12px] font-semibold hover:opacity-80 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity"
           >
             {loading ? 'Consultando...' : 'Consultar pedido →'}
           </button>
         ) : isMinimal ? (
-          <button
+          <button data-page-action="primary"
             type="button"
             onClick={handleSearch}
             disabled={
@@ -354,9 +354,9 @@ export default function Tracking() {
             }
             className="
               w-full h-12 rounded-full
-              bg-[#17213b] text-white
+              bg-[var(--primary)] text-[var(--visual-page-color)]
               text-sm font-semibold
-              hover:bg-[#0f2a56]
+              hover:bg-[var(--primary)]
               disabled:opacity-50
               disabled:cursor-not-allowed
               transition-colors
@@ -399,7 +399,7 @@ export default function Tracking() {
         <Alert variant="error" title="No se pudo consultar el pedido">
           {error}
           {isAutomaticLookup && (
-            <button type="button" className="block mt-3 underline" onClick={handleSearch}>
+            <button data-page-action="ghost" type="button" className="block mt-3 underline" onClick={handleSearch}>
               Volver a consultar
             </button>
           )}
@@ -511,14 +511,14 @@ export default function Tracking() {
       ====================================================== */}
       {order && (
         <div className={isCatalog
-          ? 'flex flex-col gap-5 animate-fade-in text-[#151515] [&_.text-[var\(--muted-foreground\)]]:text-black/45 [&_.text-[var\(--foreground\)]]:text-[#151515]'
+          ? 'flex flex-col gap-5 animate-fade-in text-[var(--visual-page-color)] [&_.text-\[var\(--muted-foreground\)\]]:text-[var(--visual-page-color)]/45 [&_.text-\[var\(--foreground\)\]]:text-[var(--visual-page-color)]'
           : 'flex flex-col gap-5 animate-fade-in'
         }>
 
           {/* ===============================================
               INFORMACIÓN DEL PEDIDO
           ================================================ */}
-          <div
+          <div data-page-panel
             className={`
               ${panelClass}
               ${isCatalog ? 'p-6 md:p-7' : isVisual ? 'p-6 md:p-7' : isMinimal ? 'p-6' : 'p-5'}
@@ -559,7 +559,7 @@ export default function Tracking() {
             <div
               className={
                 isVisual
-                  ? 'grid grid-cols-1 sm:grid-cols-2 gap-5 text-[13px] border-t border-black/10 pt-5'
+                  ? 'grid grid-cols-1 sm:grid-cols-2 gap-5 text-[13px] border-t border-[var(--visual-global-border)]/10 pt-5'
                   : isMinimal
                     ? 'grid grid-cols-1 sm:grid-cols-2 gap-5 text-sm'
                     : 'grid grid-cols-2 gap-4 text-sm'
@@ -611,7 +611,7 @@ export default function Tracking() {
           {/* ===============================================
               ESTADO
           ================================================ */}
-          <div
+          <div data-page-panel
             className={`
               ${panelClass}
               ${isCatalog ? 'p-6 md:p-7' : isVisual ? 'p-6 md:p-7' : isMinimal ? 'p-6' : 'p-5'}
@@ -622,8 +622,8 @@ export default function Tracking() {
                 <p
                   className={
                     isVisual
-                      ? 'mb-2 text-[9px] font-medium uppercase tracking-[0.18em] text-[#77716e]'
-                      : 'text-xs text-gray-400 mb-1'
+                      ? 'mb-2 text-[9px] font-medium uppercase tracking-[0.18em] text-[var(--visual-page-color)]'
+                      : 'text-xs text-[var(--visual-page-color)] mb-1'
                   }
                 >
                   Progreso
@@ -676,14 +676,14 @@ export default function Tracking() {
                             ${
                               done
                                 ? isCatalog
-                                  ? 'bg-[#1683ff]'
+                                  ? 'bg-[var(--primary)]'
                                   : isVisual
-                                    ? 'bg-black'
+                                    ? 'bg-[var(--visual-page-panel-background)]'
                                     : 'bg-[var(--success)]'
                                 : isCatalog
-                                  ? 'bg-black/10'
+                                  ? 'bg-[var(--visual-page-panel-background)]/10'
                                   : isVisual
-                                    ? 'bg-black/10'
+                                    ? 'bg-[var(--visual-page-panel-background)]/10'
                                     : 'bg-[var(--border)]'
                             }
                           `}
@@ -703,20 +703,20 @@ export default function Tracking() {
                           ${
                             done
                               ? isCatalog
-                                ? 'bg-[#1683ff] text-white'
+                                ? 'bg-[var(--primary)] text-[var(--visual-page-color)]'
                                 : isVisual
-                                  ? 'bg-black text-white'
+                                  ? 'bg-[var(--visual-page-panel-background)] text-[var(--visual-page-color)]'
                                   : 'bg-[var(--success-bg)] text-[var(--success)]'
                               : active
                                 ? isCatalog
-                                  ? 'bg-[#ff5a1f] text-white'
+                                  ? 'bg-[var(--primary)] text-[var(--visual-page-color)]'
                                   : isVisual
-                                    ? 'bg-black text-white'
-                                    : 'bg-[#17213b] text-white shadow-sm'
+                                    ? 'bg-[var(--visual-page-panel-background)] text-[var(--visual-page-color)]'
+                                    : 'bg-[var(--primary)] text-[var(--visual-page-color)] shadow-sm'
                                 : isCatalog
-                                  ? 'bg-black/[0.06] text-black/35 border border-black/10'
+                                  ? 'bg-[var(--visual-page-panel-background)]/[0.06] text-[var(--visual-page-color)]/35 border border-[var(--visual-global-border)]/10'
                                   : isVisual
-                                    ? 'bg-white text-[#77716e] border border-black/10 opacity-60'
+                                    ? 'bg-[var(--visual-page-panel-background)] text-[var(--visual-page-color)] border border-[var(--visual-global-border)]/10 opacity-60'
                                     : 'bg-[var(--muted)] text-[var(--muted-foreground)] opacity-50'
                           }
                         `}
@@ -747,10 +747,10 @@ export default function Tracking() {
                             ${
                               active
                                 ? isCatalog
-                                  ? 'text-[#e04b1a]'
+                                  ? 'text-[var(--primary)]'
                                   : isVisual
-                                    ? 'text-black'
-                                    : 'text-[#17213b]'
+                                    ? 'text-[var(--visual-page-color)]'
+                                    : 'text-[var(--primary)]'
                                 : done
                                   ? 'text-[var(--foreground)]'
                                   : 'text-[var(--muted-foreground)]'
@@ -782,7 +782,7 @@ export default function Tracking() {
           {/* ===============================================
               PRODUCTOS
           ================================================ */}
-          <div
+          <div data-page-panel
             className={`
               ${panelClass}
               ${isCatalog ? 'p-6 md:p-7' : isVisual ? 'p-6 md:p-7' : isMinimal ? 'p-6' : 'p-5'}
@@ -807,12 +807,12 @@ export default function Tracking() {
                     key={`${item.producto_id}-${item.sku}-${index}`}
                     className={
                       isVisual
-                        ? 'flex items-center gap-4 border-b border-black/10 pb-4 last:border-b-0 last:pb-0'
+                        ? 'flex items-center gap-4 border-b border-[var(--visual-global-border)]/10 pb-4 last:border-b-0 last:pb-0'
                         : 'flex items-center gap-3'
                     }
                   >
                     <div
-                      className={`${isVisual ? 'w-16 h-16 rounded-[8px]' : isMinimal ? 'w-14 h-14 rounded-xl' : 'w-12 h-12 rounded-lg'} bg-black/5 flex items-center justify-center flex-shrink-0`}
+                      className={`${isVisual ? 'w-16 h-16 rounded-[8px]' : isMinimal ? 'w-14 h-14 rounded-xl' : 'w-12 h-12 rounded-lg'} bg-[var(--visual-page-panel-background)]/5 flex items-center justify-center flex-shrink-0`}
                       aria-hidden="true"
                     >
                       <Icon name="box" className="w-6 h-6" />

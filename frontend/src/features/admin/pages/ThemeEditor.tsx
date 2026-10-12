@@ -1,852 +1,156 @@
-import {
-  useEffect,
-  useRef,
-  useState,
-} from 'react';
-import {
-  Link,
-  useSearchParams,
-} from 'react-router-dom';
-
+import type { SetStateAction } from 'react';
+import type { EditorDocument } from '../visualEditor/model';
+import { createHistory, recordHistory, undoHistory, redoHistory } from '../visualEditor/history';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Link, useBlocker, useSearchParams } from 'react-router-dom';
 import { useAdmin } from '../context/AdminContext';
+import { useStoreIdentity } from '../../storefront/context/StoreIdentityContext';
+import { readStoredStoreConfig } from '../../storefront/visual/storage';
 import { templatePaths } from '../config/navigation';
 import type { TemplateId } from '../data/mockAdminData';
-import type {
-  ThemeImageSetting,
-  ThemeTemplateCustomization,
-} from '../types';
-import {
-  Button,
-  Modal,
-} from '../components/ui';
-
+import { VISUAL_SECTIONS, type VisualSectionId } from '../visualEditor/sections';
+import { createEditorDocument, editProperty, isEditorDirty, publishEditorDocument, resetProperty, resetSection, resolveEditorDocument, restorePreset, sectionOverridePath } from '../visualEditor/model';
+import { VisualInspector, getInspectorGroups } from '../visualEditor/inspector';
+import { LegacyImageInspector } from '../visualEditor/images';
+import { FieldHelp, SECTION_HELP } from '../visualEditor/help';
+import { optionLabel } from '../visualEditor/controls';
+import { STORE_PAGES, previewPath, CHECKOUT_PREVIEW_STEPS, type PreviewPageId } from '../../storefront/visual/pages';
+import { connectVisualPreview } from '../visualEditor/preview';
 import '../admin.css';
-
-const PALETTES = [
-  {
-    name: 'Océano',
-    primary: '#2563eb',
-    secondary: '#eff6ff',
-    accent: '#0ea5e9',
-  },
-  {
-    name: 'Bosque',
-    primary: '#15803d',
-    secondary: '#f0fdf4',
-    accent: '#84cc16',
-  },
-  {
-    name: 'Ciruela',
-    primary: '#7e22ce',
-    secondary: '#faf5ff',
-    accent: '#d946ef',
-  },
-  {
-    name: 'Grafito',
-    primary: '#1f2937',
-    secondary: '#f3f4f6',
-    accent: '#f97316',
-  },
-] as const;
-
-type SelectedImage = {
-  key: string;
-  label: string;
-  top: number;
-  left: number;
-};
-
-function clampPopover(
-  value: number,
-  min: number,
-  max: number,
-) {
-  return Math.max(min, Math.min(value, max));
-}
+import '../visualEditor/editor.css';
+const ABSENT_SECTION_NOTICE = 'Esta sección no está visible en esta página. Sus ajustes se aplicarán cuando tenga contenido o esté habilitada.';
 
 export default function ThemeEditor() {
-  const {
-    config,
-    setConfig,
-  } = useAdmin();
-
+  const { config, setConfig, storageError } = useAdmin();
+  const { identity } = useStoreIdentity();
   const [params] = useSearchParams();
-
   const requested = params.get('plantilla');
-
-  const template: TemplateId =
-    requested &&
-    Object.prototype.hasOwnProperty.call(
-      templatePaths,
-      requested,
-    )
-      ? (requested as TemplateId)
-      : config.template;
-
-  const iframeRef =
-    useRef<HTMLIFrameElement>(null);
-
-  const [paletteOpen, setPaletteOpen] =
-    useState(false);
-
-  const [selectedImage, setSelectedImage] =
-    useState<SelectedImage | null>(null);
-
-  const [saved, setSaved] =
-    useState(false);
-
-  const [confirmOpen, setConfirmOpen] =
-    useState(false);
-
-
-  function loadThemeFor(
-    targetTemplate: TemplateId,
-  ): ThemeTemplateCustomization {
-    return (
-      config.themeEditor?.[targetTemplate] ?? {
-        primaryColor: config.primaryColor,
-        secondaryColor: config.secondaryColor,
-        accentColor: config.accentColor,
-        paletteName: 'Original',
-        images: {},
-      }
-    );
-  }
-
-  // Borrador local: solo vive en esta pantalla hasta publicar
-  const [theme, setTheme] =
-    useState<ThemeTemplateCustomization>(() =>
-      loadThemeFor(template),
-    );
-
-  // Si cambia la plantilla que se está editando, reinicia
-  // el borrador con lo último publicado de esa plantilla
+  const template: TemplateId = requested && Object.prototype.hasOwnProperty.call(templatePaths, requested) ? requested as TemplateId : config.template;
+  const load = () => createEditorDocument(config, template, readStoredStoreConfig(identity));
+  const [baseline, setBaseline] = useState(load);
+  const [history, setHistory] = useState(() => createHistory(load()));
+  const draft = history.present;
+  const setDraft = (next: SetStateAction<EditorDocument>) => setHistory(current => recordHistory(current, typeof next === 'function' ? next(current.present) : next));
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [inspectorOpen, setInspectorOpen] = useState(true);
+  const [selectedSection, setSelectedSection] = useState<VisualSectionId>('global');
+  const [viewport, setViewport] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
+  const [previewPage, setPreviewPage] = useState<PreviewPageId>('home');
+  const previewProduct = 'ejemplo-editor';
+  const [inspectorGroup, setInspectorGroup] = useState<string>();
+  const [registerPreview, setRegisterPreview] = useState(false);
+  const [checkoutStep, setCheckoutStep] = useState('contact');
+  const activePage = previewPage === 'home' ? 'login' : previewPage === 'checkout' && checkoutStep === 'confirm' ? 'confirmation' : previewPage;
+  const relativePreviewPath = previewPath(previewPage, previewProduct, registerPreview);
+  const publicPageUrl = `${templatePaths[template]}${relativePreviewPath ? '/' + relativePreviewPath : ''}`;
+  const previewUrl = `${publicPageUrl}${publicPageUrl.includes('?') ? '&' : '?'}visualExample=1${previewPage === 'checkout' ? '&visualStep=' + checkoutStep : ''}`;
+  const [saved, setSaved] = useState(false);
+  const [notice, setNotice] = useState('');
+  const [sectionPresent, setSectionPresent] = useState(true);
+  const [restoreRequested, setRestoreRequested] = useState(false);
+  const [imageMode, setImageMode] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<{ key: string; src: string; legacyKey?: string } | null>(null);
+  const [navigationHref, setNavigationHref] = useState<string>();
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+  const connection = useRef<ReturnType<typeof connectVisualPreview> | null>(null);
+  const frameWrap = useRef<HTMLDivElement>(null);
+  const leaveDialog = useRef<HTMLDivElement>(null);
+  const [previewBounds, setPreviewBounds] = useState({ width: 900, height: 700 });
+  const frameWidth = viewport === 'mobile' ? 375 : viewport === 'tablet' ? 768 : 1440;
+  const previewScale = Math.min(1, Math.max(1, previewBounds.width - 24) / frameWidth);
+  const effective = useMemo(() => resolveEditorDocument(draft, template), [draft, template]);
+  const latest = useRef({ effective, draft, selectedSection, imageMode }); latest.current = { effective, draft, selectedSection, imageMode };
+  const dirty = isEditorDirty(draft, baseline);
+  const blocker = useBlocker(({ currentLocation, nextLocation }) => dirty && (currentLocation.pathname !== nextLocation.pathname || currentLocation.search !== nextLocation.search));
+  useEffect(() => { if (blocker.state === 'blocked' || restoreRequested) leaveDialog.current?.querySelector<HTMLButtonElement>('button')?.focus(); }, [blocker.state, restoreRequested]);
+  useEffect(() => { const next = load(); setBaseline(next); setHistory(createHistory(next)); setSaved(false); setSelectedImage(null); }, [template]);
+  useEffect(() => { connection.current?.update(effective, draft.images); setSaved(false); }, [effective, draft.images]);
+  useEffect(() => { connection.current?.imageMode(imageMode); }, [imageMode]);
+  useEffect(() => () => connection.current?.disconnect(), []);
   useEffect(() => {
-    setTheme(loadThemeFor(template));
-  }, [template]);
-
-  function updateTheme(
-    patch: Partial<ThemeTemplateCustomization>,
-  ) {
-    const nextTheme = {
-      ...theme,
-      ...patch,
-      images: patch.images ?? theme.images,
-    };
-
-    setTheme(nextTheme);
-
-    applyThemeToPreview(nextTheme);
-  }
-
-  function applyThemeToPreview(
-    currentTheme = theme,
-  ) {
-    const doc =
-      iframeRef.current?.contentDocument;
-
-    if (!doc) return;
-
-    const root = doc.documentElement;
-
-    root.style.setProperty(
-      '--primary',
-      currentTheme.primaryColor,
-    );
-
-    root.style.setProperty(
-      '--secondary',
-      currentTheme.secondaryColor,
-    );
-
-    root.style.setProperty(
-      '--accent',
-      currentTheme.accentColor,
-    );
-
-    root.style.setProperty(
-      '--ring',
-      currentTheme.primaryColor,
-    );
-
-    const images = Array.from(
-      doc.querySelectorAll<HTMLImageElement>('img'),
-    );
-
-    images.forEach((img, index) => {
-      const key = `image-${index}`;
-      const setting =
-        currentTheme.images[key];
-
-      img.dataset.themeEditorKey = key;
-
-      if (!setting) return;
-
-      if (
-        setting.src &&
-        img.src !== setting.src
-      ) {
-        img.src = setting.src;
-      }
-
-      img.style.objectPosition =
-        `${setting.x}% ${setting.y}%`;
-
-      img.style.transform =
-        `scale(${setting.scale / 100})`;
-
-      img.style.transformOrigin = 'center';
-
-      img.style.borderRadius =
-        `${setting.radius}px`;
-    });
-  }
-
-  function attachEditorEvents() {
-    const iframe = iframeRef.current;
-    const doc = iframe?.contentDocument;
-
-    if (!iframe || !doc) return;
-
-    applyThemeToPreview();
-
-    let editorStyle =
-      doc.getElementById(
-        'ua-theme-editor-style',
-      ) as HTMLStyleElement | null;
-
-    if (!editorStyle) {
-      editorStyle =
-        doc.createElement('style');
-
-      editorStyle.id =
-        'ua-theme-editor-style';
-
-      editorStyle.textContent = `
-        img[data-theme-editor-key] {
-          cursor: pointer !important;
-          transition:
-            outline-color .15s ease,
-            box-shadow .15s ease,
-            transform .2s ease,
-            border-radius .2s ease !important;
-        }
-
-        img[data-theme-editor-key]:hover {
-          outline: 3px solid #2563eb !important;
-          outline-offset: -3px !important;
-          box-shadow:
-            inset 0 0 0 9999px
-            rgba(37, 99, 235, .04) !important;
-        }
-
-        img[data-theme-editor-selected="true"] {
-          outline: 4px solid #2563eb !important;
-          outline-offset: -4px !important;
-        }
-      `;
-
-      doc.head.appendChild(editorStyle);
-    }
-
-    const images = Array.from(
-      doc.querySelectorAll<HTMLImageElement>('img'),
-    );
-
-    images.forEach((img, index) => {
-      const key = `image-${index}`;
-
-      img.dataset.themeEditorKey = key;
-
-      img.onclick = (event) => {
-        event.preventDefault();
-        event.stopPropagation();
-
-        images.forEach(
-          (current) =>
-            delete current.dataset
-              .themeEditorSelected,
-        );
-
-        img.dataset.themeEditorSelected =
-          'true';
-
-        const imageRect =
-          img.getBoundingClientRect();
-
-        const iframeRect =
-          iframe.getBoundingClientRect();
-
-        const width = 310;
-
-        const preferredLeft =
-          iframeRect.left +
-          imageRect.right +
-          12;
-
-        const fallbackLeft =
-          iframeRect.left +
-          imageRect.left -
-          width -
-          12;
-
-        const left =
-          preferredLeft + width <
-          window.innerWidth
-            ? preferredLeft
-            : fallbackLeft;
-
-        setSelectedImage({
-          key,
-          label:
-            img.alt?.trim() ||
-            `Imagen ${index + 1}`,
-          top: clampPopover(
-            iframeRect.top +
-              imageRect.top,
-            76,
-            window.innerHeight - 460,
-          ),
-          left: clampPopover(
-            left,
-            12,
-            window.innerWidth -
-              width -
-              12,
-          ),
-        });
-      };
-    });
-  }
-
-  function currentImageSetting():
-    ThemeImageSetting {
-    if (!selectedImage) {
-      return {
-        src: '',
-        scale: 100,
-        x: 50,
-        y: 50,
-        radius: 0,
-      };
-    }
-
-    const existing =
-      theme.images[selectedImage.key];
-
-    if (existing) return existing;
-
-    const doc =
-      iframeRef.current?.contentDocument;
-
-    const img =
-      doc?.querySelector<HTMLImageElement>(
-        `img[data-theme-editor-key="${selectedImage.key}"]`,
-      );
-
-    return {
-      src: img?.src ?? '',
-      scale: 100,
-      x: 50,
-      y: 50,
-      radius: 0,
-    };
-  }
-
-  function updateSelectedImage(
-    patch: Partial<ThemeImageSetting>,
-  ) {
-    if (!selectedImage) return;
-
-    const current =
-      currentImageSetting();
-
-    const next: ThemeImageSetting = {
-      ...current,
-      ...patch,
-    };
-
-    updateTheme({
-      images: {
-        ...theme.images,
-        [selectedImage.key]: next,
-      },
-    });
-  }
-
-  function resetSelectedImage() {
-    if (!selectedImage) return;
-
-    const nextImages = {
-      ...theme.images,
-    };
-
-    delete nextImages[selectedImage.key];
-
-    updateTheme({
-      images: nextImages,
-    });
-
-    const doc =
-      iframeRef.current?.contentDocument;
-
-    const img =
-      doc?.querySelector<HTMLImageElement>(
-        `img[data-theme-editor-key="${selectedImage.key}"]`,
-      );
-
-    if (img) {
-      img.style.objectPosition = '';
-      img.style.transform = '';
-      img.style.transformOrigin = '';
-      img.style.borderRadius = '';
-    }
-  }
-
-  function saveAndPublish() {
-    setConfig({
-      ...config,
-      template,
-      primaryColor: theme.primaryColor,
-      secondaryColor: theme.secondaryColor,
-      accentColor: theme.accentColor,
-      themeEditor: {
-        ...config.themeEditor,
-        [template]: theme,
-      },
-    });
-
-    setSaved(true);
-
-    setTimeout(
-      () => setSaved(false),
-      1800,
-    );
-  }
-
-  useEffect(() => {
-    function handleResize() {
-      setSelectedImage(null);
-    }
-
-    window.addEventListener(
-      'resize',
-      handleResize,
-    );
-
-    return () =>
-      window.removeEventListener(
-        'resize',
-        handleResize,
-      );
+    const element = frameWrap.current; if (!element || typeof ResizeObserver === 'undefined') return;
+    const observer = new ResizeObserver(entries => { const { width, height } = entries[0].contentRect; setPreviewBounds({ width, height }); });
+    observer.observe(element); return () => observer.disconnect();
   }, []);
-
-  const imageSetting =
-    currentImageSetting();
-
-  return (
-    <div className="min-h-screen bg-[#eef2f7]">
-      <header className="fixed inset-x-0 top-0 z-50 h-16 bg-white border-b border-[var(--border)] flex items-center justify-between px-4 md:px-6 shadow-sm">
-        <div className="flex items-center gap-4 min-w-0">
-          <Link
-            to="/emprendedor/diseno"
-            className="text-sm font-medium text-[var(--primary)] whitespace-nowrap"
-          >
-            ← Volver a Diseño
-          </Link>
-
-          <div className="hidden sm:block h-6 w-px bg-[var(--border)]" />
-
-          <div>
-            <p className="text-sm font-semibold">
-              Editor de tienda
-            </p>
-            <p className="text-xs text-[var(--muted-foreground)]">
-              Toca una imagen para editarla
-            </p>
-          </div>
+  useEffect(() => {
+    if (!dirty) return;
+    const leave = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = ''; };
+    window.addEventListener('beforeunload', leave); return () => window.removeEventListener('beforeunload', leave);
+  }, [dirty]);
+  function selectSection(section: VisualSectionId) {
+    setSelectedSection(section); setInspectorGroup(undefined); setSelectedImage(null); setNavigationHref(undefined); setImageMode(false);
+    if (section === 'catalog' && previewPage !== 'catalog') { setPreviewPage('catalog'); setNotice('Abriendo el catálogo en vista previa.'); return; }
+    const found = connection.current?.focus(section);
+    setNotice(found ? '' : ABSENT_SECTION_NOTICE);
+  }
+  function onLoad() {
+    connection.current?.disconnect();
+    const doc = iframeRef.current?.contentDocument; if (!doc) return;
+    connection.current = connectVisualPreview(doc, (section, href, group) => { setSelectedSection(section); setInspectorGroup(group); setSelectedImage(null); setNavigationHref(href); setNotice(''); }, (key, src, legacyKey) => setSelectedImage({ key, src, legacyKey }), institutional => { setSelectedImage(null); setNotice(institutional ? 'La identidad institucional es obligatoria y su logo no se puede reemplazar.' : 'Esta imagen pertenece al contenido de la tienda. Edítala desde Portada o Productos.'); }, setSectionPresent);
+    connection.current.imageMode(latest.current.imageMode);
+    connection.current.update(latest.current.effective, latest.current.draft.images);
+    connection.current.focus(latest.current.selectedSection);
+  }
+  function save() {
+    if (setConfig(publishEditorDocument(config, template, draft))) { setBaseline(draft); setSaved(true); setNotice('Diseño guardado en este navegador para esta tienda.'); }
+  }
+  function resetVisibleSection() {
+    setDraft(current => {
+      if (!selectedSection.startsWith('page')) return resetSection(current, sectionOverridePath(selectedSection, previewPage === 'catalog', activePage));
+      const groups = getInspectorGroups(selectedSection, false, activePage).filter(group => !inspectorGroup || group.label === inspectorGroup);
+      return groups.flatMap(group => group.fields).reduce((document, field) => resetSection(document, field.path), current);
+    });
+    setNotice('Overrides de este grupo eliminados en computadora, tablet y móvil. Se recupera la herencia del diseño original.');
+  }
+  const currentLabel = inspectorGroup || VISUAL_SECTIONS.find(([id]) => id === selectedSection)?.[1];
+  return <div className="ve-editor">
+    <header className="ve-toolbar">
+      <Link to="/emprendedor/diseno">← Diseño</Link><strong>Editor de tienda</strong>
+      <button type="button" disabled={!history.past.length} onClick={() => setHistory(undoHistory)}>Deshacer</button><button type="button" disabled={!history.future.length} onClick={() => setHistory(redoHistory)}>Rehacer</button>
+      <button type="button" aria-expanded={sidebarOpen} aria-controls="ve-sections" onClick={() => setSidebarOpen(!sidebarOpen)}>Secciones</button><button type="button" aria-expanded={inspectorOpen} aria-controls="ve-properties" onClick={() => setInspectorOpen(!inspectorOpen)}>Inspector</button>
+      <span role="status" className={dirty ? 've-dirty' : ''}>{dirty ? 'Cambios sin guardar' : saved ? '✓ Guardado' : 'Sin cambios pendientes'}</span>
+      <button type="button" disabled={!dirty} onClick={() => { setHistory(createHistory(baseline)); setSaved(false); setNotice('Borrador descartado.'); }}>Descartar cambios</button>
+      <button type="button" className="ve-primary" disabled={!dirty} onClick={save}>Guardar y publicar</button>
+    </header>
+    <div className={`ve-workspace ${sidebarOpen ? '' : 've-hide-sidebar'} ${inspectorOpen ? '' : 've-hide-inspector'}`}>
+      <aside className="ve-sidebar" id="ve-sections" hidden={!sidebarOpen}>
+        <nav aria-label="Secciones editables"><h2>ESTILO GENERAL</h2>{VISUAL_SECTIONS.filter(([id]) => ['global','topBar','header','footer'].includes(id)).map(([id,label]) => <button type="button" key={id} aria-pressed={selectedSection === id && !imageMode} onClick={() => selectSection(id)}>{id === 'global' ? 'Paleta y tipografías' : label}</button>)}
+          <h2>PÁGINA ACTUAL — {previewPage === 'home' ? 'Inicio' : STORE_PAGES.find(p => p.id === previewPage)?.label}</h2>
+          {previewPage === 'home' || previewPage === 'catalog' ? VISUAL_SECTIONS.filter(([id]) => !['global','topBar','header','footer'].includes(id) && !id.startsWith('page') && (previewPage === 'home' ? id !== 'catalog' : !['hero','heroCta','sections','contact','location'].includes(id))).map(([id,label]) => <button type="button" key={id} aria-pressed={selectedSection === id && !imageMode} onClick={() => selectSection(id)}>{label}</button>) : (['pageLayout','pagePanel','pageField','pageButton'] as const).filter(id => id !== 'pageField' || !['confirmation','orders','terms','privacy','refund','story'].includes(activePage)).flatMap(id => getInspectorGroups(id,false,activePage).map(group => {
+            const labels: Record<string, string[]> = {"product":["Cajas e información","Variantes y cantidad","Botones"],"cart":["Productos y resumen","Cantidad","Botones"],"login":["Formulario","Campos","Botones"],"checkout":["Opciones y resumen","Datos y opciones","Botones"],"confirmation":["Pedido y resumen","Campos","Botones"],"tracking":["Resultado y estados","Formulario","Botones"],"profile":["Datos personales","Campos","Botones"],"orders":["Lista y detalle","Campos","Botones"]};
+            const label = id === 'pageLayout' || (id === 'pageField' && ['product','cart'].includes(activePage)) ? group.label : labels[activePage]?.[['pagePanel','pageField','pageButton'].indexOf(id)] || group.label;
+            return <button type="button" key={id + group.label} aria-pressed={selectedSection === id && inspectorGroup === group.label && !imageMode} onClick={() => { selectSection(id); setInspectorGroup(group.label); }}>{label}</button>;
+          }))}</nav>
+        <button type="button" aria-pressed={imageMode} onClick={() => { setImageMode(!imageMode); setNotice('En modo imágenes, toca una imagen para editar su encuadre.'); }}>Imágenes heredadas</button>
+        <button type="button" className="ve-danger" onClick={() => setRestoreRequested(true)}>Volver al diseño original</button>
+        <p className="ve-hint">Selecciona una sección o toca la vista previa. Los cambios viven en el borrador hasta guardar.</p>
+      </aside>
+      <main className="ve-preview">
+        <div className="ve-preview-toolbar">
+          <div role="group" aria-label="Pantalla de vista previa">{(['desktop', 'tablet', 'mobile'] as const).map(value => <button type="button" key={value} aria-pressed={viewport === value} onClick={() => setViewport(value)}>{optionLabel(value)}</button>)}</div>
+          <label>Página que estás editando<select aria-label="Página que estás editando" value={previewPage} onChange={e => { const page = e.target.value as PreviewPageId; setPreviewPage(page); setInspectorGroup(undefined); setSelectedSection(page === 'home' ? 'hero' : page === 'catalog' ? 'catalog' : 'pageLayout'); setImageMode(false); setSelectedImage(null); setNavigationHref(undefined); setNotice(''); }}><option value="home">Inicio</option>{STORE_PAGES.filter(page => page.id !== 'story' || template === 'visual').map(page => <option key={page.id} value={page.id}>{page.label}</option>)}</select></label>
+          {previewPage === 'product' && <span>Producto de ejemplo · Bolso de algodón</span>}
+          {previewPage === 'login' && <select aria-label="Vista de acceso" value={registerPreview ? 'register' : 'login'} onChange={e => setRegisterPreview(e.target.value === 'register')}><option value="login">Inicio de sesión</option><option value="register">Crear cuenta</option></select>}
+          {previewPage === 'checkout' && <select aria-label="Etapa de compra" value={checkoutStep} onChange={e => { setCheckoutStep(e.target.value); setInspectorGroup(undefined); }}>{CHECKOUT_PREVIEW_STEPS.map((step, index) => <option key={step} value={step}>{['Contacto','Entrega','Pago','Confirmación'][index]}</option>)}</select>}
+          {navigationHref && <a href={navigationHref} target="_blank" rel="noopener noreferrer">Probar navegación ↗</a>}
+          <a href={previewPage === 'product' ? templatePaths[template] + '/catalogo' : publicPageUrl} target="_blank" rel="noopener noreferrer">{previewPage === 'product' ? 'Ver catálogo público ↗' : 'Ver tienda ↗'}</a>
         </div>
-
-        <div className="relative flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() =>
-              setPaletteOpen(
-                (value) => !value,
-              )
-            }
-          >
-            🎨 Colores
-          </Button>
-
-          <Link
-            to={templatePaths[template]}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Button
-              variant="outline"
-              size="sm"
-            >
-              Ver tienda ↗
-            </Button>
-          </Link>
-
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() =>
-              setTheme(loadThemeFor(template))
-            }
-          >
-            Descartar cambios
-          </Button>
-
-          <Button
-            variant="primary"
-            size="sm"
-            onClick={() => setConfirmOpen(true)}
-          >
-            {saved
-              ? '✓ Publicado'
-              : 'Guardar y publicar'}
-          </Button>
-
-          {paletteOpen && (
-            <div className="absolute right-0 top-12 z-[70] w-80 rounded-2xl border border-[var(--border)] bg-white p-4 shadow-2xl">
-              <div className="flex items-start justify-between gap-3 mb-4">
-                <div>
-                  <h2 className="font-semibold">
-                    Paleta de la tienda
-                  </h2>
-                  <p className="text-xs text-[var(--muted-foreground)] mt-1">
-                    Elige una combinación o ajusta los colores.
-                  </p>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() =>
-                    setPaletteOpen(false)
-                  }
-                  className="text-lg leading-none"
-                  aria-label="Cerrar colores"
-                >
-                  ×
-                </button>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                {PALETTES.map(
-                  (palette) => (
-                    <button
-                      key={palette.name}
-                      type="button"
-                      onClick={() =>
-                        updateTheme({
-                          paletteName:
-                            palette.name,
-                          primaryColor:
-                            palette.primary,
-                          secondaryColor:
-                            palette.secondary,
-                          accentColor:
-                            palette.accent,
-                        })
-                      }
-                      className={`rounded-xl border p-2 text-left ${
-                        theme.paletteName ===
-                        palette.name
-                          ? 'border-[var(--primary)] ring-2 ring-[var(--primary)]/15'
-                          : 'border-[var(--border)]'
-                      }`}
-                    >
-                      <div className="flex gap-1 mb-2">
-                        <span
-                          className="h-6 flex-1 rounded"
-                          style={{
-                            background:
-                              palette.primary,
-                          }}
-                        />
-                        <span
-                          className="h-6 flex-1 rounded"
-                          style={{
-                            background:
-                              palette.secondary,
-                          }}
-                        />
-                        <span
-                          className="h-6 flex-1 rounded"
-                          style={{
-                            background:
-                              palette.accent,
-                          }}
-                        />
-                      </div>
-                      <span className="text-xs font-semibold">
-                        {palette.name}
-                      </span>
-                    </button>
-                  ),
-                )}
-              </div>
-
-              <div className="mt-4 grid gap-3">
-                {[
-                  [
-                    'Principal',
-                    'primaryColor',
-                  ],
-                  [
-                    'Secundario',
-                    'secondaryColor',
-                  ],
-                  [
-                    'Acento',
-                    'accentColor',
-                  ],
-                ].map(
-                  ([label, key]) => (
-                    <label
-                      key={key}
-                      className="flex items-center justify-between gap-3 text-sm"
-                    >
-                      <span>{label}</span>
-                      <input
-                        type="color"
-                        value={
-                          theme[
-                            key as keyof Pick<
-                              ThemeTemplateCustomization,
-                              | 'primaryColor'
-                              | 'secondaryColor'
-                              | 'accentColor'
-                            >
-                          ] as string
-                        }
-                        onChange={(
-                          event,
-                        ) =>
-                          updateTheme({
-                            paletteName:
-                              'Personalizada',
-                            [key]:
-                              event.target
-                                .value,
-                          })
-                        }
-                        className="h-9 w-14 cursor-pointer rounded border border-[var(--border)] bg-white"
-                      />
-                    </label>
-                  ),
-                )}
-              </div>
-            </div>
-          )}
-        </div>
-      </header>
-
-      <main className="pt-16 h-screen">
-        <iframe
-          ref={iframeRef}
-          title="Vista real del cliente"
-          src={templatePaths[template]}
-          onLoad={attachEditorEvents}
-          className="w-full h-full border-0 bg-white"
-        />
+        {previewPage !== 'home' && previewPage !== 'catalog' && <p className="ve-preview-context">Los ajustes afectan solo esta página. Datos de ejemplo seguros: no se realizan compras, pagos, acceso ni consultas de pedidos. Toca un elemento para editar su apariencia.</p>}
+        {(storageError || (notice && (notice !== ABSENT_SECTION_NOTICE || !sectionPresent))) && <p className="ve-notice" role={storageError ? 'alert' : 'status'}>{storageError || notice}</p>}
+        <div className="ve-frame-wrap" ref={frameWrap}><iframe ref={iframeRef} title="Vista real del cliente" src={previewUrl} onLoad={onLoad} style={{ width: frameWidth, height: Math.max(300, (previewBounds.height - 24) / previewScale), zoom: previewScale }} /></div>
       </main>
-
-      <Modal
-        open={confirmOpen}
-        onClose={() => setConfirmOpen(false)}
-        title="¿Aplicar estos cambios a tu tienda?"
-        size="sm"
-      >
-      
-        <p className="text-sm text-[var(--muted-foreground)] mb-5">
-          Los visitantes de tu tienda verán este diseño de inmediato. Puedes
-          seguir editando si algo no te convence todavía.
-        </p>
-
-        <div className="flex justify-end gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setConfirmOpen(false)}
-          >
-            Seguir editando
-          </Button>
-
-          <Button
-            variant="primary"
-            size="sm"
-            onClick={() => {
-              saveAndPublish();
-              setConfirmOpen(false);
-            }}
-          >
-            Sí, aplicar a mi tienda
-          </Button>
-        </div>
-            </Modal>
-
-      {selectedImage && (
-        <div
-          className="fixed z-[80] w-[310px] rounded-2xl border border-[var(--border)] bg-white shadow-2xl"
-          style={{
-            top: selectedImage.top,
-            left: selectedImage.left,
-          }}
-        >
-          <div className="flex items-start justify-between border-b border-[var(--border)] px-4 py-3">
-            <div className="min-w-0">
-              <p className="font-semibold text-sm">
-                Editar imagen
-              </p>
-              <p className="truncate text-xs text-[var(--muted-foreground)]">
-                {selectedImage.label}
-              </p>
-            </div>
-
-            <button
-              type="button"
-              onClick={() =>
-                setSelectedImage(null)
-              }
-              className="text-lg"
-              aria-label="Cerrar edición de imagen"
-            >
-              ×
-            </button>
-          </div>
-
-          <div className="p-4 space-y-4">
-            <label className="block">
-              <span className="text-xs font-medium">
-                Imagen
-              </span>
-              <input
-                type="text"
-                value={imageSetting.src}
-                onChange={(event) =>
-                  updateSelectedImage({
-                    src: event.target.value,
-                  })
-                }
-                className="mt-1 h-10 w-full rounded-lg border border-[var(--border)] px-3 text-xs outline-none focus:border-[var(--primary)]"
-              />
-            </label>
-
-            <label className="block">
-              <div className="flex justify-between text-xs">
-                <span>Escala</span>
-                <span>
-                  {imageSetting.scale}%
-                </span>
-              </div>
-              <input
-                type="range"
-                min="80"
-                max="180"
-                value={imageSetting.scale}
-                onChange={(event) =>
-                  updateSelectedImage({
-                    scale: Number(
-                      event.target.value,
-                    ),
-                  })
-                }
-                className="w-full"
-              />
-            </label>
-
-            <label className="block">
-              <div className="flex justify-between text-xs">
-                <span>
-                  Posición horizontal
-                </span>
-                <span>
-                  {imageSetting.x}%
-                </span>
-              </div>
-              <input
-                type="range"
-                min="0"
-                max="100"
-                value={imageSetting.x}
-                onChange={(event) =>
-                  updateSelectedImage({
-                    x: Number(
-                      event.target.value,
-                    ),
-                  })
-                }
-                className="w-full"
-              />
-            </label>
-
-            <label className="block">
-              <div className="flex justify-between text-xs">
-                <span>
-                  Posición vertical
-                </span>
-                <span>
-                  {imageSetting.y}%
-                </span>
-              </div>
-              <input
-                type="range"
-                min="0"
-                max="100"
-                value={imageSetting.y}
-                onChange={(event) =>
-                  updateSelectedImage({
-                    y: Number(
-                      event.target.value,
-                    ),
-                  })
-                }
-                className="w-full"
-              />
-            </label>
-
-            <label className="block">
-              <div className="flex justify-between text-xs">
-                <span>
-                  Redondeado
-                </span>
-                <span>
-                  {imageSetting.radius}px
-                </span>
-              </div>
-              <input
-                type="range"
-                min="0"
-                max="48"
-                value={imageSetting.radius}
-                onChange={(event) =>
-                  updateSelectedImage({
-                    radius: Number(
-                      event.target.value,
-                    ),
-                  })
-                }
-                className="w-full"
-              />
-            </label>
-
-            <Button
-              fullWidth
-              variant="outline"
-              onClick={resetSelectedImage}
-            >
-              Restablecer imagen
-            </Button>
-          </div>
-        </div>
-      )}
+      <aside className="ve-properties" id="ve-properties" aria-label="Inspector visual" hidden={!inspectorOpen}>
+        <div className="ve-inspector-heading"><h1>{imageMode && selectedImage ? 'Imagen' : currentLabel}</h1>{!imageMode && SECTION_HELP[selectedSection] && <FieldHelp label={currentLabel || ''}>{SECTION_HELP[selectedSection]!}</FieldHelp>}{!imageMode && <button type="button" title="Eliminar overrides del grupo en todos los tamaños y recuperar el diseño original" onClick={resetVisibleSection}>Restablecer sección ↺</button>}</div>
+        {imageMode && selectedImage ? <LegacyImageInspector selected={selectedImage} document={draft} onChange={setDraft} /> : <VisualInspector section={selectedSection} effective={effective} document={draft} viewport={viewport} catalogPage={previewPage === 'catalog'} page={activePage} groupLabel={inspectorGroup} onEditMany={edits => setDraft(current => Object.entries(edits).reduce((document, [path,value]) => editProperty(document,path,value), current))} onEdit={(path, value) => setDraft(current => editProperty(current, path, value))} onReset={path => setDraft(current => resetProperty(current, path))} />}
+      </aside>
     </div>
-  );
+    {(blocker.state === 'blocked' || restoreRequested) && <div className="ve-modal-backdrop"><div ref={leaveDialog} role="dialog" aria-modal="true" aria-labelledby="ve-leave-title" className="ve-modal" onKeyDown={event => {
+      if (event.key === 'Escape') { event.preventDefault(); if (restoreRequested) setRestoreRequested(false); else blocker.reset?.(); }
+      if (event.key === 'Tab') {
+        const buttons = event.currentTarget.querySelectorAll('button');
+        if (event.shiftKey && document.activeElement === buttons[0]) { event.preventDefault(); buttons[buttons.length - 1]?.focus(); }
+        else if (!event.shiftKey && document.activeElement === buttons[buttons.length - 1]) { event.preventDefault(); buttons[0]?.focus(); }
+      }
+    }}><h2 id="ve-leave-title">{restoreRequested ? 'Volver al diseño original' : 'Tienes cambios sin guardar'}</h2><p>{restoreRequested ? 'Se retirarán los ajustes generales y los de esta plantilla. Las imágenes, el contenido y la identidad institucional se conservan. Guarda después para aplicar el cambio.' : 'Guarda el diseño o descarta el borrador antes de salir.'}</p><button type="button" onClick={() => { if (restoreRequested) setRestoreRequested(false); else blocker.reset?.(); }}>Seguir editando</button><button type="button" onClick={() => { if (restoreRequested) { setDraft(restorePreset(draft)); setRestoreRequested(false); setNotice('Diseño original recuperado en el borrador.'); } else blocker.proceed?.(); }}>{restoreRequested ? 'Restablecer diseño' : 'Descartar y salir'}</button></div></div>}
+  </div>;
 }

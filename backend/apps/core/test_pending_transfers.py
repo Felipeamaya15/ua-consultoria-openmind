@@ -59,11 +59,12 @@ class TransferenciasPendientesTests(TransferFixtureMixin, TestCase):
 
     def test_other_payment_methods_are_excluded_even_with_legacy_transfer_field(self):
         expected = self.create_order()
-        for method in ('Transbank', 'PayPal', 'MercadoPago', 'Linkify', ''):
+        linkify = self.create_order(medio_pago='Linkify', metodo_pago='Linkify')
+        for method in ('Transbank', 'PayPal', 'MercadoPago', ''):
             self.create_order(medio_pago=method, metodo_pago='Transferencia')
         response = self.api.get(self.url)
         self.assertEqual(response.status_code, 200)
-        self.assertEqual([item['id_pedido'] for item in response.data['data']], [expected.pk])
+        self.assertEqual([item['id_pedido'] for item in response.data['data']], [linkify.pk, expected.pk])
 
     def test_paid_shipped_and_cancelled_orders_are_excluded(self):
         expected = self.create_order()
@@ -272,6 +273,8 @@ class RepositorioTransferencias(RepositorioFalso):
         product = super().get_by_id(tienda_id, producto_id)
         if product:
             product['id_producto'] = self.producto_id
+            for variant in product['variantes']:
+                variant['stock'] -= sum(quantity for sku, quantity in self.descuentos if sku == variant['sku'])
         return product
 
 

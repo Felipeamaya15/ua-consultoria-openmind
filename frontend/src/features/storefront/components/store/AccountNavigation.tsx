@@ -1,3 +1,4 @@
+import { isActiveEditorPreview } from '../../visual/pages';
 import { useEffect, useState } from 'react';
 import { Link, Navigate, useLocation } from 'react-router-dom';
 import { authService } from '../../../auth/services/authService';
@@ -12,6 +13,7 @@ export function useStorefrontIdentity() {
   const { pathname } = useLocation();
   const [identity, setIdentity] = useState<{user: User | null; loading: boolean}>({user: null, loading: true});
   useEffect(() => {
+    if (isActiveEditorPreview()) { setIdentity({user: null, loading: false}); return; }
     let active = true;
     setIdentity({user: null, loading: true});
     authService.getMe().then(response => {

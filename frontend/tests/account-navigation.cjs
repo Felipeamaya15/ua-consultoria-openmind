@@ -1,16 +1,17 @@
 const fs = require('node:fs'), vm = require('node:vm'), path = require('node:path');
 const assert = require('node:assert/strict'), ts = require('typescript');
 const root = path.resolve(__dirname, '..');
-let user = null, states = [], index = 0, effects = [];
+let user = null, states = [], index = 0, effects = [], editorPreview = false, identityRequests = 0;
 const jsx = (type, props) => ({type, props});
 const moduleObject = {exports: {}};
 const source = fs.readFileSync(path.join(root, 'src/features/storefront/components/store/AccountNavigation.tsx'), 'utf8');
 vm.runInNewContext(ts.transpileModule(source, {compilerOptions: {module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX}}).outputText, {
   module: moduleObject, exports: moduleObject.exports, require: id => {
+    if (id === '../../visual/pages') return {isActiveEditorPreview: () => editorPreview};
     if (id === 'react/jsx-runtime') return {jsx, jsxs: jsx, Fragment: 'Fragment'};
     if (id === 'react') return {useState: initial => {const i = index++; if (!(i in states)) states[i] = initial; return [states[i], value => {states[i] = value;}];}, useEffect: effect => effects.push(effect)};
     if (id === 'react-router-dom') return {Link: 'Link', Navigate: 'Navigate', useLocation: () => ({pathname: '/plantilla/1/perfil'})};
-    if (id.includes('authService')) return {authService: {getMe: async () => user ? {data: user} : null}};
+    if (id.includes('authService')) return {authService: {getMe: async () => { identityRequests++; return user ? {data: user} : null; }}};
     if (id.includes('useStorefrontTemplate')) return {useStorefrontTemplate: () => ({route: p => '/plantilla/1/' + p})};
     throw Error(id);
   },
@@ -43,5 +44,8 @@ async function settled(component, props = {}) {
     assert.ok(header.includes('<AccountNavigation'), file);
     assert.ok(!header.includes('to="perfil"') && !header.includes("route('perfil')"), file);
   }
+  editorPreview = true; const beforePreview = identityRequests;
+  assert.equal((await settled(AccountNavigation)).props.children, 'Iniciar sesión');
+  assert.equal(identityRequests, beforePreview, 'Editor no consulta identidad real');
   console.log('OK: propietario/staff, cliente, visitante, guard de perfil y cinco headers.');
 })().catch(error => {console.error(error); process.exitCode = 1;});

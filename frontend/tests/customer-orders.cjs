@@ -70,6 +70,7 @@ function load(file, globals) {
       if (name === 'react') return requireMock(name);
       if (name.endsWith('/api')) return {API_BASE_URL: 'https://configured.example.test'};
       if (name.includes('authService')) return {authService: {getToken: () => storeToken}};
+      if (name.includes('pendingTransfersService')) return {approveManualTransfer: async () => {throw Error('No se debe aprobar durante la lectura');}, verifyTransfer: async () => {throw Error('No se debe verificar durante la lectura');}};
       if (name.includes('mockAdminData')) return {formatPrice: String};
       if (name.includes('components/ui')) return {Badge: 'Badge', Icon: 'Icon'};
       throw Error(name);

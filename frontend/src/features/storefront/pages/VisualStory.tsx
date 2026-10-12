@@ -14,7 +14,7 @@ export default function VisualStory() {
         <em>construido con criterio</em>
       </h1>
 
-      <div className="max-w-2xl mt-10 space-y-5 text-black/60 leading-relaxed">
+      <div className="max-w-2xl mt-10 space-y-5 text-[var(--visual-page-color)]/60 leading-relaxed">
         <p>
           Creemos que encontrar productos de calidad no
           debería ser complicado.
@@ -26,9 +26,9 @@ export default function VisualStory() {
         </p>
       </div>
 
-      <Link
+      <Link data-page-action="outline"
         to="../catalogo"
-        className="inline-flex mt-10 border border-black px-7 py-4 text-sm font-semibold"
+        className="inline-flex mt-10 border border-[var(--visual-global-border)] px-7 py-4 text-sm font-semibold"
       >
         Ver catálogo completo
       </Link>

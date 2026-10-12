@@ -156,7 +156,7 @@ export default function TransbankReturnResult({
       </div>
 
       {result.status === 'approved' && (
-        <div className="bg-white border border-[var(--border)] rounded-2xl p-6 w-full text-sm text-left">
+        <div data-page-panel className="bg-[var(--visual-page-panel-background)] border border-[var(--border)] rounded-2xl p-6 w-full text-sm text-left">
           <dl className="flex flex-col gap-3">
             {orderLabel && (
               <div className="flex justify-between gap-4">
@@ -189,7 +189,7 @@ export default function TransbankReturnResult({
       {result.status !== 'loading' && (
         <div className="flex flex-col sm:flex-row gap-3 w-full">
           {result.status === 'approved' ? (
-            <Link
+            <Link data-page-action="ghost"
               to={trackingRoute}
               state={{ email }}
               className="flex-1"
@@ -199,14 +199,14 @@ export default function TransbankReturnResult({
               </Button>
             </Link>
           ) : (
-            <Link to={route('checkout')} className="flex-1">
+            <Link data-page-action="ghost" to={route('checkout')} className="flex-1">
               <Button variant="primary" fullWidth>
                 Volver al checkout
               </Button>
             </Link>
           )}
 
-          <Link to={route('catalogo')} className="flex-1">
+          <Link data-page-action="ghost" to={route('catalogo')} className="flex-1">
             <Button variant="outline" fullWidth>
               Seguir comprando
             </Button>

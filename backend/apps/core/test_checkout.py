@@ -124,8 +124,10 @@ class CheckoutOrderTests(TestCase):
     def test_sql_stock_failure_restores_mongo_stock_and_rolls_back_order(self):
         product = Producto.objects.create(nombre='Stock SQL', precio=10, stock=1, id_tienda=self.store)
         self.repo.collection.update_many({}, {'$set': {'id_producto': product.pk}})
-        with self.assertRaises(IntegrityError):
-            self.create()
+        # Simular un fallo de escritura real, sin depender de stock SQL obsoleto.
+        with patch.object(Producto, 'save', side_effect=IntegrityError('Fallo SQL simulado')):
+            with self.assertRaises(IntegrityError):
+                self.create()
         product.refresh_from_db()
         self.assertEqual(product.stock, 1)
         self.assertEqual([v['stock'] for v in self.repo.get_by_id(str(self.store.pk), self.product_id)['variantes']], [7, 8])

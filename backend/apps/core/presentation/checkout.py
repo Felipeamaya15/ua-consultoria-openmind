@@ -14,7 +14,7 @@ from rest_framework.views import APIView
 
 from apps.authentication.infrastructure.models import ConfiguracionAutenticacion
 from apps.authentication.presentation.profile import IsCustomer, StrictSerializer
-from apps.catalog.domain.stock import validate_stock
+from apps.catalog.domain.stock import validate_stock, is_variant_active
 from apps.catalog.infrastructure.repositories import ProductRepository
 from apps.core.infrastructure.tenant import resolver_tienda
 from apps.core.models import Pedido, ItemPedido, Tienda, Producto, ConfiguracionPago
@@ -129,7 +129,7 @@ class CheckoutOrderAPIView(ErroresDeCotizacionMixin, APIView):
                 if not product or not product.get('activo', False):
                     raise ValidationError({'items': 'Un producto no esta disponible en esta tienda.'})
                 variant = next((v for v in product.get('variantes', []) if v.get('sku') == item['sku']), None)
-                if variant is None or variant.get('activo') is False:
+                if variant is None or not is_variant_active(variant):
                     raise ValidationError({'items': 'El SKU no pertenece al producto seleccionado.'})
                 key = (str(product['_id']), item['sku'])
                 quantity = lines.get(key, {}).get('cantidad', 0) + item['cantidad']
@@ -188,7 +188,8 @@ class CheckoutOrderAPIView(ErroresDeCotizacionMixin, APIView):
                     if id_prod_pg:
                         try:
                             prod_pg = Producto.objects.select_for_update().get(pk=id_prod_pg, id_tienda=tienda)
-                            prod_pg.stock -= line['cantidad']
+                            current_product = repository.get_by_id(str(tienda.pk), line['producto_mongo_id'])
+                            prod_pg.stock = sum(v.get('stock', 0) for v in current_product['variantes'])
                             prod_pg.save(update_fields=['stock'])
                         except Producto.DoesNotExist:
                             pass

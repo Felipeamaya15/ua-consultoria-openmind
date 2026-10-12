@@ -1,3 +1,4 @@
+import { VISUAL_SECTION } from '../visual/sectionIds';
 import { useLandingContent } from '../../landing/hooks/useLandingContent';
 import { LandingDetails } from '../../landing/components/LandingDetails';
 import { useLandingSectionVisibility } from '../../landing/hooks/useLandingSectionVisibility';
@@ -17,22 +18,22 @@ export default function VisualHome() {
       {/* ======================================================
           HERO
       ====================================================== */}
-      <section className="px-5 md:px-8 pt-5">
-        <div
+      <section data-visual-section={VISUAL_SECTION.hero} className="px-5 md:px-8 pt-5">
+        <div data-visual-part="heroLayout"
           className="
             relative min-h-[620px] md:min-h-[720px]
             overflow-hidden
             flex items-end
           "
         >
-          <img
+          <img data-visual-part="heroImage"
             data-landing-image={landing?.imagen_principal ? true : undefined}
             src={landing?.imagen_principal || undefined} hidden={!landing?.imagen_principal}
             alt={landing?.titulo || ''}
             className="absolute inset-0 w-full h-full object-cover"
           />
 
-          <div
+          <div data-visual-part="heroOverlay"
             className="
               absolute inset-0
               bg-gradient-to-t
@@ -42,7 +43,7 @@ export default function VisualHome() {
             "
           />
 
-          <div
+          <div data-visual-part="heroContent"
             className="
               relative z-10
               text-white
@@ -73,7 +74,7 @@ export default function VisualHome() {
               {landing?.titulo}
             </h1>
 
-            <p
+            <p data-visual-part="heroSubtitle"
               className="
                 mt-7
                 text-sm md:text-base
@@ -85,8 +86,8 @@ export default function VisualHome() {
               {landing?.descripcion}
             </p>
 
-            <div className="flex flex-wrap gap-3 mt-8">
-              <Link
+            <div data-visual-part="heroCtaLayout" className="flex flex-wrap gap-3 mt-8">
+              <Link data-visual-section={VISUAL_SECTION.heroCta}
                 to="catalogo"
                 className="
                   bg-[var(--primary)] text-white
@@ -133,7 +134,7 @@ export default function VisualHome() {
       {/* ======================================================
           PRODUCTOS DESTACADOS
       ====================================================== */}
-      {isSectionVisible('Productos destacados') && visualProducts.length > 0 && (<section data-landing-content className="px-5 md:px-8 py-20 md:py-28">
+      {isSectionVisible('Productos destacados') && visualProducts.length > 0 && (<section data-visual-section={VISUAL_SECTION.sections} data-visual-kind="featured" data-landing-content className="px-5 md:px-8 py-20 md:py-28">
         <div className="max-w-6xl mx-auto">
           <header className="mb-12">
             <p
@@ -159,16 +160,16 @@ export default function VisualHome() {
           </header>
 
           {/* PRODUCTO PRINCIPAL */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+          <div data-visual-section={VISUAL_SECTION.productGrid} data-visual-grid="products" className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
             <VisualHomeProduct product={visualProducts[0]} large />
-            {visualProducts.length > 1 && <div className="grid grid-cols-1 gap-4">
+            {visualProducts.length > 1 && <div data-visual-section={VISUAL_SECTION.productGrid} data-visual-grid="products" className="grid grid-cols-1 gap-4">
               {visualProducts.slice(1, 3).map(p => <VisualHomeProduct key={p.id} product={p} />)}
             </div>}
           </div>
 
           {/* SEGUNDA FILA */}
-          {visualProducts.length > 3 && <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="grid grid-cols-2 gap-4">
+          {visualProducts.length > 3 && <div data-visual-section={VISUAL_SECTION.productGrid} data-visual-grid="products" className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div data-visual-section={VISUAL_SECTION.productGrid} data-visual-grid="products" className="grid grid-cols-2 gap-4">
               {visualProducts.slice(3, 5).map(p => <VisualHomeProduct key={p.id} product={p} />)}
             </div>
             {visualProducts[5] && <VisualHomeProduct product={visualProducts[5]} wide />}
@@ -196,7 +197,7 @@ export default function VisualHome() {
       {/* ======================================================
           HISTORIA
       ====================================================== */}
-      <section className="bg-[#f2f1ef]">
+      <section data-visual-section={VISUAL_SECTION.sections} data-visual-kind="content" className="bg-[#f2f1ef]">
         <div
           className="
             max-w-6xl mx-auto
@@ -279,7 +280,7 @@ export default function VisualHome() {
       {/* ======================================================
           SEGUNDA SECCIÓN DE HISTORIA
       ====================================================== */}
-      <section className="py-20 md:py-28 px-5 md:px-8">
+      <section data-visual-section={VISUAL_SECTION.sections} data-visual-kind="content" className="py-20 md:py-28 px-5 md:px-8">
         <div
           className="
             max-w-6xl mx-auto
@@ -364,7 +365,7 @@ function VisualHomeProduct({
   wide = false,
 }: VisualHomeProductProps) {
   return (
-    <article
+    <article data-visual-section={VISUAL_SECTION.productCard} data-visual-card="grid"
       className={`
         bg-[#f1f0ee]
         flex flex-col
@@ -395,7 +396,7 @@ function VisualHomeProduct({
         />
       </Link>
 
-      <div className="p-6">
+      <div data-visual-part="body" className="p-6">
         <p
           className="
             text-[9px]
@@ -411,7 +412,7 @@ function VisualHomeProduct({
           {product.name}
         </h3>
 
-        <p className="text-sm text-gray-500 leading-6 mt-3">
+        <p data-visual-part="description" className="text-sm text-gray-500 leading-6 mt-3">
           {product.description}
         </p>
 
@@ -421,11 +422,11 @@ function VisualHomeProduct({
             gap-5 mt-6
           "
         >
-          <span className="text-sm font-semibold">
+          <span data-visual-part="price" className="text-sm font-semibold">
             {formatPrice(product.price)}
           </span>
 
-          <Link
+          <Link data-visual-part="buyButton"
             to={`producto/${product.id}`}
             className="
               bg-[var(--primary)]

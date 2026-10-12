@@ -16,6 +16,7 @@ import type {
   AdminConfig,
   ThemeTemplateCustomization,
 } from '../types';
+import { loadThemeCustomization } from './themeCustomization';
 
 export {
   formatPrice,
@@ -95,24 +96,14 @@ export const mockPromotions: Promotion[] = [
   },
 ];
 
-function defaultTheme(): ThemeTemplateCustomization {
-  return {
-    primaryColor: defaultStoreConfig.primaryColor,
-    secondaryColor: defaultStoreConfig.secondaryColor,
-    accentColor: defaultStoreConfig.accentColor,
-    paletteName: 'Original',
-    images: {},
-  };
-}
-
 const templateThemeDefaults: Record<
   TemplateId,
   ThemeTemplateCustomization
 > = {
-  editorial: defaultTheme(),
-  minimal: defaultTheme(),
-  visual: defaultTheme(),
-  catalog: defaultTheme(),
+  editorial: loadThemeCustomization('editorial'),
+  minimal: loadThemeCustomization('minimal'),
+  visual: loadThemeCustomization('visual'),
+  catalog: loadThemeCustomization('catalog'),
 };
 
 export const createDefaultAdminConfig = (): AdminConfig =>

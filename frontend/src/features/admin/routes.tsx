@@ -1,3 +1,4 @@
+import { lazyPage } from '../../app/LazyPage';
 import EntrepreneurProfile from './pages/Profile';
 import { Navigate, type RouteObject } from 'react-router-dom';
 
@@ -9,7 +10,7 @@ import Dashboard from './pages/Dashboard';
 import { ProductList, ProductForm } from './pages/Products';
 import Orders from './pages/Orders';
 import Design from './pages/Design';
-import ThemeEditor from './pages/ThemeEditor';
+const ThemeEditor = lazyPage(() => import('./pages/ThemeEditor'));
 import LandingPage from './pages/LandingPage';
 import Promotions from './pages/Promotions';
 import Payments from './pages/Payments';

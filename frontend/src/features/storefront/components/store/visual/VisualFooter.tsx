@@ -1,3 +1,5 @@
+import { InstitutionalBadge } from '../../ui';
+import { VISUAL_SECTION } from '../../../visual/sectionIds';
 import { Link } from 'react-router-dom';
 
 import { useStore } from '../../../context/StoreContext';
@@ -6,13 +8,13 @@ export function VisualFooter() {
   const { config } = useStore();
 
   return (
-    <footer className="bg-[#111111] text-white">
+    <footer data-visual-section={VISUAL_SECTION.footer} className="bg-[#111111] text-white">
       <div className="max-w-6xl mx-auto px-5 py-14">
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
+        <div data-visual-part="footerLayout" className="grid grid-cols-1 md:grid-cols-3 gap-12">
 
           <div>
-            <p className="font-serif text-2xl mb-4">
+            <p data-visual-part="footerTitle" className="font-serif text-2xl mb-4">
               {config.name}
             </p>
 
@@ -23,7 +25,7 @@ export function VisualFooter() {
           </div>
 
           <div>
-            <p className="text-[10px] font-semibold tracking-[0.2em] mb-5">
+            <p data-visual-part="footerTitle" className="text-[10px] font-semibold tracking-[0.2em] mb-5">
               TIENDA
             </p>
 
@@ -51,15 +53,7 @@ export function VisualFooter() {
             </nav>
           </div>
 
-          <div>
-            <p className="text-[10px] font-semibold tracking-[0.2em] mb-5">
-              PROYECTO APOYADO POR
-            </p>
-
-            <p className="font-serif text-lg">
-              Universidad Autónoma de Chile
-            </p>
-          </div>
+          <div data-visual-part="branding"><InstitutionalBadge /></div>
 
         </div>
 

@@ -25,7 +25,7 @@ from apps.core.models import Usuario, Carrito, ItemCarrito, ConfiguracionTransba
 from apps.catalog.application.services import VariantService
 from apps.catalog.infrastructure.repositories import ProductRepository
 from apps.catalog.infrastructure.adapters.transbank_adapter import TransbankWebpayAdapter
-from apps.catalog.domain.stock import validate_stock
+from apps.catalog.domain.stock import validate_stock, is_variant_active
 from apps.catalog.domain.exceptions import (
     CantidadInvalidaException,
     StockInsuficienteException,
@@ -617,9 +617,11 @@ class GetPublicProductDetailUseCase:
 
     def execute(self, tienda_id: str, slug: str) -> Optional[Dict[str, Any]]:
         producto = self.repository.get_by_slug(tienda_id, slug)
+        if producto is None and ObjectId.is_valid(slug):
+            producto = self.repository.get_by_id(tienda_id, slug)
         if producto is None or not producto.get("activo", False):
             return None
-        return producto
+        return {**producto, 'variantes': [v for v in producto.get('variantes', []) if is_variant_active(v)]}
 
 
 class GetPublicProductAttributesUseCase:
@@ -878,6 +880,8 @@ def resolver_datos_item(item: ItemCarrito, variant_service: Optional[VariantServ
         variante = service.get_variant_by_sku(str(item.id_producto_id), item.sku)
     except ValueError:
         return 0, item.id_producto.precio
+    if not item.id_producto.activo or not is_variant_active(variante):
+        return 0, item.id_producto.precio
     item.atributos_calculados = {a.get("clave"): a.get("valor")
                                  for a in variante.get("atributos_variante", []) if isinstance(a, dict) and a.get("clave")}
     precio = precio_efectivo_variante(variante)
@@ -1083,6 +1087,9 @@ class AgregarItemCarritoUseCase:
                 variante = self.variant_service.get_variant_by_sku(str(producto.id_producto), sku_normalizado)
             except ValueError as e:
                 raise VarianteNoEncontradaException(str(e))
+
+            if not is_variant_active(variante):
+                raise VarianteNoEncontradaException('La variante ya no está disponible.')
 
             # SKU canónico de la variante (get_variant_by_sku también acepta id o índice)
             sku_normalizado = str(variante.get("sku") or sku_normalizado).strip().upper()

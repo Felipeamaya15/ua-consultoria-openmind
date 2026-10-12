@@ -1,6 +1,10 @@
+import { isActiveEditorPreview } from '../../visual/pages';
+import { StorePageContent } from './StorePageContent';
+import { VISUAL_SECTION } from '../../visual/sectionIds';
 import { AccountNavigation } from './AccountNavigation';
-import { useLandingContent } from '../../../landing/hooks/useLandingContent';
-import { useLandingSectionVisibility } from '../../../landing/hooks/useLandingSectionVisibility';
+import { StoreVisualRoot } from './StoreVisualRoot';
+
+
 import { useEffect, useState } from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 
@@ -50,11 +54,11 @@ function CartIcon({ count }: { count: number }) {
  * - Categorías
  * - Footer
  *
- * El contenido de cada página se renderiza mediante <Outlet />.
+ * El contenido de cada página se renderiza mediante <StorePageContent><Outlet /></StorePageContent>.
  */
 export function EditorialLayout() {
-  const { categories } = useLandingContent();
-  const isSectionVisible = useLandingSectionVisibility();
+
+
   const { config, landing } = useStore();
   const { count } = useCart();
   const navigate = useNavigate();
@@ -67,6 +71,7 @@ export function EditorialLayout() {
   // Buscar si hay un usuario logueado al cargar el layout
   // Buscar si hay un usuario logueado al cargar o al cambiar de página
   useEffect(() => {
+    if (isActiveEditorPreview()) return;
     authService.getMe().then(response => {
       if (response?.data) {
         setUser(response.data);
@@ -95,31 +100,22 @@ export function EditorialLayout() {
 
 
   return (
-    <div className="template-editorial min-h-screen bg-[#fafaf8] flex flex-col">
+    <StoreVisualRoot className="template-editorial min-h-screen bg-[#fafaf8] flex flex-col">
 
       {/* =====================================================
           BARRA INSTITUCIONAL
       ====================================================== */}
-      <div className="bg-[var(--institutional)] text-white py-2 px-4 text-xs flex items-center justify-center gap-2.5 font-medium">
-        <img
-          src="/logo-universidad-autonoma.png"
-          alt="Logo Universidad Autónoma de Chile"
-          className="w-8 h-8 object-contain bg-white rounded-md p-1 shadow-sm"
-        />
-        <span>
-          Plataforma impulsada por <strong>Universidad Autónoma de Chile</strong>
-        </span>
-      </div>
+      <div data-visual-section={VISUAL_SECTION.topBar} data-institutional-bar className="bg-[var(--institutional)] text-white py-2 px-4 text-xs flex items-center justify-center gap-2.5 font-medium"><InstitutionalBadge /></div>
 
       {/* =====================================================
           HEADER
       ====================================================== */}
-      <header className="bg-white border-b border-[var(--border)] sticky top-0 z-40">
+      <header data-visual-section={VISUAL_SECTION.header} className="bg-white border-b border-[var(--border)] sticky top-0 z-40">
 
-        <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between gap-6">
+        <div data-visual-part="headerLayout" className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between gap-6">
 
           {/* Logo / nombre de tienda */}
-          <Link
+          <Link data-visual-part="logo"
             to="."
             className="flex items-center gap-3"
             aria-label={`Ir al inicio de ${config.name}`}
@@ -145,7 +141,7 @@ export function EditorialLayout() {
           {/* =================================================
               NAVEGACIÓN DESKTOP
           ================================================== */}
-          <nav
+          <nav data-visual-part="navigation"
             className="hidden md:flex items-center gap-6"
             aria-label="Navegación principal"
           >
@@ -287,28 +283,6 @@ export function EditorialLayout() {
           </nav>
         )}
 
-        {/* =================================================
-            CATEGORÍAS
-        ================================================== */}
-        {isSectionVisible('Categorías') && categories.length > 0 && (<div className="border-t border-[var(--border)] overflow-x-auto scrollbar-hide">
-          <div className="max-w-7xl mx-auto px-4 flex gap-6 py-2">
-
-            {categories.map((category) => (
-              <Link
-                key={category}
-                to={
-                  category === 'Todos'
-                    ? 'catalogo'
-                    : `catalogo?cat=${encodeURIComponent(category)}`
-                }
-                className="text-xs text-[var(--muted-foreground)] hover:text-[var(--primary)] whitespace-nowrap transition-colors"
-              >
-                {category}
-              </Link>
-            ))}
-
-          </div>
-        </div>)}
 
       </header>
 
@@ -316,20 +290,20 @@ export function EditorialLayout() {
           CONTENIDO DE LA PÁGINA
       ====================================================== */}
       <main className="flex-1">
-        <Outlet />
+        <StorePageContent><Outlet /></StorePageContent>
       </main>
 
       {/* =====================================================
           FOOTER
       ====================================================== */}
-      <footer className="bg-[var(--foreground)] text-white mt-16">
+      <footer data-visual-section={VISUAL_SECTION.footer} className="bg-[var(--foreground)] text-white mt-16">
 
-        <div className="max-w-7xl mx-auto px-4 py-10 grid grid-cols-1 md:grid-cols-4 gap-8">
+        <div data-visual-part="footerLayout" className="max-w-7xl mx-auto px-4 py-10 grid grid-cols-1 md:grid-cols-4 gap-8">
 
           {/* Información de tienda */}
           <div className="md:col-span-2">
 
-            <p className="font-display text-2xl mb-2">
+            <p data-visual-part="footerTitle" className="font-display text-2xl mb-2">
               {config.name}
             </p>
 
@@ -338,7 +312,7 @@ export function EditorialLayout() {
             </p>
 
             <div className="mt-4">
-              <InstitutionalBadge />
+              <div data-visual-part="branding"><InstitutionalBadge /></div>
             </div>
 
           </div>
@@ -346,7 +320,7 @@ export function EditorialLayout() {
           {/* Tienda */}
           <div>
 
-            <p className="text-xs font-semibold uppercase tracking-wider text-white/40 mb-3">
+            <p data-visual-part="footerTitle" className="text-xs font-semibold uppercase tracking-wider text-white/40 mb-3">
               Tienda
             </p>
 
@@ -373,7 +347,7 @@ export function EditorialLayout() {
           {/* Legal */}
           <div>
 
-            <p className="text-xs font-semibold uppercase tracking-wider text-white/40 mb-3">
+            <p data-visual-part="footerTitle" className="text-xs font-semibold uppercase tracking-wider text-white/40 mb-3">
               Legal
             </p>
 
@@ -407,12 +381,12 @@ export function EditorialLayout() {
         </div>
 
         {/* Copyright */}
-        <div className="border-t border-white/10 py-4 text-center text-xs text-white/40 px-4">
+        <div data-visual-part="branding" className="border-t border-white/10 py-4 text-center text-xs text-white/40 px-4">
           © 2025 {config.name} · Plataforma e-commerce Universidad Autónoma de Chile
         </div>
 
       </footer>
 
-    </div>
+    </StoreVisualRoot>
   );
 }

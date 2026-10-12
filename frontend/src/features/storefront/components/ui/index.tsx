@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { VISUAL_SECTION } from '../../visual/sectionIds';
 import React, { useId, useEffect, ReactNode, ButtonHTMLAttributes, InputHTMLAttributes, SelectHTMLAttributes, TextareaHTMLAttributes } from 'react';
 
 // ── Button ────────────────────────────────────────────────────────────────────
@@ -32,6 +33,9 @@ const btnSizes: Record<ButtonSize, string> = {
 export function Button({ variant = 'primary', size = 'md', loading, icon, iconRight, fullWidth, children, className = '', disabled, ...props }: ButtonProps) {
   return (
     <button
+      data-visual-section={VISUAL_SECTION.pageButton}
+      data-button-variant={variant}
+      data-page-action={variant === 'primary' || variant === 'accent' ? 'primary' : undefined}
       className={`${btnBase} ${btnVariants[variant]} ${btnSizes[size]} ${fullWidth ? 'w-full' : ''} ${className}`}
       disabled={disabled || loading}
       {...props}
@@ -62,7 +66,7 @@ export function Input({ label, error, hint, icon, iconRight, className = '', id,
   const generatedId = useId();
   const inputId = id ?? generatedId;
   return (
-    <div className="flex flex-col gap-1">
+    <div data-visual-section={VISUAL_SECTION.pageField} className="flex flex-col gap-1">
       {label && <label htmlFor={inputId} className="text-sm font-medium text-[var(--foreground)]">{label}</label>}
       <div className="relative">
         {icon && <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted-foreground)]">{icon}</span>}
@@ -95,9 +99,10 @@ interface TextareaProps extends TextareaHTMLAttributes<HTMLTextAreaElement> {
 export function Textarea({ label, error, hint, className = '', id, ...props }: TextareaProps) {
   const elId = id ?? label?.toLowerCase().replace(/\s+/g, '-');
   return (
-    <div className="flex flex-col gap-1">
+    <div data-visual-section={VISUAL_SECTION.pageField} className="flex flex-col gap-1">
       {label && <label htmlFor={elId} className="text-sm font-medium text-[var(--foreground)]">{label}</label>}
       <textarea
+        aria-invalid={!!error}
         id={elId}
         className={`w-full text-sm border rounded-lg px-3 py-2 bg-white text-[var(--foreground)] placeholder-[var(--muted-foreground)] transition-colors resize-y
           focus:outline-none focus:ring-2 focus:ring-[var(--ring)] focus:border-[var(--primary)]
@@ -122,9 +127,10 @@ interface SelectProps extends SelectHTMLAttributes<HTMLSelectElement> {
 export function Select({ label, error, hint, options, className = '', id, ...props }: SelectProps) {
   const elId = id ?? label?.toLowerCase().replace(/\s+/g, '-');
   return (
-    <div className="flex flex-col gap-1">
+    <div data-visual-section={VISUAL_SECTION.pageField} className="flex flex-col gap-1">
       {label && <label htmlFor={elId} className="text-sm font-medium text-[var(--foreground)]">{label}</label>}
       <select
+        aria-invalid={!!error}
         id={elId}
         className={`w-full h-9 text-sm border rounded-lg px-3 bg-white text-[var(--foreground)] transition-colors
           focus:outline-none focus:ring-2 focus:ring-[var(--ring)] focus:border-[var(--primary)]
@@ -158,6 +164,7 @@ export function Badge({ variant = 'default', children, className = '' }: { varia
 export function Card({ children, className = '', onClick }: { children: ReactNode; className?: string; onClick?: () => void }) {
   return (
     <div
+      data-visual-section={VISUAL_SECTION.pagePanel} data-page-panel
       className={`bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 ${onClick ? 'cursor-pointer hover:shadow-md transition-shadow' : ''} ${className}`}
       onClick={onClick}
       role={onClick ? 'button' : undefined}
@@ -371,13 +378,13 @@ export function Toggle({ checked, onChange, label, id }: { checked: boolean; onC
 // ── Institutional Badge ───────────────────────────────────────────────────────
 export function InstitutionalBadge({ compact = false }: { compact?: boolean }) {
   return (
-    <div className={`flex items-center gap-2.5 bg-[var(--institutional)] text-white ${compact ? 'px-2.5 py-1.5 rounded-lg text-xs' : 'px-4 py-2 rounded-xl text-sm'} font-semibold`}>
+    <div data-institutional-branding className={`flex items-center gap-2 text-xs ua-institutional-badge ${compact ? 'ua-institutional-badge--compact' : ''}`}>
       <img
         src="/logo-universidad-autonoma.png"
         alt="Logo Universidad Autónoma de Chile"
         className={compact ? 'w-6 h-6 object-contain bg-white rounded-md p-0.5 shadow-sm' : 'w-8 h-8 object-contain bg-white rounded-md p-1 shadow-sm'}
       />
-      {compact ? 'UAutónoma' : 'Universidad Autónoma de Chile'}
+      <span>Universidad Autónoma de Chile</span>
     </div>
   );
 }

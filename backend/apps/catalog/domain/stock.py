@@ -1,3 +1,7 @@
+def is_variant_active(variant):
+    return variant.get('activo') is not False and variant.get('es_activa') is not False
+
+
 def validate_stock(value):
     """El inventario se expresa como una cantidad entera no negativa."""
     if isinstance(value, bool) or not isinstance(value, int) or value < 0:

@@ -14,6 +14,7 @@ from apps.core.infrastructure.tenant import resolver_tienda
 from apps.core.models import ItemPedido, Pedido
 from apps.core.presentation.customer_orders import OrderDetailSerializer
 from apps.core.presentation.responses import success_response
+from apps.core.presentation.exceptions import custom_exception_handler
 
 
 class TrackingLookupSerializer(StrictSerializer):
@@ -54,6 +55,9 @@ class OrderTrackingAPIView(APIView):
     authentication_classes = []
     permission_classes = [AllowAny]
     throttle_classes = [TrackingLookupThrottle]
+
+    def get_exception_handler(self):
+        return custom_exception_handler
 
     def finalize_response(self, request, response, *args, **kwargs):
         response = super().finalize_response(request, response, *args, **kwargs)

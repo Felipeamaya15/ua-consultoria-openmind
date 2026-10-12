@@ -1,3 +1,4 @@
+import { VISUAL_SECTION } from '../visual/sectionIds';
 import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 
@@ -258,7 +259,7 @@ export default function Catalog() {
 
   if (isCatalog) {
     return (
-      <div className="bg-[#050505] text-white">
+      <div data-visual-section={VISUAL_SECTION.catalog} data-visual-catalog className="bg-[#050505] text-white">
         <section className="max-w-[1160px] mx-auto px-5 pt-10 md:pt-14 pb-20 md:pb-28">
           {/* CABECERA */}
           <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-7 mb-9">
@@ -335,15 +336,15 @@ export default function Catalog() {
           <button
             type="button"
             className="md:hidden mb-5 h-10 rounded-full border border-white/15 px-5 text-[11px] font-semibold text-white"
-            aria-expanded={filtersOpen}
+            data-visual-part="catalogFiltersToggle" aria-expanded={filtersOpen}
             onClick={() => setFiltersOpen(!filtersOpen)}
           >
             Filtros{activeFiltersCount > 0 && ` (${activeFiltersCount})`} {filtersOpen ? '−' : '+'}
           </button>
 
-          <div className="grid grid-cols-12 gap-5 md:gap-7 items-start">
+          <div data-visual-part="catalogLayout" className="grid grid-cols-12 gap-5 md:gap-7 items-start">
             {/* FILTROS */}
-            <aside
+            <aside data-visual-part="catalogFilters" data-visual-open={filtersOpen}
               className={`col-span-12 md:col-span-3 ${
                 filtersOpen ? 'block' : 'hidden'
               } md:block`}
@@ -370,9 +371,9 @@ export default function Catalog() {
                     Categorías
                   </p>
 
-                  <div className="flex flex-col gap-1">
+                  <div data-visual-section={VISUAL_SECTION.categories} data-visual-part="categoryList" className="flex flex-col gap-1">
                     {categories.map((cat) => (
-                      <button
+                      <button data-visual-part="categoryItem" aria-pressed={category === cat}
                         type="button"
                         key={cat}
                         onClick={() => {
@@ -465,7 +466,7 @@ export default function Catalog() {
             </aside>
 
             {/* PRODUCTOS */}
-            <main className="col-span-12 md:col-span-9">
+            <main data-visual-part="catalogResults" className="col-span-12 md:col-span-9">
               {appliedFilters}
 
               {paginated.length === 0 ? (
@@ -479,6 +480,7 @@ export default function Catalog() {
               ) : (
                 <>
                   <div
+                    data-visual-section={VISUAL_SECTION.productGrid} data-visual-grid={viewMode === 'grid' ? 'catalog' : undefined}
                     className={
                       viewMode === 'grid'
                         ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4'
@@ -521,7 +523,7 @@ export default function Catalog() {
 
   if (isVisual) {
     return (
-      <div className="bg-white text-[#111111]">
+      <div data-visual-section={VISUAL_SECTION.catalog} data-visual-catalog className="bg-white text-[#111111]">
         <section className="max-w-[1180px] mx-auto px-5 md:px-8 pt-8 md:pt-10 pb-20">
           <div className="mb-8 md:mb-10">
             <h1 className="font-serif text-[42px] sm:text-[48px] md:text-[52px] leading-none tracking-[-0.025em] text-[#111111]">
@@ -530,9 +532,11 @@ export default function Catalog() {
           </div>
 
           {/* FILTROS */}
-          <div className="mb-6 border-b border-black/10 pb-6">
+          <div data-visual-part="catalogLayout">
+          <aside data-visual-part="catalogFilters" data-visual-open={filtersOpen} className={`${filtersOpen ? 'block' : 'hidden'} mb-6 border-b border-[var(--border)] pb-6`}>
             <div className="flex items-center justify-between gap-4">
               <button
+                data-visual-part="catalogFiltersToggle"
                 type="button"
                 aria-expanded={filtersOpen}
                 onClick={() => setFiltersOpen(!filtersOpen)}
@@ -553,10 +557,12 @@ export default function Catalog() {
               )}
             </div>
 
-            {filtersOpen && (
+            <div data-visual-section={VISUAL_SECTION.categories} data-visual-part="categoryList" className="mt-5 flex flex-wrap gap-2">
+              {categories.map(cat => <button key={cat} type="button" data-visual-part="categoryItem" aria-pressed={category === cat} onClick={() => { setCategory(cat); setPage(1); }}>{cat}</button>)}
+            </div>
               <div className="mt-6">
                 {attrFilters.groups.length === 0 ? (
-                  <p className="text-[13px] text-[#8c8683]">
+                  <p className="text-[13px] text-[var(--muted-foreground)]">
                     No hay filtros disponibles.
                   </p>
                 ) : (
@@ -572,8 +578,10 @@ export default function Catalog() {
                   </div>
                 )}
               </div>
-            )}
-          </div>
+          </aside>
+
+          <div data-visual-part="catalogResults">
+          <button type="button" data-visual-part="catalogFiltersToggle" aria-expanded={filtersOpen} onClick={() => setFiltersOpen(!filtersOpen)} className="mb-5 border border-[var(--border)] rounded px-4 py-2">Filtros {filtersOpen ? '−' : '+'}</button>
 
           {appliedFilters}
 
@@ -585,7 +593,7 @@ export default function Catalog() {
             />
           ) : (
             <>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 md:gap-6">
+              <div data-visual-section={VISUAL_SECTION.productGrid} data-visual-grid="catalog" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 md:gap-6">
                 {paginated.map((product) => (
                   <ProductCard
                     key={product.id}
@@ -607,6 +615,8 @@ export default function Catalog() {
               )}
             </>
           )}
+          </div>
+          </div>
         </section>
       </div>
     );
@@ -620,6 +630,7 @@ export default function Catalog() {
 
   return (
     <div
+      data-visual-section={VISUAL_SECTION.catalog} data-visual-catalog
       className={
         isMinimal
           ? 'max-w-6xl mx-auto px-4 md:px-8 pt-12 pb-8'
@@ -822,7 +833,7 @@ export default function Catalog() {
               : ''
           }
         `}
-        aria-expanded={filtersOpen}
+        data-visual-part="catalogFiltersToggle" aria-expanded={filtersOpen}
         onClick={() =>
           setFiltersOpen(!filtersOpen)
         }
@@ -832,7 +843,7 @@ export default function Catalog() {
 
       {/* CONTENIDO */}
 
-      <div
+      <div data-visual-part="catalogLayout"
         className={`
           grid
           grid-cols-12
@@ -841,7 +852,7 @@ export default function Catalog() {
       >
         {/* FILTROS */}
 
-        <aside
+        <aside data-visual-part="catalogFilters" data-visual-open={filtersOpen}
           className={`
             col-span-12
             md:col-span-3
@@ -905,9 +916,9 @@ export default function Catalog() {
                 Categorías
               </p>
 
-              <div className="flex flex-col gap-1">
+              <div data-visual-section={VISUAL_SECTION.categories} data-visual-part="categoryList" className="flex flex-col gap-1">
                 {categories.map((cat) => (
-                  <button
+                  <button data-visual-part="categoryItem" aria-pressed={category === cat}
                     type="button"
                     key={cat}
                     onClick={() => {
@@ -1054,7 +1065,7 @@ export default function Catalog() {
 
         {/* PRODUCTOS */}
 
-        <main className="col-span-12 md:col-span-3 lg:col-span-9">
+        <main data-visual-part="catalogResults" className="col-span-12 md:col-span-3 lg:col-span-9">
           {appliedFilters}
 
           {paginated.length === 0 ? (
@@ -1066,6 +1077,7 @@ export default function Catalog() {
           ) : (
             <>
               <div
+                data-visual-section={VISUAL_SECTION.productGrid} data-visual-grid={viewMode === 'grid' ? 'catalog' : undefined}
                 className={
                   viewMode === 'grid'
                     ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6'

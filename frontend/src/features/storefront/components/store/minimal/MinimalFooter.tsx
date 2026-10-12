@@ -1,3 +1,5 @@
+import { InstitutionalBadge } from '../../ui';
+import { VISUAL_SECTION } from '../../../visual/sectionIds';
 
 import { Link } from 'react-router-dom';
 import { useStore } from '../../../context/StoreContext';
@@ -6,11 +8,11 @@ export function MinimalFooter() {
   const { config } = useStore();
 
   return (
-    <footer className="px-4 md:px-8 pb-6 mt-20">
+    <footer data-visual-section={VISUAL_SECTION.footer} className="px-4 md:px-8 pb-6 mt-20">
       <div className="max-w-6xl mx-auto bg-[#111111] text-white rounded-[28px] px-6 md:px-10 py-10">
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-8">
+        <div data-visual-part="footerLayout" className="flex flex-col md:flex-row md:items-end justify-between gap-8">
           <div>
-            <p className="text-2xl font-semibold mb-2">
+            <p data-visual-part="footerTitle" className="text-2xl font-semibold mb-2">
               {config.name}.
             </p>
 
@@ -50,8 +52,8 @@ export function MinimalFooter() {
           </nav>
         </div>
 
-        <div className="border-t border-white/10 mt-8 pt-5 text-[11px] text-white/35">
-          © 2025 {config.name} · Universidad Autónoma de Chile
+        <div data-visual-part="branding" className="border-t border-white/10 mt-8 pt-5 text-[11px] text-white/35">
+          <InstitutionalBadge /><p>© 2025 {config.name}</p>
         </div>
       </div>
     </footer>

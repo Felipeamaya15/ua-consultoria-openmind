@@ -1,3 +1,4 @@
+import { VISUAL_SECTION } from '../../../visual/sectionIds';
 import { AccountNavigation } from '../AccountNavigation';
 import { useStore } from '../../../context/StoreContext';
 import { Link } from 'react-router-dom';
@@ -18,10 +19,10 @@ export function CatalogHeader() {
         </Link>
       </div>
 
-      <header className="sticky top-0 z-50 bg-[#050505]/90 backdrop-blur-md py-3">
+      <header data-visual-section={VISUAL_SECTION.header} className="sticky top-0 z-50 bg-[#050505]/90 backdrop-blur-md py-3">
         <div className="max-w-[1160px] mx-auto px-5">
-          <nav className="h-14 rounded-full bg-[#202022] border border-white/[0.06] px-5 md:px-7 flex items-center justify-between shadow-2xl shadow-black/30">
-            <Link
+          <nav data-visual-part="headerLayout" className="h-14 rounded-full bg-[#202022] border border-white/[0.06] px-5 md:px-7 flex items-center justify-between shadow-2xl shadow-black/30">
+            <Link data-visual-part="logo"
               to={route()}
               aria-label="Inicio"
               className="flex items-center text-white hover:text-[var(--primary)] transition-colors"
@@ -33,7 +34,7 @@ export function CatalogHeader() {
               </svg>}
             </Link>
 
-            <div className="flex items-center gap-5 md:gap-8 text-[12px] font-semibold text-white">
+            <div data-visual-part="navigation" className="flex items-center gap-5 md:gap-8 text-[12px] font-semibold text-white">
               <Link to={route()} className="hidden sm:block hover:text-[var(--primary)] transition-colors">
                 Mi Tienda
               </Link>

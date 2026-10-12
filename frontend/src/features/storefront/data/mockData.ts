@@ -1,3 +1,4 @@
+import type { VisualConfigOverrides } from '../visual/types';
 // Datos de demostración del diseño; no se realizan llamadas al backend.
 export type TemplateId = 'editorial' | 'minimal' | 'visual' | 'catalog';
 
@@ -76,6 +77,7 @@ export interface Address {
 }
 
 export interface StoreConfig {
+  visualConfig?: VisualConfigOverrides;
   name: string;
   description: string;
   logo?: string;

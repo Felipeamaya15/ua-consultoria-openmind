@@ -1,5 +1,6 @@
+import { VISUAL_SECTION } from '../../../visual/sectionIds';
 import { useLandingContent } from '../../../../landing/hooks/useLandingContent';
-import { Icon } from '../../ui';
+import { Icon, InstitutionalBadge } from '../../ui';
 import { useLandingSectionVisibility } from '../../../../landing/hooks/useLandingSectionVisibility';
 import { Link } from 'react-router-dom';
 import { useStorefrontTemplate } from '../../../hooks/useStorefrontTemplate';
@@ -10,10 +11,10 @@ export function CatalogFooter() {
   const { route } = useStorefrontTemplate();
 
   return (
-    <footer className="bg-[#050505] border-t border-white/10 text-white">
-      <div className="max-w-[1160px] mx-auto px-5 py-10 md:py-12 grid grid-cols-1 md:grid-cols-3 gap-7 items-start">
+    <footer data-visual-section={VISUAL_SECTION.footer} className="bg-[#050505] border-t border-white/10 text-white">
+      <div data-visual-part="footerLayout" className="max-w-[1160px] mx-auto px-5 py-10 md:py-12 grid grid-cols-1 md:grid-cols-3 gap-7 items-start">
         <div>
-          <p className="text-lg font-extrabold tracking-tight">
+          <p data-visual-part="footerTitle" className="text-lg font-extrabold tracking-tight">
             Mi Tienda
           </p>
 
@@ -56,6 +57,7 @@ export function CatalogFooter() {
           </Link>
         </div>
       </div>
+      <div data-visual-part="branding" className="mt-6"><InstitutionalBadge /></div>
     </footer>
   );
 }

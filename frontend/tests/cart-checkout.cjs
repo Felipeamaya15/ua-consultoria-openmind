@@ -54,7 +54,7 @@ const result = {id_pedido: 42, identificador: 'PEDIDO-BACKEND-42', tienda_id: 9,
   await orderService.create(input);
   assert.ok(!('cotizacion' in JSON.parse(calls.at(-1).options.body)));
   response = {ok: true, json: async () => ({exito: true, data: {...result, costo_envio: '3490.00'}})};
-  await assert.rejects(orderService.create(input), /respuesta del pedido es invÃ¡lida/);
+  await assert.rejects(orderService.create(input), /respuesta del pedido es inválida/);
   response = {ok: true, json: async () => ({exito: true, data: result})};
   assert.equal(payload.items[0].producto_id, items[0].productId);
   assert.equal(payload.items[0].sku, 'QA-M');
@@ -84,10 +84,13 @@ const result = {id_pedido: 42, identificador: 'PEDIDO-BACKEND-42', tienda_id: 9,
     useMemo: callback => callback(), useEffect(callback) {if (recordEffects) effects.push(callback);},
   };
   const requireMock = name => {
+    if (name.endsWith('visual/pages')) return load('src/features/storefront/visual/pages.ts', {URLSearchParams});
     if (name === 'react/jsx-runtime') return {jsx, jsxs: jsx};
     if (name === 'react') return mockReact;
     if (name === 'react-router-dom') return {Link: 'Link', useNavigate: () => (...args) => navigateCalls.push(args)};
     if (name.includes('CartContext')) return {useCart: () => cart};
+    if (name.includes('StoreIdentityContext')) return {useStoreIdentity: () => ({identity: null})};
+    if (name.includes('storePreferences')) return {readCheckoutAuthSettings: () => ({emailPassword: true, google: true, guestCheckout: true, requiresAuth: 'optional'})};
     if (name.includes('useStorefrontTemplate')) return {useStorefrontTemplate: () => ({route: p => `/plantilla/1/${p}`, isCatalog: template === 'catalog', isVisual: template === 'visual', isMinimal: template === 'minimal'})};
     if (name.includes('mockData')) return {formatPrice: n => `CLP ${n}`};
     if (name.includes('orderService')) return {orderService: {create: async data => {createCalls.push(data); if (pending) await pending; if (fail) throw Error('Stock insuficiente'); return result;}}};
@@ -206,16 +209,19 @@ const result = {id_pedido: 42, identificador: 'PEDIDO-BACKEND-42', tienda_id: 9,
     assert.ok(!pendingTree.some(value => typeof value === 'string' && value.includes('Envío gratis sobre')));
     cart.shipping = 0; cart.shippingMethod = 'Retiro';
   }
-  let contextStates = [], cursor = 0, addedToSql = [], deleted = [];
+  let contextStates = [], cursor = 0, addedToSql = [], deleted = [], editorPreview = false, cartReads = 0;
   let persistedCart = [{id_item_carrito: 99, id_producto: 123, nombre_producto: 'Legado', precio_unitario: 0, cantidad: 1, stock_disponible: 0}];
   const Provider = load('src/features/storefront/context/CartContext.tsx', {
     localStorage: {getItem: () => 'buyer-token'}, sessionStorage: {getItem: () => null},
     require: name => {
+      if (name.includes('StoreIdentityContext')) return {useStoreIdentity: () => ({identity: null})};
+      if (name.includes('guestCartStorage')) return {guestCartKey: () => null};
+      if (name === '../visual/pages') return {isActiveEditorPreview: () => editorPreview};
       if (name === 'react/jsx-runtime') return {jsx, jsxs: jsx};
       if (name === 'react') return {createContext: () => ({Provider: 'Provider'}), useContext() {}, useEffect() {}, useCallback: fn => fn,
         useState(initial) {const i = cursor++; if (!(i in contextStates)) contextStates[i] = initial; return [contextStates[i], next => {contextStates[i] = typeof next === 'function' ? next(contextStates[i]) : next;}];}};
       if (name.includes('cartService')) return {cartService: {
-        obtenerCarrito: async () => persistedCart,
+        obtenerCarrito: async () => { cartReads++; return persistedCart; },
         agregarItem: async id => {addedToSql.push(id);}, eliminarItem: async id => {deleted.push(id);},
       }};
       throw Error(name);
@@ -255,5 +261,6 @@ const result = {id_pedido: 42, identificador: 'PEDIDO-BACKEND-42', tienda_id: 9,
   assert.equal(context().items[0].id_item_carrito, 100);
   assert.equal(context().items[0].price, 0);
   assert.equal(context().items[0].maxStock, 0);
+  editorPreview = true; const readsBeforePreview = cartReads; await context().refreshCart(); assert.equal(cartReads, readsBeforePreview, 'Editor no consulta carrito real');
   console.log('OK: contrato real, Token/invitado, errores, doble envío, reintento, Webpay, cuatro plantillas, stock independiente y limpieza del carrito');
 })().catch(error => {console.error(error); process.exitCode = 1;});

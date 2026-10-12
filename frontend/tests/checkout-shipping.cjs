@@ -65,6 +65,8 @@ function harness(template) {
       };
       if (name === 'react-router-dom') return {Link: 'Link', useNavigate: () => () => {}};
       if (name.includes('CartContext')) return {useCart: () => cart};
+      if (name.includes('StoreIdentityContext')) return {useStoreIdentity: () => ({identity: null})};
+      if (name.includes('storePreferences')) return {readCheckoutAuthSettings: () => ({emailPassword: true, google: true, guestCheckout: true, requiresAuth: 'optional'})};
       if (name.includes('useStorefrontTemplate')) return {useStorefrontTemplate: () => ({route: p => `/plantilla/${template}/${p}`,
         isMinimal: template === 2, isVisual: template === 3, isCatalog: template === 4})};
       if (name.includes('mockData')) return {formatPrice: n => `CLP ${n}`};
@@ -75,6 +77,7 @@ function harness(template) {
       };
       if (name.includes('orderService')) return {orderService: {create: async data => {created.push(data); throw createError || Error('Stop after payload');}}};
       if (name.includes('PaymentService')) return {};
+      if (name.endsWith('visual/pages')) return load('src/features/storefront/visual/pages.ts', {URLSearchParams});
       if (name.includes('components/ui')) return Object.fromEntries(['Stepper','Button','Input','Select','Alert','Icon'].map(type => [type,type]));
       throw Error(name);
     },
