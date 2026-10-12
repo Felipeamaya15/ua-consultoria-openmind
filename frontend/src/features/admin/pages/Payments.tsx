@@ -175,7 +175,7 @@ export default function Payments() {
 
         const resolvedTiendaId = Number(tiendaBody.data.id_tienda);
         if (!Number.isInteger(resolvedTiendaId) || resolvedTiendaId <= 0) {
-          throw new Error('El backend devolvió un identificador de tienda inválido.');
+          throw new Error('No pudimos identificar tu tienda. Intenta nuevamente.');
         }
 
         if (!active) return;
@@ -297,7 +297,7 @@ export default function Payments() {
     ) {
       setTbFeedback({
         type: 'error',
-        message: 'Código de comercio y API Key son obligatorios para activar Transbank.',
+        message: 'Completa el código de comercio y la clave secreta para activar Transbank.',
       });
       setTbSaving(false);
       return false;
@@ -361,7 +361,7 @@ export default function Payments() {
 
     } catch {
 
-      setTbFeedback({ type: 'error', message: 'No se pudo conectar con el servidor backend.' });
+      setTbFeedback({ type: 'error', message: 'No pudimos guardar la configuración de pagos. Revisa tu conexión e intenta nuevamente.' });
 
       return false;
 
@@ -399,7 +399,7 @@ export default function Payments() {
     ) {
       setPpFeedback({
         type: 'error',
-        message: 'Client ID y Client Secret son obligatorios para activar PayPal.',
+        message: 'Completa el identificador y la clave secreta de PayPal para activarlo.',
       });
       setPpSaving(false);
       return false;
@@ -465,7 +465,7 @@ export default function Payments() {
 
     } catch {
 
-      setPpFeedback({ type: 'error', message: 'No se pudo conectar con el servidor backend.' });
+      setPpFeedback({ type: 'error', message: 'No pudimos guardar la configuración de pagos. Revisa tu conexión e intenta nuevamente.' });
 
       return false;
 
@@ -503,7 +503,7 @@ export default function Payments() {
     ) {
       setMpFeedback({
         type: 'error',
-        message: 'Public Key y Access Token son obligatorios para activar Mercado Pago.',
+        message: 'Completa la clave pública y la clave privada de Mercado Pago para activarlo.',
       });
       setMpSaving(false);
       return false;
@@ -597,7 +597,7 @@ export default function Payments() {
 
     } catch {
 
-      setMpFeedback({ type: 'error', message: 'No se pudo conectar con el servidor backend.' });
+      setMpFeedback({ type: 'error', message: 'No pudimos guardar la configuración de pagos. Revisa tu conexión e intenta nuevamente.' });
 
       return false;
 
@@ -659,7 +659,7 @@ export default function Payments() {
 
       setTransferFeedback({
         type: 'success',
-        message: 'Datos bancarios guardados en el backend para esta tienda.',
+        message: 'Datos bancarios guardados para esta tienda.',
       });
       return true;
     } catch (error) {
@@ -819,7 +819,7 @@ export default function Payments() {
 
         <div className="grid gap-2">
           <p className="text-xs font-semibold text-[var(--muted-foreground)]">
-            URL de integración: pégala en Linkify (Mi Linkify → Cuentas → Editar → Cobros remotos)
+            Dirección para recibir avisos de pago: pégala en Linkify (Mi Linkify → Cuentas → Editar → Cobros remotos)
           </p>
           <div className="flex items-center gap-2">
             <input
@@ -869,7 +869,7 @@ export default function Payments() {
             error={linkifyFieldErrors.environment}
             onChange={(event) => updateField('linkify', 'environment', event.target.value)}
             options={[
-              { value: 'sandbox', label: 'Sandbox' },
+              { value: 'sandbox', label: 'Modo de prueba' },
               { value: 'production', label: 'Produccion' },
             ]}
           />
@@ -1028,7 +1028,7 @@ export default function Payments() {
 
                   <span className="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-[#ebfdf2] text-[#027a48]">
 
-                    API Conectada
+                    Cuenta conectada
 
                   </span>
 
@@ -1128,7 +1128,7 @@ export default function Payments() {
 
             <Input
 
-              label="API Key Secret"
+              label="Clave secreta de Transbank"
 
               autoComplete="off"
 
@@ -1138,6 +1138,7 @@ export default function Payments() {
 
               placeholder={tbMaskedKey ? `Guardada: ${tbMaskedKey}` : 'Ingresa la clave provista por Transbank'}
 
+              persistentHint
               hint={
 
                 tbMaskedKey
@@ -1204,7 +1205,7 @@ export default function Payments() {
 
                   <span className="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-[#ebfdf2] text-[#027a48]">
 
-                    API Conectada
+                    Cuenta conectada
 
                   </span>
 
@@ -1284,7 +1285,7 @@ export default function Payments() {
 
               <Input
 
-                label="Public Key"
+                label="Clave pública de Mercado Pago"
 
                 autoComplete="off"
 
@@ -1304,7 +1305,7 @@ export default function Payments() {
 
             <Input
 
-              label="Access Token"
+              label="Clave privada de Mercado Pago"
 
               autoComplete="off"
 
@@ -1312,13 +1313,14 @@ export default function Payments() {
 
               value={mpAccessToken}
 
-              placeholder={mpMaskedToken ? `Guardado: ${mpMaskedToken}` : 'Ingresa el Access Token provisto por Mercado Pago'}
+              placeholder={mpMaskedToken ? `Guardado: ${mpMaskedToken}` : 'Ingresa la clave privada entregada por Mercado Pago'}
 
+              persistentHint
               hint={
 
                 mpMaskedToken
 
-                  ? `Token guardado: ${mpMaskedToken}. Déjalo vacío si no deseas modificarlo.`
+                  ? `Clave guardada: ${mpMaskedToken}. Déjalo vacío si no deseas modificarlo.`
 
                   : undefined
 
@@ -1380,7 +1382,7 @@ export default function Payments() {
 
                   <span className="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-[#ebfdf2] text-[#027a48]">
 
-                    API Conectada
+                    Cuenta conectada
 
                   </span>
 
@@ -1460,7 +1462,7 @@ export default function Payments() {
 
               <Input
 
-                label="Client ID"
+                label="Identificador de PayPal"
 
                 autoComplete="off"
 
@@ -1468,7 +1470,7 @@ export default function Payments() {
 
                 value={ppClientId}
 
-                placeholder="Client ID provisto por PayPal Developer"
+                placeholder="Identificador entregado por PayPal"
 
                 onChange={(e: any) => setPpClientId(e.target.value)}
 
@@ -1480,7 +1482,7 @@ export default function Payments() {
 
             <Input
 
-              label="Client Secret"
+              label="Clave secreta de PayPal"
 
               autoComplete="off"
 
@@ -1490,6 +1492,7 @@ export default function Payments() {
 
               placeholder={ppMaskedSecret ? `Guardada: ${ppMaskedSecret}` : 'Ingresa la Secret Key de PayPal'}
 
+              persistentHint
               hint={
 
                 ppMaskedSecret

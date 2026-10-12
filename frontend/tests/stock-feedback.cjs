@@ -66,6 +66,7 @@ function component(file, template, initial = []) {
     if (name === 'react') return h.react;
     if (name === 'react-router-dom') return { Link: 'Link', useNavigate: () => () => {}, useParams: () => ({ id: 'polera' }) };
     if (name.includes('StockFeedback')) return feedback;
+    if (name.includes('QuantityControl')) return load('src/features/storefront/components/store/QuantityControl.tsx', () => ({ jsx, jsxs: jsx }));
     if (name.includes('CartContext')) return { useCart: context };
     if (name.includes('mockData')) return { formatPrice: value => `CLP ${value}` };
     if (name.includes('useStorefrontTemplate')) return { useStorefrontTemplate: () => ({ route: p => `/${p}`, isCatalog: template === 'catalog', isVisual: template === 'visual', isMinimal: template === 'minimal' }) };

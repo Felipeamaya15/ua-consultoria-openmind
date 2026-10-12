@@ -48,15 +48,8 @@ export default function EmailTemplates() {
 
   return (
     <div className="max-w-6xl space-y-6 animate-fade-in">
-      <div>
-        <h1 className="text-2xl font-bold">Correos automáticos</h1>
-        <p className="text-sm text-[var(--muted-foreground)] mt-1">
-          Personaliza los mensajes que se enviarán a tus clientes durante la compra.
-        </p>
-      </div>
-
-      <Alert variant="info" title="Diseño preparado para integración">
-        Este prototipo guarda las plantillas. Los datos del cliente y del pedido se insertarán desde la base de datos cuando se conecte el servicio de correo.
+      <Alert variant="info" title="Envío automático aún no disponible">
+        Puedes preparar y guardar estos mensajes. Por ahora no se envían correos automáticos a tus clientes.
       </Alert>
 
       <div className="grid grid-cols-1 lg:grid-cols-[240px_minmax(0,1fr)] gap-5">

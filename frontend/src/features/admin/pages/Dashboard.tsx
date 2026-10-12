@@ -33,9 +33,6 @@ export default function Dashboard() {
           <h1 className="text-2xl font-bold text-[var(--foreground)]">
             Resumen de la Tienda
           </h1>
-          <p className="text-sm text-[var(--muted-foreground)]">
-            Bienvenido a tu panel de control comercial.
-          </p>
         </div>
         <div className="w-full sm:w-52">
           <Select

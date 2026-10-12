@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { paypalService } from '../services/paypalService';
 import { ConfiguracionPayPalInput } from '../types/paypal.types';
+import { humanizeAdminError } from '../utils/humanizeError';
 
 interface Props {
   tiendaId?: number;
@@ -47,7 +48,7 @@ export const PayPalConfigForm: React.FC<Props> = ({ tiendaId = 1 }) => {
     setSuccessMsg(null);
 
     if (activo && !clientId.trim()) {
-      setErrorMsg('El Client ID es obligatorio para habilitar PayPal.');
+      setErrorMsg('Completa el identificador de PayPal para habilitarlo.');
       return;
     }
 
@@ -98,7 +99,7 @@ export const PayPalConfigForm: React.FC<Props> = ({ tiendaId = 1 }) => {
               <h3 className="font-semibold text-base text-[#151515]">PayPal</h3>
               {isConfigured && activo && (
                 <span className="px-2 py-0.5 text-[10px] font-bold tracking-wide uppercase bg-emerald-100 text-emerald-700 rounded-full">
-                  API CONECTADA
+                  CUENTA CONECTADA
                 </span>
               )}
             </div>
@@ -121,7 +122,7 @@ export const PayPalConfigForm: React.FC<Props> = ({ tiendaId = 1 }) => {
       {/* Alertas */}
       {errorMsg && (
         <div className="p-3 text-sm text-red-700 bg-red-50 border border-red-200 rounded-xl">
-          {errorMsg}
+          {humanizeAdminError(errorMsg, 'No pudimos guardar la configuración de PayPal. Revisa los datos e intenta nuevamente.')}
         </div>
       )}
       {successMsg && (

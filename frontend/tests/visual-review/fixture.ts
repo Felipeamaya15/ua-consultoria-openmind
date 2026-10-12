@@ -3,6 +3,7 @@ const image = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www
 const originalFetch = window.fetch.bind(window);
 if (new URLSearchParams(location.search).get('cart-preview') === '1') localStorage.setItem('ua-visual-review-cart', '1');
 const customerPage = /\/(perfil|mis-pedidos)(\/|$)/.test(location.pathname);
+const productControls = new URLSearchParams(location.search).get('product-controls') === '1';
 window.fetch = async (input, init) => {
   const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
   if (!url.includes('/api/')) return originalFetch(input, init);
@@ -19,12 +20,17 @@ window.fetch = async (input, init) => {
   if (path === '/api/auth/login/') return json({ token: 'visual-review-synthetic-token', user: { email: 'emprendedor@gmail.com', is_store_owner: true } });
   if (path.includes('emprendedor/perfil') || path === '/api/auth/me/') return json({ first_name: 'Revisión', last_name: 'Visual', email: 'qa@example.test', is_store_owner: !customerPage });
   if (path === '/api/auth/perfil/') return json({ first_name: 'Revisión', last_name: 'Visual', email: 'qa@example.test', phone: '' });
-  if (path === '/api/catalog/carrito/items/') return json(localStorage.getItem('ua-visual-review-cart') === '1' ? [{ id_item_carrito: 1, slug: 'prueba-1', nombre_producto: 'Producto de prueba 1', precio_unitario: 12990, cantidad: 1, sku: 'QA-1', imagen: image, stock_disponible: 8, atributos: {} }] : []);
+  if (path === '/api/catalog/carrito/items/' && init?.method === 'POST') {
+    const request = JSON.parse(String(init.body));
+    const item = {id_item_carrito:1,producto_id:1,slug:'prueba-1',nombre_producto:'Producto de prueba 1',precio_unitario:12990,cantidad:request.cantidad,sku:request.sku,imagen:image,stock_disponible:8,atributos:{talla:request.sku?.split('-').at(-1)}};
+    localStorage.setItem('ua-visual-review-product-cart',JSON.stringify(item)); return json(item);
+  }
+  if (path === '/api/catalog/carrito/items/') { const item=localStorage.getItem('ua-visual-review-product-cart'); return json(item ? [JSON.parse(item)] : localStorage.getItem('ua-visual-review-cart') === '1' ? [{ id_item_carrito: 1, slug: 'prueba-1', nombre_producto: 'Producto de prueba 1', precio_unitario: 12990, cantidad: 1, sku: 'QA-1', imagen: image, stock_disponible: 8, atributos: {} }] : []); }
   if (path === '/api/entregas/alternativas/') return json({ pickup: { enabled: true, address: 'Dirección de prueba', schedule: 'Lunes a viernes' }, chilexpress: { enabled: false, accountId: '', apiKey: '', status: 'not_configured' }, starken: { enabled: false, accountId: '', apiKey: '', status: 'not_configured' } });
   if (path === '/api/catalog/productos/') return json(Array.from({ length: 6 }, (_, index) => ({ id: String(index + 1), slug: 'prueba-' + (index + 1), nombre: 'Producto de prueba ' + (index + 1), categoria: index % 2 ? 'Accesorios' : 'Ropa', imagen: image, precio: 12990 + index * 1000, precio_oferta: null, disponible: true })));
   const detail = path.match(/^\/api\/catalog\/productos\/prueba-(\d+)\/$/);
   if (/^\/api\/catalog\/productos\/prueba-\d+\/atributos\/$/.test(path)) return json({ atributos_generales: [{ clave: 'material', etiqueta: 'Material', valor: 'Material de prueba' }], atributos_variante: [] });
-  if (detail) { const number = Number(detail[1]); return json({ id: String(number), slug: 'prueba-' + number, nombre: 'Producto de prueba ' + number, descripcion: 'Descripción de prueba', categoria: number % 2 ? 'Ropa' : 'Accesorios', imagenes: [image], variantes: [{ sku: 'QA-' + number, precio: 12990 + (number - 1) * 1000, precio_oferta: null, stock: 8, atributos_variante: [] }] }); }
+  if (detail) { const number = Number(detail[1]); return json({ id: String(number), slug: 'prueba-' + number, nombre: 'Producto de prueba ' + number, descripcion: 'Descripción de prueba', categoria: number % 2 ? 'Ropa' : 'Accesorios', imagenes: productControls ? [image,image,image] : [image], variantes: productControls ? ['M','L'].map(talla => ({sku: 'QA-'+number+'-'+talla,precio:12990,precio_oferta:null,stock:8,atributos_variante:[{clave:'talla',etiqueta:'Talla',valor:talla}]})) : [{ sku: 'QA-' + number, precio: 12990 + (number - 1) * 1000, precio_oferta: null, stock: 8, atributos_variante: [] }] }); }
   if (path === '/api/landing/configuracion/') return json({ id: 1, tienda: 987654, titulo: 'Tu próxima historia', descripcion: 'Datos sintéticos para revisar selección, diseño y persistencia local.', texto_boton: 'Ver productos', imagen_principal: image, logo: image, secciones: {}, contenido: { productos_destacados: ['1','2','3','4','5','6'], categorias: ['Ropa','Accesorios'], beneficios: [{ titulo: 'Envío disponible', descripcion: 'Contenido de prueba', icono: 'truck' }], contacto: { telefono: '+56 9 0000 0000', correo: 'qa@example.test', horario: '', whatsapp: '', instagram: '', facebook: '', sitio_web: '' }, ubicacion: { direccion: 'Dirección de prueba', comuna: 'Comuna', ciudad: 'Ciudad', region: 'Región', enlace_maps: '' } } });
   return json([]);
 };

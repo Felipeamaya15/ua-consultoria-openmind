@@ -80,6 +80,7 @@ function applyImageCustomizations(theme: Record<string, unknown> | null, origina
       `scale(${(setting.scale ?? 100) / 100})`;
 
     img.style.transformOrigin = 'center';
+    img.style.objectFit = setting.fit ?? originals.get(img)?.fit ?? '';
     img.style.borderRadius =
       `${setting.radius ?? 0}px`;
   });

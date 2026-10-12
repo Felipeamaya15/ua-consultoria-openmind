@@ -15,6 +15,9 @@ import {
 import { AdminSidebar } from './AdminSidebar';
 import { AdminHeader } from './AdminHeader';
 import { Alert } from '../ui';
+import { AdminHelpProvider } from '../../context/AdminHelpContext';
+import { AdminPageHeader } from '../AdminPageHeader';
+import { getAdminPageHelp } from '../../config/pageHelp';
 
 import '../../admin.css';
 
@@ -22,6 +25,7 @@ function Layout() {
   const [open, setOpen] = useState(false);
 
   const { pathname } = useLocation();
+  const pageHelp = getAdminPageHelp(pathname);
 
   const { storageError } = useAdmin();
 
@@ -67,6 +71,7 @@ function Layout() {
         />
 
         <main className="p-5 md:p-8 max-w-7xl w-full mx-auto">
+          {pageHelp && <AdminPageHeader {...pageHelp} />}
           {storageError && (
             <div className="mb-5">
               <Alert variant="error">
@@ -85,7 +90,7 @@ function Layout() {
 export function AdminLayout() {
   return (
     <AdminProvider>
-      <Layout />
+      <AdminHelpProvider><Layout /></AdminHelpProvider>
     </AdminProvider>
   );
 }
