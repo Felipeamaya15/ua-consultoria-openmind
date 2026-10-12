@@ -1,30 +1,29 @@
 import { useLocation } from 'react-router-dom';
+import type { TemplateId } from '../data/mockData';
+import { TEMPLATE_BY_NUMBER } from '../visual/templates';
+import { VISUAL_PRESETS } from '../visual/presets';
 
-export type StorefrontTemplate =
-  | 'editorial'
-  | 'minimal'
-  | 'visual'
-  | 'catalog';
+export type StorefrontTemplate = TemplateId;
 
 const TEMPLATE_CONFIG = {
   '1': {
-    template: 'editorial',
-    name: 'Studio Pop',
+    template: TEMPLATE_BY_NUMBER['1'],
+    name: VISUAL_PRESETS.editorial.name,
     basePath: '/plantilla/1',
   },
   '2': {
-    template: 'minimal',
-    name: 'Descubrimiento suave',
+    template: TEMPLATE_BY_NUMBER['2'],
+    name: VISUAL_PRESETS.minimal.name,
     basePath: '/plantilla/2',
   },
   '3': {
-    template: 'visual',
-    name: 'Editorial Velta',
+    template: TEMPLATE_BY_NUMBER['3'],
+    name: VISUAL_PRESETS.visual.name,
     basePath: '/plantilla/3',
   },
   '4': {
-    template: 'catalog',
-    name: 'Escaparate Obsidiana',
+    template: TEMPLATE_BY_NUMBER['4'],
+    name: VISUAL_PRESETS.catalog.name,
     basePath: '/plantilla/4',
   },
 } as const;
@@ -62,7 +61,7 @@ export function useStorefrontTemplate() {
   };
 
   return {
-    template: config.template as StorefrontTemplate,
+    template: config.template,
     templateName: config.name,
     templateNumber,
     basePath: config.basePath,

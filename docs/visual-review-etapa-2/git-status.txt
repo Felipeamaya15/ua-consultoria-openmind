@@ -1,0 +1,59 @@
+ M backend/apps/visual_config/views.py
+ M frontend/package.json
+ M frontend/src/features/admin/components/TransbankConfigForm.tsx
+ M frontend/src/features/admin/context/AdminContext.tsx
+ M frontend/src/features/admin/data/adminRepository.ts
+ M frontend/src/features/admin/data/mockAdminData.ts
+ M frontend/src/features/admin/pages/Design.tsx
+ M frontend/src/features/admin/pages/ThemeEditor.tsx
+ M frontend/src/features/admin/types/index.ts
+ M frontend/src/features/landing/components/LandingDetails.tsx
+ M frontend/src/features/storefront/components/store/EditorialLayout.tsx
+ M frontend/src/features/storefront/components/store/ProductCard.tsx
+ M frontend/src/features/storefront/components/store/catalog/CatalogFooter.tsx
+ M frontend/src/features/storefront/components/store/catalog/CatalogHeader.tsx
+ M frontend/src/features/storefront/components/store/catalog/CatalogLayout.tsx
+ M frontend/src/features/storefront/components/store/minimal/MinimalFooter.tsx
+ M frontend/src/features/storefront/components/store/minimal/MinimalHeader.tsx
+ M frontend/src/features/storefront/components/store/minimal/MinimalLayout.tsx
+ M frontend/src/features/storefront/components/store/visual/VisualFooter.tsx
+ M frontend/src/features/storefront/components/store/visual/VisualHeader.tsx
+ M frontend/src/features/storefront/components/store/visual/VisualLayout.tsx
+ M frontend/src/features/storefront/components/ui/index.tsx
+ M frontend/src/features/storefront/context/StoreContext.tsx
+ M frontend/src/features/storefront/data/mockData.ts
+ M frontend/src/features/storefront/hooks/useStorefrontTemplate.ts
+ M frontend/src/features/storefront/pages/Cart.tsx
+ M frontend/src/features/storefront/pages/Catalog.tsx
+ M frontend/src/features/storefront/pages/CatalogHome.tsx
+ M frontend/src/features/storefront/pages/Checkout.tsx
+ M frontend/src/features/storefront/pages/CustomerOrders.tsx
+ M frontend/src/features/storefront/pages/EditorialHome.tsx
+ M frontend/src/features/storefront/pages/Login.tsx
+ M frontend/src/features/storefront/pages/MinimalHome.tsx
+ M frontend/src/features/storefront/pages/Profile.tsx
+ M frontend/src/features/storefront/pages/VisualHome.tsx
+ M frontend/src/main.tsx
+ M frontend/src/styles/storefront.css
+ M frontend/tests/cart-checkout.cjs
+ M frontend/tests/checkout-shipping.cjs
+ M frontend/tests/stock-feedback.cjs
+ M frontend/tests/storefront-variants.cjs
+?? backend/apps/visual_config/test_store_identity.py
+?? docs/visual-config-etapa-1.md
+?? docs/visual-config-revision-etapa-1.md
+?? docs/visual-config-revision-etapa-2.md
+?? docs/visual-review-etapa-2/
+?? frontend/scripts/
+?? frontend/src/features/admin/data/themeCustomization.ts
+?? frontend/src/features/admin/visualEditor/
+?? frontend/src/features/storefront/components/store/StorePageContent.tsx
+?? frontend/src/features/storefront/components/store/StoreVisualRoot.tsx
+?? frontend/src/features/storefront/context/StoreIdentityContext.tsx
+?? frontend/src/features/storefront/services/storeIdentityService.ts
+?? frontend/src/features/storefront/services/storePreferences.ts
+?? frontend/src/features/storefront/visual/
+?? frontend/src/styles/visual-config.css
+?? frontend/tests/visual-config.cjs
+?? frontend/tests/visual-editor.cjs
+?? frontend/tests/visual-review/

@@ -1,3 +1,4 @@
+import { VISUAL_SECTION } from '../../../visual/sectionIds';
 import { AccountNavigation } from '../AccountNavigation';
 import { useStore } from '../../../context/StoreContext';
 import { Link } from 'react-router-dom';
@@ -35,11 +36,11 @@ export function MinimalHeader() {
   const { count } = useCart();
 
   return (
-    <div className="px-4 md:px-8 pt-5">
-      <header className="max-w-6xl mx-auto bg-white rounded-2xl border border-black/5 shadow-sm px-4 md:px-6 h-16 md:max-lg:h-auto md:max-lg:min-h-16 md:max-lg:py-3 md:max-lg:flex-wrap flex items-center justify-between gap-4">
+    <div data-visual-header-shell className="px-4 md:px-8 pt-5">
+      <header data-visual-section={VISUAL_SECTION.header} data-visual-part="headerLayout" className="max-w-6xl mx-auto bg-white rounded-2xl border border-black/5 shadow-sm px-4 md:px-6 h-16 md:max-lg:h-auto md:max-lg:min-h-16 md:max-lg:py-3 md:max-lg:flex-wrap flex items-center justify-between gap-4">
 
         {/* Nombre */}
-        <Link
+        <Link data-visual-part="logo"
           to="."
           className="flex items-center gap-2 font-semibold text-[var(--primary)] whitespace-nowrap"
         >
@@ -48,7 +49,7 @@ export function MinimalHeader() {
         </Link>
 
         {/* Navegación */}
-        <nav
+        <nav data-visual-part="navigation"
           className="hidden md:flex md:max-lg:order-3 md:max-lg:w-full md:max-lg:justify-center items-center bg-[#f4f4f4] rounded-full p-1"
           aria-label="Navegación principal"
         >

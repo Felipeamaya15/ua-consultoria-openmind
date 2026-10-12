@@ -98,7 +98,7 @@ export default function ProductDetail() {
       <div
         className={
           isCatalog
-            ? 'max-w-[1160px] mx-auto px-5 py-24 text-center text-white'
+            ? 'max-w-[1160px] mx-auto px-5 py-24 text-center text-[var(--visual-page-color)]'
             : isMinimal
               ? 'max-w-6xl mx-auto px-4 md:px-8 py-20 text-center'
               : 'max-w-7xl mx-auto px-4 py-16 text-center'
@@ -121,7 +121,7 @@ export default function ProductDetail() {
       <div
         className={
           isCatalog
-            ? 'max-w-[1160px] mx-auto px-5 py-24 text-center text-white'
+            ? 'max-w-[1160px] mx-auto px-5 py-24 text-center text-[var(--visual-page-color)]'
             : isMinimal
               ? 'max-w-6xl mx-auto px-4 md:px-8 py-20 text-center'
               : 'max-w-7xl mx-auto px-4 py-16 text-center'
@@ -136,7 +136,7 @@ export default function ProductDetail() {
           Producto no encontrado
         </h1>
 
-        <Link
+        <Link data-page-action="ghost"
           to={route('catalogo')}
           className="text-[var(--primary)] hover:underline"
         >
@@ -211,7 +211,7 @@ export default function ProductDetail() {
   const inCart =
     items.find(
       (item) =>
-        item.productId === product.id &&
+        item.productId === (product.catalogId || product.id) &&
         item.variantId === selectedVariant?.id,
     )?.quantity ?? 0;
 
@@ -233,7 +233,7 @@ export default function ProductDetail() {
     }
 
     addItem({
-      productId: product.id,
+      productId: product.catalogId || product.id,
       variantId: selectedVariant.id,
       name: product.name,
       image: product.images[0],
@@ -259,28 +259,28 @@ export default function ProductDetail() {
 
   if (isCatalog) {
     return (
-      <div className="bg-[#050505] text-white">
+      <div className="bg-[var(--visual-page-panel-background)] text-[var(--visual-page-color)]">
         <div className="max-w-[1160px] mx-auto px-5 py-8 md:py-12">
-          <Link
+          <Link data-page-action="ghost"
             to={route('catalogo')}
-            className="inline-flex items-center gap-2 mb-8 text-[10px] font-bold uppercase tracking-[0.14em] text-white/45 transition-colors hover:text-white"
+            className="inline-flex items-center gap-2 mb-8 text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--visual-page-color)]/45 transition-colors hover:text-[var(--visual-page-color)]"
           >
             <span aria-hidden="true">←</span>
             Volver al catálogo
           </Link>
 
-          <div className="grid grid-cols-1 lg:grid-cols-[1.08fr_0.92fr] gap-9 lg:gap-14 items-start">
+          <div data-page-columns className="grid grid-cols-1 lg:grid-cols-[1.08fr_0.92fr] gap-9 lg:gap-14 items-start">
             {/* GALERÍA */}
             <div>
-              <div className="relative overflow-hidden rounded-[22px] bg-[#171719] aspect-[4/4.25]">
-                <img
+              <div data-page-panel className="relative overflow-hidden rounded-[22px] bg-[var(--visual-page-panel-background)] aspect-[4/4.25]">
+                <img data-page-main-image
                   src={product.images[activeImg]}
                   alt={product.name}
                   className="w-full h-full object-cover"
                 />
 
                 {comparePrice && (
-                  <span className="absolute left-4 top-4 rounded-full bg-[#ff5a1f] px-3.5 py-2 text-[10px] font-black text-white">
+                  <span className="absolute left-4 top-4 rounded-full bg-[var(--primary)] px-3.5 py-2 text-[10px] font-black text-[var(--visual-page-color)]">
                     -{discountPct}%
                   </span>
                 )}
@@ -289,7 +289,7 @@ export default function ProductDetail() {
               {product.images.length > 1 && (
                 <div className="flex gap-3 overflow-x-auto pt-3 pb-1">
                   {product.images.map((img, index) => (
-                    <button
+                    <button data-page-gallery-item data-page-action="choice"
                       type="button"
                       key={index}
                       aria-label={`Ver imagen ${index + 1}`}
@@ -297,7 +297,7 @@ export default function ProductDetail() {
                       onClick={() => setActiveImg(index)}
                       className={`w-[76px] h-[76px] flex-shrink-0 overflow-hidden rounded-[10px] border-2 transition-colors ${
                         activeImg === index
-                          ? 'border-[#1683ff]'
+                          ? 'border-[var(--primary)]'
                           : 'border-transparent opacity-60 hover:opacity-100'
                       }`}
                     >
@@ -315,18 +315,18 @@ export default function ProductDetail() {
             {/* INFORMACIÓN */}
             <div className="lg:pt-2">
               <div className="flex flex-wrap items-center gap-3 mb-4">
-                <span className="text-[10px] font-black uppercase tracking-[0.16em] text-[#ff5a1f]">
+                <span className="text-[10px] font-black uppercase tracking-[0.16em] text-[var(--primary)]">
                   {product.category}
                 </span>
 
                 {comparePrice && (
-                  <span className="rounded-full border border-white/15 px-3 py-1 text-[9px] font-bold text-white/65">
+                  <span className="rounded-full border border-[var(--visual-global-border)]/15 px-3 py-1 text-[9px] font-bold text-[var(--visual-page-color)]/65">
                     Oferta -{discountPct}%
                   </span>
                 )}
 
                 {!inStock && (
-                  <span className="rounded-full bg-white px-3 py-1 text-[9px] font-black uppercase tracking-[0.12em] text-black">
+                  <span className="rounded-full bg-[var(--visual-page-panel-background)] px-3 py-1 text-[9px] font-black uppercase tracking-[0.12em] text-[var(--visual-page-color)]">
                     Sin stock
                   </span>
                 )}
@@ -336,23 +336,23 @@ export default function ProductDetail() {
                 {product.name}
               </h1>
 
-              <p className="mt-4 text-[10px] uppercase tracking-[0.12em] text-white/30">
+              <p className="mt-4 text-[10px] uppercase tracking-[0.12em] text-[var(--visual-page-color)]/30">
                 SKU: {selectedVariant?.sku ?? product.variants[0]?.sku ?? 'N/A'}
               </p>
 
               <div className="flex items-baseline gap-3 mt-7">
-                <span className="text-[26px] font-black">
+                <span data-page-price className="text-[26px] font-black">
                   {formatPrice(price)}
                 </span>
 
                 {comparePrice && (
-                  <span className="text-[13px] text-white/35 line-through">
+                  <span className="text-[13px] text-[var(--visual-page-color)]/35 line-through">
                     {formatPrice(comparePrice)}
                   </span>
                 )}
               </div>
 
-              <p className="mt-6 max-w-xl text-[13px] leading-6 text-white/55">
+              <p data-page-description className="mt-6 max-w-xl text-[13px] leading-6 text-[var(--visual-page-color)]/55">
                 {product.description}
               </p>
 
@@ -360,13 +360,13 @@ export default function ProductDetail() {
 
               {/* VARIANTES */}
               {Object.entries(product.attributes).map(([attrName, values]) => (
-                <div key={attrName} className="border-t border-white/10 mt-7 pt-6">
+                <div key={attrName} className="border-t border-[var(--visual-global-border)]/10 mt-7 pt-6">
                   <div className="flex items-center justify-between gap-4 mb-4">
-                    <p className="text-[10px] font-black uppercase tracking-[0.15em] text-white/75">
+                    <p className="text-[10px] font-black uppercase tracking-[0.15em] text-[var(--visual-page-color)]/75">
                       {product.attributeLabels?.[attrName] || attrName}
                     </p>
 
-                    <span className="text-[11px] text-white/35">
+                    <span className="text-[11px] text-[var(--visual-page-color)]/35">
                       {selectedAttrs[attrName] ?? 'Seleccionar'}
                     </span>
                   </div>
@@ -377,7 +377,7 @@ export default function ProductDetail() {
                       const selected = selectedAttrs[attrName] === value;
 
                       return (
-                        <button
+                        <button data-page-action="choice"
                           type="button"
                           key={value}
                           disabled={!available}
@@ -392,8 +392,8 @@ export default function ProductDetail() {
                           }}
                           className={`min-w-[54px] rounded-[9px] border px-4 py-2.5 text-[11px] font-semibold transition-colors ${
                             selected
-                              ? 'border-[#1683ff] bg-[#1683ff] text-white'
-                              : 'border-white/15 bg-[#171719] text-white/75 hover:border-white/40'
+                              ? 'border-[var(--primary)] bg-[var(--primary)] text-[var(--visual-page-color)]'
+                              : 'border-[var(--visual-global-border)]/15 bg-[var(--visual-page-panel-background)] text-[var(--visual-page-color)]/75 hover:border-[var(--visual-global-border)]/40'
                           } ${
                             !available
                               ? 'cursor-not-allowed opacity-25 line-through'
@@ -412,44 +412,44 @@ export default function ProductDetail() {
               {selectedVariant && completeSelection && <StockFeedback sku={selectedVariant.sku} maxStock={selectedVariant.stock} quantity={inCart} className="mt-5 rounded-[10px] border border-[#ff5a1f]/25 bg-[#ff5a1f]/10 px-4 py-3 text-[11px] text-[#ffb291]" />}
 
               {!inStock && (
-                <div className="mt-5 rounded-[10px] border border-white/10 bg-white/[0.06] px-4 py-3 text-[11px] text-white/55">
+                <div data-page-panel className="mt-5 rounded-[10px] border border-[var(--visual-global-border)]/10 bg-[var(--visual-page-panel-background)]/[0.06] px-4 py-3 text-[11px] text-[var(--visual-page-color)]/55">
                   Este producto no está disponible actualmente.
                 </div>
               )}
 
               {/* CANTIDAD + CARRITO */}
-              <div className="border-t border-white/10 mt-7 pt-6">
-                <p className="mb-3 text-[10px] font-black uppercase tracking-[0.15em] text-white/75">
+              <div className="border-t border-[var(--visual-global-border)]/10 mt-7 pt-6">
+                <p className="mb-3 text-[10px] font-black uppercase tracking-[0.15em] text-[var(--visual-page-color)]/75">
                   Cantidad
                 </p>
 
                 <div className="flex flex-col sm:flex-row gap-3">
-                  <div className="flex h-12 w-[132px] flex-shrink-0 items-center overflow-hidden rounded-[9px] bg-white text-[#151515]">
-                    <button
+                  <div data-page-quantity className="flex h-12 w-[132px] flex-shrink-0 items-center overflow-hidden rounded-[9px] bg-[var(--visual-page-panel-background)] text-[var(--visual-page-color)]">
+                    <button data-page-action="ghost"
                       type="button"
                       onClick={() => setQty((current) => Math.max(1, current - 1))}
-                      className="h-full w-11 text-lg transition-colors hover:bg-black/[0.05]"
+                      className="h-full w-11 text-lg transition-colors hover:bg-[var(--visual-page-panel-background)]/[0.05]"
                     >
                       −
                     </button>
 
-                    <span className="flex h-full flex-1 items-center justify-center border-x border-black/10 text-sm font-black">
+                    <span className="flex h-full flex-1 items-center justify-center border-x border-[var(--visual-global-border)]/10 text-sm font-black">
                       {qty}
                     </span>
 
-                    <button
+                    <button data-page-action="ghost"
                       type="button"
                       onClick={() =>
                         setQty((current) => Math.max(1, Math.min(remaining, current + 1)))
                       }
                       disabled={!inStock || !completeSelection || qty >= remaining}
-                      className="h-full w-11 text-lg transition-colors hover:bg-black/[0.05] disabled:opacity-30"
+                      className="h-full w-11 text-lg transition-colors hover:bg-[var(--visual-page-panel-background)]/[0.05] disabled:opacity-30"
                     >
                       +
                     </button>
                   </div>
 
-                  <button
+                  <button data-page-action="primary"
                     type="button"
                     onClick={handleAddToCart}
                     disabled={
@@ -460,8 +460,8 @@ export default function ProductDetail() {
                     }
                     className={`h-12 flex-1 rounded-[9px] px-6 text-[12px] font-bold transition-colors disabled:cursor-not-allowed disabled:opacity-30 ${
                       added
-                        ? 'bg-white text-black'
-                        : 'bg-[#1683ff] text-white hover:bg-[#3194f5]'
+                        ? 'bg-[var(--visual-page-panel-background)] text-[var(--visual-page-color)]'
+                        : 'bg-[var(--primary)] text-[var(--visual-page-color)] hover:bg-[var(--primary)]'
                     }`}
                   >
                     {remaining === 0
@@ -477,9 +477,9 @@ export default function ProductDetail() {
                 </div>
 
                 {hasCartItems && (
-                  <Link
+                  <Link data-page-action="outline"
                     to={route('carrito')}
-                    className="mt-3 flex h-11 w-full items-center justify-center rounded-[9px] border border-white/15 text-[11px] font-bold text-white transition-colors hover:bg-white hover:text-black"
+                    className="mt-3 flex h-11 w-full items-center justify-center rounded-[9px] border border-[var(--visual-global-border)]/15 text-[11px] font-bold text-[var(--visual-page-color)] transition-colors hover:bg-[var(--visual-page-panel-background)] hover:text-[var(--visual-page-color)]"
                   >
                     Ir al carrito →
                   </Link>
@@ -487,12 +487,12 @@ export default function ProductDetail() {
               </div>
 
               {/* ENTREGA */}
-              <div className="mt-8 rounded-[14px] bg-[#f5f5f3] p-5 text-[#151515]">
-                <p className="mb-4 text-[9px] font-black uppercase tracking-[0.16em] text-black/45">
+              <div data-page-panel className="mt-8 rounded-[14px] bg-[var(--visual-page-panel-background)] p-5 text-[var(--visual-page-color)]">
+                <p className="mb-4 text-[9px] font-black uppercase tracking-[0.16em] text-[var(--visual-page-color)]/45">
                   Compra y entrega
                 </p>
 
-                <div className="flex flex-col gap-3 text-[12px] text-black/60">
+                <div className="flex flex-col gap-3 text-[12px] text-[var(--visual-page-color)]/60">
                   <div className="flex items-center gap-3">
                     <Icon name="truck" className="w-4 h-4 text-[#1683ff]" />
                     <span>Chilexpress · Starken</span>
@@ -514,10 +514,10 @@ export default function ProductDetail() {
 
           {/* RELACIONADOS */}
           {related.length > 0 && (
-            <section className="mt-20 md:mt-24 border-t border-white/10 pt-12">
+            <section className="mt-20 md:mt-24 border-t border-[var(--visual-global-border)]/10 pt-12">
               <div className="flex items-end justify-between gap-4 mb-8">
                 <div>
-                  <p className="mb-2 text-[10px] font-black uppercase tracking-[0.16em] text-[#ff5a1f]">
+                  <p className="mb-2 text-[10px] font-black uppercase tracking-[0.16em] text-[var(--primary)]">
                     Sigue explorando
                   </p>
 
@@ -526,9 +526,9 @@ export default function ProductDetail() {
                   </h2>
                 </div>
 
-                <Link
+                <Link data-page-action="ghost"
                   to={route('catalogo')}
-                  className="hidden sm:inline text-[11px] font-semibold text-[#1683ff] hover:opacity-70"
+                  className="hidden sm:inline text-[11px] font-semibold text-[var(--primary)] hover:opacity-70"
                 >
                   Ver catálogo →
                 </Link>
@@ -551,21 +551,21 @@ export default function ProductDetail() {
 
   if (isVisual) {
     return (
-      <div className="bg-white text-[#111111]">
+      <div className="bg-[var(--visual-page-panel-background)] text-[var(--visual-page-color)]">
         <div className="max-w-[1180px] mx-auto px-5 md:px-8 py-8 md:py-12">
-          <Link
+          <Link data-page-action="ghost"
             to={route('catalogo')}
-            className="inline-flex items-center gap-2 mb-8 text-[10px] font-medium uppercase tracking-[0.16em] text-[#696462] hover:opacity-60"
+            className="inline-flex items-center gap-2 mb-8 text-[10px] font-medium uppercase tracking-[0.16em] text-[var(--visual-page-color)] hover:opacity-60"
           >
             <span aria-hidden="true">←</span>
             Volver al catálogo
           </Link>
 
-          <div className="grid grid-cols-1 lg:grid-cols-[1.08fr_0.92fr] gap-10 lg:gap-16 items-start">
+          <div data-page-columns className="grid grid-cols-1 lg:grid-cols-[1.08fr_0.92fr] gap-10 lg:gap-16 items-start">
             {/* Galería */}
             <div>
-              <div className="overflow-hidden rounded-[12px] bg-[#f1f1f0] aspect-[4/4.15]">
-                <img
+              <div data-page-panel className="overflow-hidden rounded-[12px] bg-[var(--visual-page-panel-background)] aspect-[4/4.15]">
+                <img data-page-main-image
                   src={product.images[activeImg]}
                   alt={product.name}
                   className="w-full h-full object-cover"
@@ -575,7 +575,7 @@ export default function ProductDetail() {
               {product.images.length > 1 && (
                 <div className="flex gap-3 overflow-x-auto pt-3 pb-1">
                   {product.images.map((img, index) => (
-                    <button
+                    <button data-page-gallery-item data-page-action="choice"
                       type="button"
                       key={index}
                       aria-label={`Ver imagen ${index + 1}`}
@@ -583,7 +583,7 @@ export default function ProductDetail() {
                       onClick={() => setActiveImg(index)}
                       className={`w-[74px] h-[74px] flex-shrink-0 overflow-hidden rounded-[8px] border transition-colors ${
                         activeImg === index
-                          ? 'border-black'
+                          ? 'border-[var(--visual-global-border)]'
                           : 'border-transparent'
                       }`}
                     >
@@ -601,18 +601,18 @@ export default function ProductDetail() {
             {/* Información */}
             <div className="lg:pt-3">
               <div className="flex flex-wrap items-center gap-3 mb-4">
-                <span className="text-[9px] font-medium uppercase tracking-[0.18em] text-[#686260]">
+                <span className="text-[9px] font-medium uppercase tracking-[0.18em] text-[var(--visual-page-color)]">
                   {product.category}
                 </span>
 
                 {comparePrice && (
-                  <span className="rounded-full bg-[#efefed] px-3 py-1 text-[9px] font-semibold">
+                  <span className="rounded-full bg-[var(--visual-page-panel-background)] px-3 py-1 text-[9px] font-semibold">
                     -{discountPct}%
                   </span>
                 )}
 
                 {!inStock && (
-                  <span className="rounded-full bg-black px-3 py-1 text-[9px] font-semibold uppercase tracking-[0.12em] text-white">
+                  <span className="rounded-full bg-[var(--visual-page-panel-background)] px-3 py-1 text-[9px] font-semibold uppercase tracking-[0.12em] text-[var(--visual-page-color)]">
                     Sin stock
                   </span>
                 )}
@@ -622,23 +622,23 @@ export default function ProductDetail() {
                 {product.name}
               </h1>
 
-              <p className="mt-4 text-[11px] uppercase tracking-[0.12em] text-[#9a9491]">
+              <p className="mt-4 text-[11px] uppercase tracking-[0.12em] text-[var(--visual-page-color)]">
                 SKU: {selectedVariant?.sku ?? product.variants[0]?.sku ?? 'N/A'}
               </p>
 
               <div className="flex items-baseline gap-3 mt-7">
-                <span className="text-[24px] font-semibold">
+                <span data-page-price className="text-[24px] font-semibold">
                   {formatPrice(price)}
                 </span>
 
                 {comparePrice && (
-                  <span className="text-[13px] text-[#9a9491] line-through">
+                  <span className="text-[13px] text-[var(--visual-page-color)] line-through">
                     {formatPrice(comparePrice)}
                   </span>
                 )}
               </div>
 
-              <p className="mt-6 max-w-xl text-[14px] leading-7 text-[#716b68]">
+              <p data-page-description className="mt-6 max-w-xl text-[14px] leading-7 text-[var(--visual-page-color)]">
                 {product.description}
               </p>
 
@@ -646,13 +646,13 @@ export default function ProductDetail() {
 
               {/* Variantes */}
               {Object.entries(product.attributes).map(([attrName, values]) => (
-                <div key={attrName} className="border-t border-black/10 mt-7 pt-6">
+                <div key={attrName} className="border-t border-[var(--visual-global-border)]/10 mt-7 pt-6">
                   <div className="flex items-center justify-between gap-4 mb-4">
                     <p className="text-[10px] font-semibold uppercase tracking-[0.16em]">
                       {product.attributeLabels?.[attrName] || attrName}
                     </p>
 
-                    <span className="text-[11px] text-[#8c8683]">
+                    <span className="text-[11px] text-[var(--visual-page-color)]">
                       {selectedAttrs[attrName] ?? 'Seleccionar'}
                     </span>
                   </div>
@@ -663,7 +663,7 @@ export default function ProductDetail() {
                       const selected = selectedAttrs[attrName] === value;
 
                       return (
-                        <button
+                        <button data-page-action="choice"
                           type="button"
                           key={value}
                           disabled={!available}
@@ -678,8 +678,8 @@ export default function ProductDetail() {
                           }}
                           className={`min-w-[52px] rounded-[7px] border px-4 py-2.5 text-[12px] transition-colors ${
                             selected
-                              ? 'border-black bg-black text-white'
-                              : 'border-black/15 bg-white hover:border-black'
+                              ? 'border-[var(--visual-global-border)] bg-[var(--visual-page-panel-background)] text-[var(--visual-page-color)]'
+                              : 'border-[var(--visual-global-border)]/15 bg-[var(--visual-page-panel-background)] hover:border-[var(--visual-global-border)]'
                           } ${
                             !available
                               ? 'cursor-not-allowed opacity-30 line-through'
@@ -697,44 +697,44 @@ export default function ProductDetail() {
               {selectedVariant && completeSelection && <StockFeedback sku={selectedVariant.sku} maxStock={selectedVariant.stock} quantity={inCart} className="mt-5 rounded-[8px] bg-[#f4f1e8] px-4 py-3 text-[12px] text-[#5f5849]" />}
 
               {!inStock && (
-                <div className="mt-5 rounded-[8px] bg-[#f4eeee] px-4 py-3 text-[12px] text-[#694d4d]">
+                <div data-page-panel className="mt-5 rounded-[8px] bg-[var(--visual-page-panel-background)] px-4 py-3 text-[12px] text-[var(--visual-page-color)]">
                   Este producto no está disponible actualmente.
                 </div>
               )}
 
               {/* Cantidad + carrito */}
-              <div className="border-t border-black/10 mt-7 pt-6">
+              <div className="border-t border-[var(--visual-global-border)]/10 mt-7 pt-6">
                 <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.16em]">
                   Cantidad
                 </p>
 
                 <div className="flex flex-col sm:flex-row gap-3">
-                  <div className="flex h-12 w-[132px] flex-shrink-0 items-center overflow-hidden rounded-[8px] border border-black/15 bg-white">
-                    <button
+                  <div data-page-quantity className="flex h-12 w-[132px] flex-shrink-0 items-center overflow-hidden rounded-[8px] border border-[var(--visual-global-border)]/15 bg-[var(--visual-page-panel-background)]">
+                    <button data-page-action="ghost"
                       type="button"
                       onClick={() => setQty((current) => Math.max(1, current - 1))}
-                      className="h-full w-11 text-lg transition-colors hover:bg-[#f1f1f0]"
+                      className="h-full w-11 text-lg transition-colors hover:bg-[var(--visual-page-panel-background)]"
                     >
                       −
                     </button>
 
-                    <span className="flex h-full flex-1 items-center justify-center border-x border-black/10 text-sm font-semibold">
+                    <span className="flex h-full flex-1 items-center justify-center border-x border-[var(--visual-global-border)]/10 text-sm font-semibold">
                       {qty}
                     </span>
 
-                    <button
+                    <button data-page-action="ghost"
                       type="button"
                       onClick={() =>
                         setQty((current) => Math.max(1, Math.min(remaining, current + 1)))
                       }
                       disabled={!inStock || !completeSelection || qty >= remaining}
-                      className="h-full w-11 text-lg transition-colors hover:bg-[#f1f1f0] disabled:opacity-30"
+                      className="h-full w-11 text-lg transition-colors hover:bg-[var(--visual-page-panel-background)] disabled:opacity-30"
                     >
                       +
                     </button>
                   </div>
 
-                  <button
+                  <button data-page-action="primary"
                     type="button"
                     onClick={handleAddToCart}
                     disabled={
@@ -745,8 +745,8 @@ export default function ProductDetail() {
                     }
                     className={`h-12 flex-1 rounded-[8px] px-6 text-[12px] font-semibold transition-opacity disabled:cursor-not-allowed disabled:opacity-35 ${
                       added
-                        ? 'bg-[#e9e9e6] text-black'
-                        : 'bg-black text-white hover:opacity-80'
+                        ? 'bg-[var(--visual-page-panel-background)] text-[var(--visual-page-color)]'
+                        : 'bg-[var(--visual-page-panel-background)] text-[var(--visual-page-color)] hover:opacity-80'
                     }`}
                   >
                     {remaining === 0
@@ -762,9 +762,9 @@ export default function ProductDetail() {
                 </div>
 
                 {hasCartItems && (
-                  <Link
+                  <Link data-page-action="primary"
                     to={route('carrito')}
-                    className="mt-3 flex h-11 w-full items-center justify-center rounded-[8px] border border-black text-[11px] font-semibold transition-colors hover:bg-black hover:text-white"
+                    className="mt-3 flex h-11 w-full items-center justify-center rounded-[8px] border border-[var(--visual-global-border)] text-[11px] font-semibold transition-colors hover:bg-[var(--visual-page-panel-background)] hover:text-[var(--visual-page-color)]"
                   >
                     Ir al carrito →
                   </Link>
@@ -772,12 +772,12 @@ export default function ProductDetail() {
               </div>
 
               {/* Entrega */}
-              <div className="mt-8 rounded-[10px] bg-[#f1f1f0] p-5">
+              <div data-page-panel className="mt-8 rounded-[10px] bg-[var(--visual-page-panel-background)] p-5">
                 <p className="mb-4 text-[9px] font-semibold uppercase tracking-[0.18em]">
                   Compra y entrega
                 </p>
 
-                <div className="flex flex-col gap-3 text-[12px] text-[#625d5a]">
+                <div className="flex flex-col gap-3 text-[12px] text-[var(--visual-page-color)]">
                   <div className="flex items-center gap-3">
                     <Icon name="truck" className="w-4 h-4 text-black" />
                     <span>Despacho a todo Chile</span>
@@ -799,10 +799,10 @@ export default function ProductDetail() {
 
           {/* Relacionados */}
           {related.length > 0 && (
-            <section className="mt-20 md:mt-24 border-t border-black/10 pt-12">
+            <section className="mt-20 md:mt-24 border-t border-[var(--visual-global-border)]/10 pt-12">
               <div className="flex items-end justify-between gap-4 mb-8">
                 <div>
-                  <p className="mb-2 text-[9px] font-medium uppercase tracking-[0.18em] text-[#77716e]">
+                  <p className="mb-2 text-[9px] font-medium uppercase tracking-[0.18em] text-[var(--visual-page-color)]">
                     También podría gustarte
                   </p>
                   <h2 className="font-serif text-[34px] md:text-[42px] leading-none">
@@ -810,9 +810,9 @@ export default function ProductDetail() {
                   </h2>
                 </div>
 
-                <Link
+                <Link data-page-action="outline"
                   to={route('catalogo')}
-                  className="hidden sm:inline text-[10px] font-semibold uppercase tracking-[0.12em] border-b border-black pb-1"
+                  className="hidden sm:inline text-[10px] font-semibold uppercase tracking-[0.12em] border-b border-[var(--visual-global-border)] pb-1"
                 >
                   Ver catálogo
                 </Link>
@@ -867,7 +867,7 @@ export default function ProductDetail() {
       {/* =====================================================
           PRODUCTO
       ====================================================== */}
-      <div
+      <div data-page-columns
         className={`
           grid grid-cols-1 lg:grid-cols-2
           ${isMinimal ? 'mt-7 gap-8 lg:gap-12' : 'mt-6 gap-10'}
@@ -877,7 +877,7 @@ export default function ProductDetail() {
             GALERÍA
         ================================================== */}
         <div className="flex flex-col gap-3">
-          <div
+          <div data-page-panel
             className={`
               overflow-hidden bg-[var(--muted)]
               ${
@@ -887,7 +887,7 @@ export default function ProductDetail() {
               }
             `}
           >
-            <img
+            <img data-page-main-image
               src={product.images[activeImg]}
               alt={product.name}
               className="w-full h-full object-cover"
@@ -897,7 +897,7 @@ export default function ProductDetail() {
           {product.images.length > 1 && (
             <div className="flex gap-2 overflow-x-auto pb-1">
               {product.images.map((img, index) => (
-                <button
+                <button data-page-gallery-item data-page-action="choice"
                   type="button"
                   key={index}
                   aria-label={`Ver imagen ${index + 1}`}
@@ -943,7 +943,7 @@ export default function ProductDetail() {
           <div>
             <div className="flex items-center gap-2 flex-wrap mb-3">
               {isMinimal ? (
-                <span className="text-xs uppercase tracking-[0.12em] text-gray-400">
+                <span className="text-xs uppercase tracking-[0.12em] text-[var(--visual-page-color)]">
                   {product.category}
                 </span>
               ) : (
@@ -968,7 +968,7 @@ export default function ProductDetail() {
             <h1
               className={
                 isMinimal
-                  ? 'text-3xl md:text-4xl lg:text-5xl font-semibold tracking-tight leading-[1.05] text-[#171717]'
+                  ? 'text-3xl md:text-4xl lg:text-5xl font-semibold tracking-tight leading-[1.05] text-[var(--visual-page-color)]'
                   : 'text-3xl font-bold text-[var(--foreground)]'
               }
             >
@@ -978,7 +978,7 @@ export default function ProductDetail() {
             <p
               className={
                 isMinimal
-                  ? 'text-xs text-gray-400 mt-3'
+                  ? 'text-xs text-[var(--visual-page-color)] mt-3'
                   : 'text-sm text-[var(--muted-foreground)] mt-1'
               }
             >
@@ -993,10 +993,10 @@ export default function ProductDetail() {
               PRECIO
           ================================================== */}
           <div className="flex items-baseline gap-3">
-            <span
+            <span data-page-price
               className={
                 isMinimal
-                  ? 'text-3xl font-semibold tracking-tight text-[#171717]'
+                  ? 'text-3xl font-semibold tracking-tight text-[var(--visual-page-color)]'
                   : 'text-4xl font-bold text-[var(--foreground)]'
               }
             >
@@ -1007,7 +1007,7 @@ export default function ProductDetail() {
               <span
                 className={
                   isMinimal
-                    ? 'text-sm text-gray-400 line-through'
+                    ? 'text-sm text-[var(--visual-page-color)] line-through'
                     : 'text-xl text-[var(--muted-foreground)] line-through'
                 }
               >
@@ -1025,7 +1025,7 @@ export default function ProductDetail() {
                 key={attrName}
                 className={
                   isMinimal
-                    ? 'border-t border-black/5 pt-5'
+                    ? 'border-t border-[var(--visual-global-border)]/5 pt-5'
                     : ''
                 }
               >
@@ -1051,7 +1051,7 @@ export default function ProductDetail() {
                       selectedAttrs[attrName] === value;
 
                     return (
-                      <button
+                      <button data-page-action="choice"
                         type="button"
                         key={value}
                         disabled={!available}
@@ -1077,8 +1077,8 @@ export default function ProductDetail() {
                           }
                           ${
                             selected
-                              ? 'border-[var(--primary)] bg-[var(--primary)] text-white'
-                              : 'border-[var(--border)] bg-white text-[var(--foreground)] hover:border-[var(--primary)]'
+                              ? 'border-[var(--primary)] bg-[var(--primary)] text-[var(--visual-page-color)]'
+                              : 'border-[var(--border)] bg-[var(--visual-page-panel-background)] text-[var(--foreground)] hover:border-[var(--primary)]'
                           }
                           ${
                             !available
@@ -1113,14 +1113,14 @@ export default function ProductDetail() {
           <div
             className={
               isMinimal
-                ? 'flex flex-col sm:flex-row gap-3 border-t border-black/5 pt-5'
+                ? 'flex flex-col sm:flex-row gap-3 border-t border-[var(--visual-global-border)]/5 pt-5'
                 : 'flex gap-3'
             }
           >
-            <div
+            <div data-page-panel data-page-quantity
               className={`
                 flex border border-[var(--border)]
-                overflow-hidden bg-white
+                overflow-hidden bg-[var(--visual-page-panel-background)]
                 ${
                   isMinimal
                     ? 'rounded-full h-12 self-start'
@@ -1128,7 +1128,7 @@ export default function ProductDetail() {
                 }
               `}
             >
-              <button
+              <button data-page-action="outline"
                 type="button"
                 onClick={() =>
                   setQty((current) =>
@@ -1154,7 +1154,7 @@ export default function ProductDetail() {
                 {qty}
               </span>
 
-              <button
+              <button data-page-action="outline"
                 type="button"
                 onClick={() =>
                   setQty((current) =>
@@ -1173,7 +1173,7 @@ export default function ProductDetail() {
             </div>
 
             <div className="flex-1 flex flex-col gap-2">
-              <button
+              <button data-page-action="primary"
                 type="button"
                 onClick={handleAddToCart}
                 disabled={
@@ -1191,8 +1191,8 @@ export default function ProductDetail() {
                   }
                   ${
                     added
-                      ? 'bg-[var(--success)] text-white'
-                      : 'bg-[var(--primary)] text-white hover:bg-[#0f2a56]'
+                      ? 'bg-[var(--success)] text-[var(--visual-page-color)]'
+                      : 'bg-[var(--primary)] text-[var(--visual-page-color)] hover:bg-[var(--primary)]'
                   }
                   disabled:opacity-50
                   disabled:cursor-not-allowed
@@ -1210,7 +1210,7 @@ export default function ProductDetail() {
               </button>
 
               {hasCartItems && (
-                <Link
+                <Link data-page-action="outline"
                   to={route('carrito')}
                   className={`
                     w-full font-semibold text-sm
@@ -1221,10 +1221,10 @@ export default function ProductDetail() {
                         ? 'h-11 rounded-full'
                         : 'h-10 rounded-lg'
                     }
-                    border border-[#17213b]
-                    text-[#17213b]
-                    bg-white
-                    hover:bg-gray-50
+                    border border-[var(--primary)]
+                    text-[var(--primary)]
+                    bg-[var(--visual-page-panel-background)]
+                    hover:bg-[var(--visual-page-panel-background)]
                   `}
                 >
                   Ir al carrito →
@@ -1247,7 +1247,7 @@ export default function ProductDetail() {
               Descripción
             </h2>
 
-            <p className="text-sm text-[var(--muted-foreground)] leading-relaxed">
+            <p data-page-description className="text-sm text-[var(--muted-foreground)] leading-relaxed">
               {product.description}
             </p>
           </div>
@@ -1257,10 +1257,10 @@ export default function ProductDetail() {
           {/* =================================================
               ENTREGA
           ================================================== */}
-          <div
+          <div data-page-panel
             className={
               isMinimal
-                ? 'bg-white border border-black/5 rounded-[20px] p-5'
+                ? 'bg-[var(--visual-page-panel-background)] border border-[var(--visual-global-border)]/5 rounded-[20px] p-5'
                 : 'bg-[var(--muted)] rounded-xl p-4'
             }
           >
@@ -1318,7 +1318,7 @@ export default function ProductDetail() {
           }
         >
           {isMinimal && (
-            <p className="text-xs text-gray-400 mb-2">
+            <p className="text-xs text-[var(--visual-page-color)] mb-2">
               También podría gustarte
             </p>
           )}
@@ -1335,9 +1335,9 @@ export default function ProductDetail() {
             </h2>
 
             {isMinimal && (
-              <Link
+              <Link data-page-action="ghost"
                 to={route('catalogo')}
-                className="text-sm text-[#17213b] hover:opacity-60 transition-opacity"
+                className="text-sm text-[var(--primary)] hover:opacity-60 transition-opacity"
               >
                 Ver catálogo →
               </Link>

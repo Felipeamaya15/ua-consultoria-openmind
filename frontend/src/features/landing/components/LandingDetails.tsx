@@ -1,3 +1,4 @@
+import { VISUAL_SECTION } from '../../storefront/visual/sectionIds';
 import { useLandingContent } from '../hooks/useLandingContent';
 import { useLandingSectionVisibility } from '../hooks/useLandingSectionVisibility';
 import { useStorefrontTemplate } from '../../storefront/hooks/useStorefrontTemplate';
@@ -25,10 +26,10 @@ export function LandingDetails({ includeBenefits = false }: { includeBenefits?: 
     { label: 'Sitio web', icon: 'globe', text: c.sitio_web, href: webLink(c.sitio_web) },
   ].filter(item => item.text);
   return <>
-    {includeBenefits && visible('Beneficios') && content.beneficios.length > 0 && <section className={`max-w-6xl mx-auto px-5 py-12 border-t ${tone}`} aria-label="Beneficios">
+    {includeBenefits && visible('Beneficios') && content.beneficios.length > 0 && <section data-visual-section={VISUAL_SECTION.sections} data-visual-kind="benefits" className={`max-w-6xl mx-auto px-5 py-12 border-t ${tone}`} aria-label="Beneficios">
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">{content.beneficios.map((b, i) => <div key={i}><Icon name={b.icono} className="w-6 h-6" /><h2 className="font-semibold mt-4">{b.titulo}</h2>{b.descripcion && <p className="text-sm opacity-70 mt-2">{b.descripcion}</p>}</div>)}</div>
     </section>}
-    {visible('Información de contacto') && (contacts.length > 0 || c.horario) && <section data-landing-content data-template={template} className="landing-details" aria-label="Información de contacto">
+    {visible('Información de contacto') && (contacts.length > 0 || c.horario) && <section data-visual-section={VISUAL_SECTION.contact} data-landing-content data-template={template} className="landing-details" aria-label="Información de contacto">
       <div className="landing-details__inner">
         <header className="landing-details__heading"><span className="landing-details__eyebrow">Contacto</span><h2>Información de contacto</h2></header>
         <div className={`landing-details__contact-layout ${c.horario && contacts.length ? 'landing-details__contact-layout--with-hours' : ''}`}>
@@ -43,7 +44,7 @@ export function LandingDetails({ includeBenefits = false }: { includeBenefits?: 
         </div>
       </div>
     </section>}
-    {visible('Mapa / ubicación') && (hasAddress || webLink(u.enlace_maps)) && <section data-landing-content data-template={template} className="landing-details landing-details--location" aria-label="Ubicación">
+    {visible('Mapa / ubicación') && (hasAddress || webLink(u.enlace_maps)) && <section data-visual-section={VISUAL_SECTION.location} data-landing-content data-template={template} className="landing-details landing-details--location" aria-label="Ubicación">
       <div className="landing-details__inner">
         <header className="landing-details__heading"><span className="landing-details__eyebrow">Ubicación</span><h2>Dónde encontrarnos</h2></header>
         <div className="landing-details__location-card">

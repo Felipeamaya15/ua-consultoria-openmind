@@ -1,6 +1,7 @@
-import CustomerOrders from '../../features/storefront/pages/CustomerOrders';
+import { lazyPage } from '../LazyPage';
+const CustomerOrders = lazyPage(() => import('../../features/storefront/pages/CustomerOrders'));
 import { RequireCustomer } from '../../features/storefront/components/store/AccountNavigation';
-import Profile from '../../features/storefront/pages/Profile';
+const Profile = lazyPage(() => import('../../features/storefront/pages/Profile'));
 
 import { adminRoute } from '../../features/admin/routes';
 import {
@@ -13,20 +14,20 @@ import { MinimalLayout } from '../../features/storefront/components/store/minima
 import { VisualLayout } from '../../features/storefront/components/store/visual/VisualLayout';
 import { CatalogLayout } from '../../features/storefront/components/store/catalog/CatalogLayout';
 
-import EditorialHome from '../../features/storefront/pages/EditorialHome';
-import MinimalHome from '../../features/storefront/pages/MinimalHome';
-import VisualHome from '../../features/storefront/pages/VisualHome';
-import VisualStory from '../../features/storefront/pages/VisualStory';
-import CatalogHome from '../../features/storefront/pages/CatalogHome';
+const EditorialHome = lazyPage(() => import('../../features/storefront/pages/EditorialHome'));
+const MinimalHome = lazyPage(() => import('../../features/storefront/pages/MinimalHome'));
+const VisualHome = lazyPage(() => import('../../features/storefront/pages/VisualHome'));
+const VisualStory = lazyPage(() => import('../../features/storefront/pages/VisualStory'));
+const CatalogHome = lazyPage(() => import('../../features/storefront/pages/CatalogHome'));
 
-import Catalog from '../../features/storefront/pages/Catalog';
-import ProductDetail from '../../features/storefront/pages/ProductDetail';
-import Cart from '../../features/storefront/pages/Cart';
-import Checkout from '../../features/storefront/pages/Checkout';
-import OrderConfirmation from '../../features/storefront/pages/OrderConfirmation';
-import Tracking from '../../features/storefront/pages/Tracking';
-import Login from '../../features/storefront/pages/Login';
-import Legal from '../../features/storefront/pages/Legal';
+const Catalog = lazyPage(() => import('../../features/storefront/pages/Catalog'));
+const ProductDetail = lazyPage(() => import('../../features/storefront/pages/ProductDetail'));
+const Cart = lazyPage(() => import('../../features/storefront/pages/Cart'));
+const Checkout = lazyPage(() => import('../../features/storefront/pages/Checkout'));
+const OrderConfirmation = lazyPage(() => import('../../features/storefront/pages/OrderConfirmation'));
+const Tracking = lazyPage(() => import('../../features/storefront/pages/Tracking'));
+const Login = lazyPage(() => import('../../features/storefront/pages/Login'));
+const Legal = lazyPage(() => import('../../features/storefront/pages/Legal'));
 
 import { PendingPage } from '../../features/storefront/pages/PreviewPages';
 

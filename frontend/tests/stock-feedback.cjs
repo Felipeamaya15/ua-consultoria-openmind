@@ -50,6 +50,8 @@ assert.ok(text(feedback.StockFeedback({ sku: 'M', maxStock: 1, quantity: 1 })).i
 
 const providerHooks = hooks();
 const provider = load('src/features/storefront/context/CartContext.tsx', name => {
+  if (name.includes('StoreIdentityContext')) return {useStoreIdentity: () => ({identity: null})};
+  if (name.includes('guestCartStorage')) return {guestCartKey: () => null};
   if (name === 'react') return providerHooks.react;
   return { jsx, jsxs: jsx };
 });
@@ -70,6 +72,7 @@ function component(file, template, initial = []) {
     if (name.includes('ProductCard')) return { ProductCard: 'ProductCard' };
     if (name.includes('ProductAttributes')) return { ProductAttributes: 'ProductAttributes' };
     if (name.includes('catalogService')) return {};
+    if (name.includes('visual/sectionIds')) return load('src/features/storefront/visual/sectionIds.ts', () => ({}));
     if (name.includes('ui')) return Object.fromEntries(['Button','EmptyState','Icon','Badge','Breadcrumb','Alert'].map(name => [name, name]));
     throw new Error(name);
   });

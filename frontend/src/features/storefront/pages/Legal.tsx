@@ -37,17 +37,17 @@ export default function Legal() {
 
   if (isCatalog) {
     return (
-      <div className="bg-[#050505] text-white">
+      <div className="bg-[var(--visual-page-panel-background)] text-[var(--visual-page-color)]">
         <div className="max-w-[900px] mx-auto px-5 py-10 md:py-14">
           <div className="mb-8">
-            <Link
+            <Link data-page-action="ghost"
               to={route()}
-              className="inline-flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.14em] text-white/40 hover:text-white transition-colors"
+              className="inline-flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--visual-page-color)]/40 hover:text-[var(--visual-page-color)] transition-colors"
             >
               ← Volver a la tienda
             </Link>
 
-            <p className="mt-8 text-[#ff5a1f] text-[10px] font-black uppercase tracking-[0.16em]">
+            <p className="mt-8 text-[var(--primary)] text-[10px] font-black uppercase tracking-[0.16em]">
               Información legal
             </p>
 
@@ -55,12 +55,12 @@ export default function Legal() {
               {meta.label}
             </h1>
 
-            <p className="mt-4 max-w-2xl text-[13px] leading-6 text-white/45">
+            <p className="mt-4 max-w-2xl text-[13px] leading-6 text-[var(--visual-page-color)]/45">
               Consulta la información y condiciones asociadas a tu compra.
             </p>
           </div>
 
-          <div className="rounded-[16px] bg-[#f5f5f3] p-6 md:p-10 text-[#151515]">
+          <div data-page-panel className="rounded-[16px] bg-[var(--visual-page-panel-background)] p-6 md:p-10 text-[var(--visual-page-color)]">
             <div className="max-w-none">
               {page.published
                 .split('\n\n')
@@ -76,7 +76,7 @@ export default function Legal() {
                     return (
                       <h2
                         key={index}
-                        className="mt-8 first:mt-0 mb-3 text-[15px] font-black tracking-[-0.01em] text-[#151515]"
+                        className="mt-8 first:mt-0 mb-3 text-[15px] font-black tracking-[-0.01em] text-[var(--visual-page-color)]"
                       >
                         {block.replace(/\*\*/g, '')}
                       </h2>
@@ -86,7 +86,7 @@ export default function Legal() {
                   return (
                     <p
                       key={index}
-                      className="mb-4 text-[13px] leading-7 text-black/60"
+                      className="mb-4 text-[13px] leading-7 text-[var(--visual-page-color)]/60"
                     >
                       {block}
                     </p>
@@ -94,20 +94,20 @@ export default function Legal() {
                 })}
             </div>
 
-            <div className="mt-10 pt-6 border-t border-black/10">
-              <p className="mb-3 text-[9px] font-black uppercase tracking-[0.16em] text-[#e04b1a]">
+            <div className="mt-10 pt-6 border-t border-[var(--visual-global-border)]/10">
+              <p className="mb-3 text-[9px] font-black uppercase tracking-[0.16em] text-[var(--primary)]">
                 Otras páginas legales
               </p>
 
               <div className="flex flex-wrap gap-2">
                 {LEGAL_ORDER.map((key) => (
-                  <Link
+                  <Link data-page-action="primary"
                     key={key}
                     to={route(`legal/${key}`)}
                     className={`rounded-full px-4 py-2 text-[11px] font-semibold transition-colors ${
                       activeType === key
-                        ? 'bg-[#1683ff] text-white'
-                        : 'bg-white text-black/60 hover:bg-black hover:text-white'
+                        ? 'bg-[var(--primary)] text-[var(--visual-page-color)]'
+                        : 'bg-[var(--visual-page-panel-background)] text-[var(--visual-page-color)]/60 hover:bg-[var(--visual-page-panel-background)] hover:text-[var(--visual-page-color)]'
                     }`}
                   >
                     {LEGAL_META[key].label}
@@ -143,26 +143,26 @@ export default function Legal() {
 
       {isMinimal && (
         <div className="mt-8 mb-7">
-          <p className="text-xs text-gray-400 mb-2">
+          <p className="text-xs text-[var(--visual-page-color)] mb-2">
             Información legal
           </p>
 
-          <h1 className="text-3xl md:text-4xl font-semibold tracking-tight text-[#171717]">
+          <h1 className="text-3xl md:text-4xl font-semibold tracking-tight text-[var(--visual-page-color)]">
             {meta.label}
           </h1>
 
-          <p className="text-sm text-gray-500 mt-3 max-w-2xl">
+          <p className="text-sm text-[var(--visual-page-color)] mt-3 max-w-2xl">
             Consulta la información y condiciones
             asociadas a tu compra.
           </p>
         </div>
       )}
 
-      <div
+      <div data-page-panel
         className={
           isMinimal
-            ? 'bg-white border border-black/5 rounded-[28px] p-6 md:p-10'
-            : 'mt-6 bg-white border border-[var(--border)] rounded-2xl p-8'
+            ? 'bg-[var(--visual-page-panel-background)] border border-[var(--visual-global-border)]/5 rounded-[28px] p-6 md:p-10'
+            : 'mt-6 bg-[var(--visual-page-panel-background)] border border-[var(--border)] rounded-2xl p-8'
         }
       >
         {!isMinimal && (
@@ -188,7 +188,7 @@ export default function Legal() {
                     key={index}
                     className={
                       isMinimal
-                        ? 'font-semibold text-[#171717] mt-8 first:mt-0 mb-3 text-base'
+                        ? 'font-semibold text-[var(--visual-page-color)] mt-8 first:mt-0 mb-3 text-base'
                         : 'font-semibold text-[var(--foreground)] mt-6 mb-2 text-sm uppercase tracking-wider'
                     }
                   >
@@ -202,7 +202,7 @@ export default function Legal() {
                   key={index}
                   className={
                     isMinimal
-                      ? 'text-sm leading-7 mb-4 text-gray-600'
+                      ? 'text-sm leading-7 mb-4 text-[var(--visual-page-color)]'
                       : 'text-sm leading-relaxed mb-3'
                   }
                 >
@@ -215,12 +215,12 @@ export default function Legal() {
         <div
           className={
             isMinimal
-              ? 'flex flex-wrap gap-2 mt-10 pt-6 border-t border-black/5'
+              ? 'flex flex-wrap gap-2 mt-10 pt-6 border-t border-[var(--visual-global-border)]/5'
               : 'flex flex-wrap gap-4 mt-8 pt-6 border-t border-[var(--border)]'
           }
         >
           {LEGAL_ORDER.map((key) => (
-            <Link
+            <Link data-page-action="primary"
               key={key}
               to={route(`legal/${key}`)}
               className={
@@ -233,8 +233,8 @@ export default function Legal() {
                     transition-colors
                     ${
                       activeType === key
-                        ? 'bg-[#17213b] text-white'
-                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        ? 'bg-[var(--primary)] text-[var(--visual-page-color)]'
+                        : 'bg-[var(--visual-page-panel-background)] text-[var(--visual-page-color)] hover:bg-[var(--visual-page-panel-background)]'
                     }
                   `
                   : `
@@ -257,9 +257,9 @@ export default function Legal() {
 
       {isMinimal && (
         <div className="text-center mt-7">
-          <Link
+          <Link data-page-action="ghost"
             to={route()}
-            className="text-sm text-gray-500 hover:text-[#17213b] transition-colors"
+            className="text-sm text-[var(--visual-page-color)] hover:text-[var(--primary)] transition-colors"
           >
             ← Volver a la tienda
           </Link>

@@ -1,0 +1,209 @@
+Suite: tests\visual-editor.cjs (exit 0)
+OK stage 3 palette coordinates surfaces while manual bar and footer edits remain independent
+OK stage 3 page geometry follows presets and explicit responsive page values win
+OK stage 3 examples require the embedded editor and preserve public confirmation guards
+OK stage 3 Velta filter consumers support the existing layout and category contract
+OK section catalog has 17 unique typed IDs shared with storefront
+OK closest marker selects hero
+OK closest marker selects heroCta
+OK closest marker selects productCard
+OK initial draft is clean and selecting does not mutate document
+OK hero alignment changes only its leaf and activates dirty
+OK editing does not write to storage
+OK pill CTA derives radius 999px and center affects its consumer
+OK CTA custom width is consumed and clamped by public CSS
+OK CTA invalid custom widths do not produce invalid CSS
+OK CTA variants and shapes have distinct public values
+OK product card compact and large sizes reach CSS
+OK product card radius, alignment and button radius are independent
+OK category style and footer background reach consumer variables
+OK sticky header has both sticky and relative states
+OK topbar false, zero height and font size reach public CSS
+OK product grids retain separate desktop/tablet/mobile columns
+OK responsive edits remain partial and affect the selected breakpoint
+OK reset property eliminates override and follows future preset changes
+OK reset section removes only its common/template/responsive branches
+OK restore preset keeps content, images and other template overrides
+OK discard returns exactly to saved document including images
+OK save reloads overrides and leaves another store untouched
+OK legacy color reset is not re-persisted as effective preset color
+OK zero and false persist through publication and reload
+OK all inspector property paths exist in the resolver schema
+OK all emitted variables have responsive aliases and public consumers
+OK selection listeners prevent navigation only while connected and clean up
+OK ThemeEditor save failure keeps dirty and success clears it; discard restores preview
+OK catalog card and grid selection edit and reset catalog branches only
+OK legacy image restoration uses the original before saved customizations
+OK business images remain owned by landing and product editors
+OK legacy palettes edit three sparse color leaves and reset removes them
+OK additive section padding preserves the original benefits spacing
+OK banner small writes responsive heights and persists only overrides
+OK banner medium writes responsive heights and persists only overrides
+OK banner large writes responsive heights and persists only overrides
+OK custom legacy banner height remains readable and reset restores all sizes
+OK image framing validates all positions and feeds responsive public CSS
+OK institutional false is rejected in every cascade and breakpoint for all presets
+OK footer reset and preset restoration retain mandatory branding
+OK inspector offers no institutional disabling or topbar hiding field
+OK institutional logo is excluded from legacy image mutation
+OK public layouts share the protected fixed university logo and reference
+OK category navigation lives in the existing landing category section
+OK main editor section names are friendly without changing shared IDs
+OK help opens on hover, focus and click and closes with Escape and blur
+OK palettes coordinate bars and footer while allowing subsequent individual edits
+OK every named font is validated and reaches body and title CSS
+OK public route scopes match every configurable page and preserve product identifiers
+OK page inspector paths exist for every page and reset only the selected group
+OK page drafts persist sparsely without affecting checkout data or another page
+OK checkout step selection works only inside the embedded design editor
+OK landing actions keep selecting their product section instead of unrelated page controls
+
+58 visual editor tests passed.
+Suite: tests\visual-editor-final.cjs (exit 0)
+OK history undoes resets, redoes, clears a branch and bounds memory
+OK selector actually changes the iframe, page inspector, history and sparse publication
+OK safe examples render complete pages without mounting public business children
+OK product geometry and cart/form properties reach responsive public variables
+OK stable image keys survive reordered DOM and replacements while reading old keys
+OK contrast warnings distinguish insufficient contrast from dynamic colors
+6 final editor tests passed.
+Suite: tests\visual-config.cjs (exit 0)
+OK global defaults produce a complete config
+OK old colors and template remain compatible
+OK template preset applies layout, spacing, hero, card and footer
+OK store overrides win over preset and legacy colors
+OK template overrides win over store-wide overrides
+OK deep partial fields preserve siblings
+OK zero is preserved for radius, gap, padding, height, border and opacity
+OK valid false remains false while institutional visibility stays mandatory
+OK unknown fields and prototype keys are ignored
+OK invalid data never replaces known defaults
+OK future config version is safely ignored
+OK all four presets produce complete and distinct styles
+OK resolving does not mutate defaults, presets or input
+OK responsive overrides cascade desktop → tablet → mobile
+OK partial breakpoint data does not freeze desktop changes
+OK responsive rejects invalid values and preserves valid false/zero
+OK CSS bridge provides responsive colors, visibility and grid counts
+OK catalog grid and card overrides are independent of landing
+OK legacy persisted colors with no themeEditor survive admin hydration
+OK partial themes get defaults without losing overrides or images
+OK store and template overrides round trip in existing v1 storage
+OK color editing preserves section settings, images, false and zero
+OK color editing can override store-wide visual colors
+OK hydration displays effective section colors in the existing editor
+OK StoreContext resolves routes, legacy data and live storage updates
+OK malformed storage returns defaults without throwing
+OK partial editor updates deep merge and preserve sibling overrides
+OK resetting an override restores inheritance without losing siblings
+OK two stores on the same API are isolated across read and save
+OK API installations and envelopes cannot share a store namespace
+OK unidentified v1 data is preserved without being assigned to any store
+OK identity-tagged legacy v1 remains compatible and saves into its own key
+OK unknown identity never reads or saves local customizations
+OK corrupt scoped data never falls back to unidentified global data
+OK image and template saves do not freeze effective preset colors or sections
+OK changing presets and their defaults preserves explicit overrides
+OK template color changes do not contaminate other templates or duplicate legacy colors
+OK valid empty image source and palette names survive hydration and save
+OK SSR and denied storage safely return defaults without touching window
+OK CSS variables are valid strings, consistently named and preserve line clamp
+OK legacy image normalization rejects invalid values and preserves valid zero
+OK preview variables survive asynchronous updates and observers disconnect
+OK checkout preferences follow store identity and preserve false
+OK StoreProvider and StoreVisualRoot render in SSR without browser globals
+OK identity service validates public backend identity
+OK missing, invalid and unsafe store IDs are rejected
+OK identity failures never fall back to store 1
+47 visual configuration tests passed.
+Suite: tests\storefront-variants.cjs (exit 0)
+OK: M/L, etiquetas dinámicas, SKU/precios/stock, carrito, filtros y resumen sin selector vacío
+Suite: tests\stock-feedback.cjs (exit 0)
+OK: límite por SKU, umbral <=5, avisos en cuatro plantillas, reducción/eliminación y totales
+Suite: tests\profile.cjs (exit 0)
+Perfil: token, contrato, errores, carga real y feedback de guardado verificados.
+Suite: tests\product-editing.cjs (exit 0)
+OK: listado/detalle Mongo, edición con revisión, errores y sin fallback local
+Suite: tests\product-creation.cjs (exit 0)
+OK: contrato Token, errores backend y Guardado independiente de caché
+Suite: tests\order-tracking.cjs (exit 0)
+OK: confirmación y seguimiento real, seis casos requeridos en cuatro plantillas, contrato, errores y cancelación de consultas.
+Suite: tests\landing-editor.cjs (exit 0)
+OK: reintentos limitados, recuperación, errores definitivos, cancelación, horario semanal, filtros de Chile y valores anteriores.
+Suite: tests\landing-content.cjs (exit 0)
+OK: selección por IDs, 0/1/3/6 productos en 4 plantillas, flags, hero, contactos/Maps, vacíos, editor y guardado multipart.
+Suite: tests\entrepreneur-profile.cjs (exit 0)
+OK: contrato Token emprendedor, guard propietario/cliente/visitante y formulario remoto con errores.
+Suite: tests\customer-orders.cjs (exit 0)
+OK: pedidos cliente y propietario, contratos, Token, errores y navegación en cuatro plantillas protegidas.
+Suite: tests\checkout-shipping.cjs (exit 0)
+✔ Catálogo territorial: 16 regiones, alias y comunas consistentes con backend (14.5299ms)
+✔ Servicio: request, referencia, precio y errores de contrato (146.5044ms)
+▶ Plantilla 1: checkout y despacho
+  ✔ solo muestra métodos habilitados desde API (8.7157ms)
+  ✔ sin alternativas y error de carga no hay fallback (2.696ms)
+  ✔ seleccionar región y comuna carga catálogo correcto (7.4039ms)
+  ✔ Chilexpress muestra tarifa y total exactos sobre 50.000 (1.4218ms)
+  ✔ seleccionar Starken invalida Chilexpress y usa su tarifa (1.5757ms)
+  ✔ cambiar comuna invalida inmediatamente e impide confirmar durante carga (1.4424ms)
+  ✔ cambiar región no reutiliza cotización aunque la comuna sea anterior (1.3503ms)
+  ✔ respuesta tardía de destino anterior no restaura tarifa (1.8887ms)
+  ✔ fallo al cotizar bloquea y permite reintento sin 3.490 (2.0605ms)
+  ✔ cotización vencida bloquea confirmación (1.4269ms)
+  ✔ Retiro usa cero, dirección/horario y no cotiza con o sin destino (1.6772ms)
+  ✔ payload conserva dirección, operador y referencia sin precios de cliente (0.9372ms)
+✔ Plantilla 1: checkout y despacho (128.3589ms)
+▶ Plantilla 2: checkout y despacho
+  ✔ solo muestra métodos habilitados desde API (4.4131ms)
+  ✔ sin alternativas y error de carga no hay fallback (0.8749ms)
+  ✔ seleccionar región y comuna carga catálogo correcto (1.4154ms)
+  ✔ Chilexpress muestra tarifa y total exactos sobre 50.000 (0.6353ms)
+  ✔ seleccionar Starken invalida Chilexpress y usa su tarifa (0.9002ms)
+  ✔ cambiar comuna invalida inmediatamente e impide confirmar durante carga (0.6498ms)
+  ✔ cambiar región no reutiliza cotización aunque la comuna sea anterior (0.5267ms)
+  ✔ respuesta tardía de destino anterior no restaura tarifa (1.1735ms)
+  ✔ fallo al cotizar bloquea y permite reintento sin 3.490 (1.357ms)
+  ✔ cotización vencida bloquea confirmación (0.6886ms)
+  ✔ Retiro usa cero, dirección/horario y no cotiza con o sin destino (0.7579ms)
+  ✔ payload conserva dirección, operador y referencia sin precios de cliente (0.984ms)
+✔ Plantilla 2: checkout y despacho (103.7502ms)
+▶ Plantilla 3: checkout y despacho
+  ✔ solo muestra métodos habilitados desde API (1.6031ms)
+  ✔ sin alternativas y error de carga no hay fallback (0.5916ms)
+  ✔ seleccionar región y comuna carga catálogo correcto (1.0522ms)
+  ✔ Chilexpress muestra tarifa y total exactos sobre 50.000 (0.5692ms)
+  ✔ seleccionar Starken invalida Chilexpress y usa su tarifa (0.7427ms)
+  ✔ cambiar comuna invalida inmediatamente e impide confirmar durante carga (1.162ms)
+  ✔ cambiar región no reutiliza cotización aunque la comuna sea anterior (0.6791ms)
+  ✔ respuesta tardía de destino anterior no restaura tarifa (1.0053ms)
+  ✔ fallo al cotizar bloquea y permite reintento sin 3.490 (1.1312ms)
+  ✔ cotización vencida bloquea confirmación (0.5539ms)
+  ✔ Retiro usa cero, dirección/horario y no cotiza con o sin destino (0.5377ms)
+  ✔ payload conserva dirección, operador y referencia sin precios de cliente (0.7361ms)
+✔ Plantilla 3: checkout y despacho (92.8098ms)
+▶ Plantilla 4: checkout y despacho
+  ✔ solo muestra métodos habilitados desde API (0.9388ms)
+  ✔ sin alternativas y error de carga no hay fallback (0.504ms)
+  ✔ seleccionar región y comuna carga catálogo correcto (0.7305ms)
+  ✔ Chilexpress muestra tarifa y total exactos sobre 50.000 (0.3626ms)
+  ✔ seleccionar Starken invalida Chilexpress y usa su tarifa (0.5399ms)
+  ✔ cambiar comuna invalida inmediatamente e impide confirmar durante carga (0.6496ms)
+  ✔ cambiar región no reutiliza cotización aunque la comuna sea anterior (0.3807ms)
+  ✔ respuesta tardía de destino anterior no restaura tarifa (0.9884ms)
+  ✔ fallo al cotizar bloquea y permite reintento sin 3.490 (0.9026ms)
+  ✔ cotización vencida bloquea confirmación (0.4732ms)
+  ✔ Retiro usa cero, dirección/horario y no cotiza con o sin destino (0.5051ms)
+  ✔ payload conserva dirección, operador y referencia sin precios de cliente (0.7082ms)
+✔ Plantilla 4: checkout y despacho (79.6103ms)
+ℹ tests 54
+ℹ suites 0
+ℹ pass 54
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 570.3182
+Suite: tests\cart-checkout.cjs (exit 0)
+OK: contrato real, Token/invitado, errores, doble envío, reintento, Webpay, cuatro plantillas, stock independiente y limpieza del carrito
+Suite: tests\account-navigation.cjs (exit 0)
+OK: propietario/staff, cliente, visitante, guard de perfil y cinco headers.

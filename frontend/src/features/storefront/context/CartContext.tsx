@@ -1,6 +1,9 @@
+import { isActiveEditorPreview } from '../visual/pages';
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react';
 import type { CartItem as BaseCartItem } from '../data/mockData';
 import { cartService } from '../services/cartService';
+import { useStoreIdentity } from './StoreIdentityContext';
+import { guestCartKey, readGuestCart, saveGuestCart } from '../services/guestCartStorage';
 
 export interface CartItem extends BaseCartItem {
   id_item_carrito?: number;
@@ -34,9 +37,24 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const [shippingMethod, setShippingMethod] = useState('');
   const [customShipping, setCustomShipping] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
+  const { identity } = useStoreIdentity();
+  const hasToken = !!(localStorage.getItem('token') || sessionStorage.getItem('token'));
+  const storageKey = hasToken ? null : guestCartKey(identity);
+  const [hydratedKey, setHydratedKey] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (isActiveEditorPreview() || !storageKey) return;
+    setItems(readGuestCart(storageKey));
+    setHydratedKey(storageKey);
+  }, [storageKey]);
+
+  useEffect(() => {
+    if (!isActiveEditorPreview() && storageKey && hydratedKey === storageKey) saveGuestCart(storageKey, items);
+  }, [storageKey, hydratedKey, items]);
 
   // 1. Sincronizar el carrito real desde PostgreSQL
   const refreshCart = useCallback(async () => {
+    if (isActiveEditorPreview()) return;
     if (!localStorage.getItem('token') && !sessionStorage.getItem('token')) return;
     try {
       setLoading(true);

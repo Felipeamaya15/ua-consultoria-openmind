@@ -77,6 +77,7 @@ const real = {id_pedido: 42, identificador: identifier, fecha_creacion: '2026-10
     },
   };
   const requireMock = name => {
+    if (name === '../visual/pages') return load('src/features/storefront/visual/pages.ts', {});
     if (name === 'react/jsx-runtime') return {jsx, jsxs: jsx};
     if (name === 'react') return react;
     if (name === 'react-router-dom') return {Link: 'Link', Navigate: 'Navigate', useLocation: () => location};
@@ -98,6 +99,12 @@ const real = {id_pedido: 42, identificador: identifier, fecha_creacion: '2026-10
     throw Error(name);
   };
   const Confirmation = load('src/features/storefront/pages/OrderConfirmation.tsx', {require: requireMock}).default;
+  const exampleFrame = { parent: { location: { pathname: '/emprendedor/diseno/editor' } } };
+  const PreviewConfirmation = load('src/features/storefront/pages/OrderConfirmation.tsx', {require: requireMock, window: exampleFrame}).default;
+  location = {search: '', state: null};
+  assert.ok(nodes(PreviewConfirmation()).includes('VISTA-PREVIA'));
+  exampleFrame.parent.location.pathname = '/plantilla/1';
+  assert.ok(nodes(PreviewConfirmation()).some(node => node.type === 'Navigate'));
   const Tracking = load('src/features/storefront/pages/Tracking.tsx', {require: requireMock}).default;
   const WebpayReturn = load('src/features/storefront/pages/TransbankReturnResult.tsx', {require: requireMock,
     sessionStorage: {getItem: key => receiptStorage.get(key) ?? null, setItem: (key, value) => receiptStorage.set(key, value)},

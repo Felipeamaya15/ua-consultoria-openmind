@@ -1,3 +1,4 @@
+import { VISUAL_SECTION } from '../../visual/sectionIds';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 
@@ -51,7 +52,7 @@ export function ProductCard({
   const quantity =
     items.find(
       (item) =>
-        item.productId === product.id &&
+        item.productId === (product.catalogId || product.id) &&
         item.variantId === selectedVariant?.id,
     )?.quantity ?? 0;
 
@@ -66,7 +67,7 @@ export function ProductCard({
     }
 
     addItem({
-      productId: product.id,
+      productId: product.catalogId || product.id,
       variantId: selectedVariant.id,
       name: product.name,
       image: product.images[0],
@@ -142,7 +143,7 @@ export function ProductCard({
 
   if (isCatalog && layout === 'grid') {
     return (
-      <article className="group flex h-full flex-col overflow-hidden rounded-[14px] bg-white text-[#151515]">
+      <article data-visual-section={VISUAL_SECTION.productCard} data-visual-card="grid" className="group flex h-full flex-col overflow-hidden rounded-[14px] bg-white text-[#151515]">
         <Link
           to={productPath}
           aria-label={`Ver ${product.name}`}
@@ -175,7 +176,7 @@ export function ProductCard({
           )}
         </Link>
 
-        <div className="flex flex-1 flex-col p-4">
+        <div data-visual-part="body" className="flex flex-1 flex-col p-4">
           <p className="text-[9px] font-black uppercase tracking-[0.14em] text-[#e04b1a]">
             {product.category}
           </p>
@@ -186,13 +187,13 @@ export function ProductCard({
             </Link>
           </h3>
 
-          <p className="mt-2 line-clamp-2 min-h-[36px] text-[11px] leading-[1.55] text-black/50">
+          <p data-visual-part="description" className="mt-2 line-clamp-2 min-h-[36px] text-[11px] leading-[1.55] text-black/50">
             {product.description}
           </p>
 
           <div className="mt-auto flex items-end justify-between gap-3 pt-5">
             <div>
-              <p className="text-[14px] font-black">
+              <p data-visual-part="price" className="text-[14px] font-black">
                 {formatPrice(price)}
               </p>
 
@@ -214,7 +215,7 @@ export function ProductCard({
           {selectedVariant && <StockFeedback sku={selectedVariant.sku} maxStock={selectedVariant.stock} quantity={quantity} />}
 
           {inStock && (
-            <button
+            <button data-visual-part="buyButton"
               type="button"
               onClick={handleAddToCart}
               disabled={!canBuySelectedVariant || atLimit}
@@ -235,7 +236,7 @@ export function ProductCard({
 
   if (isCatalog && layout === 'list') {
     return (
-      <article className="group flex overflow-hidden rounded-[14px] bg-white text-[#151515]">
+      <article data-visual-section={VISUAL_SECTION.productCard} data-visual-card="list" className="group flex overflow-hidden rounded-[14px] bg-white text-[#151515]">
         <Link
           to={productPath}
           className="relative w-28 sm:w-40 flex-shrink-0 overflow-hidden bg-[#ececea]"
@@ -253,7 +254,7 @@ export function ProductCard({
           )}
         </Link>
 
-        <div className="flex min-w-0 flex-1 flex-col p-4 sm:p-5">
+        <div data-visual-part="body" className="flex min-w-0 flex-1 flex-col p-4 sm:p-5">
           <p className="text-[9px] font-black uppercase tracking-[0.14em] text-[#e04b1a]">
             {product.category}
           </p>
@@ -265,13 +266,13 @@ export function ProductCard({
             {product.name}
           </Link>
 
-          <p className="mt-2 hidden sm:block text-[11px] leading-5 text-black/50">
+          <p data-visual-part="description" className="mt-2 hidden sm:block text-[11px] leading-5 text-black/50">
             {product.description}
           </p>
 
           <div className="mt-auto flex flex-wrap items-end justify-between gap-3 pt-4">
             <div>
-              <p className="text-[14px] font-black">
+              <p data-visual-part="price" className="text-[14px] font-black">
                 {formatPrice(price)}
               </p>
 
@@ -283,7 +284,7 @@ export function ProductCard({
             </div>
 
             {inStock ? (
-              <button
+              <button data-visual-part="buyButton"
                 type="button"
                 onClick={handleAddToCart}
                 disabled={!canBuySelectedVariant || atLimit}
@@ -314,7 +315,7 @@ export function ProductCard({
 
   if (isVisual && layout === 'grid') {
     return (
-      <article className="group flex h-full flex-col overflow-hidden rounded-[10px] bg-[#f1f1f0]">
+      <article data-visual-section={VISUAL_SECTION.productCard} data-visual-card="grid" className="group flex h-full flex-col overflow-hidden rounded-[10px] bg-[#f1f1f0]">
         <Link
           to={productPath}
           aria-label={`Ver ${product.name}`}
@@ -335,7 +336,7 @@ export function ProductCard({
           )}
         </Link>
 
-        <div className="flex flex-1 flex-col px-4 pb-4 pt-4">
+        <div data-visual-part="body" className="flex flex-1 flex-col px-4 pb-4 pt-4">
           <p className="mb-2 text-[9px] font-medium uppercase tracking-[0.16em] text-[#303030]">
             {product.category}
           </p>
@@ -346,13 +347,13 @@ export function ProductCard({
             </Link>
           </h3>
 
-          <p className="mt-2 line-clamp-2 min-h-[38px] text-[12px] leading-[1.45] text-[#77716f]">
+          <p data-visual-part="description" className="mt-2 line-clamp-2 min-h-[38px] text-[12px] leading-[1.45] text-[#77716f]">
             {product.description}
           </p>
 
           <div className="mt-auto flex items-center justify-between gap-3 pt-4">
             <div className="min-w-0">
-              <p className="whitespace-nowrap text-[13px] font-semibold text-[#111111]">
+              <p data-visual-part="price" className="whitespace-nowrap text-[13px] font-semibold text-[#111111]">
                 {formatPrice(price)}
               </p>
 
@@ -364,7 +365,7 @@ export function ProductCard({
             </div>
 
             {inStock ? (
-              <button
+              <button data-visual-part="buyButton"
                 type="button"
                 onClick={handleAddToCart}
                 disabled={!canBuySelectedVariant || atLimit}
@@ -400,6 +401,7 @@ export function ProductCard({
   if (layout === 'list') {
     return (
       <article
+        data-visual-section={VISUAL_SECTION.productCard} data-visual-card="list"
         className={`
           flex gap-4
           bg-white
@@ -451,12 +453,12 @@ export function ProductCard({
             </Link>
           </h3>
 
-          <p className="text-xs text-[var(--muted-foreground)] line-clamp-1 mt-0.5">
+          <p data-visual-part="description" className="text-xs text-[var(--muted-foreground)] line-clamp-1 mt-0.5">
             {product.description}
           </p>
 
           <div className="flex items-center gap-2 mt-1.5">
-            <span className="font-bold text-sm text-[var(--foreground)]">
+            <span data-visual-part="price" className="font-bold text-sm text-[var(--foreground)]">
               {formatPrice(price)}
             </span>
 
@@ -471,7 +473,7 @@ export function ProductCard({
           {selectedVariant && <StockFeedback sku={selectedVariant.sku} maxStock={selectedVariant.stock} quantity={quantity} />}
 
           {inStock && (
-            <button
+            <button data-visual-part="buyButton"
               type="button"
               onClick={handleAddToCart}
               disabled={!canBuySelectedVariant || atLimit}
@@ -534,7 +536,7 @@ export function ProductCard({
             {product.name}
           </p>
 
-          <p className="text-xs font-bold text-[var(--primary)] mt-0.5">
+          <p data-visual-part="price" className="text-xs font-bold text-[var(--primary)] mt-0.5">
             {formatPrice(price)}
           </p>
         </div>
@@ -550,6 +552,7 @@ export function ProductCard({
 
   return (
     <article
+      data-visual-section={VISUAL_SECTION.productCard} data-visual-card="grid"
       className={`
         flex flex-col
         bg-white
@@ -629,6 +632,7 @@ export function ProductCard({
       </Link>
 
       <div
+        data-visual-part="body"
         className={`
           flex flex-col flex-1
           ${
@@ -662,8 +666,10 @@ export function ProductCard({
           </h3>
         </div>
 
+        <p data-visual-part="description" className="text-xs text-[var(--muted-foreground)] line-clamp-2">{product.description}</p>
+
         <div className="flex items-center gap-2 mt-auto">
-          <span
+          <span data-visual-part="price"
             className={`
               font-bold
               text-[var(--foreground)]
@@ -688,7 +694,7 @@ export function ProductCard({
           {selectedVariant && <StockFeedback sku={selectedVariant.sku} maxStock={selectedVariant.stock} quantity={quantity} />}
 
         {inStock && (
-          <button
+          <button data-visual-part="buyButton"
             type="button"
             onClick={handleAddToCart}
             disabled={!canBuySelectedVariant || atLimit}

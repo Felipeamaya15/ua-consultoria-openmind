@@ -1,3 +1,4 @@
+import { VISUAL_SECTION } from '../visual/sectionIds';
 import { useLandingContent } from '../../landing/hooks/useLandingContent';
 import { LandingDetails } from '../../landing/components/LandingDetails';
 import { useLandingSectionVisibility } from '../../landing/hooks/useLandingSectionVisibility';
@@ -20,19 +21,19 @@ export default function CatalogHome() {
   return (
     <div className="bg-[#050505] text-white overflow-hidden">
       {/* HERO EDITORIAL */}
-      <section className="max-w-[1320px] mx-auto px-5 pt-2 md:pt-4">
-        <div className="relative min-h-[620px] md:min-h-[720px] overflow-hidden rounded-[28px]">
-          <img
+      <section data-visual-section={VISUAL_SECTION.hero} className="max-w-[1320px] mx-auto px-5 pt-2 md:pt-4">
+        <div data-visual-part="heroFrame" className="relative min-h-[620px] md:min-h-[720px] overflow-hidden rounded-[28px]">
+          <img data-visual-part="heroImage"
             data-landing-image={landing?.imagen_principal ? true : undefined}
             src={landing?.imagen_principal || undefined} hidden={!landing?.imagen_principal}
             alt={landing?.titulo || ''}
             className="absolute inset-0 w-full h-full object-cover object-center"
           />
-          <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/55 to-black/15" />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/45 via-transparent to-black/10" />
+          <div data-visual-part="heroOverlay" className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/55 to-black/15" />
+          <div data-visual-part="heroOverlaySecondary" className="absolute inset-0 bg-gradient-to-t from-black/45 via-transparent to-black/10" />
 
-          <div className="relative z-10 min-h-[620px] md:min-h-[720px] flex items-center">
-            <div className="px-7 sm:px-12 md:px-20 max-w-[650px]">
+          <div data-visual-part="heroLayout" className="relative z-10 min-h-[620px] md:min-h-[720px] flex items-center">
+            <div data-visual-part="heroContent" className="px-7 sm:px-12 md:px-20 max-w-[650px]">
               <p className="text-[var(--primary)] text-[11px] md:text-xs font-extrabold uppercase tracking-[0.08em]">
                 Producto destacado
               </p>
@@ -42,13 +43,13 @@ export default function CatalogHome() {
                 {landing?.titulo}
               </h1>
 
-              <p className="mt-7 max-w-md text-sm md:text-base leading-7 text-white/80">
+              <p data-visual-part="heroSubtitle" className="mt-7 max-w-md text-sm md:text-base leading-7 text-white/80">
                 {landing?.descripcion}
               </p>
 
-              <div className="mt-8 flex items-center gap-5">
+              <div data-visual-part="heroCtaLayout" className="mt-8 flex items-center gap-5">
 
-                <Link
+                <Link data-visual-section={VISUAL_SECTION.heroCta}
                   to={route('catalogo')}
                   className="rounded-full bg-[var(--accent)] px-7 py-3 text-sm font-semibold hover:bg-[var(--accent)] transition-colors"
                 >
@@ -61,7 +62,7 @@ export default function CatalogHome() {
       </section>
 
       {/* MANIFIESTO + SEGUNDO PRODUCTO */}
-      {isSectionVisible('Productos destacados') && mochila && (<section data-landing-content className="max-w-[1160px] mx-auto px-5 py-24 md:py-32">
+      {isSectionVisible('Productos destacados') && mochila && (<section data-visual-section={VISUAL_SECTION.sections} data-visual-kind="featured" data-landing-content className="max-w-[1160px] mx-auto px-5 py-24 md:py-32">
         <h2 className="max-w-[800px] text-[48px] sm:text-[62px] md:text-[76px] leading-[0.96] tracking-[-0.055em] font-black">
           Todo lo que necesitas.
           <br />
@@ -77,7 +78,7 @@ export default function CatalogHome() {
             alt={mochila.name}
             className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.025]"
           />
-          <div className="absolute inset-0 bg-gradient-to-r from-black/65 via-black/25 to-transparent" />
+          <div data-visual-part="heroOverlay" className="absolute inset-0 bg-gradient-to-r from-black/65 via-black/25 to-transparent" />
 
           <div className="relative z-10 p-8 md:p-12">
             <p className="text-[var(--primary)] text-xs font-bold">
@@ -94,7 +95,7 @@ export default function CatalogHome() {
       </section>)}
 
       {/* BLOQUE BLANCO */}
-      <section className="bg-[#f6f6f4] text-[#151515]">
+      <section data-visual-section={VISUAL_SECTION.sections} data-visual-kind="content" className="bg-[#f6f6f4] text-[#151515]">
         <div className="grid grid-cols-1 lg:grid-cols-2 min-h-[560px]">
           <div className="flex items-center">
             <div className="max-w-[580px] px-8 sm:px-14 lg:pl-[max(4rem,calc((100vw-1160px)/2))] lg:pr-16 py-20">
@@ -135,7 +136,7 @@ export default function CatalogHome() {
       </section>
 
       {/* DESCUBRIR */}
-      {isSectionVisible('Productos destacados') && discover.length > 0 && (<section data-landing-content className="max-w-[1160px] mx-auto px-5 py-24 md:py-28">
+      {isSectionVisible('Productos destacados') && discover.length > 0 && (<section data-visual-section={VISUAL_SECTION.sections} data-visual-kind="featured" data-landing-content className="max-w-[1160px] mx-auto px-5 py-24 md:py-28">
         <div className="flex items-end justify-between gap-6 mb-10">
           <div>
             <p className="text-[var(--primary)] text-xs font-bold">
@@ -154,9 +155,9 @@ export default function CatalogHome() {
           </Link>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+        <div data-visual-section={VISUAL_SECTION.productGrid} data-visual-grid="products" className="grid grid-cols-1 md:grid-cols-3 gap-5">
           {discover.map((product) => (
-            <article key={product.id} className="group">
+            <article data-visual-section={VISUAL_SECTION.productCard} data-visual-card="grid" key={product.id} className="group">
               <Link
                 to={route(`producto/${product.id}`)}
                 className="block aspect-[1.15/1] rounded-[24px] overflow-hidden bg-[#171719]"
@@ -176,11 +177,11 @@ export default function CatalogHome() {
                 {product.name}
               </h3>
 
-              <p className="mt-3 text-sm font-semibold">
+              <p data-visual-part="price" className="mt-3 text-sm font-semibold">
                 {formatPrice(product.basePrice)}
               </p>
 
-              <Link
+              <Link data-visual-part="buyButton"
                 to={route(`producto/${product.id}`)}
                 className="mt-5 h-11 rounded-full bg-[var(--accent)] text-white text-sm font-semibold flex items-center justify-center hover:bg-[var(--accent)] transition-colors"
               >

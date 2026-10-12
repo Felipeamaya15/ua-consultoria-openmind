@@ -41,7 +41,7 @@ class CustomerOrderHistoryTests(TestCase):
         self.assertEqual(response.status_code, 200)
         data = response.data['data']
         self.assertEqual(data['estado'], 'enviado')
-        self.assertEqual(data['estado_etiqueta'], 'Enviado')
+        self.assertEqual(data['estado_etiqueta'], 'Enviado/En tránsito')
         self.assertEqual(data['monto_total'], '40.00')
         self.assertEqual(data['items'][0]['precio_unitario'], '20.00')
         self.assertEqual(data['items'][0]['subtotal'], '40.00')

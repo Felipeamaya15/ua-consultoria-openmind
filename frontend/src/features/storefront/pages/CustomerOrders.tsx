@@ -27,22 +27,22 @@ export default function CustomerOrders() {
       
       <h1 className="text-2xl font-semibold">{mainOrderNumber}</h1>
       
-      {id && <Link to={route('mis-pedidos')} className="underline">Volver a mis pedidos</Link>}
+      {id && <Link data-page-action="ghost" to={route('mis-pedidos')} className="underline">Volver a mis pedidos</Link>}
       {error && <p role="alert" className="text-red-700">{error}</p>}
       {!error && data === null && <p role="status">Cargando pedidos…</p>}
       {!id && data?.length === 0 && <p>Aún no tienes pedidos.</p>}
       
       {data?.map(order => (
-        <article key={order.id_pedido} className="border rounded-xl p-5 space-y-3">
+        <article data-visual-section="pagePanel" data-page-panel key={order.id_pedido} className="border rounded-xl p-5 space-y-3">
           <h2 className="font-semibold text-lg">
             {order.identificador || `Pedido #${order.id_pedido}`}
           </h2>
           <p><time dateTime={order.fecha_creacion}>{new Date(order.fecha_creacion).toLocaleString('es-CL')}</time></p>
-          <p>Estado: <span className="inline-block rounded bg-gray-100 px-2 py-1">{order.estado_etiqueta}</span></p>
+          <p>Estado: <span className="inline-block rounded bg-[var(--visual-page-panel-background)] px-2 py-1">{order.estado_etiqueta}</span></p>
           <p>Productos: {order.cantidad_productos}</p>
           <p>Total: {order.monto_total}</p>
           
-          {!id && <Link to={route(`mis-pedidos/${order.id_pedido}`)} className="font-medium text-[var(--primary)] hover:underline">Ver detalle y seguimiento</Link>}
+          {!id && <Link data-page-action="ghost" to={route(`mis-pedidos/${order.id_pedido}`)} className="font-medium text-[var(--primary)] hover:underline">Ver detalle y seguimiento</Link>}
           
           {id && (
             <div className="overflow-x-auto mt-4">
@@ -61,7 +61,7 @@ export default function CustomerOrders() {
                       <td className="py-3">
                         {item.nombre}
                         {item.sku && (
-                          <span className="block text-sm text-gray-500 mt-1">
+                          <span className="block text-sm text-[var(--visual-page-color)] mt-1">
                             SKU: {item.sku} · {item.atributos_variante?.map(attribute => `${attribute.etiqueta}: ${attribute.valor}`).join(' · ')}
                           </span>
                         )}

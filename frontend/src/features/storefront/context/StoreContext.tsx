@@ -2,6 +2,7 @@ import {
   createContext,
   useContext,
   useEffect,
+  useMemo,
   useState,
   type ReactNode,
 } from 'react';
@@ -16,23 +17,19 @@ import {
 import { fetchPublicProducts } from '../services/catalogService';
 import { fetchLandingConfig } from '../../landing/services/landingService';
 import type { LandingConfig } from '../../landing/types/landing.types';
+import { isRecord, resolveVisualConfig, resolveStoreVisualConfig } from '../visual/resolveVisualConfig';
+import { useStoreIdentity } from './StoreIdentityContext';
+import { templateFromPath } from '../visual/templates';
+import { findImageSetting, captureOriginalImage, isLegacyEditableImage, readThemeImages, restoreOriginalImage, type OriginalImageStyle } from '../visual/imageSettings';
+import { getStoreConfigKey, readStoredStoreConfig, isStoreConfigChange, STORE_CONFIG_CHANGED_EVENT } from '../visual/storage';
 
-const ADMIN_STORAGE_KEY = 'ua-entrepreneur-demo-v1';
-
-function readBusinessConfig(): StoreConfig {
+function readBusinessConfig(saved: Record<string, unknown>): StoreConfig {
   try {
-    const raw = localStorage.getItem(ADMIN_STORAGE_KEY);
-    if (!raw) return defaultStoreConfig;
-
-    const parsed = JSON.parse(raw);
-    const saved = parsed?.config;
-    if (!saved || typeof saved !== 'object') return defaultStoreConfig;
-
     return {
       ...defaultStoreConfig,
-      name: saved.name || defaultStoreConfig.name,
-      description: saved.description || defaultStoreConfig.description,
-      logo: saved.logo || defaultStoreConfig.logo,
+      name: typeof saved.name === 'string' ? saved.name : defaultStoreConfig.name,
+      description: typeof saved.description === 'string' ? saved.description : defaultStoreConfig.description,
+      logo: typeof saved.logo === 'string' ? saved.logo : defaultStoreConfig.logo,
     };
   } catch {
     return defaultStoreConfig;
@@ -40,7 +37,8 @@ function readBusinessConfig(): StoreConfig {
 }
 
 const StoreContext = createContext({
-  config: readBusinessConfig(),
+  config: defaultStoreConfig,
+  visualConfig: resolveVisualConfig(),
   landing: null as LandingConfig | null,
   landingLoading: true,
   landingError: '',
@@ -48,53 +46,28 @@ const StoreContext = createContext({
   landingCatalogError: '',
 });
 
-const templateByNumber: Record<string, TemplateId> = {
-  '1': 'editorial',
-  '2': 'minimal',
-  '3': 'visual',
-  '4': 'catalog',
-};
-
-type StoredImageSetting = {
-  src?: string;
-  scale?: number;
-  x?: number;
-  y?: number;
-  radius?: number;
-};
-
-type StoredTheme = {
-  primaryColor?: string;
-  secondaryColor?: string;
-  accentColor?: string;
-  images?: Record<string, StoredImageSetting>;
-};
-
-function readTheme(template: TemplateId): StoredTheme | null {
+function readTheme(saved: Record<string, unknown>, template: TemplateId): Record<string, unknown> | null {
   try {
-    const raw = localStorage.getItem(ADMIN_STORAGE_KEY);
-    if (!raw) return null;
-
-    const parsed = JSON.parse(raw);
-    return parsed?.config?.themeEditor?.[template] ?? null;
+    const theme = isRecord(saved.themeEditor) ? saved.themeEditor[template] : null;
+    return isRecord(theme) ? theme : null;
   } catch {
     return null;
   }
 }
 
-function applyImageCustomizations(theme: StoredTheme | null) {
-  if (!theme?.images) return;
+function applyImageCustomizations(theme: Record<string, unknown> | null, originals: Map<HTMLImageElement, OriginalImageStyle>) {
+  const settings = readThemeImages(theme?.images);
 
   const images = Array.from(
     document.querySelectorAll<HTMLImageElement>('img'),
   );
 
   images.forEach((img, index) => {
-    if (img.hasAttribute('data-landing-image') || img.closest('[data-landing-content]')) return;
-    const key = `image-${index}`;
-    const setting = theme.images?.[key];
+    if (!isLegacyEditableImage(img)) return;
+    const setting = findImageSetting(settings, img, index);
 
     if (!setting) return;
+    if (!originals.has(img)) originals.set(img, captureOriginalImage(img));
 
     if (setting.src && img.src !== setting.src) {
       img.src = setting.src;
@@ -112,45 +85,32 @@ function applyImageCustomizations(theme: StoredTheme | null) {
   });
 }
 
-function applyTheme(theme: StoredTheme | null) {
-  if (!theme) return;
-
-  const root = document.documentElement;
-
-  if (theme.primaryColor) {
-    root.style.setProperty(
-      '--primary',
-      theme.primaryColor,
-    );
-    root.style.setProperty(
-      '--ring',
-      theme.primaryColor,
-    );
-  }
-
-  if (theme.secondaryColor) {
-    root.style.setProperty(
-      '--secondary',
-      theme.secondaryColor,
-    );
-  }
-
-  if (theme.accentColor) {
-    root.style.setProperty(
-      '--accent',
-      theme.accentColor,
-    );
-  }
-
-  applyImageCustomizations(theme);
-}
-
 export function StoreProvider({
   children,
 }: {
   children: ReactNode;
 }) {
   const { pathname } = useLocation();
+  const { identity } = useStoreIdentity();
+  const storageKey = identity ? getStoreConfigKey(identity) : null;
+  const [storageRevision, setStorageRevision] = useState(0);
+  useEffect(() => {
+    if (!storageKey || typeof window === 'undefined') return;
+    const refresh = () => setStorageRevision(value => value + 1);
+    const onStorage = (event: StorageEvent) => { if (event.key === storageKey || event.key === null) refresh(); };
+    const onChange = (event: Event) => { if (isStoreConfigChange(event, storageKey)) refresh(); };
+    window.addEventListener('storage', onStorage);
+    window.addEventListener(STORE_CONFIG_CHANGED_EVENT, onChange);
+    return () => {
+      window.removeEventListener('storage', onStorage);
+      window.removeEventListener(STORE_CONFIG_CHANGED_EVENT, onChange);
+    };
+  }, [storageKey]);
+  const savedConfig = useMemo(() => readStoredStoreConfig(identity), [identity, storageRevision]);
+  const activeTemplate = templateFromPath(pathname) ?? savedConfig.template;
+  const visualConfig = useMemo(() => {
+    return resolveStoreVisualConfig(savedConfig, activeTemplate);
+  }, [activeTemplate, savedConfig]);
   const [landing, setLanding] = useState<LandingConfig | null>(null);
   const [landingLoading, setLandingLoading] = useState(true);
   const [landingError, setLandingError] = useState('');
@@ -167,19 +127,15 @@ export function StoreProvider({
   }, []);
 
   useEffect(() => {
-    const match = pathname.match(
-      /^\/plantilla\/([1-4])(?:\/|$)/,
-    );
+    const template = templateFromPath(pathname);
+    if (!template || typeof document === 'undefined' || typeof MutationObserver === 'undefined') return;
+    const theme = readTheme(savedConfig, template);
 
-    if (!match) return;
-
-    const template = templateByNumber[match[1]];
-    const theme = readTheme(template);
-
-    applyTheme(theme);
+    const originals = new Map<HTMLImageElement, OriginalImageStyle>();
+    applyImageCustomizations(theme, originals);
 
     const observer = new MutationObserver(() => {
-      applyImageCustomizations(theme);
+      applyImageCustomizations(theme, originals);
     });
 
     observer.observe(document.body, {
@@ -187,12 +143,17 @@ export function StoreProvider({
       subtree: true,
     });
 
-    return () => observer.disconnect();
-  }, [pathname]);
+    return () => {
+      observer.disconnect();
+      for (const [img, original] of originals) {
+        restoreOriginalImage(img, original);
+      }
+    };
+  }, [pathname, savedConfig]);
 
   return (
     <StoreContext.Provider
-      value={{ config: { ...readBusinessConfig(), ...(landing ? { logo: landing.logo || '' } : {}) }, landing, landingLoading, landingError, landingProducts, landingCatalogError }}
+      value={{ config: { ...readBusinessConfig(savedConfig), primaryColor: visualConfig.global.colors.primary, secondaryColor: visualConfig.global.colors.secondary, accentColor: visualConfig.global.colors.accent, ...(landing ? { logo: landing.logo || '' } : {}) }, visualConfig, landing, landingLoading, landingError, landingProducts, landingCatalogError }}
     >
       {children}
     </StoreContext.Provider>

@@ -1,0 +1,1036 @@
+{
+  "heights": [
+    {
+      "size": "small",
+      "view": "Computadora",
+      "height": 319.9944152832031,
+      "overflow": false,
+      "width": 1423
+    },
+    {
+      "size": "small",
+      "view": "Tablet",
+      "height": 280,
+      "overflow": false,
+      "width": 758
+    },
+    {
+      "size": "small",
+      "view": "Móvil",
+      "height": 318.75,
+      "overflow": false,
+      "width": 365
+    },
+    {
+      "size": "medium",
+      "view": "Computadora",
+      "height": 479.9916076660156,
+      "overflow": false,
+      "width": 1423
+    },
+    {
+      "size": "medium",
+      "view": "Tablet",
+      "height": 400,
+      "overflow": false,
+      "width": 758
+    },
+    {
+      "size": "medium",
+      "view": "Móvil",
+      "height": 340,
+      "overflow": false,
+      "width": 365
+    },
+    {
+      "size": "large",
+      "view": "Computadora",
+      "height": 639.9888305664062,
+      "overflow": false,
+      "width": 1423
+    },
+    {
+      "size": "large",
+      "view": "Tablet",
+      "height": 520,
+      "overflow": false,
+      "width": 758
+    },
+    {
+      "size": "large",
+      "view": "Móvil",
+      "height": 440,
+      "overflow": false,
+      "width": 365
+    }
+  ],
+  "softHeights": [
+    {
+      "size": "small",
+      "view": "Computadora",
+      "categoryInside": false,
+      "height": 377.8587646484375
+    },
+    {
+      "size": "small",
+      "view": "Tablet",
+      "categoryInside": false,
+      "height": 361.703125
+    },
+    {
+      "size": "small",
+      "view": "Móvil",
+      "categoryInside": false,
+      "height": 372.90625
+    },
+    {
+      "size": "medium",
+      "view": "Computadora",
+      "categoryInside": false,
+      "height": 503.9798278808594
+    },
+    {
+      "size": "medium",
+      "view": "Tablet",
+      "categoryInside": false,
+      "height": 420
+    },
+    {
+      "size": "medium",
+      "view": "Móvil",
+      "categoryInside": false,
+      "height": 447.6875
+    },
+    {
+      "size": "large",
+      "view": "Computadora",
+      "categoryInside": false,
+      "height": 671.97314453125
+    },
+    {
+      "size": "large",
+      "view": "Tablet",
+      "categoryInside": false,
+      "height": 546
+    },
+    {
+      "size": "large",
+      "view": "Móvil",
+      "categoryInside": false,
+      "height": 508.28125
+    }
+  ],
+  "branding": [
+    {
+      "preset": 1,
+      "page": "landing",
+      "width": 1440,
+      "badges": [
+        {
+          "font": "12px",
+          "logo": "/logo-universidad-autonoma.png",
+          "logoWidth": 32,
+          "text": "Universidad Autónoma de Chile",
+          "visible": true
+        },
+        {
+          "font": "12px",
+          "logo": "/logo-universidad-autonoma.png",
+          "logoWidth": 32,
+          "text": "Universidad Autónoma de Chile",
+          "visible": true
+        }
+      ],
+      "overflow": false
+    },
+    {
+      "preset": 1,
+      "page": "landing",
+      "width": 768,
+      "badges": [
+        {
+          "font": "12px",
+          "logo": "/logo-universidad-autonoma.png",
+          "logoWidth": 32,
+          "text": "Universidad Autónoma de Chile",
+          "visible": true
+        },
+        {
+          "font": "12px",
+          "logo": "/logo-universidad-autonoma.png",
+          "logoWidth": 32,
+          "text": "Universidad Autónoma de Chile",
+          "visible": true
+        }
+      ],
+      "overflow": false
+    },
+    {
+      "preset": 1,
+      "page": "landing",
+      "width": 375,
+      "badges": [
+        {
+          "font": "12px",
+          "logo": "/logo-universidad-autonoma.png",
+          "logoWidth": 32,
+          "text": "Universidad Autónoma de Chile",
+          "visible": true
+        },
+        {
+          "font": "12px",
+          "logo": "/logo-universidad-autonoma.png",
+          "logoWidth": 32,
+          "text": "Universidad Autónoma de Chile",
+          "visible": true
+        }
+      ],
+      "overflow": false
+    },
+    {
+      "preset": 1,
+      "page": "/catalogo",
+      "width": 1440,
+      "badges": [
+        {
+          "font": "12px",
+          "logo": "/logo-universidad-autonoma.png",
+          "logoWidth": 32,
+          "text": "Universidad Autónoma de Chile",
+          "visible": true
+        },
+        {
+          "font": "12px",
+          "logo": "/logo-universidad-autonoma.png",
+          "logoWidth": 32,
+          "text": "Universidad Autónoma de Chile",
+          "visible": true
+        }
+      ],
+      "overflow": false
+    },
+    {
+      "preset": 1,
+      "page": "/catalogo",
+      "width": 768,
+      "badges": [
+        {
+          "font": "12px",
+          "logo": "/logo-universidad-autonoma.png",
+          "logoWidth": 32,
+          "text": "Universidad Autónoma de Chile",
+          "visible": true
+        },
+        {
+          "font": "12px",
+          "logo": "/logo-universidad-autonoma.png",
+          "logoWidth": 32,
+          "text": "Universidad Autónoma de Chile",
+          "visible": true
+        }
+      ],
+      "overflow": false
+    },
+    {
+      "preset": 1,
+      "page": "/catalogo",
+      "width": 375,
+      "badges": [
+        {
+          "font": "12px",
+          "logo": "/logo-universidad-autonoma.png",
+          "logoWidth": 32,
+          "text": "Universidad Autónoma de Chile",
+          "visible": true
+        },
+        {
+          "font": "12px",
+          "logo": "/logo-universidad-autonoma.png",
+          "logoWidth": 32,
+          "text": "Universidad Autónoma de Chile",
+          "visible": true
+        }
+      ],
+      "overflow": false
+    },
+    {
+      "preset": 2,
+      "page": "landing",
+      "width": 1440,
+      "badges": [
+        {
+          "font": "12px",
+          "logo": "/logo-universidad-autonoma.png",
+          "logoWidth": 32,
+          "text": "Universidad Autónoma de Chile",
+          "visible": true
+        },
+        {
+          "font": "12px",
+          "logo": "/logo-universidad-autonoma.png",
+          "logoWidth": 32,
+          "text": "Universidad Autónoma de Chile",
+          "visible": true
+        }
+      ],
+      "overflow": false
+    },
+    {
+      "preset": 2,
+      "page": "landing",
+      "width": 768,
+      "badges": [
+        {
+          "font": "12px",
+          "logo": "/logo-universidad-autonoma.png",
+          "logoWidth": 32,
+          "text": "Universidad Autónoma de Chile",
+          "visible": true
+        },
+        {
+          "font": "12px",
+          "logo": "/logo-universidad-autonoma.png",
+          "logoWidth": 32,
+          "text": "Universidad Autónoma de Chile",
+          "visible": true
+        }
+      ],
+      "overflow": false
+    },
+    {
+      "preset": 2,
+      "page": "landing",
+      "width": 375,
+      "badges": [
+        {
+          "font": "12px",
+          "logo": "/logo-universidad-autonoma.png",
+          "logoWidth": 32,
+          "text": "Universidad Autónoma de Chile",
+          "visible": true
+        },
+        {
+          "font": "12px",
+          "logo": "/logo-universidad-autonoma.png",
+          "logoWidth": 32,
+          "text": "Universidad Autónoma de Chile",
+          "visible": true
+        }
+      ],
+      "overflow": false
+    },
+    {
+      "preset": 2,
+      "page": "/catalogo",
+      "width": 1440,
+      "badges": [
+        {
+          "font": "12px",
+          "logo": "/logo-universidad-autonoma.png",
+          "logoWidth": 32,
+          "text": "Universidad Autónoma de Chile",
+          "visible": true
+        },
+        {
+          "font": "12px",
+          "logo": "/logo-universidad-autonoma.png",
+          "logoWidth": 32,
+          "text": "Universidad Autónoma de Chile",
+          "visible": true
+        }
+      ],
+      "overflow": false
+    },
+    {
+      "preset": 2,
+      "page": "/catalogo",
+      "width": 768,
+      "badges": [
+        {
+          "font": "12px",
+          "logo": "/logo-universidad-autonoma.png",
+          "logoWidth": 32,
+          "text": "Universidad Autónoma de Chile",
+          "visible": true
+        },
+        {
+          "font": "12px",
+          "logo": "/logo-universidad-autonoma.png",
+          "logoWidth": 32,
+          "text": "Universidad Autónoma de Chile",
+          "visible": true
+        }
+      ],
+      "overflow": false
+    },
+    {
+      "preset": 2,
+      "page": "/catalogo",
+      "width": 375,
+      "badges": [
+        {
+          "font": "12px",
+          "logo": "/logo-universidad-autonoma.png",
+          "logoWidth": 32,
+          "text": "Universidad Autónoma de Chile",
+          "visible": true
+        },
+        {
+          "font": "12px",
+          "logo": "/logo-universidad-autonoma.png",
+          "logoWidth": 32,
+          "text": "Universidad Autónoma de Chile",
+          "visible": true
+        }
+      ],
+      "overflow": false
+    },
+    {
+      "preset": 3,
+      "page": "landing",
+      "width": 1440,
+      "badges": [
+        {
+          "font": "12px",
+          "logo": "/logo-universidad-autonoma.png",
+          "logoWidth": 32,
+          "text": "Universidad Autónoma de Chile",
+          "visible": true
+        },
+        {
+          "font": "12px",
+          "logo": "/logo-universidad-autonoma.png",
+          "logoWidth": 32,
+          "text": "Universidad Autónoma de Chile",
+          "visible": true
+        }
+      ],
+      "overflow": false
+    },
+    {
+      "preset": 3,
+      "page": "landing",
+      "width": 768,
+      "badges": [
+        {
+          "font": "12px",
+          "logo": "/logo-universidad-autonoma.png",
+          "logoWidth": 32,
+          "text": "Universidad Autónoma de Chile",
+          "visible": true
+        },
+        {
+          "font": "12px",
+          "logo": "/logo-universidad-autonoma.png",
+          "logoWidth": 32,
+          "text": "Universidad Autónoma de Chile",
+          "visible": true
+        }
+      ],
+      "overflow": false
+    },
+    {
+      "preset": 3,
+      "page": "landing",
+      "width": 375,
+      "badges": [
+        {
+          "font": "12px",
+          "logo": "/logo-universidad-autonoma.png",
+          "logoWidth": 32,
+          "text": "Universidad Autónoma de Chile",
+          "visible": true
+        },
+        {
+          "font": "12px",
+          "logo": "/logo-universidad-autonoma.png",
+          "logoWidth": 32,
+          "text": "Universidad Autónoma de Chile",
+          "visible": true
+        }
+      ],
+      "overflow": false
+    },
+    {
+      "preset": 3,
+      "page": "/catalogo",
+      "width": 1440,
+      "badges": [
+        {
+          "font": "12px",
+          "logo": "/logo-universidad-autonoma.png",
+          "logoWidth": 32,
+          "text": "Universidad Autónoma de Chile",
+          "visible": true
+        },
+        {
+          "font": "12px",
+          "logo": "/logo-universidad-autonoma.png",
+          "logoWidth": 32,
+          "text": "Universidad Autónoma de Chile",
+          "visible": true
+        }
+      ],
+      "overflow": false
+    },
+    {
+      "preset": 3,
+      "page": "/catalogo",
+      "width": 768,
+      "badges": [
+        {
+          "font": "12px",
+          "logo": "/logo-universidad-autonoma.png",
+          "logoWidth": 32,
+          "text": "Universidad Autónoma de Chile",
+          "visible": true
+        },
+        {
+          "font": "12px",
+          "logo": "/logo-universidad-autonoma.png",
+          "logoWidth": 32,
+          "text": "Universidad Autónoma de Chile",
+          "visible": true
+        }
+      ],
+      "overflow": false
+    },
+    {
+      "preset": 3,
+      "page": "/catalogo",
+      "width": 375,
+      "badges": [
+        {
+          "font": "12px",
+          "logo": "/logo-universidad-autonoma.png",
+          "logoWidth": 32,
+          "text": "Universidad Autónoma de Chile",
+          "visible": true
+        },
+        {
+          "font": "12px",
+          "logo": "/logo-universidad-autonoma.png",
+          "logoWidth": 32,
+          "text": "Universidad Autónoma de Chile",
+          "visible": true
+        }
+      ],
+      "overflow": false
+    },
+    {
+      "preset": 4,
+      "page": "landing",
+      "width": 1440,
+      "badges": [
+        {
+          "font": "12px",
+          "logo": "/logo-universidad-autonoma.png",
+          "logoWidth": 32,
+          "text": "Universidad Autónoma de Chile",
+          "visible": true
+        },
+        {
+          "font": "12px",
+          "logo": "/logo-universidad-autonoma.png",
+          "logoWidth": 32,
+          "text": "Universidad Autónoma de Chile",
+          "visible": true
+        }
+      ],
+      "overflow": false
+    },
+    {
+      "preset": 4,
+      "page": "landing",
+      "width": 768,
+      "badges": [
+        {
+          "font": "12px",
+          "logo": "/logo-universidad-autonoma.png",
+          "logoWidth": 32,
+          "text": "Universidad Autónoma de Chile",
+          "visible": true
+        },
+        {
+          "font": "12px",
+          "logo": "/logo-universidad-autonoma.png",
+          "logoWidth": 32,
+          "text": "Universidad Autónoma de Chile",
+          "visible": true
+        }
+      ],
+      "overflow": false
+    },
+    {
+      "preset": 4,
+      "page": "landing",
+      "width": 375,
+      "badges": [
+        {
+          "font": "12px",
+          "logo": "/logo-universidad-autonoma.png",
+          "logoWidth": 32,
+          "text": "Universidad Autónoma de Chile",
+          "visible": true
+        },
+        {
+          "font": "12px",
+          "logo": "/logo-universidad-autonoma.png",
+          "logoWidth": 32,
+          "text": "Universidad Autónoma de Chile",
+          "visible": true
+        }
+      ],
+      "overflow": false
+    },
+    {
+      "preset": 4,
+      "page": "/catalogo",
+      "width": 1440,
+      "badges": [
+        {
+          "font": "12px",
+          "logo": "/logo-universidad-autonoma.png",
+          "logoWidth": 32,
+          "text": "Universidad Autónoma de Chile",
+          "visible": true
+        },
+        {
+          "font": "12px",
+          "logo": "/logo-universidad-autonoma.png",
+          "logoWidth": 32,
+          "text": "Universidad Autónoma de Chile",
+          "visible": true
+        }
+      ],
+      "overflow": false
+    },
+    {
+      "preset": 4,
+      "page": "/catalogo",
+      "width": 768,
+      "badges": [
+        {
+          "font": "12px",
+          "logo": "/logo-universidad-autonoma.png",
+          "logoWidth": 32,
+          "text": "Universidad Autónoma de Chile",
+          "visible": true
+        },
+        {
+          "font": "12px",
+          "logo": "/logo-universidad-autonoma.png",
+          "logoWidth": 32,
+          "text": "Universidad Autónoma de Chile",
+          "visible": true
+        }
+      ],
+      "overflow": false
+    },
+    {
+      "preset": 4,
+      "page": "/catalogo",
+      "width": 375,
+      "badges": [
+        {
+          "font": "12px",
+          "logo": "/logo-universidad-autonoma.png",
+          "logoWidth": 32,
+          "text": "Universidad Autónoma de Chile",
+          "visible": true
+        },
+        {
+          "font": "12px",
+          "logo": "/logo-universidad-autonoma.png",
+          "logoWidth": 32,
+          "text": "Universidad Autónoma de Chile",
+          "visible": true
+        }
+      ],
+      "overflow": false
+    }
+  ],
+  "pages": [
+    {
+      "preset": 1,
+      "page": "ingresar",
+      "width": 1440,
+      "branding": 3,
+      "overflow": false,
+      "scope": "login"
+    },
+    {
+      "preset": 1,
+      "page": "ingresar",
+      "width": 768,
+      "branding": 3,
+      "overflow": false,
+      "scope": "login"
+    },
+    {
+      "preset": 1,
+      "page": "ingresar",
+      "width": 375,
+      "branding": 3,
+      "overflow": false,
+      "scope": "login"
+    },
+    {
+      "preset": 1,
+      "page": "carrito",
+      "width": 1440,
+      "branding": 2,
+      "overflow": false,
+      "scope": "cart"
+    },
+    {
+      "preset": 1,
+      "page": "carrito",
+      "width": 768,
+      "branding": 2,
+      "overflow": false,
+      "scope": "cart"
+    },
+    {
+      "preset": 1,
+      "page": "carrito",
+      "width": 375,
+      "branding": 2,
+      "overflow": false,
+      "scope": "cart"
+    },
+    {
+      "preset": 1,
+      "page": "compra",
+      "width": 1440,
+      "branding": 2,
+      "overflow": false,
+      "scope": "checkout"
+    },
+    {
+      "preset": 1,
+      "page": "compra",
+      "width": 768,
+      "branding": 2,
+      "overflow": false,
+      "scope": "checkout"
+    },
+    {
+      "preset": 1,
+      "page": "compra",
+      "width": 375,
+      "branding": 2,
+      "overflow": false,
+      "scope": "checkout"
+    },
+    {
+      "preset": 2,
+      "page": "ingresar",
+      "width": 1440,
+      "branding": 2,
+      "overflow": false,
+      "scope": "login"
+    },
+    {
+      "preset": 2,
+      "page": "ingresar",
+      "width": 768,
+      "branding": 2,
+      "overflow": false,
+      "scope": "login"
+    },
+    {
+      "preset": 2,
+      "page": "ingresar",
+      "width": 375,
+      "branding": 2,
+      "overflow": false,
+      "scope": "login"
+    },
+    {
+      "preset": 2,
+      "page": "carrito",
+      "width": 1440,
+      "branding": 2,
+      "overflow": false,
+      "scope": "cart"
+    },
+    {
+      "preset": 2,
+      "page": "carrito",
+      "width": 768,
+      "branding": 2,
+      "overflow": false,
+      "scope": "cart"
+    },
+    {
+      "preset": 2,
+      "page": "carrito",
+      "width": 375,
+      "branding": 2,
+      "overflow": false,
+      "scope": "cart"
+    },
+    {
+      "preset": 2,
+      "page": "compra",
+      "width": 1440,
+      "branding": 2,
+      "overflow": false,
+      "scope": "checkout"
+    },
+    {
+      "preset": 2,
+      "page": "compra",
+      "width": 768,
+      "branding": 2,
+      "overflow": false,
+      "scope": "checkout"
+    },
+    {
+      "preset": 2,
+      "page": "compra",
+      "width": 375,
+      "branding": 2,
+      "overflow": false,
+      "scope": "checkout"
+    },
+    {
+      "preset": 3,
+      "page": "ingresar",
+      "width": 1440,
+      "branding": 2,
+      "overflow": false,
+      "scope": "login"
+    },
+    {
+      "preset": 3,
+      "page": "ingresar",
+      "width": 768,
+      "branding": 2,
+      "overflow": false,
+      "scope": "login"
+    },
+    {
+      "preset": 3,
+      "page": "ingresar",
+      "width": 375,
+      "branding": 2,
+      "overflow": false,
+      "scope": "login"
+    },
+    {
+      "preset": 3,
+      "page": "carrito",
+      "width": 1440,
+      "branding": 2,
+      "overflow": false,
+      "scope": "cart"
+    },
+    {
+      "preset": 3,
+      "page": "carrito",
+      "width": 768,
+      "branding": 2,
+      "overflow": false,
+      "scope": "cart"
+    },
+    {
+      "preset": 3,
+      "page": "carrito",
+      "width": 375,
+      "branding": 2,
+      "overflow": false,
+      "scope": "cart"
+    },
+    {
+      "preset": 3,
+      "page": "compra",
+      "width": 1440,
+      "branding": 2,
+      "overflow": false,
+      "scope": "checkout"
+    },
+    {
+      "preset": 3,
+      "page": "compra",
+      "width": 768,
+      "branding": 2,
+      "overflow": false,
+      "scope": "checkout"
+    },
+    {
+      "preset": 3,
+      "page": "compra",
+      "width": 375,
+      "branding": 2,
+      "overflow": false,
+      "scope": "checkout"
+    },
+    {
+      "preset": 4,
+      "page": "ingresar",
+      "width": 1440,
+      "branding": 3,
+      "overflow": false,
+      "scope": "login"
+    },
+    {
+      "preset": 4,
+      "page": "ingresar",
+      "width": 768,
+      "branding": 3,
+      "overflow": false,
+      "scope": "login"
+    },
+    {
+      "preset": 4,
+      "page": "ingresar",
+      "width": 375,
+      "branding": 3,
+      "overflow": false,
+      "scope": "login"
+    },
+    {
+      "preset": 4,
+      "page": "carrito",
+      "width": 1440,
+      "branding": 2,
+      "overflow": false,
+      "scope": "cart"
+    },
+    {
+      "preset": 4,
+      "page": "carrito",
+      "width": 768,
+      "branding": 2,
+      "overflow": false,
+      "scope": "cart"
+    },
+    {
+      "preset": 4,
+      "page": "carrito",
+      "width": 375,
+      "branding": 2,
+      "overflow": false,
+      "scope": "cart"
+    },
+    {
+      "preset": 4,
+      "page": "compra",
+      "width": 1440,
+      "branding": 2,
+      "overflow": false,
+      "scope": "checkout"
+    },
+    {
+      "preset": 4,
+      "page": "compra",
+      "width": 768,
+      "branding": 2,
+      "overflow": false,
+      "scope": "checkout"
+    },
+    {
+      "preset": 4,
+      "page": "compra",
+      "width": 375,
+      "branding": 2,
+      "overflow": false,
+      "scope": "checkout"
+    }
+  ],
+  "checkoutSteps": [
+    {
+      "step": "contact",
+      "heading": "Datos de contacto",
+      "overflow": false,
+      "radius": "23px"
+    },
+    {
+      "step": "delivery",
+      "heading": "Método de entrega",
+      "overflow": false,
+      "radius": "23px"
+    },
+    {
+      "step": "payment",
+      "heading": "Método de pago",
+      "overflow": false,
+      "radius": "23px"
+    },
+    {
+      "step": "confirm",
+      "heading": "Confirmar pedido",
+      "overflow": false,
+      "radius": "23px"
+    }
+  ],
+  "otherPages": [
+    {
+      "page": "tracking",
+      "headings": [
+        "Seguimiento de pedido"
+      ],
+      "overflow": false
+    },
+    {
+      "page": "profile",
+      "headings": [
+        "Mi cuenta · Perfil",
+        "Cambiar contraseña"
+      ],
+      "overflow": false
+    },
+    {
+      "page": "orders",
+      "headings": [
+        "Mis pedidos"
+      ],
+      "overflow": false
+    },
+    {
+      "page": "terms",
+      "headings": [
+        "Términos y Condiciones",
+        "1. Aceptación de los términos",
+        "2. Descripción del servicio",
+        "3. Registro y cuenta de usuario",
+        "4. Política de compras",
+        "5. Limitación de responsabilidad",
+        "6. Modificaciones"
+      ],
+      "overflow": false
+    },
+    {
+      "page": "privacy",
+      "headings": [
+        "Política de Privacidad",
+        "1. Información que recopilamos",
+        "2. Uso de la información",
+        "3. Compartir información",
+        "4. Seguridad",
+        "5. Derechos del titular",
+        "6. Cookies"
+      ],
+      "overflow": false
+    },
+    {
+      "page": "refund",
+      "headings": [
+        "Política de Reembolso",
+        "1. Derecho a devolución",
+        "2. Condiciones de devolución",
+        "3. Proceso de reembolso",
+        "4. Excepciones",
+        "5. Productos defectuosos"
+      ],
+      "overflow": false
+    },
+    {
+      "page": "confirmation",
+      "headings": [],
+      "overflow": false
+    }
+  ]
+}

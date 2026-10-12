@@ -50,6 +50,7 @@ function cardHarness(product, template = 'catalog', layout = 'grid') {
       if (name === 'react-router-dom') return { Link: 'Link' };
       if (name.includes('mockData')) return { formatPrice: value => `CLP ${value}` };
       if (name.includes('StockFeedback')) return { StockFeedback: 'StockFeedback' };
+      if (name.includes('visual/sectionIds')) return load('src/features/storefront/visual/sectionIds.ts', {});
       if (name.includes('CartContext')) return { useCart: () => ({ items: cart, addItem: item => cart.push(item) }) };
       if (name.includes('useStorefrontTemplate')) return { useStorefrontTemplate: () => ({ route: p => `/${p}`, isCatalog: template === 'catalog', isMinimal: template === 'minimal', isVisual: template === 'visual' }) };
       if (name === '../ui') return { Badge: 'Badge' };
@@ -159,6 +160,7 @@ async function main() {
     assert.equal(buy.props.disabled, false);
     buy.props.onClick();
     assert.equal(cart[0].sku, 'QA-PANT-L');
+    assert.equal(cart[0].productId, raw.id, 'Detalle y carrito recargado comparten el ID Mongo, sin confundirlo con el slug');
     assert.equal(cart[0].maxStock, 8);
     assert.equal(cart[0].comparePrice, undefined);
   }
@@ -175,6 +177,7 @@ async function main() {
   const add = walk(h.render(), n => n.type === 'button')[0];
   add.props.onClick();
   assert.equal(h.cart[0].sku, 'RED-S');
+  assert.equal(h.cart[0].productId, raw.id);
 
   const filters = load('src/features/storefront/hooks/useAttributeFilters.ts', { require: () => ({}) });
   assert.equal(filters.matchesAttributeSelection(dynamic, { color: ['Rojo'], size: ['Pequeño'] }), true);

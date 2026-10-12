@@ -130,6 +130,7 @@ class PlantillaSeleccionadaAPIView(APIView):
         return success_response(
             data={
                 "plantilla_seleccionada": plantilla_seleccionada,
+                "tienda_id": tienda.pk,
             },
             mensaje="Plantilla seleccionada obtenida correctamente",
             status=status.HTTP_200_OK,
