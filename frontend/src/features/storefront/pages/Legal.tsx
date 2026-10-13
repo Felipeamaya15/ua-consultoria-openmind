@@ -3,23 +3,14 @@ import { useParams, Link } from 'react-router-dom';
 import { Breadcrumb } from '../components/ui';
 
 import {
-  defaultLegalPages,
   type LegalType,
   LEGAL_META,
   LEGAL_ORDER,
 } from '../data/legalContent';
+import { formatLegalDate, isLegalType } from '../data/legalPublication';
+import { useStore } from '../context/StoreContext';
 
 import { useStorefrontTemplate } from '../hooks/useStorefrontTemplate';
-
-function isLegalType(
-  value: string | undefined,
-): value is LegalType {
-  return (
-    value === 'terms' ||
-    value === 'privacy' ||
-    value === 'refund'
-  );
-}
 
 export default function Legal() {
   const { type } = useParams();
@@ -27,13 +18,32 @@ export default function Legal() {
   const { route, isMinimal, isCatalog } =
     useStorefrontTemplate();
 
-  const legal = defaultLegalPages;
+  const { legalPages } = useStore();
 
-  const activeType: LegalType =
-    isLegalType(type) ? type : 'terms';
+  if (!isLegalType(type)) {
+    return (
+      <section className="max-w-3xl mx-auto px-4 py-16">
+        <h1 className="font-display text-3xl mb-4">Página no encontrada</h1>
+        <p className="text-sm mb-6">La página legal que buscas no existe.</p>
+        <div className="flex flex-wrap gap-4">
+          {LEGAL_ORDER.map((key) => (
+            <Link
+              key={key}
+              to={route(`legal/${key}`)}
+              className="text-sm font-medium text-[var(--primary)] underline"
+            >
+              {LEGAL_META[key].label}
+            </Link>
+          ))}
+        </div>
+      </section>
+    );
+  }
 
-  const page = legal[activeType];
+  const activeType: LegalType = type;
+  const page = legalPages[activeType];
   const meta = LEGAL_META[activeType];
+  const updatedOn = formatLegalDate(page.lastPublished);
 
   if (isCatalog) {
     return (
@@ -93,6 +103,12 @@ export default function Legal() {
                   );
                 })}
             </div>
+
+            {updatedOn && (
+              <p className="mt-6 text-[11px] text-[var(--visual-page-color)]/40">
+                Última actualización: {updatedOn}
+              </p>
+            )}
 
             <div className="mt-10 pt-6 border-t border-[var(--visual-global-border)]/10">
               <p className="mb-3 text-[9px] font-black uppercase tracking-[0.16em] text-[var(--primary)]">
@@ -212,6 +228,17 @@ export default function Legal() {
             })}
         </div>
 
+        {updatedOn && (
+          <p
+            className={
+              isMinimal
+                ? 'mt-6 text-xs text-[var(--visual-page-color)]/50'
+                : 'mt-6 text-xs text-[var(--muted-foreground)]'
+            }
+          >
+            Última actualización: {updatedOn}
+          </p>
+        )}
         <div
           className={
             isMinimal

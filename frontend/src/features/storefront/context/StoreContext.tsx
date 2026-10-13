@@ -19,6 +19,7 @@ import { fetchLandingConfig } from '../../landing/services/landingService';
 import type { LandingConfig } from '../../landing/types/landing.types';
 import { isRecord, resolveVisualConfig, resolveStoreVisualConfig } from '../visual/resolveVisualConfig';
 import { useStoreIdentity } from './StoreIdentityContext';
+import { readPublishedLegalPages } from '../data/legalPublication';
 import { templateFromPath } from '../visual/templates';
 import { findImageSetting, captureOriginalImage, isLegacyEditableImage, readThemeImages, restoreOriginalImage, type OriginalImageStyle } from '../visual/imageSettings';
 import { getStoreConfigKey, readStoredStoreConfig, isStoreConfigChange, STORE_CONFIG_CHANGED_EVENT } from '../visual/storage';
@@ -44,6 +45,7 @@ const StoreContext = createContext({
   landingError: '',
   landingProducts: [] as Product[],
   landingCatalogError: '',
+  legalPages: readPublishedLegalPages(undefined),
 });
 
 function readTheme(saved: Record<string, unknown>, template: TemplateId): Record<string, unknown> | null {
@@ -108,6 +110,7 @@ export function StoreProvider({
     };
   }, [storageKey]);
   const savedConfig = useMemo(() => readStoredStoreConfig(identity), [identity, storageRevision]);
+  const legalPages = useMemo(() => readPublishedLegalPages(savedConfig), [savedConfig]);
   const activeTemplate = templateFromPath(pathname) ?? savedConfig.template;
   const visualConfig = useMemo(() => {
     return resolveStoreVisualConfig(savedConfig, activeTemplate);
@@ -154,7 +157,7 @@ export function StoreProvider({
 
   return (
     <StoreContext.Provider
-      value={{ config: { ...readBusinessConfig(savedConfig), primaryColor: visualConfig.global.colors.primary, secondaryColor: visualConfig.global.colors.secondary, accentColor: visualConfig.global.colors.accent, ...(landing ? { logo: landing.logo || '' } : {}) }, visualConfig, landing, landingLoading, landingError, landingProducts, landingCatalogError }}
+      value={{ config: { ...readBusinessConfig(savedConfig), primaryColor: visualConfig.global.colors.primary, secondaryColor: visualConfig.global.colors.secondary, accentColor: visualConfig.global.colors.accent, ...(landing ? { logo: landing.logo || '' } : {}) }, visualConfig, landing, landingLoading, landingError, landingProducts, landingCatalogError, legalPages }}
     >
       {children}
     </StoreContext.Provider>
