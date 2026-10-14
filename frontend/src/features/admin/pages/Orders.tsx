@@ -105,14 +105,14 @@ export default function Orders() {
     }
   };
 
-  // SCRUM-378: Manejador para el selector de estado
+  // SCRUM-379: Manejador para la actualización del estado logístico
   const handleStatusChange = async (pedidoId: number, nuevoEstado: string) => {
     setUpdatingStatus(true);
     setVerifyMessage(null);
     try {
       await updateOrderStatus(pedidoId, nuevoEstado);
       
-      // Actualizamos el estado local sin recargar toda la tabla
+      // Actualiza el estado local sin recargar toda la tabla
       setPedidos(prevPedidos => prevPedidos.map(p => 
         p.id_pedido === pedidoId ? { ...p, estado: nuevoEstado } : p
       ));
@@ -262,12 +262,12 @@ export default function Orders() {
               <div className="bg-[var(--muted)] rounded-lg p-3">
                 <p className="text-[var(--muted-foreground)] mb-1">Estado</p>
                 
-                {/* SCRUM-378: Selector de Estados */}
+                {/* SCRUM-379: Selector de actualización de Estados */}
                 <select
                   value={selectedOrder.estado?.toLowerCase() || "pendiente"}
                   disabled={updatingStatus}
                   onChange={(e) => handleStatusChange(selectedOrder.id_pedido, e.target.value)}
-                  className="w-full mt-1 border border-[var(--border)] rounded-md p-1.5 text-xs bg-white focus:ring-2 focus:ring-[var(--primary)] outline-none disabled:opacity-50"
+                  className="w-full mt-1 border border-[var(--border)] rounded-md p-1.5 text-xs bg-white focus:ring-2 focus:ring-[var(--primary)] outline-none disabled:opacity-50 transition-opacity"
                 >
                   {Object.entries(STATUS_BADGE).map(([key, config]) => (
                     <option key={key} value={key}>{config.label}</option>
