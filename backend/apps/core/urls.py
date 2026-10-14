@@ -20,7 +20,8 @@ from apps.core.presentation.views import (
     TransferenciasPendientesAPIView,
     AprobarTransferenciaManualAPIView,
     RechazarTransferenciaManualAPIView,
-    TiendaPedidosAPIView
+    TiendaPedidosAPIView,
+    OrderTrackingAPIView
 )
 
 urlpatterns = [

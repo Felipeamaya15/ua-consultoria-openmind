@@ -37,8 +37,6 @@ class TrackingLookupSerializer(StrictSerializer):
         return identifier
 
     def validate_email(self, value):
-        # La comparacion es insensible a mayusculas; conservar una forma canonica
-        # evita diferencias entre clientes antes de buscar la orden asociada.
         return value.casefold()
 
 
@@ -48,10 +46,7 @@ class TrackingLookupThrottle(AnonRateThrottle):
 
 
 class OrderTrackingAPIView(APIView):
-    """POST {identificador, email} -> detalle actual, 400 inválido, 404 sin coincidencia.
-
-    El correo viaja en el cuerpo; la respuesta excluye dirección, teléfono y claves.
-    """
+    """POST {identificador, email} -> detalle actual, 400 inválido, 404 sin coincidencia."""
     authentication_classes = []
     permission_classes = [AllowAny]
     throttle_classes = [TrackingLookupThrottle]
@@ -68,7 +63,7 @@ class OrderTrackingAPIView(APIView):
         lookup = TrackingLookupSerializer(data=request.data)
         lookup.is_valid(raise_exception=True)
         tienda = resolver_tienda(request)
-        # Ambos datos son obligatorios: nunca se consulta solo por número/ID.
+        
         matches = list(Pedido.objects.filter(
             tienda=tienda,
             identificador__iexact=lookup.validated_data['identificador'],
@@ -76,18 +71,58 @@ class OrderTrackingAPIView(APIView):
         ).prefetch_related(
             Prefetch('itempedido_set', queryset=ItemPedido.objects.select_related('id_producto'))
         )[:2])
+        
         if len(matches) != 1:
             raise NotFound('No encontramos un pedido con ese número y correo.')
+            
         order = matches[0]
         data = OrderDetailSerializer(order).data
+        
+        # --- SCRUM-377: Construcción de Línea de Tiempo (RF-02.4) ---
+        estado_actual = getattr(order, 'estado', 'pendiente')
+        estados_map = {
+            'pendiente': 'Pendiente de pago',
+            'pagado': 'Pago confirmado',
+            'preparacion': 'En preparación',
+            'despachado': 'Despachado / En tránsito',
+            'entregado': 'Entregado',
+            'cancelado': 'Cancelado',
+        }
+        
+        orden_estados = ['pendiente', 'pagado', 'preparacion', 'despachado', 'entregado']
+        
+        if estado_actual == 'cancelado':
+            linea_tiempo = [{'estado': 'cancelado', 'etiqueta': 'Cancelado', 'completado': True, 'actual': True}]
+        else:
+            try:
+                indice_actual = orden_estados.index(estado_actual)
+            except ValueError:
+                indice_actual = 0
+                
+            pasos = [
+                {'estado': 'pendiente', 'etiqueta': 'Recibido'},
+                {'estado': 'pagado', 'etiqueta': 'Pago Confirmado'},
+                {'estado': 'preparacion', 'etiqueta': 'En Preparación'},
+                {'estado': 'despachado', 'etiqueta': 'En Tránsito'},
+                {'estado': 'entregado', 'etiqueta': 'Entregado'},
+            ]
+            for i, paso in enumerate(pasos):
+                paso['completado'] = i <= indice_actual
+                paso['actual'] = i == indice_actual
+            linea_tiempo = pasos
+        # -------------------------------------------------------------
+
         data.update(
             identificador=order.identificador,
             nombre_contacto=order.nombre_contacto,
-            medio_pago=order.medio_pago or order.metodo_pago,
-            entrega={'metodo': order.entrega.get('metodo', '')},
-            costo_envio=format(order.costo_envio, '.2f'),
-            descuento=format(order.descuento, '.2f'),
+            medio_pago=order.medio_pago or getattr(order, 'metodo_pago', ''),
+            entrega={'metodo': order.entrega.get('metodo', '') if order.entrega else ''},
+            costo_envio=format(order.costo_envio, '.2f') if order.costo_envio else '0.00',
+            descuento=format(order.descuento, '.2f') if order.descuento else '0.00',
+            estado_label=estados_map.get(estado_actual, str(estado_actual).capitalize()),
+            linea_tiempo=linea_tiempo,
         )
+        
         response = success_response(data=data, mensaje='Pedido obtenido correctamente.')
         response['Cache-Control'] = 'no-store'
         return response

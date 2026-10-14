@@ -20,7 +20,8 @@ from apps.core.presentation.responses import error_response, success_response
 from apps.core.presentation.serializers import ConfiguracionPagoSerializer, ShippingConfigurationSerializer
 from apps.core.models import Pedido
 from rest_framework import generics
-from .serializers import PedidoTiendaSerializer, TransferenciaPendienteSerializer
+from rest_framework.response import Response
+from .serializers import PedidoTiendaSerializer, TransferenciaPendienteSerializer, PedidoEstadoDetalleSerializer
 
 class RegistrarCompraView(GuestCheckoutOrderAPIView):
     """Compatibilidad SCRUM-289: reutiliza la creación y seguridad de SCRUM-291."""
@@ -329,3 +330,32 @@ class TiendaPedidosAPIView(generics.ListAPIView):
     def get_queryset(self):
         tienda = resolver_tienda(self.request, exigir_propietario=True)
         return Pedido.objects.filter(tienda=tienda).prefetch_related('itempedido_set').order_by('-fecha_creacion')
+
+class OrderTrackingAPIView(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        numero_orden = request.query_params.get('numero_orden')
+        email = request.query_params.get('email')
+
+        if not numero_orden:
+            return Response({"error": "Debe proporcionar el número de orden."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Búsqueda soportando ID secuencial o UUID
+        pedido = Pedido.objects.filter(id_pedido=numero_orden).first()
+        if not pedido:
+            pedido = Pedido.objects.filter(identificador=numero_orden).first()
+
+        if not pedido:
+            return Response({"error": "Orden no encontrada."}, status=status.HTTP_404_NOT_FOUND)
+
+        if not request.user.is_authenticated:
+            if not email or (pedido.correo_contacto and pedido.correo_contacto.lower() != email.strip().lower()):
+                return Response({"error": "El correo no coincide con la orden ingresada."}, status=status.HTTP_403_FORBIDDEN)
+        else:
+            # Si tiene usuario asignado y no es admin, validar que sea dueño de la orden
+            if hasattr(pedido, 'id_usuario') and pedido.id_usuario != request.user and not request.user.is_staff:
+                return Response({"error": "No tienes permisos para ver esta orden."}, status=status.HTTP_403_FORBIDDEN)
+
+        serializer = PedidoEstadoDetalleSerializer(pedido)
+        return Response(serializer.data, status=status.HTTP_200_OK)
