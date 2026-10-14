@@ -460,3 +460,60 @@ class PedidoTiendaSerializer(serializers.ModelSerializer):
             'monto_total', 'estado', 'fecha_creacion', 'metodo_pago', 
             'costo_envio', 'descuento', 'items'
         ]
+
+class PedidoEstadoDetalleSerializer(serializers.ModelSerializer):
+    estado_label = serializers.SerializerMethodField()
+    linea_tiempo = serializers.SerializerMethodField()
+    items = ItemPedidoTiendaSerializer(source='itempedido_set', many=True, read_only=True)
+
+    class Meta:
+        model = Pedido
+        fields = [
+            'id_pedido',
+            'identificador',
+            'fecha_creacion',
+            'monto_total',
+            'metodo_pago',
+            'costo_envio',
+            'estado',
+            'estado_label',
+            'linea_tiempo',
+            'items',
+        ]
+
+    def get_estado_label(self, obj):
+        estados_map = {
+            'pendiente': 'Pendiente de pago',
+            'pagado': 'Pago confirmado',
+            'preparacion': 'En preparación',
+            'despachado': 'Despachado / En tránsito',
+            'entregado': 'Entregado',
+            'cancelado': 'Cancelado',
+        }
+        return estados_map.get(obj.estado, str(obj.estado).capitalize())
+
+    def get_linea_tiempo(self, obj):
+        orden_estados = ['pendiente', 'pagado', 'preparacion', 'despachado', 'entregado']
+        estado_actual = obj.estado
+        
+        if estado_actual == 'cancelado':
+            return [{'estado': 'cancelado', 'etiqueta': 'Cancelado', 'completado': True, 'actual': True}]
+
+        try:
+            indice_actual = orden_estados.index(estado_actual)
+        except ValueError:
+            indice_actual = 0
+
+        pasos = [
+            {'estado': 'pendiente', 'etiqueta': 'Recibido'},
+            {'estado': 'pagado', 'etiqueta': 'Pago Confirmado'},
+            {'estado': 'preparacion', 'etiqueta': 'En Preparación'},
+            {'estado': 'despachado', 'etiqueta': 'En Tránsito'},
+            {'estado': 'entregado', 'etiqueta': 'Entregado'},
+        ]
+
+        for i, paso in enumerate(pasos):
+            paso['completado'] = i <= indice_actual
+            paso['actual'] = i == indice_actual
+
+        return pasos
