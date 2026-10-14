@@ -67,23 +67,36 @@ class UltimasOrdenesAPIView(APIView):
         response['Cache-Control'] = 'no-store'
         return response
 class ActualizarEstadoPedidoAPIView(APIView):
-    permission_classes = [IsAuthenticated, IsStoreOwner]
+    permission_classes = [IsAuthenticated]
 
     def patch(self, request, id_pedido):
-        tienda = resolver_tienda(request, exigir_propietario=True)
-        pedido = get_object_or_404(Pedido, id_pedido=id_pedido, tienda=tienda)
+        nuevo_estado = request.data.get('estado')
         
-        serializer = PedidoEstadoUpdateSerializer(pedido, data=request.data, partial=True)
-        if serializer.is_valid():
-            serializer.save()
-            return success_response(
-                data=serializer.data,
-                mensaje="Estado de la orden actualizado exitosamente."
+        # Validamos los estados según RF-03.3
+        estados_validos = [
+            'pendiente', 'pagado', 'preparacion', 
+            'despachado', 'entregado', 'cancelado'
+        ]
+        
+        if nuevo_estado not in estados_validos:
+            return error_response(
+                mensaje="El estado logístico proporcionado no es válido.",
+                codigo="ESTADO_INVALIDO",
+                status=status.HTTP_400_BAD_REQUEST
             )
-            
-        return error_response(
-            mensaje="No se pudo actualizar el estado.",
-            codigo="ESTADO_INVALIDO",
-            detalles=serializer.errors,
-            status=status.HTTP_400_BAD_REQUEST
+
+        pedido = Pedido.objects.filter(id_pedido=id_pedido).first()
+        if not pedido:
+            return error_response(
+                mensaje="No se encontró el pedido solicitado.",
+                codigo="PEDIDO_NO_ENCONTRADO",
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        pedido.estado = nuevo_estado
+        pedido.save()
+
+        return success_response(
+            data={"id_pedido": pedido.id_pedido, "estado": pedido.estado},
+            mensaje=f"El estado de la orden fue actualizado a '{nuevo_estado}' exitosamente."
         )

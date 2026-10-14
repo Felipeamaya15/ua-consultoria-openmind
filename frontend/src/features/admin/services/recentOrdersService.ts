@@ -73,19 +73,19 @@ export function formatRecentOrderDate(value: string): string {
 }
 
 export const updateOrderStatus = async (pedidoId: number, nuevoEstado: string) => {
-  const token = localStorage.getItem('token'); 
-  const response = await fetch(`${API_BASE_URL}/api/core/admin/pedidos/${pedidoId}/estado/`, {
+  const token = authService.getToken();
+  const response = await fetch(`${API_BASE_URL}/api/tienda/pedidos/${pedidoId}/estado/`, {
     method: 'PATCH',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Token ${token}`
+      ...(token ? { 'Authorization': `Token ${token}` } : {})
     },
     body: JSON.stringify({ estado: nuevoEstado })
   });
 
   const json = await response.json();
   if (!response.ok || !json.exito) {
-    throw new Error(json.mensaje || 'Error al actualizar el estado de la orden');
+    throw new Error(json.mensaje || json.detail || 'Error al actualizar el estado logístico de la orden.');
   }
   return json.data;
 };
