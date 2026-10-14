@@ -3,6 +3,11 @@ from apps.core.presentation.order_tracking import OrderTrackingAPIView
 from apps.core.presentation.checkout import CheckoutOrderAPIView
 from apps.core.presentation.shipping import ShippingQuoteAPIView
 from apps.core.presentation.linkify_notificacion import LinkifyNotificacionView
+from apps.core.presentation.legal import (
+    ConfiguracionLegalAPIView,
+    PaginaLegalDetalleAPIView,
+    PaginasLegalesPublicasAPIView,
+)
 from django.urls import path
 from . import views
 from apps.core.presentation.views import (
@@ -46,4 +51,7 @@ urlpatterns = [
     path('pagos/transferencias/<int:pedido_id>/aprobar/', AprobarTransferenciaManualAPIView.as_view(), name='aprobar-transferencia-manual'),
     path('pagos/transferencias/<int:pedido_id>/rechazar/', RechazarTransferenciaManualAPIView.as_view(), name='rechazar-transferencia-manual'),
     path('tienda/pedidos/', TiendaPedidosAPIView.as_view(), name='tienda-pedidos'),
+    path('legal/', PaginasLegalesPublicasAPIView.as_view(), name='legal-publico'),
+    path('legal/configuracion/', ConfiguracionLegalAPIView.as_view(), name='legal-configuracion'),
+    path('legal/<str:tipo>/', PaginaLegalDetalleAPIView.as_view(), name='legal-detalle'),
 ]

@@ -10,15 +10,21 @@ import {
 } from '../data/legalContent';
 
 import { useStorefrontTemplate } from '../hooks/useStorefrontTemplate';
+import { useStore } from '../context/StoreContext';
 
-function isLegalType(
-  value: string | undefined,
-): value is LegalType {
-  return (
-    value === 'terms' ||
-    value === 'privacy' ||
-    value === 'refund'
-  );
+const TYPE_MAP: Record<string, LegalType> = {
+  terms: 'terms',
+  terminos: 'terms',
+  privacy: 'privacy',
+  privacidad: 'privacy',
+  refund: 'refund',
+  reembolso: 'refund',
+  reembolsos: 'refund',
+};
+
+function resolveLegalType(value: string | undefined): LegalType {
+  if (!value) return 'terms';
+  return TYPE_MAP[value.toLowerCase()] ?? 'terms';
 }
 
 export default function Legal() {
@@ -27,12 +33,11 @@ export default function Legal() {
   const { route, isMinimal, isCatalog } =
     useStorefrontTemplate();
 
-  const legal = defaultLegalPages;
+  const { legalPages } = useStore();
+  const activeType: LegalType = resolveLegalType(type);
+  const legal = legalPages || defaultLegalPages;
 
-  const activeType: LegalType =
-    isLegalType(type) ? type : 'terms';
-
-  const page = legal[activeType];
+  const page = legal[activeType] || defaultLegalPages[activeType];
   const meta = LEGAL_META[activeType];
 
   if (isCatalog) {
@@ -40,12 +45,16 @@ export default function Legal() {
       <div className="bg-[var(--visual-page-panel-background)] text-[var(--visual-page-color)]">
         <div className="max-w-[900px] mx-auto px-5 py-10 md:py-14">
           <div className="mb-8">
-            <Link data-page-action="ghost"
-              to={route()}
-              className="inline-flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--visual-page-color)]/40 hover:text-[var(--visual-page-color)] transition-colors"
-            >
-              ← Volver a la tienda
-            </Link>
+            <Breadcrumb
+              items={[
+                {
+                  label: 'Inicio',
+                },
+                {
+                  label: meta.label,
+                },
+              ]}
+            />
 
             <p className="mt-8 text-[var(--primary)] text-[10px] font-black uppercase tracking-[0.16em]">
               Información legal
@@ -133,7 +142,6 @@ export default function Legal() {
         items={[
           {
             label: 'Inicio',
-            href: route(),
           },
           {
             label: meta.label,
@@ -254,17 +262,6 @@ export default function Legal() {
           ))}
         </div>
       </div>
-
-      {isMinimal && (
-        <div className="text-center mt-7">
-          <Link data-page-action="ghost"
-            to={route()}
-            className="text-sm text-[var(--visual-page-color)] hover:text-[var(--primary)] transition-colors"
-          >
-            ← Volver a la tienda
-          </Link>
-        </div>
-      )}
     </div>
   );
 }

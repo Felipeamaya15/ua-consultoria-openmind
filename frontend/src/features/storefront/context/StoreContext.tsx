@@ -22,6 +22,8 @@ import { useStoreIdentity } from './StoreIdentityContext';
 import { templateFromPath } from '../visual/templates';
 import { findImageSetting, captureOriginalImage, isLegacyEditableImage, readThemeImages, restoreOriginalImage, type OriginalImageStyle } from '../visual/imageSettings';
 import { getStoreConfigKey, readStoredStoreConfig, isStoreConfigChange, STORE_CONFIG_CHANGED_EVENT } from '../visual/storage';
+import { legalService } from '../services/legalService';
+import { defaultLegalPages, type LegalType, type LegalPage } from '../data/legalContent';
 
 function readBusinessConfig(saved: Record<string, unknown>): StoreConfig {
   try {
@@ -44,6 +46,10 @@ const StoreContext = createContext({
   landingError: '',
   landingProducts: [] as Product[],
   landingCatalogError: '',
+  legalPages: defaultLegalPages as Record<LegalType, LegalPage>,
+  legalLoading: true,
+  legalError: '',
+  refreshLegal: async () => {},
 });
 
 function readTheme(saved: Record<string, unknown>, template: TemplateId): Record<string, unknown> | null {
@@ -116,6 +122,22 @@ export function StoreProvider({
   const [landingError, setLandingError] = useState('');
   const [landingProducts, setLandingProducts] = useState<Product[]>([]);
   const [landingCatalogError, setLandingCatalogError] = useState('');
+  const [legalPages, setLegalPages] = useState<Record<LegalType, LegalPage>>(defaultLegalPages);
+  const [legalLoading, setLegalLoading] = useState(true);
+  const [legalError, setLegalError] = useState('');
+
+  const refreshLegal = async () => {
+    try {
+      const data = await legalService.fetchPublicLegalPages();
+      setLegalPages(data);
+      setLegalError('');
+    } catch (error) {
+      setLegalError(error instanceof Error ? error.message : 'No se pudieron cargar las páginas legales.');
+    } finally {
+      setLegalLoading(false);
+    }
+  };
+
   useEffect(() => {
     let active = true;
     fetchPublicProducts().then(products => { if (active) setLandingProducts(products); })
@@ -123,8 +145,12 @@ export function StoreProvider({
     fetchLandingConfig().then(data => { if (active) setLanding(data); })
       .catch(error => { if (active) setLandingError(error instanceof Error ? error.message : 'No se pudo cargar la configuración de landing.'); })
       .finally(() => { if (active) setLandingLoading(false); });
+    legalService.fetchPublicLegalPages()
+      .then(data => { if (active) { setLegalPages(data); setLegalError(''); } })
+      .catch(error => { if (active) setLegalError(error instanceof Error ? error.message : 'No se pudieron cargar las páginas legales.'); })
+      .finally(() => { if (active) setLegalLoading(false); });
     return () => { active = false; };
-  }, []);
+  }, [storageRevision]);
 
   useEffect(() => {
     const template = templateFromPath(pathname);
@@ -153,7 +179,25 @@ export function StoreProvider({
 
   return (
     <StoreContext.Provider
-      value={{ config: { ...readBusinessConfig(savedConfig), primaryColor: visualConfig.global.colors.primary, secondaryColor: visualConfig.global.colors.secondary, accentColor: visualConfig.global.colors.accent, ...(landing ? { logo: landing.logo || '' } : {}) }, visualConfig, landing, landingLoading, landingError, landingProducts, landingCatalogError }}
+      value={{
+        config: {
+          ...readBusinessConfig(savedConfig),
+          primaryColor: visualConfig.global.colors.primary,
+          secondaryColor: visualConfig.global.colors.secondary,
+          accentColor: visualConfig.global.colors.accent,
+          ...(landing ? { logo: landing.logo || '' } : {}),
+        },
+        visualConfig,
+        landing,
+        landingLoading,
+        landingError,
+        landingProducts,
+        landingCatalogError,
+        legalPages,
+        legalLoading,
+        legalError,
+        refreshLegal,
+      }}
     >
       {children}
     </StoreContext.Provider>
