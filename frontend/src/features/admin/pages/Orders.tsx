@@ -4,6 +4,7 @@ import { Badge, Icon } from "../components/ui"
 import { API_BASE_URL } from "../../../api"
 import { authService } from "../../auth/services/authService"
 import { approveManualTransfer, verifyTransfer } from "../services/pendingTransfersService"
+import { updateOrderStatus } from '../services/recentOrdersService';
 
 type StoreOrder = {
   id_pedido: number; identificador: string | null; nombre_contacto: string; correo_contacto: string;
@@ -49,8 +50,9 @@ export default function Orders() {
   const [error, setError] = useState('')
   const [refreshKey, setRefreshKey] = useState(0)
 
-  // Estados para la validación activa de Linkify
+  // Estados para la validación activa de Linkify y cambios de estado
   const [verifying, setVerifying] = useState(false)
+  const [updatingStatus, setUpdatingStatus] = useState(false)
   const [verifyMessage, setVerifyMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null)
 
   useEffect(() => {
@@ -84,7 +86,7 @@ export default function Orders() {
     fetchPedidos();
   }, [refreshKey]);
 
-  // Manejador del botón verificar
+  // Manejador del botón verificar pagos
   const handlePaymentConfirmation = async (order: StoreOrder) => {
     const isManualTransfer = order.metodo_pago.trim().toLowerCase() === 'transferencia';
     if (isManualTransfer && !window.confirm(`¿Confirmas que recibiste el pago del pedido ${order.identificador || `#${order.id_pedido}`}?`)) return;
@@ -95,12 +97,31 @@ export default function Orders() {
         ? await approveManualTransfer(order.id_pedido)
         : await verifyTransfer(order.id_pedido);
       setVerifyMessage({ type: 'success', text: result.mensaje });
-      // Recargamos la lista para que cambie el estado visual a "Pagado"
       setRefreshKey(prev => prev + 1);
     } catch (cause) {
       setVerifyMessage({ type: 'error', text: cause instanceof Error ? cause.message : 'Error al verificar el pago.' });
     } finally {
       setVerifying(false);
+    }
+  };
+
+  // SCRUM-378: Manejador para el selector de estado
+  const handleStatusChange = async (pedidoId: number, nuevoEstado: string) => {
+    setUpdatingStatus(true);
+    setVerifyMessage(null);
+    try {
+      await updateOrderStatus(pedidoId, nuevoEstado);
+      
+      // Actualizamos el estado local sin recargar toda la tabla
+      setPedidos(prevPedidos => prevPedidos.map(p => 
+        p.id_pedido === pedidoId ? { ...p, estado: nuevoEstado } : p
+      ));
+      
+      setVerifyMessage({ type: 'success', text: `Estado logístico actualizado a: ${STATUS_BADGE[nuevoEstado]?.label}` });
+    } catch (error: any) {
+      setVerifyMessage({ type: 'error', text: error.message || 'Error al actualizar el estado.' });
+    } finally {
+      setUpdatingStatus(false);
     }
   };
 
@@ -112,7 +133,7 @@ export default function Orders() {
     ? pedidos.find((p) => p.id_pedido === selectedId)
     : null
 
-  // Limpiamos el mensaje de verificación si se cambia de pedido
+  // Limpiamos el mensaje de alerta si se cambia de pedido
   useEffect(() => {
     setVerifyMessage(null);
   }, [selectedId]);
@@ -122,7 +143,6 @@ export default function Orders() {
   }
   if (error) return <p role="alert" className="p-5 text-red-700">{error}</p>
 
-  // Verifica si el método de pago aplica para verificación
   const isVerifiableMethod = selectedOrder?.metodo_pago?.toLowerCase() === 'transferencia' || selectedOrder?.metodo_pago?.toLowerCase() === 'linkify';
 
   return (
@@ -163,7 +183,6 @@ export default function Orders() {
           ) : (
             <div className="divide-y divide-[var(--border)]">
               {filtered.map((order) => {
-                // Mapeo seguro del estado
                 const statusKey = order.estado ? order.estado.toLowerCase() : "pendiente"
                 const st = STATUS_BADGE[statusKey] || STATUS_BADGE["pendiente"]
                 const isSelected = selectedId === order.id_pedido
@@ -241,10 +260,19 @@ export default function Orders() {
 
             <div className="grid grid-cols-2 gap-3 text-xs">
               <div className="bg-[var(--muted)] rounded-lg p-3">
-                <p className="text-[var(--muted-foreground)] mb-1">Pedido</p>
-                <Badge variant={STATUS_BADGE[selectedOrder.estado?.toLowerCase() || "pendiente"]?.variant || "warning"}>
-                  {STATUS_BADGE[selectedOrder.estado?.toLowerCase() || "pendiente"]?.label || "Pendiente"}
-                </Badge>
+                <p className="text-[var(--muted-foreground)] mb-1">Estado</p>
+                
+                {/* SCRUM-378: Selector de Estados */}
+                <select
+                  value={selectedOrder.estado?.toLowerCase() || "pendiente"}
+                  disabled={updatingStatus}
+                  onChange={(e) => handleStatusChange(selectedOrder.id_pedido, e.target.value)}
+                  className="w-full mt-1 border border-[var(--border)] rounded-md p-1.5 text-xs bg-white focus:ring-2 focus:ring-[var(--primary)] outline-none disabled:opacity-50"
+                >
+                  {Object.entries(STATUS_BADGE).map(([key, config]) => (
+                    <option key={key} value={key}>{config.label}</option>
+                  ))}
+                </select>
               </div>
               
               <div className="bg-[var(--muted)] rounded-lg p-3 flex flex-col items-start justify-center">
@@ -253,7 +281,6 @@ export default function Orders() {
                     {selectedOrder.metodo_pago || "No especificado"}
                 </span>
                 
-                {/* BOTÓN DE VERIFICACIÓN: Aparece si es Transferencia o Linkify y está Pendiente */}
                 {isVerifiableMethod && selectedOrder.estado?.toLowerCase() === 'pendiente' && (
                   <button 
                     onClick={() => handlePaymentConfirmation(selectedOrder)}

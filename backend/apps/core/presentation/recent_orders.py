@@ -3,10 +3,16 @@
 Listado liviano para el dashboard del propietario: solo las órdenes más recientes y
 solo los datos que muestra la tabla. No incluye correo, teléfono, dirección ni ítems.
 """
+
+
+from rest_framework.response import Response
+from rest_framework import status
+from django.shortcuts import get_object_or_404
+from apps.authentication.permissions import IsStoreOwner
 from rest_framework import serializers
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
-
+from apps.core.presentation.serializers import PedidoEstadoUpdateSerializer
 from apps.core.infrastructure.tenant import resolver_tienda
 from apps.core.models import Pedido
 from apps.core.presentation.responses import error_response, success_response
@@ -60,3 +66,24 @@ class UltimasOrdenesAPIView(APIView):
         )
         response['Cache-Control'] = 'no-store'
         return response
+class ActualizarEstadoPedidoAPIView(APIView):
+    permission_classes = [IsAuthenticated, IsStoreOwner]
+
+    def patch(self, request, id_pedido):
+        tienda = resolver_tienda(request, exigir_propietario=True)
+        pedido = get_object_or_404(Pedido, id_pedido=id_pedido, tienda=tienda)
+        
+        serializer = PedidoEstadoUpdateSerializer(pedido, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return success_response(
+                data=serializer.data,
+                mensaje="Estado de la orden actualizado exitosamente."
+            )
+            
+        return error_response(
+            mensaje="No se pudo actualizar el estado.",
+            codigo="ESTADO_INVALIDO",
+            detalles=serializer.errors,
+            status=status.HTTP_400_BAD_REQUEST
+        )

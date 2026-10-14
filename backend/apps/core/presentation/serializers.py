@@ -517,3 +517,16 @@ class PedidoEstadoDetalleSerializer(serializers.ModelSerializer):
             paso['actual'] = i == indice_actual
 
         return pasos
+class PedidoEstadoUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Pedido
+        fields = ['estado']
+
+    def validate_estado(self, value):
+        estados_permitidos = [
+            'pendiente', 'pagado', 'preparacion', 
+            'despachado', 'entregado', 'cancelado'
+        ]
+        if value not in estados_permitidos:
+            raise serializers.ValidationError("Estado logístico no válido.")
+        return value
