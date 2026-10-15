@@ -90,6 +90,7 @@ export const updateOrderStatus = async (pedidoId: number, nuevoEstado: string) =
   }
 
   const token = authService.getToken();
+  if (!token) throw new Error('Inicia sesión como propietario para actualizar el estado.');
   const response = await fetch(`${API_BASE_URL}/api/tienda/pedidos/${pedidoId}/estado/`, {
     method: 'PATCH',
     headers: {
@@ -103,5 +104,11 @@ export const updateOrderStatus = async (pedidoId: number, nuevoEstado: string) =
   if (!response.ok || !json.exito) {
     throw new Error(json.mensaje || json.detail || 'Error al actualizar el estado logístico de la orden.');
   }
-  return json.data;
+  const updated = json.data;
+  if (!isRecord(updated) || updated.id_pedido !== pedidoId
+    || !ALLOWED_ORDER_STATUSES.includes(updated.estado as typeof ALLOWED_ORDER_STATUSES[number])
+    || typeof updated.estado_etiqueta !== 'string') {
+    throw new Error('La respuesta del estado del pedido es inválida. Recarga los pedidos para consultar su estado actual.');
+  }
+  return updated as {id_pedido: number; estado: string; estado_etiqueta: string};
 };

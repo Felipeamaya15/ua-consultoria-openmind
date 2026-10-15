@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Alert, Badge, Button } from '../ui';
 import { formatPrice } from '../../data/mockAdminData';
 import { orderStatusBadge } from '../../data/orderStatus';
+import { orderDetailDestination } from '../../services/orderNavigation';
 import {
   RECENT_ORDERS_LIMIT,
   formatRecentOrderDate,
@@ -71,7 +72,10 @@ export function RecentOrdersView({ state, onRetry }: { state: RecentOrdersState;
                 return (
                   <tr key={order.id_pedido} className="hover:bg-[var(--muted)]/50 transition-colors">
                     <td className="py-3 px-2 font-mono font-semibold">
-                      {order.identificador || `#${order.id_pedido}`}
+                      <Link to={orderDetailDestination(order.id_pedido)} aria-label={`Ver detalle del pedido ${order.identificador || `#${order.id_pedido}`}`}
+                        className="text-[var(--primary)] hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 rounded">
+                        {order.identificador || `#${order.id_pedido}`} <span aria-hidden="true">→</span>
+                      </Link>
                     </td>
                     <td className="py-3 px-2">{order.nombre_contacto || 'Sin nombre'}</td>
                     <td className="py-3 px-2 whitespace-nowrap text-[var(--muted-foreground)]">

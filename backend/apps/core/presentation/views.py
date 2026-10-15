@@ -19,9 +19,12 @@ from apps.core.presentation.linkify_notificacion import LinkifyNotificacionView
 from apps.core.presentation.responses import error_response, success_response
 from apps.core.presentation.serializers import ConfiguracionPagoSerializer, ShippingConfigurationSerializer
 from apps.core.models import Pedido
+from apps.core.pickup import validate_pickup, prepare_pickup_for_save
+from copy import deepcopy
 from rest_framework import generics
-from rest_framework.response import Response
-from .serializers import PedidoTiendaSerializer, TransferenciaPendienteSerializer, PedidoEstadoDetalleSerializer
+# Compatibilidad: una sola implementación de seguimiento con validación y aislamiento por tienda.
+from apps.core.presentation.order_tracking import OrderTrackingAPIView
+from .serializers import PedidoTiendaSerializer, TransferenciaPendienteSerializer
 
 class RegistrarCompraView(GuestCheckoutOrderAPIView):
     """Compatibilidad SCRUM-289: reutiliza la creación y seguridad de SCRUM-291."""
@@ -71,7 +74,7 @@ class ConfiguracionEntregaAPIView(APIView):
 
     def get(self, request):
         tienda = resolver_tienda(request, exigir_propietario=True)
-        return success_response(data=delivery_for_store(tienda))
+        return success_response(data=delivery_for_store(tienda, public=False))
 
     def put(self, request):
         return self.save_configuration(request, partial=False)
@@ -88,12 +91,31 @@ class ConfiguracionEntregaAPIView(APIView):
         with transaction.atomic():
             # Serializa PATCH concurrentes, incluso antes de existir la configuración.
             Tienda.objects.select_for_update().get(pk=tienda.pk)
-            config, _ = ConfiguracionEntrega.objects.get_or_create(tienda=tienda)
-            datos = delivery_data(config.datos)
+            config = ConfiguracionEntrega.objects.filter(tienda=tienda).first()
+            datos = delivery_data(config.datos if config else None)
+            previous = deepcopy(datos['pickup'])
+            def merge(target, changes):
+                for key, value in changes.items():
+                    if isinstance(value, dict) and isinstance(target.get(key), dict):
+                        merge(target[key], value)
+                    else:
+                        target[key] = value
             for method, changes in serializer.validated_data.items():
-                datos[method].update(changes)
+                merge(datos[method], changes)
+            pickup = datos['pickup']
+            errors = validate_pickup(pickup, tienda.pk)
+            if pickup.get('enabled') and pickup.get('version') != 2:
+                if not previous.get('enabled') or any(pickup.get(k) != previous.get(k) for k in ('address', 'schedule')):
+                    errors['location.verification'] = 'Para activar o editar retiro, completa la dirección estructurada y los horarios por día.'
+            if previous.get('version') == 2 and pickup.get('version') != 2:
+                errors['version'] = 'No se puede reemplazar la configuración estructurada por texto.'
+            if errors:
+                return error_response('Revisa la configuración de retiro.', 'ERROR_VALIDACION', {'pickup': errors})
+            datos['pickup'] = prepare_pickup_for_save(pickup, tienda.pk)
+            if config is None:
+                config = ConfiguracionEntrega(tienda=tienda)
             config.datos = datos
-            config.save(update_fields=['datos', 'fecha_actualizacion'])
+            config.save()
         return success_response(data=datos, mensaje='Configuración de entregas guardada.')
 
 
@@ -330,32 +352,3 @@ class TiendaPedidosAPIView(generics.ListAPIView):
     def get_queryset(self):
         tienda = resolver_tienda(self.request, exigir_propietario=True)
         return Pedido.objects.filter(tienda=tienda).prefetch_related('itempedido_set').order_by('-fecha_creacion')
-
-class OrderTrackingAPIView(APIView):
-    permission_classes = [AllowAny]
-
-    def get(self, request):
-        numero_orden = request.query_params.get('numero_orden')
-        email = request.query_params.get('email')
-
-        if not numero_orden:
-            return Response({"error": "Debe proporcionar el número de orden."}, status=status.HTTP_400_BAD_REQUEST)
-
-        # Búsqueda soportando ID secuencial o UUID
-        pedido = Pedido.objects.filter(id_pedido=numero_orden).first()
-        if not pedido:
-            pedido = Pedido.objects.filter(identificador=numero_orden).first()
-
-        if not pedido:
-            return Response({"error": "Orden no encontrada."}, status=status.HTTP_404_NOT_FOUND)
-
-        if not request.user.is_authenticated:
-            if not email or (pedido.correo_contacto and pedido.correo_contacto.lower() != email.strip().lower()):
-                return Response({"error": "El correo no coincide con la orden ingresada."}, status=status.HTTP_403_FORBIDDEN)
-        else:
-            # Si tiene usuario asignado y no es admin, validar que sea dueño de la orden
-            if hasattr(pedido, 'id_usuario') and pedido.id_usuario != request.user and not request.user.is_staff:
-                return Response({"error": "No tienes permisos para ver esta orden."}, status=status.HTTP_403_FORBIDDEN)
-
-        serializer = PedidoEstadoDetalleSerializer(pedido)
-        return Response(serializer.data, status=status.HTTP_200_OK)

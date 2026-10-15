@@ -119,6 +119,9 @@ class CheckoutOrderAPIView(ErroresDeCotizacionMixin, APIView):
                 delivery_snapshot['cotizacion'] = quote
             else:
                 delivery_snapshot['retiro'] = {key: delivery['pickup'][key] for key in ('address', 'schedule')}
+                for key in ('version', 'location', 'hours', 'validation_method'):
+                    if key in delivery['pickup']:
+                        delivery_snapshot['retiro'][key] = delivery['pickup'][key]
             repository = ProductRepository()
             lines = {}
             for item in data['items']:

@@ -137,6 +137,7 @@ class DeliveryConfigurationTests(TestCase):
         self.assertFalse(ConfiguracionEntrega.objects.exists())
 
     def test_save_pickup_and_get_saved_configuration(self):
+        ConfiguracionEntrega.objects.create(tienda=self.store, datos=self.configuration)  # compatibility with saved legacy
         response = self.api.put(self.url, self.configuration, format='json')
         self.assertEqual(response.status_code, 200, response.data)
         self.assertEqual(ConfiguracionEntrega.objects.get(tienda=self.store).datos, self.configuration)
@@ -145,6 +146,7 @@ class DeliveryConfigurationTests(TestCase):
 
     def test_partial_save_and_disable_preserve_address_schedule_and_carriers(self):
         self.configuration['chilexpress']['enabled'] = True
+        ConfiguracionEntrega.objects.create(tienda=self.store, datos=self.configuration)
         self.api.put(self.url, self.configuration, format='json')
         response = self.api.patch(self.url, {'pickup': {'enabled': False}}, format='json')
         self.assertEqual(response.status_code, 200, response.data)
@@ -155,6 +157,7 @@ class DeliveryConfigurationTests(TestCase):
         self.assertEqual(ConfiguracionEntrega.objects.count(), 1)
 
     def test_patch_can_create_configuration_with_defaults(self):
+        self.configuration['pickup']['enabled'] = False
         response = self.api.patch(self.url, {'pickup': self.configuration['pickup']}, format='json')
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data['data'], self.configuration)
@@ -252,6 +255,44 @@ class DeliveryCheckoutTests(TestCase):
         self.assertEqual(order.costo_envio, 0)
         self.assertEqual(order.monto_total, 1000)
         self.repository.decrease_stock.assert_called_once_with(str(self.store.pk), 'DELIVERY-SKU', 1)
+
+    def test_panel_save_public_checkout_and_disable_preserve_carriers_and_payments(self):
+        admin = APIClient()
+        admin.force_authenticate(self.store.id_usuario_propietario)
+        self.configuration['chilexpress']['enabled'] = True
+        self.configuration['starken']['enabled'] = True
+        from apps.core.test_pickup import make_pickup
+        self.configuration['pickup'] = make_pickup(self.store)
+        payments = deepcopy(ConfiguracionPago.objects.get(tienda=self.store).datos)
+        response = admin.put('/api/entregas/configuracion/', self.configuration, format='json')
+        self.assertEqual(response.status_code, 200, response.data)
+        self.assertEqual(admin.get('/api/entregas/configuracion/').data['data'], self.configuration)
+        public_config = deepcopy(self.configuration)
+        public_config['pickup']['location'].pop('verification')
+        self.assertEqual(self.api.get('/api/entregas/alternativas/').data['data'], public_config)
+        with patch('apps.core.presentation.checkout.validate_quote') as quote:
+            response = self.api.post(self.url, self.payload, format='json')
+            self.assertEqual(response.status_code, 201, response.data)
+            quote.assert_not_called()
+        order = Pedido.objects.get()
+        self.assertEqual(order.entrega['metodo'], 'Retiro')
+        self.assertEqual(order.entrega['retiro']['location']['comuna'], 'Providencia')
+        self.assertEqual(order.costo_envio, 0)
+        self.assertEqual(order.medio_pago, 'Transferencia')
+        disabled = deepcopy(self.configuration)
+        disabled['pickup']['enabled'] = False
+        self.assertEqual(admin.put('/api/entregas/configuracion/', disabled, format='json').status_code, 200)
+        self.assertEqual(admin.get('/api/entregas/configuracion/').data['data'], disabled)
+        public_disabled = deepcopy(disabled)
+        public_disabled['pickup']['location'].pop('verification')
+        self.assertEqual(self.api.get('/api/entregas/alternativas/').data['data'], public_disabled)
+        response = self.api.post(self.url, {**self.payload, 'clave_checkout': str(uuid4())}, format='json')
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(Pedido.objects.count(), 1)
+        self.assertEqual(ConfiguracionPago.objects.get(tienda=self.store).datos, payments)
+        order.refresh_from_db()
+        self.assertEqual(order.entrega['retiro']['location']['comuna'], 'Providencia')
+        self.assertEqual(self.repository.decrease_stock.call_count, 1)
 
     def test_retry_of_existing_order_survives_disable_without_new_stock_changes(self):
         config = ConfiguracionEntrega.objects.create(tienda=self.store, datos=self.configuration)

@@ -2,10 +2,12 @@ import { useEffect, useRef, useState } from 'react';
 import { useAdmin } from '../context/AdminContext';
 import { useAdminForm } from '../hooks/useAdminForm';
 import { AdminCard, Alert, Input, Toggle, Button, Icon, Badge } from '../components/ui';
-import { getShippingConfiguration, saveShippingConfiguration } from '../../storefront/services/shippingService';
+import { getShippingConfiguration, saveShippingConfiguration, ShippingConfigurationError } from '../../storefront/services/shippingService';
 import territorio from '../data/chileTerritory.json';
 import { comunasDeRegion } from '../../storefront/data/comunasChile';
 import type { ShippingRate } from '../types';
+import PickupEditor from '../components/shipping/PickupEditor';
+import { validatePickup } from '../services/pickupConfiguration';
 
 export default function Shipping() {
   const { config, setConfig } = useAdmin();
@@ -15,6 +17,8 @@ export default function Shipping() {
   const savingRef = useRef(false);
   const mountedRef = useRef(false);
   const [message, setMessage] = useState('');
+  const [pickupErrors, setPickupErrors] = useState<Record<string, string>>({});
+  const [pickupProviderConfigured, setPickupProviderConfigured] = useState<boolean | null>(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -53,6 +57,9 @@ export default function Shipping() {
 
   async function save() {
     if (!loaded || savingRef.current) return;
+    const validation = validatePickup(form.pickup, pickupProviderConfigured === true);
+    setPickupErrors(validation);
+    if (Object.keys(validation).length) { setError('Revisa los campos de retiro indicados.'); return; }
     savingRef.current = true;
     setSaving(true);
     setError('');
@@ -66,7 +73,10 @@ export default function Shipping() {
         setError('Las entregas se guardaron en el servidor, pero no se pudo actualizar la copia del navegador.');
       }
     } catch (cause) {
-      if (mountedRef.current) setError(cause instanceof Error ? cause.message : 'No se pudieron guardar las entregas.');
+      if (mountedRef.current) {
+        setError(cause instanceof Error ? cause.message : 'No se pudieron guardar las entregas.');
+        if (cause instanceof ShippingConfigurationError) setPickupErrors(cause.fields);
+      }
     } finally {
       savingRef.current = false;
       if (mountedRef.current) setSaving(false);
@@ -142,6 +152,10 @@ export default function Shipping() {
             </AdminCard>
           );
         })}
+        <PickupEditor value={form.pickup} errors={pickupErrors} onProviderStatus={setPickupProviderConfigured} onChange={pickup => {
+          setMessage(''); setPickupErrors({});
+          setForm({ ...form, pickup });
+        }} />
         <Button onClick={() => void save()}>{saving ? 'Guardando…' : 'Guardar entregas'}</Button>
       </fieldset>
       {message && <Alert variant="success">{message}</Alert>}

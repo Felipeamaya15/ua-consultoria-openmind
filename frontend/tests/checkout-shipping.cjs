@@ -75,6 +75,7 @@ function harness(template) {
         getDeliveryAlternatives: async () => {if (failConfig) throw Error('Error de alternativas'); return config;},
         getShippingQuotes: realShipping.getShippingQuotes,
       };
+      if (name.includes('PickupDetails')) return {default: 'PickupDetails'};
       if (name.includes('orderService')) return {orderService: {create: async data => {created.push(data); throw createError || Error('Stop after payload');}}};
       if (name.includes('PaymentService')) return {};
       if (name.endsWith('visual/pages')) return load('src/features/storefront/visual/pages.ts', {URLSearchParams});
@@ -230,8 +231,11 @@ for (const template of [1,2,3,4]) test(`Plantilla ${template}: checkout y despac
   });
   await t.test('Retiro usa cero, dirección/horario y no cotiza con o sin destino', async () => {
     h.reset(); h.render(); await h.settle(); h.cart.shippingMethod='Retiro'; h.states[8]='Transferencia'; let tree=await h.settle();
-    assert.ok(tree.some(value=>typeof value==='string' && value.includes('Local 123') && value.includes('9 a 18')));
-    assert.ok(tree.includes('Gratis'));
+    const details = tree.find(node => node.type === 'PickupDetails');
+    assert.equal(details.props.pickup.address,'Local 123'); assert.equal(details.props.pickup.schedule,'9 a 18');
+    assert.ok(tree.includes('Retira tu pedido en nuestro establecimiento'));
+    assert.ok(!tree.some(value => typeof value === 'string' && value.includes('Local 123')));
+    assert.ok(tree.includes('Gratis ($0)'));
     assert.equal(h.calls.length,0); assert.ok(!tree.some(node=>node.props?.label==='Región'));
     h.setAddress({city:'Providencia'}); tree=await h.settle(); assert.equal(h.calls.length,0);
     tree=h.toConfirm(); assert.ok(tree.includes('CLP 48000')); assert.equal(h.confirm(tree).props.disabled,false);

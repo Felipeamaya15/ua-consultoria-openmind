@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { orderService, type TrackedOrder, type LineaTiempoPaso } from './services/orderService'; 
+import { orderService, type TrackedOrder, type LineaTiempoPaso } from './services/orderService';
 
 export const OrderTracking = () => {
   const [orderNumber, setOrderNumber] = useState('');
@@ -13,7 +13,7 @@ export const OrderTracking = () => {
     setError('');
     setOrderData(null);
     setLoading(true);
-    
+
     try {
       const data = await orderService.track(orderNumber, email);
       setOrderData(data);
@@ -27,7 +27,7 @@ export const OrderTracking = () => {
   return (
     <div className="max-w-3xl mx-auto p-6">
       <h2 className="text-2xl font-bold mb-6">Portal de Seguimiento</h2>
-      
+
       <form onSubmit={handleSearch} className="mb-8 space-y-4 bg-white p-6 rounded-lg shadow-sm border">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Número de Orden</label>
@@ -51,8 +51,8 @@ export const OrderTracking = () => {
             required
           />
         </div>
-        <button 
-          type="submit" 
+        <button
+          type="submit"
           disabled={loading}
           className="w-full bg-blue-600 text-white p-2 rounded font-semibold hover:bg-blue-700 disabled:opacity-50"
         >
@@ -73,15 +73,15 @@ export const OrderTracking = () => {
               {orderData.estado_label}
             </span>
           </div>
-          
+
           <div className="grid grid-cols-2 md:grid-cols-5 gap-2 pt-4">
             {/* Se declaran explícitamente los tipos (LineaTiempoPaso y number) para resolver los errores ts(7006) */}
             {orderData.linea_tiempo.map((paso: LineaTiempoPaso, idx: number) => (
-              <div 
-                key={idx} 
+              <div
+                key={idx}
                 className={`p-3 text-center text-xs md:text-sm rounded-lg border ${
-                  paso.actual ? 'bg-blue-600 border-blue-600 text-white font-bold shadow' : 
-                  paso.completado ? 'bg-green-50 border-green-200 text-green-700' : 
+                  paso.actual ? 'bg-blue-600 border-blue-600 text-white font-bold shadow' :
+                  paso.completado ? 'bg-green-50 border-green-200 text-green-700' :
                   'bg-gray-50 border-gray-200 text-gray-400'
                 }`}
               >

@@ -237,6 +237,9 @@ export const shippingService = {
 // ── Métodos de develop para configuración y cotizaciones en tienda ─────────
 
 export type ShippingConfiguration = AdminConfig['shippingConfiguration'];
+export class ShippingConfigurationError extends Error {
+  constructor(message: string, public fields: Record<string, string>) { super(message); }
+}
 
 function isConfiguration(value: unknown): value is ShippingConfiguration {
   if (!value || typeof value !== 'object') return false;
@@ -257,6 +260,16 @@ async function readConfiguration(response: Response): Promise<ShippingConfigurat
   if (!body) throw new Error('No pudimos cargar la configuración de entregas en este momento. Intenta nuevamente.');
   if (!response.ok || body.exito !== true) {
     const details = body.error?.detalles;
+    if (details && typeof details === 'object' && 'pickup' in details) {
+      const fields: Record<string, string> = {};
+      const flatten = (value: unknown, prefix = '') => {
+        if (Array.isArray(value)) fields[prefix] = value.join(' ');
+        else if (value && typeof value === 'object') Object.entries(value).forEach(([key, child]) => flatten(child, prefix ? `${prefix}.${key}` : key));
+        else if (typeof value === 'string') fields[prefix] = value;
+      };
+      flatten(details.pickup);
+      throw new ShippingConfigurationError('Revisa los campos de retiro indicados.', fields);
+    }
     throw new Error((body.mensaje || body.detail || 'No se pudo consultar la configuración de entregas.')
       + (details ? ` ${JSON.stringify(details)}` : ''));
   }
@@ -291,6 +304,26 @@ export async function getDeliveryAlternatives(signal?: AbortSignal): Promise<Shi
     throw new Error('No pudimos conectar con el servidor para cargar las alternativas de entrega. Intenta nuevamente.');
   }
   return readConfiguration(response);
+}
+
+export async function getPickupAddressStatus(signal?: AbortSignal): Promise<{ configured: boolean }> {
+  const response = await fetch(`${API_BASE_URL}/api/entregas/retiro/direcciones/`, { headers: adminHeaders(), signal });
+  const body = await readJson(response);
+  if (!response.ok || body?.exito !== true) throw new Error('No se pudo consultar el servicio de direcciones.');
+  return { configured: body.data?.configured === true };
+}
+
+export async function searchPickupAddresses(region: string, comuna: string, query: string, signal?: AbortSignal): Promise<import('../../admin/services/pickupConfiguration').PickupLocation[]> {
+  const response = await fetch(`${API_BASE_URL}/api/entregas/retiro/direcciones/`, {
+    method: 'POST', headers: adminHeaders(), body: JSON.stringify({ region, comuna, query }), signal,
+  });
+  const body = await readJson(response);
+  if (!response.ok || body?.exito !== true) throw new Error(body?.mensaje || 'No se pudieron buscar direcciones.');
+  if (!Array.isArray(body.data) || !body.data.every((row: unknown) => row && typeof row === 'object' &&
+    ['region', 'comuna', 'street', 'number', 'reference', 'verification'].every(key => typeof (row as Record<string, unknown>)[key] === 'string'))) {
+    throw new Error('El proveedor devolvió direcciones inválidas.');
+  }
+  return body.data;
 }
 
 export type ShippingQuote = {
