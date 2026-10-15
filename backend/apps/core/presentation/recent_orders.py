@@ -3,10 +3,14 @@
 Listado liviano para el dashboard del propietario: solo las órdenes más recientes y
 solo los datos que muestra la tabla. No incluye correo, teléfono, dirección ni ítems.
 """
+from rest_framework.response import Response
+from rest_framework import status
+from django.shortcuts import get_object_or_404
+from apps.authentication.permissions import IsStoreOwner
 from rest_framework import serializers
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
-
+from apps.core.presentation.serializers import PedidoEstadoUpdateSerializer
 from apps.core.infrastructure.tenant import resolver_tienda
 from apps.core.models import Pedido
 from apps.core.presentation.responses import error_response, success_response
@@ -60,3 +64,43 @@ class UltimasOrdenesAPIView(APIView):
         )
         response['Cache-Control'] = 'no-store'
         return response
+
+
+class ActualizarEstadoPedidoAPIView(APIView):
+    """PATCH /api/tienda/pedidos/<id_pedido>/estado/ -> actualiza el estado de una orden de la tienda."""
+    permission_classes = [IsAuthenticated]
+
+    def patch(self, request, id_pedido):
+        tienda = resolver_tienda(request, exigir_propietario=True)
+
+        serializer = PedidoEstadoUpdateSerializer(data=request.data)
+        if not serializer.is_valid():
+            return error_response(
+                mensaje="El estado logístico proporcionado no es válido.",
+                codigo="ESTADO_INVALIDO",
+                detalles=serializer.errors,
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        estado_normalizado = serializer.validated_data['estado']
+
+        pedido = Pedido.objects.filter(id_pedido=id_pedido, tienda=tienda).first()
+        if not pedido:
+            return error_response(
+                mensaje="No se encontró el pedido solicitado.",
+                codigo="PEDIDO_NO_ENCONTRADO",
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        pedido.estado = estado_normalizado
+        pedido.save(update_fields=['estado'])
+
+        return success_response(
+            data={
+                "id_pedido": pedido.id_pedido,
+                "identificador": pedido.identificador,
+                "estado": pedido.estado,
+                "estado_etiqueta": pedido.get_estado_display(),
+            },
+            mensaje=f"El estado de la orden fue actualizado a '{pedido.get_estado_display()}' exitosamente.",
+        )

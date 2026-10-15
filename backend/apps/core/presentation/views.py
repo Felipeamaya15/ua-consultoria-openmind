@@ -22,6 +22,8 @@ from apps.core.models import Pedido
 from apps.core.pickup import validate_pickup, prepare_pickup_for_save
 from copy import deepcopy
 from rest_framework import generics
+# Compatibilidad: una sola implementación de seguimiento con validación y aislamiento por tienda.
+from apps.core.presentation.order_tracking import OrderTrackingAPIView
 from .serializers import PedidoTiendaSerializer, TransferenciaPendienteSerializer
 
 class RegistrarCompraView(GuestCheckoutOrderAPIView):

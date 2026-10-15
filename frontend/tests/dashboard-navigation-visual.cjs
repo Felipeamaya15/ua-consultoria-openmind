@@ -52,6 +52,7 @@ function metrics(period) {
     for (const width of [375, 768, 1280]) {
       const page = await browser.newPage({ viewport: { width, height: 900 }, timezoneId: 'Asia/Tokyo' });
       const errors = []; page.on('pageerror', error => errors.push(error.message));
+      let updatedState = null, rejectNextUpdate = true;
       await page.route('https://dashboard-api.test/**', async route => {
         const url = new URL(route.request().url());
         const headers = { 'access-control-allow-origin': '*', 'access-control-allow-headers': '*', 'access-control-allow-methods': '*' };
@@ -60,7 +61,16 @@ function metrics(period) {
         let body;
         if (url.pathname === '/api/tienda/dashboard/') body = { exito: true, data: metrics(url.searchParams.get('periodo')) };
         else if (url.pathname === '/api/tienda/pedidos/ultimos/') body = { exito: true, data: orders.slice(0, 5).map(o => ({ ...o, estado_etiqueta: o.estado })) };
-        else if (url.pathname === '/api/tienda/pedidos/') body = orders;
+        else if (url.pathname === '/api/tienda/pedidos/') body = orders.map(order => order.id_pedido === 3 && updatedState ? {...order,estado:updatedState} : order);
+        else if (url.pathname === '/api/tienda/pedidos/3/estado/') {
+          assert.equal(route.request().method(), 'PATCH');
+          if (rejectNextUpdate) {
+            rejectNextUpdate = false;
+            return route.fulfill({status:409,headers,json:{exito:false,mensaje:'Transición rechazada por servidor'}});
+          }
+          updatedState = route.request().postDataJSON().estado;
+          body = {exito:true,data:{id_pedido:3,estado:updatedState,estado_etiqueta:'En origen'}};
+        }
         else throw Error(`Endpoint inesperado: ${url.pathname}`);
         await route.fulfill({ status: 200, headers, json: body });
       });
@@ -111,6 +121,16 @@ function metrics(period) {
       assert.equal(new URL(page.url()).searchParams.get('pedido'), '3');
       await page.reload(); await page.getByRole('region', { name: 'Detalle del pedido ORD-3', exact: true }).waitFor();
       assert.equal(await page.evaluate(() => document.activeElement.getAttribute('aria-label')), 'Detalle del pedido ORD-3');
+      const beforeUpdate = page.url();
+      await page.getByRole('combobox', {name:'Estado del pedido',exact:true}).selectOption('enviado');
+      await page.getByRole('alert').filter({hasText:'Transición rechazada por servidor'}).waitFor();
+      assert.equal(await page.getByRole('combobox', {name:'Estado del pedido',exact:true}).inputValue(),'preparando');
+      await page.getByRole('combobox', {name:'Estado del pedido',exact:true}).selectOption('en_origen');
+      await page.getByRole('status').filter({hasText:'Estado logístico actualizado a: En origen'}).waitFor();
+      assert.equal(await page.getByRole('combobox', {name:'Estado del pedido',exact:true}).inputValue(),'en_origen');
+      assert.equal(page.url(),beforeUpdate);
+      await page.reload();await page.getByRole('combobox', {name:'Estado del pedido',exact:true}).waitFor();
+      assert.equal(await page.getByRole('combobox', {name:'Estado del pedido',exact:true}).inputValue(),'en_origen');
       await page.getByRole('button', { name: 'Cerrar detalle del pedido' }).click();
       assert.equal(new URL(page.url()).searchParams.has('pedido'), false);
       await page.goBack(); await page.getByRole('region', { name: 'Detalle del pedido ORD-3', exact: true }).waitFor();

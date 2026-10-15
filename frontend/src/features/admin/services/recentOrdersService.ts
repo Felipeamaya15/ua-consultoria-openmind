@@ -5,6 +5,17 @@ import { authService } from '../../auth/services/authService';
 export const RECENT_ORDERS_LIMIT = 5;
 const MAX_LIMIT = 20;
 
+export const ALLOWED_ORDER_STATUSES = [
+  'pendiente',
+  'pagado',
+  'preparando',
+  'en_origen',
+  'enviado',
+  'en_reparto',
+  'entregado',
+  'cancelado',
+] as const;
+
 export interface RecentOrder {
   id_pedido: number;
   identificador: string | null;
@@ -71,3 +82,33 @@ export function formatRecentOrderDate(value: string): string {
   if (Number.isNaN(date.getTime())) return '';
   return `${date.getDate()} ${MONTHS[date.getMonth()]} ${date.getFullYear()}, ${twoDigits(date.getHours())}:${twoDigits(date.getMinutes())}`;
 }
+
+export const updateOrderStatus = async (pedidoId: number, nuevoEstado: string) => {
+  const estadoNormalizado = String(nuevoEstado || '').trim().toLowerCase();
+  if (!ALLOWED_ORDER_STATUSES.includes(estadoNormalizado as typeof ALLOWED_ORDER_STATUSES[number])) {
+    throw new Error('El estado logístico proporcionado no es válido.');
+  }
+
+  const token = authService.getToken();
+  if (!token) throw new Error('Inicia sesión como propietario para actualizar el estado.');
+  const response = await fetch(`${API_BASE_URL}/api/tienda/pedidos/${pedidoId}/estado/`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { 'Authorization': `Token ${token}` } : {})
+    },
+    body: JSON.stringify({ estado: estadoNormalizado })
+  });
+
+  const json = await response.json();
+  if (!response.ok || !json.exito) {
+    throw new Error(json.mensaje || json.detail || 'Error al actualizar el estado logístico de la orden.');
+  }
+  const updated = json.data;
+  if (!isRecord(updated) || updated.id_pedido !== pedidoId
+    || !ALLOWED_ORDER_STATUSES.includes(updated.estado as typeof ALLOWED_ORDER_STATUSES[number])
+    || typeof updated.estado_etiqueta !== 'string') {
+    throw new Error('La respuesta del estado del pedido es inválida. Recarga los pedidos para consultar su estado actual.');
+  }
+  return updated as {id_pedido: number; estado: string; estado_etiqueta: string};
+};
