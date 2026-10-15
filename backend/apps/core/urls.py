@@ -21,7 +21,6 @@ from apps.core.presentation.views import (
     AprobarTransferenciaManualAPIView,
     RechazarTransferenciaManualAPIView,
     TiendaPedidosAPIView,
-    OrderTrackingAPIView
 )
 
 urlpatterns = [

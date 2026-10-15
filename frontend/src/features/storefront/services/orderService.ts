@@ -27,7 +27,7 @@ export interface LineaTiempoPaso {
   actual: boolean;
 }
 
-// Se añaden estado_label y linea_tiempo al tipo de retorno
+// Se mantienen estado_label y linea_tiempo para OrderTracking.tsx
 export type TrackedOrder = Omit<CustomerOrder, 'items'>
   & Pick<CreatedOrder, 'identificador' | 'costo_envio' | 'descuento'> & {
     nombre_contacto: string;
@@ -109,13 +109,16 @@ export const orderService = {
     if (!order || typeof order !== 'object') throw new Error('La respuesta del pedido es inválida.');
     const data = order as Record<string, unknown>;
     
-    // Se valida la existencia de estado_label y linea_tiempo
+    const hasValidLabel = typeof data.estado_label === 'string' || typeof data.estado_etiqueta === 'string';
+    const hasValidTimeline = data.linea_tiempo === undefined || Array.isArray(data.linea_tiempo);
+
     if (!Number.isSafeInteger(data.id_pedido)
       || typeof data.identificador !== 'string'
       || normalizeOrderNumber(data.identificador) !== orderNumber
       || !['pendiente', 'pagado', 'preparando', 'en_origen', 'enviado', 'en_reparto', 'entregado', 'cancelado'].includes(String(data.estado))
-      || !['nombre_contacto', 'medio_pago', 'fecha_creacion', 'estado_label'].every(key => typeof data[key] === 'string')
-      || !Array.isArray(data.linea_tiempo)
+      || !['nombre_contacto', 'medio_pago', 'fecha_creacion'].every(key => typeof data[key] === 'string')
+      || !hasValidLabel
+      || !hasValidTimeline
       || !['monto_total', 'descuento', 'costo_envio'].every(key => typeof data[key] === 'string'
         && String(data[key]).trim() !== '' && Number.isFinite(Number(data[key])) && Number(data[key]) >= 0)
       || !data.entrega || typeof data.entrega !== 'object'

@@ -66,19 +66,25 @@ class UltimasOrdenesAPIView(APIView):
         )
         response['Cache-Control'] = 'no-store'
         return response
+
+
 class ActualizarEstadoPedidoAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
     def patch(self, request, id_pedido):
         nuevo_estado = request.data.get('estado')
+        alias_estados = {
+            'preparacion': 'preparando',
+            'despachado': 'enviado',
+        }
+        estado_normalizado = alias_estados.get(nuevo_estado, nuevo_estado)
         
-        # Validamos los estados según RF-03.3
         estados_validos = [
-            'pendiente', 'pagado', 'preparacion', 
-            'despachado', 'entregado', 'cancelado'
+            'pendiente', 'pagado', 'preparando', 'en_origen',
+            'enviado', 'en_reparto', 'entregado', 'cancelado',
         ]
         
-        if nuevo_estado not in estados_validos:
+        if estado_normalizado not in estados_validos:
             return error_response(
                 mensaje="El estado logístico proporcionado no es válido.",
                 codigo="ESTADO_INVALIDO",
@@ -93,10 +99,10 @@ class ActualizarEstadoPedidoAPIView(APIView):
                 status=status.HTTP_404_NOT_FOUND
             )
 
-        pedido.estado = nuevo_estado
+        pedido.estado = estado_normalizado
         pedido.save()
 
         return success_response(
             data={"id_pedido": pedido.id_pedido, "estado": pedido.estado},
-            mensaje=f"El estado de la orden fue actualizado a '{nuevo_estado}' exitosamente."
+            mensaje=f"El estado de la orden fue actualizado a '{pedido.estado}' exitosamente."
         )
