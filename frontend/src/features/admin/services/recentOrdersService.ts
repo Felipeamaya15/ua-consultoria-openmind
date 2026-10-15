@@ -5,6 +5,17 @@ import { authService } from '../../auth/services/authService';
 export const RECENT_ORDERS_LIMIT = 5;
 const MAX_LIMIT = 20;
 
+export const ALLOWED_ORDER_STATUSES = [
+  'pendiente',
+  'pagado',
+  'preparando',
+  'en_origen',
+  'enviado',
+  'en_reparto',
+  'entregado',
+  'cancelado',
+] as const;
+
 export interface RecentOrder {
   id_pedido: number;
   identificador: string | null;
@@ -73,6 +84,11 @@ export function formatRecentOrderDate(value: string): string {
 }
 
 export const updateOrderStatus = async (pedidoId: number, nuevoEstado: string) => {
+  const estadoNormalizado = String(nuevoEstado || '').trim().toLowerCase();
+  if (!ALLOWED_ORDER_STATUSES.includes(estadoNormalizado as typeof ALLOWED_ORDER_STATUSES[number])) {
+    throw new Error('El estado logístico proporcionado no es válido.');
+  }
+
   const token = authService.getToken();
   const response = await fetch(`${API_BASE_URL}/api/tienda/pedidos/${pedidoId}/estado/`, {
     method: 'PATCH',
@@ -80,7 +96,7 @@ export const updateOrderStatus = async (pedidoId: number, nuevoEstado: string) =
       'Content-Type': 'application/json',
       ...(token ? { 'Authorization': `Token ${token}` } : {})
     },
-    body: JSON.stringify({ estado: nuevoEstado })
+    body: JSON.stringify({ estado: estadoNormalizado })
   });
 
   const json = await response.json();
