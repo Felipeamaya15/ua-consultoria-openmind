@@ -77,6 +77,7 @@ function harness(template) {
       };
       if (name.includes('PickupDetails')) return {default: 'PickupDetails'};
       if (name.includes('orderService')) return {orderService: {create: async data => {created.push(data); throw createError || Error('Stop after payload');}}};
+      if (name.includes('promotionService')) return {validatePromotion: async code => ({code, type: 'fixed', discount: 1000, shipping: 0, message: 'Aplicado'})};
       if (name.includes('PaymentService')) return {};
       if (name.endsWith('visual/pages')) return load('src/features/storefront/visual/pages.ts', {URLSearchParams});
       if (name.includes('components/ui')) return Object.fromEntries(['Stepper','Button','Input','Select','Alert','Icon'].map(type => [type,type]));
