@@ -6,6 +6,7 @@ from rest_framework.authtoken.models import Token
 from rest_framework.test import APIClient
 
 from apps.core.models import Promocion, Tienda
+from apps.core.promotions import calculate_promotion
 
 
 class PromocionesAdminTests(TestCase):
@@ -37,3 +38,15 @@ class PromocionesAdminTests(TestCase):
     def test_solo_propietario_puede_administrar_promociones(self):
         self.client.credentials()
         self.assertEqual(self.client.get('/api/promociones/').status_code, 401)
+
+    def test_crea_promocion_de_envio_gratuito_y_elimina_el_costo(self):
+        response = self.client.post('/api/promociones/', {
+            'name': 'Despacho gratis', 'code': 'ENVIO-GRATIS', 'type': 'free_shipping',
+            'value': 9999, 'minAmount': 20000, 'startsAt': date.today(), 'active': True,
+        }, format='json')
+        self.assertEqual(response.status_code, 201, response.data)
+        promotion = Promocion.objects.get(codigo='ENVIO-GRATIS')
+        self.assertEqual(promotion.valor, 0)
+        amounts = calculate_promotion(self.store, ' envio-gratis ', 25000, 3990)
+        self.assertEqual(amounts.discount, 0)
+        self.assertEqual(amounts.shipping, 0)
