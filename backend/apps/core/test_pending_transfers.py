@@ -284,7 +284,7 @@ class RegistroTransferenciasTests(TransferFixtureMixin, TestCase):
     def setUp(self):
         super().setUp()
         self.api.credentials(HTTP_AUTHORIZATION='Token ' + Token.objects.create(user=self.buyer).key)
-        ConfiguracionEntrega.objects.create(tienda=self.store, datos={'pickup': {'enabled': True}})
+        ConfiguracionEntrega.objects.create(tienda=self.store, datos={'pickup': {'enabled': True, 'address': 'Local de prueba', 'schedule': 'Lun–Vie 09:00 a 18:00'}})
         self.product = Producto.objects.create(nombre='Producto transferencia', precio=10000, stock=7,
                                               id_tienda=self.store)
         self.repository = RepositorioTransferencias(self.product.pk)

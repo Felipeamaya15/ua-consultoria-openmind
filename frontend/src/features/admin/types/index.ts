@@ -60,11 +60,7 @@ export interface AdminConfig extends StoreConfig {
   shippingConfiguration: {
     chilexpress: CarrierConnection;
     starken: CarrierConnection;
-    pickup: {
-      enabled: boolean;
-      address: string;
-      schedule: string;
-    };
+    pickup: import('../services/pickupConfiguration').PickupConfiguration;
   };
 
   paymentConfiguration: Record<

@@ -63,7 +63,7 @@ class OrderTrackingAPIView(APIView):
         lookup = TrackingLookupSerializer(data=request.data)
         lookup.is_valid(raise_exception=True)
         tienda = resolver_tienda(request)
-        
+
         matches = list(Pedido.objects.filter(
             tienda=tienda,
             identificador__iexact=lookup.validated_data['identificador'],
@@ -71,13 +71,13 @@ class OrderTrackingAPIView(APIView):
         ).prefetch_related(
             Prefetch('itempedido_set', queryset=ItemPedido.objects.select_related('id_producto'))
         )[:2])
-        
+
         if len(matches) != 1:
             raise NotFound('No encontramos un pedido con ese número y correo.')
-            
+
         order = matches[0]
         data = OrderDetailSerializer(order).data
-        
+
         # --- SCRUM-377: Construcción de Línea de Tiempo (RF-02.4) ---
         alias_estado = {'preparacion': 'preparando', 'despachado': 'enviado'}
         estado_actual = alias_estado.get(getattr(order, 'estado', 'pendiente'), getattr(order, 'estado', 'pendiente'))
@@ -91,9 +91,9 @@ class OrderTrackingAPIView(APIView):
             'entregado': 'Entregado',
             'cancelado': 'Cancelado',
         }
-        
+
         orden_estados = ['pendiente', 'pagado', 'preparando', 'en_origen', 'enviado', 'en_reparto', 'entregado']
-        
+
         if estado_actual == 'cancelado':
             linea_tiempo = [{'estado': 'cancelado', 'etiqueta': 'Cancelado', 'completado': True, 'actual': True}]
         else:
@@ -101,7 +101,7 @@ class OrderTrackingAPIView(APIView):
                 indice_actual = orden_estados.index(estado_actual)
             except ValueError:
                 indice_actual = 0
-                
+
             pasos = [
                 {'estado': 'pendiente', 'etiqueta': 'Recibido'},
                 {'estado': 'pagado', 'etiqueta': 'Pago Confirmado'},
@@ -127,7 +127,7 @@ class OrderTrackingAPIView(APIView):
             estado_label=estados_map.get(estado_actual, str(estado_actual).capitalize()),
             linea_tiempo=linea_tiempo,
         )
-        
+
         response = success_response(data=data, mensaje='Pedido obtenido correctamente.')
         response['Cache-Control'] = 'no-store'
         return response

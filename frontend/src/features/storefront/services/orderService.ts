@@ -34,7 +34,7 @@ export type TrackedOrder = Omit<CustomerOrder, 'items'>
     medio_pago: string;
     entrega: {metodo?: string};
     items: CustomerOrderItem[];
-    estado_label: string; 
+    estado_label: string;
     linea_tiempo: LineaTiempoPaso[];
   };
 
@@ -92,23 +92,23 @@ export const orderService = {
     if (!isValidOrderNumber(orderNumber)) throw new Error(ORDER_NUMBER_FORMAT_MESSAGE);
     const normalizedEmail = normalizeTrackingEmail(email);
     if (!isValidTrackingEmail(normalizedEmail)) throw new Error(TRACKING_EMAIL_FORMAT_MESSAGE);
-    
+
     const response = await fetch(`${API_BASE}/api/pedidos/seguimiento/`, {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({identificador: orderNumber, email: normalizedEmail}),
       signal,
     });
-    
+
     const body = await response.json();
     if (!response.ok || body.exito !== true) {
       throw new Error(body.detail || body.mensaje || 'No se pudo consultar el pedido. Verifica el número y correo.');
     }
-    
+
     const order: unknown = body.data;
     if (!order || typeof order !== 'object') throw new Error('La respuesta del pedido es inválida.');
     const data = order as Record<string, unknown>;
-    
+
     const hasValidLabel = typeof data.estado_label === 'string' || typeof data.estado_etiqueta === 'string';
     const hasValidTimeline = data.linea_tiempo === undefined || Array.isArray(data.linea_tiempo);
 
@@ -134,7 +134,7 @@ export const orderService = {
     }
     return order as TrackedOrder;
   },
-  
+
   async create(input: CheckoutInput): Promise<CreatedOrder> {
     const token = authService.getToken();
     let response: Response;
@@ -154,14 +154,14 @@ export const orderService = {
     } catch {
       throw new OrderError('No pudimos conectar con el servidor. Revisa tu conexión e intenta nuevamente.');
     }
-    
+
     let body: any = null;
     try {
       body = await response.json();
     } catch {
       body = null;
     }
-    
+
     if (!body || typeof body !== 'object') {
       throw new OrderError('No pudimos registrar tu pedido en este momento. Intenta nuevamente.');
     }
@@ -173,7 +173,7 @@ export const orderService = {
       throw new OrderError(message || 'No se pudo registrar el pedido.',
         typeof body.error?.codigo === 'string' ? body.error.codigo : undefined);
     }
-    
+
     const order: unknown = body.data;
     if (!order || typeof order !== 'object') throw new Error('La respuesta del pedido es inválida.');
     const data = order as Record<string, unknown>;

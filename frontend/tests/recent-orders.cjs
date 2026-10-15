@@ -13,7 +13,7 @@ function load(relative, mocks = {}, globals = {}) {
     const p = path.resolve(path.dirname(file), id);
     return load(['.ts', '.tsx'].map(ext => p + ext).find(fs.existsSync) || path.join(p, 'index.ts'), mocks, globals);
   };
-  vm.runInNewContext(code, { module, exports: module.exports, require: req, ...globals });
+  vm.runInNewContext(code, { module, exports: module.exports, require: req, URLSearchParams, ...globals });
   return module.exports;
 }
 
@@ -39,6 +39,29 @@ const exito = data => respuesta(200, { exito: true, mensaje: 'ok', data });
 const mensajeDe = async promesa => { try { await promesa; } catch (error) { return error.message; } return null; };
 
 async function pruebasDelServicio() {
+  await test('actualiza estado con Token y PATCH; utiliza la respuesta validada del servidor', async () => {
+    const {api,llamadas} = servicio({fetchImpl: async () => exito({id_pedido:3,estado:'en_origen',estado_etiqueta:'En origen'})});
+    const updated = await api.updateOrderStatus(3, ' EN_ORIGEN ');
+    assert.equal(updated.estado, 'en_origen');
+    assert.equal(llamadas[0][0], 'http://api.test/api/tienda/pedidos/3/estado/');
+    assert.equal(llamadas[0][1].method, 'PATCH');
+    assert.equal(llamadas[0][1].headers.Authorization, 'Token abc');
+    same(JSON.parse(llamadas[0][1].body), {estado:'en_origen'});
+  });
+  await test('estado inválido o sesión ausente no envían; errores y respuestas inconsistentes no actualizan', async () => {
+    const guest = servicio({token:null,fetchImpl:async()=>{throw Error('No enviar');}});
+    assert.ok((await mensajeDe(guest.api.updateOrderStatus(3,'pagado'))).includes('Inicia sesión'));
+    assert.equal(guest.llamadas.length,0);
+    const invalid = servicio({fetchImpl:async()=>{throw Error('No enviar');}});
+    assert.ok((await mensajeDe(invalid.api.updateOrderStatus(3,'inventado'))).includes('no es válido'));
+    assert.equal(invalid.llamadas.length,0);
+    const rejected = servicio({fetchImpl:async()=>respuesta(409,{exito:false,mensaje:'Transición rechazada por servidor'})});
+    assert.equal(await mensajeDe(rejected.api.updateOrderStatus(3,'cancelado')),'Transición rechazada por servidor');
+    for(const data of [null,{id_pedido:4,estado:'pagado',estado_etiqueta:'Pagado'},{id_pedido:3,estado:'inventado',estado_etiqueta:'Otro'}]) {
+      const bad = servicio({fetchImpl:async()=>exito(data)});
+      assert.ok((await mensajeDe(bad.api.updateOrderStatus(3,'pagado'))).includes('inválida'));
+    }
+  });
   await test('consulta las últimas órdenes con la sesión del propietario', async () => {
     const { api, llamadas } = servicio({ fetchImpl: async () => exito([orden(1), orden(2)]) });
     const lista = await api.getRecentOrders();
@@ -149,7 +172,7 @@ async function pruebasDeEstadosYFechas() {
 
 // ------------------------------------------------------------------ vista y componente
 const uiMocks = {
-  'react-router-dom': { Link: ({ to, children }) => React.createElement('a', { href: to }, children) },
+  'react-router-dom': { useSearchParams: () => [new URLSearchParams(), () => {}], Link: ({ to, children }) => React.createElement('a', { href: to }, children) },
   '../ui': {
     Alert: ({ variant, children }) => React.createElement('div', { 'data-alert': variant }, children),
     Badge: ({ variant, children }) => React.createElement('span', { 'data-badge': variant }, children),
@@ -289,9 +312,12 @@ async function pruebasDelDashboard() {
     const mocks = {
       '../data/mockAdminData': { formatPrice: valor => `$${valor}` },
       '../components/ui': { Select: () => React.createElement('select', null), Badge: ({ children }) => React.createElement('span', null, children) },
-      'react-router-dom': { Link: ({ to, children }) => React.createElement('a', { href: to }, children) },
+      'react-router-dom': { useSearchParams: () => [new URLSearchParams(), () => {}], Link: ({ to, children }) => React.createElement('a', { href: to }, children) },
       '../context/AdminContext': { useAdmin: () => ({ config: { orders: mockOrders } }) },
       '../components/dashboard/RecentOrders': { default: () => React.createElement('section', null, 'LISTADO-REAL-DE-ORDENES') },
+      '../services/dashboardService': { getDashboard: async () => ({}) },
+      '../../data/mockAdminData': { formatPrice: valor => `$${valor}` },
+      '../ui': { Alert: () => null, Button: () => null, Icon: () => null },
     };
     const { default: Dashboard } = load('src/features/admin/pages/Dashboard.tsx', mocks);
     const salida = renderToStaticMarkup(React.createElement(Dashboard));
