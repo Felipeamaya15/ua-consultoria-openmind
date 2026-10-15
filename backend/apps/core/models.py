@@ -48,6 +48,43 @@ class Tienda(models.Model):
     class Meta:
         db_table = 'tienda'
 
+
+class Promocion(models.Model):
+    TIPO_PORCENTAJE = 'percentage'
+    TIPO_MONTO_FIJO = 'fixed'
+    TIPO_ENVIO_GRATIS = 'free_shipping'
+    TIPOS = [
+        (TIPO_PORCENTAJE, 'Porcentaje'),
+        (TIPO_MONTO_FIJO, 'Monto fijo'),
+        (TIPO_ENVIO_GRATIS, 'Envio gratis'),
+    ]
+
+    tienda = models.ForeignKey(Tienda, on_delete=models.CASCADE, related_name='promociones')
+    nombre = models.CharField(max_length=150)
+    codigo = models.CharField(max_length=40)
+    tipo = models.CharField(max_length=20, choices=TIPOS)
+    valor = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    monto_minimo = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    maximo_usos = models.PositiveIntegerField(null=True, blank=True)
+    usos = models.PositiveIntegerField(default=0)
+    fecha_inicio = models.DateField()
+    fecha_fin = models.DateField(null=True, blank=True)
+    activa = models.BooleanField(default=True)
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+    fecha_actualizacion = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'promocion'
+        constraints = [
+            models.UniqueConstraint(fields=('tienda', 'codigo'), name='uq_promocion_tienda_codigo'),
+            models.CheckConstraint(check=Q(valor__gte=0), name='chk_promocion_valor_no_negativo'),
+            models.CheckConstraint(check=Q(monto_minimo__gte=0), name='chk_promocion_minimo_no_negativo'),
+        ]
+
+    def save(self, *args, **kwargs):
+        self.codigo = self.codigo.strip().upper()
+        super().save(*args, **kwargs)
+
 class Producto(models.Model):
     id_producto = models.BigAutoField(primary_key=True)
     nombre = models.CharField(max_length=200)
