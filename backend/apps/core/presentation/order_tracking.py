@@ -79,17 +79,20 @@ class OrderTrackingAPIView(APIView):
         data = OrderDetailSerializer(order).data
         
         # --- SCRUM-377: Construcción de Línea de Tiempo (RF-02.4) ---
-        estado_actual = getattr(order, 'estado', 'pendiente')
+        alias_estado = {'preparacion': 'preparando', 'despachado': 'enviado'}
+        estado_actual = alias_estado.get(getattr(order, 'estado', 'pendiente'), getattr(order, 'estado', 'pendiente'))
         estados_map = {
             'pendiente': 'Pendiente de pago',
             'pagado': 'Pago confirmado',
-            'preparacion': 'En preparación',
-            'despachado': 'Despachado / En tránsito',
+            'preparando': 'En preparación',
+            'en_origen': 'En origen',
+            'enviado': 'Despachado / En tránsito',
+            'en_reparto': 'En reparto',
             'entregado': 'Entregado',
             'cancelado': 'Cancelado',
         }
         
-        orden_estados = ['pendiente', 'pagado', 'preparacion', 'despachado', 'entregado']
+        orden_estados = ['pendiente', 'pagado', 'preparando', 'en_origen', 'enviado', 'en_reparto', 'entregado']
         
         if estado_actual == 'cancelado':
             linea_tiempo = [{'estado': 'cancelado', 'etiqueta': 'Cancelado', 'completado': True, 'actual': True}]
@@ -102,8 +105,10 @@ class OrderTrackingAPIView(APIView):
             pasos = [
                 {'estado': 'pendiente', 'etiqueta': 'Recibido'},
                 {'estado': 'pagado', 'etiqueta': 'Pago Confirmado'},
-                {'estado': 'preparacion', 'etiqueta': 'En Preparación'},
-                {'estado': 'despachado', 'etiqueta': 'En Tránsito'},
+                {'estado': 'preparando', 'etiqueta': 'En Preparación'},
+                {'estado': 'en_origen', 'etiqueta': 'En Origen'},
+                {'estado': 'enviado', 'etiqueta': 'En Tránsito'},
+                {'estado': 'en_reparto', 'etiqueta': 'En Reparto'},
                 {'estado': 'entregado', 'etiqueta': 'Entregado'},
             ]
             for i, paso in enumerate(pasos):
