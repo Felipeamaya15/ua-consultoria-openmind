@@ -1,6 +1,10 @@
 /** Cómo se muestra cada estado de un pedido en el panel del emprendedor. */
 export type OrderBadgeVariant = 'default' | 'info' | 'warning' | 'success' | 'error';
 
+/** Equivalentes a Pedido.ESTADOS_PAGADOS y al conteo por_despachar del dashboard. */
+export const CONFIRMED_ORDER_STATES = ['pagado', 'preparando', 'en_origen', 'enviado', 'en_reparto', 'entregado'] as const;
+export const DISPATCH_ORDER_STATES = ['pendiente', 'pagado', 'preparando', 'en_origen'] as const;
+
 export interface OrderStatusBadge {
   label: string;
   variant: OrderBadgeVariant;

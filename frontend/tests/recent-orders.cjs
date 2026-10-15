@@ -13,7 +13,7 @@ function load(relative, mocks = {}, globals = {}) {
     const p = path.resolve(path.dirname(file), id);
     return load(['.ts', '.tsx'].map(ext => p + ext).find(fs.existsSync) || path.join(p, 'index.ts'), mocks, globals);
   };
-  vm.runInNewContext(code, { module, exports: module.exports, require: req, ...globals });
+  vm.runInNewContext(code, { module, exports: module.exports, require: req, URLSearchParams, ...globals });
   return module.exports;
 }
 
@@ -149,7 +149,7 @@ async function pruebasDeEstadosYFechas() {
 
 // ------------------------------------------------------------------ vista y componente
 const uiMocks = {
-  'react-router-dom': { Link: ({ to, children }) => React.createElement('a', { href: to }, children) },
+  'react-router-dom': { useSearchParams: () => [new URLSearchParams(), () => {}], Link: ({ to, children }) => React.createElement('a', { href: to }, children) },
   '../ui': {
     Alert: ({ variant, children }) => React.createElement('div', { 'data-alert': variant }, children),
     Badge: ({ variant, children }) => React.createElement('span', { 'data-badge': variant }, children),
@@ -289,9 +289,12 @@ async function pruebasDelDashboard() {
     const mocks = {
       '../data/mockAdminData': { formatPrice: valor => `$${valor}` },
       '../components/ui': { Select: () => React.createElement('select', null), Badge: ({ children }) => React.createElement('span', null, children) },
-      'react-router-dom': { Link: ({ to, children }) => React.createElement('a', { href: to }, children) },
+      'react-router-dom': { useSearchParams: () => [new URLSearchParams(), () => {}], Link: ({ to, children }) => React.createElement('a', { href: to }, children) },
       '../context/AdminContext': { useAdmin: () => ({ config: { orders: mockOrders } }) },
       '../components/dashboard/RecentOrders': { default: () => React.createElement('section', null, 'LISTADO-REAL-DE-ORDENES') },
+      '../services/dashboardService': { getDashboard: async () => ({}) },
+      '../../data/mockAdminData': { formatPrice: valor => `$${valor}` },
+      '../ui': { Alert: () => null, Button: () => null, Icon: () => null },
     };
     const { default: Dashboard } = load('src/features/admin/pages/Dashboard.tsx', mocks);
     const salida = renderToStaticMarkup(React.createElement(Dashboard));

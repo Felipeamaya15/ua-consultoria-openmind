@@ -247,10 +247,46 @@ class DeliveryStringField(serializers.CharField):
         return super().to_internal_value(data)
 
 
-class PickupConfigurationSerializer(StrictSerializer):
+class PickupLocationSerializer(StrictSerializer):
+    region = DeliveryStringField(allow_blank=True, max_length=200)
+    comuna = DeliveryStringField(allow_blank=True, max_length=200)
+    street = DeliveryStringField(allow_blank=True, max_length=200)
+    number = DeliveryStringField(allow_blank=True, max_length=50)
+    reference = DeliveryStringField(allow_blank=True, max_length=500)
+    verification = DeliveryStringField(allow_blank=True, max_length=4096)
+
+
+class PickupDaySerializer(StrictSerializer):
     enabled = DeliveryBooleanField()
-    address = DeliveryStringField(allow_blank=True, max_length=500)
+    start = DeliveryStringField(allow_blank=True, max_length=5)
+    end = DeliveryStringField(allow_blank=True, max_length=5)
+
+
+class PickupHoursSerializer(StrictSerializer):
+    mon = PickupDaySerializer()
+    tue = PickupDaySerializer()
+    wed = PickupDaySerializer()
+    thu = PickupDaySerializer()
+    fri = PickupDaySerializer()
+    sat = PickupDaySerializer()
+    sun = PickupDaySerializer()
+
+
+class PickupConfigurationSerializer(StrictSerializer):
+    validation_method = serializers.CharField(read_only=True)
+    enabled = DeliveryBooleanField()
+    address = DeliveryStringField(allow_blank=True, max_length=1500)
     schedule = DeliveryStringField(allow_blank=True, max_length=500)
+    version = serializers.ChoiceField(choices=[2], required=False)
+    location = PickupLocationSerializer(required=False)
+    hours = PickupHoursSerializer(required=False)
+    legacy_address = DeliveryStringField(allow_blank=True, max_length=500, required=False)
+    legacy_schedule = DeliveryStringField(allow_blank=True, max_length=500, required=False)
+
+    def validate(self, data):
+        if data.get('version') != 2 and len(data.get('address', '')) > 500:
+            raise serializers.ValidationError({'address': 'La dirección antigua admite hasta 500 caracteres.'})
+        return data
 
 
 class ShippingRateSerializer(StrictSerializer):

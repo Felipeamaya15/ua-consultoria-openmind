@@ -24,7 +24,7 @@ class CheckoutOrderTests(TestCase):
         self.owner = users.objects.create_user(username='checkout-owner')
         self.store = Tienda.objects.create(nombre='Checkout store', id_usuario_propietario=self.owner)
         ConfiguracionEntrega.objects.create(tienda=self.store, datos={
-            'pickup': {'enabled': True}, 'chilexpress': {'enabled': True}, 'starken': {'enabled': True},
+            'pickup': {'enabled': True, 'address': 'Local de prueba', 'schedule': 'Lun–Vie 09:00 a 18:00'}, 'chilexpress': {'enabled': True}, 'starken': {'enabled': True},
         })
         ConfiguracionPago.objects.create(tienda=self.store, datos={'transfer': {'enabled': True,
             'fields': {field: 'qa' for field in TRANSFER_PUBLIC_FIELDS}}})

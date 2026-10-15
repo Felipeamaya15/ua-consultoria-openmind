@@ -4,6 +4,8 @@ from apps.core.presentation.checkout import CheckoutOrderAPIView
 from apps.core.presentation.shipping import ShippingQuoteAPIView
 from apps.core.presentation.linkify_notificacion import LinkifyNotificacionView
 from apps.core.presentation.recent_orders import UltimasOrdenesAPIView
+from apps.core.presentation.dashboard import DashboardAPIView
+from apps.core.presentation.pickup_address import PickupAddressAPIView
 from django.urls import path
 from . import views
 from apps.core.presentation.views import (
@@ -24,6 +26,8 @@ from apps.core.presentation.views import (
 )
 
 urlpatterns = [
+    path('entregas/retiro/direcciones/', PickupAddressAPIView.as_view(), name='pickup-address'),
+    path('tienda/dashboard/', DashboardAPIView.as_view(), name='tienda-dashboard'),
     path('pedidos/registrar/', RegistrarCompraView.as_view(), name='pedidos-registrar'),
     path('checkout/pedidos/', CheckoutOrderAPIView.as_view(), name='checkout-order'),
     path('pedidos/seguimiento/', OrderTrackingAPIView.as_view(), name='order-tracking'),

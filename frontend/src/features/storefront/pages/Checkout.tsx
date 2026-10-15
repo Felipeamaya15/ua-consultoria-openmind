@@ -3,7 +3,8 @@ import { useEffect, useMemo, useState, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 
 import { orderService } from '../services/orderService';
-import { getDeliveryAlternatives, getShippingQuotes, type ShippingQuote } from '../services/shippingService';
+import { getDeliveryAlternatives, getShippingQuotes, type ShippingQuote, type ShippingConfiguration } from '../services/shippingService';
+import PickupDetails from '../components/checkout/PickupDetails';
 import { useCart } from '../context/CartContext';
 import { formatPrice } from '../data/mockData';
 import { comunasDeRegion, esComunaDeRegion } from '../data/comunasChile';
@@ -59,6 +60,7 @@ type ShippingOption = {
   desc: string;
   priceLabel: string;
   requiresAddress: boolean;
+  pickup?: ShippingConfiguration['pickup'];
 };
 
 type PaymentOption = {
@@ -116,8 +118,8 @@ const defaultShippingOptions: ShippingOption[] = [
     id: 'Retiro',
     label: 'Retiro en tienda',
     icon: 'store',
-    desc: 'Retira tu compra presencialmente',
-    priceLabel: 'Gratis',
+    desc: 'Retira tu pedido en nuestro establecimiento',
+    priceLabel: 'Gratis ($0)',
     requiresAddress: false,
   },
 ];
@@ -314,8 +316,9 @@ export default function Checkout() {
         return configuration.pickup.enabled;
       }).map(option => option.id === 'Retiro' ? {
         ...option,
-        desc: ['Sin costo', configuration.pickup.schedule, configuration.pickup.address].filter(Boolean).join(' · '),
-        priceLabel: 'Gratis',
+        desc: 'Retira tu pedido en nuestro establecimiento',
+        pickup: configuration.pickup,
+        priceLabel: 'Gratis ($0)',
       } : option);
       setShippingOptions(enabled);
     }).catch(cause => {
@@ -1174,11 +1177,10 @@ export default function Checkout() {
 
               <div className="flex flex-col gap-3" role="radiogroup" aria-label="Alternativas de entrega">
                 {shippingOptions.map((method) => (
-                  <label
+                  <div
                     key={method.id}
                     className={`
-                      flex items-center gap-4
-                      p-4 border cursor-pointer
+                      border min-w-0 focus-within:ring-2 focus-within:ring-[var(--primary)]
                       transition-all
                       ${
                         isMinimal
@@ -1192,9 +1194,11 @@ export default function Checkout() {
                       }
                     `}
                   >
+                    <label className="flex items-center gap-4 p-4 cursor-pointer">
                     <input
                       type="radio"
                       name="shipping"
+                      aria-label={method.label}
                       value={method.id}
                       checked={shippingMethod === method.id}
                       onChange={() => setShippingMethod(method.id)}
@@ -1208,13 +1212,13 @@ export default function Checkout() {
                       />
                     </div>
 
-                    <div className="flex-1">
+                    <div className="flex-1 min-w-0">
                       <p className={isCatalog ? "font-semibold text-sm text-[var(--visual-page-color)]" : "font-semibold text-sm"}>
                         {method.label}
                       </p>
 
                       <p className="text-xs text-[var(--visual-page-color)] mt-0.5">
-                        {method.id === shippingMethod && selectedQuote
+                        {method.id !== 'Retiro' && method.id === shippingMethod && selectedQuote
                           ? selectedQuote.plazo_dias
                             ? `${selectedQuote.plazo_dias} dias habiles · Tarifa de la tienda`
                             : 'Despacho a domicilio'
@@ -1223,13 +1227,15 @@ export default function Checkout() {
                     </div>
 
                     <span className="text-sm font-semibold">
-                      {method.id === shippingMethod && selectedQuote
+                      {method.id !== 'Retiro' && method.id === shippingMethod && selectedQuote
                         ? formatPrice(selectedQuote.monto)
-                        : method.id === shippingMethod && quoteUnavailable
+                        : method.id !== 'Retiro' && method.id === shippingMethod && quoteUnavailable
                           ? 'Sin tarifa'
                           : method.priceLabel}
                     </span>
-                  </label>
+                    </label>
+                    {method.id === 'Retiro' && method.pickup && <div className="px-4 pb-3"><PickupDetails pickup={method.pickup} /></div>}
+                  </div>
                 ))}
               </div>
 
@@ -1966,7 +1972,7 @@ export default function Checkout() {
               <div className="flex justify-between text-sm">
                 <span className="text-[var(--visual-page-color)]">Envío</span>
                 <span className="font-medium">
-                  {shipping === null ? 'Por cotizar' : shipping === 0 ? 'Gratis' : formatPrice(shipping)}
+                  {shipping === null ? 'Por cotizar' : shipping === 0 ? 'Gratis ($0)' : formatPrice(shipping)}
                 </span>
               </div>
               <div className="flex justify-between font-bold text-lg pt-2 border-t border-[var(--border)]">

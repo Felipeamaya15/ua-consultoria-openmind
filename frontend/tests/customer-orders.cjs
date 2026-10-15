@@ -4,7 +4,7 @@ const root = path.resolve(__dirname, '..');
 function load(file, globals) {
   const module = {exports: {}};
   const source = fs.readFileSync(path.join(root, file), 'utf8').replace('import.meta.env.VITE_API_URL', 'undefined');
-  vm.runInNewContext(ts.transpileModule(source, {compilerOptions: {target: ts.ScriptTarget.ES2020, module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX}}).outputText, {module, exports: module.exports, Error, sessionStorage: {getItem: () => null}, ...globals});
+  vm.runInNewContext(ts.transpileModule(source, {compilerOptions: {target: ts.ScriptTarget.ES2020, module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX}}).outputText, {module, exports: module.exports, Error, AbortController, URLSearchParams, sessionStorage: {getItem: () => null}, ...globals});
   return module.exports;
 }
 (async () => {
@@ -31,7 +31,7 @@ function load(file, globals) {
   const service = {getCustomerOrders: async () => {if (fail) throw Error('No disponible'); return data;}, getCustomerOrder: async requested => {assert.equal(requested, '42'); return real;}};
   const requireMock = name => {
     if (name === 'react/jsx-runtime') return {jsx, jsxs: jsx};
-    if (name === 'react') return {useState: initial => {const i = index++; if (!(i in states)) states[i] = initial; return [states[i], value => {states[i] = value;}];}, useEffect: effect => effects.push(effect)};
+    if (name === 'react') return {useRef: () => ({current: null}), useState: initial => {const i = index++; if (!(i in states)) states[i] = initial; return [states[i], value => {states[i] = value;}];}, useEffect: effect => effects.push(effect)};
     if (name === 'react-router-dom') return {Link: 'Link', NavLink: 'NavLink', useParams: () => ({id})};
     if (name.includes('authService')) return {authService: service};
     if (name.includes('useStorefrontTemplate')) return {useStorefrontTemplate: () => ({route: p => '/plantilla/' + template + '/' + p})};
@@ -68,11 +68,14 @@ function load(file, globals) {
     require: name => {
       if (name === 'react/jsx-runtime') return {jsx, jsxs: jsx};
       if (name === 'react') return requireMock(name);
+      if (name === 'react-router-dom') return {Link: 'Link', useSearchParams: () => [new URLSearchParams(), () => {}]};
+      if (name.includes('orderStatus')) return load('src/features/admin/data/orderStatus.ts', {});
+      if (name.includes('orderNavigation')) return load('src/features/admin/services/orderNavigation.ts', {require: () => load('src/features/admin/data/orderStatus.ts', {})});
       if (name.endsWith('/api')) return {API_BASE_URL: 'https://configured.example.test'};
       if (name.includes('authService')) return {authService: {getToken: () => storeToken}};
       if (name.includes('pendingTransfersService')) return {approveManualTransfer: async () => {throw Error('No se debe aprobar durante la lectura');}, verifyTransfer: async () => {throw Error('No se debe verificar durante la lectura');}};
       if (name.includes('mockAdminData')) return {formatPrice: String};
-      if (name.includes('components/ui')) return {Badge: 'Badge', Icon: 'Icon'};
+      if (name.includes('components/ui')) return {Badge: 'Badge', Icon: 'Icon', Input: 'Input', Button: 'Button'};
       throw Error(name);
     },
   });

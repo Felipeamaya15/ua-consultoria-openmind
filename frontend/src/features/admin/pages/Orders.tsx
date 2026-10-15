@@ -1,9 +1,13 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { formatPrice } from "../data/mockAdminData"
-import { Badge, Icon } from "../components/ui"
+import { Badge, Icon, Input, Button } from "../components/ui"
 import { API_BASE_URL } from "../../../api"
 import { authService } from "../../auth/services/authService"
 import { approveManualTransfer, verifyTransfer } from "../services/pendingTransfersService"
+
+import { Link, useSearchParams } from 'react-router-dom'
+import { ORDER_STATUS_BADGE as STATUS_BADGE } from '../data/orderStatus'
+import { readOrderFilters, filterStoreOrders, orderDateInChile } from '../services/orderNavigation'
 
 type StoreOrder = {
   id_pedido: number; identificador: string | null; nombre_contacto: string; correo_contacto: string;
@@ -27,24 +31,22 @@ function isStoreOrder(value: unknown): value is StoreOrder {
       && Number.isFinite(Number(item.precio_unitario)))
 }
 
-const STATUS_BADGE: Record<string, {
-  label: string
-  variant: "default" | "info" | "warning" | "success" | "error"
-}> = {
-  pendiente: { label: "Pendiente", variant: "warning" },
-  pagado: { label: "Pagado", variant: "info" },
-  preparando: { label: "En preparación", variant: "info" },
-  en_origen: { label: "En origen", variant: "info" },
-  enviado: { label: "En tránsito", variant: "info" },
-  en_reparto: { label: "En reparto", variant: "info" },
-  entregado: { label: "Entregado", variant: "success" },
-  cancelado: { label: "Cancelado", variant: "error" },
-}
-
 export default function Orders() {
   const [pedidos, setPedidos] = useState<StoreOrder[]>([])
-  const [filter, setFilter] = useState("all")
-  const [selectedId, setSelectedId] = useState<number | null>(null)
+  const [params, setParams] = useSearchParams()
+  const filters = readOrderFilters(params)
+  const filter = filters.status
+  const selectedId = filters.selectedId
+  const detailRef = useRef<HTMLDivElement>(null)
+  const updateParams = (changes: Record<string, string | null>) => {
+    setParams(previous => {
+      const next = new URLSearchParams(previous)
+      Object.entries(changes).forEach(([key, value]) => { if (value) next.set(key, value); else next.delete(key) })
+      return next
+    })
+  }
+  const setFilter = (value: string) => updateParams({ estado: value === 'all' ? null : value })
+  const setSelectedId = (value: number | null) => updateParams({ pedido: value ? String(value) : null })
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState('')
   const [refreshKey, setRefreshKey] = useState(0)
@@ -54,6 +56,8 @@ export default function Orders() {
   const [verifyMessage, setVerifyMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null)
 
   useEffect(() => {
+    const controller = new AbortController()
+    setError('')
     const fetchPedidos = async () => {
       try {
         const token = authService.getToken();
@@ -61,6 +65,7 @@ export default function Orders() {
         
         const response = await fetch(`${API_BASE_URL}/api/tienda/pedidos/`, {
           method: 'GET',
+          signal: controller.signal,
           headers: {
             'Authorization': `Token ${token}`,
             'Content-Type': 'application/json'
@@ -70,18 +75,19 @@ export default function Orders() {
         if (response.ok) {
           const data = await response.json();
           if (!Array.isArray(data) || !data.every(isStoreOrder)) throw new Error('El listado de pedidos recibido es inválido.');
-          setPedidos(data);
+          if (!controller.signal.aborted) setPedidos(data);
         } else {
           throw new Error('No se pudieron consultar los pedidos.');
         }
       } catch (error) {
-        setError(error instanceof Error ? error.message : 'No se pudieron consultar los pedidos.');
+        if (!controller.signal.aborted) setError(error instanceof Error ? error.message : 'No se pudieron consultar los pedidos.');
       } finally {
-        setCargando(false);
+        if (!controller.signal.aborted) setCargando(false);
       }
     };
 
     fetchPedidos();
+    return () => controller.abort();
   }, [refreshKey]);
 
   // Manejador del botón verificar
@@ -104,9 +110,7 @@ export default function Orders() {
     }
   };
 
-  const filtered = filter === "all"
-    ? pedidos
-    : pedidos.filter((p) => p.estado === filter)
+  const filtered = filterStoreOrders(pedidos, filters)
 
   const selectedOrder = selectedId
     ? pedidos.find((p) => p.id_pedido === selectedId)
@@ -117,6 +121,10 @@ export default function Orders() {
     setVerifyMessage(null);
   }, [selectedId]);
 
+  useEffect(() => {
+    if (!cargando && selectedId) detailRef.current?.focus()
+  }, [selectedId, cargando])
+
   if (cargando) {
     return <div className="p-10 text-center">Cargando pedidos...</div>
   }
@@ -126,12 +134,26 @@ export default function Orders() {
   const isVerifiableMethod = selectedOrder?.metodo_pago?.toLowerCase() === 'transferencia' || selectedOrder?.metodo_pago?.toLowerCase() === 'linkify';
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-5 gap-5">
+    <div className="space-y-4">
+      {['7', '30', 'year'].includes(params.get('periodo') || '') && <Link
+        to={`/emprendedor?periodo=${params.get('periodo')}`} className="text-sm text-[var(--primary)] hover:underline focus-visible:outline focus-visible:outline-2 rounded">← Volver al dashboard</Link>}
+      <div className="flex flex-wrap items-end gap-3">
+        <Input id="orders-from" type="date" label="Desde" value={filters.from}
+          onChange={event => updateParams({ fecha_desde: event.target.value, periodo: null })} />
+        <Input id="orders-to" type="date" label="Hasta" value={filters.to}
+          onChange={event => updateParams({ fecha_hasta: event.target.value, periodo: null })} />
+        <Button variant="outline" onClick={() => updateParams({ estado: null, fecha_desde: null, fecha_hasta: null, periodo: null })}>Limpiar filtros</Button>
+      </div>
+      <p className="text-xs text-[var(--muted-foreground)]">Fechas de registro del pedido en hora de Chile. {filtered.length} pedidos coinciden con los filtros.</p>
+      {filters.error && <p role="alert" className="text-sm text-[var(--error)]">{filters.error}</p>}
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-5">
       <div className="lg:col-span-3">
         {/* Filters */}
         <div className="flex gap-2 mb-4 overflow-x-auto pb-1">
           {[
             ["all", "Todos"],
+            ["confirmed", "Pagos confirmados"],
+            ["dispatch", "Por despachar"],
             ["pendiente", "Pendientes"],
             ["pagado", "Pagados"],
             ["preparando", "Preparando"],
@@ -143,8 +165,9 @@ export default function Orders() {
           ].map(([val, label]) => (
             <button
               key={val}
+              aria-pressed={filter === val}
               onClick={() => setFilter(val)}
-              className={`px-3 py-1.5 text-xs rounded-lg font-medium whitespace-nowrap transition-colors ${
+              className={`px-3 py-1.5 text-xs rounded-lg font-medium whitespace-nowrap transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--primary)] ${
                 filter === val
                   ? "bg-[var(--primary)] text-white"
                   : "bg-white border border-[var(--border)] text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
@@ -158,7 +181,7 @@ export default function Orders() {
         <div className="bg-white border border-[var(--border)] rounded-xl overflow-hidden">
           {filtered.length === 0 ? (
             <div className="p-10 text-center text-[var(--muted-foreground)] text-sm">
-              No hay pedidos en esta categoría.
+              No hay pedidos que coincidan con los filtros.
             </div>
           ) : (
             <div className="divide-y divide-[var(--border)]">
@@ -171,10 +194,10 @@ export default function Orders() {
                 return (
                   <div
                     key={order.id_pedido}
-                    role="button" tabIndex={0} aria-label={`Ver pedido ${order.identificador}`}
+                    role="button" tabIndex={0} aria-label={`Ver pedido ${order.identificador || `#${order.id_pedido}`}`} aria-expanded={isSelected}
                     onKeyDown={event => {if(event.key === "Enter" || event.key === " "){event.preventDefault();setSelectedId(isSelected ? null : order.id_pedido);}}}
                     onClick={() => setSelectedId(isSelected ? null : order.id_pedido)}
-                    className={`p-4 border-b border-[var(--border)] last:border-0 cursor-pointer transition-colors ${
+                    className={`p-4 border-b border-[var(--border)] last:border-0 cursor-pointer transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--primary)] ${
                       isSelected
                         ? "bg-[var(--secondary)]"
                         : "hover:bg-[var(--muted)]/30"
@@ -203,7 +226,7 @@ export default function Orders() {
                       <span>{order.metodo_pago || "No especificado"}</span>
                       <span>·</span>
                       <span>
-                        {new Date(order.fecha_creacion).toLocaleDateString("es-CL")}
+                        {orderDateInChile(order.fecha_creacion).split("-").reverse().join("/")}
                       </span>
                     </div>
                   </div>
@@ -217,7 +240,7 @@ export default function Orders() {
       {/* Order detail panel */}
       <div className="lg:col-span-2">
         {selectedOrder ? (
-          <div className="bg-white border border-[var(--border)] rounded-xl p-5 sticky top-20 flex flex-col gap-4">
+          <div ref={detailRef} tabIndex={-1} role="region" aria-label={`Detalle del pedido ${selectedOrder.identificador || `#${selectedOrder.id_pedido}`}`} className="bg-white border border-[var(--border)] rounded-xl p-5 sticky top-20 flex flex-col gap-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--primary)]">
             <div className="flex items-start justify-between">
               <div>
                 <p className="font-mono text-xs text-[var(--muted-foreground)]">
@@ -226,6 +249,7 @@ export default function Orders() {
                 <p className="font-bold">{selectedOrder.nombre_contacto || "Sin nombre"}</p>
               </div>
               <button
+                aria-label="Cerrar detalle del pedido"
                 onClick={() => setSelectedId(null)}
                 className="text-[var(--muted-foreground)] hover:text-[var(--foreground)] p-1"
               >
@@ -309,10 +333,11 @@ export default function Orders() {
           <div className="bg-white border border-[var(--border)] rounded-xl p-10 text-center text-[var(--muted-foreground)]">
             <Icon name="file" className="w-9 h-9 mx-auto mb-3" />
             <p className="text-sm">
-              Selecciona un pedido para ver sus detalles
+              {selectedId ? "El pedido solicitado no se encuentra disponible en esta tienda." : "Selecciona un pedido para ver sus detalles"}
             </p>
           </div>
         )}
+      </div>
       </div>
     </div>
   )
