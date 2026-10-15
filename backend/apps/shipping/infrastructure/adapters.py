@@ -2,6 +2,7 @@ import logging
 import uuid
 from decimal import Decimal
 from typing import List
+from apps.catalog.infrastructure.adapters.seguimiento_response import procesar_respuesta_seguimiento
 from apps.shipping.domain.ports import LogisticsPort
 from apps.shipping.domain.dtos import (
     DireccionDespachoDTO, 
@@ -238,31 +239,25 @@ class ChilexpressAdapter(LogisticsPort):
                 f"No se registraron envíos en Chilexpress para el seguimiento '{codigo}'."
             )
 
+        # Respuesta del operador (simulado).
+        respuesta = {
+            "data": {
+                "statusList": [
+                    {"date": "2026-10-07T09:00:00Z", "status": "RECEPCION_EN_SUCURSAL", "description": "Envío admitido en sucursal Chilexpress origen.", "location": "Sucursal Santiago Centro"},
+                    {"date": "2026-10-07T18:30:00Z", "status": "CLASIFICACION_HUB_CENTRAL", "description": "Paquete clasificado en Centro de Distribución Enea.", "location": "Hub Enea Pudahuel"},
+                    {"date": "2026-10-08T06:15:00Z", "status": "EN_TRANSITO_REGIONAL", "description": "Carga despachada hacia el centro de distribución de destino.", "location": "Centro Operativo Regional"},
+                    {"date": "2026-10-08T11:45:00Z", "status": "EN_DISTRIBUCION", "description": "Envío asignado a móvil para entrega final en domicilio.", "location": "Ruta Última Milla"},
+                ]
+            }
+        }
         eventos = [
             EventoSeguimientoDTO(
-                fecha_hora="2026-10-07T09:00:00Z",
-                estado="RECEPCION_EN_SUCURSAL",
-                descripcion="Envío admitido en sucursal Chilexpress origen.",
-                ubicacion="Sucursal Santiago Centro"
-            ),
-            EventoSeguimientoDTO(
-                fecha_hora="2026-10-07T18:30:00Z",
-                estado="CLASIFICACION_HUB_CENTRAL",
-                descripcion="Paquete clasificado en Centro de Distribución Enea.",
-                ubicacion="Hub Enea Pudahuel"
-            ),
-            EventoSeguimientoDTO(
-                fecha_hora="2026-10-08T06:15:00Z",
-                estado="EN_TRANSITO_REGIONAL",
-                descripcion="Carga despachada hacia el centro de distribución de destino.",
-                ubicacion="Centro Operativo Regional"
-            ),
-            EventoSeguimientoDTO(
-                fecha_hora="2026-10-08T11:45:00Z",
-                estado="EN_DISTRIBUCION",
-                descripcion="Envío asignado a móvil para entrega final en domicilio.",
-                ubicacion="Ruta Última Milla"
+                fecha_hora=evento["fecha"],
+                estado=evento["estado"],
+                descripcion=evento["descripcion"],
+                ubicacion=evento["ubicacion"],
             )
+            for evento in procesar_respuesta_seguimiento("Chilexpress", respuesta)
         ]
 
         return DetalleSeguimientoDTO(
@@ -392,31 +387,23 @@ class StarkenAdapter(LogisticsPort):
                 f"No se registraron envíos en Starken para el seguimiento '{codigo}'."
             )
 
+        # Respuesta del operador (simulada hasta conectar la API real).
+        respuesta = {
+            "eventos": [
+                {"fecha": "2026-10-07T08:30:00Z", "estado": "INGRESO_EN_AGENCIA", "descripcion": "Carga recepcionada y documentada en agencia Starken.", "ciudad": "Agencia Alameda Santiago"},
+                {"fecha": "2026-10-07T20:15:00Z", "estado": "EN_CENTRO_DISTRIBUCION", "descripcion": "Procesamiento y consolidación de carga en Centro de Distribución.", "ciudad": "Hub San Bernardo"},
+                {"fecha": "2026-10-08T05:40:00Z", "estado": "EN_TRANSITO_INTERURBANO", "descripcion": "Camión troncal en traslado interurbano hacia terminal de destino.", "ciudad": "Ruta Interurbana"},
+                {"fecha": "2026-10-08T10:20:00Z", "estado": "EN_REPARTO_DOMICILIO", "descripcion": "Carga a bordo de vehículo de reparto para entrega en domicilio.", "ciudad": "Sector Destino Final"},
+            ]
+        }
         eventos = [
             EventoSeguimientoDTO(
-                fecha_hora="2026-10-07T08:30:00Z",
-                estado="INGRESO_EN_AGENCIA",
-                descripcion="Carga recepcionada y documentada en agencia Starken.",
-                ubicacion="Agencia Alameda Santiago"
-            ),
-            EventoSeguimientoDTO(
-                fecha_hora="2026-10-07T20:15:00Z",
-                estado="EN_CENTRO_DISTRIBUCION",
-                descripcion="Procesamiento y consolidación de carga en Centro de Distribución.",
-                ubicacion="Hub San Bernardo"
-            ),
-            EventoSeguimientoDTO(
-                fecha_hora="2026-10-08T05:40:00Z",
-                estado="EN_TRANSITO_INTERURBANO",
-                descripcion="Camión troncal en traslado interurbano hacia terminal de destino.",
-                ubicacion="Ruta Interurbana"
-            ),
-            EventoSeguimientoDTO(
-                fecha_hora="2026-10-08T10:20:00Z",
-                estado="EN_REPARTO_DOMICILIO",
-                descripcion="Carga a bordo de vehículo de reparto para entrega en domicilio.",
-                ubicacion="Sector Destino Final"
+                fecha_hora=evento["fecha"],
+                estado=evento["estado"],
+                descripcion=evento["descripcion"],
+                ubicacion=evento["ubicacion"],
             )
+            for evento in procesar_respuesta_seguimiento("Starken", respuesta)
         ]
 
         return DetalleSeguimientoDTO(
