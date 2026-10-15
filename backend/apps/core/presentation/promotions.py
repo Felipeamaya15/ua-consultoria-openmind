@@ -1,12 +1,13 @@
 from django.db import IntegrityError
 from rest_framework import serializers, status
 from rest_framework.authentication import TokenAuthentication
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.views import APIView
 
 from apps.authentication.permissions import IsStoreOwner
 from apps.core.infrastructure.tenant import resolver_tienda
 from apps.core.models import Promocion
+from apps.core.promotions import PromotionError, calculate_promotion
 from apps.core.presentation.responses import error_response, success_response
 
 
@@ -96,3 +97,31 @@ class PromocionDetalleAPIView(APIView):
             return error_response('La promocion no existe.', 'PROMOCION_NO_ENCONTRADA', status=status.HTTP_404_NOT_FOUND)
         promocion.delete()
         return success_response(mensaje='Promocion eliminada correctamente.')
+
+
+class ValidarPromocionSerializer(serializers.Serializer):
+    code = serializers.CharField(max_length=40, trim_whitespace=True)
+    subtotal = serializers.DecimalField(max_digits=12, decimal_places=2, min_value=0)
+    shipping = serializers.DecimalField(max_digits=12, decimal_places=2, min_value=0, required=False, default=0)
+
+
+class ValidarPromocionAPIView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        tienda = resolver_tienda(request)
+        serializer = ValidarPromocionSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+        try:
+            amounts = calculate_promotion(tienda, data['code'], data['subtotal'], data['shipping'])
+        except PromotionError as exc:
+            return error_response(str(exc), 'PROMOCION_INVALIDA', status=status.HTTP_400_BAD_REQUEST)
+        promotion = amounts.promotion
+        return success_response(data={
+            'code': promotion.codigo,
+            'type': promotion.tipo,
+            'discount': format(amounts.discount, '.2f'),
+            'shipping': format(amounts.shipping, '.2f'),
+            'message': 'Codigo promocional aplicado correctamente.',
+        })

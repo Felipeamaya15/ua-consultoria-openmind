@@ -50,3 +50,41 @@ class PromocionesAdminTests(TestCase):
         amounts = calculate_promotion(self.store, ' envio-gratis ', 25000, 3990)
         self.assertEqual(amounts.discount, 0)
         self.assertEqual(amounts.shipping, 0)
+
+    def test_valida_codigo_vigente_y_calcula_descuento_fijo(self):
+        Promocion.objects.create(
+            tienda=self.store, nombre='Cinco mil', codigo='FIJO5000', tipo='fixed', valor=5000,
+            monto_minimo=10000, fecha_inicio=date.today() - timedelta(days=1),
+            fecha_fin=date.today() + timedelta(days=1), activa=True,
+        )
+        self.client.credentials()
+        response = self.client.post('/api/promociones/validar/', {
+            'code': ' fijo5000 ', 'subtotal': '12000.00', 'shipping': '3500.00',
+        }, format='json')
+        self.assertEqual(response.status_code, 200, response.data)
+        self.assertEqual(response.data['data']['discount'], '5000.00')
+        self.assertEqual(response.data['data']['shipping'], '3500.00')
+
+    def test_rechaza_codigo_inexistente_inactivo_expirado_sin_minimo_o_sin_cupos(self):
+        cases = [
+            ('INACTIVA', {'activa': False}, 20000),
+            ('EXPIRADA', {'fecha_fin': date.today() - timedelta(days=1)}, 20000),
+            ('FUTURA', {'fecha_inicio': date.today() + timedelta(days=1)}, 20000),
+            ('MINIMO', {'monto_minimo': 30000}, 20000),
+            ('AGOTADA', {'maximo_usos': 1, 'usos': 1}, 20000),
+        ]
+        for code, changes, subtotal in cases:
+            values = dict(tienda=self.store, nombre=code, codigo=code, tipo='fixed', valor=1000,
+                          fecha_inicio=date.today(), activa=True)
+            values.update(changes)
+            Promocion.objects.create(**values)
+            response = self.client.post('/api/promociones/validar/', {
+                'code': code, 'subtotal': subtotal, 'shipping': 3000,
+            }, format='json')
+            self.assertEqual(response.status_code, 400, (code, response.data))
+            self.assertEqual(response.data['error']['codigo'], 'PROMOCION_INVALIDA')
+
+        missing = self.client.post('/api/promociones/validar/', {
+            'code': 'NO-EXISTE', 'subtotal': 20000,
+        }, format='json')
+        self.assertEqual(missing.status_code, 400)
