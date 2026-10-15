@@ -482,19 +482,24 @@ class PedidoEstadoDetalleSerializer(serializers.ModelSerializer):
         ]
 
     def get_estado_label(self, obj):
+        alias_estados = {'preparacion': 'preparando', 'despachado': 'enviado'}
+        estado_actual = alias_estados.get(obj.estado, obj.estado)
         estados_map = {
             'pendiente': 'Pendiente de pago',
             'pagado': 'Pago confirmado',
-            'preparacion': 'En preparación',
-            'despachado': 'Despachado / En tránsito',
+            'preparando': 'En preparación',
+            'en_origen': 'En origen',
+            'enviado': 'Despachado / En tránsito',
+            'en_reparto': 'En reparto',
             'entregado': 'Entregado',
             'cancelado': 'Cancelado',
         }
-        return estados_map.get(obj.estado, str(obj.estado).capitalize())
+        return estados_map.get(estado_actual, str(obj.estado).capitalize())
 
     def get_linea_tiempo(self, obj):
-        orden_estados = ['pendiente', 'pagado', 'preparacion', 'despachado', 'entregado']
-        estado_actual = obj.estado
+        alias_estados = {'preparacion': 'preparando', 'despachado': 'enviado'}
+        estado_actual = alias_estados.get(obj.estado, obj.estado)
+        orden_estados = ['pendiente', 'pagado', 'preparando', 'en_origen', 'enviado', 'en_reparto', 'entregado']
         
         if estado_actual == 'cancelado':
             return [{'estado': 'cancelado', 'etiqueta': 'Cancelado', 'completado': True, 'actual': True}]
@@ -507,8 +512,10 @@ class PedidoEstadoDetalleSerializer(serializers.ModelSerializer):
         pasos = [
             {'estado': 'pendiente', 'etiqueta': 'Recibido'},
             {'estado': 'pagado', 'etiqueta': 'Pago Confirmado'},
-            {'estado': 'preparacion', 'etiqueta': 'En Preparación'},
-            {'estado': 'despachado', 'etiqueta': 'En Tránsito'},
+            {'estado': 'preparando', 'etiqueta': 'En Preparación'},
+            {'estado': 'en_origen', 'etiqueta': 'En Origen'},
+            {'estado': 'enviado', 'etiqueta': 'En Tránsito'},
+            {'estado': 'en_reparto', 'etiqueta': 'En Reparto'},
             {'estado': 'entregado', 'etiqueta': 'Entregado'},
         ]
 
@@ -517,16 +524,21 @@ class PedidoEstadoDetalleSerializer(serializers.ModelSerializer):
             paso['actual'] = i == indice_actual
 
         return pasos
-class PedidoEstadoUpdateSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Pedido
-        fields = ['estado']
+
+
+class PedidoEstadoUpdateSerializer(serializers.Serializer):
+    estado = serializers.CharField(required=True)
 
     def validate_estado(self, value):
+        alias_estados = {
+            'preparacion': 'preparando',
+            'despachado': 'enviado',
+        }
+        estado_normalizado = alias_estados.get(str(value).strip().lower(), str(value).strip().lower())
         estados_permitidos = [
-            'pendiente', 'pagado', 'preparacion', 
-            'despachado', 'entregado', 'cancelado'
+            'pendiente', 'pagado', 'preparando', 'en_origen',
+            'enviado', 'en_reparto', 'entregado', 'cancelado',
         ]
-        if value not in estados_permitidos:
+        if estado_normalizado not in estados_permitidos:
             raise serializers.ValidationError("Estado logístico no válido.")
-        return value
+        return estado_normalizado

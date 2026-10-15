@@ -3,8 +3,6 @@
 Listado liviano para el dashboard del propietario: solo las órdenes más recientes y
 solo los datos que muestra la tabla. No incluye correo, teléfono, dirección ni ítems.
 """
-
-
 from rest_framework.response import Response
 from rest_framework import status
 from django.shortcuts import get_object_or_404
@@ -69,40 +67,40 @@ class UltimasOrdenesAPIView(APIView):
 
 
 class ActualizarEstadoPedidoAPIView(APIView):
+    """PATCH /api/tienda/pedidos/<id_pedido>/estado/ -> actualiza el estado de una orden de la tienda."""
     permission_classes = [IsAuthenticated]
 
     def patch(self, request, id_pedido):
-        nuevo_estado = request.data.get('estado')
-        alias_estados = {
-            'preparacion': 'preparando',
-            'despachado': 'enviado',
-        }
-        estado_normalizado = alias_estados.get(nuevo_estado, nuevo_estado)
-        
-        estados_validos = [
-            'pendiente', 'pagado', 'preparando', 'en_origen',
-            'enviado', 'en_reparto', 'entregado', 'cancelado',
-        ]
-        
-        if estado_normalizado not in estados_validos:
+        tienda = resolver_tienda(request, exigir_propietario=True)
+
+        serializer = PedidoEstadoUpdateSerializer(data=request.data)
+        if not serializer.is_valid():
             return error_response(
                 mensaje="El estado logístico proporcionado no es válido.",
                 codigo="ESTADO_INVALIDO",
-                status=status.HTTP_400_BAD_REQUEST
+                detalles=serializer.errors,
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
-        pedido = Pedido.objects.filter(id_pedido=id_pedido).first()
+        estado_normalizado = serializer.validated_data['estado']
+
+        pedido = Pedido.objects.filter(id_pedido=id_pedido, tienda=tienda).first()
         if not pedido:
             return error_response(
                 mensaje="No se encontró el pedido solicitado.",
                 codigo="PEDIDO_NO_ENCONTRADO",
-                status=status.HTTP_404_NOT_FOUND
+                status=status.HTTP_404_NOT_FOUND,
             )
 
         pedido.estado = estado_normalizado
-        pedido.save()
+        pedido.save(update_fields=['estado'])
 
         return success_response(
-            data={"id_pedido": pedido.id_pedido, "estado": pedido.estado},
-            mensaje=f"El estado de la orden fue actualizado a '{pedido.estado}' exitosamente."
+            data={
+                "id_pedido": pedido.id_pedido,
+                "identificador": pedido.identificador,
+                "estado": pedido.estado,
+                "estado_etiqueta": pedido.get_estado_display(),
+            },
+            mensaje=f"El estado de la orden fue actualizado a '{pedido.get_estado_display()}' exitosamente.",
         )
