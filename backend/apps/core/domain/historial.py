@@ -6,6 +6,7 @@ from django.utils import timezone
 
 TAMANO_POR_DEFECTO = 20
 TAMANO_MAXIMO = 100
+BUSQUEDA_MAXIMA = 100
 DIAS_MAXIMOS_POR_DIA = 366
 AGRUPACIONES = ('dia', 'mes')
 ORDENES = {
@@ -93,6 +94,29 @@ def leer_pagina(params):
     tamano = (_entero(params['tamano'], 'tamano', 'TAMANO_INVALIDO', TAMANO_MAXIMO)
               if 'tamano' in params else TAMANO_POR_DEFECTO)
     return Pagina(numero, tamano)
+
+
+def leer_estado(params, estados_validos):
+    if 'estado' not in params:
+        return None
+    estado = params['estado']
+    if estado not in estados_validos:
+        raise ParametroInvalido('El estado indicado no es válido.', 'ESTADO_INVALIDO')
+    return estado
+
+
+def leer_orden(params):
+    clave = params.get('orden', 'fecha_desc')
+    if clave not in ORDENES:
+        raise ParametroInvalido(f'El orden debe ser uno de: {", ".join(ORDENES)}.', 'ORDEN_INVALIDO')
+    return ORDENES[clave]
+
+
+def leer_busqueda(params):
+    texto = params.get('q', '').strip()
+    if len(texto) > BUSQUEDA_MAXIMA:
+        raise ParametroInvalido(f'La búsqueda admite hasta {BUSQUEDA_MAXIMA} caracteres.', 'BUSQUEDA_INVALIDA')
+    return texto
 
 
 def leer_agrupacion(params, rango):

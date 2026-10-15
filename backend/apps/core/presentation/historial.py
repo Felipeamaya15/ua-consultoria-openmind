@@ -1,6 +1,6 @@
 from decimal import Decimal
 
-from django.db.models import Count, Sum
+from django.db.models import Count, Q, Sum
 from django.db.models.functions import TruncDay, TruncMonth
 from django.utils import timezone
 from rest_framework import serializers
@@ -37,6 +37,33 @@ def _sin_cache(response):
     response['Cache-Control'] = 'no-store'
     return response
 
+class HistorialPedidosAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        tienda = resolver_tienda(request, exigir_propietario=True)
+        params = request.query_params
+        try:
+            rango = reglas.leer_rango(params)
+            estado = reglas.leer_estado(params, {valor for valor, _ in Pedido.ESTADO_CHOICES})
+            texto = reglas.leer_busqueda(params)
+            orden = reglas.leer_orden(params)
+            pagina = reglas.leer_pagina(params)
+        except reglas.ParametroInvalido as error:
+            return error_response(error.mensaje, error.codigo)
+
+        pedidos = rango.aplicar(Pedido.objects.filter(tienda=tienda))
+        if estado:
+            pedidos = pedidos.filter(estado=estado)
+        if texto:
+            pedidos = pedidos.filter(Q(identificador__icontains=texto) | Q(nombre_contacto__icontains=texto))
+        total = pedidos.count()
+        filas = _solo_campos_de_la_tabla(pedidos).order_by(*orden)[pagina.inicio:pagina.fin]
+        return _sin_cache(success_response(
+            data=FilaHistorialSerializer(filas, many=True).data,
+            mensaje='Historial de pedidos obtenido correctamente.',
+            paginacion=pagina.metadatos(total),
+        ))
 
 class HistorialVentasAPIView(APIView):
     permission_classes = [IsAuthenticated]
