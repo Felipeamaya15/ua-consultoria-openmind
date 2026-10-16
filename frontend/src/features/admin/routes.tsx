@@ -1,6 +1,6 @@
 import { lazyPage } from '../../app/LazyPage';
 import EntrepreneurProfile from './pages/Profile';
-import { Navigate, type RouteObject } from 'react-router-dom';
+import { Navigate, useLocation, type RouteObject } from 'react-router-dom';
 
 import { RequireAdmin } from './auth/RequireAdmin';
 import { AdminProvider } from './context/AdminContext';
@@ -18,8 +18,13 @@ import Shipping from './pages/Shipping';
 import Authentication from './pages/Authentication';
 import Emails from './pages/Emails';
 import SeoAnalytics from './pages/SeoAnalytics';
-import Settings from './pages/Settings';
+import LandingPage from './pages/LandingPage';
 import Legal from './pages/Legal';
+
+function LegacySettingsRedirect() {
+  const { search, hash, state } = useLocation();
+  return <Navigate to={{ pathname: '/emprendedor/landing', search, hash }} state={state} replace />;
+}
 
 function ThemeEditorRoute() {
   return (
@@ -66,7 +71,7 @@ export const adminRoute: RouteObject = {
         },
         {
           path: 'landing',
-          element: <Navigate to="/emprendedor/configuracion#pagina-principal" replace />,
+          element: <LandingPage />,
         },
         {
           path: 'promociones',
@@ -98,7 +103,7 @@ export const adminRoute: RouteObject = {
         },
         {
           path: 'configuracion',
-          element: <Settings />,
+          element: <LegacySettingsRedirect />,
         },
         {
           path: 'legal',

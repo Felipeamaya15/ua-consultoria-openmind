@@ -5,6 +5,7 @@ export const menuItems = [
   {path:'/emprendedor',label:'Resumen',icon:'grid'},
   {path:'/emprendedor/productos',label:'Productos',icon:'box'},
   {path:'/emprendedor/pedidos',label:'Pedidos',icon:'orders'},
+  {path:'/emprendedor/landing',label:'Página principal',icon:'home'},
   {path:'/emprendedor/diseno',label:'Diseño',icon:'settings'},
   {path:'/emprendedor/promociones',label:'Promociones',icon:'link'},
   {path:'/emprendedor/marketing',label:'Marketing',icon:'arrowUpRight'},
@@ -13,5 +14,4 @@ export const menuItems = [
   {path:'/emprendedor/autenticacion',label:'Acceso de clientes',icon:'shield'},
   {path:'/emprendedor/correos',label:'Correos',icon:'mail'},
   {path:'/emprendedor/seo',label:'Buscadores y visitas',icon:'search'},
-  {path:'/emprendedor/configuracion',label:'Página principal',icon:'settings'},
 ];

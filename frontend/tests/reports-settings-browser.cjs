@@ -104,7 +104,7 @@ const currentDashboard = { fecha_desde: '2026-10-09', fecha_hasta: '2026-10-15',
       failReport = false; await history.getByRole('button', { name: 'Reintentar historial' }).click();
       await page.waitForFunction(() => document.querySelector('[aria-labelledby="reports-title"] tbody')?.children.length === 12);
       await page.goto(base + '/emprendedor/landing');
-      await page.waitForURL('**/emprendedor/configuracion#pagina-principal');
+      await page.waitForURL('**/emprendedor/landing');
       await page.getByLabel('Nombre de la tienda (obligatorio)').waitFor();
       assert.equal(await page.getByLabel('Nombre de la tienda (obligatorio)').inputValue(), business.nombre);
       await page.getByRole('link', { name: 'Información del negocio', exact: true }).focus();
@@ -116,7 +116,7 @@ const currentDashboard = { fecha_desde: '2026-10-09', fecha_hasta: '2026-10-15',
       assert.equal(await page.getByLabel('Correo electrónico', { exact: true }).count(), 1);
       assert.equal(await page.getByLabel('Teléfono (con código de país)').count(), 1);
       assert.equal(await page.getByRole('heading', { name: 'Logo', exact: true }).count(), 1);
-      assert.equal(await page.locator('nav[aria-label="Panel del emprendedor"] a[href="/emprendedor/landing"]').count(), 0);
+      assert.equal(await page.locator('nav[aria-label="Panel del emprendedor"] a[href="/emprendedor/landing"]').count(), 1);
       await page.getByRole('button', { name: 'Recuperar nombre y descripción de este navegador' }).click();
       assert.equal(await page.getByLabel('Nombre de la tienda (obligatorio)').inputValue(), 'Nombre anterior local');
       await page.getByRole('button', { name: 'Recuperar logo y contacto locales' }).click();
