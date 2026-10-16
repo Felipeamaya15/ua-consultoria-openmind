@@ -4,6 +4,7 @@ from apps.core.presentation.checkout import CheckoutOrderAPIView
 from apps.core.presentation.shipping import ShippingQuoteAPIView
 from apps.core.presentation.linkify_notificacion import LinkifyNotificacionView
 from apps.core.presentation.recent_orders import UltimasOrdenesAPIView, ActualizarEstadoPedidoAPIView
+from apps.core.presentation.historial import HistorialPedidosAPIView, HistorialVentasAPIView
 from apps.core.presentation.dashboard import DashboardAPIView
 from apps.core.presentation.pickup_address import PickupAddressAPIView
 from django.urls import path
@@ -51,6 +52,8 @@ urlpatterns = [
     path('pagos/transferencias/<int:pedido_id>/aprobar/', AprobarTransferenciaManualAPIView.as_view(), name='aprobar-transferencia-manual'),
     path('pagos/transferencias/<int:pedido_id>/rechazar/', RechazarTransferenciaManualAPIView.as_view(), name='rechazar-transferencia-manual'),
     path('tienda/pedidos/', TiendaPedidosAPIView.as_view(), name='tienda-pedidos'),
+    path('tienda/pedidos/historial/', HistorialPedidosAPIView.as_view(), name='tienda-pedidos-historial'),
+    path('tienda/ventas/historial/', HistorialVentasAPIView.as_view(), name='tienda-ventas-historial'),
     path('tienda/pedidos/ultimos/', UltimasOrdenesAPIView.as_view(), name='tienda-pedidos-ultimos'),
     path('tienda/pedidos/<int:id_pedido>/estado/', ActualizarEstadoPedidoAPIView.as_view(), name='actualizar-estado-pedido'),
 ]

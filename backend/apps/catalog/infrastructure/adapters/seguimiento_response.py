@@ -4,13 +4,15 @@ CAMPOS = {
     "Chilexpress": {
         "ruta_eventos": ("data", "statusList"),
         "fecha": "date",
+        "estado": "status",
         "descripcion": "description",
         "ubicacion": "location",
     },
     "Starken": {
         "ruta_eventos": ("eventos",),
         "fecha": "fecha",
-        "descripcion": "estado",
+        "estado": "estado",
+        "descripcion": "descripcion",
         "ubicacion": "ciudad",
     },
 }
@@ -36,6 +38,7 @@ def procesar_respuesta_seguimiento(operador: str, respuesta: dict) -> list[dict]
     return [
         {
             "fecha": evento.get(campos["fecha"], ""),
+            "estado": evento.get(campos["estado"], ""),
             "descripcion": evento.get(campos["descripcion"], ""),
             "ubicacion": evento.get(campos["ubicacion"], ""),
         }

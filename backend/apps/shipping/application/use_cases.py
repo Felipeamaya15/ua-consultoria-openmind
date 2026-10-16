@@ -1,5 +1,6 @@
 from decimal import Decimal
 from typing import List, Dict, Any, Optional
+from apps.catalog.domain.seguimiento import estandarizar_estado
 from apps.shipping.domain.ports import LogisticsPort
 from apps.shipping.domain.dtos import DireccionDespachoDTO, PaqueteDTO
 from apps.shipping.domain.exceptions import DireccionFueraDeCoberturaException
@@ -124,6 +125,11 @@ class CotizarDespachoEcommerceUseCase:
         }
 
 
+def _estado_estandar(estado_operador: str) -> Optional[str]:
+    estado = estandarizar_estado(estado_operador)
+    return estado.value if estado else None
+
+
 class ConsultarSeguimientoUseCase:
     """
     Caso de uso: Consulta y procesamiento del estado logístico de una orden.
@@ -142,12 +148,14 @@ class ConsultarSeguimientoUseCase:
             "numero_seguimiento": detalle.numero_seguimiento,
             "proveedor": detalle.proveedor,
             "estado_actual": detalle.estado_actual,
+            "estado_estandar": _estado_estandar(detalle.estado_actual),
             "descripcion_estado": detalle.descripcion_estado,
             "fecha_estimada_entrega": detalle.fecha_estimada_entrega,
             "historial": [
                 {
                     "fecha_hora": e.fecha_hora,
                     "estado": e.estado,
+                    "estado_estandar": _estado_estandar(e.estado),
                     "descripcion": e.descripcion,
                     "ubicacion": e.ubicacion
                 }
