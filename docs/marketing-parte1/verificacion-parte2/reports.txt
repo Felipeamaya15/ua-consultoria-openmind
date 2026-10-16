@@ -1,0 +1,18 @@
+
+> frontend@0.0.0 test:reports
+> node tests/reports.cjs
+
+✔ consulta propietario, filtros opcionales y cancelación; no envía tienda elegida por navegador (156.9842ms)
+✔ ausencia de sesión y errores HTTP no se presentan como datos válidos (262.8084ms)
+✔ descarga un blob PDF, asigna nombres anual/mensual y libera recursos (87.9984ms)
+✔ tabla mensual completa, totales, empates y cero accesibles sin pedidos individuales (103.0794ms)
+✔ información del negocio persiste con Token, solo sus campos y evento de actualización (11.7747ms)
+✔ CLP conserva los centavos del backend incluso en importes mayores que Number.MAX_SAFE_INTEGER (11.0311ms)
+ℹ tests 6
+ℹ suites 0
+ℹ pass 6
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 646.7488

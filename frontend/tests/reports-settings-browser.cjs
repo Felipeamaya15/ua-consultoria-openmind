@@ -144,8 +144,8 @@ const currentDashboard = { fecha_desde: '2026-10-09', fecha_hasta: '2026-10-15',
       await page.screenshot({ path: path.join(out, `configuracion-${width}.png`), fullPage: true });
       if (width === 375) {
         await page.getByRole('button', { name: 'Abrir navegación' }).click();
-        await page.getByRole('link', { name: 'Configuración de la tienda', exact: true }).click();
-      } else await page.getByRole('link', { name: 'Configuración de la tienda', exact: true }).click();
+        await page.getByRole('link', { name: 'Página principal', exact: true }).click();
+      } else await page.getByRole('link', { name: 'Página principal', exact: true }).click();
       for (const template of [1, 2, 3, 4]) {
         await page.goto(`${base}/plantilla/${template}`);
         await page.getByText('Portada conservada tras guardar', { exact: true }).first().waitFor();

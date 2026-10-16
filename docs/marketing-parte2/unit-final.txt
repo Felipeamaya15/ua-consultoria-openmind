@@ -1,0 +1,13 @@
+✔ documento visual normaliza límites, enums, colores, textos; no admite campos comerciales (1.5363ms)
+✔ textos editoriales no anuncian precios, HTML ni condiciones; nombre real separado (0.5709ms)
+✔ colores de todos los bloques comerciales tienen contraste AA sin cambiar marca (0.469ms)
+✔ historial acotado, undo/redo, reset reversible y rama nueva sin futuro (2.1852ms)
+✔ plantillas y formato no alteran datos comerciales; renderer evita inyección y títulos falsos (86.9724ms)
+ℹ tests 5
+ℹ suites 0
+ℹ pass 5
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 109.4571

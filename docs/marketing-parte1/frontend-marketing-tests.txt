@@ -1,0 +1,19 @@
+✔ fuente administrativa conserva imágenes, ID y flags de variantes; no crea precio ni foto (2.8298ms)
+✔ Desde considera solo variantes activas disponibles; original y oferta siempre de la misma variante (21.1768ms)
+✔ promociones solo desde ofertas disponibles: no códigos internos, ni campañas locales (1.5759ms)
+✔ inactivo, sin stock, sin variante activa o sin precio válido no anuncian disponibilidad (0.9985ms)
+✔ ofertas inválidas no generan ahorro; precio cero válido, redondeo half-up y ahorro pequeño (1.522ms)
+✔ sin imagen usa composición tipográfica; búsqueda respeta acentos, categorías y SKU (0.9719ms)
+✔ marca reutiliza nombre y logo de las fuentes existentes; sin logo o fallo parcial no inventa marca (28.3675ms)
+✔ colores hex y alpha se normalizan; el texto alcanza contraste WCAG AA (1.0837ms)
+✔ endpoint autentica, cancela, evita caché y no envía identidad de tienda ni mutaciones (91.5007ms)
+✔ preview renderiza tres formatos, precios reales y alcance de la oferta sin acciones futuras (57.8983ms)
+✔ promociones sin fuente general mantienen explicación y vacío honesto (27.833ms)
+ℹ tests 11
+ℹ suites 0
+ℹ pass 11
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 255.3611

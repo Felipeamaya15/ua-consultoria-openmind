@@ -11,7 +11,7 @@ export const ADMIN_PAGE_HELP = {
   '/emprendedor/autenticacion': { title: 'Acceso de clientes', description: 'Elige cómo podrán registrarse e iniciar sesión tus clientes, y si necesitan una cuenta para comprar.' },
   '/emprendedor/correos': { title: 'Correos para tus clientes', description: 'Personaliza los mensajes preparados para informar a tus clientes sobre sus compras.' },
   '/emprendedor/seo': { title: 'Tu tienda en buscadores', description: 'Mejora cómo se presenta tu tienda en los buscadores. Los campos de medición son opcionales.' },
-  '/emprendedor/configuracion': { title: 'Configuración de la tienda', description: 'Administra la información del negocio, la página principal, el logo y los datos de contacto. Guarda los cambios de cada apartado.' },
+  '/emprendedor/configuracion': { title: 'Página principal', description: 'Administra la información del negocio, la página principal, el logo y los datos de contacto. Guarda los cambios de cada apartado.' },
   '/emprendedor/legal': { title: 'Páginas legales', description: 'Prepara los textos de términos, privacidad y devoluciones que podrán consultar tus clientes. Revisa que correspondan a tu negocio.' },
   '/emprendedor/perfil': { title: 'Tu cuenta', description: 'Revisa y actualiza tus datos personales y de contacto.' },
 } as const;

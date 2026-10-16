@@ -1,0 +1,38 @@
+
+> frontend@0.0.0 test:dashboard
+> node tests/dashboard.cjs && node tests/recent-orders.cjs
+
+OK metadatos analíticos válidos conservan porcentajes, estados y ticket; rechaza campos inválidos
+OK contrato, token, período y cancelación viajan al endpoint real
+OK sesión ausente no consulta y 401/403/500 se explican
+OK red, JSON inválido, respuesta malformada y abort son tratados
+OK carga, error, reintento y vacío no inventan ventas
+OK histórico muestra fechas CLP, filas y estructura responsiva accesible
+OK cambia período sin recarga y descarta respuesta anterior
+OK error permite reintento y conserva últimas órdenes independientes
+8 pruebas OK
+OK actualiza estado con Token y PATCH; utiliza la respuesta validada del servidor
+OK estado inválido o sesión ausente no envían; errores y respuestas inconsistentes no actualizan
+OK consulta las últimas órdenes con la sesión del propietario
+OK un límite fuera de rango vuelve al valor por defecto
+OK sin sesión no consulta y pide iniciar sesión
+OK un fallo de red se explica sin textos técnicos
+OK una consulta cancelada se propaga tal cual para que la pantalla la ignore
+OK cada error del servidor tiene un mensaje claro
+OK una respuesta con otro formato se rechaza
+OK acepta una orden sin identificador y datos extra del servidor
+OK cada estado del pedido tiene su etiqueta y su color
+OK un estado desconocido usa la etiqueta del servidor y nunca rompe la pantalla
+OK la fecha se muestra en español con la hora local
+OK la tabla muestra las órdenes con su estado, total y fecha, sin pedir nada más
+OK los casos especiales de una orden no rompen la fila
+OK mientras carga solo se ve el aviso de carga
+OK si no hay órdenes se dice, sin mostrar una tabla vacía
+OK si falla se explica el motivo y se puede reintentar
+OK al abrir el dashboard consulta las órdenes y las muestra cuando llegan
+OK si falla muestra el error y "Reintentar" vuelve a consultar
+OK un error que no es un Error usa el mensaje general
+OK si se sale del dashboard, la consulta se cancela y su resultado se ignora
+OK el dashboard muestra las órdenes reales y ya no las de ejemplo
+
+23 pruebas OK

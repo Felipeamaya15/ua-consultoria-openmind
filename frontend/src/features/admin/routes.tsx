@@ -11,6 +11,7 @@ import { ProductList, ProductForm } from './pages/Products';
 import Orders from './pages/Orders';
 import Design from './pages/Design';
 const ThemeEditor = lazyPage(() => import('./pages/ThemeEditor'));
+const Marketing = lazyPage(() => import('../marketing/pages/Marketing'));
 import Promotions from './pages/Promotions';
 import Payments from './pages/Payments';
 import Shipping from './pages/Shipping';
@@ -70,6 +71,10 @@ export const adminRoute: RouteObject = {
         {
           path: 'promociones',
           element: <Promotions />,
+        },
+        {
+          path: 'marketing',
+          element: <Marketing />,
         },
         {
           path: 'pagos',
