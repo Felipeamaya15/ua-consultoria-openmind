@@ -1,6 +1,6 @@
 import type { TemplateId } from '../../storefront/data/mockData';
 export const templatePaths: Record<TemplateId,string> = {editorial:'/plantilla/1',minimal:'/plantilla/2',visual:'/plantilla/3',catalog:'/plantilla/4'};
-export const legalSlugs = {terms:'terminos',privacy:'privacidad',refund:'reembolso'} as const;
+export const legalSlugs = {terms:'terminos',privacy:'privacidad',refund:'reembolso',cookies:'cookies'} as const;
 export const menuItems = [
   {path:'/emprendedor',label:'Dashboard',icon:'grid'},
   {path:'/emprendedor/productos',label:'Productos',icon:'box'},

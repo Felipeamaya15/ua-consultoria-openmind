@@ -70,6 +70,28 @@ No aplican reembolsos para: productos personalizados creados específicamente pa
 
 Si el producto presenta defectos de fabricación, tiene derecho a reparación, reemplazo o devolución del dinero según la garantía legal correspondiente."""
 
+COOKIES_DEFAULT = """**1. ¿Qué son las cookies?**
+
+Las cookies son pequeños archivos de texto que los sitios web almacenan en su navegador o dispositivo para recordar información sobre su visita, facilitar la navegación y mejorar su experiencia de usuario.
+
+**2. Tipos de cookies que utilizamos**
+
+- **Cookies técnicas y necesarias:** Esenciales para el funcionamiento básico del e-commerce, como mantener su sesión iniciada, recordar los artículos en su carrito de compras y procesar el pago de forma segura.
+- **Cookies de personalización:** Permiten recordar sus preferencias de navegación (como idioma o moneda seleccionada).
+- **Cookies de análisis y rendimiento:** Nos ayudan a comprender cómo interactúan los usuarios con nuestra tienda, qué productos son más visitados y optimizar el rendimiento técnico del sitio.
+
+**3. Finalidad del tratamiento**
+
+Utilizamos estas tecnologías únicamente para brindarle un servicio seguro, eficiente y adaptado a sus necesidades comerciales. No utilizamos cookies para vender sus datos a terceros con fines publicitarios no autorizados.
+
+**4. Gestión y configuración de cookies**
+
+Usted puede configurar o deshabilitar el uso de cookies en cualquier momento a través de la configuración de su navegador web (Google Chrome, Mozilla Firefox, Safari, Microsoft Edge). Tenga en cuenta que bloquear ciertas cookies necesarias puede afectar el funcionamiento correcto de la tienda y del proceso de compra.
+
+**5. Actualizaciones de la política**
+
+Podemos actualizar esta Política de Cookies para reflejar cambios tecnológicos o normativos. Se informará a los usuarios sobre cambios relevantes a través de nuestro sitio web."""
+
 LEGAL_META = {
     'terms': {
         'title': 'Términos y Condiciones',
@@ -89,6 +111,12 @@ LEGAL_META = {
         'description': 'Condiciones de devolución y reembolso según la Ley del Consumidor.',
         'content': REFUND_DEFAULT,
     },
+    'cookies': {
+        'title': 'Política de Cookies',
+        'short': 'Cookies',
+        'description': 'Información sobre el uso de cookies y tecnologías de seguimiento en la tienda.',
+        'content': COOKIES_DEFAULT,
+    },
 }
 
 TYPE_ALIASES = {
@@ -99,9 +127,14 @@ TYPE_ALIASES = {
     'refund': 'refund',
     'reembolso': 'refund',
     'reembolsos': 'refund',
+    'cookies': 'cookies',
+    'cookie': 'cookies',
+    'galletas': 'cookies',
+    'politica-cookies': 'cookies',
+    'politica-de-cookies': 'cookies',
 }
 
-CANONICAL_TYPES = ('terms', 'privacy', 'refund')
+CANONICAL_TYPES = ('terms', 'privacy', 'refund', 'cookies')
 
 
 def normalize_legal_type(tipo: str) -> str | None:
@@ -122,6 +155,15 @@ def get_default_legal_pages() -> dict:
         }
         for key, meta in LEGAL_META.items()
     }
+
+
+DEFAULT_COOKIE_BANNER = {
+    'title': 'Aviso de Cookies',
+    'message': 'Utilizamos cookies propias y de terceros para garantizar el funcionamiento seguro de la tienda, recordar tus preferencias y analizar la navegación.',
+    'acceptText': 'Aceptar cookies',
+    'declineText': 'Solo necesarias',
+    'enabled': True,
+}
 
 
 def legal_for_store(tienda, *, for_admin=False) -> dict:
@@ -157,7 +199,131 @@ def legal_for_store(tienda, *, for_admin=False) -> dict:
                 'lastPublished': last_published,
             }
 
+        if key == 'cookies':
+            banner_data = stored_item.get('banner') if isinstance(stored_item.get('banner'), dict) else {}
+            result[key]['banner'] = {**DEFAULT_COOKIE_BANNER, **banner_data}
+
     return result
+
+
+def create_legal_for_store(tienda, payload: dict) -> dict:
+    """Implementa la creación de contenido legal para la tienda."""
+    from apps.core.models import ConfiguracionLegal
+    from rest_framework.exceptions import ValidationError
+
+    if not isinstance(payload, dict):
+        raise ValidationError('Los datos deben enviarse como un objeto JSON.')
+
+    configuracion, _ = ConfiguracionLegal.objects.get_or_create(tienda=tienda)
+    current_stored = configuracion.datos if isinstance(configuracion.datos, dict) else {}
+    current_pages = legal_for_store(tienda, for_admin=True)
+
+    now_iso = timezone.now().isoformat()
+
+    if 'tipo' in payload or 'type' in payload:
+        raw_type = payload.get('tipo') or payload.get('type')
+        canonical = normalize_legal_type(raw_type)
+        if not canonical:
+            raise ValidationError({'tipo': f"Tipo inválido. Opciones válidas: {', '.join(CANONICAL_TYPES)}"})
+
+        initial_content = payload.get('draft') or payload.get('content') or LEGAL_META[canonical]['content']
+        if not isinstance(initial_content, str):
+            raise ValidationError({'draft': 'El contenido legal debe ser texto.'})
+        if len(initial_content) > 50000:
+            raise ValidationError({'draft': 'El texto excede el límite máximo permitido (50.000 caracteres).'})
+
+        title = payload.get('title') or LEGAL_META[canonical]['title']
+        if not isinstance(title, str) or not title.strip():
+            raise ValidationError({'title': 'El título no puede estar vacío.'})
+
+        page = current_pages[canonical]
+        page['title'] = title.strip()
+        page['draft'] = initial_content
+        if payload.get('published'):
+            if not isinstance(payload['published'], str):
+                raise ValidationError({'published': 'El contenido publicado debe ser texto.'})
+            page['published'] = payload['published']
+            page['lastPublished'] = now_iso
+
+        current_stored[canonical] = page
+    else:
+        for key in CANONICAL_TYPES:
+            if key in payload:
+                item = payload[key]
+                if not isinstance(item, dict):
+                    raise ValidationError({key: 'Cada página debe ser un objeto con sus campos.'})
+
+                page = current_pages[key]
+                draft = item.get('draft') or item.get('content') or LEGAL_META[key]['content']
+                if not isinstance(draft, str):
+                    raise ValidationError({key: {'draft': 'El contenido debe ser texto.'}})
+                if len(draft) > 50000:
+                    raise ValidationError({key: {'draft': 'El texto excede el límite máximo permitido (50.000 caracteres).'}} )
+                page['draft'] = draft
+
+                if item.get('published'):
+                    if not isinstance(item['published'], str):
+                        raise ValidationError({key: {'published': 'El contenido publicado debe ser texto.'}})
+                    page['published'] = item['published']
+                    page['lastPublished'] = now_iso
+
+                title = item.get('title') or LEGAL_META[key]['title']
+                if not isinstance(title, str) or not title.strip():
+                    raise ValidationError({key: {'title': 'El título no puede estar vacío.'}})
+                page['title'] = title.strip()
+
+                current_stored[key] = page
+
+    configuracion.datos = current_stored
+    configuracion.save(update_fields=['datos', 'fecha_actualizacion'])
+
+    return legal_for_store(tienda, for_admin=True)
+
+
+def update_legal_for_store(tienda, payload: dict) -> dict:
+    """Implementa la actualización del contenido legal (borrador y metadatos)."""
+    return save_legal_for_store(tienda, payload)
+
+
+def publish_legal_for_store(tienda, tipo: str, content: str = None) -> dict:
+    """Implementa la publicación de contenido legal en la tienda."""
+    from apps.core.models import ConfiguracionLegal
+    from rest_framework.exceptions import ValidationError
+
+    configuracion, _ = ConfiguracionLegal.objects.get_or_create(tienda=tienda)
+    current_stored = configuracion.datos if isinstance(configuracion.datos, dict) else {}
+    current_pages = legal_for_store(tienda, for_admin=True)
+
+    now_iso = timezone.now().isoformat()
+
+    target_types = []
+    if not tipo or tipo == 'all':
+        target_types = list(CANONICAL_TYPES)
+    else:
+        canonical = normalize_legal_type(tipo)
+        if not canonical:
+            raise ValidationError({'tipo': f"Tipo inválido. Opciones válidas: {', '.join(CANONICAL_TYPES)}"})
+        target_types = [canonical]
+
+    for key in target_types:
+        page = current_pages[key]
+        text_to_publish = content if (content is not None and len(target_types) == 1) else page['draft']
+
+        if not isinstance(text_to_publish, str) or not text_to_publish.strip():
+            raise ValidationError({'content': f"El contenido a publicar para {page['title']} no puede estar vacío."})
+        if len(text_to_publish) > 50000:
+            raise ValidationError({'content': f"El texto de {page['title']} excede el límite máximo permitido (50.000 caracteres)."})
+
+        page['draft'] = text_to_publish
+        page['published'] = text_to_publish
+        page['lastPublished'] = now_iso
+
+        current_stored[key] = page
+
+    configuracion.datos = current_stored
+    configuracion.save(update_fields=['datos', 'fecha_actualizacion'])
+
+    return legal_for_store(tienda, for_admin=True)
 
 
 def save_legal_for_store(tienda, payload: dict) -> dict:
@@ -187,8 +353,8 @@ def save_legal_for_store(tienda, payload: dict) -> dict:
             page['draft'] = LEGAL_META[canonical]['content']
         elif accion == 'publish':
             content_to_publish = payload.get('published') or payload.get('draft') or page['draft']
-            if not isinstance(content_to_publish, str):
-                raise ValidationError({'content': 'El contenido debe ser texto.'})
+            if not isinstance(content_to_publish, str) or not content_to_publish.strip():
+                raise ValidationError({'content': 'El contenido legal a publicar no puede estar vacío.'})
             if len(content_to_publish) > 50000:
                 raise ValidationError({'content': 'El texto excede el límite máximo permitido (50.000 caracteres).'})
             page['draft'] = content_to_publish
@@ -215,9 +381,13 @@ def save_legal_for_store(tienda, payload: dict) -> dict:
         if 'title' in payload and isinstance(payload['title'], str) and payload['title'].strip():
             page['title'] = payload['title'].strip()
 
+        if canonical == 'cookies' and 'banner' in payload and isinstance(payload['banner'], dict):
+            existing_banner = page.get('banner') if isinstance(page.get('banner'), dict) else DEFAULT_COOKIE_BANNER
+            page['banner'] = {**existing_banner, **payload['banner']}
+
         current_stored[canonical] = page
 
-    # Caso 2: Objeto completo con claves terms/privacy/refund
+    # Caso 2: Objeto completo con claves terms/privacy/refund/cookies
     else:
         for key in CANONICAL_TYPES:
             if key in payload:
@@ -245,9 +415,14 @@ def save_legal_for_store(tienda, payload: dict) -> dict:
                 if 'title' in item and isinstance(item['title'], str) and item['title'].strip():
                     page['title'] = item['title'].strip()
 
+                if key == 'cookies' and 'banner' in item and isinstance(item['banner'], dict):
+                    existing_banner = page.get('banner') if isinstance(page.get('banner'), dict) else DEFAULT_COOKIE_BANNER
+                    page['banner'] = {**existing_banner, **item['banner']}
+
                 current_stored[key] = page
 
     configuracion.datos = current_stored
     configuracion.save(update_fields=['datos', 'fecha_actualizacion'])
 
     return legal_for_store(tienda, for_admin=True)
+

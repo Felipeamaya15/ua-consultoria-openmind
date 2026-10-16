@@ -7,7 +7,7 @@ import { Alert, Badge, Button, Textarea } from "../components/ui";
 import { legalService } from "../../storefront/services/legalService";
 import { STORE_CONFIG_CHANGED_EVENT } from "../../storefront/visual/storage";
 
-const pageTypes: LegalPageType[] = ["terms", "privacy", "refund"];
+const pageTypes: LegalPageType[] = ["terms", "privacy", "refund", "cookies"];
 
 export default function LegalEditor() {
   const { type = "terms" } = useParams();

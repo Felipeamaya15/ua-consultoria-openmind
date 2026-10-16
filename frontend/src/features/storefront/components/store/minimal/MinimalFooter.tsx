@@ -44,6 +44,13 @@ export function MinimalFooter() {
             </Link>
 
             <Link
+              to="legal/cookies"
+              className="hover:text-white transition-colors"
+            >
+              Cookies
+            </Link>
+
+            <Link
               to="seguimiento"
               className="hover:text-white transition-colors"
             >

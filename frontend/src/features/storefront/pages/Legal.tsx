@@ -20,6 +20,11 @@ const TYPE_MAP: Record<string, LegalType> = {
   refund: 'refund',
   reembolso: 'refund',
   reembolsos: 'refund',
+  cookies: 'cookies',
+  cookie: 'cookies',
+  galletas: 'cookies',
+  'politica-cookies': 'cookies',
+  'politica-de-cookies': 'cookies',
 };
 
 function resolveLegalType(value: string | undefined): LegalType {
@@ -102,6 +107,22 @@ export default function Legal() {
                   );
                 })}
             </div>
+
+            {activeType === 'cookies' && (
+              <div className="mt-8 p-4 rounded-xl border border-[var(--visual-global-border)]/20 bg-[var(--visual-page-panel-background)] flex items-center justify-between gap-4 flex-wrap">
+                <div>
+                  <p className="text-xs font-semibold text-[var(--visual-page-color)]">Tus preferencias de cookies</p>
+                  <p className="text-[11px] text-[var(--visual-page-color)]/60">Puedes revisar o cambiar la configuración de cookies en cualquier momento.</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => window.dispatchEvent(new Event('openmind_open_cookie_banner'))}
+                  className="px-3.5 py-1.5 text-xs font-semibold rounded-lg bg-[var(--primary)] text-white hover:opacity-90 transition-opacity"
+                >
+                  Configurar cookies
+                </button>
+              </div>
+            )}
 
             <div className="mt-10 pt-6 border-t border-[var(--visual-global-border)]/10">
               <p className="mb-3 text-[9px] font-black uppercase tracking-[0.16em] text-[var(--primary)]">
@@ -219,6 +240,22 @@ export default function Legal() {
               );
             })}
         </div>
+
+        {activeType === 'cookies' && (
+          <div className="mt-6 p-4 rounded-xl border border-[var(--border)] bg-slate-50 dark:bg-slate-900/40 flex items-center justify-between gap-4 flex-wrap">
+            <div>
+              <p className="text-sm font-semibold">Tus preferencias de cookies</p>
+              <p className="text-xs text-[var(--muted-foreground)]">Puedes revisar o cambiar la configuración de cookies en cualquier momento.</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => window.dispatchEvent(new Event('openmind_open_cookie_banner'))}
+              className="px-4 py-2 text-xs font-semibold rounded-lg bg-[var(--primary)] text-white hover:opacity-90 transition-opacity"
+            >
+              Configurar cookies
+            </button>
+          </div>
+        )}
 
         <div
           className={

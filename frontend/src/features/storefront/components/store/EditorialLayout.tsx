@@ -374,6 +374,12 @@ export function EditorialLayout() {
                 Reembolsos
               </Link>
 
+              <Link
+                to="legal/cookies"
+                className="hover:text-white transition-colors"
+              >
+                Cookies
+              </Link>
             </div>
 
           </div>

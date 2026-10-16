@@ -43,6 +43,7 @@ class LegalPagesAPITestCase(APITestCase):
         self.assertIn('terms', data)
         self.assertIn('privacy', data)
         self.assertIn('refund', data)
+        self.assertIn('cookies', data)
 
         self.assertEqual(data['terms']['title'], 'Términos y Condiciones')
         self.assertIn('1. Aceptación de los términos', data['terms']['published'])
@@ -54,6 +55,9 @@ class LegalPagesAPITestCase(APITestCase):
         self.assertEqual(data['refund']['title'], 'Política de Reembolso')
         self.assertIn('1. Derecho a devolución', data['refund']['published'])
 
+        self.assertEqual(data['cookies']['title'], 'Política de Cookies')
+        self.assertIn('1. ¿Qué son las cookies?', data['cookies']['published'])
+
     def test_consulta_publica_detalle_por_tipo_y_alias(self):
         """Verifica la consulta individual por clave y alias en español."""
         for endpoint, title_expected in [
@@ -63,6 +67,9 @@ class LegalPagesAPITestCase(APITestCase):
             ('/api/legal/privacidad/', 'Política de Privacidad'),
             ('/api/legal/refund/', 'Política de Reembolso'),
             ('/api/legal/reembolso/', 'Política de Reembolso'),
+            ('/api/legal/cookies/', 'Política de Cookies'),
+            ('/api/legal/galletas/', 'Política de Cookies'),
+            ('/api/legal/politica-de-cookies/', 'Política de Cookies'),
         ]:
             response = self.client.get(endpoint)
             self.assertEqual(response.status_code, status.HTTP_200_OK, f"Fallo al consultar {endpoint}")
@@ -162,6 +169,26 @@ class LegalPagesAPITestCase(APITestCase):
         public_res = self.client.get('/api/legal/privacidad/')
         self.assertIn('Protección de datos conforme a ley chilena', public_res.data['data']['published'])
 
+    def test_publicar_politica_cookies_refleja_en_publico(self):
+        """Verifica la persistencia y publicación del editor de Política de Cookies."""
+        self.client.credentials(HTTP_AUTHORIZATION=f'Token {self.token_propietario.key}')
+
+        texto_cookies = "**1. Política de Cookies Personalizada**\n\nUso de cookies estrictamente técnicas."
+        payload = {
+            'tipo': 'cookies',
+            'draft': texto_cookies,
+            'accion': 'publish',
+        }
+        res = self.client.put('/api/legal/configuracion/', payload, format='json')
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertEqual(res.data['data']['cookies']['published'], texto_cookies)
+
+        public_res = self.client.get('/api/legal/cookies/')
+        self.assertIn('Uso de cookies estrictamente técnicas', public_res.data['data']['published'])
+
+        alias_res = self.client.get('/api/legal/galletas/')
+        self.assertIn('Uso de cookies estrictamente técnicas', alias_res.data['data']['published'])
+
     def test_restaurar_plantilla_base(self):
         """Verifica la acción de restaurar plantilla base en el borrador."""
         self.client.credentials(HTTP_AUTHORIZATION=f'Token {self.token_propietario.key}')
@@ -184,3 +211,99 @@ class LegalPagesAPITestCase(APITestCase):
         }
         res = self.client.put('/api/legal/configuracion/', payload, format='json')
         self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_creacion_contenido_legal_post_201(self):
+        """Implementar la creación de contenido legal: POST responde 201 CREATED."""
+        self.client.credentials(HTTP_AUTHORIZATION=f'Token {self.token_propietario.key}')
+
+        # 1. Creación en /api/legal/configuracion/
+        payload = {
+            'tipo': 'terms',
+            'title': 'Términos Oficiales 2026',
+            'draft': '**1. Cláusula inicial**\n\nTexto de prueba creado.',
+        }
+        res = self.client.post('/api/legal/configuracion/', payload, format='json')
+        self.assertEqual(res.status_code, status.HTTP_201_CREATED)
+        self.assertTrue(res.data['exito'])
+        self.assertEqual(res.data['mensaje'], 'Contenido legal creado correctamente.')
+        self.assertEqual(res.data['data']['terms']['title'], 'Términos Oficiales 2026')
+        self.assertEqual(res.data['data']['terms']['draft'], '**1. Cláusula inicial**\n\nTexto de prueba creado.')
+
+        # 2. Creación en /api/legal/
+        payload_privacy = {
+            'tipo': 'privacy',
+            'title': 'Privacidad Personalizada',
+            'draft': '**1. Protección**\n\nDatos cifrados.',
+        }
+        res_root = self.client.post('/api/legal/', payload_privacy, format='json')
+        self.assertEqual(res_root.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(res_root.data['data']['privacy']['title'], 'Privacidad Personalizada')
+
+    def test_actualizacion_contenido_legal_put_patch_200(self):
+        """Implementar la actualización del contenido legal: PUT y PATCH responden 200 OK."""
+        self.client.credentials(HTTP_AUTHORIZATION=f'Token {self.token_propietario.key}')
+
+        # PUT
+        payload_put = {
+            'tipo': 'refund',
+            'draft': '**1. Reembolsos actualizados**\n\nNueva política.',
+            'title': 'Política de Reembolso Express',
+            'accion': 'draft',
+        }
+        res_put = self.client.put('/api/legal/configuracion/', payload_put, format='json')
+        self.assertEqual(res_put.status_code, status.HTTP_200_OK)
+        self.assertEqual(res_put.data['mensaje'], 'Contenido legal actualizado correctamente.')
+        self.assertEqual(res_put.data['data']['refund']['draft'], '**1. Reembolsos actualizados**\n\nNueva política.')
+        self.assertEqual(res_put.data['data']['refund']['title'], 'Política de Reembolso Express')
+
+        # PATCH
+        payload_patch = {
+            'tipo': 'refund',
+            'draft': '**1. Reembolsos parcheados**\n\nVersión parcheada.',
+        }
+        res_patch = self.client.patch('/api/legal/configuracion/', payload_patch, format='json')
+        self.assertEqual(res_patch.status_code, status.HTTP_200_OK)
+        self.assertEqual(res_patch.data['data']['refund']['draft'], '**1. Reembolsos parcheados**\n\nVersión parcheada.')
+
+    def test_publicacion_contenido_legal_endpoint_dedicado(self):
+        """Implementar la publicación de contenido legal: endpoint dedicado POST responde 200 OK y refleja en público."""
+        self.client.credentials(HTTP_AUTHORIZATION=f'Token {self.token_propietario.key}')
+
+        # Publicar vía /api/legal/configuracion/publicar/
+        payload_pub = {
+            'tipo': 'privacy',
+            'content': '**1. Política Oficial Publicada**\n\nVisible inmediatamente en la tienda.',
+        }
+        res_pub = self.client.post('/api/legal/configuracion/publicar/', payload_pub, format='json')
+        self.assertEqual(res_pub.status_code, status.HTTP_200_OK)
+        self.assertEqual(res_pub.data['mensaje'], 'Contenido legal publicado correctamente.')
+        self.assertEqual(res_pub.data['data']['privacy']['published'], payload_pub['content'])
+
+        # Verificar en endpoint público
+        res_public = self.client.get('/api/legal/privacy/')
+        self.assertEqual(res_public.status_code, status.HTTP_200_OK)
+        self.assertEqual(res_public.data['data']['published'], payload_pub['content'])
+
+        # Publicar vía /api/legal/<tipo>/publicar/
+        res_pub_tipo = self.client.post(
+            '/api/legal/terms/publicar/',
+            {'content': '**1. Términos Vía URL Específica**\n\nPublicado directo.'},
+            format='json'
+        )
+        self.assertEqual(res_pub_tipo.status_code, status.HTTP_200_OK)
+        self.assertEqual(res_pub_tipo.data['mensaje'], 'Contenido legal publicado correctamente.')
+
+        res_pub_terms = self.client.get('/api/legal/terms/')
+        self.assertEqual(res_pub_terms.data['data']['published'], '**1. Términos Vía URL Específica**\n\nPublicado directo.')
+
+    def test_publicacion_rechaza_contenido_vacio(self):
+        """La publicación de contenido legal debe validar que el texto no esté vacío ni en blanco."""
+        self.client.credentials(HTTP_AUTHORIZATION=f'Token {self.token_propietario.key}')
+
+        res_vacio = self.client.post(
+            '/api/legal/configuracion/publicar/',
+            {'tipo': 'terms', 'content': '   '},
+            format='json'
+        )
+        self.assertEqual(res_vacio.status_code, status.HTTP_400_BAD_REQUEST)
+

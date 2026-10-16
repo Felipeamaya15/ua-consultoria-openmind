@@ -84,6 +84,13 @@ export function VisualFooter() {
             >
               Reembolsos
             </Link>
+
+            <Link
+              to="legal/cookies"
+              className="hover:text-white"
+            >
+              Cookies
+            </Link>
           </nav>
 
         </div>

@@ -7,6 +7,7 @@ from apps.core.presentation.legal import (
     ConfiguracionLegalAPIView,
     PaginaLegalDetalleAPIView,
     PaginasLegalesPublicasAPIView,
+    PublicarContenidoLegalAPIView,
 )
 from django.urls import path
 from . import views
@@ -53,5 +54,7 @@ urlpatterns = [
     path('tienda/pedidos/', TiendaPedidosAPIView.as_view(), name='tienda-pedidos'),
     path('legal/', PaginasLegalesPublicasAPIView.as_view(), name='legal-publico'),
     path('legal/configuracion/', ConfiguracionLegalAPIView.as_view(), name='legal-configuracion'),
+    path('legal/configuracion/publicar/', PublicarContenidoLegalAPIView.as_view(), name='legal-publicar'),
+    path('legal/<str:tipo>/publicar/', PublicarContenidoLegalAPIView.as_view(), name='legal-publicar-tipo'),
     path('legal/<str:tipo>/', PaginaLegalDetalleAPIView.as_view(), name='legal-detalle'),
 ]

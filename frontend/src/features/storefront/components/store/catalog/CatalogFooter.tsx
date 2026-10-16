@@ -50,6 +50,13 @@ export function CatalogFooter() {
           </Link>
 
           <Link
+            to={route('legal/cookies')}
+            className="hover:text-white transition-colors"
+          >
+            Cookies
+          </Link>
+
+          <Link
             to={route('seguimiento')}
             className="hover:text-white transition-colors"
           >

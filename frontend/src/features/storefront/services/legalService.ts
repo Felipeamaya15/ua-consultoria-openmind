@@ -23,7 +23,7 @@ function normalizePages(data: unknown): Record<LegalType, LegalPage> {
   if (!data || typeof data !== 'object') return result;
 
   const raw = data as Record<string, any>;
-  for (const key of ['terms', 'privacy', 'refund'] as const) {
+  for (const key of ['terms', 'privacy', 'refund', 'cookies'] as const) {
     if (raw[key] && typeof raw[key] === 'object') {
       const item = raw[key];
       result[key] = {
@@ -31,6 +31,13 @@ function normalizePages(data: unknown): Record<LegalType, LegalPage> {
         draft: typeof item.draft === 'string' ? item.draft : (typeof item.published === 'string' ? item.published : result[key].draft),
         published: typeof item.published === 'string' ? item.published : result[key].published,
         lastPublished: typeof item.lastPublished === 'string' ? item.lastPublished : result[key].lastPublished,
+        banner: item.banner && typeof item.banner === 'object' ? {
+          title: typeof item.banner.title === 'string' ? item.banner.title : (result[key].banner?.title || 'Aviso de Cookies'),
+          message: typeof item.banner.message === 'string' ? item.banner.message : (result[key].banner?.message || ''),
+          acceptText: typeof item.banner.acceptText === 'string' ? item.banner.acceptText : (result[key].banner?.acceptText || 'Aceptar cookies'),
+          declineText: typeof item.banner.declineText === 'string' ? item.banner.declineText : (result[key].banner?.declineText || 'Solo necesarias'),
+          enabled: typeof item.banner.enabled === 'boolean' ? item.banner.enabled : (result[key].banner?.enabled ?? true),
+        } : result[key].banner,
       };
     }
   }
@@ -90,35 +97,82 @@ export const legalService = {
   },
 
   /**
-   * Guarda un borrador de una página específica en el backend.
+   * Implementa la creación de contenido legal en el backend (POST /api/legal/configuracion/).
    */
-  async saveDraft(tipo: LegalType, draft: string): Promise<Record<LegalType, LegalPage>> {
+  async createLegalContent(
+    payload: { tipo?: LegalType; title?: string; draft?: string; published?: string } | Record<LegalType, Partial<LegalPage>>
+  ): Promise<Record<LegalType, LegalPage>> {
     const response = await fetch(`${API_BASE}/api/legal/configuracion/`, {
-      method: 'PUT',
+      method: 'POST',
       headers: getAdminHeaders(),
-      body: JSON.stringify({ tipo, draft, accion: 'draft' }),
+      body: JSON.stringify(payload),
     });
     const body = await response.json();
     if (!response.ok || body.exito !== true) {
-      throw new Error(body.mensaje || 'No se pudo guardar el borrador.');
+      const details = body.error?.detalles;
+      throw new Error((body.mensaje || 'No se pudo crear el contenido legal.') + (details ? ` ${JSON.stringify(details)}` : ''));
     }
     return normalizePages(body.data);
+  },
+
+  /**
+   * Implementa la actualización del contenido legal (borrador, título y configuración adicional) (PUT /api/legal/configuracion/).
+   */
+  async updateLegalContent(
+    tipo: LegalType,
+    draft: string,
+    title?: string,
+    extra?: Record<string, unknown>
+  ): Promise<Record<LegalType, LegalPage>> {
+    const payload: Record<string, unknown> = { tipo, draft, accion: 'draft', ...extra };
+    if (title) payload.title = title;
+    const response = await fetch(`${API_BASE}/api/legal/configuracion/`, {
+      method: 'PUT',
+      headers: getAdminHeaders(),
+      body: JSON.stringify(payload),
+    });
+    const body = await response.json();
+    if (!response.ok || body.exito !== true) {
+      const details = body.error?.detalles;
+      throw new Error((body.mensaje || 'No se pudo actualizar el contenido legal.') + (details ? ` ${JSON.stringify(details)}` : ''));
+    }
+    return normalizePages(body.data);
+  },
+
+  /**
+   * Implementa la publicación de contenido legal en la tienda (POST /api/legal/configuracion/publicar/).
+   */
+  async publishLegalContent(tipo: LegalType, content?: string): Promise<Record<LegalType, LegalPage>> {
+    const response = await fetch(`${API_BASE}/api/legal/configuracion/publicar/`, {
+      method: 'POST',
+      headers: getAdminHeaders(),
+      body: JSON.stringify({ tipo, content }),
+    });
+    const body = await response.json();
+    if (!response.ok || body.exito !== true) {
+      const details = body.error?.detalles;
+      throw new Error((body.mensaje || 'No se pudo publicar el contenido legal.') + (details ? ` ${JSON.stringify(details)}` : ''));
+    }
+    return normalizePages(body.data);
+  },
+
+  /**
+   * Guarda un borrador de una página específica en el backend.
+   */
+  async saveDraft(
+    tipo: LegalType,
+    draft: string,
+    title?: string,
+    extra?: Record<string, unknown>
+  ): Promise<Record<LegalType, LegalPage>> {
+    return this.updateLegalContent(tipo, draft, title, extra);
   },
 
   /**
    * Publica los cambios de una página legal específica hacia la tienda online.
    */
   async publish(tipo: LegalType, content: string): Promise<Record<LegalType, LegalPage>> {
-    const response = await fetch(`${API_BASE}/api/legal/configuracion/`, {
-      method: 'PUT',
-      headers: getAdminHeaders(),
-      body: JSON.stringify({ tipo, draft: content, published: content, accion: 'publish' }),
-    });
-    const body = await response.json();
-    if (!response.ok || body.exito !== true) {
-      throw new Error(body.mensaje || 'No se pudo publicar la página legal.');
-    }
-    return normalizePages(body.data);
+    return this.publishLegalContent(tipo, content);
   },
 
   /**

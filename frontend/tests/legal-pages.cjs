@@ -84,10 +84,12 @@ function transpileAndRun(relativePath, customContext = {}) {
   assert.ok(legalContent.defaultLegalPages.terms, 'defaultLegalPages must have terms');
   assert.ok(legalContent.defaultLegalPages.privacy, 'defaultLegalPages must have privacy');
   assert.ok(legalContent.defaultLegalPages.refund, 'defaultLegalPages must have refund');
+  assert.ok(legalContent.defaultLegalPages.cookies, 'defaultLegalPages must have cookies');
   assert.ok(legalContent.defaultLegalPages.terms.published.includes('Aceptación de los términos'));
   assert.ok(legalContent.defaultLegalPages.privacy.published.includes('Información que recopilamos'));
   assert.ok(legalContent.defaultLegalPages.refund.published.includes('Derecho a devolución'));
-  console.log('✔ legalContent defaults verified');
+  assert.ok(legalContent.defaultLegalPages.cookies.published.includes('¿Qué son las cookies?'));
+  console.log('✔ legalContent defaults verified (including cookies)');
 
   // 2. Test legalService API calls
   let fetchCalls = [];
@@ -102,6 +104,7 @@ function transpileAndRun(relativePath, customContext = {}) {
             terms: { title: 'Términos Test', published: 'Contenido Términos' },
             privacy: { title: 'Privacidad Test', published: 'Contenido Privacidad' },
             refund: { title: 'Reembolso Test', published: 'Contenido Reembolso' },
+            cookies: { title: 'Cookies Test', published: 'Contenido Cookies' },
           },
         }),
       };
@@ -115,6 +118,7 @@ function transpileAndRun(relativePath, customContext = {}) {
             terms: { title: 'Términos Admin', draft: 'Draft Términos', published: 'Pub Términos' },
             privacy: { title: 'Privacidad Admin', draft: 'Draft Privacidad', published: 'Pub Privacidad' },
             refund: { title: 'Reembolso Admin', draft: 'Draft Reembolso', published: 'Pub Reembolso' },
+            cookies: { title: 'Cookies Admin', draft: 'Draft Cookies', published: 'Pub Cookies' },
           },
         }),
       };
@@ -151,38 +155,66 @@ function transpileAndRun(relativePath, customContext = {}) {
   assert.equal(publicPages.terms.published, 'Contenido Términos');
   assert.equal(publicPages.privacy.published, 'Contenido Privacidad');
   assert.equal(publicPages.refund.published, 'Contenido Reembolso');
-  console.log('✔ legalService.fetchPublicLegalPages verified');
+  assert.equal(publicPages.cookies.published, 'Contenido Cookies');
+  console.log('✔ legalService.fetchPublicLegalPages verified (including cookies)');
 
   // 2.2 Fetch admin pages
   const adminPages = await legalService.fetchAdminLegalPages();
   assert.equal(adminPages.terms.draft, 'Draft Términos');
+  assert.equal(adminPages.cookies.draft, 'Draft Cookies');
   assert.ok(fetchCalls.some(c => c.options?.headers?.Authorization === 'Token token-abc'));
-  console.log('✔ legalService.fetchAdminLegalPages sends auth token');
+  console.log('✔ legalService.fetchAdminLegalPages sends auth token and includes cookies');
 
-  // 2.3 Save draft
+  // 2.3 Create legal content
+  await legalService.createLegalContent({ tipo: 'terms', draft: 'Contenido creado', title: 'Términos Creados' });
+  const createCall = fetchCalls[fetchCalls.length - 1];
+  assert.equal(createCall.options.method, 'POST');
+  assert.equal(createCall.url, 'http://test-api:8000/api/legal/configuracion/');
+  assert.equal(JSON.parse(createCall.options.body).tipo, 'terms');
+  assert.equal(JSON.parse(createCall.options.body).draft, 'Contenido creado');
+  console.log('✔ legalService.createLegalContent sends POST to /api/legal/configuracion/');
+
+  // 2.4 Update legal content
+  await legalService.updateLegalContent('refund', 'Borrador actualizado');
+  const updateCall = fetchCalls[fetchCalls.length - 1];
+  assert.equal(updateCall.options.method, 'PUT');
+  assert.equal(updateCall.url, 'http://test-api:8000/api/legal/configuracion/');
+  assert.equal(JSON.parse(updateCall.options.body).accion, 'draft');
+  assert.equal(JSON.parse(updateCall.options.body).draft, 'Borrador actualizado');
+  console.log('✔ legalService.updateLegalContent sends PUT to /api/legal/configuracion/');
+
+  // 2.5 Publish legal content
+  await legalService.publishLegalContent('cookies', 'Política de cookies publicada');
+  const publishCall = fetchCalls[fetchCalls.length - 1];
+  assert.equal(publishCall.options.method, 'POST');
+  assert.equal(publishCall.url, 'http://test-api:8000/api/legal/configuracion/publicar/');
+  assert.equal(JSON.parse(publishCall.options.body).tipo, 'cookies');
+  assert.equal(JSON.parse(publishCall.options.body).content, 'Política de cookies publicada');
+  console.log('✔ legalService.publishLegalContent sends POST to /api/legal/configuracion/publicar/ for cookies');
+
+  // 2.6 Save draft & publish facades
   await legalService.saveDraft('terms', 'Nuevo borrador de términos');
   const draftCall = fetchCalls[fetchCalls.length - 1];
   assert.equal(draftCall.options.method, 'PUT');
   assert.equal(JSON.parse(draftCall.options.body).accion, 'draft');
   assert.equal(JSON.parse(draftCall.options.body).draft, 'Nuevo borrador de términos');
-  console.log('✔ legalService.saveDraft sends correct draft payload');
+  console.log('✔ legalService.saveDraft delegates properly');
 
-  // 2.4 Publish
   await legalService.publish('refund', 'Nueva política de reembolso publicada');
   const pubCall = fetchCalls[fetchCalls.length - 1];
-  assert.equal(pubCall.options.method, 'PUT');
-  assert.equal(JSON.parse(pubCall.options.body).accion, 'publish');
+  assert.equal(pubCall.options.method, 'POST');
+  assert.equal(pubCall.url, 'http://test-api:8000/api/legal/configuracion/publicar/');
   assert.equal(JSON.parse(pubCall.options.body).tipo, 'refund');
-  assert.equal(JSON.parse(pubCall.options.body).published, 'Nueva política de reembolso publicada');
-  console.log('✔ legalService.publish sends correct publish payload for refund');
+  assert.equal(JSON.parse(pubCall.options.body).content, 'Nueva política de reembolso publicada');
+  console.log('✔ legalService.publish delegates properly to publishLegalContent');
 
-  // 2.5 Restore
-  await legalService.restore('privacy');
+  // 2.7 Restore
+  await legalService.restore('cookies');
   const restCall = fetchCalls[fetchCalls.length - 1];
   assert.equal(restCall.options.method, 'PUT');
   assert.equal(JSON.parse(restCall.options.body).accion, 'restore');
-  assert.equal(JSON.parse(restCall.options.body).tipo, 'privacy');
-  console.log('✔ legalService.restore sends correct restore payload for privacy');
+  assert.equal(JSON.parse(restCall.options.body).tipo, 'cookies');
+  console.log('✔ legalService.restore sends correct restore payload for cookies');
 
   // 3. Checkout links verification
   const checkoutSource = fs.readFileSync(path.join(root, 'src/features/storefront/pages/Checkout.tsx'), 'utf8');
@@ -195,7 +227,32 @@ function transpileAndRun(relativePath, customContext = {}) {
   const legalSource = fs.readFileSync(path.join(root, 'src/features/storefront/pages/Legal.tsx'), 'utf8');
   assert.ok(!legalSource.includes('Volver a la tienda'), 'Legal page must not have Volver a la tienda links');
   assert.ok(!legalSource.includes('href: route()'), 'Breadcrumb Inicio must not have href');
-  console.log('✔ Legal page shows Inicio as non-clickable text and excludes return-to-home links');
+  assert.ok(legalSource.includes('cookies'), 'Legal page must support cookies');
+  console.log('✔ Legal page shows Inicio as non-clickable text and supports cookies');
 
-  console.log('\nAll Legal Pages tests passed successfully!');
+  // 5. Footers verification: Cookies link must be present in all 4 store templates
+  const editorialFooter = fs.readFileSync(path.join(root, 'src/features/storefront/components/store/EditorialLayout.tsx'), 'utf8');
+  assert.ok(editorialFooter.includes('legal/cookies'), 'Editorial layout must have Cookies link in footer');
+
+  const catalogFooter = fs.readFileSync(path.join(root, 'src/features/storefront/components/store/catalog/CatalogFooter.tsx'), 'utf8');
+  assert.ok(catalogFooter.includes('legal/cookies'), 'Catalog footer must have Cookies link in footer');
+
+  const minimalFooter = fs.readFileSync(path.join(root, 'src/features/storefront/components/store/minimal/MinimalFooter.tsx'), 'utf8');
+  assert.ok(minimalFooter.includes('legal/cookies'), 'Minimal footer must have Cookies link in footer');
+
+  const visualFooter = fs.readFileSync(path.join(root, 'src/features/storefront/components/store/visual/VisualFooter.tsx'), 'utf8');
+  assert.ok(visualFooter.includes('legal/cookies'), 'Visual footer must have Cookies link in footer');
+  console.log('✔ All 4 store template footers include the Cookies link');
+
+  // 6. Cookie consent pop-up banner verification
+  const cookieBannerSource = fs.readFileSync(path.join(root, 'src/features/storefront/components/store/CookieConsentBanner.tsx'), 'utf8');
+  assert.ok(cookieBannerSource.includes('openmind_cookie_consent'), 'CookieConsentBanner must use localStorage consent key');
+  assert.ok(cookieBannerSource.includes('legal/cookies'), 'CookieConsentBanner must link to legal/cookies');
+  assert.ok(cookieBannerSource.includes('Aviso de Cookies'), 'CookieConsentBanner must contain cookie notice');
+
+  const routerSource = fs.readFileSync(path.join(root, 'src/app/router/index.tsx'), 'utf8');
+  assert.ok(routerSource.includes('<CookieConsentBanner />'), 'StorefrontProviders must mount CookieConsentBanner');
+  console.log('✔ Cookie consent pop-up banner is implemented and mounted in StorefrontProviders');
+
+  console.log('\nAll Legal Pages & Cookies tests passed successfully!');
 })();

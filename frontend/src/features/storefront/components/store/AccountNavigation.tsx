@@ -4,7 +4,7 @@ import { Link, Navigate, useLocation } from 'react-router-dom';
 import { authService } from '../../../auth/services/authService';
 import { useStorefrontTemplate } from '../../hooks/useStorefrontTemplate';
 
-type User = { is_staff: boolean; is_store_owner: boolean };
+type User = { id?: number | string; email?: string; username?: string; is_staff: boolean; is_store_owner: boolean };
 export function isStoreAdministrator(user: User | null): boolean {
   return Boolean(user && (user.is_store_owner));
 }
