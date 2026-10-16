@@ -316,6 +316,7 @@ async function pruebasDelDashboard() {
       '../context/AdminContext': { useAdmin: () => ({ config: { orders: mockOrders } }) },
       '../components/dashboard/RecentOrders': { default: () => React.createElement('section', null, 'LISTADO-REAL-DE-ORDENES') },
       '../services/dashboardService': { getDashboard: async () => ({}) },
+      '../components/dashboard/Reports': { default: () => null },
       '../../data/mockAdminData': { formatPrice: valor => `$${valor}` },
       '../ui': { Alert: () => null, Button: () => null, Icon: () => null },
     };

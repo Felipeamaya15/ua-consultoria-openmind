@@ -16,6 +16,7 @@ import {
 
 import { fetchPublicProducts } from '../services/catalogService';
 import { fetchLandingConfig } from '../../landing/services/landingService';
+import { fetchStoreInformation, STORE_INFORMATION_CHANGED, type StoreInformation } from '../services/storeInformationService';
 import type { LandingConfig } from '../../landing/types/landing.types';
 import { isRecord, resolveVisualConfig, resolveStoreVisualConfig } from '../visual/resolveVisualConfig';
 import { useStoreIdentity } from './StoreIdentityContext';
@@ -116,6 +117,13 @@ export function StoreProvider({
     return resolveStoreVisualConfig(savedConfig, activeTemplate);
   }, [activeTemplate, savedConfig]);
   const [landing, setLanding] = useState<LandingConfig | null>(null);
+  const [business, setBusiness] = useState<StoreInformation | null>(null);
+  useEffect(() => {
+    const controller = new AbortController();
+    const refresh = () => { void fetchStoreInformation(controller.signal).then(value => { if (!controller.signal.aborted) setBusiness(value); }).catch(() => {}); };
+    refresh(); window.addEventListener(STORE_INFORMATION_CHANGED, refresh); window.addEventListener('focus', refresh);
+    return () => { controller.abort(); window.removeEventListener(STORE_INFORMATION_CHANGED, refresh); window.removeEventListener('focus', refresh); };
+  }, [identity]);
   const [landingLoading, setLandingLoading] = useState(true);
   const [landingError, setLandingError] = useState('');
   const [landingProducts, setLandingProducts] = useState<Product[]>([]);
@@ -157,7 +165,7 @@ export function StoreProvider({
 
   return (
     <StoreContext.Provider
-      value={{ config: { ...readBusinessConfig(savedConfig), primaryColor: visualConfig.global.colors.primary, secondaryColor: visualConfig.global.colors.secondary, accentColor: visualConfig.global.colors.accent, ...(landing ? { logo: landing.logo || '' } : {}) }, visualConfig, landing, landingLoading, landingError, landingProducts, landingCatalogError, legalPages }}
+      value={{ config: { ...readBusinessConfig(savedConfig), ...(business ? { name: business.nombre, description: business.descripcion || '' } : {}), primaryColor: visualConfig.global.colors.primary, secondaryColor: visualConfig.global.colors.secondary, accentColor: visualConfig.global.colors.accent, ...(landing ? { logo: landing.logo || '' } : {}) }, visualConfig, landing, landingLoading, landingError, landingProducts, landingCatalogError, legalPages }}
     >
       {children}
     </StoreContext.Provider>

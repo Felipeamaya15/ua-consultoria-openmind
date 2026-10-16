@@ -189,6 +189,7 @@ test('StoreContext resolves routes, legacy data and live storage updates', () =>
     if (id === 'react-router-dom') return { useLocation: () => ({ pathname }) };
     if (id.includes('catalogService')) return { fetchPublicProducts: async () => [] };
     if (id.includes('landingService')) return { fetchLandingConfig: async () => null };
+    if (id.includes('storeInformationService')) return { fetchStoreInformation: async () => ({ nombre: 'Tienda', descripcion: '' }), STORE_INFORMATION_CHANGED: 'test-store-information' };
     if (id.includes('StoreIdentityContext')) return { useStoreIdentity: () => ({ identity: identityA }) };
     return load(path.resolve(root, 'src/features/storefront/context', id + '.ts'));
   };
@@ -202,7 +203,7 @@ test('StoreContext resolves routes, legacy data and live storage updates', () =>
   let value = render();
   assert.equal(value.visualConfig.global.radius, 28); assert.equal(value.config.primaryColor, '#123456'); assert.equal(value.visualConfig.hero.gap, 0);
   const cleanupStorage = effects[0]();
-  const cleanupImages = effects[2]();
+  const cleanupImages = effects[3]();
   assert.equal(image.src, '/custom.png'); assert.equal(image.style.transform, 'scale(1.5)'); assert.equal(image.style.objectPosition, '0% 50%');
   seed({ themeEditor: { minimal: { visualConfig: { topBar: { visible: false }, productCard: { radius: 0 } } } } });
   listeners.get('ua-store-config-changed')(new TestCustomEvent('ua-store-config-changed', { detail: { storageKey: ADMIN_STORAGE_KEY } }));
@@ -400,6 +401,7 @@ test('StoreProvider and StoreVisualRoot render in SSR without browser globals', 
       if (id.includes('landingService')) return { fetchLandingConfig: () => { throw Error('SSR must not fetch landing'); } };
       const target = path.resolve(path.dirname(path.join(root, file)), id);
       if (fs.existsSync(target + '.tsx')) return moduleFor(path.relative(root, target + '.tsx'));
+      if (id.endsWith('/storeInformationService')) return { fetchStoreInformation: async () => ({ nombre: 'Tienda', descripcion: '' }), STORE_INFORMATION_CHANGED: 'test-store-information' };
       return load(target + '.ts');
     };
     vm.runInNewContext(code, { module, exports: module.exports, require: req });

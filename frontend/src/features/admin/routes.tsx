@@ -11,7 +11,6 @@ import { ProductList, ProductForm } from './pages/Products';
 import Orders from './pages/Orders';
 import Design from './pages/Design';
 const ThemeEditor = lazyPage(() => import('./pages/ThemeEditor'));
-import LandingPage from './pages/LandingPage';
 import Promotions from './pages/Promotions';
 import Payments from './pages/Payments';
 import Shipping from './pages/Shipping';
@@ -66,7 +65,7 @@ export const adminRoute: RouteObject = {
         },
         {
           path: 'landing',
-          element: <LandingPage />,
+          element: <Navigate to="/emprendedor/configuracion#pagina-principal" replace />,
         },
         {
           path: 'promociones',

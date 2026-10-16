@@ -1,0 +1,17 @@
+Creating test database for alias 'default'...
+
+................................................Linkify: aviso rechazado (PEDIDO_YA_ENVIADO) pedido=1: El pedido ya esta en preparacion o despacho: la anulacion del pago requiere revision manual.
+Linkify: aviso rechazado (PEDIDO_YA_ENVIADO) pedido=2: El pedido ya esta en preparacion o despacho: la anulacion del pago requiere revision manual.
+Linkify: aviso rechazado (PEDIDO_YA_ENVIADO) pedido=3: El pedido ya esta en preparacion o despacho: la anulacion del pago requiere revision manual.
+Linkify: aviso rechazado (PEDIDO_YA_ENVIADO) pedido=4: El pedido ya esta en preparacion o despacho: la anulacion del pago requiere revision manual.
+Linkify: aviso rechazado (PEDIDO_YA_ENVIADO) pedido=5: El pedido ya esta en preparacion o despacho: la anulacion del pago requiere revision manual.
+...Linkify: aviso rechazado (PEDIDO_NO_DISPONIBLE) pedido=6: El pedido no admite este cobro.
+................................................................................................
+----------------------------------------------------------------------
+Ran 147 tests in 29.266s
+
+OK
+Destroying test database for alias 'default'...
+
+Found 147 test(s).
+System check identified no issues (0 silenced).

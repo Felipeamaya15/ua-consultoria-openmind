@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Select } from '../components/ui';
 import RecentOrders from '../components/dashboard/RecentOrders';
+import Reports from '../components/dashboard/Reports';
 import { DashboardMetrics, type DashboardState } from '../components/dashboard/DashboardMetrics';
 import { getDashboard, type DashboardPeriod } from '../services/dashboardService';
 export default function Dashboard() {
@@ -34,5 +35,6 @@ export default function Dashboard() {
     </div>
     <DashboardMetrics state={state} period={period} onRetry={() => setAttempt(value => value + 1)} />
     <RecentOrders />
+    <Reports />
   </div>;
 }
