@@ -101,6 +101,12 @@ export const OrderTracking = () => {
                 </li>
               ))}
             </ul>
+            {Number(orderData.descuento) > 0 && (
+              <div className="mt-4 flex justify-between text-sm text-[var(--success)]">
+                <span>Descuento aplicado</span>
+                <span>−${Number(orderData.descuento).toLocaleString('es-CL')}</span>
+              </div>
+            )}
             <div className="mt-4 flex justify-between font-bold text-lg">
               <span>Total pagado:</span>
               <span>${Number(orderData.monto_total).toLocaleString('es-CL')}</span>
