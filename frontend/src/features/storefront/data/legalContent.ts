@@ -3,34 +3,62 @@
 // currently live `published` copy so the emprendedor can work without affecting
 // what buyers see until they hit "Publicar".
 
+import type { LegalContentVersion } from './legalVersions';
+
 export type LegalType = 'terms' | 'privacy' | 'refund';
+
+export interface LegalPageDefinition {
+  type: LegalType;
+  slug: string;
+  label: string;
+  short: string;
+  description: string;
+}
 
 export interface LegalPage {
   title: string;
   draft: string;
   published: string;
   lastPublished: string | null; // ISO date string
+  versions?: LegalContentVersion[];
+  currentVersionId?: string | null;
 }
 
-export const LEGAL_META: Record<LegalType, { label: string; short: string; description: string }> = {
-  terms: {
+/** Catálogo único de páginas legales disponibles en el e-commerce. */
+export const LEGAL_PAGE_DEFINITIONS: readonly LegalPageDefinition[] = [
+  {
+    type: 'terms',
+    slug: 'terminos',
     label: 'Términos y Condiciones',
     short: 'Términos',
     description: 'Reglas de uso de la tienda, compras y responsabilidades.',
   },
-  privacy: {
+  {
+    type: 'privacy',
+    slug: 'privacidad',
     label: 'Política de Privacidad',
     short: 'Privacidad',
     description: 'Cómo recopilas, usas y proteges los datos de tus clientes.',
   },
-  refund: {
+  {
+    type: 'refund',
+    slug: 'reembolso',
     label: 'Política de Reembolso',
     short: 'Reembolsos',
     description: 'Condiciones de devolución y reembolso según la Ley del Consumidor.',
   },
-};
+] as const;
 
-export const LEGAL_ORDER: LegalType[] = ['terms', 'privacy', 'refund'];
+export const LEGAL_ORDER: LegalType[] = LEGAL_PAGE_DEFINITIONS.map(({ type }) => type);
+
+export const LEGAL_META: Record<LegalType, Omit<LegalPageDefinition, 'type' | 'slug'>> =
+  Object.fromEntries(
+    LEGAL_PAGE_DEFINITIONS.map(({ type, slug: _slug, ...metadata }) => [type, metadata]),
+  ) as Record<LegalType, Omit<LegalPageDefinition, 'type' | 'slug'>>;
+
+export const LEGAL_SLUGS: Record<LegalType, string> = Object.fromEntries(
+  LEGAL_PAGE_DEFINITIONS.map(({ type, slug }) => [type, slug]),
+) as Record<LegalType, string>;
 
 const TERMS = `**1. Aceptación de los términos**
 

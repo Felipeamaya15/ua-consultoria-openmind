@@ -6,6 +6,7 @@ import logging
 from uuid import uuid4
 
 from django.db import transaction
+from django.db.models import F
 from rest_framework import serializers
 from rest_framework.authentication import TokenAuthentication
 from rest_framework.exceptions import NotAuthenticated, PermissionDenied, ValidationError
@@ -17,7 +18,8 @@ from apps.authentication.presentation.profile import IsCustomer, StrictSerialize
 from apps.catalog.domain.stock import validate_stock, is_variant_active
 from apps.catalog.infrastructure.repositories import ProductRepository
 from apps.core.infrastructure.tenant import resolver_tienda
-from apps.core.models import Pedido, ItemPedido, Tienda, Producto, ConfiguracionPago
+from apps.core.models import Pedido, ItemPedido, Tienda, Producto, ConfiguracionPago, Promocion
+from apps.core.promotions import calculate_promotion, PromotionError
 from apps.core.presentation.responses import success_response
 from apps.core.infrastructure.linkify_client import LinkifyAdapter
 from apps.core.delivery import DELIVERY_METHODS, delivery_for_store
@@ -63,7 +65,7 @@ class CheckoutSerializer(StrictSerializer):
     metodo_entrega = serializers.ChoiceField(choices=['Chilexpress', 'Starken', 'Retiro'])
     direccion = AddressSerializer(required=False)
     cotizacion = serializers.CharField(max_length=4096, required=False)
-    codigo_promocional = serializers.ChoiceField(choices=['', 'VERANO20', 'NUEVO5000'], default='', allow_blank=True)
+    codigo_promocional = serializers.CharField(max_length=40, default='', allow_blank=True, trim_whitespace=True)
 
     def validate(self, data):
         if data['metodo_entrega'] != 'Retiro':
@@ -161,9 +163,14 @@ class CheckoutOrderAPIView(ErroresDeCotizacionMixin, APIView):
                 )
                 
             subtotal = sum((line['precio_unitario'] * line['cantidad'] for line in lines.values()), Decimal(0))
-            promo = data['codigo_promocional']
-            discount = min(subtotal, (subtotal * Decimal('.2')).quantize(Decimal('1'), rounding=ROUND_HALF_UP)
-                           if promo == 'VERANO20' else Decimal(5000) if promo == 'NUEVO5000' else Decimal(0))
+            try:
+                promotion_amounts = calculate_promotion(
+                    tienda, data['codigo_promocional'], subtotal, shipping, lock=True,
+                )
+            except PromotionError as exc:
+                raise ValidationError({'codigo_promocional': str(exc)}) from exc
+            discount = promotion_amounts.discount
+            shipping = promotion_amounts.shipping
             total = subtotal - discount + shipping
 
             if data['medio_pago'] == 'Transbank' and (total <= 0 or total != total.to_integral_value()):
@@ -180,6 +187,8 @@ class CheckoutOrderAPIView(ErroresDeCotizacionMixin, APIView):
                 costo_envio=shipping, descuento=discount,
             )
             ItemPedido.objects.bulk_create([ItemPedido(id_pedido=order, **line) for line in lines.values()])
+            if promotion_amounts.promotion:
+                Promocion.objects.filter(pk=promotion_amounts.promotion.pk).update(usos=F('usos') + 1)
             result = self.result(order, self._url_pago(order, tienda))
             reserved = []
             try:

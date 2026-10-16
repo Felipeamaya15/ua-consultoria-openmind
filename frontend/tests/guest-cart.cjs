@@ -29,6 +29,7 @@ const Provider = load('src/features/storefront/context/CartContext.tsx', name =>
   if (name.includes('StoreIdentityContext')) return {useStoreIdentity: () => ({identity})};
   if (name.includes('guestCartStorage')) return persistence;
   if (name.includes('visual/pages')) return {isActiveEditorPreview: () => preview};
+  if (name.includes('promotionService')) return {validatePromotion: async () => {throw Error('No promo validation expected');}};
   if (name.includes('cartService')) return {cartService: {obtenerCarrito() {throw Error('Guest/preview must not query real cart');}}};
   throw Error(name);
 }).CartProvider;

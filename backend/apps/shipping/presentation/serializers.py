@@ -71,6 +71,7 @@ class CotizacionEnvioSerializer(serializers.Serializer):
 class EventoSeguimientoResponseSerializer(serializers.Serializer):
     fecha_hora = serializers.CharField()
     estado = serializers.CharField()
+    estado_estandar = serializers.CharField(allow_null=True, required=False)
     descripcion = serializers.CharField()
     ubicacion = serializers.CharField()
 
@@ -78,6 +79,7 @@ class DetalleSeguimientoResponseSerializer(serializers.Serializer):
     numero_seguimiento = serializers.CharField()
     proveedor = serializers.CharField()
     estado_actual = serializers.CharField()
+    estado_estandar = serializers.CharField(allow_null=True, required=False)
     descripcion_estado = serializers.CharField()
     fecha_estimada_entrega = serializers.CharField()
     historial = EventoSeguimientoResponseSerializer(many=True)

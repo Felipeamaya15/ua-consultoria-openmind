@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 
 import { orderService } from '../services/orderService';
+import { validatePromotion, type ValidatedPromotion } from '../services/promotionService';
 import { getDeliveryAlternatives, getShippingQuotes, type ShippingQuote, type ShippingConfiguration } from '../services/shippingService';
 import PickupDetails from '../components/checkout/PickupDetails';
 import { useCart } from '../context/CartContext';
@@ -494,6 +495,12 @@ export default function Checkout() {
   const [quoteError, setQuoteError] = useState('');
   const [quoteAttempt, setQuoteAttempt] = useState(0);
   const [quoteErrorKind, setQuoteErrorKind] = useState('');
+  const [promoInput, setPromoInput] = useState(promoCode);
+  const [checkoutPromoCode, setCheckoutPromoCode] = useState(promoCode);
+  const [validatedPromotion, setValidatedPromotion] = useState<ValidatedPromotion | null>(null);
+  const [promoLoading, setPromoLoading] = useState(false);
+  const [promoError, setPromoError] = useState('');
+  const [promoMessage, setPromoMessage] = useState('');
   
   const destinationKey = JSON.stringify([shippingMethod, address.region, address.city]);
   const selectedShippingOption = shippingOptions.find(option => option.id === shippingMethod);
@@ -502,8 +509,47 @@ export default function Checkout() {
     ? candidateQuote : undefined;
     
   // => CÁLCULO DEL TOTAL DEL PEDIDO SUMANDO EL COSTO DE DESPACHO <=
-  const shipping = shippingMethod === 'Retiro' ? 0 : selectedQuote?.monto ?? null;
-  const total = subtotal - discount + (shipping ?? 0);
+  const quotedShipping = shippingMethod === 'Retiro' ? 0 : selectedQuote?.monto ?? null;
+  const shipping = validatedPromotion ? validatedPromotion.shipping : quotedShipping;
+  const effectiveDiscount = validatedPromotion ? validatedPromotion.discount : discount;
+  const total = subtotal - effectiveDiscount + (shipping ?? 0);
+
+  useEffect(() => {
+    setValidatedPromotion(null);
+    setPromoMessage('');
+    if (checkoutPromoCode) setPromoError('Vuelve a aplicar el codigo porque cambio el pedido o el envio.');
+  }, [subtotal, quotedShipping]);
+
+  const handleApplyPromotion = async () => {
+    const code = promoInput.trim();
+    if (!code) {
+      setValidatedPromotion(null);
+      setCheckoutPromoCode('');
+      setPromoMessage('');
+      setPromoError('Ingresa un codigo promocional.');
+      return;
+    }
+    if (quotedShipping === null) {
+      setPromoError('Selecciona y cotiza el envio antes de aplicar el codigo.');
+      return;
+    }
+    setPromoLoading(true);
+    setPromoError('');
+    setPromoMessage('');
+    try {
+      const result = await validatePromotion(code, subtotal, quotedShipping);
+      setValidatedPromotion(result);
+      setCheckoutPromoCode(result.code);
+      setPromoInput(result.code);
+      setPromoMessage(result.message);
+    } catch (cause) {
+      setValidatedPromotion(null);
+      setCheckoutPromoCode('');
+      setPromoError(cause instanceof Error ? cause.message : 'El codigo promocional no es valido.');
+    } finally {
+      setPromoLoading(false);
+    }
+  };
   
   // Validamos que exista un costo real de despacho, o sea retiro en tienda.
   const deliveryReady = !shippingLoading && !shippingError && !!selectedShippingOption
@@ -681,7 +727,7 @@ export default function Checkout() {
     submitting.current = true;
     setLoading(true);
     setErrors({});
-    const signature = JSON.stringify({items, contact, paymentMethod, shippingMethod, address, promoCode});
+    const signature = JSON.stringify({items, contact, paymentMethod, shippingMethod, address, promoCode: checkoutPromoCode});
     if (checkoutAttempt.current.signature !== signature) {
       checkoutAttempt.current = {signature, key: crypto.randomUUID()};
     }
@@ -690,7 +736,7 @@ export default function Checkout() {
         throw new Error('Este medio de pago todavía no está disponible para completar la compra.');
       }
       const order = await orderService.create({
-        key: checkoutAttempt.current.key, items, contact, paymentMethod, shippingMethod, address, promoCode,
+        key: checkoutAttempt.current.key, items, contact, paymentMethod, shippingMethod, address, promoCode: checkoutPromoCode,
         shippingQuote: selectedQuote?.cotizacion,
       });
 
@@ -1941,14 +1987,47 @@ export default function Checkout() {
                     </p>
                   </div>
 
-                  <p data-page-price className="text-xs font-semibold">
-                    {formatPrice(item.price * item.quantity)}
-                  </p>
+                  <div className="text-right">
+                    {item.comparePrice !== undefined && item.comparePrice > item.price && (
+                      <p
+                        data-page-price
+                        className="text-[10px] text-[var(--visual-page-color)] line-through"
+                        aria-label={`Precio original ${formatPrice(item.comparePrice * item.quantity)}`}
+                      >
+                        {formatPrice(item.comparePrice * item.quantity)}
+                      </p>
+                    )}
+
+                    <p data-page-price className="text-xs font-semibold">
+                      {formatPrice(item.price * item.quantity)}
+                    </p>
+                  </div>
                 </div>
               ))}
             </div>
 
             <div className="border-t border-[var(--border)] pt-4 flex flex-col gap-3 text-sm">
+              <div className="pb-4 border-b border-[var(--border)]">
+                <label htmlFor="checkout-promo-code" className="block text-xs font-semibold uppercase tracking-wider text-[var(--visual-page-color)] mb-2">
+                  Código promocional
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    id="checkout-promo-code"
+                    value={promoInput}
+                    onChange={event => setPromoInput(event.target.value.toUpperCase())}
+                    onKeyDown={event => { if (event.key === 'Enter') { event.preventDefault(); void handleApplyPromotion(); } }}
+                    placeholder="Ej: VERANO20"
+                    autoComplete="off"
+                    className="h-10 flex-1 min-w-0 rounded-lg border border-[var(--border)] bg-transparent px-3 text-sm outline-none"
+                  />
+                  <Button type="button" variant="secondary" disabled={promoLoading} onClick={() => void handleApplyPromotion()}>
+                    {promoLoading ? 'Validando...' : 'Aplicar'}
+                  </Button>
+                </div>
+                {promoError && <p role="alert" className="mt-2 text-xs text-[var(--error)]">{promoError}</p>}
+                {promoMessage && <p role="status" className="mt-2 text-xs text-[var(--success)]">{promoMessage}</p>}
+              </div>
               <div className="flex justify-between">
                 <span className="text-[var(--visual-page-color)]">
                   Subtotal
@@ -1959,12 +2038,12 @@ export default function Checkout() {
                 </span>
               </div>
 
-              {discount > 0 && (
+              {effectiveDiscount > 0 && (
                 <div className="flex justify-between text-[var(--success)]">
-                  <span>Descuento</span>
+                  <span>Descuento{checkoutPromoCode ? ` (${checkoutPromoCode})` : ''}</span>
 
                   <span>
-                    −{formatPrice(discount)}
+                    −{formatPrice(effectiveDiscount)}
                   </span>
                 </div>
               )}

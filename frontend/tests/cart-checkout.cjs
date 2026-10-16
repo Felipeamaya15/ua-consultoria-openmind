@@ -95,6 +95,7 @@ const result = {id_pedido: 42, identificador: 'PEDIDO-BACKEND-42', tienda_id: 9,
     if (name.includes('useStorefrontTemplate')) return {useStorefrontTemplate: () => ({route: p => `/plantilla/1/${p}`, isCatalog: template === 'catalog', isVisual: template === 'visual', isMinimal: template === 'minimal'})};
     if (name.includes('mockData')) return {formatPrice: n => `CLP ${n}`};
     if (name.includes('orderService')) return {orderService: {create: async data => {createCalls.push(data); if (pending) await pending; if (fail) throw Error('Stock insuficiente'); return result;}}};
+    if (name.includes('promotionService')) return {validatePromotion: async code => ({code, type: 'fixed', discount: 1000, shipping: 0, message: 'Aplicado'})};
     if (name.includes('shippingService')) return {getDeliveryAlternatives: async () => ({pickup: {enabled: true}, chilexpress: {enabled: false}, starken: {enabled: false}}), getShippingQuotes: async () => []};
     if (name.includes('comunasChile')) return load('src/features/storefront/data/comunasChile.ts', {
       require: () => ({default: require('../src/features/admin/data/chileTerritory.json')}),
@@ -217,6 +218,7 @@ const result = {id_pedido: 42, identificador: 'PEDIDO-BACKEND-42', tienda_id: 9,
     require: name => {
       if (name.includes('StoreIdentityContext')) return {useStoreIdentity: () => ({identity: null})};
       if (name.includes('guestCartStorage')) return {guestCartKey: () => null};
+      if (name.includes('promotionService')) return {validatePromotion: async () => ({code: 'TEST', type: 'fixed', discount: 0, shipping: 0, message: ''})};
       if (name === '../visual/pages') return {isActiveEditorPreview: () => editorPreview};
       if (name === 'react/jsx-runtime') return {jsx, jsxs: jsx};
       if (name === 'react') return {createContext: () => ({Provider: 'Provider'}), useContext() {}, useEffect() {}, useCallback: fn => fn,
