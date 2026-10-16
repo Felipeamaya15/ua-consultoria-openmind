@@ -12,10 +12,10 @@ from apps.core.presentation.responses import error_response, success_response
 
 
 class PromocionSerializer(serializers.ModelSerializer):
-    id = serializers.IntegerField(read_only=True)
+    id = serializers.IntegerField(source='pk', read_only=True)
     code = serializers.CharField(source='codigo', max_length=40)
     name = serializers.CharField(source='nombre', max_length=150)
-    type = serializers.ChoiceField(source='tipo', choices=Promocion.TIPOS)
+    type = serializers.ChoiceField(source='tipo', choices=Promocion.TIPOS_CODIGO)
     value = serializers.DecimalField(source='valor', max_digits=12, decimal_places=2)
     minAmount = serializers.DecimalField(source='monto_minimo', max_digits=12, decimal_places=2, required=False, default=0)
     maxUses = serializers.IntegerField(source='maximo_usos', min_value=1, allow_null=True, required=False)
