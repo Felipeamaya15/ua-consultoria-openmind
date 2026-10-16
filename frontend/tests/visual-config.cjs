@@ -182,6 +182,7 @@ test('StoreContext resolves routes, legacy data and live storage updates', () =>
     useMemo: fn => fn(),
     useState: initial => { const slot = index++; if (!(slot in slots)) slots[slot] = typeof initial === 'function' ? initial() : initial; return [slots[slot], next => { slots[slot] = typeof next === 'function' ? next(slots[slot]) : next; }]; },
     useEffect: effect => effects.push(effect),
+    useCallback: fn => fn,
   };
   const req = id => {
     if (id === 'react/jsx-runtime') return { jsx, jsxs: jsx };
@@ -189,6 +190,7 @@ test('StoreContext resolves routes, legacy data and live storage updates', () =>
     if (id === 'react-router-dom') return { useLocation: () => ({ pathname }) };
     if (id.includes('catalogService')) return { fetchPublicProducts: async () => [] };
     if (id.includes('landingService')) return { fetchLandingConfig: async () => null };
+    if (id.includes('legalService')) return { legalService: { fetchPublicLegalPages: async () => ({}) } };
     if (id.includes('StoreIdentityContext')) return { useStoreIdentity: () => ({ identity: identityA }) };
     return load(path.resolve(root, 'src/features/storefront/context', id + '.ts'));
   };
@@ -398,6 +400,7 @@ test('StoreProvider and StoreVisualRoot render in SSR without browser globals', 
       if (id.includes('StoreIdentityContext')) return { useStoreIdentity: () => ({ identity: null }) };
       if (id.includes('catalogService')) return { fetchPublicProducts: () => { throw Error('SSR must not fetch catalog'); } };
       if (id.includes('landingService')) return { fetchLandingConfig: () => { throw Error('SSR must not fetch landing'); } };
+      if (id.includes('legalService')) return { legalService: { fetchPublicLegalPages: () => { throw Error('SSR must not fetch legal'); } } };
       const target = path.resolve(path.dirname(path.join(root, file)), id);
       if (fs.existsSync(target + '.tsx')) return moduleFor(path.relative(root, target + '.tsx'));
       return load(target + '.ts');

@@ -53,7 +53,7 @@ export function VisualFooter() {
             </nav>
           </div>
 
-          <div data-visual-part="branding"><InstitutionalBadge /></div>
+          <div data-visual-part="branding"><InstitutionalBadge showVersion={true} /></div>
 
         </div>
 
@@ -83,6 +83,13 @@ export function VisualFooter() {
               className="hover:text-white"
             >
               Reembolsos
+            </Link>
+
+            <Link
+              to="legal/cookies"
+              className="hover:text-white"
+            >
+              Cookies
             </Link>
           </nav>
 

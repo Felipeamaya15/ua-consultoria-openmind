@@ -5,7 +5,15 @@
 
 import type { LegalContentVersion } from './legalVersions';
 
-export type LegalType = 'terms' | 'privacy' | 'refund';
+export type LegalType = 'terms' | 'privacy' | 'refund' | 'cookies';
+
+export interface CookieBannerConfig {
+  title: string;
+  message: string;
+  acceptText: string;
+  declineText: string;
+  enabled: boolean;
+}
 
 export interface LegalPageDefinition {
   type: LegalType;
@@ -20,6 +28,11 @@ export interface LegalPage {
   draft: string;
   published: string;
   lastPublished: string | null; // ISO date string
+  version?: number;
+  fecha_vigencia?: string | null;
+  vigente?: boolean;
+  estado?: string;
+  banner?: CookieBannerConfig;
   versions?: LegalContentVersion[];
   currentVersionId?: string | null;
 }
@@ -46,6 +59,13 @@ export const LEGAL_PAGE_DEFINITIONS: readonly LegalPageDefinition[] = [
     label: 'Política de Reembolso',
     short: 'Reembolsos',
     description: 'Condiciones de devolución y reembolso según la Ley del Consumidor.',
+  },
+  {
+    type: 'cookies',
+    slug: 'cookies',
+    label: 'Política de Cookies',
+    short: 'Cookies',
+    description: 'Información sobre el uso de cookies y tecnologías de seguimiento en la tienda.',
   },
 ] as const;
 
@@ -128,14 +148,52 @@ No aplican reembolsos para: productos personalizados creados específicamente pa
 
 Si el producto presenta defectos de fabricación, tiene derecho a reparación, reemplazo o devolución del dinero según la garantía legal correspondiente.`;
 
+const COOKIES = `**1. ¿Qué son las cookies?**
+
+Las cookies son pequeños archivos de texto que los sitios web almacenan en su navegador o dispositivo para recordar información sobre su visita, facilitar la navegación y mejorar su experiencia de usuario.
+
+**2. Tipos de cookies que utilizamos**
+
+- **Cookies técnicas y necesarias:** Esenciales para el funcionamiento básico del e-commerce, como mantener su sesión iniciada, recordar los artículos en su carrito de compras y procesar el pago de forma segura.
+- **Cookies de personalización:** Permiten recordar sus preferencias de navegación (como idioma o moneda seleccionada).
+- **Cookies de análisis y rendimiento:** Nos ayudan a comprender cómo interactúan los usuarios con nuestra tienda, qué productos son más visitados y optimizar el rendimiento técnico del sitio.
+
+**3. Finalidad del tratamiento**
+
+Utilizamos estas tecnologías únicamente para brindarle un servicio seguro, eficiente y adaptado a sus necesidades comerciales. No utilizamos cookies para vender sus datos a terceros con fines publicitarios no autorizados.
+
+**4. Gestión y configuración de cookies**
+
+Usted puede configurar o deshabilitar el uso de cookies en cualquier momento a través de la configuración de su navegador web (Google Chrome, Mozilla Firefox, Safari, Microsoft Edge). Tenga en cuenta que bloquear ciertas cookies necesarias puede afectar el funcionamiento correcto de la tienda y del proceso de compra.
+
+**5. Actualizaciones de la política**
+
+Podemos actualizar esta Política de Cookies para reflejar cambios tecnológicos o normativos. Se informará a los usuarios sobre cambios relevantes a través de nuestro sitio web.`;
+
 export const LEGAL_TEMPLATES: Record<LegalType, string> = {
   terms: TERMS,
   privacy: PRIVACY,
   refund: REFUND,
+  cookies: COOKIES,
+};
+
+export const defaultCookieBanner: CookieBannerConfig = {
+  title: 'Aviso de Cookies',
+  message: 'Utilizamos cookies propias y de terceros para garantizar el funcionamiento seguro de la tienda, recordar tus preferencias y analizar la navegación. Para más información, consulta nuestra',
+  acceptText: 'Aceptar cookies',
+  declineText: 'Solo necesarias',
+  enabled: true,
 };
 
 export const defaultLegalPages: Record<LegalType, LegalPage> = {
   terms: { title: LEGAL_META.terms.label, draft: TERMS, published: TERMS, lastPublished: '2025-08-01' },
   privacy: { title: LEGAL_META.privacy.label, draft: PRIVACY, published: PRIVACY, lastPublished: '2025-08-01' },
   refund: { title: LEGAL_META.refund.label, draft: REFUND, published: REFUND, lastPublished: '2025-08-01' },
+  cookies: {
+    title: LEGAL_META.cookies.label,
+    draft: COOKIES,
+    published: COOKIES,
+    lastPublished: '2025-08-01',
+    banner: defaultCookieBanner,
+  },
 };

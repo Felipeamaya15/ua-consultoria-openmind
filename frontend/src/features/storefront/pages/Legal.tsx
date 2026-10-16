@@ -6,10 +6,10 @@ import {
   type LegalType,
   LEGAL_META,
   LEGAL_ORDER,
+  defaultLegalPages,
 } from '../data/legalContent';
 import { formatLegalDate, isLegalType } from '../data/legalPublication';
 import { useStore } from '../context/StoreContext';
-
 import { useStorefrontTemplate } from '../hooks/useStorefrontTemplate';
 
 export default function Legal() {
@@ -41,7 +41,7 @@ export default function Legal() {
   }
 
   const activeType: LegalType = type;
-  const page = legalPages[activeType];
+  const page = (legalPages && legalPages[activeType]) || defaultLegalPages[activeType];
   const meta = LEGAL_META[activeType];
   const updatedOn = formatLegalDate(page.lastPublished);
 
@@ -50,12 +50,16 @@ export default function Legal() {
       <div className="bg-[var(--visual-page-panel-background)] text-[var(--visual-page-color)]">
         <div className="max-w-[900px] mx-auto px-5 py-10 md:py-14">
           <div className="mb-8">
-            <Link data-page-action="ghost"
-              to={route()}
-              className="inline-flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--visual-page-color)]/40 hover:text-[var(--visual-page-color)] transition-colors"
-            >
-              ← Volver a la tienda
-            </Link>
+            <Breadcrumb
+              items={[
+                {
+                  label: 'Inicio',
+                },
+                {
+                  label: meta.label,
+                },
+              ]}
+            />
 
             <p className="mt-8 text-[var(--primary)] text-[10px] font-black uppercase tracking-[0.16em]">
               Información legal
@@ -68,6 +72,17 @@ export default function Legal() {
             <p className="mt-4 max-w-2xl text-[13px] leading-6 text-[var(--visual-page-color)]/45">
               Consulta la información y condiciones asociadas a tu compra.
             </p>
+
+            <div className="mt-3 flex items-center gap-2 flex-wrap">
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-medium text-black border border-neutral-300 bg-transparent">
+                Versión vigente {page.version ? `v${page.version}` : 'v1'}
+              </span>
+              {page.lastPublished && (
+                <span className="text-[12px] text-black/80">
+                  Actualizada el {new Date(page.lastPublished).toLocaleDateString('es-CL', { year: 'numeric', month: 'long', day: 'numeric' })}
+                </span>
+              )}
+            </div>
           </div>
 
           <div data-page-panel className="rounded-[16px] bg-[var(--visual-page-panel-background)] p-6 md:p-10 text-[var(--visual-page-color)]">
@@ -103,6 +118,22 @@ export default function Legal() {
                   );
                 })}
             </div>
+
+            {activeType === 'cookies' && (
+              <div className="mt-8 p-4 rounded-xl border border-[var(--visual-global-border)]/20 bg-[var(--visual-page-panel-background)] flex items-center justify-between gap-4 flex-wrap">
+                <div>
+                  <p className="text-xs font-semibold text-[var(--visual-page-color)]">Tus preferencias de cookies</p>
+                  <p className="text-[11px] text-[var(--visual-page-color)]/60">Puedes revisar o cambiar la configuración de cookies en cualquier momento.</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => window.dispatchEvent(new Event('openmind_open_cookie_banner'))}
+                  className="px-3.5 py-1.5 text-xs font-semibold rounded-lg bg-[var(--primary)] text-white hover:opacity-90 transition-opacity"
+                >
+                  Configurar cookies
+                </button>
+              </div>
+            )}
 
             {updatedOn && (
               <p className="mt-6 text-[11px] text-[var(--visual-page-color)]/40">
@@ -149,7 +180,6 @@ export default function Legal() {
         items={[
           {
             label: 'Inicio',
-            href: route(),
           },
           {
             label: meta.label,
@@ -182,10 +212,21 @@ export default function Legal() {
         }
       >
         {!isMinimal && (
-          <h1 className="text-2xl font-bold text-[var(--foreground)] mb-6">
+          <h1 className="text-2xl font-bold text-[var(--foreground)] mb-3">
             {meta.label}
           </h1>
         )}
+
+        <div className="flex items-center gap-2 mb-6 flex-wrap">
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium text-black border border-neutral-300 bg-transparent">
+            Versión vigente {page.version ? `v${page.version}` : 'v1'}
+          </span>
+          {page.lastPublished && (
+            <span className="text-xs text-black/80">
+              • Actualizada el {new Date(page.lastPublished).toLocaleDateString('es-CL', { year: 'numeric', month: 'long', day: 'numeric' })}
+            </span>
+          )}
+        </div>
 
         <div className="max-w-none text-[var(--muted-foreground)]">
           {page.published
@@ -227,6 +268,22 @@ export default function Legal() {
               );
             })}
         </div>
+
+        {activeType === 'cookies' && (
+          <div className="mt-6 p-4 rounded-xl border border-[var(--border)] bg-slate-50 dark:bg-slate-900/40 flex items-center justify-between gap-4 flex-wrap">
+            <div>
+              <p className="text-sm font-semibold">Tus preferencias de cookies</p>
+              <p className="text-xs text-[var(--muted-foreground)]">Puedes revisar o cambiar la configuración de cookies en cualquier momento.</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => window.dispatchEvent(new Event('openmind_open_cookie_banner'))}
+              className="px-4 py-2 text-xs font-semibold rounded-lg bg-[var(--primary)] text-white hover:opacity-90 transition-opacity"
+            >
+              Configurar cookies
+            </button>
+          </div>
+        )}
 
         {updatedOn && (
           <p
@@ -281,17 +338,6 @@ export default function Legal() {
           ))}
         </div>
       </div>
-
-      {isMinimal && (
-        <div className="text-center mt-7">
-          <Link data-page-action="ghost"
-            to={route()}
-            className="text-sm text-[var(--visual-page-color)] hover:text-[var(--primary)] transition-colors"
-          >
-            ← Volver a la tienda
-          </Link>
-        </div>
-      )}
     </div>
   );
 }

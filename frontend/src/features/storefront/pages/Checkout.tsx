@@ -1816,14 +1816,22 @@ export default function Checkout() {
                   target="_blank"
                 >
                   condiciones de uso
-                </Link>{' '}
-                y{' '}
+                </Link>
+                , nuestra{' '}
                 <Link data-page-action="ghost"
                   to={route('legal/privacy')}
                   className="font-semibold underline"
                   target="_blank"
                 >
                   política de privacidad
+                </Link>{' '}
+                y nuestra{' '}
+                <Link data-page-action="ghost"
+                  to={route('legal/refund')}
+                  className="font-semibold underline"
+                  target="_blank"
+                >
+                  política de reembolso
                 </Link>
                 .
               </Alert>

@@ -3,6 +3,14 @@ from apps.core.presentation.order_tracking import OrderTrackingAPIView
 from apps.core.presentation.checkout import CheckoutOrderAPIView
 from apps.core.presentation.shipping import ShippingQuoteAPIView
 from apps.core.presentation.linkify_notificacion import LinkifyNotificacionView
+from apps.core.presentation.legal import (
+    ConfiguracionLegalAPIView,
+    ConsultaVersionVigenteAPIView,
+    PaginaLegalDetalleAPIView,
+    PaginasLegalesPublicasAPIView,
+    PublicarContenidoLegalAPIView,
+)
+from apps.core.presentation.software_version import SoftwareVersionAPIView
 from apps.core.presentation.recent_orders import UltimasOrdenesAPIView, ActualizarEstadoPedidoAPIView
 from apps.core.presentation.historial import HistorialPedidosAPIView, HistorialVentasAPIView
 from apps.core.presentation.dashboard import DashboardAPIView
@@ -60,4 +68,21 @@ urlpatterns = [
     path('tienda/ventas/historial/', HistorialVentasAPIView.as_view(), name='tienda-ventas-historial'),
     path('tienda/pedidos/ultimos/', UltimasOrdenesAPIView.as_view(), name='tienda-pedidos-ultimos'),
     path('tienda/pedidos/<int:id_pedido>/estado/', ActualizarEstadoPedidoAPIView.as_view(), name='actualizar-estado-pedido'),
+    path('legal/', PaginasLegalesPublicasAPIView.as_view(), name='legal-publico'),
+    path('legal/vigente/', ConsultaVersionVigenteAPIView.as_view(), name='legal-version-vigente-todos'),
+    path('legal/vigente/<str:tipo>/', ConsultaVersionVigenteAPIView.as_view(), name='legal-version-vigente-tipo'),
+    path('legal/version-vigente/', ConsultaVersionVigenteAPIView.as_view(), name='legal-version-vigente-alias'),
+    path('legal/version-vigente/<str:tipo>/', ConsultaVersionVigenteAPIView.as_view(), name='legal-version-vigente-alias-tipo'),
+    path('legal/configuracion/', ConfiguracionLegalAPIView.as_view(), name='legal-configuracion'),
+    path('legal/configuracion/publicar/', PublicarContenidoLegalAPIView.as_view(), name='legal-publicar'),
+    path('legal/<str:tipo>/publicar/', PublicarContenidoLegalAPIView.as_view(), name='legal-publicar-tipo'),
+    path('legal/<str:tipo>/vigente/', ConsultaVersionVigenteAPIView.as_view(), name='legal-tipo-vigente'),
+    path('legal/<str:tipo>/', PaginaLegalDetalleAPIView.as_view(), name='legal-detalle'),
+    # Consulta de la versión vigente del software
+    path('software/version-vigente/', SoftwareVersionAPIView.as_view(), name='software-version-vigente'),
+    path('software/version/', SoftwareVersionAPIView.as_view(), name='software-version'),
+    path('version-vigente/', SoftwareVersionAPIView.as_view(), name='version-vigente-raiz'),
+    path('version/', SoftwareVersionAPIView.as_view(), name='version-raiz'),
+    path('sistema/version-vigente/', SoftwareVersionAPIView.as_view(), name='sistema-version-vigente'),
+    path('sistema/version/', SoftwareVersionAPIView.as_view(), name='sistema-version'),
 ]

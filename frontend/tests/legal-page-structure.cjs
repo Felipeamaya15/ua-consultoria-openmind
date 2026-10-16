@@ -22,7 +22,7 @@ const definitions = JSON.parse(JSON.stringify(legal.LEGAL_PAGE_DEFINITIONS));
 
 assert.deepEqual(
   definitions.map(({ type }) => type),
-  ['terms', 'privacy', 'refund'],
+  ['terms', 'privacy', 'refund', 'cookies'],
   'el catálogo conserva el orden público de las páginas',
 );
 assert.equal(new Set(definitions.map(({ type }) => type)).size, definitions.length);

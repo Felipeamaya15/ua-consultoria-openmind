@@ -34,6 +34,7 @@ import { PendingPage } from '../../features/storefront/pages/PreviewPages';
 import { StoreProvider } from '../../features/storefront/context/StoreContext';
 import { CartProvider } from '../../features/storefront/context/CartContext';
 import { OrderProvider } from '../../features/storefront/context/OrderContext';
+import { CookieConsentBanner } from '../../features/storefront/components/store/CookieConsentBanner';
 
 function StorefrontProviders({
   children,
@@ -45,6 +46,7 @@ function StorefrontProviders({
       <CartProvider>
         <OrderProvider>
           {children}
+          <CookieConsentBanner />
         </OrderProvider>
       </CartProvider>
     </StoreProvider>

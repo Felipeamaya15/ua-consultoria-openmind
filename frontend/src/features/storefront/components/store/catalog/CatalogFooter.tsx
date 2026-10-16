@@ -50,6 +50,13 @@ export function CatalogFooter() {
           </Link>
 
           <Link
+            to={route('legal/cookies')}
+            className="hover:text-white transition-colors"
+          >
+            Cookies
+          </Link>
+
+          <Link
             to={route('seguimiento')}
             className="hover:text-white transition-colors"
           >
@@ -57,7 +64,7 @@ export function CatalogFooter() {
           </Link>
         </div>
       </div>
-      <div data-visual-part="branding" className="mt-6"><InstitutionalBadge /></div>
+      <div data-visual-part="branding" className="mt-6"><InstitutionalBadge showVersion={true} /></div>
     </footer>
   );
 }
