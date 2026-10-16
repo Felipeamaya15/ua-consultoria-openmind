@@ -3,6 +3,8 @@
 // currently live `published` copy so the emprendedor can work without affecting
 // what buyers see until they hit "Publicar".
 
+import type { LegalContentVersion } from './legalVersions';
+
 export type LegalType = 'terms' | 'privacy' | 'refund';
 
 export interface LegalPageDefinition {
@@ -18,6 +20,8 @@ export interface LegalPage {
   draft: string;
   published: string;
   lastPublished: string | null; // ISO date string
+  versions?: LegalContentVersion[];
+  currentVersionId?: string | null;
 }
 
 /** Catálogo único de páginas legales disponibles en el e-commerce. */
