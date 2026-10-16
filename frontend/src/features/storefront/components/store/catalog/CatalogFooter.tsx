@@ -64,7 +64,7 @@ export function CatalogFooter() {
           </Link>
         </div>
       </div>
-      <div data-visual-part="branding" className="mt-6"><InstitutionalBadge /></div>
+      <div data-visual-part="branding" className="mt-6"><InstitutionalBadge showVersion={true} /></div>
     </footer>
   );
 }

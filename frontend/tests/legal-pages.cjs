@@ -146,6 +146,24 @@ function transpileAndRun(relativePath, customContext = {}) {
         }),
       };
     }
+    if (url.includes('/api/software/version-vigente/')) {
+      return {
+        ok: true,
+        json: async () => ({
+          exito: true,
+          mensaje: 'Versión vigente del software obtenida correctamente.',
+          data: {
+            sistema: 'OpenMind E-Commerce',
+            version: '1.0.0',
+            version_vigente: '1.0.0',
+            fecha_vigencia: '2026-10-16',
+            estado: 'vigente',
+            vigente: true,
+            plataforma: 'Universidad Autónoma de Chile',
+          },
+        }),
+      };
+    }
     if (url.includes('/api/legal/terminos/')) {
       return {
         ok: true,
@@ -289,5 +307,29 @@ function transpileAndRun(relativePath, customContext = {}) {
   assert.ok(routerSource.includes('<CookieConsentBanner />'), 'StorefrontProviders must mount CookieConsentBanner');
   console.log('✔ Cookie consent pop-up banner is implemented and mounted in StorefrontProviders');
 
-  console.log('\nAll Legal Pages & Cookies tests passed successfully!');
+  // 7. Consulta de la versión vigente del software
+  const softwareVersionMod = transpileAndRun('src/features/storefront/services/softwareVersionService.ts', {
+    requireMock: (id) => {
+      if (id.endsWith('/api')) return { API_BASE_URL: 'http://test-api:8000' };
+      return null;
+    },
+    globals: {
+      fetch: fakeFetch,
+    },
+  });
+
+  const { softwareVersionService } = softwareVersionMod;
+  const versionInfo = await softwareVersionService.getSoftwareVersion();
+  assert.equal(versionInfo.sistema, 'OpenMind E-Commerce');
+  assert.equal(versionInfo.version_vigente, '1.0.0');
+  assert.equal(versionInfo.estado, 'vigente');
+  assert.equal(versionInfo.vigente, true);
+  console.log('✔ softwareVersionService.getSoftwareVersion queries /api/software/version-vigente/ and returns valid software version data');
+
+  const institutionalBadgeSource = fs.readFileSync(path.join(root, 'src/features/storefront/components/ui/index.tsx'), 'utf8');
+  assert.ok(institutionalBadgeSource.includes('v1.0.0'), 'InstitutionalBadge must display software version badge');
+  assert.ok(institutionalBadgeSource.includes('SoftwareVersionModal'), 'InstitutionalBadge must link to SoftwareVersionModal');
+  console.log('✔ InstitutionalBadge includes interactive software version indicator and modal trigger');
+
+  console.log('\nAll Legal Pages, Cookies & Software Version tests passed successfully!');
 })();

@@ -53,7 +53,7 @@ export function VisualFooter() {
             </nav>
           </div>
 
-          <div data-visual-part="branding"><InstitutionalBadge /></div>
+          <div data-visual-part="branding"><InstitutionalBadge showVersion={true} /></div>
 
         </div>
 

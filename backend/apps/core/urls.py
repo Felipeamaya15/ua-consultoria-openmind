@@ -10,6 +10,7 @@ from apps.core.presentation.legal import (
     PaginasLegalesPublicasAPIView,
     PublicarContenidoLegalAPIView,
 )
+from apps.core.presentation.software_version import SoftwareVersionAPIView
 from django.urls import path
 from . import views
 from apps.core.presentation.views import (
@@ -63,4 +64,11 @@ urlpatterns = [
     path('legal/<str:tipo>/publicar/', PublicarContenidoLegalAPIView.as_view(), name='legal-publicar-tipo'),
     path('legal/<str:tipo>/vigente/', ConsultaVersionVigenteAPIView.as_view(), name='legal-tipo-vigente'),
     path('legal/<str:tipo>/', PaginaLegalDetalleAPIView.as_view(), name='legal-detalle'),
+    # Consulta de la versión vigente del software
+    path('software/version-vigente/', SoftwareVersionAPIView.as_view(), name='software-version-vigente'),
+    path('software/version/', SoftwareVersionAPIView.as_view(), name='software-version'),
+    path('version-vigente/', SoftwareVersionAPIView.as_view(), name='version-vigente-raiz'),
+    path('version/', SoftwareVersionAPIView.as_view(), name='version-raiz'),
+    path('sistema/version-vigente/', SoftwareVersionAPIView.as_view(), name='sistema-version-vigente'),
+    path('sistema/version/', SoftwareVersionAPIView.as_view(), name='sistema-version'),
 ]
