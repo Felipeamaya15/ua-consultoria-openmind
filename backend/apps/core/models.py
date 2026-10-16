@@ -333,3 +333,43 @@ class ConfiguracionEntrega(models.Model):
 
     def __str__(self):
         return f"Configuración de entrega - Tienda {self.tienda_id}"
+
+
+class Promocion(models.Model):
+    TIPO_CHOICES = [
+        ('descuento_porcentual', 'Descuento porcentual'),
+        ('descuento_monto_fijo', 'Descuento por monto fijo'),
+        ('envio_gratuito', 'Envío gratuito'),
+        ('precio_oferta', 'Precio de oferta'),
+    ]
+
+    id_promocion = models.BigAutoField(primary_key=True)
+    tienda = models.ForeignKey(Tienda, on_delete=models.CASCADE, related_name='promociones')
+    nombre = models.CharField(max_length=100)
+    tipo = models.CharField(max_length=30, choices=TIPO_CHOICES)
+    codigo = models.CharField(max_length=40, blank=True, default='')
+    activa = models.BooleanField(default=True)
+    fecha_inicio = models.DateTimeField(null=True, blank=True)
+    fecha_fin = models.DateTimeField(null=True, blank=True)
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'promocion'
+        constraints = [
+            models.CheckConstraint(
+                check=(
+                    Q(fecha_inicio__isnull=True)
+                    | Q(fecha_fin__isnull=True)
+                    | Q(fecha_fin__gte=models.F('fecha_inicio'))
+                ),
+                name='chk_promocion_fechas_validas',
+            ),
+            models.UniqueConstraint(
+                fields=['tienda', 'codigo'],
+                condition=~Q(codigo=''),
+                name='uq_promocion_codigo_por_tienda',
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.nombre} ({self.get_tipo_display()})"
