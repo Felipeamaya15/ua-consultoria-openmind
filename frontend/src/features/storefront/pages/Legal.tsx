@@ -72,6 +72,17 @@ export default function Legal() {
             <p className="mt-4 max-w-2xl text-[13px] leading-6 text-[var(--visual-page-color)]/45">
               Consulta la información y condiciones asociadas a tu compra.
             </p>
+
+            <div className="mt-3 flex items-center gap-2 flex-wrap">
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-medium text-black border border-neutral-300 bg-transparent">
+                Versión vigente {page.version ? `v${page.version}` : 'v1'}
+              </span>
+              {page.lastPublished && (
+                <span className="text-[12px] text-black/80">
+                  Actualizada el {new Date(page.lastPublished).toLocaleDateString('es-CL', { year: 'numeric', month: 'long', day: 'numeric' })}
+                </span>
+              )}
+            </div>
           </div>
 
           <div data-page-panel className="rounded-[16px] bg-[var(--visual-page-panel-background)] p-6 md:p-10 text-[var(--visual-page-color)]">
@@ -195,10 +206,21 @@ export default function Legal() {
         }
       >
         {!isMinimal && (
-          <h1 className="text-2xl font-bold text-[var(--foreground)] mb-6">
+          <h1 className="text-2xl font-bold text-[var(--foreground)] mb-3">
             {meta.label}
           </h1>
         )}
+
+        <div className="flex items-center gap-2 mb-6 flex-wrap">
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium text-black border border-neutral-300 bg-transparent">
+            Versión vigente {page.version ? `v${page.version}` : 'v1'}
+          </span>
+          {page.lastPublished && (
+            <span className="text-xs text-black/80">
+              • Actualizada el {new Date(page.lastPublished).toLocaleDateString('es-CL', { year: 'numeric', month: 'long', day: 'numeric' })}
+            </span>
+          )}
+        </div>
 
         <div className="max-w-none text-[var(--muted-foreground)]">
           {page.published

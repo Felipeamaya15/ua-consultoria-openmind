@@ -123,6 +123,29 @@ function transpileAndRun(relativePath, customContext = {}) {
         }),
       };
     }
+    if (url.includes('/api/legal/vigente/terms/')) {
+      return {
+        ok: true,
+        json: async () => ({
+          exito: true,
+          data: { tipo: 'terms', title: 'Términos Vigente', published: 'Pub Términos Vigente', version: 2, vigente: true, estado: 'vigente' },
+        }),
+      };
+    }
+    if (url.includes('/api/legal/vigente/')) {
+      return {
+        ok: true,
+        json: async () => ({
+          exito: true,
+          data: {
+            terms: { tipo: 'terms', title: 'Términos Vigente', published: 'Pub Términos Vigente', version: 2, vigente: true, estado: 'vigente' },
+            privacy: { tipo: 'privacy', title: 'Privacidad Vigente', published: 'Pub Privacidad Vigente', version: 1, vigente: true, estado: 'vigente' },
+            refund: { tipo: 'refund', title: 'Reembolso Vigente', published: 'Pub Reembolso Vigente', version: 1, vigente: true, estado: 'vigente' },
+            cookies: { tipo: 'cookies', title: 'Cookies Vigente', published: 'Pub Cookies Vigente', version: 1, vigente: true, estado: 'vigente' },
+          },
+        }),
+      };
+    }
     if (url.includes('/api/legal/terminos/')) {
       return {
         ok: true,
@@ -216,6 +239,17 @@ function transpileAndRun(relativePath, customContext = {}) {
   assert.equal(JSON.parse(restCall.options.body).tipo, 'cookies');
   console.log('✔ legalService.restore sends correct restore payload for cookies');
 
+  // 2.8 Consulta de versión vigente
+  await legalService.fetchVersionVigente();
+  const vigenteAllCall = fetchCalls[fetchCalls.length - 1];
+  assert.equal(vigenteAllCall.url, 'http://test-api:8000/api/legal/vigente/');
+  console.log('✔ legalService.fetchVersionVigente queries /api/legal/vigente/ for all active versions');
+
+  await legalService.fetchVersionVigente('terms');
+  const vigenteTypeCall = fetchCalls[fetchCalls.length - 1];
+  assert.equal(vigenteTypeCall.url, 'http://test-api:8000/api/legal/vigente/terms/');
+  console.log('✔ legalService.fetchVersionVigente queries /api/legal/vigente/terms/ for specific policy');
+
   // 3. Checkout links verification
   const checkoutSource = fs.readFileSync(path.join(root, 'src/features/storefront/pages/Checkout.tsx'), 'utf8');
   assert.ok(checkoutSource.includes("to={route('legal/terms')}"), 'Checkout must link to terms');
@@ -223,12 +257,13 @@ function transpileAndRun(relativePath, customContext = {}) {
   assert.ok(checkoutSource.includes("to={route('legal/refund')}"), 'Checkout must link to refund');
   console.log('✔ Checkout links to terms, privacy, and refund policies in purchase flow');
 
-  // 4. Legal page navigation verification (Inicio is non-clickable text, no Volver a la tienda)
+  // 4. Legal page navigation verification (Inicio is non-clickable text, no Volver a la tienda, shows Versión vigente)
   const legalSource = fs.readFileSync(path.join(root, 'src/features/storefront/pages/Legal.tsx'), 'utf8');
   assert.ok(!legalSource.includes('Volver a la tienda'), 'Legal page must not have Volver a la tienda links');
   assert.ok(!legalSource.includes('href: route()'), 'Breadcrumb Inicio must not have href');
   assert.ok(legalSource.includes('cookies'), 'Legal page must support cookies');
-  console.log('✔ Legal page shows Inicio as non-clickable text and supports cookies');
+  assert.ok(legalSource.includes('Versión vigente'), 'Legal page must display Versión vigente badge');
+  console.log('✔ Legal page shows Inicio as non-clickable text, supports cookies and displays Versión vigente');
 
   // 5. Footers verification: Cookies link must be present in all 4 store templates
   const editorialFooter = fs.readFileSync(path.join(root, 'src/features/storefront/components/store/EditorialLayout.tsx'), 'utf8');

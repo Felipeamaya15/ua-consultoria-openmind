@@ -18,6 +18,10 @@ export interface LegalPage {
   draft: string;
   published: string;
   lastPublished: string | null; // ISO date string
+  version?: number;
+  fecha_vigencia?: string | null;
+  vigente?: boolean;
+  estado?: string;
   banner?: CookieBannerConfig;
 }
 

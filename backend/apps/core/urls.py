@@ -5,6 +5,7 @@ from apps.core.presentation.shipping import ShippingQuoteAPIView
 from apps.core.presentation.linkify_notificacion import LinkifyNotificacionView
 from apps.core.presentation.legal import (
     ConfiguracionLegalAPIView,
+    ConsultaVersionVigenteAPIView,
     PaginaLegalDetalleAPIView,
     PaginasLegalesPublicasAPIView,
     PublicarContenidoLegalAPIView,
@@ -53,8 +54,13 @@ urlpatterns = [
     path('pagos/transferencias/<int:pedido_id>/rechazar/', RechazarTransferenciaManualAPIView.as_view(), name='rechazar-transferencia-manual'),
     path('tienda/pedidos/', TiendaPedidosAPIView.as_view(), name='tienda-pedidos'),
     path('legal/', PaginasLegalesPublicasAPIView.as_view(), name='legal-publico'),
+    path('legal/vigente/', ConsultaVersionVigenteAPIView.as_view(), name='legal-version-vigente-todos'),
+    path('legal/vigente/<str:tipo>/', ConsultaVersionVigenteAPIView.as_view(), name='legal-version-vigente-tipo'),
+    path('legal/version-vigente/', ConsultaVersionVigenteAPIView.as_view(), name='legal-version-vigente-alias'),
+    path('legal/version-vigente/<str:tipo>/', ConsultaVersionVigenteAPIView.as_view(), name='legal-version-vigente-alias-tipo'),
     path('legal/configuracion/', ConfiguracionLegalAPIView.as_view(), name='legal-configuracion'),
     path('legal/configuracion/publicar/', PublicarContenidoLegalAPIView.as_view(), name='legal-publicar'),
     path('legal/<str:tipo>/publicar/', PublicarContenidoLegalAPIView.as_view(), name='legal-publicar-tipo'),
+    path('legal/<str:tipo>/vigente/', ConsultaVersionVigenteAPIView.as_view(), name='legal-tipo-vigente'),
     path('legal/<str:tipo>/', PaginaLegalDetalleAPIView.as_view(), name='legal-detalle'),
 ]

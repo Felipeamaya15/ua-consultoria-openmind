@@ -198,10 +198,17 @@ export default function LegalEditor() {
         </section>
 
         <section className="bg-white border border-[var(--border)] rounded-2xl p-5">
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
             <div>
-              <p className="font-semibold text-sm">Vista previa publicada</p>
-              <p className="text-xs text-[var(--muted-foreground)]">Versión actualmente visible para compradores.</p>
+              <div className="flex items-center gap-2">
+                <p className="font-semibold text-sm">Versión vigente publicada</p>
+                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium text-black border border-neutral-300 bg-transparent">
+                  v{page.version || 1} • Vigente
+                </span>
+              </div>
+              <p className="text-xs text-[var(--muted-foreground)]">
+                Versión actualmente visible para compradores{page.lastPublished ? ` (desde ${new Date(page.lastPublished).toLocaleDateString('es-CL')})` : ''}.
+              </p>
             </div>
             <Link
               to={`${templatePaths[config.template]}/legal/${current}`}

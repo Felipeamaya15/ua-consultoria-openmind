@@ -307,3 +307,124 @@ class LegalPagesAPITestCase(APITestCase):
         )
         self.assertEqual(res_vacio.status_code, status.HTTP_400_BAD_REQUEST)
 
+    def test_consulta_version_vigente_todas_las_paginas(self):
+        """Implementar la consulta de la versión vigente: GET /api/legal/vigente/ retorna todas las políticas vigentes."""
+        response = self.client.get('/api/legal/vigente/')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(response.data['exito'])
+        self.assertEqual(response.data['mensaje'], 'Versiones vigentes obtenidas correctamente.')
+
+        data = response.data['data']
+        for tipo in ('terms', 'privacy', 'refund', 'cookies'):
+            self.assertIn(tipo, data)
+            item = data[tipo]
+            self.assertEqual(item['tipo'], tipo)
+            self.assertTrue(len(item['content']) > 0)
+            self.assertEqual(item['content'], item['published'])
+            self.assertEqual(item['version'], 1)
+            self.assertTrue(item['vigente'])
+            self.assertEqual(item['estado'], 'vigente')
+            self.assertIsNotNone(item['fecha_vigencia'])
+            self.assertNotIn('draft', item, 'La consulta de versión vigente jamás debe exponer borradores.')
+
+        # Verificar alias /api/legal/version-vigente/
+        res_alias = self.client.get('/api/legal/version-vigente/')
+        self.assertEqual(res_alias.status_code, status.HTTP_200_OK)
+        self.assertEqual(res_alias.data['data']['terms']['title'], 'Términos y Condiciones')
+
+    def test_consulta_version_vigente_por_tipo_y_alias(self):
+        """Implementar la consulta de la versión vigente por tipo específico, alias y query params."""
+        # Consulta por URL canónica y en español
+        test_cases = [
+            ('/api/legal/vigente/terms/', 'terms', 'Términos y Condiciones'),
+            ('/api/legal/vigente/terminos/', 'terms', 'Términos y Condiciones'),
+            ('/api/legal/terms/vigente/', 'terms', 'Términos y Condiciones'),
+            ('/api/legal/vigente/privacy/', 'privacy', 'Política de Privacidad'),
+            ('/api/legal/vigente/privacidad/', 'privacy', 'Política de Privacidad'),
+            ('/api/legal/vigente/refund/', 'refund', 'Política de Reembolso'),
+            ('/api/legal/vigente/reembolso/', 'refund', 'Política de Reembolso'),
+            ('/api/legal/vigente/cookies/', 'cookies', 'Política de Cookies'),
+            ('/api/legal/vigente/galletas/', 'cookies', 'Política de Cookies'),
+            ('/api/legal/version-vigente/cookies/', 'cookies', 'Política de Cookies'),
+        ]
+
+        for url, tipo_expected, title_expected in test_cases:
+            res = self.client.get(url)
+            self.assertEqual(res.status_code, status.HTTP_200_OK, f"Fallo al consultar versión vigente en {url}")
+            self.assertTrue(res.data['exito'])
+            data = res.data['data']
+            self.assertEqual(data['tipo'], tipo_expected)
+            self.assertEqual(data['title'], title_expected)
+            self.assertTrue(data['vigente'])
+            self.assertEqual(data['estado'], 'vigente')
+            self.assertIn('content', data)
+
+        # Consulta con query param ?tipo=terms
+        res_param = self.client.get('/api/legal/vigente/?tipo=refund')
+        self.assertEqual(res_param.status_code, status.HTTP_200_OK)
+        self.assertEqual(res_param.data['data']['tipo'], 'refund')
+
+        # Consulta con tipo no existente devuelve 404
+        bad_res = self.client.get('/api/legal/vigente/tipo_inexistente/')
+        self.assertEqual(bad_res.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertFalse(bad_res.data['exito'])
+
+    def test_consulta_version_vigente_incrementa_version_al_publicar(self):
+        """La versión vigente incrementa su número de versión al publicar nuevo contenido."""
+        # 1. Versión inicial es 1
+        res_v1 = self.client.get('/api/legal/vigente/terms/')
+        self.assertEqual(res_v1.data['data']['version'], 1)
+
+        # 2. Publicar nuevo contenido
+        self.client.credentials(HTTP_AUTHORIZATION=f'Token {self.token_propietario.key}')
+        nuevo_texto_v2 = "**1. Cláusula Actualizada v2**\n\nNuevos términos vigentes 2026."
+        pub_res = self.client.post(
+            '/api/legal/terms/publicar/',
+            {'content': nuevo_texto_v2},
+            format='json'
+        )
+        self.assertEqual(pub_res.status_code, status.HTTP_200_OK)
+
+        # 3. La consulta de la versión vigente ahora reporta versión 2
+        res_v2 = self.client.get('/api/legal/vigente/terms/')
+        self.assertEqual(res_v2.status_code, status.HTTP_200_OK)
+        self.assertEqual(res_v2.data['data']['version'], 2)
+        self.assertEqual(res_v2.data['data']['content'], nuevo_texto_v2)
+        self.assertEqual(res_v2.data['data']['published'], nuevo_texto_v2)
+        self.assertTrue(res_v2.data['data']['vigente'])
+
+        # 4. Publicar de nuevo genera versión 3
+        nuevo_texto_v3 = "**1. Cláusula Actualizada v3**\n\nTercera versión vigente."
+        self.client.post(
+            '/api/legal/terms/publicar/',
+            {'content': nuevo_texto_v3},
+            format='json'
+        )
+        res_v3 = self.client.get('/api/legal/vigente/terms/')
+        self.assertEqual(res_v3.data['data']['version'], 3)
+        self.assertEqual(res_v3.data['data']['content'], nuevo_texto_v3)
+
+    def test_consulta_version_vigente_no_expone_borradores(self):
+        """Verifica que la versión vigente se mantiene inmutable ante cambios en borradores."""
+        # Publicar una versión oficial conocida
+        self.client.credentials(HTTP_AUTHORIZATION=f'Token {self.token_propietario.key}')
+        self.client.post(
+            '/api/legal/privacy/publicar/',
+            {'content': '**1. Privacidad Oficial**\n\nTexto público vigente.'},
+            format='json'
+        )
+
+        # Guardar un borrador de prueba no publicado
+        self.client.put(
+            '/api/legal/configuracion/',
+            {'tipo': 'privacy', 'draft': '**1. Borrador Secreto**\n\nNo debe verse en la versión vigente.', 'accion': 'draft'},
+            format='json'
+        )
+
+        # La consulta de la versión vigente debe seguir mostrando el texto publicado oficial
+        res = self.client.get('/api/legal/vigente/privacy/')
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertIn('Texto público vigente', res.data['data']['content'])
+        self.assertNotIn('Borrador Secreto', res.data['data']['content'])
+
+

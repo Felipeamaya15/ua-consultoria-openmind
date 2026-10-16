@@ -6,6 +6,7 @@ from apps.core.infrastructure.tenant import resolver_tienda
 from apps.core.legal import (
     CANONICAL_TYPES,
     create_legal_for_store,
+    get_version_vigente,
     legal_for_store,
     normalize_legal_type,
     publish_legal_for_store,
@@ -13,6 +14,38 @@ from apps.core.legal import (
     update_legal_for_store,
 )
 from apps.core.presentation.responses import error_response, success_response
+
+
+class ConsultaVersionVigenteAPIView(APIView):
+    """Implementa la consulta de la versión vigente de las páginas legales en el e-commerce."""
+
+    permission_classes = [AllowAny]
+
+    def get(self, request, tipo=None):
+        tienda = resolver_tienda(request)
+        raw_type = tipo or request.query_params.get('tipo') or request.query_params.get('type')
+
+        if raw_type and raw_type != 'all':
+            canonical = normalize_legal_type(raw_type)
+            if not canonical:
+                return error_response(
+                    mensaje=f"Tipo de página legal no encontrado. Opciones: {', '.join(CANONICAL_TYPES)}",
+                    codigo="PAGINA_NO_ENCONTRADA",
+                    status=status.HTTP_404_NOT_FOUND,
+                )
+            version_data = get_version_vigente(tienda, canonical)
+            return success_response(
+                data=version_data,
+                mensaje=f"Versión vigente de {version_data['title']} obtenida correctamente.",
+                status=status.HTTP_200_OK,
+            )
+
+        versiones = get_version_vigente(tienda)
+        return success_response(
+            data=versiones,
+            mensaje="Versiones vigentes obtenidas correctamente.",
+            status=status.HTTP_200_OK,
+        )
 
 
 class PaginasLegalesPublicasAPIView(APIView):

@@ -31,6 +31,10 @@ function normalizePages(data: unknown): Record<LegalType, LegalPage> {
         draft: typeof item.draft === 'string' ? item.draft : (typeof item.published === 'string' ? item.published : result[key].draft),
         published: typeof item.published === 'string' ? item.published : result[key].published,
         lastPublished: typeof item.lastPublished === 'string' ? item.lastPublished : result[key].lastPublished,
+        version: typeof item.version === 'number' ? item.version : 1,
+        fecha_vigencia: typeof item.fecha_vigencia === 'string' ? item.fecha_vigencia : (typeof item.lastPublished === 'string' ? item.lastPublished : null),
+        vigente: item.vigente !== false,
+        estado: typeof item.estado === 'string' ? item.estado : 'vigente',
         banner: item.banner && typeof item.banner === 'object' ? {
           title: typeof item.banner.title === 'string' ? item.banner.title : (result[key].banner?.title || 'Aviso de Cookies'),
           message: typeof item.banner.message === 'string' ? item.banner.message : (result[key].banner?.message || ''),
@@ -45,6 +49,46 @@ function normalizePages(data: unknown): Record<LegalType, LegalPage> {
 }
 
 export const legalService = {
+  /**
+   * Implementa la consulta de la versión vigente de las páginas legales en el e-commerce.
+   * Si se especifica `tipo`, retorna la versión vigente de dicha política (por ej. 'terms', 'privacy').
+   * Si no se especifica, retorna el conjunto completo de políticas vigentes.
+   */
+  async fetchVersionVigente(tipo?: string, signal?: AbortSignal): Promise<LegalPage | Record<LegalType, LegalPage>> {
+    try {
+      const url = tipo
+        ? `${API_BASE}/api/legal/vigente/${encodeURIComponent(tipo)}/`
+        : `${API_BASE}/api/legal/vigente/`;
+      const response = await fetch(url, { signal });
+      const body = await response.json();
+      if (!response.ok || body.exito !== true) {
+        throw new Error(body.mensaje || 'No se pudo consultar la versión vigente.');
+      }
+      if (tipo) {
+        const item = body.data;
+        return {
+          title: item.title || '',
+          draft: item.draft || item.published || item.content || '',
+          published: item.published || item.content || '',
+          lastPublished: item.lastPublished || item.fecha_vigencia || null,
+          version: typeof item.version === 'number' ? item.version : 1,
+          fecha_vigencia: item.fecha_vigencia || item.lastPublished || null,
+          vigente: item.vigente !== false,
+          estado: item.estado || 'vigente',
+          banner: item.banner,
+        };
+      }
+      return normalizePages(body.data);
+    } catch (error) {
+      console.warn('Fallback local al consultar versión vigente:', error);
+      if (tipo) {
+        const canonical = (tipo.toLowerCase() as LegalType) in defaultLegalPages ? (tipo.toLowerCase() as LegalType) : 'terms';
+        return defaultLegalPages[canonical];
+      }
+      return structuredClone(defaultLegalPages);
+    }
+  },
+
   /**
    * Consulta pública de las páginas legales vigentes para compradores y visitantes.
    */
@@ -77,6 +121,10 @@ export const legalService = {
       draft: data.draft || data.published || '',
       published: data.published || '',
       lastPublished: data.lastPublished || null,
+      version: typeof data.version === 'number' ? data.version : 1,
+      fecha_vigencia: data.fecha_vigencia || data.lastPublished || null,
+      vigente: data.vigente !== false,
+      estado: data.estado || 'vigente',
     };
   },
 

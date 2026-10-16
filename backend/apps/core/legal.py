@@ -152,6 +152,10 @@ def get_default_legal_pages() -> dict:
             'draft': meta['content'],
             'published': meta['content'],
             'lastPublished': now_iso,
+            'version': 1,
+            'fecha_vigencia': now_iso,
+            'vigente': True,
+            'estado': 'vigente',
         }
         for key, meta in LEGAL_META.items()
     }
@@ -184,6 +188,10 @@ def legal_for_store(tienda, *, for_admin=False) -> dict:
         draft = str(stored_item.get('draft') if stored_item.get('draft') is not None else defaults[key]['draft'])
         published = str(stored_item.get('published') if stored_item.get('published') is not None else defaults[key]['published'])
         last_published = stored_item.get('lastPublished') or defaults[key]['lastPublished']
+        version = int(stored_item.get('version') or defaults[key].get('version', 1))
+        fecha_vigencia = stored_item.get('fecha_vigencia') or last_published
+        vigente = True
+        estado = 'vigente'
 
         if for_admin:
             result[key] = {
@@ -191,12 +199,20 @@ def legal_for_store(tienda, *, for_admin=False) -> dict:
                 'draft': draft,
                 'published': published,
                 'lastPublished': last_published,
+                'version': version,
+                'fecha_vigencia': fecha_vigencia,
+                'vigente': vigente,
+                'estado': estado,
             }
         else:
             result[key] = {
                 'title': title,
                 'published': published,
                 'lastPublished': last_published,
+                'version': version,
+                'fecha_vigencia': fecha_vigencia,
+                'vigente': vigente,
+                'estado': estado,
             }
 
         if key == 'cookies':
@@ -314,9 +330,25 @@ def publish_legal_for_store(tienda, tipo: str, content: str = None) -> dict:
         if len(text_to_publish) > 50000:
             raise ValidationError({'content': f"El texto de {page['title']} excede el límite máximo permitido (50.000 caracteres)."})
 
+        stored_page = current_stored.get(key, {})
+        current_version = int(stored_page.get('version') or page.get('version') or 1)
+        new_version = current_version + 1
+
         page['draft'] = text_to_publish
         page['published'] = text_to_publish
         page['lastPublished'] = now_iso
+        page['version'] = new_version
+        page['fecha_vigencia'] = now_iso
+        page['vigente'] = True
+        page['estado'] = 'vigente'
+
+        historial = stored_page.get('historial') if isinstance(stored_page.get('historial'), list) else []
+        historial.append({
+            'version': new_version,
+            'fecha_vigencia': now_iso,
+            'content': text_to_publish,
+        })
+        page['historial'] = historial
 
         current_stored[key] = page
 
@@ -357,9 +389,26 @@ def save_legal_for_store(tienda, payload: dict) -> dict:
                 raise ValidationError({'content': 'El contenido legal a publicar no puede estar vacío.'})
             if len(content_to_publish) > 50000:
                 raise ValidationError({'content': 'El texto excede el límite máximo permitido (50.000 caracteres).'})
+
+            stored_page = current_stored.get(canonical, {})
+            current_version = int(stored_page.get('version') or page.get('version') or 1)
+            new_version = current_version + 1
+
             page['draft'] = content_to_publish
             page['published'] = content_to_publish
             page['lastPublished'] = now_iso
+            page['version'] = new_version
+            page['fecha_vigencia'] = now_iso
+            page['vigente'] = True
+            page['estado'] = 'vigente'
+
+            historial = stored_page.get('historial') if isinstance(stored_page.get('historial'), list) else []
+            historial.append({
+                'version': new_version,
+                'fecha_vigencia': now_iso,
+                'content': content_to_publish,
+            })
+            page['historial'] = historial
         else:  # accion == 'draft' o update regular
             draft_content = payload.get('draft')
             if draft_content is not None:
@@ -375,8 +424,17 @@ def save_legal_for_store(tienda, payload: dict) -> dict:
                     raise ValidationError({'published': 'El contenido publicado debe ser texto.'})
                 if len(published_content) > 50000:
                     raise ValidationError({'published': 'El texto excede el límite máximo permitido (50.000 caracteres).'})
+
+                stored_page = current_stored.get(canonical, {})
+                current_version = int(stored_page.get('version') or page.get('version') or 1)
+                new_version = current_version + 1
+
                 page['published'] = published_content
                 page['lastPublished'] = now_iso
+                page['version'] = new_version
+                page['fecha_vigencia'] = now_iso
+                page['vigente'] = True
+                page['estado'] = 'vigente'
 
         if 'title' in payload and isinstance(payload['title'], str) and payload['title'].strip():
             page['title'] = payload['title'].strip()
@@ -409,7 +467,14 @@ def save_legal_for_store(tienda, payload: dict) -> dict:
                     if len(item['published']) > 50000:
                         raise ValidationError({key: {'published': 'El texto excede el límite máximo permitido (50.000 caracteres).'}} )
                     if item['published'] != page['published']:
+                        stored_page = current_stored.get(key, {})
+                        current_version = int(stored_page.get('version') or page.get('version') or 1)
+                        new_version = current_version + 1
                         page['lastPublished'] = now_iso
+                        page['version'] = new_version
+                        page['fecha_vigencia'] = now_iso
+                        page['vigente'] = True
+                        page['estado'] = 'vigente'
                     page['published'] = item['published']
 
                 if 'title' in item and isinstance(item['title'], str) and item['title'].strip():
@@ -425,4 +490,56 @@ def save_legal_for_store(tienda, payload: dict) -> dict:
     configuracion.save(update_fields=['datos', 'fecha_actualizacion'])
 
     return legal_for_store(tienda, for_admin=True)
+
+
+def get_version_vigente(tienda, tipo: str = None) -> dict:
+    """Implementa la consulta de la versión vigente de las páginas legales.
+
+    Permite consultar la versión vigente de un tipo específico (terms, privacy, refund, cookies)
+    o de todas las políticas vigentes de la tienda para su despliegue y validación.
+    """
+    from rest_framework.exceptions import ValidationError
+
+    pages = legal_for_store(tienda, for_admin=False)
+
+    if tipo and tipo != 'all':
+        canonical = normalize_legal_type(tipo)
+        if not canonical:
+            raise ValidationError({'tipo': f"Tipo de página legal no encontrado. Opciones válidas: {', '.join(CANONICAL_TYPES)}"})
+
+        item = pages[canonical]
+        version_data = {
+            'tipo': canonical,
+            'title': item['title'],
+            'content': item['published'],
+            'published': item['published'],
+            'version': item.get('version', 1),
+            'fecha_vigencia': item.get('fecha_vigencia') or item.get('lastPublished'),
+            'lastPublished': item.get('lastPublished'),
+            'vigente': True,
+            'estado': 'vigente',
+        }
+        if canonical == 'cookies' and 'banner' in item:
+            version_data['banner'] = item['banner']
+        return version_data
+
+    result = {}
+    for key in CANONICAL_TYPES:
+        item = pages[key]
+        item_data = {
+            'tipo': key,
+            'title': item['title'],
+            'content': item['published'],
+            'published': item['published'],
+            'version': item.get('version', 1),
+            'fecha_vigencia': item.get('fecha_vigencia') or item.get('lastPublished'),
+            'lastPublished': item.get('lastPublished'),
+            'vigente': True,
+            'estado': 'vigente',
+        }
+        if key == 'cookies' and 'banner' in item:
+            item_data['banner'] = item['banner']
+        result[key] = item_data
+
+    return result
 
