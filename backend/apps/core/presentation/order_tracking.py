@@ -14,7 +14,7 @@ from apps.core.infrastructure.tenant import resolver_tienda
 from apps.core.models import ItemPedido, Pedido
 from apps.core.presentation.customer_orders import OrderDetailSerializer
 from apps.core.presentation.responses import success_response
-from apps.core.presentation.exceptions import custom_exception_handler
+from apps.core.presentation.tracking_guard import TrackingAttemptGuard, tracking_exception_handler
 
 
 class TrackingLookupSerializer(StrictSerializer):
@@ -52,7 +52,7 @@ class OrderTrackingAPIView(APIView):
     throttle_classes = [TrackingLookupThrottle]
 
     def get_exception_handler(self):
-        return custom_exception_handler
+        return tracking_exception_handler
 
     def finalize_response(self, request, response, *args, **kwargs):
         response = super().finalize_response(request, response, *args, **kwargs)
@@ -63,6 +63,8 @@ class OrderTrackingAPIView(APIView):
         lookup = TrackingLookupSerializer(data=request.data)
         lookup.is_valid(raise_exception=True)
         tienda = resolver_tienda(request)
+        guard = TrackingAttemptGuard(lookup.validated_data['identificador'], lookup.validated_data['email'])
+        guard.check()
 
         matches = list(Pedido.objects.filter(
             tienda=tienda,
@@ -73,8 +75,10 @@ class OrderTrackingAPIView(APIView):
         )[:2])
 
         if len(matches) != 1:
+            guard.register_failure()
             raise NotFound('No encontramos un pedido con ese número y correo.')
 
+        guard.register_success()
         order = matches[0]
         data = OrderDetailSerializer(order).data
 
