@@ -1,13 +1,16 @@
+
 from apps.core.presentation.customer_orders import CustomerOrdersAPIView
 from apps.core.presentation.order_tracking import OrderTrackingAPIView
 from apps.core.presentation.checkout import CheckoutOrderAPIView
 from apps.core.presentation.shipping import ShippingQuoteAPIView
 from apps.core.presentation.linkify_notificacion import LinkifyNotificacionView
 from apps.core.presentation.recent_orders import UltimasOrdenesAPIView, ActualizarEstadoPedidoAPIView
+from apps.core.presentation.historial import HistorialPedidosAPIView, HistorialVentasAPIView
 from apps.core.presentation.dashboard import DashboardAPIView
 from apps.core.presentation.reports import InformeAPIView, InformePDFAPIView
 from apps.core.presentation.store_configuration import InformacionTiendaAPIView
 from apps.core.presentation.pickup_address import PickupAddressAPIView
+from apps.core.presentation.promotions import PromocionesAPIView, PromocionDetalleAPIView, ValidarPromocionAPIView
 from django.urls import path
 from . import views
 from apps.core.presentation.views import (
@@ -17,9 +20,9 @@ from apps.core.presentation.views import (
     MetodosPagoActivosAPIView,
     RegistrarCompraView,
     TiendaPagoActualAPIView,
-    IniciarPagoPayPalView, 
+    IniciarPagoPayPalView,
     CapturarPagoPayPalView,
-    WebhookLinkifyAPIView, 
+    WebhookLinkifyAPIView,
     VerificarTransferenciaLinkifyAPIView,
     TransferenciasPendientesAPIView,
     AprobarTransferenciaManualAPIView,
@@ -31,6 +34,9 @@ urlpatterns = [
     path('tienda/informes/', InformeAPIView.as_view(), name='tienda-informes'),
     path('tienda/informes/pdf/', InformePDFAPIView.as_view(), name='tienda-informes-pdf'),
     path('tienda/configuracion/', InformacionTiendaAPIView.as_view(), name='tienda-configuracion'),
+    path('promociones/', PromocionesAPIView.as_view(), name='promotions'),
+    path('promociones/validar/', ValidarPromocionAPIView.as_view(), name='promotion-validate'),
+    path('promociones/<int:promotion_id>/', PromocionDetalleAPIView.as_view(), name='promotion-detail'),
     path('entregas/retiro/direcciones/', PickupAddressAPIView.as_view(), name='pickup-address'),
     path('tienda/dashboard/', DashboardAPIView.as_view(), name='tienda-dashboard'),
     path('pedidos/registrar/', RegistrarCompraView.as_view(), name='pedidos-registrar'),
@@ -56,6 +62,8 @@ urlpatterns = [
     path('pagos/transferencias/<int:pedido_id>/aprobar/', AprobarTransferenciaManualAPIView.as_view(), name='aprobar-transferencia-manual'),
     path('pagos/transferencias/<int:pedido_id>/rechazar/', RechazarTransferenciaManualAPIView.as_view(), name='rechazar-transferencia-manual'),
     path('tienda/pedidos/', TiendaPedidosAPIView.as_view(), name='tienda-pedidos'),
+    path('tienda/pedidos/historial/', HistorialPedidosAPIView.as_view(), name='tienda-pedidos-historial'),
+    path('tienda/ventas/historial/', HistorialVentasAPIView.as_view(), name='tienda-ventas-historial'),
     path('tienda/pedidos/ultimos/', UltimasOrdenesAPIView.as_view(), name='tienda-pedidos-ultimos'),
     path('tienda/pedidos/<int:id_pedido>/estado/', ActualizarEstadoPedidoAPIView.as_view(), name='actualizar-estado-pedido'),
 ]
