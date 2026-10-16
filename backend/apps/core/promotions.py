@@ -29,7 +29,7 @@ def calculate_promotion(tienda, code, subtotal, shipping, *, today=None, lock=Fa
     current_date = today or timezone.localdate()
     if not promotion.activa:
         raise PromotionError('El codigo promocional esta inactivo.')
-    if current_date < promotion.fecha_inicio:
+    if promotion.fecha_inicio and current_date < promotion.fecha_inicio:
         raise PromotionError('El codigo promocional aun no esta vigente.')
     if promotion.fecha_fin and current_date > promotion.fecha_fin:
         raise PromotionError('El codigo promocional expiro.')

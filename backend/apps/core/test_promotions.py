@@ -92,7 +92,7 @@ class PromocionesAdminTests(TestCase):
     def test_rechaza_codigo_inexistente_inactivo_expirado_sin_minimo_o_sin_cupos(self):
         cases = [
             ('INACTIVA', {'activa': False}, 20000),
-            ('EXPIRADA', {'fecha_fin': date.today() - timedelta(days=1)}, 20000),
+            ('EXPIRADA', {'fecha_inicio': date.today() - timedelta(days=5), 'fecha_fin': date.today() - timedelta(days=1)}, 20000),
             ('FUTURA', {'fecha_inicio': date.today() + timedelta(days=1)}, 20000),
             ('MINIMO', {'monto_minimo': 30000}, 20000),
             ('AGOTADA', {'maximo_usos': 1, 'usos': 1}, 20000),
