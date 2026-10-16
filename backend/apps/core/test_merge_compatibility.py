@@ -104,10 +104,30 @@ class MergeCompatibilityTests(TestCase):
         self.assertEqual(october.data['data']['pedidos_pagados'], 0)
         self.assertEqual(september.data['data']['pedidos_pagados'], 1)
 
-    def test_current_promotion_api_requires_code_despite_optional_label(self):
-        response = self.api.post('/api/promociones/', {'name': 'Sin código QA', 'type': 'fixed', 'value': 1000, 'startsAt': '2026-10-16'}, format='json')
-        self.assertEqual(response.status_code, 400)
+    def test_current_promotion_api_requires_code(self):
+        base = {'name': 'Sin código QA', 'type': 'fixed', 'value': 1000, 'startsAt': '2026-10-16'}
+        for code in (None, '', '   '):
+            with self.subTest(code=code):
+                payload = dict(base)
+                if code is not None:
+                    payload['code'] = code
+                response = self.api.post('/api/promociones/', payload, format='json')
+                self.assertEqual(response.status_code, 400, response.data)
+                self.assertIn('code', response.data)
+                self.assertEqual(response.data['code'][0].code, 'required' if code is None else 'blank')
+                self.assertFalse(self.store.promociones.exists())
+
+    def test_current_promotion_api_preserves_code_length_limit(self):
+        payload = {'name': 'Límite de código QA', 'code': 'A' * 41, 'type': 'fixed', 'value': 1000, 'startsAt': '2026-10-16'}
+        response = self.api.post('/api/promociones/', payload, format='json')
+        self.assertEqual(response.status_code, 400, response.data)
+        self.assertIn('code', response.data)
+        self.assertEqual(response.data['code'][0].code, 'max_length')
         self.assertFalse(self.store.promociones.exists())
+        payload['code'] = 'A' * 40
+        response = self.api.post('/api/promociones/', payload, format='json')
+        self.assertEqual(response.status_code, 201, response.data)
+        self.assertEqual(self.store.promociones.get().codigo, payload['code'])
 
     def test_ticket_rounding_difference_remains_explicit(self):
         self.order('MERGE-ROUND-A', '2026-10-10T15:00:00+00:00', amount='10.00')

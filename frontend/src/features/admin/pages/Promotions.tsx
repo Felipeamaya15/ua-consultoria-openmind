@@ -43,6 +43,7 @@ export default function Promotions() {
     if(!editPromo.startsAt || (editPromo.endsAt && editPromo.endsAt<editPromo.startsAt)) {setError('Revisa las fechas de inicio y fin.');return;}
     if((editPromo.minAmount ?? 0)<0 || (editPromo.maxUses !== undefined && (!Number.isInteger(editPromo.maxUses) || editPromo.maxUses<1))) {setError('Revisa el monto mínimo y el límite de usos.');return;}
     const code=editPromo.code?.trim().toUpperCase();
+    if(!code) {setError('Ingresa el código de descuento. Es obligatorio para usar la promoción.');return;}
     if(code && promos.some(p=>p.id!==editPromo.id && p.code?.toUpperCase()===code)) {setError('Ya existe una promoción con ese código.');return;}
     const draft:Partial<Promotion>={...editPromo,name:editPromo.name.trim(),code,type,value:type==='free_shipping'?0:value,usedCount:editPromo.usedCount ?? 0,startsAt:editPromo.startsAt,active:editPromo.active ?? true};
     try {
@@ -204,10 +205,12 @@ export default function Promotions() {
             placeholder="Ej: Descuento Verano 2025"
           />
           <Input
-            label="Código de descuento (opcional)"
+            label="Código de descuento (obligatorio)"
+            required maxLength={40}
             value={editPromo?.code ?? ""} onChange={e=>patch({code:e.target.value})}
             placeholder="VERANO20"
-            hint="Deja vacío para aplicar automáticamente sin código"
+            hint="El cliente debe ingresar este código en el checkout para aplicar la promoción."
+            persistentHint
           />
           <Select
             label="Tipo de descuento"
