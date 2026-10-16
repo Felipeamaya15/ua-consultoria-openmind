@@ -97,15 +97,12 @@ export default function Promotions() {
 
     const type = editPromo.type ?? "percentage"
     const value = type === "free_shipping" ? 0 : Number(editPromo.value ?? 0)
-    if (
-      type !== "free_shipping" &&
-      (!Number.isFinite(value) ||
-        value <= 0 ||
-        (type === "percentage" && value > 100))
-    ) {
-      setError(
-        "El descuento debe ser mayor que cero y el porcentaje no puede superar 100."
-      )
+    if (type === "percentage" && (!Number.isFinite(value) || value <= 0 || value > 100)) {
+      setError("El porcentaje de descuento debe ser mayor que 0 y no puede superar 100%.")
+      return
+    }
+    if (type === "fixed" && (!Number.isFinite(value) || value <= 0)) {
+      setError("El monto fijo de descuento debe ser mayor que cero.")
       return
     }
 
@@ -423,9 +420,16 @@ export default function Promotions() {
           />
           <div className="grid grid-cols-2 gap-3">
             <Input
-              label="Valor"
+              label={
+                editPromo?.type === "percentage"
+                  ? "Valor (%)"
+                  : editPromo?.type === "fixed"
+                    ? "Valor ($)"
+                    : "Valor"
+              }
               type="number"
-              min={0}
+              min={editPromo?.type === "free_shipping" ? 0 : 1}
+              max={editPromo?.type === "percentage" ? 100 : undefined}
               disabled={editPromo?.type === "free_shipping"}
               value={
                 editPromo?.type === "free_shipping"
@@ -438,6 +442,11 @@ export default function Promotions() {
                 })
               }
               placeholder={editPromo?.type === "fixed" ? "5000" : "20"}
+              hint={
+                editPromo?.type === "percentage"
+                  ? "Entre 1% y 100%"
+                  : undefined
+              }
             />
             <Input
               label="Monto mínimo de compra"
