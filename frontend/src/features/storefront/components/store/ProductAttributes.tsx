@@ -8,6 +8,7 @@ import {
 
 interface ProductAttributesProps {
   slug: string;
+  previewAttributes?: AtributoGeneral[];
 }
 
 interface Styles {
@@ -50,11 +51,12 @@ const STYLES: Record<'editorial' | 'minimal' | 'visual' | 'catalog', Styles> = {
 };
 
 
-export function ProductAttributes({ slug }: ProductAttributesProps) {
+export function ProductAttributes({ slug, previewAttributes }: ProductAttributesProps) {
   const { template } = useStorefrontTemplate();
-  const [atributos, setAtributos] = useState<AtributoGeneral[]>([]);
+  const [atributos, setAtributos] = useState<AtributoGeneral[]>(previewAttributes ?? []);
 
   useEffect(() => {
+    if (previewAttributes) { setAtributos(previewAttributes); return; }
     const controller = new AbortController();
     setAtributos([]);
 
@@ -67,7 +69,7 @@ export function ProductAttributes({ slug }: ProductAttributesProps) {
       });
 
     return () => controller.abort();
-  }, [slug]);
+  }, [slug, previewAttributes]);
 
   if (atributos.length === 0) return null;
 

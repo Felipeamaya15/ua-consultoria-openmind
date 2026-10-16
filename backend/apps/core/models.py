@@ -48,6 +48,63 @@ class Tienda(models.Model):
     class Meta:
         db_table = 'tienda'
 
+
+class Promocion(models.Model):
+    TIPO_PORCENTAJE = 'descuento_porcentual'
+    TIPO_MONTO_FIJO = 'descuento_monto_fijo'
+    TIPO_ENVIO_GRATIS = 'envio_gratuito'
+    TIPO_PRECIO_OFERTA = 'precio_oferta'
+    
+    TIPOS_CODIGO = [
+        (TIPO_PORCENTAJE, 'Descuento porcentual'),
+        (TIPO_MONTO_FIJO, 'Descuento por monto fijo'),
+        (TIPO_ENVIO_GRATIS, 'Envío gratuito'),
+    ]
+    TIPOS = TIPOS_CODIGO + [
+        (TIPO_PRECIO_OFERTA, 'Precio de oferta'),
+    ]
+
+    id_promocion = models.BigAutoField(primary_key=True)
+    tienda = models.ForeignKey(Tienda, on_delete=models.CASCADE, related_name='promociones')
+    nombre = models.CharField(max_length=150)
+    tipo = models.CharField(max_length=30, choices=TIPOS)
+    codigo = models.CharField(max_length=40, blank=True, default='')
+    valor = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    monto_minimo = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    maximo_usos = models.PositiveIntegerField(null=True, blank=True)
+    usos = models.PositiveIntegerField(default=0)
+    activa = models.BooleanField(default=True)
+    fecha_inicio = models.DateTimeField(null=True, blank=True)
+    fecha_fin = models.DateTimeField(null=True, blank=True)
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+    fecha_actualizacion = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'promocion'
+        constraints = [
+            models.UniqueConstraint(
+                fields=['tienda', 'codigo'],
+                condition=~Q(codigo=''),
+                name='uq_promocion_codigo_por_tienda',
+            ),
+            models.CheckConstraint(
+                condition=(
+                    Q(fecha_inicio__isnull=True)
+                    | Q(fecha_fin__isnull=True)
+                    | Q(fecha_fin__gte=models.F('fecha_inicio'))
+                ),
+                name='chk_promocion_fechas_validas',
+            ),
+            models.CheckConstraint(condition=Q(valor__gte=0), name='chk_promocion_valor_no_negativo'),
+            models.CheckConstraint(condition=Q(monto_minimo__gte=0), name='chk_promocion_minimo_no_negativo'),
+        ]
+
+    def save(self, *args, **kwargs):
+        self.codigo = self.codigo.strip().upper()
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.nombre} ({self.get_tipo_display()})"
 class Producto(models.Model):
     id_producto = models.BigAutoField(primary_key=True)
     nombre = models.CharField(max_length=200)
@@ -333,8 +390,6 @@ class ConfiguracionEntrega(models.Model):
 
     def __str__(self):
         return f"Configuración de entrega - Tienda {self.tienda_id}"
-
-
 class ConfiguracionLegal(models.Model):
     tienda = models.OneToOneField(
         'core.Tienda',
@@ -350,4 +405,4 @@ class ConfiguracionLegal(models.Model):
         verbose_name_plural = 'Configuraciones legales'
 
     def __str__(self):
-        return f"Configuración legal - Tienda {self.tienda_id}"
+        return f"Configuración legal - Tienda {self.tienda_id}"

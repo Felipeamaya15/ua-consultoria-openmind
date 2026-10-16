@@ -1,4 +1,5 @@
 from copy import deepcopy
+from datetime import date
 from decimal import Decimal
 from unittest.mock import patch
 from uuid import uuid4
@@ -12,7 +13,7 @@ from rest_framework.test import APIClient
 from apps.authentication.infrastructure.models import ConfiguracionAutenticacion
 from apps.catalog.infrastructure.repositories import ProductRepository
 from apps.core.payments import TRANSFER_PUBLIC_FIELDS
-from apps.core.models import Tienda, Pedido, ItemPedido, Usuario, Producto, Carrito, ItemCarrito, ConfiguracionPago, ConfiguracionEntrega
+from apps.core.models import Tienda, Pedido, ItemPedido, Usuario, Producto, Carrito, ItemCarrito, ConfiguracionPago, ConfiguracionEntrega, Promocion
 
 
 class CheckoutOrderTests(TestCase):
@@ -24,7 +25,7 @@ class CheckoutOrderTests(TestCase):
         self.owner = users.objects.create_user(username='checkout-owner')
         self.store = Tienda.objects.create(nombre='Checkout store', id_usuario_propietario=self.owner)
         ConfiguracionEntrega.objects.create(tienda=self.store, datos={
-            'pickup': {'enabled': True}, 'chilexpress': {'enabled': True}, 'starken': {'enabled': True},
+            'pickup': {'enabled': True, 'address': 'Local de prueba', 'schedule': 'Lun–Vie 09:00 a 18:00'}, 'chilexpress': {'enabled': True}, 'starken': {'enabled': True},
         })
         ConfiguracionPago.objects.create(tienda=self.store, datos={'transfer': {'enabled': True,
             'fields': {field: 'qa' for field in TRANSFER_PUBLIC_FIELDS}}})
@@ -202,6 +203,10 @@ class CheckoutOrderTests(TestCase):
         self.assertEqual(Pedido.objects.count(), 0)
 
     def test_shipping_discount_and_offer_are_computed_on_server(self):
+        promotion = Promocion.objects.create(
+            tienda=self.store, nombre='Verano', codigo='VERANO20', tipo='percentage',
+            valor=20, fecha_inicio=date.today(), activa=True,
+        )
         config = ConfiguracionEntrega.objects.get(tienda=self.store)
         config.datos['chilexpress']['tarifas'] = [
             {'region': 'Metropolitana', 'comuna': 'Santiago', 'monto': 4500, 'plazo_dias': None}]
@@ -217,6 +222,8 @@ class CheckoutOrderTests(TestCase):
         self.assertEqual(order.costo_envio, Decimal(4500))
         self.assertEqual(order.descuento, Decimal(6000))
         self.assertEqual(order.monto_total, Decimal(28500))
+        promotion.refresh_from_db()
+        self.assertEqual(promotion.usos, 1)
 
     def test_delivery_requires_real_address_and_invalid_token_is_rejected(self):
         self.assertEqual(self.create(dict(self.payload, metodo_entrega='Starken')).status_code, 400)

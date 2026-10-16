@@ -32,7 +32,7 @@ class TiendaSQLHTTPTests(TestCase):
             patcher = patch(target, return_value=self.repo)
             patcher.start()
             self.addCleanup(patcher.stop)
-        ConfiguracionEntrega.objects.create(tienda=self.tienda, datos={'pickup': {'enabled': True}})
+        ConfiguracionEntrega.objects.create(tienda=self.tienda, datos={'pickup': {'enabled': True, 'address': 'Local de prueba', 'schedule': 'Lun–Vie 09:00 a 18:00'}})
         ConfiguracionPago.objects.create(tienda=self.tienda, datos={'transfer': {'enabled': True,
             'fields': {field: 'qa' for field in TRANSFER_PUBLIC_FIELDS}}})
         self.lista_url = f'/api/productos/{self.producto}/variantes/'

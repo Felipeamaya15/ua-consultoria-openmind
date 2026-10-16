@@ -1,6 +1,27 @@
-import { useId, type ReactNode } from 'react';
+import { useId, type ReactNode, type ComponentProps } from 'react';
+import { Alert as StoreAlert, Input as StoreInput, Textarea as StoreTextarea, Select as StoreSelect } from '../../../storefront/components/ui';
+import { useAdminHelp } from '../../context/AdminHelpContext';
+import { humanizeAdminError } from '../../utils/humanizeError';
 import { Icon as StoreIcon } from '../../../storefront/components/ui/Icon';
-export { Button, Input, Textarea, Select, Badge, Alert, EmptyState, InstitutionalBadge } from '../../../storefront/components/ui';
+export { Button, Badge, EmptyState, InstitutionalBadge } from '../../../storefront/components/ui';
+export function Input({ persistentHint = false, ...props }: ComponentProps<typeof StoreInput> & { persistentHint?: boolean }) {
+  const { showHelp } = useAdminHelp();
+  return <StoreInput {...props} hint={persistentHint || showHelp ? props.hint : undefined} />;
+}
+export function Textarea({ persistentHint = false, ...props }: ComponentProps<typeof StoreTextarea> & { persistentHint?: boolean }) {
+  const { showHelp } = useAdminHelp();
+  return <StoreTextarea {...props} hint={persistentHint || showHelp ? props.hint : undefined} />;
+}
+export function Select({ persistentHint = false, ...props }: ComponentProps<typeof StoreSelect> & { persistentHint?: boolean }) {
+  const { showHelp } = useAdminHelp();
+  return <StoreSelect {...props} hint={persistentHint || showHelp ? props.hint : undefined} />;
+}
+function errorText(children: ReactNode): ReactNode {
+  return Array.isArray(children) ? children.map(errorText) : typeof children === 'string' ? humanizeAdminError(children) : children;
+}
+export function Alert(props: ComponentProps<typeof StoreAlert>) {
+  return <StoreAlert {...props} title={props.variant === 'error' && props.title ? humanizeAdminError(props.title) : props.title}>{props.variant === 'error' ? errorText(props.children) : props.children}</StoreAlert>;
+}
 export { AdminModal as Modal } from './AdminModal';
 export type IconName = string;
 const extraIcons: Record<string,ReactNode> = {

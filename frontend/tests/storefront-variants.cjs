@@ -138,6 +138,7 @@ async function main() {
         if (name === 'react-router-dom') return { Link: 'Link', useParams: () => ({ id: raw.slug }) };
         if (name.includes('mockData')) return { formatPrice: value => `CLP ${value}` };
         if (name.includes('StockFeedback')) return { StockFeedback: 'StockFeedback' };
+        if (name.includes('QuantityControl')) return { QuantityControl: 'QuantityControl' };
       if (name.includes('CartContext')) return { useCart: () => ({ items: cart, addItem: item => cart.push(item) }) };
         if (name.includes('useStorefrontTemplate')) return { useStorefrontTemplate: () => ({ route: p => `/${p}`, isCatalog: template === 'catalog', isMinimal: template === 'minimal', isVisual: template === 'visual' }) };
         if (name.includes('components/ui')) return { Badge: 'Badge', Breadcrumb: 'Breadcrumb', Alert: 'Alert', Icon: 'Icon' };
@@ -163,6 +164,11 @@ async function main() {
     assert.equal(cart[0].productId, raw.id, 'Detalle y carrito recargado comparten el ID Mongo, sin confundirlo con el slug');
     assert.equal(cart[0].maxStock, 8);
     assert.equal(cart[0].comparePrice, undefined);
+    cursor = 0;
+    const previewTree = detail.default({ previewProduct: product });
+    const previewBuy = walk(previewTree, n => n.type === 'button' && /Comprar|Agregar al carrito|Agregado al carrito/.test(text(n)))[0];
+    previewBuy.props.onClick();
+    assert.equal(cart.length, 1, 'El ejemplo reutiliza la vista pero nunca agrega al carrito real');
   }
 
   details = { ...raw, variantes: [

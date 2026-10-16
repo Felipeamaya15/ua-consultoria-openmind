@@ -247,10 +247,46 @@ class DeliveryStringField(serializers.CharField):
         return super().to_internal_value(data)
 
 
-class PickupConfigurationSerializer(StrictSerializer):
+class PickupLocationSerializer(StrictSerializer):
+    region = DeliveryStringField(allow_blank=True, max_length=200)
+    comuna = DeliveryStringField(allow_blank=True, max_length=200)
+    street = DeliveryStringField(allow_blank=True, max_length=200)
+    number = DeliveryStringField(allow_blank=True, max_length=50)
+    reference = DeliveryStringField(allow_blank=True, max_length=500)
+    verification = DeliveryStringField(allow_blank=True, max_length=4096)
+
+
+class PickupDaySerializer(StrictSerializer):
     enabled = DeliveryBooleanField()
-    address = DeliveryStringField(allow_blank=True, max_length=500)
+    start = DeliveryStringField(allow_blank=True, max_length=5)
+    end = DeliveryStringField(allow_blank=True, max_length=5)
+
+
+class PickupHoursSerializer(StrictSerializer):
+    mon = PickupDaySerializer()
+    tue = PickupDaySerializer()
+    wed = PickupDaySerializer()
+    thu = PickupDaySerializer()
+    fri = PickupDaySerializer()
+    sat = PickupDaySerializer()
+    sun = PickupDaySerializer()
+
+
+class PickupConfigurationSerializer(StrictSerializer):
+    validation_method = serializers.CharField(read_only=True)
+    enabled = DeliveryBooleanField()
+    address = DeliveryStringField(allow_blank=True, max_length=1500)
     schedule = DeliveryStringField(allow_blank=True, max_length=500)
+    version = serializers.ChoiceField(choices=[2], required=False)
+    location = PickupLocationSerializer(required=False)
+    hours = PickupHoursSerializer(required=False)
+    legacy_address = DeliveryStringField(allow_blank=True, max_length=500, required=False)
+    legacy_schedule = DeliveryStringField(allow_blank=True, max_length=500, required=False)
+
+    def validate(self, data):
+        if data.get('version') != 2 and len(data.get('address', '')) > 500:
+            raise serializers.ValidationError({'address': 'La dirección antigua admite hasta 500 caracteres.'})
+        return data
 
 
 class ShippingRateSerializer(StrictSerializer):
@@ -460,3 +496,85 @@ class PedidoTiendaSerializer(serializers.ModelSerializer):
             'monto_total', 'estado', 'fecha_creacion', 'metodo_pago', 
             'costo_envio', 'descuento', 'items'
         ]
+
+class PedidoEstadoDetalleSerializer(serializers.ModelSerializer):
+    estado_label = serializers.SerializerMethodField()
+    linea_tiempo = serializers.SerializerMethodField()
+    items = ItemPedidoTiendaSerializer(source='itempedido_set', many=True, read_only=True)
+
+    class Meta:
+        model = Pedido
+        fields = [
+            'id_pedido',
+            'identificador',
+            'fecha_creacion',
+            'monto_total',
+            'metodo_pago',
+            'costo_envio',
+            'estado',
+            'estado_label',
+            'linea_tiempo',
+            'items',
+        ]
+
+    def get_estado_label(self, obj):
+        alias_estados = {'preparacion': 'preparando', 'despachado': 'enviado'}
+        estado_actual = alias_estados.get(obj.estado, obj.estado)
+        estados_map = {
+            'pendiente': 'Pendiente de pago',
+            'pagado': 'Pago confirmado',
+            'preparando': 'En preparación',
+            'en_origen': 'En origen',
+            'enviado': 'Despachado / En tránsito',
+            'en_reparto': 'En reparto',
+            'entregado': 'Entregado',
+            'cancelado': 'Cancelado',
+        }
+        return estados_map.get(estado_actual, str(obj.estado).capitalize())
+
+    def get_linea_tiempo(self, obj):
+        alias_estados = {'preparacion': 'preparando', 'despachado': 'enviado'}
+        estado_actual = alias_estados.get(obj.estado, obj.estado)
+        orden_estados = ['pendiente', 'pagado', 'preparando', 'en_origen', 'enviado', 'en_reparto', 'entregado']
+
+        if estado_actual == 'cancelado':
+            return [{'estado': 'cancelado', 'etiqueta': 'Cancelado', 'completado': True, 'actual': True}]
+
+        try:
+            indice_actual = orden_estados.index(estado_actual)
+        except ValueError:
+            indice_actual = 0
+
+        pasos = [
+            {'estado': 'pendiente', 'etiqueta': 'Recibido'},
+            {'estado': 'pagado', 'etiqueta': 'Pago Confirmado'},
+            {'estado': 'preparando', 'etiqueta': 'En Preparación'},
+            {'estado': 'en_origen', 'etiqueta': 'En Origen'},
+            {'estado': 'enviado', 'etiqueta': 'En Tránsito'},
+            {'estado': 'en_reparto', 'etiqueta': 'En Reparto'},
+            {'estado': 'entregado', 'etiqueta': 'Entregado'},
+        ]
+
+        for i, paso in enumerate(pasos):
+            paso['completado'] = i <= indice_actual
+            paso['actual'] = i == indice_actual
+
+        return pasos
+
+
+class PedidoEstadoUpdateSerializer(serializers.Serializer):
+    estado = serializers.CharField(required=True)
+
+    def validate_estado(self, value):
+        alias_estados = {
+            'preparacion': 'preparando',
+            'despachado': 'enviado',
+        }
+        estado_normalizado = alias_estados.get(str(value).strip().lower(), str(value).strip().lower())
+        estados_permitidos = [
+            'pendiente', 'pagado', 'preparando', 'en_origen',
+            'enviado', 'en_reparto', 'entregado', 'cancelado',
+        ]
+        if estado_normalizado not in estados_permitidos:
+            raise serializers.ValidationError("Estado logístico no válido.")
+        return estado_normalizado

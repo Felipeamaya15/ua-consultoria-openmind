@@ -19,6 +19,7 @@ import { fetchLandingConfig } from '../../landing/services/landingService';
 import type { LandingConfig } from '../../landing/types/landing.types';
 import { isRecord, resolveVisualConfig, resolveStoreVisualConfig } from '../visual/resolveVisualConfig';
 import { useStoreIdentity } from './StoreIdentityContext';
+import { readPublishedLegalPages } from '../data/legalPublication';
 import { templateFromPath } from '../visual/templates';
 import { findImageSetting, captureOriginalImage, isLegacyEditableImage, readThemeImages, restoreOriginalImage, type OriginalImageStyle } from '../visual/imageSettings';
 import { getStoreConfigKey, readStoredStoreConfig, isStoreConfigChange, STORE_CONFIG_CHANGED_EVENT } from '../visual/storage';
@@ -46,7 +47,7 @@ const StoreContext = createContext({
   landingError: '',
   landingProducts: [] as Product[],
   landingCatalogError: '',
-  legalPages: defaultLegalPages as Record<LegalType, LegalPage>,
+  legalPages: readPublishedLegalPages(undefined),
   legalLoading: true,
   legalError: '',
   refreshLegal: async () => {},
@@ -86,6 +87,7 @@ function applyImageCustomizations(theme: Record<string, unknown> | null, origina
       `scale(${(setting.scale ?? 100) / 100})`;
 
     img.style.transformOrigin = 'center';
+    img.style.objectFit = setting.fit ?? originals.get(img)?.fit ?? '';
     img.style.borderRadius =
       `${setting.radius ?? 0}px`;
   });
@@ -113,6 +115,7 @@ export function StoreProvider({
     };
   }, [storageKey]);
   const savedConfig = useMemo(() => readStoredStoreConfig(identity), [identity, storageRevision]);
+  const localLegalPages = useMemo(() => readPublishedLegalPages(savedConfig), [savedConfig]);
   const activeTemplate = templateFromPath(pathname) ?? savedConfig.template;
   const visualConfig = useMemo(() => {
     return resolveStoreVisualConfig(savedConfig, activeTemplate);
@@ -122,14 +125,19 @@ export function StoreProvider({
   const [landingError, setLandingError] = useState('');
   const [landingProducts, setLandingProducts] = useState<Product[]>([]);
   const [landingCatalogError, setLandingCatalogError] = useState('');
-  const [legalPages, setLegalPages] = useState<Record<LegalType, LegalPage>>(defaultLegalPages);
+  const [backendLegalPages, setBackendLegalPages] = useState<Record<LegalType, LegalPage> | null>(null);
   const [legalLoading, setLegalLoading] = useState(true);
   const [legalError, setLegalError] = useState('');
+
+  const legalPages = useMemo(() => {
+    if (!backendLegalPages) return localLegalPages;
+    return { ...localLegalPages, ...backendLegalPages };
+  }, [localLegalPages, backendLegalPages]);
 
   const refreshLegal = async () => {
     try {
       const data = await legalService.fetchPublicLegalPages();
-      setLegalPages(data);
+      setBackendLegalPages(data);
       setLegalError('');
     } catch (error) {
       setLegalError(error instanceof Error ? error.message : 'No se pudieron cargar las páginas legales.');
@@ -146,7 +154,7 @@ export function StoreProvider({
       .catch(error => { if (active) setLandingError(error instanceof Error ? error.message : 'No se pudo cargar la configuración de landing.'); })
       .finally(() => { if (active) setLandingLoading(false); });
     legalService.fetchPublicLegalPages()
-      .then(data => { if (active) { setLegalPages(data); setLegalError(''); } })
+      .then(data => { if (active) { setBackendLegalPages(data); setLegalError(''); } })
       .catch(error => { if (active) setLegalError(error instanceof Error ? error.message : 'No se pudieron cargar las páginas legales.'); })
       .finally(() => { if (active) setLegalLoading(false); });
     return () => { active = false; };

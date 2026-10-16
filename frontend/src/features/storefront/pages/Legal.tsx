@@ -3,34 +3,14 @@ import { useParams, Link } from 'react-router-dom';
 import { Breadcrumb } from '../components/ui';
 
 import {
-  defaultLegalPages,
   type LegalType,
   LEGAL_META,
   LEGAL_ORDER,
+  defaultLegalPages,
 } from '../data/legalContent';
-
-import { useStorefrontTemplate } from '../hooks/useStorefrontTemplate';
+import { formatLegalDate, isLegalType } from '../data/legalPublication';
 import { useStore } from '../context/StoreContext';
-
-const TYPE_MAP: Record<string, LegalType> = {
-  terms: 'terms',
-  terminos: 'terms',
-  privacy: 'privacy',
-  privacidad: 'privacy',
-  refund: 'refund',
-  reembolso: 'refund',
-  reembolsos: 'refund',
-  cookies: 'cookies',
-  cookie: 'cookies',
-  galletas: 'cookies',
-  'politica-cookies': 'cookies',
-  'politica-de-cookies': 'cookies',
-};
-
-function resolveLegalType(value: string | undefined): LegalType {
-  if (!value) return 'terms';
-  return TYPE_MAP[value.toLowerCase()] ?? 'terms';
-}
+import { useStorefrontTemplate } from '../hooks/useStorefrontTemplate';
 
 export default function Legal() {
   const { type } = useParams();
@@ -39,11 +19,31 @@ export default function Legal() {
     useStorefrontTemplate();
 
   const { legalPages } = useStore();
-  const activeType: LegalType = resolveLegalType(type);
-  const legal = legalPages || defaultLegalPages;
 
-  const page = legal[activeType] || defaultLegalPages[activeType];
+  if (!isLegalType(type)) {
+    return (
+      <section className="max-w-3xl mx-auto px-4 py-16">
+        <h1 className="font-display text-3xl mb-4">Página no encontrada</h1>
+        <p className="text-sm mb-6">La página legal que buscas no existe.</p>
+        <div className="flex flex-wrap gap-4">
+          {LEGAL_ORDER.map((key) => (
+            <Link
+              key={key}
+              to={route(`legal/${key}`)}
+              className="text-sm font-medium text-[var(--primary)] underline"
+            >
+              {LEGAL_META[key].label}
+            </Link>
+          ))}
+        </div>
+      </section>
+    );
+  }
+
+  const activeType: LegalType = type;
+  const page = (legalPages && legalPages[activeType]) || defaultLegalPages[activeType];
   const meta = LEGAL_META[activeType];
+  const updatedOn = formatLegalDate(page.lastPublished);
 
   if (isCatalog) {
     return (
@@ -133,6 +133,12 @@ export default function Legal() {
                   Configurar cookies
                 </button>
               </div>
+            )}
+
+            {updatedOn && (
+              <p className="mt-6 text-[11px] text-[var(--visual-page-color)]/40">
+                Última actualización: {updatedOn}
+              </p>
             )}
 
             <div className="mt-10 pt-6 border-t border-[var(--visual-global-border)]/10">
@@ -279,6 +285,17 @@ export default function Legal() {
           </div>
         )}
 
+        {updatedOn && (
+          <p
+            className={
+              isMinimal
+                ? 'mt-6 text-xs text-[var(--visual-page-color)]/50'
+                : 'mt-6 text-xs text-[var(--muted-foreground)]'
+            }
+          >
+            Última actualización: {updatedOn}
+          </p>
+        )}
         <div
           className={
             isMinimal

@@ -595,6 +595,18 @@ export default function Tracking() {
                 </p>
               </div>
 
+              {Number(order.descuento) > 0 && (
+                <div>
+                  <p className="text-xs text-[var(--muted-foreground)]">
+                    Descuento aplicado
+                  </p>
+
+                  <p className="font-medium mt-1 text-[var(--success)]">
+                    −{formatPrice(Number(order.descuento))}
+                  </p>
+                </div>
+              )}
+
               <div>
                 <p className="text-xs text-[var(--muted-foreground)]">
                   Total

@@ -19,12 +19,23 @@ export type CheckoutInput = {
   shippingQuote?: string;
 };
 
+
+export interface LineaTiempoPaso {
+  estado: string;
+  etiqueta: string;
+  completado: boolean;
+  actual: boolean;
+}
+
+// Se mantienen estado_label y linea_tiempo para OrderTracking.tsx
 export type TrackedOrder = Omit<CustomerOrder, 'items'>
   & Pick<CreatedOrder, 'identificador' | 'costo_envio' | 'descuento'> & {
     nombre_contacto: string;
     medio_pago: string;
     entrega: {metodo?: string};
     items: CustomerOrderItem[];
+    estado_label: string;
+    linea_tiempo: LineaTiempoPaso[];
   };
 
 export const ORDER_NUMBER_FORMAT_MESSAGE = 'El número de orden debe tener el formato ORD-AAAAMMDD-XXXX.';
@@ -65,7 +76,6 @@ export function isValidTrackingEmail(value: string): boolean {
     && labels.every(label => label.length <= 63 && /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/i.test(label));
 }
 
-/** Error al registrar el pedido; `code` es el código estable que informa el backend (por ejemplo, COTIZACION_VENCIDA). */
 export class OrderError extends Error {
   code?: string;
 
@@ -82,24 +92,33 @@ export const orderService = {
     if (!isValidOrderNumber(orderNumber)) throw new Error(ORDER_NUMBER_FORMAT_MESSAGE);
     const normalizedEmail = normalizeTrackingEmail(email);
     if (!isValidTrackingEmail(normalizedEmail)) throw new Error(TRACKING_EMAIL_FORMAT_MESSAGE);
+
     const response = await fetch(`${API_BASE}/api/pedidos/seguimiento/`, {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({identificador: orderNumber, email: normalizedEmail}),
       signal,
     });
+
     const body = await response.json();
     if (!response.ok || body.exito !== true) {
       throw new Error(body.detail || body.mensaje || 'No se pudo consultar el pedido. Verifica el número y correo.');
     }
+
     const order: unknown = body.data;
     if (!order || typeof order !== 'object') throw new Error('La respuesta del pedido es inválida.');
     const data = order as Record<string, unknown>;
+
+    const hasValidLabel = typeof data.estado_label === 'string' || typeof data.estado_etiqueta === 'string';
+    const hasValidTimeline = data.linea_tiempo === undefined || Array.isArray(data.linea_tiempo);
+
     if (!Number.isSafeInteger(data.id_pedido)
       || typeof data.identificador !== 'string'
       || normalizeOrderNumber(data.identificador) !== orderNumber
       || !['pendiente', 'pagado', 'preparando', 'en_origen', 'enviado', 'en_reparto', 'entregado', 'cancelado'].includes(String(data.estado))
-      || !['nombre_contacto', 'medio_pago', 'fecha_creacion', 'estado_etiqueta'].every(key => typeof data[key] === 'string')
+      || !['nombre_contacto', 'medio_pago', 'fecha_creacion'].every(key => typeof data[key] === 'string')
+      || !hasValidLabel
+      || !hasValidTimeline
       || !['monto_total', 'descuento', 'costo_envio'].every(key => typeof data[key] === 'string'
         && String(data[key]).trim() !== '' && Number.isFinite(Number(data[key])) && Number(data[key]) >= 0)
       || !data.entrega || typeof data.entrega !== 'object'
@@ -115,6 +134,7 @@ export const orderService = {
     }
     return order as TrackedOrder;
   },
+
   async create(input: CheckoutInput): Promise<CreatedOrder> {
     const token = authService.getToken();
     let response: Response;
@@ -132,15 +152,16 @@ export const orderService = {
         }),
       });
     } catch {
-      // Es seguro reintentar: la clave de checkout evita duplicar el pedido.
       throw new OrderError('No pudimos conectar con el servidor. Revisa tu conexión e intenta nuevamente.');
     }
+
     let body: any = null;
     try {
       body = await response.json();
     } catch {
-      body = null; // El servidor respondió algo que no es JSON (por ejemplo, una página de error).
+      body = null;
     }
+
     if (!body || typeof body !== 'object') {
       throw new OrderError('No pudimos registrar tu pedido en este momento. Intenta nuevamente.');
     }
@@ -152,6 +173,7 @@ export const orderService = {
       throw new OrderError(message || 'No se pudo registrar el pedido.',
         typeof body.error?.codigo === 'string' ? body.error.codigo : undefined);
     }
+
     const order: unknown = body.data;
     if (!order || typeof order !== 'object') throw new Error('La respuesta del pedido es inválida.');
     const data = order as Record<string, unknown>;

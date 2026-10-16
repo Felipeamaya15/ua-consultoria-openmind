@@ -11,6 +11,11 @@ from apps.core.presentation.legal import (
     PublicarContenidoLegalAPIView,
 )
 from apps.core.presentation.software_version import SoftwareVersionAPIView
+from apps.core.presentation.recent_orders import UltimasOrdenesAPIView, ActualizarEstadoPedidoAPIView
+from apps.core.presentation.historial import HistorialPedidosAPIView, HistorialVentasAPIView
+from apps.core.presentation.dashboard import DashboardAPIView
+from apps.core.presentation.pickup_address import PickupAddressAPIView
+from apps.core.presentation.promotions import PromocionesAPIView, PromocionDetalleAPIView, ValidarPromocionAPIView
 from django.urls import path
 from . import views
 from apps.core.presentation.views import (
@@ -27,10 +32,15 @@ from apps.core.presentation.views import (
     TransferenciasPendientesAPIView,
     AprobarTransferenciaManualAPIView,
     RechazarTransferenciaManualAPIView,
-    TiendaPedidosAPIView
+    TiendaPedidosAPIView,
 )
 
 urlpatterns = [
+    path('promociones/', PromocionesAPIView.as_view(), name='promotions'),
+    path('promociones/validar/', ValidarPromocionAPIView.as_view(), name='promotion-validate'),
+    path('promociones/<int:promotion_id>/', PromocionDetalleAPIView.as_view(), name='promotion-detail'),
+    path('entregas/retiro/direcciones/', PickupAddressAPIView.as_view(), name='pickup-address'),
+    path('tienda/dashboard/', DashboardAPIView.as_view(), name='tienda-dashboard'),
     path('pedidos/registrar/', RegistrarCompraView.as_view(), name='pedidos-registrar'),
     path('checkout/pedidos/', CheckoutOrderAPIView.as_view(), name='checkout-order'),
     path('pedidos/seguimiento/', OrderTrackingAPIView.as_view(), name='order-tracking'),
@@ -54,6 +64,10 @@ urlpatterns = [
     path('pagos/transferencias/<int:pedido_id>/aprobar/', AprobarTransferenciaManualAPIView.as_view(), name='aprobar-transferencia-manual'),
     path('pagos/transferencias/<int:pedido_id>/rechazar/', RechazarTransferenciaManualAPIView.as_view(), name='rechazar-transferencia-manual'),
     path('tienda/pedidos/', TiendaPedidosAPIView.as_view(), name='tienda-pedidos'),
+    path('tienda/pedidos/historial/', HistorialPedidosAPIView.as_view(), name='tienda-pedidos-historial'),
+    path('tienda/ventas/historial/', HistorialVentasAPIView.as_view(), name='tienda-ventas-historial'),
+    path('tienda/pedidos/ultimos/', UltimasOrdenesAPIView.as_view(), name='tienda-pedidos-ultimos'),
+    path('tienda/pedidos/<int:id_pedido>/estado/', ActualizarEstadoPedidoAPIView.as_view(), name='actualizar-estado-pedido'),
     path('legal/', PaginasLegalesPublicasAPIView.as_view(), name='legal-publico'),
     path('legal/vigente/', ConsultaVersionVigenteAPIView.as_view(), name='legal-version-vigente-todos'),
     path('legal/vigente/<str:tipo>/', ConsultaVersionVigenteAPIView.as_view(), name='legal-version-vigente-tipo'),

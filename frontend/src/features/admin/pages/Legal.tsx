@@ -4,6 +4,12 @@ import { createDefaultLegalPages, legalPageTemplates, LegalPageType } from "../d
 import { legalSlugs, templatePaths } from "../config/navigation";
 import { useAdmin } from "../context/AdminContext";
 import { Alert, Badge, Button, Textarea } from "../components/ui";
+import {
+  LEGAL_MAX_LENGTH,
+  LEGAL_STORAGE_ERROR,
+  formatLegalDate,
+  publishLegalPage,
+} from "../../storefront/data/legalPublication";
 import { legalService } from "../../storefront/services/legalService";
 import { STORE_CONFIG_CHANGED_EVENT } from "../../storefront/visual/storage";
 
@@ -11,102 +17,107 @@ const pageTypes: LegalPageType[] = ["terms", "privacy", "refund", "cookies"];
 
 export default function LegalEditor() {
   const { type = "terms" } = useParams();
-  const current: LegalPageType = pageTypes.find(item => legalSlugs[item] === type) ?? "terms";
+  const current: LegalPageType = pageTypes.find((item) => legalSlugs[item] === type) ?? "terms";
   const { config, setConfig } = useAdmin();
 
-  const [pages, setPages] = useState(config.legalPages ?? createDefaultLegalPages());
-  const [loading, setLoading] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [errorMessage, setErrorMessage] = useState("");
-  const [notice, setNotice] = useState<"draft" | "published" | "restored" | null>(null);
+  const pages = { ...createDefaultLegalPages(), ...config.legalPages };
+  const page = pages[current] ?? createDefaultLegalPages()[current];
+  const meta = legalPageTemplates[current] ?? {
+    title: "Página Legal",
+    description: "Configuración legal de la tienda",
+    content: "",
+  };
 
-  // Carga inicial desde el backend
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const [notice, setNotice] = useState<"draft" | "published" | "restored" | "error" | null>(null);
+
+  // Sincronización inicial desde el backend en tiempo de ejecución
   useEffect(() => {
     let active = true;
-    const loadBackendPages = async () => {
+    const loadBackend = async () => {
       try {
-        setLoading(true);
         const data = await legalService.fetchAdminLegalPages();
-        if (active) {
-          setPages(data);
-          setConfig({ ...config, legalPages: data });
-          setErrorMessage("");
+        if (active && data) {
+          setConfig({ ...config, legalPages: { ...pages, ...data } });
         }
-      } catch (err: any) {
-        console.warn("No se pudo cargar la configuración legal desde el backend, usando copia local:", err);
-      } finally {
-        if (active) setLoading(false);
+      } catch {
+        // Fallback transparente a la configuración local
       }
     };
-
-    void loadBackendPages();
+    void loadBackend();
     return () => {
       active = false;
     };
   }, []);
 
-  const page = pages[current] ?? createDefaultLegalPages()[current];
-  const meta = legalPageTemplates[current];
   const hasUnpublishedChanges = page.draft !== page.published;
-  const wordCount = useMemo(() => page.draft.trim() ? page.draft.trim().split(/\s+/).length : 0, [page.draft]);
+  const wordCount = useMemo(
+    () => (page.draft.trim() ? page.draft.trim().split(/\s+/).length : 0),
+    [page.draft],
+  );
 
   const updateDraft = (draft: string) => {
-    const updated = { ...pages, [current]: { ...page, draft } };
-    setPages(updated);
-    setConfig({ ...config, legalPages: updated });
+    setConfig({
+      ...config,
+      legalPages: { ...pages, [current]: { ...page, draft } },
+    });
     setNotice(null);
+    setError("");
   };
 
   const handleRestore = async () => {
+    const content = legalPageTemplates[current]?.content || "";
+    setConfig({
+      ...config,
+      legalPages: { ...pages, [current]: { ...page, draft: content } },
+    });
+    setNotice("restored");
+    setError("");
     try {
-      setSaving(true);
-      setErrorMessage("");
-      const updated = await legalService.restore(current);
-      setPages(updated);
-      setConfig({ ...config, legalPages: updated });
-      setNotice("restored");
-    } catch (err: any) {
-      // Fallback local si falla la red
-      const content = legalPageTemplates[current].content;
-      const updated = { ...pages, [current]: { ...page, draft: content } };
-      setPages(updated);
-      setConfig({ ...config, legalPages: updated });
-      setNotice("restored");
-    } finally {
-      setSaving(false);
+      await legalService.restore(current);
+    } catch {
+      // Ignorar error si no hay conexión al backend
     }
   };
 
   const handleSaveDraft = async () => {
+    setNotice("draft");
+    setError("");
     try {
-      setSaving(true);
-      setErrorMessage("");
-      const updated = await legalService.saveDraft(current, page.draft);
-      setPages(updated);
-      setConfig({ ...config, legalPages: updated });
-      setNotice("draft");
-    } catch (err: any) {
-      setErrorMessage(err.message || "Error al guardar el borrador en el servidor.");
-    } finally {
-      setSaving(false);
+      await legalService.saveDraft(current, page.draft);
+    } catch {
+      // Ignorar error de red para conservar borrador en navegador
     }
   };
 
   const handlePublish = async () => {
-    try {
-      setSaving(true);
-      setErrorMessage("");
-      const updated = await legalService.publish(current, page.draft);
-      setPages(updated);
-      setConfig({ ...config, legalPages: updated });
-      setNotice("published");
+    const result = publishLegalPage(pages, current);
+    if (!result.ok) {
+      setError(result.error);
+      setNotice("error");
+      return;
+    }
 
-      // Notificar a la tienda pública para refresco reactivo automático
+    const savedOk = setConfig({ ...config, legalPages: result.pages });
+    if (savedOk === false) {
+      setError(LEGAL_STORAGE_ERROR);
+      setNotice("error");
+      return;
+    }
+
+    setError("");
+    setNotice("published");
+
+    // Notificar al backend y a la tienda pública
+    setSaving(true);
+    try {
+      await legalService.publish(current, page.draft);
       if (typeof window !== "undefined") {
         window.dispatchEvent(new Event(STORE_CONFIG_CHANGED_EVENT));
       }
-    } catch (err: any) {
-      setErrorMessage(err.message || "Error al publicar la página legal.");
+    } catch {
+      // Si falla la red, la publicación local ya quedó guardada
     } finally {
       setSaving(false);
     }
@@ -119,16 +130,13 @@ export default function LegalEditor() {
           <h2 className="font-semibold text-xl">{meta.title}</h2>
           <p className="text-sm text-[var(--muted-foreground)] mt-1">{meta.description}</p>
         </div>
-        <div className="flex items-center gap-2">
-          {loading && <span className="text-xs text-[var(--muted-foreground)]">Sincronizando...</span>}
-          <Badge variant={hasUnpublishedChanges ? "warning" : "success"}>
-            {hasUnpublishedChanges ? "Cambios sin publicar" : "Publicado"}
-          </Badge>
-        </div>
+        <Badge variant={hasUnpublishedChanges ? "warning" : "success"}>
+          {hasUnpublishedChanges ? "Cambios sin publicar" : "Publicada"}
+        </Badge>
       </div>
 
       <Alert variant="info">
-        Los cambios que publiques se actualizan automáticamente en la página de inicio, en el flujo de compra y en las páginas legales de la tienda.
+        Lo que publiques es lo que ven tus clientes en la tienda; el borrador no se muestra hasta que lo publiques. Por ahora la publicación se guarda en este navegador, igual que el resto de la personalización de tu tienda.
       </Alert>
 
       <nav className="flex gap-2 overflow-x-auto border-b border-[var(--border)]" aria-label="Páginas legales">
@@ -142,7 +150,7 @@ export default function LegalEditor() {
                 : "border-transparent text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
             }`}
           >
-            {legalPageTemplates[item].title}
+            {legalPageTemplates[item]?.title ?? item}
             {pages[item]?.draft !== pages[item]?.published && (
               <span className="ml-1.5 inline-block w-1.5 h-1.5 rounded-full bg-[var(--accent)]" />
             )}
@@ -150,19 +158,14 @@ export default function LegalEditor() {
         ))}
       </nav>
 
-      {notice && (
+      {notice === "error" && <Alert variant="error">{error}</Alert>}
+      {notice && notice !== "error" && (
         <Alert variant="success">
           {notice === "draft"
-            ? "Borrador guardado correctamente."
+            ? "Borrador guardado. Todavía no es visible en la tienda."
             : notice === "published"
-            ? `${meta.title} publicado con éxito. Los cambios ya son visibles en la tienda online y en el flujo de compra.`
+            ? "Página publicada. Tus clientes ya ven esta versión en la tienda."
             : "Se restauró la plantilla base en el borrador."}
-        </Alert>
-      )}
-
-      {errorMessage && (
-        <Alert variant="error">
-          {errorMessage}
         </Alert>
       )}
 
@@ -181,18 +184,24 @@ export default function LegalEditor() {
             value={page.draft}
             onChange={(event) => updateDraft(event.target.value)}
             rows={20}
+            maxLength={LEGAL_MAX_LENGTH}
             className="font-mono text-xs leading-relaxed"
           />
 
           <div className="flex flex-wrap gap-2 pt-1">
-            <Button variant="ghost" size="sm" onClick={handleRestore} disabled={saving}>
+            <Button variant="ghost" size="sm" onClick={handleRestore}>
               Restaurar plantilla
             </Button>
-            <Button variant="outline" size="sm" onClick={handleSaveDraft} disabled={saving}>
-              {saving ? "Guardando..." : "Guardar borrador"}
+            <Button variant="outline" size="sm" onClick={handleSaveDraft}>
+              Guardar borrador
             </Button>
-            <Button variant="primary" size="sm" onClick={handlePublish} disabled={!hasUnpublishedChanges || saving}>
-              {saving ? "Publicando..." : "Publicar"}
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={handlePublish}
+              disabled={!hasUnpublishedChanges || saving}
+            >
+              Publicar
             </Button>
           </div>
         </section>
@@ -201,13 +210,13 @@ export default function LegalEditor() {
           <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
             <div>
               <div className="flex items-center gap-2">
-                <p className="font-semibold text-sm">Versión vigente publicada</p>
+                <p className="font-semibold text-sm">Versión publicada</p>
                 <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium text-black border border-neutral-300 bg-transparent">
                   v{page.version || 1} • Vigente
                 </span>
               </div>
               <p className="text-xs text-[var(--muted-foreground)]">
-                Versión actualmente visible para compradores{page.lastPublished ? ` (desde ${new Date(page.lastPublished).toLocaleDateString('es-CL')})` : ''}.
+                Es la versión que ven tus clientes{formatLegalDate(page.lastPublished) ? ` · actualizada el ${formatLegalDate(page.lastPublished)}` : ""}.
               </p>
             </div>
             <Link

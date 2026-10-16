@@ -5,6 +5,7 @@ import { TemplateId } from "../data/mockAdminData"
 import { templatePaths } from "../config/navigation"
 import { openAdminWindow } from "../auth/demoSession"
 import { Button, Alert, Badge } from "../components/ui"
+import { AdminHelp } from '../components/AdminPageHeader';
 import { loadThemeCustomization, patchThemeCustomization } from '../data/themeCustomization';
 
 const TEMPLATES: {
@@ -16,37 +17,37 @@ const TEMPLATES: {
 }[] = [
   {
     id: "editorial",
-    name: "Plantilla 01 — Studio Pop",
+    name: "Studio Pop",
     description:
-      "Tienda luminosa y modular con escaparate visual, CTA vibrante y compra rápida.",
+      "Colorida, moderna y dinámica. Ideal para una marca con personalidad.",
     tags: ["Modular", "Color", "Editorial"],
     preview:
       "https://images.unsplash.com/photo-1555212697-194d092e3b8f?w=400&h=250&fit=crop&auto=format",
   },
   {
     id: "minimal",
-    name: "Plantilla 02 — Soft Discovery",
+    name: "Soft Discovery",
     description:
-      "Estilo Shop con bordes redondeados suaves (28px), buscador en píldora con acento violeta (#5433eb) y tarjetas ultra suaves.",
-    tags: ["Pillow-soft", "Shop Violet", "Clean Canvas"],
+      "Suave, cercana y fácil de recorrer. Una experiencia acogedora para tus clientes.",
+    tags: ["Suave", "Cercana", "Luminosa"],
     preview:
       "https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=400&h=250&fit=crop&auto=format",
   },
   {
     id: "visual",
-    name: "Plantilla 03 — Velta Editorial",
+    name: "Velta Editorial",
     description:
-      "Imágenes a pantalla completa, navegación superpuesta oscura, bloques de producto con gran protagonismo visual.",
-    tags: ["Oscuro", "Full-bleed", "Editorial"],
+      "Elegante y enfocada en fotografía. Cuenta tu historia con imágenes.",
+    tags: ["Fotografía", "Elegancia", "Historia"],
     preview:
       "https://images.unsplash.com/photo-1558769132-cb1aea458c5e?w=400&h=250&fit=crop&auto=format",
   },
   {
     id: "catalog",
-    name: "Plantilla 04 — Obsidian Showcase",
+    name: "Obsidian Showcase",
     description:
-      "Vitrina oscura premium, producto protagonista y acción de compra enfocada.",
-    tags: ["Premium", "Oscuro", "Showcase"],
+      "Oscura, premium y minimalista. Tus productos son protagonistas.",
+    tags: ["Premium", "Oscuro", "Minimalista"],
     preview:
       "https://images.unsplash.com/photo-1472851294608-062f824d29cc?w=400&h=250&fit=crop&auto=format",
   },
@@ -113,10 +114,10 @@ export default function Design() {
 
   return (
     <div className="flex flex-col gap-6 max-w-5xl">
-      <Alert variant="info">
+      <AdminHelp>
         Al cambiar de plantilla, todos tus productos, precios e imágenes se
         mantienen intactos. Solo cambia la presentación visual.
-      </Alert>
+      </AdminHelp>
 
       {saved && (
         <Alert variant="success">
