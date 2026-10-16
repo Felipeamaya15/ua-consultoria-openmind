@@ -3,6 +3,8 @@
 // currently live `published` copy so the emprendedor can work without affecting
 // what buyers see until they hit "Publicar".
 
+import type { LegalContentVersion } from './legalVersions';
+
 export type LegalType = 'terms' | 'privacy' | 'refund';
 
 export interface LegalPage {
@@ -10,6 +12,8 @@ export interface LegalPage {
   draft: string;
   published: string;
   lastPublished: string | null; // ISO date string
+  versions?: LegalContentVersion[];
+  currentVersionId?: string | null;
 }
 
 export const LEGAL_META: Record<LegalType, { label: string; short: string; description: string }> = {
