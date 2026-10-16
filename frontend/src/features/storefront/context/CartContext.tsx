@@ -4,6 +4,7 @@ import type { CartItem as BaseCartItem } from '../data/mockData';
 import { cartService } from '../services/cartService';
 import { useStoreIdentity } from './StoreIdentityContext';
 import { guestCartKey, readGuestCart, saveGuestCart } from '../services/guestCartStorage';
+import { validatePromotion } from '../services/promotionService';
 
 export interface CartItem extends BaseCartItem {
   id_item_carrito?: number;
@@ -12,7 +13,8 @@ export interface CartItem extends BaseCartItem {
 interface CartState {
   clearCart: () => Promise<void>;
   promoCode: string;
-  applyPromo: (code: string) => boolean;
+  applyPromo: (code: string) => Promise<{ ok: boolean; message: string }>;
+  promoNotice: string;
   discount: number;
   shipping: number | null;
   total: number;
@@ -34,6 +36,9 @@ const CartContext = createContext<CartState | null>(null);
 export function CartProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
   const [promoCode, setPromoCode] = useState('');
+  const [promoDiscount, setPromoDiscount] = useState(0);
+  const [promoSubtotal, setPromoSubtotal] = useState(0);
+  const [promoNotice, setPromoNotice] = useState('');
   const [shippingMethod, setShippingMethod] = useState('');
   const [customShipping, setCustomShipping] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
@@ -96,17 +101,12 @@ export function CartProvider({ children }: { children: ReactNode }) {
     refreshCart();
   }, [refreshCart]);
 
-  const applyPromo = (code: string) => {
-    const normalized = code.trim().toUpperCase();
-    const valid = ['VERANO20', 'NUEVO5000'].includes(normalized);
-    setPromoCode(valid ? normalized : '');
-    return valid;
-  };
-
   const clearCart = async () => {
     const persisted = items.filter(item => item.id_item_carrito);
     setItems([]);
     setPromoCode('');
+    setPromoDiscount(0);
+    setPromoNotice('');
     setShippingMethod('');
     setCustomShipping(null);
     await Promise.allSettled(persisted.map(item => cartService.eliminarItem(item.id_item_carrito!)));
@@ -219,14 +219,48 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   const count = items.reduce((sum, i) => sum + i.quantity, 0);
   const subtotal = items.reduce((sum, i) => sum + i.price * i.quantity, 0);
-  const discount = Math.min(
-    subtotal,
-    promoCode === 'VERANO20'
-      ? Math.round(subtotal * 0.2)
-      : promoCode === 'NUEVO5000'
-      ? 5000
-      : 0
-  );
+  const discount = promoCode ? Math.min(subtotal, promoDiscount) : 0;
+
+  const applyPromo = async (code: string) => {
+    const normalized = code.trim().toUpperCase();
+    setPromoNotice('');
+    if (!normalized) return { ok: false, message: 'Ingresa un código promocional.' };
+    if (subtotal <= 0) return { ok: false, message: 'Agrega productos al carrito antes de aplicar un código.' };
+    try {
+      const result = await validatePromotion(normalized, subtotal, 0);
+      setPromoCode(result.code);
+      setPromoDiscount(result.discount);
+      setPromoSubtotal(subtotal);
+      return { ok: true, message: result.message || '¡Código aplicado correctamente!' };
+    } catch (err) {
+      setPromoCode('');
+      setPromoDiscount(0);
+      return { ok: false, message: err instanceof Error && err.message ? err.message : 'Código inválido o expirado.' };
+    }
+  };
+
+  useEffect(() => {
+    if (!promoCode || promoSubtotal === subtotal) return;
+    let active = true;
+    const dropPromo = (notice: string) => {
+      setPromoCode('');
+      setPromoDiscount(0);
+      setPromoNotice(notice);
+    };
+    if (subtotal <= 0) { dropPromo(`El código ${promoCode} se quitó porque el carrito quedó vacío.`); return; }
+    validatePromotion(promoCode, subtotal, 0)
+      .then(result => {
+        if (!active) return;
+        setPromoDiscount(result.discount);
+        setPromoSubtotal(subtotal);
+      })
+      .catch(err => {
+        if (active) dropPromo(err instanceof Error && err.message
+          ? `El código ${promoCode} se quitó: ${err.message}`
+          : `El código ${promoCode} se quitó porque ya no es válido para este carrito.`);
+      });
+    return () => { active = false; };
+  }, [promoCode, promoSubtotal, subtotal]);
   const shipping =
     !items.length || shippingMethod === 'Retiro'
       ? 0
@@ -241,6 +275,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         clearCart,
         promoCode,
         applyPromo,
+        promoNotice,
         discount,
         shipping,
         total,

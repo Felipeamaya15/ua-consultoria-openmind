@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 
 import { StockFeedback } from '../components/store/StockFeedback';
@@ -18,6 +18,7 @@ export default function Cart() {
     shipping,
     total,
     applyPromo,
+    promoNotice,
     count,
     loading,
   } = useCart();
@@ -30,17 +31,27 @@ export default function Cart() {
   const [promoError, setPromoError] = useState('');
   const [promoSuccess, setPromoSuccess] = useState('');
 
-  const handleApplyPromo = () => {
-    const ok = applyPromo(promoInput);
+  const [promoBusy, setPromoBusy] = useState(false);
 
-    if (ok) {
-      setPromoSuccess('¡Código aplicado correctamente!');
+  const handleApplyPromo = async () => {
+    if (promoBusy) return;
+    setPromoBusy(true);
+    const result = await applyPromo(promoInput);
+    setPromoBusy(false);
+
+    if (result.ok) {
+      setPromoSuccess(result.message);
       setPromoError('');
     } else {
-      setPromoError('Código inválido o expirado.');
+      setPromoError(result.message);
       setPromoSuccess('');
     }
   };
+  useEffect(() => {
+    if (!promoNotice) return;
+    setPromoError(promoNotice);
+    setPromoSuccess('');
+  }, [promoNotice]);
 
   if (loading && items.length === 0) return <p role="status" className="p-8 text-center">Cargando carrito…</p>;
 
