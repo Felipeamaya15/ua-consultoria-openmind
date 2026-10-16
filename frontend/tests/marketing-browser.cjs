@@ -31,7 +31,7 @@ const settle = async page => page.locator('.marketing-preview-empty, .marketing-
       let storeName = 'Tienda QA OpenMind';
       let delayCatalog = true, releaseCatalog;
       const gate = new Promise(resolve => { releaseCatalog = resolve; });
-      const requests = [], errors = [];
+      const requests = [], errors = [], serverPromotions = [];
       await context.addInitScript(() => {
         localStorage.setItem('token', 'marketing-qa-owner');
         for (const apiBaseUrl of ['http://localhost:8000', 'http://127.0.0.1:8000']) {
@@ -61,6 +61,18 @@ const settle = async page => page.locator('.marketing-preview-empty, .marketing-
         else if (p === '/api/tienda/pedidos/ultimos/' || p === '/api/catalog/productos/') data = [];
         else if (p === '/api/tienda/informes/') data = JSON.parse(fs.readFileSync(path.resolve(fixtures, '../../mejoras-informes-configuracion/evidencias/informe-ventas-pedidos-2025.json'), 'utf8'));
         else if (p === '/api/tienda/informes/pdf/') return route.fulfill({ contentType: 'application/pdf', body: fs.readFileSync(path.resolve(fixtures, '../../mejoras-informes-configuracion/evidencias/informe-ventas-pedidos-2025.pdf')) });
+        else if (p === '/api/promociones/') {
+          // Contrato persistido de develop, únicamente en el transporte simulado de QA.
+          if (request.method() === 'POST') {
+            assert.equal(request.headers().authorization, 'Token marketing-qa-owner');
+            const draft = request.postDataJSON();
+            assert.equal(draft.code, 'QA-CAMPANIA');
+            const row = { ...draft, id: 1, usedCount: 0 };
+            serverPromotions.push(row);
+            return route.fulfill({ status: 201, json: envelope(row) });
+          }
+          data = serverPromotions;
+        }
         return route.fulfill({ json: envelope(data) });
       });
       await context.route('**/media/no-existe-qa.png', route => route.fulfill({ status: 404, body: '' }));
@@ -175,19 +187,24 @@ const settle = async page => page.locator('.marketing-preview-empty, .marketing-
       await page.waitForURL('**/emprendedor/configuracion#pagina-principal');
       await page.getByLabel('Nombre de la tienda (obligatorio)').waitFor();
       await page.getByRole('button', { name: 'Guardar página principal' }).waitFor();
+      assert.equal(requests.filter(r => !['GET', 'OPTIONS'].includes(r.method)).length, 0, 'Marketing, formatos y preview no guardan datos');
       await page.goto(base + '/emprendedor/promociones', { waitUntil: 'domcontentloaded' });
       await page.getByRole('button', { name: 'Nueva promoción' }).click();
-      await page.getByLabel('Nombre interno').fill('Promoción QA local independiente');
+      await page.getByLabel('Nombre interno').fill('Campaña QA independiente');
+      await page.getByLabel('Código de descuento (opcional)').fill('QA-CAMPANIA');
       await page.getByLabel('Valor', { exact: true }).fill('10');
       await page.getByRole('button', { name: 'Guardar promoción', exact: true }).click();
-      await page.getByRole('heading', { name: 'Promoción QA local independiente', exact: true }).waitFor();
+      await page.getByRole('heading', { name: 'Campaña QA independiente', exact: true }).waitFor();
       await page.reload({ waitUntil: 'domcontentloaded' });
-      await page.getByRole('heading', { name: 'Promoción QA local independiente', exact: true }).waitFor();
+      await page.getByRole('heading', { name: 'Campaña QA independiente', exact: true }).waitFor();
       await page.goto(base + '/emprendedor/marketing', { waitUntil: 'domcontentloaded' });
       await page.getByLabel('Producto para publicar').waitFor();
       await page.getByRole('radio', { name: /Crear publicación de promoción/ }).check();
-      assert.equal(await page.getByText('Promoción QA local independiente', { exact: true }).count(), 0, 'las campañas locales no se convierten en ofertas de Marketing');
-      assert.equal(requests.filter(r => !['GET', 'OPTIONS'].includes(r.method)).length, 0, 'ninguna publicación guarda datos');
+      assert.equal(await page.getByText('Campaña QA independiente', { exact: true }).count(), 0, 'Marketing sigue limitado a ofertas de variantes, sin convertir campañas generales');
+      const mutations = requests.filter(r => !['GET', 'OPTIONS'].includes(r.method));
+      assert.equal(mutations.length, 1);
+      assert.equal(mutations[0].p, '/api/promociones/');
+      assert.equal(mutations[0].method, 'POST', 'solo el guardado explícito en Promociones usa POST, interceptado por QA');
       assert(requests.filter(r => r.p === '/api/catalog/productos/admin/listado/').every(r => r.headers.authorization === 'Token marketing-qa-owner' && !r.query));
       assert.equal(errors.length, 0, errors.join('\n'));
       console.log(`OK ${width}px: tres formatos, variantes/ofertas de fixture, vacíos/errores/carga, logo/imagen ausentes, teclado, acceso contextual, formato sin persistencia, PDF/configuración/promociones conservados`);
