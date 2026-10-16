@@ -6,7 +6,7 @@ import { useCart } from '../../../context/CartContext';
 import { useStorefrontTemplate } from '../../../hooks/useStorefrontTemplate';
 
 export function CatalogHeader() {
-  const { landing } = useStore();
+  const { config } = useStore();
   const { count } = useCart();
   const { route } = useStorefrontTemplate();
 
@@ -24,19 +24,20 @@ export function CatalogHeader() {
           <nav data-visual-part="headerLayout" className="h-14 rounded-full bg-[#202022] border border-white/[0.06] px-5 md:px-7 flex items-center justify-between shadow-2xl shadow-black/30">
             <Link data-visual-part="logo"
               to={route()}
-              aria-label="Inicio"
-              className="flex items-center text-white hover:text-[var(--primary)] transition-colors"
+              aria-label={`Ir al inicio de ${config.name || 'la tienda'}`}
+              className="flex min-w-0 max-w-full items-center gap-2 text-white hover:text-[var(--primary)] transition-colors"
             >
-              {landing?.logo ? <img data-landing-image src={landing.logo} alt="Logo de la tienda" className="block w-auto h-auto max-w-[80px] sm:max-w-[120px] xl:max-w-[160px] max-h-10 sm:max-h-11 shrink-0 object-contain object-center" /> : <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" className="w-5 h-5" strokeWidth="1.7">
+              {config.logo ? <img data-landing-image src={config.logo} alt={`Logo de ${config.name}`} className="block w-auto h-auto max-w-[80px] sm:max-w-[120px] xl:max-w-[160px] max-h-10 sm:max-h-11 shrink-0 object-contain object-center" /> : <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" className="w-5 h-5" strokeWidth="1.7">
                 <path d="M3 11.5 12 4l9 7.5" />
                 <path d="M5.5 10v10h13V10" />
                 <path d="M9.5 20v-6h5v6" />
               </svg>}
+              <span className="truncate text-xs sm:hidden">{config.name}</span>
             </Link>
 
-            <div data-visual-part="navigation" className="flex items-center gap-5 md:gap-8 text-[12px] font-semibold text-white">
-              <Link to={route()} className="hidden sm:block hover:text-[var(--primary)] transition-colors">
-                Mi Tienda
+            <div data-visual-part="navigation" className="flex min-w-0 max-w-full items-center gap-5 md:gap-8 text-[12px] font-semibold text-white">
+              <Link to={route()} className="hidden sm:block truncate hover:text-[var(--primary)] transition-colors">
+                {config.name}
               </Link>
               <Link to={route('catalogo')} className="hover:text-[var(--primary)] transition-colors">
                 Catálogo

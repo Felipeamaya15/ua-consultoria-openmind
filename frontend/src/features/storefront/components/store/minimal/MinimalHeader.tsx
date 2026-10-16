@@ -32,7 +32,7 @@ function MinimalCartIcon({ count }: { count: number }) {
 }
 
 export function MinimalHeader() {
-  const { landing } = useStore();
+  const { config } = useStore();
   const { count } = useCart();
 
   return (
@@ -42,10 +42,11 @@ export function MinimalHeader() {
         {/* Nombre */}
         <Link data-visual-part="logo"
           to="."
-          className="flex items-center gap-2 font-semibold text-[var(--primary)] whitespace-nowrap"
+          aria-label={`Ir al inicio de ${config.name || 'la tienda'}`}
+          className="flex min-w-0 max-w-full items-center gap-2 font-semibold text-[var(--primary)]"
         >
-          {landing?.logo && <img data-landing-image src={landing.logo} alt="Logo de la tienda" className="block w-auto h-auto max-w-[80px] sm:max-w-[120px] xl:max-w-[160px] max-h-10 sm:max-h-11 shrink-0 object-contain object-center" />}
-          Mi Tienda.
+          {config.logo && <img data-landing-image src={config.logo} alt={`Logo de ${config.name}`} className="block w-auto h-auto max-w-[80px] sm:max-w-[120px] xl:max-w-[160px] max-h-10 sm:max-h-11 shrink-0 object-contain object-center" />}
+          <span className="truncate">{config.name}</span>
         </Link>
 
         {/* Navegación */}
@@ -76,7 +77,7 @@ export function MinimalHeader() {
         </nav>
 
         {/* Acciones */}
-        <div className="flex items-center gap-2 md:gap-4">
+        <div className="flex shrink-0 items-center gap-2 md:gap-4">
           <AccountNavigation className="hidden sm:block text-xs font-medium text-[var(--primary)]" />
 
           <Link

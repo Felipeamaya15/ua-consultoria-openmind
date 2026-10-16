@@ -11,7 +11,7 @@ import { formatPrice } from '../data/mockData';
 export default function VisualHome() {
   const { featured } = useLandingContent();
   const isSectionVisible = useLandingSectionVisibility();
-  const { landing } = useStore();
+  const { landing, config } = useStore();
   const visualProducts = featured.map(p => ({ id: p.id, name: p.name, category: p.category, description: p.description, price: p.basePrice, image: p.images[0] }));
   return (
     <>
@@ -125,7 +125,7 @@ export default function VisualHome() {
                 text-white/65
               "
             >
-              — Velta · Envíos a todo Chile
+              — {config.name} · Envíos a todo Chile
             </p>
           </div>
         </div>
@@ -207,7 +207,7 @@ export default function VisualHome() {
           <div className="min-h-[620px]">
             <img
               src="https://images.unsplash.com/photo-1643168343279-3f93c2e592ef?w=800&h=1000&fit=crop&auto=format"
-              alt="Selección de productos Velta"
+              alt="Selección de productos"
               className="w-full h-full object-cover"
             />
           </div>
@@ -227,7 +227,7 @@ export default function VisualHome() {
                 mb-7
               "
             >
-              7 años en marcha
+              Una selección en constante evolución
             </p>
 
             <p
@@ -256,11 +256,10 @@ export default function VisualHome() {
             </h2>
 
             <p className="mt-7 text-sm leading-7 text-gray-600">
-              Valentina Roque fundó Velta en 2018 con una
-              convicción simple: que encontrar productos de
-              calidad no debería ser complicado. Lo que comenzó
-              como un catálogo pequeño y cuidado se convirtió
-              en una tienda que hoy despacha a todo el país.
+              Encontrar productos de calidad no debería ser
+              complicado. Por eso reunimos una selección de
+              productos para que puedas explorar el catálogo
+              y elegir con información clara.
             </p>
 
             <p className="mt-5 text-sm leading-7 text-gray-600">
@@ -271,7 +270,7 @@ export default function VisualHome() {
             </p>
 
             <p className="mt-8 font-serif italic text-lg">
-              Valentina Roque, fundadora
+              Nuestra forma de elegir
             </p>
           </div>
         </div>
@@ -331,7 +330,7 @@ export default function VisualHome() {
           <div className="min-h-[520px]">
             <img
               src="https://images.unsplash.com/photo-1441984904996-e0b6ba687e04?w=900&h=700&fit=crop&auto=format"
-              alt="Interior de la tienda Velta"
+              alt="Espacio comercial"
               className="w-full h-full object-cover"
             />
           </div>

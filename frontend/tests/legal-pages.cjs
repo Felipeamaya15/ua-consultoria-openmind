@@ -129,6 +129,7 @@ function provider() {
   const mocks = {
     'react/jsx-runtime': { jsx, jsxs: jsx }, react: fakeReact, 'react-router-dom': { useLocation: () => ({ pathname: '/plantilla/1/legal/terms' }) },
     '../services/catalogService': { fetchPublicProducts: async () => [] }, '../../landing/services/landingService': { fetchLandingConfig: async () => null },
+    '../services/storeInformationService': { fetchStoreInformation: async () => ({ nombre: 'Tienda', descripcion: '' }), STORE_INFORMATION_CHANGED: 'test-store-information' },
     './StoreIdentityContext': { useStoreIdentity: () => ({ identity }) },
   };
   const api = load('src/features/storefront/context/StoreContext.tsx', mocks, { localStorage, structuredClone, document: { querySelectorAll: () => [], body: {} }, MutationObserver: class { observe() {} disconnect() {} } });

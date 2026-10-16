@@ -1,3 +1,4 @@
+import { useStore } from '../../../context/StoreContext';
 import { VISUAL_SECTION } from '../../../visual/sectionIds';
 import { useLandingContent } from '../../../../landing/hooks/useLandingContent';
 import { Icon, InstitutionalBadge } from '../../ui';
@@ -6,6 +7,7 @@ import { Link } from 'react-router-dom';
 import { useStorefrontTemplate } from '../../../hooks/useStorefrontTemplate';
 
 export function CatalogFooter() {
+  const { config } = useStore();
   const { content } = useLandingContent();
   const isSectionVisible = useLandingSectionVisibility();
   const { route } = useStorefrontTemplate();
@@ -15,7 +17,7 @@ export function CatalogFooter() {
       <div data-visual-part="footerLayout" className="max-w-[1160px] mx-auto px-5 py-10 md:py-12 grid grid-cols-1 md:grid-cols-3 gap-7 items-start">
         <div>
           <p data-visual-part="footerTitle" className="text-lg font-extrabold tracking-tight">
-            Mi Tienda
+            {config.name}
           </p>
 
           <p className="mt-2 max-w-xs text-[12px] leading-5 text-white/45">

@@ -6,7 +6,7 @@ import { useCart } from '../../../context/CartContext';
 import { useStorefrontTemplate } from '../../../hooks/useStorefrontTemplate';
 
 export function VisualHeader() {
-  const { landing } = useStore();
+  const { config } = useStore();
   const { count } = useCart();
   const { route } = useStorefrontTemplate();
 
@@ -16,11 +16,12 @@ export function VisualHeader() {
 
         <Link data-visual-part="logo"
           to={route()}
-          className="flex items-center gap-3 flex-shrink-0"
+          aria-label={`Ir al inicio de ${config.name || 'la tienda'}`}
+          className="flex min-w-0 max-w-full items-center gap-3"
         >
-          {landing?.logo && <img data-landing-image src={landing.logo} alt="Logo de la tienda" className="block w-auto h-auto max-w-[80px] sm:max-w-[120px] xl:max-w-[160px] max-h-10 sm:max-h-11 shrink-0 object-contain object-center" />}
-          <span className="font-serif text-2xl">
-            Velta
+          {config.logo && <img data-landing-image src={config.logo} alt={`Logo de ${config.name}`} className="block w-auto h-auto max-w-[80px] sm:max-w-[120px] xl:max-w-[160px] max-h-10 sm:max-h-11 shrink-0 object-contain object-center" />}
+          <span className="font-serif text-2xl truncate">
+            {config.name}
           </span>
 
           <span className="hidden sm:block h-5 w-px bg-black/15" />
@@ -30,19 +31,7 @@ export function VisualHeader() {
           </span>
         </Link>
 
-        <div className="hidden xl:flex bg-[#111111] text-white rounded-md px-5 py-2 text-center leading-tight">
-          <span className="font-serif text-xs">
-            UNIVERSIDAD
-            <br />
-            <strong className="text-sm">
-              Autónoma
-            </strong>
-            <br />
-            de Chile
-          </span>
-        </div>
-
-        <nav data-visual-part="navigation" className="flex items-center gap-4 md:gap-6 text-sm">
+        <nav data-visual-part="navigation" className="flex shrink-0 items-center gap-4 md:gap-6 text-sm">
           <Link
             to={route('catalogo')}
             className="hover:opacity-50 transition-opacity"
