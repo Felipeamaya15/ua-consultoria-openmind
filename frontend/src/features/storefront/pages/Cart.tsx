@@ -14,6 +14,7 @@ export default function Cart() {
     updateQuantity,
     subtotal,
     discount,
+    promoCode,
     shipping,
     total,
     applyPromo,
@@ -300,7 +301,7 @@ export default function Cart() {
 
                   {discount > 0 && (
                     <div className="flex justify-between gap-4 text-[var(--primary)]">
-                      <span>Descuento</span>
+                      <span>Descuento{promoCode ? ` (${promoCode})` : ''}</span>
                       <span className="font-semibold">−{formatPrice(discount)}</span>
                     </div>
                   )}
@@ -549,7 +550,7 @@ export default function Cart() {
 
                   {discount > 0 && (
                     <div className="flex justify-between gap-4">
-                      <span className="text-[var(--visual-page-color)]">Descuento</span>
+                      <span className="text-[var(--visual-page-color)]">Descuento{promoCode ? ` (${promoCode})` : ''}</span>
                       <span>−{formatPrice(discount)}</span>
                     </div>
                   )}
@@ -751,7 +752,7 @@ export default function Cart() {
 
               {discount > 0 && (
                 <div className="flex justify-between">
-                  <span className="text-[var(--muted-foreground)]">Descuento</span>
+                  <span className="text-[var(--muted-foreground)]">Descuento{promoCode ? ` (${promoCode})` : ''}</span>
                   <span>−{formatPrice(discount)}</span>
                 </div>
               )}

@@ -2028,7 +2028,7 @@ export default function Checkout() {
 
               {effectiveDiscount > 0 && (
                 <div className="flex justify-between text-[var(--success)]">
-                  <span>Descuento</span>
+                  <span>Descuento{checkoutPromoCode ? ` (${checkoutPromoCode})` : ''}</span>
 
                   <span>
                     −{formatPrice(effectiveDiscount)}
