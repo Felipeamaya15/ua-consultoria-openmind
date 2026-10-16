@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { formatPrice, Promotion } from "../data/mockAdminData"
 import { useAdmin } from "../context/AdminContext";
 import {
@@ -10,17 +10,33 @@ import {
   Modal,
   Alert,
 } from "../components/ui"
+import { promotionService } from "../services/promotionService"
 
 export default function Promotions() {
   const {config,setConfig} = useAdmin();
-  const promos = config.promotions;
+  const [promos,setPromotionRows] = useState<Promotion[]>([]);
   const [error,setError] = useState("");
-  const setPromos = (update:(previous:Promotion[])=>Promotion[]) => setConfig({...config,promotions:update(config.promotions)});
+  const [loading,setLoading] = useState(true);
+  const setPromos = (update:(previous:Promotion[])=>Promotion[]) => {
+    const next = update(promos);
+    setPromotionRows(next);
+    setConfig({...config,promotions:next});
+    return true;
+  };
   const [showModal, setShowModal] = useState(false)
   const [editPromo, setEditPromo] = useState<Partial<Promotion> | null>(null)
 
+  useEffect(() => {
+    let active = true;
+    promotionService.list()
+      .then(rows => { if (active) setPromos(() => rows); })
+      .catch(cause => { if (active) setError(cause instanceof Error ? cause.message : 'No se pudieron cargar las promociones.'); })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, []);
+
   const patch = (changes:Partial<Promotion>) => setEditPromo(current => ({...current,...changes}));
-  const save = () => {
+  const save = async () => {
     if(!editPromo?.name?.trim()) {setError('Ingresa el nombre de la promoción.'); return;}
     const type=editPromo.type ?? 'percentage', value=Number(editPromo.value ?? 0);
     if(type !== 'free_shipping' && (!Number.isFinite(value) || value<=0 || (type==='percentage' && value>100))) {setError('El descuento debe ser positivo y el porcentaje no puede superar 100.');return;}
@@ -28,13 +44,25 @@ export default function Promotions() {
     if((editPromo.minAmount ?? 0)<0 || (editPromo.maxUses !== undefined && (!Number.isInteger(editPromo.maxUses) || editPromo.maxUses<1))) {setError('Revisa el monto mínimo y el límite de usos.');return;}
     const code=editPromo.code?.trim().toUpperCase();
     if(code && promos.some(p=>p.id!==editPromo.id && p.code?.toUpperCase()===code)) {setError('Ya existe una promoción con ese código.');return;}
-    const promo:Promotion={...editPromo,id:editPromo.id ?? crypto.randomUUID(),name:editPromo.name.trim(),code,type,value:type==='free_shipping'?0:value,usedCount:editPromo.usedCount ?? 0,startsAt:editPromo.startsAt,active:editPromo.active ?? true};
-    if(setPromos(previous => previous.some(p=>p.id===promo.id)?previous.map(p=>p.id===promo.id?promo:p):[...previous,promo])) setShowModal(false);
+    const draft:Partial<Promotion>={...editPromo,name:editPromo.name.trim(),code,type,value:type==='free_shipping'?0:value,usedCount:editPromo.usedCount ?? 0,startsAt:editPromo.startsAt,active:editPromo.active ?? true};
+    try {
+      const promo = editPromo.id
+        ? await promotionService.update(draft as Promotion)
+        : await promotionService.create(draft);
+      if(setPromos(previous => previous.some(p=>p.id===promo.id)?previous.map(p=>p.id===promo.id?promo:p):[promo,...previous])) setShowModal(false);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'No se pudo guardar la promoción.');
+    }
   };
-  const toggleActive = (id: string) => {
-    setPromos((prev) =>
-      prev.map((p) => (p.id === id ? { ...p, active: !p.active } : p)),
-    )
+  const toggleActive = async (id: string) => {
+    const current = promos.find(p => p.id === id);
+    if (!current) return;
+    try {
+      const updated = await promotionService.update({...current, active: !current.active});
+      setPromos(prev => prev.map(p => p.id === id ? updated : p));
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'No se pudo actualizar la promoción.');
+    }
   }
 
   const typeBadge = (type: Promotion["type"]) =>
@@ -66,6 +94,8 @@ export default function Promotions() {
       </div>
 
       <div className="grid grid-cols-1 gap-3">
+        {loading && <p role="status" className="text-sm text-[var(--muted-foreground)]">Cargando promociones...</p>}
+        {!loading && error && !showModal && <Alert variant="error">{error}</Alert>}
         {promos.map((promo) => (
           <div
             key={promo.id}

@@ -7,6 +7,7 @@ from apps.core.presentation.recent_orders import UltimasOrdenesAPIView, Actualiz
 from apps.core.presentation.historial import HistorialPedidosAPIView, HistorialVentasAPIView
 from apps.core.presentation.dashboard import DashboardAPIView
 from apps.core.presentation.pickup_address import PickupAddressAPIView
+from apps.core.presentation.promotions import PromocionesAPIView, PromocionDetalleAPIView, ValidarPromocionAPIView
 from django.urls import path
 from . import views
 from apps.core.presentation.views import (
@@ -27,6 +28,9 @@ from apps.core.presentation.views import (
 )
 
 urlpatterns = [
+    path('promociones/', PromocionesAPIView.as_view(), name='promotions'),
+    path('promociones/validar/', ValidarPromocionAPIView.as_view(), name='promotion-validate'),
+    path('promociones/<int:promotion_id>/', PromocionDetalleAPIView.as_view(), name='promotion-detail'),
     path('entregas/retiro/direcciones/', PickupAddressAPIView.as_view(), name='pickup-address'),
     path('tienda/dashboard/', DashboardAPIView.as_view(), name='tienda-dashboard'),
     path('pedidos/registrar/', RegistrarCompraView.as_view(), name='pedidos-registrar'),
