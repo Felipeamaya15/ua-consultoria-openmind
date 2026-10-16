@@ -24,7 +24,7 @@ import { templateFromPath } from '../visual/templates';
 import { findImageSetting, captureOriginalImage, isLegacyEditableImage, readThemeImages, restoreOriginalImage, type OriginalImageStyle } from '../visual/imageSettings';
 import { getStoreConfigKey, readStoredStoreConfig, isStoreConfigChange, STORE_CONFIG_CHANGED_EVENT } from '../visual/storage';
 import { legalService } from '../services/legalService';
-import { defaultLegalPages, type LegalType, type LegalPage } from '../data/legalContent';
+import { type LegalType, type LegalPage } from '../data/legalContent';
 
 function readBusinessConfig(saved: Record<string, unknown>): StoreConfig {
   try {
