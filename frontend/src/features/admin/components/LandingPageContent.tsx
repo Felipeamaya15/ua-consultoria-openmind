@@ -11,8 +11,6 @@ import { fetchLandingConfig, saveLandingConfig } from '../../landing/services/la
 import type { LandingInput } from '../../landing/types/landing.types';
 import { AdminHelp } from './AdminPageHeader';
 import { humanizeAdminError } from '../utils/humanizeError';
-import { useStoreIdentity } from '../../storefront/context/StoreIdentityContext';
-import { readStoredStoreConfig } from '../../storefront/visual/storage';
 
 const emptyForm: LandingInput = {
   titulo: '', descripcion: '', texto_boton: '', imagen_principal: null, logo: null, contenido: normalizeLandingContent(),
@@ -21,8 +19,6 @@ const emptyForm: LandingInput = {
 
 export default function LandingPageContent() {
   const { config } = useAdmin();
-  const { identity } = useStoreIdentity();
-  const legacy = readStoredStoreConfig(identity);
   const [form, setForm] = useState<LandingInput>(emptyForm);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -50,16 +46,6 @@ export default function LandingPageContent() {
     return () => { active = false; controller.abort(); };
   }, []);
   function change(next: LandingInput) { setForm(next); setSaved(false); }
-  function recoverLocalContact() {
-    const contenido = normalizeLandingContent(form.contenido);
-    change({ ...form,
-      logo: form.logo || (typeof legacy.logo === 'string' ? legacy.logo : null),
-      contenido: { ...contenido, contacto: { ...contenido.contacto,
-        correo: contenido.contacto.correo || (typeof legacy.contactEmail === 'string' ? legacy.contactEmail : ''),
-        telefono: contenido.contacto.telefono || (typeof legacy.contactPhone === 'string' ? legacy.contactPhone : ''),
-      } },
-    });
-  }
   async function save() {
     setSaving(true); setSaved(false); setError('');
     try { const savedConfig = await saveLandingConfig(form); setForm({ ...savedConfig, contenido: normalizeLandingContent(savedConfig.contenido), secciones: { ...emptyForm.secciones, ...savedConfig.secciones } }); setSaved(true); }
@@ -70,8 +56,7 @@ export default function LandingPageContent() {
   return <form className="flex flex-col gap-5 max-w-3xl" onSubmit={e => { e.preventDefault(); void save(); }}>
     {error && <div role="alert"><Alert variant="error">{error}</Alert></div>}
     <fieldset disabled={saving || loadFailed} className="flex flex-col gap-5">
-      {(legacy.logo || legacy.contactEmail || legacy.contactPhone) ? <AdminCard><p className="text-sm mb-3">Puedes recuperar el logo y los datos de contacto guardados en este navegador en los campos vacíos. Revisa el resultado y guarda para publicarlo.</p><Button type="button" variant="outline" onClick={recoverLocalContact}>Recuperar logo y contacto locales</Button></AdminCard> : null}
-      {([{ key: 'titulo', label: 'Título principal', maxLength: 255, help: 'Este texto aparecerá destacado al entrar a tu tienda. Es obligatorio.' }, { key: 'descripcion', label: 'Descripción', maxLength: undefined, help: 'Cuenta brevemente qué ofrece tu negocio. Puedes dejar este campo vacío.' }, { key: 'texto_boton', label: 'Texto del botón principal', maxLength: 100, help: 'Escribe la invitación que verán tus clientes, por ejemplo: Ver productos. Es obligatorio.' }] as const).map(field =>
+      {([{ key: 'titulo', label: 'Título principal', maxLength: 255, help: 'Este texto aparecerá destacado al entrar a tu tienda. Es obligatorio.' }, { key: 'descripcion', label: 'Descripción de portada', maxLength: undefined, help: 'Cuenta brevemente qué ofrece tu negocio. Puedes dejar este campo vacío.' }, { key: 'texto_boton', label: 'Texto del botón principal', maxLength: 100, help: 'Escribe la invitación que verán tus clientes, por ejemplo: Ver productos. Es obligatorio.' }] as const).map(field =>
         <AdminCard key={field.key}><Input label={field.label} value={form[field.key]} required={field.key !== 'descripcion'} maxLength={field.maxLength} onChange={e => change({ ...form, [field.key]: e.target.value })} /><AdminHelp>{field.help}</AdminHelp></AdminCard>)}
       <AdminCard><h2 className="text-sm font-semibold mb-3">Imagen principal</h2><AdminHelp>Será una de las primeras imágenes que verán tus clientes. Puedes añadirla o cambiarla cuando quieras.</AdminHelp><ImageUpload value={form.imagen_principal || ''} onChange={image => change({ ...form, imagen_principal: image || null })} maxMB={2} allowSVG={false} /></AdminCard>
       <AdminCard><h2 className="text-sm font-semibold mb-3">Logo</h2><AdminHelp>Usa el logo de tu negocio para que tus clientes reconozcan tu marca. Es opcional.</AdminHelp><ImageUpload value={form.logo || ''} onChange={logo => change({ ...form, logo: logo || null })} maxMB={1} allowSVG={false} /></AdminCard>

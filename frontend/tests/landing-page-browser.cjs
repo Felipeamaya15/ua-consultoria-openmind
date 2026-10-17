@@ -1,6 +1,10 @@
 // Navegador real, aplicación real y respuestas HTTP de prueba interceptadas.
 // No inicia sesión ni escribe en las bases comerciales.
 const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
+const evidenceDir = process.env.LANDING_EVIDENCE_DIR;
+if (evidenceDir) fs.mkdirSync(evidenceDir, { recursive: true });
 const { chromium } = require(process.env.DASHBOARD_PLAYWRIGHT_MODULE || 'playwright');
 const base = process.env.LANDING_TEST_URL || 'http://127.0.0.1:5180';
 const envelope = data => ({ exito: true, mensaje: '', data });
@@ -11,7 +15,7 @@ const envelope = data => ({ exito: true, mensaje: '', data });
       const context = await browser.newContext({ viewport: { width, height: 950 }, acceptDownloads: true });
       let business = { nombre: 'Negocio de prueba', descripcion: 'Descripción del negocio' };
       let landing = { id: 1, tienda: 1, titulo: 'Portada de prueba', descripcion: 'Descripción de portada independiente', texto_boton: 'Ver productos',
-        imagen_principal: null, logo: null, secciones: { 'Productos destacados': true, 'Categorías': true, 'Beneficios': true, 'Información de contacto': true, 'Mapa / ubicación': false },
+        imagen_principal: `${base}/qa/portada.svg`, logo: `${base}/qa/logo.svg`, secciones: { 'Productos destacados': true, 'Categorías': true, 'Beneficios': true, 'Información de contacto': true, 'Mapa / ubicación': false },
         contenido: { productos_destacados: [], categorias: [], beneficios: [{ titulo: 'Beneficio conservado', descripcion: 'Descripción', icono: 'truck' }],
           contacto: { telefono: '+56 9 1111 2222', whatsapp: '', correo: 'servidor@example.test', instagram: '', facebook: '', sitio_web: '', horario: '' },
           ubicacion: { direccion: '', comuna: '', ciudad: '', region: '', enlace_maps: '' } } };
@@ -21,7 +25,7 @@ const envelope = data => ({ exito: true, mensaje: '', data });
         localStorage.setItem('token', 'qa-test-token');
         for (const apiBaseUrl of ['http://localhost:8000', 'http://127.0.0.1:8000']) {
           const identity = { apiBaseUrl, storeId: '1' };
-          localStorage.setItem(`ua-entrepreneur-demo-v1:store:${encodeURIComponent(apiBaseUrl)}:1`, JSON.stringify({ version: 1, identity, config: { name: 'Nombre anterior local', description: 'Descripción local', contactEmail: 'local@example.test', contactPhone: '+56 9 9999 9999' } }));
+          localStorage.setItem(`ua-entrepreneur-demo-v1:store:${encodeURIComponent(apiBaseUrl)}:1`, JSON.stringify({ version: 1, identity, config: { name: 'Nombre anterior local', description: 'Descripción local', themeEditor: { editorial: { visualConfig: { hero: { gap: 17 } } } }, contactEmail: 'local@example.test', contactPhone: '+56 9 9999 9999' } }));
         }
       });
       await context.route('**/api/**', async route => {
@@ -51,6 +55,7 @@ const envelope = data => ({ exito: true, mensaje: '', data });
 
         return route.fulfill({ json: envelope(data) });
       });
+      await context.route('**/qa/*.svg', route => route.fulfill({ contentType: 'image/svg+xml', body: '<svg xmlns="http://www.w3.org/2000/svg" width="480" height="180"><rect width="480" height="180" fill="#dce8f4"/><circle cx="240" cy="90" r="55" fill="#1a3a6b"/></svg>' }));
       const page = await context.newPage(); page.on('pageerror', error => errors.push(error.message));
       const noOverflow = async label => assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `${width}px ${label}: sin desbordamiento`);
       await page.goto(base + '/emprendedor/landing');
@@ -67,19 +72,37 @@ const envelope = data => ({ exito: true, mensaje: '', data });
       assert.equal(await page.locator('form form').count(), 0);
       await page.getByLabel('Nombre de la tienda (obligatorio)').waitFor();
       assert.equal(await page.getByLabel('Nombre de la tienda (obligatorio)').inputValue(), business.nombre);
-      await page.getByRole('link', { name: 'Información del negocio', exact: true }).focus();
-      await page.keyboard.press('Enter');
-      assert.equal(new URL(page.url()).hash, '#informacion-negocio');
-      await page.getByRole('link', { name: 'Página principal y contacto', exact: true }).focus();
-      await page.keyboard.press('Enter');
-      assert.equal(new URL(page.url()).hash, '#pagina-principal');
+      assert.equal(await page.locator('nav[aria-label="Apartados de configuración"]').count(), 0);
+      assert.equal(await page.getByRole('heading', { name: 'Página principal y contacto', exact: true }).count(), 0);
+      assert.equal(await page.getByRole('heading', { name: 'Información del negocio', exact: true }).count(), 1);
+      assert.equal(await page.getByRole('button', { name: /Recuperar.*(navegador|locales)/ }).count(), 0);
+      // La eliminación es solo de la interfaz: la configuración local y sus estilos sobreviven.
+      assert(await page.evaluate(() => Object.keys(localStorage).some(key => {
+        const raw = localStorage.getItem(key);
+        return key.startsWith('ua-entrepreneur-demo-v1:store:') && raw.includes('Nombre anterior local');
+      })));
+      const businessCard = page.locator('#informacion-negocio > section');
+      const titleCard = page.getByLabel('Título principal', { exact: true }).locator('xpath=ancestor::section[1]');
+      for (const card of [businessCard, titleCard]) {
+        assert.equal(await card.evaluate(el => getComputedStyle(el).backgroundColor), 'rgb(255, 255, 255)');
+        assert.equal(await card.evaluate(el => getComputedStyle(el).paddingTop), '20px');
+      }
+      const businessBox = await businessCard.boundingBox(), titleBox = await titleCard.boundingBox();
+      assert(titleBox.y >= businessBox.y + businessBox.height + 19);
+      assert.equal(await page.getByLabel('Descripción de portada', { exact: true }).inputValue(), landing.descripcion);
+      const previews = page.locator('#pagina-principal img[alt="Imagen seleccionada"]');
+      assert.equal(await previews.count(), 2);
+      for (const preview of await previews.all()) assert(await preview.evaluate(img => img.complete && img.naturalWidth > 0));
+      await noOverflow('tarjetas iniciales');
+      if (evidenceDir) {
+        await page.screenshot({ path: path.join(evidenceDir, `editor-${width}.png`), fullPage: true });
+        await page.screenshot({ path: path.join(evidenceDir, `editor-inicio-${width}.png`) });
+      }
       assert.equal(await page.getByLabel('Correo electrónico', { exact: true }).count(), 1);
       assert.equal(await page.getByLabel('Teléfono (con código de país)').count(), 1);
       assert.equal(await page.getByRole('heading', { name: 'Logo', exact: true }).count(), 1);
       assert.equal(await page.locator('nav[aria-label="Panel del emprendedor"] a[href="/emprendedor/landing"]').count(), 1);
-      await page.getByRole('button', { name: 'Recuperar nombre y descripción de este navegador' }).click();
-      assert.equal(await page.getByLabel('Nombre de la tienda (obligatorio)').inputValue(), 'Nombre anterior local');
-      await page.getByRole('button', { name: 'Recuperar logo y contacto locales' }).click();
+      assert.equal(await page.getByLabel('Nombre de la tienda (obligatorio)').inputValue(), business.nombre);
       assert.equal(await page.getByLabel('Correo electrónico', { exact: true }).inputValue(), 'servidor@example.test');
       assert.equal(await page.getByLabel('Teléfono (con código de país)').inputValue(), '+56 9 1111 2222');
       const putsBeforeValidation = requests.filter(r => r.method === 'PUT').length;
@@ -104,6 +127,9 @@ const envelope = data => ({ exito: true, mensaje: '', data });
       await page.getByLabel('Título principal', { exact: true }).waitFor();
       assert.equal(await page.getByLabel('Título principal', { exact: true }).inputValue(), 'Portada conservada tras guardar');
       await noOverflow('configuración');
+      assert(await page.evaluate(() => Object.keys(localStorage).some(key => {
+        try { return JSON.parse(localStorage.getItem(key))?.config?.themeEditor?.editorial?.visualConfig?.hero?.gap === 17; } catch { return false; }
+      })), 'Los estilos locales se conservan al guardar y recargar');
       await page.evaluate(() => window.scrollTo(0, 0));
       if (width === 375) {
         await page.getByRole('button', { name: 'Abrir navegación' }).click();
@@ -113,6 +139,8 @@ const envelope = data => ({ exito: true, mensaje: '', data });
         await page.goto(`${base}/plantilla/${template}`);
         await page.getByText('Portada conservada tras guardar', { exact: true }).first().waitFor();
         await noOverflow(`plantilla ${template}`);
+        await page.getByText('Nombre persistido de prueba', { exact: true }).and(page.locator(':visible')).first().waitFor();
+        if (evidenceDir) await page.screenshot({ path: path.join(evidenceDir, `plantilla-${template}-${width}.png`) });
       }
       failLandingLoad = true;
       await page.goto(base + '/emprendedor/configuracion');
@@ -130,7 +158,7 @@ const envelope = data => ({ exito: true, mensaje: '', data });
       await page.getByLabel('Nombre de la tienda (obligatorio)').waitFor();
       assert.equal(await page.getByLabel('Nombre de la tienda (obligatorio)').inputValue(), business.nombre);
       assert.equal(errors.length, 0, errors.join('\n'));
-      console.log(`OK ${width}px: navegación, redirecciones con parámetros/hash, menú/casa, guardado, errores/reintento, recuperación local, cuatro plantillas y formularios independientes`);
+      console.log(`OK ${width}px: navegación, redirecciones con parámetros/hash, menú/casa, guardado, errores/reintento, tarjetas blancas, previews, estilos locales conservados, cuatro plantillas y formularios independientes`);
       await context.close();
       const guest = await browser.newContext();
       const guestPage = await guest.newPage();
