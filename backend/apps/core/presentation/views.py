@@ -21,10 +21,10 @@ from apps.core.presentation.serializers import ConfiguracionPagoSerializer, Ship
 from apps.core.models import Pedido
 from apps.core.pickup import validate_pickup, prepare_pickup_for_save
 from copy import deepcopy
-from rest_framework import generics
+from rest_framework import generics, serializers
 # Compatibilidad: una sola implementación de seguimiento con validación y aislamiento por tienda.
 from apps.core.presentation.order_tracking import OrderTrackingAPIView
-from .serializers import PedidoTiendaSerializer, TransferenciaPendienteSerializer
+from .serializers import PedidoTiendaSerializer, TransferenciaPendienteSerializer       
 
 class RegistrarCompraView(GuestCheckoutOrderAPIView):
     """Compatibilidad SCRUM-289: reutiliza la creación y seguridad de SCRUM-291."""
@@ -345,10 +345,37 @@ class RechazarTransferenciaManualAPIView(APIView):
         )
 
 
+
 class TiendaPedidosAPIView(generics.ListAPIView):
     serializer_class = PedidoTiendaSerializer
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        tienda = resolver_tienda(self.request, exigir_propietario=True)
-        return Pedido.objects.filter(tienda=tienda).prefetch_related('itempedido_set').order_by('-fecha_creacion')
+        tienda = resolver_tienda(
+            self.request,
+            exigir_propietario=True
+        )
+
+        pedidos = Pedido.objects.filter(
+            tienda=tienda
+        )
+
+        estado = self.request.query_params.get('estado')
+
+        if estado is not None:
+            estado = estado.strip().lower()
+
+            estados_permitidos = {
+                valor for valor, _ in Pedido.ESTADO_CHOICES
+            }
+
+            if estado not in estados_permitidos:
+                raise serializers.ValidationError({
+                    'estado': 'El estado seleccionado no es válido.'
+                })
+
+            pedidos = pedidos.filter(estado=estado)
+
+        return pedidos.prefetch_related(
+            'itempedido_set'
+        ).order_by('-fecha_creacion')
