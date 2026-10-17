@@ -1,4 +1,5 @@
-from django.db import IntegrityError
+from datetime import datetime
+from django.db import IntegrityError, connection
 from rest_framework import serializers, status
 from rest_framework.authentication import TokenAuthentication
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -10,18 +11,52 @@ from apps.core.models import Promocion
 from apps.core.promotions import PromotionError, calculate_promotion
 from apps.core.presentation.responses import error_response, success_response
 
+TIPO_TO_CANONICAL = {
+    'percentage': 'percentage',
+    'descuento_porcentual': 'percentage',
+    'fixed': 'fixed',
+    'descuento_monto_fijo': 'fixed',
+    'free_shipping': 'free_shipping',
+    'envio_gratuito': 'free_shipping',
+}
+
+
+def ensure_promocion_schema():
+    try:
+        with connection.cursor() as cursor:
+            table_names = connection.introspection.table_names(cursor)
+            if 'promocion' not in table_names:
+                with connection.schema_editor() as schema_editor:
+                    schema_editor.create_model(Promocion)
+                return
+            columns = {
+                col.name
+                for col in connection.introspection.get_table_description(cursor, 'promocion')
+            }
+            if 'id' in columns and 'id_promocion' not in columns:
+                cursor.execute('ALTER TABLE promocion RENAME COLUMN id TO id_promocion;')
+    except Exception:
+        pass
+
+
+class FlexibleDateField(serializers.DateField):
+    def to_representation(self, value):
+        if isinstance(value, datetime):
+            value = value.date()
+        return super().to_representation(value)
+
 
 class PromocionSerializer(serializers.ModelSerializer):
     id = serializers.IntegerField(source='pk', read_only=True)
     code = serializers.CharField(source='codigo', max_length=40)
     name = serializers.CharField(source='nombre', max_length=150)
-    type = serializers.ChoiceField(source='tipo', choices=Promocion.TIPOS_CODIGO)
+    type = serializers.ChoiceField(source='tipo', choices=list(TIPO_TO_CANONICAL.keys()))
     value = serializers.DecimalField(source='valor', max_digits=12, decimal_places=2)
     minAmount = serializers.DecimalField(source='monto_minimo', max_digits=12, decimal_places=2, required=False, default=0)
     maxUses = serializers.IntegerField(source='maximo_usos', min_value=1, allow_null=True, required=False)
     usedCount = serializers.IntegerField(source='usos', read_only=True)
-    startsAt = serializers.DateField(source='fecha_inicio')
-    endsAt = serializers.DateField(source='fecha_fin', allow_null=True, required=False)
+    startsAt = FlexibleDateField(source='fecha_inicio')
+    endsAt = FlexibleDateField(source='fecha_fin', allow_null=True, required=False)
     active = serializers.BooleanField(source='activa', required=False, default=True)
 
     class Meta:
@@ -34,17 +69,32 @@ class PromocionSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError('Usa solo letras, numeros y guiones.')
         return normalized
 
+    def validate_type(self, value):
+        return TIPO_TO_CANONICAL.get(value, value)
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        data['type'] = TIPO_TO_CANONICAL.get(data.get('type'), data.get('type'))
+        return data
+
     def validate(self, attrs):
         attrs = super().validate(attrs)
-        tipo = attrs.get('tipo', getattr(self.instance, 'tipo', None))
+        raw_tipo = attrs.get('tipo', getattr(self.instance, 'tipo', None))
+        tipo = TIPO_TO_CANONICAL.get(raw_tipo, raw_tipo)
+        if 'tipo' in attrs:
+            attrs['tipo'] = tipo
         valor = attrs.get('valor', getattr(self.instance, 'valor', 0))
         inicio = attrs.get('fecha_inicio', getattr(self.instance, 'fecha_inicio', None))
         fin = attrs.get('fecha_fin', getattr(self.instance, 'fecha_fin', None))
-        if tipo == Promocion.TIPO_MONTO_FIJO and valor <= 0:
+        if isinstance(inicio, datetime):
+            inicio = inicio.date()
+        if isinstance(fin, datetime):
+            fin = fin.date()
+        if tipo == 'fixed' and valor <= 0:
             raise serializers.ValidationError({'value': 'El monto fijo debe ser mayor que cero.'})
-        if tipo == Promocion.TIPO_PORCENTAJE and (valor <= 0 or valor > 100):
+        if tipo == 'percentage' and (valor <= 0 or valor > 100):
             raise serializers.ValidationError({'value': 'El porcentaje debe estar entre 0 y 100.'})
-        if tipo == Promocion.TIPO_ENVIO_GRATIS:
+        if tipo == 'free_shipping':
             attrs['valor'] = 0
         if inicio and fin and fin < inicio:
             raise serializers.ValidationError({'endsAt': 'La fecha de fin no puede ser anterior al inicio.'})
@@ -56,11 +106,13 @@ class PromocionesAPIView(APIView):
     permission_classes = [IsAuthenticated, IsStoreOwner]
 
     def get(self, request):
+        ensure_promocion_schema()
         tienda = resolver_tienda(request, exigir_propietario=True)
         rows = Promocion.objects.filter(tienda=tienda).order_by('-fecha_creacion')
         return success_response(data=PromocionSerializer(rows, many=True).data)
 
     def post(self, request):
+        ensure_promocion_schema()
         tienda = resolver_tienda(request, exigir_propietario=True)
         serializer = PromocionSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -76,6 +128,7 @@ class PromocionDetalleAPIView(APIView):
     permission_classes = [IsAuthenticated, IsStoreOwner]
 
     def _get(self, request, promotion_id):
+        ensure_promocion_schema()
         tienda = resolver_tienda(request, exigir_propietario=True)
         return Promocion.objects.filter(tienda=tienda, pk=promotion_id).first()
 
@@ -109,6 +162,7 @@ class ValidarPromocionAPIView(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
+        ensure_promocion_schema()
         tienda = resolver_tienda(request)
         serializer = ValidarPromocionSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -118,9 +172,10 @@ class ValidarPromocionAPIView(APIView):
         except PromotionError as exc:
             return error_response(str(exc), 'PROMOCION_INVALIDA', status=status.HTTP_400_BAD_REQUEST)
         promotion = amounts.promotion
+        canonical_type = TIPO_TO_CANONICAL.get(promotion.tipo, promotion.tipo)
         return success_response(data={
             'code': promotion.codigo,
-            'type': promotion.tipo,
+            'type': canonical_type,
             'discount': format(amounts.discount, '.2f'),
             'shipping': format(amounts.shipping, '.2f'),
             'message': 'Codigo promocional aplicado correctamente.',

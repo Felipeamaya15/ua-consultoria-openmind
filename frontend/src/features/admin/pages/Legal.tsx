@@ -124,7 +124,7 @@ export default function LegalEditor() {
   };
 
   return (
-    <div className="max-w-5xl space-y-5">
+    <div className="w-full space-y-5">
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
           <h2 className="font-semibold text-xl">{meta.title}</h2>

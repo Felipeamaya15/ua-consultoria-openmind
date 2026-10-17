@@ -84,7 +84,7 @@ export default function Shipping() {
   }
 
   return (
-    <div className="flex flex-col gap-5 max-w-2xl">
+    <div className="flex flex-col gap-5 w-full">
       <Alert variant="info">
         Configura la tarifa que cobrará tu tienda para cada región y comuna, en pesos chilenos. Estas tarifas se gestionan manualmente y no se consultan a Chilexpress ni Starken. Sin tarifa para el destino, el cliente no podrá confirmar ese despacho.
       </Alert>
@@ -156,7 +156,7 @@ export default function Shipping() {
           setMessage(''); setPickupErrors({});
           setForm({ ...form, pickup });
         }} />
-        <Button onClick={() => void save()}>{saving ? 'Guardando…' : 'Guardar entregas'}</Button>
+        <div><Button onClick={() => void save()}>{saving ? 'Guardando…' : 'Guardar entregas'}</Button></div>
       </fieldset>
       {message && <Alert variant="success">{message}</Alert>}
     </div>

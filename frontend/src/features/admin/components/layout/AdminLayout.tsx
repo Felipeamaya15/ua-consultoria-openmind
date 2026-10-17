@@ -70,7 +70,7 @@ function Layout() {
           onMenu={() => setOpen(!open)}
         />
 
-        <main className="p-5 md:p-8 max-w-7xl w-full mx-auto">
+        <main className="p-5 md:p-8 w-full">
           {pageHelp && <AdminPageHeader {...pageHelp} />}
           {storageError && (
             <div className="mb-5">
