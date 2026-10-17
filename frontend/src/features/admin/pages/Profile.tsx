@@ -82,7 +82,7 @@ export default function EntrepreneurProfile() {
   }
 
   return (
-    <div className="max-w-xl space-y-5">
+    <div className="w-full space-y-5">
       <div>
         <h2 className="font-semibold text-xl">
           Mi cuenta / Emprendedor

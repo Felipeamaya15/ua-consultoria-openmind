@@ -113,7 +113,7 @@ export default function Design() {
   }
 
   return (
-    <div className="flex flex-col gap-6 max-w-5xl">
+    <div className="flex flex-col gap-6 w-full">
       <AdminHelp>
         Al cambiar de plantilla, todos tus productos, precios e imágenes se
         mantienen intactos. Solo cambia la presentación visual.
@@ -201,8 +201,6 @@ export default function Design() {
           ))}
         </div>
       </div>
-
-
 
       <div>
         <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 mb-4">
