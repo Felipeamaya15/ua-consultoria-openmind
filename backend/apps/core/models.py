@@ -50,15 +50,18 @@ class Tienda(models.Model):
 
 
 class Promocion(models.Model):
-    TIPO_PORCENTAJE = 'descuento_porcentual'
-    TIPO_MONTO_FIJO = 'descuento_monto_fijo'
-    TIPO_ENVIO_GRATIS = 'envio_gratuito'
+    TIPO_PORCENTAJE = 'percentage'
+    TIPO_MONTO_FIJO = 'fixed'
+    TIPO_ENVIO_GRATIS = 'free_shipping'
     TIPO_PRECIO_OFERTA = 'precio_oferta'
-    
+
     TIPOS_CODIGO = [
         (TIPO_PORCENTAJE, 'Descuento porcentual'),
         (TIPO_MONTO_FIJO, 'Descuento por monto fijo'),
         (TIPO_ENVIO_GRATIS, 'Envío gratuito'),
+        ('descuento_porcentual', 'Descuento porcentual'),
+        ('descuento_monto_fijo', 'Descuento por monto fijo'),
+        ('envio_gratuito', 'Envío gratuito'),
     ]
     TIPOS = TIPOS_CODIGO + [
         (TIPO_PRECIO_OFERTA, 'Precio de oferta'),
@@ -74,8 +77,8 @@ class Promocion(models.Model):
     maximo_usos = models.PositiveIntegerField(null=True, blank=True)
     usos = models.PositiveIntegerField(default=0)
     activa = models.BooleanField(default=True)
-    fecha_inicio = models.DateTimeField(null=True, blank=True)
-    fecha_fin = models.DateTimeField(null=True, blank=True)
+    fecha_inicio = models.DateField(null=True, blank=True)
+    fecha_fin = models.DateField(null=True, blank=True)
     fecha_creacion = models.DateTimeField(auto_now_add=True)
     fecha_actualizacion = models.DateTimeField(auto_now=True)
 
@@ -101,10 +104,18 @@ class Promocion(models.Model):
 
     def save(self, *args, **kwargs):
         self.codigo = self.codigo.strip().upper()
+        alias_tipo = {
+            'descuento_porcentual': self.TIPO_PORCENTAJE,
+            'descuento_monto_fijo': self.TIPO_MONTO_FIJO,
+            'envio_gratuito': self.TIPO_ENVIO_GRATIS,
+        }
+        self.tipo = alias_tipo.get(self.tipo, self.tipo)
         super().save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.nombre} ({self.get_tipo_display()})"
+
+
 class Producto(models.Model):
     id_producto = models.BigAutoField(primary_key=True)
     nombre = models.CharField(max_length=200)
@@ -361,6 +372,7 @@ class VarianteProducto(models.Model):
             models.CheckConstraint(check=models.Q(precio__gte=0), name='chk_variante_precio_valido'),
             models.CheckConstraint(check=models.Q(stock__gte=0), name='chk_variante_stock_valido'),
         ]
+
 class ConfiguracionPago(models.Model):
     tienda = models.OneToOneField(
         'core.Tienda',
@@ -390,6 +402,7 @@ class ConfiguracionEntrega(models.Model):
 
     def __str__(self):
         return f"Configuración de entrega - Tienda {self.tienda_id}"
+
 class ConfiguracionLegal(models.Model):
     tienda = models.OneToOneField(
         'core.Tienda',
