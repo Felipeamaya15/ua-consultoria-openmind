@@ -1,5 +1,5 @@
 import re
-from zoneinfo import ZoneInfo
+from apps.core.domain.periodos import ZONA_COMERCIAL as ZONA
 
 from django.http import HttpResponse
 from django.utils import timezone
@@ -10,7 +10,6 @@ from apps.core.infrastructure.reports import consultar_informe
 from apps.core.infrastructure.tenant import resolver_tienda
 from apps.core.presentation.responses import error_response, success_response
 
-ZONA = ZoneInfo('America/Santiago')
 
 
 def leer_filtros(params):

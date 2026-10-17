@@ -22,6 +22,7 @@ settings.DATABASES['default']['TEST'] = {'NAME': 'test_openmind_reports_' + uuid
 settings.DATABASES['default']['OPTIONS'] = {'connect_timeout': 5}
 django.setup()
 from django.core.management import call_command
-call_command('test', 'apps.core.test_reports', 'apps.core.test_store_configuration',
-             'apps.core.test_dashboard', 'apps.core.test_ultimas_ordenes', 'apps.core.test_estados_pedido',
-             verbosity=1, interactive=False)
+call_command('test', *(sys.argv[1:] or [
+    'apps.core.test_reports', 'apps.core.test_store_configuration',
+    'apps.core.test_dashboard', 'apps.core.test_ultimas_ordenes', 'apps.core.test_estados_pedido',
+]), verbosity=1, interactive=False)

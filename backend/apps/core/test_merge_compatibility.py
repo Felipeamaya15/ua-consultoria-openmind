@@ -94,13 +94,13 @@ class MergeCompatibilityTests(TestCase):
         for url in urls:
             self.assertEqual(self.api.get(url, {'tienda_id': self.store.pk + 1}).status_code, 403 if url == '/api/promociones/' else 400)
 
-    def test_timezone_difference_is_explicit_and_not_silently_changed_by_merge(self):
-        # El historial hereda UTC del servidor; informes usa Chile explícitamente.
+    def test_histories_and_reports_share_approved_santiago_periods(self):
+        # Los períodos comerciales usan Chile, incluso si TIME_ZONE global sigue en UTC.
         self.order('MERGE-BOUNDARY', '2026-10-01T02:30:00+00:00')
         history = self.api.get('/api/tienda/ventas/historial/', {'fecha_desde': '2026-10-01', 'fecha_hasta': '2026-10-31'})
         october = self.api.get('/api/tienda/informes/', {'anio': 2026, 'mes': 10})
         september = self.api.get('/api/tienda/informes/', {'anio': 2026, 'mes': 9})
-        self.assertEqual(history.data['data']['resumen']['cantidad_ventas'], 1)
+        self.assertEqual(history.data['data']['resumen']['cantidad_ventas'], 0)
         self.assertEqual(october.data['data']['pedidos_pagados'], 0)
         self.assertEqual(september.data['data']['pedidos_pagados'], 1)
 

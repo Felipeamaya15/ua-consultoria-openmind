@@ -1,5 +1,5 @@
 """Agregados comerciales por mes y estado; nunca materializa pedidos individuales."""
-from datetime import date, datetime, time, timedelta
+from datetime import date, timedelta
 from decimal import Decimal, ROUND_HALF_UP
 
 from django.db.models import Count, Sum
@@ -7,6 +7,7 @@ from django.db.models.functions import ExtractMonth
 from django.utils import timezone
 
 from apps.core.models import Pedido
+from apps.core.domain.periodos import inicio_dia_utc
 
 MESES = ('Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
          'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre')
@@ -21,8 +22,8 @@ def consultar_informe(tienda, anio, mes, zona):
     anios.add(actual)
     inicio = date(anio, mes or 1, 1)
     fin_exclusivo = date(anio + 1, 1, 1) if mes in (None, 12) else date(anio, mes + 1, 1)
-    rows = (base.filter(fecha_creacion__gte=datetime.combine(inicio, time.min, tzinfo=zona),
-                        fecha_creacion__lt=datetime.combine(fin_exclusivo, time.min, tzinfo=zona))
+    rows = (base.filter(fecha_creacion__gte=inicio_dia_utc(inicio, zona),
+                        fecha_creacion__lt=inicio_dia_utc(fin_exclusivo, zona))
             .annotate(mes=ExtractMonth('fecha_creacion', tzinfo=zona)).values('mes', 'estado')
             .annotate(pedidos=Count('pk'), monto=Sum('monto_total')).order_by('mes', 'estado'))
     meses = {m: {'mes': m, 'etiqueta': MESES[m - 1], 'ventas': Decimal('0'), 'pedidos': 0, 'pagados': 0}

@@ -162,10 +162,10 @@ async function pruebasDeEstadosYFechas() {
     for (const raro of ['constructor', '__proto__', 'toString', 'hasOwnProperty', '']) same(estados.orderStatusBadge(raro), { label: 'Estado desconocido', variant: 'default' }, raro);
   });
 
-  await test('la fecha se muestra en español con la hora local', async () => {
-    assert.equal(fechas.formatRecentOrderDate(new Date(2026, 9, 13, 15, 5).toISOString()), '13 oct 2026, 15:05');
-    assert.equal(fechas.formatRecentOrderDate(new Date(2026, 0, 2, 9, 0).toISOString()), '2 ene 2026, 09:00');
-    assert.equal(fechas.formatRecentOrderDate(new Date(2026, 11, 31, 23, 59).toISOString()), '31 dic 2026, 23:59');
+  await test('la fecha se muestra en español con hora de Santiago independiente del navegador', async () => {
+    assert.equal(fechas.formatRecentOrderDate('2026-10-13T18:05:00Z'), '13 oct 2026, 15:05');
+    assert.equal(fechas.formatRecentOrderDate('2026-01-02T12:00:00Z'), '2 ene 2026, 09:00');
+    assert.equal(fechas.formatRecentOrderDate('2027-01-01T02:59:00Z'), '31 dic 2026, 23:59');
     for (const mala of ['', 'ayer', 'no es fecha']) assert.equal(fechas.formatRecentOrderDate(mala), '', mala);
   });
 }
