@@ -1,5 +1,6 @@
 import { foregroundFor, marketingPalette } from './brand';
 import type { MarketingPalette } from './types';
+import { fonts } from '../../storefront/visual/cssVariables';
 
 export const TEMPLATES = [
   { id: 'photo', name: 'Fotografía', detail: 'Imagen amplia y ficha debajo' },
@@ -7,13 +8,28 @@ export const TEMPLATES = [
   { id: 'minimal', name: 'Esencial', detail: 'Composición limpia con ficha primero' },
 ] as const;
 export type Template = typeof TEMPLATES[number]['id'];
-export type TextBlock = 'heading' | 'subtitle' | 'cta';
-export const FONT_FAMILIES = { sans: 'Arial, sans-serif', serif: 'Georgia, serif', mono: '"Courier New", monospace' } as const;
-export interface TextStyle { size: number; bold: boolean; italic: boolean; align: 'left' | 'center' | 'right'; color: string | null }
+export type EditorialBlock = 'heading' | 'subtitle' | 'cta';
+export type TextBlock = EditorialBlock | 'title' | 'price' | 'variant' | 'brand';
+// Reutiliza el catálogo de la tienda, conservando los tres alias de Marketing 1/2.
+export const FONT_FAMILIES = { ...fonts, sans: 'Arial, sans-serif', serif: 'Georgia, serif', mono: '"Courier New", monospace', jakarta: fonts.sans, display: fonts.serif } as const;
+export interface Appearance {
+  radius: number | null; borderStyle: 'original' | 'none' | 'solid' | 'dashed'; borderWidth: number; borderColor: string | null;
+  shadow: 'original' | 'none' | 'soft' | 'medium' | 'strong'; padding: number | null; gap: number | null; copyPadding: number | null;
+  imageRadius: number | null; imagePadding: number | null; imageX: number | null; imageY: number | null; mediaShare: number | null;
+  logoSize: number | null; buttonRadius: number | null; buttonStyle: 'solid' | 'outline' | 'ghost'; buttonFullWidth: boolean;
+  showButton: boolean; buttonPaddingX: number | null; buttonPaddingY: number | null;
+}
+export const defaultAppearance = (): Appearance => ({ radius: null, borderStyle: 'original', borderWidth: 1, borderColor: null,
+  shadow: 'original', padding: null, gap: null, copyPadding: null, imageRadius: null, imagePadding: null, imageX: null, imageY: null,
+  mediaShare: null, logoSize: null, buttonRadius: null, buttonStyle: 'solid', buttonFullWidth: true, showButton: true,
+  buttonPaddingX: null, buttonPaddingY: null });
+export interface TextStyle { size: number; bold: boolean; italic: boolean; align: 'inherit' | 'left' | 'center' | 'right'; color: string | null }
 export interface DesignState {
   template: Template;
   heading: string; subtitle: string; cta: string; showSubtitle: boolean;
   font: keyof typeof FONT_FAMILIES;
+  headingFont: keyof typeof FONT_FAMILIES | null;
+  appearance: Appearance;
   textStyles: Record<TextBlock, TextStyle>;
   colors: { background: string | null; text: string | null; accent: string | null; label: string | null };
   showLogo: boolean; imageIndex: number; fit: 'contain' | 'cover'; position: 'center' | 'top' | 'bottom'; zoom: number;
@@ -21,11 +37,11 @@ export interface DesignState {
 }
 export const TEXT_LIMITS = { heading: 48, subtitle: 72, cta: 48 } as const;
 const style = (bold = false): TextStyle => ({ size: 100, bold, italic: false, align: 'left', color: null });
-export function defaultDesign(): DesignState {
-  return { template: 'photo', heading: '', subtitle: '', cta: 'Disponible en nuestra tienda', showSubtitle: false, font: 'sans',
-    textStyles: { heading: style(true), subtitle: style(), cta: style() },
+export function defaultDesign(template: Template = 'photo'): DesignState {
+  return { template, heading: '', subtitle: '', cta: 'Disponible en nuestra tienda', showSubtitle: false, font: 'sans', headingFont: null, appearance: defaultAppearance(),
+    textStyles: { heading: style(true), subtitle: style(), cta: style(), title: { ...style(true), align: 'inherit' }, price: { ...style(true), align: 'inherit' }, variant: { ...style(), align: 'inherit' }, brand: { ...style(true), align: 'inherit' } },
     colors: { background: null, text: null, accent: null, label: null }, showLogo: true, imageIndex: 0,
-    fit: 'contain', position: 'center', zoom: 100, spacing: 'comfortable', alignment: 'left', mediaSide: 'start' };
+    fit: 'contain', position: 'center', zoom: 100, spacing: 'comfortable', alignment: 'left', mediaSide: template === 'minimal' ? 'end' : 'start' };
 }
 const hex = (v: unknown): string | null => typeof v === 'string' && /^#[a-f\d]{6}$/i.test(v) ? v : null;
 const choice = <T extends string>(v: unknown, options: readonly T[], fallback: T): T => options.includes(v as T) ? v as T : fallback;
@@ -34,18 +50,29 @@ const bound = (v: unknown, low: number, high: number, fallback: number) => typeo
 export function normalizeDesign(value: DesignState): DesignState {
   const defaults = defaultDesign();
   const textStyles = { ...defaults.textStyles };
-  for (const key of ['heading', 'subtitle', 'cta'] as const) {
+  for (const key of ['heading', 'subtitle', 'cta', 'title', 'price', 'variant', 'brand'] as const) {
     const raw = value.textStyles?.[key];
-    textStyles[key] = { size: bound(raw?.size, 85, 115, 100), bold: raw?.bold === true, italic: raw?.italic === true,
-      align: choice(raw?.align, ['left', 'center', 'right'], 'left'), color: hex(raw?.color) };
+    textStyles[key] = { size: bound(raw?.size, 60, 160, 100), bold: raw?.bold === undefined ? defaults.textStyles[key].bold : raw.bold === true, italic: raw?.italic === true,
+      align: choice(raw?.align, ['inherit', 'left', 'center', 'right'], defaults.textStyles[key].align), color: hex(raw?.color) };
   }
-  const text = (key: TextBlock) => typeof value[key] === 'string' ? value[key].replace(/[\u0000-\u001f\u007f]/g, ' ').slice(0, TEXT_LIMITS[key]) : defaults[key];
+  const text = (key: EditorialBlock) => typeof value[key] === 'string' ? value[key].replace(/[\u0000-\u001f\u007f]/g, ' ').slice(0, TEXT_LIMITS[key]) : defaults[key];
+  const raw = value.appearance || defaults.appearance;
+  const optional = (key: keyof Appearance, max: number, min = 0) => raw[key] == null ? null : bound(raw[key], min, max, min);
+  const appearance: Appearance = {
+    radius: optional('radius', 12), borderStyle: choice(raw.borderStyle, ['original', 'none', 'solid', 'dashed'], 'original'),
+    borderWidth: bound(raw.borderWidth, 0, 8, 1), borderColor: hex(raw.borderColor), shadow: choice(raw.shadow, ['original', 'none', 'soft', 'medium', 'strong'], 'original'),
+    padding: optional('padding', 10), gap: optional('gap', 8), copyPadding: optional('copyPadding', 6), imageRadius: optional('imageRadius', 20),
+    imagePadding: optional('imagePadding', 10), imageX: optional('imageX', 100), imageY: optional('imageY', 100), mediaShare: optional('mediaShare', 70, 25),
+    logoSize: optional('logoSize', 15, 2), buttonRadius: optional('buttonRadius', 12), buttonStyle: choice(raw.buttonStyle, ['solid', 'outline', 'ghost'], 'solid'),
+    buttonFullWidth: raw.buttonFullWidth !== false, showButton: raw.showButton !== false, buttonPaddingX: optional('buttonPaddingX', 8), buttonPaddingY: optional('buttonPaddingY', 5),
+  };
   return { template: choice(value.template, ['photo', 'feature', 'minimal'], 'photo'), heading: text('heading'), subtitle: text('subtitle'), cta: text('cta'),
-    showSubtitle: value.showSubtitle === true, font: choice(value.font, ['sans', 'serif', 'mono'], 'sans'), textStyles,
+    showSubtitle: value.showSubtitle === true, font: choice(value.font, Object.keys(FONT_FAMILIES) as (keyof typeof FONT_FAMILIES)[], 'sans'),
+    headingFont: value.headingFont && Object.prototype.hasOwnProperty.call(FONT_FAMILIES, value.headingFont) ? value.headingFont : null, appearance, textStyles,
     colors: { background: hex(value.colors?.background), text: hex(value.colors?.text), accent: hex(value.colors?.accent), label: hex(value.colors?.label) },
     showLogo: value.showLogo !== false, imageIndex: bound(value.imageIndex, 0, 9999, 0),
     fit: choice(value.fit, ['contain', 'cover'], 'contain'), position: choice(value.position, ['center', 'top', 'bottom'], 'center'),
-    zoom: bound(value.zoom, 100, 130, 100), spacing: choice(value.spacing, ['compact', 'comfortable'], 'comfortable'),
+    zoom: bound(value.zoom, 1, 400, 100), spacing: choice(value.spacing, ['compact', 'comfortable'], 'comfortable'),
     alignment: choice(value.alignment, ['left', 'center', 'right'], 'left'), mediaSide: choice(value.mediaSide, ['start', 'end'], 'start') };
 }
 /** Los campos editoriales no sirven para introducir ofertas/condiciones alternativas. El nombre real siempre se conserva. */
@@ -73,10 +100,21 @@ export const PALETTES = [
 ];
 export interface DesignHistory { past: DesignState[]; present: DesignState; future: DesignState[] }
 export type DesignAction = { type: 'change'; next: DesignState } | { type: 'undo' } | { type: 'redo' } | { type: 'reset' };
-export const initialHistory = (): DesignHistory => ({ past: [], present: defaultDesign(), future: [] });
+export const initialHistory = (template: Template = 'photo'): DesignHistory => ({ past: [], present: defaultDesign(template), future: [] });
 export function designHistory(state: DesignHistory, action: DesignAction): DesignHistory {
   if (action.type === 'undo') return state.past.length ? { past: state.past.slice(0, -1), present: state.past[state.past.length - 1], future: [state.present, ...state.future].slice(0, 40) } : state;
   if (action.type === 'redo') return state.future.length ? { past: [...state.past, state.present].slice(-40), present: state.future[0], future: state.future.slice(1) } : state;
-  const next = action.type === 'reset' ? defaultDesign() : normalizeDesign(action.next);
+  const next = action.type === 'reset' ? defaultDesign(state.present.template) : normalizeDesign(action.next);
   return JSON.stringify(next) === JSON.stringify(state.present) ? state : { past: [...state.past, state.present].slice(-40), present: next, future: [] };
+}
+
+export interface TemplateHistory { active: Template; documents: Record<Template, DesignHistory> }
+export const initialTemplateHistory = (): TemplateHistory => ({ active: 'photo', documents: { photo: initialHistory('photo'), feature: initialHistory('feature'), minimal: initialHistory('minimal') } });
+/** Cambiar plantilla restaura su documento e historial; nunca copia ajustes de la anterior. */
+export function templateHistory(state: TemplateHistory, action: DesignAction): TemplateHistory {
+  if (action.type === 'change' && action.next.template !== state.active) {
+    return TEMPLATES.some(t => t.id === action.next.template) ? { ...state, active: action.next.template } : state;
+  }
+  const next = designHistory(state.documents[state.active], action);
+  return next === state.documents[state.active] ? state : { ...state, documents: { ...state.documents, [state.active]: next } };
 }

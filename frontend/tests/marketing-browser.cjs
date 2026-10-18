@@ -116,6 +116,7 @@ const settle = async page => page.locator('.marketing-preview-empty, .marketing-
       assert.equal(requests.filter(r => r.p === '/api/catalog/productos/admin/listado/').length, countBeforeFormat, 'formato no guarda ni consulta de nuevo');
       assert.equal(await page.evaluate(() => JSON.stringify(Object.entries(localStorage).filter(([key]) => key.includes('ua-entrepreneur-demo-v1')))), storageBeforeFormat, 'los cambios de formato no persisten publicaciones');
       if (process.env.MARKETING_EDITOR_TESTS === '1') await require('./marketing-editor-browser.cjs')(page, { width, out, pid, choose, formats });
+      if (process.env.MARKETING_CUSTOMIZATION_TESTS === '1') await require('./marketing-customization-browser.cjs')(page, { width, choose, formats });
       await page.getByLabel('Variante de la publicación').selectOption('ROJO');
       assert.equal(await art.locator('.marketing-art-offer').count(), 0);
       assert((await art.innerText()).includes('$32.000')); assert(!(await art.innerText()).includes('Desde'));

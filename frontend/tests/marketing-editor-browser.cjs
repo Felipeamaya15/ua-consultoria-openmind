@@ -70,6 +70,12 @@ module.exports = async function verifyEditor(page, { width, out, pid, choose, fo
   await section('Plantilla');
   for (const template of ['Fotografía', 'Destacado', 'Esencial']) {
     await page.getByRole('radio', { name: new RegExp(template) }).check();
+    if (template !== 'Fotografía') {
+      assert.equal(await art.locator('.marketing-art-heading').count(), 0, 'plantilla nueva no hereda textos');
+      await section('Textos'); await page.getByLabel('Bloque de texto').selectOption('heading');
+      await page.getByLabel('Encabezado adicional (opcional)', { exact: true }).fill('Descubre tu próximo favorito');
+      await section('Plantilla');
+    }
     for (const [format, label] of formats) {
       await page.getByRole('radio', { name: new RegExp(label) }).check();
       await valid(`${template}-${format}`);
@@ -82,7 +88,7 @@ module.exports = async function verifyEditor(page, { width, out, pid, choose, fo
   assert.equal(await art.locator('.marketing-art-heading').count(), 1);
   await page.getByRole('button', { name: 'Restablecer diseño', exact: true }).click();
   await page.getByRole('button', { name: 'Confirmar restablecimiento', exact: true }).click();
-  assert.equal(await art.getAttribute('data-template'), 'photo'); assert.equal(await art.locator('.marketing-art-heading').count(), 0);
+  assert.equal(await art.getAttribute('data-template'), 'minimal'); assert.equal(await art.locator('.marketing-art-heading').count(), 0);
   assert.equal(await art.getAttribute('data-format'), 'banner');
   await page.getByRole('button', { name: 'Deshacer', exact: true }).click(); assert.equal(await art.locator('.marketing-art-heading').count(), 1);
   await page.getByRole('button', { name: 'Rehacer', exact: true }).click(); assert.equal(await art.locator('.marketing-art-heading').count(), 0);

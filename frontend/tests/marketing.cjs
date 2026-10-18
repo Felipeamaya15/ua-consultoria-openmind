@@ -5,7 +5,7 @@ const root = path.resolve(__dirname, '..');
 function load(file, mocks = {}, globals = {}) {
   const full = path.resolve(root, file), module = { exports: {} };
   const code = ts.transpileModule(fs.readFileSync(full, 'utf8'), { compilerOptions: { target: ts.ScriptTarget.ES2020, module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX } }).outputText;
-  vm.runInNewContext(code, { module, exports: module.exports, require: id => {
+  vm.runInNewContext(code, { structuredClone, module, exports: module.exports, require: id => {
     if (id in mocks) return mocks[id];
     if (!id.startsWith('.')) return require(id);
     const p = path.resolve(path.dirname(full), id);

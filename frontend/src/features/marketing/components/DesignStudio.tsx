@@ -1,5 +1,5 @@
 import { useReducer, type ReactNode } from 'react';
-import { designHistory, initialHistory } from '../domain/editor';
+import { templateHistory, initialTemplateHistory } from '../domain/editor';
 import type { PublicationContent, PublicationDesign, StoreBrand } from '../domain/types';
 import { DesignControls } from './DesignControls';
 import { PublicationPreview } from './PublicationPreview';
@@ -11,7 +11,8 @@ export function DesignStudio(props: Props) {
 }
 /** La clave de montaje es producto/origen: nunca arrastra texto, recursos ni historial entre productos. */
 function DesignSession({ sourceData, brandData, design, images, notices, empty }: Props) {
-  const [history, dispatch] = useReducer(designHistory, undefined, initialHistory);
+  const [session, dispatch] = useReducer(templateHistory, undefined, initialTemplateHistory);
+  const history = session.documents[session.active];
   return <>
     <div className="marketing-preview-panel">{notices}{sourceData && brandData ? <PublicationPreview content={sourceData} brand={brandData} design={{ ...design, editor: history.present }} images={images} /> : empty}</div>
     {sourceData && brandData && <DesignControls value={history.present} brand={brandData} images={images} onChange={next => dispatch({ type: 'change', next })}

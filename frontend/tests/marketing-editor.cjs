@@ -4,7 +4,7 @@ const React = require('react'), { renderToStaticMarkup } = require('react-dom/se
 function load(file) {
   const full = path.resolve(__dirname, '../src/features/marketing', file), module = { exports: {} };
   const code = ts.transpileModule(fs.readFileSync(full, 'utf8'), { compilerOptions: { target: ts.ScriptTarget.ES2020, module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX } }).outputText;
-  vm.runInNewContext(code, { module, exports: module.exports, require: id => {
+  vm.runInNewContext(code, { structuredClone, module, exports: module.exports, require: id => {
     if (!id.startsWith('.')) return require(id);
     const base = path.resolve(path.dirname(full), id);
     return load(['.ts', '.tsx'].map(ext => base + ext).find(fs.existsSync));
@@ -15,7 +15,7 @@ test('documento visual normaliza límites, enums, colores, textos; no admite cam
   const d = e.defaultDesign();
   const n = e.normalizeDesign({ ...d, price: 1, template: 'bad', font: 'url(bad)', zoom: 800, imageIndex: -5, heading: 'A'.repeat(90),
     colors: { background: 'url(x)', text: '#abcdef', accent: '#fff1', label: '<svg>' }, textStyles: { ...d.textStyles, heading: { size: NaN, color: 'red', align: 'bad', bold: true, italic: true } } });
-  assert.equal(n.template, 'photo'); assert.equal(n.font, 'sans'); assert.equal(n.zoom, 130); assert.equal(n.imageIndex, 0);
+  assert.equal(n.template, 'photo'); assert.equal(n.font, 'sans'); assert.equal(n.zoom, 400); assert.equal(n.imageIndex, 0);
   assert.equal(n.heading.length, 48); assert.equal(n.colors.background, null); assert.equal(n.colors.text, '#abcdef');
   assert.equal(n.textStyles.heading.size, 100); assert.equal(n.textStyles.heading.align, 'left'); assert(!('price' in n));
   assert.equal(e.normalizeDesign({ ...d, zoom: Infinity }).zoom, 100);
@@ -55,4 +55,51 @@ test('plantillas y formato no alteran datos comerciales; renderer evita inyecci�
     assert(!html.includes('<script>')); assert(!html.includes('bad')); assert(html.includes('&lt;img')); assert(html.includes('Conoce el producto'));
   }
   assert.equal(JSON.stringify([source, brand]), before);
+});
+
+test('cada plantilla restaura ajustes e historial propios sin arrastrar los de otra', () => {
+  let s = e.initialTemplateHistory();
+  const change = patch => { s = e.templateHistory(s, { type: 'change', next: { ...s.documents[s.active].present, ...patch } }); };
+  change({ heading: 'Solo fotografía', appearance: { ...e.defaultAppearance(), radius: 4 } });
+  change({ template: 'feature' });
+  assert.equal(s.documents.feature.present.heading, '');
+  assert.equal(s.documents.feature.present.appearance.radius, null);
+  change({ heading: 'Solo destacado' });
+  change({ template: 'minimal' });
+  assert.equal(s.documents.minimal.present.heading, '');
+  assert.equal(s.documents.minimal.present.mediaSide, 'end', 'Esencial conserva ficha primero');
+  change({ template: 'photo' });
+  assert.equal(s.documents.photo.present.heading, 'Solo fotografía');
+  s = e.templateHistory(s, { type: 'undo' });
+  assert.equal(s.documents.photo.present.heading, '');
+  assert.equal(s.documents.feature.present.heading, 'Solo destacado');
+  s = e.templateHistory(s, { type: 'redo' });
+  assert.equal(s.documents.photo.present.appearance.radius, 4);
+  change({ template: '__proto__' }); assert.equal(s.active, 'photo');
+  const anotherStore = e.initialTemplateHistory();
+  assert.equal(anotherStore.documents.photo.present.heading, '');
+  assert.notEqual(anotherStore.documents.photo, s.documents.photo);
+});
+
+test('restablecer solo afecta a la plantilla activa y es reversible', () => {
+  let s = e.initialTemplateHistory();
+  s = e.templateHistory(s, { type: 'change', next: { ...s.documents.photo.present, template: 'minimal' } });
+  s = e.templateHistory(s, { type: 'change', next: { ...s.documents.minimal.present, heading: 'Personalizado' } });
+  s = e.templateHistory(s, { type: 'reset' });
+  assert.equal(s.active, 'minimal'); assert.equal(s.documents.minimal.present.template, 'minimal');
+  assert.equal(s.documents.minimal.present.mediaSide, 'end');
+  s = e.templateHistory(s, { type: 'undo' }); assert.equal(s.documents.minimal.present.heading, 'Personalizado');
+});
+
+test('apariencia limita valores y rechaza CSS arbitrario; fuente heredada y datos comerciales protegidos', () => {
+  const value = e.normalizeDesign({ ...e.defaultDesign(), headingFont: 'constructor', price: 1,
+    appearance: { radius: Infinity, imageX: -30, imageY: 900, mediaShare: 100, imagePadding: 999, buttonStyle: 'url(bad)', borderColor: 'red;display:none', showButton: false } });
+  assert.equal(value.headingFont, null); assert(!('price' in value));
+  assert.equal(value.appearance.imageX, 0); assert.equal(value.appearance.imageY, 100);
+  assert.equal(value.appearance.mediaShare, 70); assert.equal(value.appearance.imagePadding, 10);
+  assert.equal(value.appearance.radius, 0); assert.equal(value.appearance.borderColor, null);
+  assert.equal(value.appearance.buttonStyle, 'solid'); assert.equal(value.appearance.showButton, false);
+  const legacy = e.normalizeDesign({ template: 'photo' });
+  assert.equal(legacy.textStyles.price.bold, true); assert.equal(legacy.appearance.radius, null);
+  assert.equal(e.FONT_FAMILIES.calibri.includes('Calibri'), true);
 });
