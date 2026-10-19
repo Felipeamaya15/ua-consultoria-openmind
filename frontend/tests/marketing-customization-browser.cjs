@@ -1,6 +1,6 @@
 // Matriz real de controles: reutiliza el transporte interceptado de Marketing, sin persistir ni exportar.
 const assert = require('node:assert/strict'), fs = require('node:fs'), path = require('node:path');
-module.exports = async (page, { width, choose, formats }) => {
+module.exports = async (page, { width, choose, formats, out }) => {
   const art = page.locator('.marketing-art');
   const section = name => page.getByRole('button', { name, exact: true }).click();
   const template = name => page.getByRole('radio', { name: new RegExp(name) }).check();
@@ -35,11 +35,12 @@ module.exports = async (page, { width, choose, formats }) => {
       await page.getByLabel('Tipografía de títulos').selectOption('georgia');
       assert((await art.locator('.marketing-art-title').evaluate(n => getComputedStyle(n).fontFamily)).includes('Georgia'));
       assert((await art.evaluate(n => getComputedStyle(n).fontFamily)).includes('Calibri'));
-      for (const block of ['heading', 'subtitle', 'cta', 'title', 'price', 'variant', 'brand']) {
+      for (const block of ['heading', 'subtitle', 'cta', 'title', 'price', 'variant', 'brand', 'description']) {
         await page.getByLabel('Bloque de texto').selectOption(block);
         if (block === 'subtitle') { await page.getByLabel('Texto del subtítulo', { exact: true }).fill('Calidad para cada día'); await page.getByLabel('Mostrar subtítulo', { exact: true }).check(); }
         if (block === 'cta') await page.getByLabel('Texto de llamada a la acción', { exact: true }).fill('Conoce nuestra colección');
-        const selector = { heading: '.marketing-art-heading', subtitle: '.marketing-art-subtitle', cta: '.marketing-art-cta', title: '.marketing-art-title', price: '.marketing-art-price', variant: '.marketing-art-variant', brand: '.marketing-art-brand > span' }[block];
+        if (block === 'description') await page.getByLabel('Mostrar descripción del producto', {exact:true}).check();
+        const selector = { heading: '.marketing-art-heading', subtitle: '.marketing-art-subtitle', cta: '.marketing-art-cta', title: '.marketing-art-title', price: '.marketing-art-price', variant: '.marketing-art-variant', brand: '.marketing-art-brand > span', description: '.marketing-art-description' }[block];
         const element = art.locator(selector);
         const before = await element.evaluate(n => parseFloat(getComputedStyle(n).fontSize));
         await page.getByLabel('Tamaño del bloque').fill('105'); await pause();
@@ -55,6 +56,11 @@ module.exports = async (page, { width, choose, formats }) => {
         // Volver a valores moderados evita confundir controles acumulados con capacidad de cabida.
         await page.getByLabel('Cursiva del bloque', { exact: true }).uncheck();
         await page.getByLabel('Tamaño del bloque').fill('90');
+        if (block === 'description') {
+          assert.equal(await element.innerText(), 'Material resistente para acompañarte cada día.');
+          await page.getByLabel('Mostrar descripción del producto', {exact:true}).uncheck();
+          assert.equal(await element.count(), 0, 'descripción opcional conserva el diseño original');
+        }
       }
       assert((await art.innerText()).includes('$24.000')); assert((await art.innerText()).includes('$30.000'));
       await section('Imagen y logo');
@@ -85,14 +91,14 @@ module.exports = async (page, { width, choose, formats }) => {
         assert.equal(horizontal ? boxes.image.x < boxes.copy.x : boxes.image.y < boxes.copy.y, side === 'start', `${name}/${format}: orden efectivo`);
       }
       for (const [field, value] of [['Bordes de la pieza (%)','2'], ['Grosor del borde (px)','2'], ['Espacio interior de la pieza (%)','3'], ['Separación entre elementos (%)','1'], ['Espacio interior de la ficha (%)','1'], ['Espacio para imagen (%)','40'], ['Bordes de llamada a la acción (%)','2'], ['Espacio lateral de llamada a la acción (%)','2'], ['Espacio vertical de llamada a la acción (%)','1']]) await page.getByLabel(field, { exact: true }).fill(value);
-      assert.notEqual(await page.getByLabel('Estilo del borde').inputValue(), 'original', 'editar grosor activa el borde');
+      assert.notEqual(await page.getByLabel('Estilo del borde', {exact:true}).inputValue(), 'original', 'editar grosor activa el borde');
       assert.equal(await page.getByLabel('Espaciado de la pieza').inputValue(), 'custom');
       await page.getByLabel('Espaciado de la pieza').selectOption('compact');
       assert.equal(await page.getByLabel('Espacio interior de la pieza (%)', {exact:true}).inputValue(), '');
       assert.equal(await page.getByLabel('Separación entre elementos (%)', {exact:true}).inputValue(), '');
       await page.getByLabel('Espacio interior de la pieza (%)', {exact:true}).fill('3');
       await page.getByLabel('Separación entre elementos (%)', {exact:true}).fill('1');
-      await page.getByLabel('Estilo del borde').selectOption('dashed'); await color('Color del borde', '#ffffff');
+      await page.getByLabel('Estilo del borde', {exact:true}).selectOption('dashed'); await color('Color del borde', '#ffffff');
       await page.getByLabel('Sombra de la pieza').selectOption('strong');
       assert.equal(await art.evaluate(n => getComputedStyle(n).borderTopStyle), 'dashed');
       assert.notEqual(await art.evaluate(n => getComputedStyle(n).boxShadow), 'none');
@@ -105,6 +111,62 @@ module.exports = async (page, { width, choose, formats }) => {
       await page.getByLabel('Mostrar llamada a la acción', { exact: true }).check();
       await page.getByLabel('Llamada a la acción a todo el ancho').check();
       await page.getByLabel('Estilo de llamada a la acción').selectOption('solid');
+      // Ficha independiente: geometría y contraste se comprueban en el DOM real.
+      const copy = art.locator('.marketing-art-copy'), cta = art.locator('.marketing-art-cta');
+      await color('Fondo de la ficha', '#ffffff');
+      await page.getByLabel('Bordes de la ficha (%)', {exact:true}).fill('2');
+      await page.getByLabel('Grosor del borde de la ficha (px)', {exact:true}).fill('2');
+      assert.equal(await page.getByLabel('Estilo del borde de la ficha').inputValue(), 'solid');
+      await page.getByLabel('Estilo del borde de la ficha').selectOption('dashed');
+      await color('Color del borde de la ficha', '#172b3a');
+      await page.getByLabel('Sombra de la ficha').selectOption('soft');
+      assert.equal(await copy.evaluate(n => getComputedStyle(n).backgroundColor), 'rgb(255, 255, 255)');
+      assert.equal(await copy.evaluate(n => getComputedStyle(n).borderTopStyle), 'dashed');
+      assert.equal(await copy.evaluate(n => getComputedStyle(n).borderTopWidth), '2px');
+      assert.equal(await copy.evaluate(n => getComputedStyle(n).borderTopColor), 'rgb(23, 43, 58)');
+      assert.notEqual(await copy.evaluate(n => getComputedStyle(n).boxShadow), 'none');
+      assert.equal(await art.locator('.marketing-art-title').evaluate(n => getComputedStyle(n).color), 'rgb(0, 0, 0)', 'contraste sobre la ficha, independiente de la pieza');
+      assert.equal(await art.locator('.marketing-art-brand > span').evaluate(n => getComputedStyle(n).color), 'rgb(255, 255, 255)', 'la marca mantiene el contraste sobre la pieza');
+      await page.getByRole('button', {name:'Deshacer', exact:true}).click();
+      assert.equal(await page.getByLabel('Sombra de la ficha').inputValue(), 'original');
+      await page.getByRole('button', {name:'Rehacer', exact:true}).click();
+      assert.equal(await page.getByLabel('Sombra de la ficha').inputValue(), 'soft');
+      await color('Fondo de llamada a la acción', '#172b3a');
+      assert.equal(await cta.evaluate(n => getComputedStyle(n).backgroundColor), 'rgb(23, 43, 58)');
+      assert.equal(await cta.evaluate(n => getComputedStyle(n).color), 'rgb(255, 255, 255)');
+      await page.getByLabel('Ancho personalizado de llamada a la acción (%)', {exact:true}).fill('70');
+      assert.equal(await page.getByLabel('Llamada a la acción a todo el ancho').isChecked(), false);
+      for (const align of ['left','center','right']) {
+        await page.getByLabel('Posición de llamada a la acción').selectOption(align); await pause();
+        const boxes = await copy.evaluate(n => { const r=n.getBoundingClientRect(), c=n.querySelector('.marketing-art-cta').getBoundingClientRect(), s=getComputedStyle(n); return {start:r.left+parseFloat(s.paddingLeft)+parseFloat(s.borderLeftWidth),end:r.right-parseFloat(s.paddingRight)-parseFloat(s.borderRightWidth),left:c.left,right:c.right,width:c.width}; });
+        assert(Math.abs(boxes.width / (boxes.end-boxes.start) - .7) < .02, `ancho CTA real ${name}/${format}/${width}: ${JSON.stringify(boxes)}`);
+        assert(Math.abs(align === 'left' ? boxes.left-boxes.start : align === 'right' ? boxes.end-boxes.right : (boxes.left-boxes.start)-(boxes.end-boxes.right)) < 2, `${name}/${format}: alineación CTA efectiva`);
+      }
+      for (const [shape, radius] of [['square','0px'],['pill','999px']]) {
+        await page.getByLabel('Forma de llamada a la acción').selectOption(shape);
+        assert.equal(await cta.evaluate(n => getComputedStyle(n).borderTopLeftRadius), radius);
+      }
+      await page.getByLabel('Forma de llamada a la acción').selectOption('rounded');
+      assert((await cta.evaluate(n => parseFloat(getComputedStyle(n).borderTopLeftRadius))) > 0);
+      await page.getByLabel('Bordes de llamada a la acción (%)', {exact:true}).fill('1');
+      assert.equal(await page.getByLabel('Forma de llamada a la acción').inputValue(), 'original', 'radio manual toma efecto');
+      await page.getByLabel('Estilo de llamada a la acción').selectOption('outline');
+      await page.getByLabel('Borde de llamada a la acción', {exact:true}).selectOption('dashed');
+      await page.getByLabel('Grosor del borde de llamada a la acción (px)', {exact:true}).fill('2');
+      await color('Color del borde de llamada a la acción', '#ffffff');
+      assert.equal(await cta.evaluate(n => getComputedStyle(n).borderTopStyle), 'dashed');
+      assert.equal(await cta.evaluate(n => getComputedStyle(n).borderTopWidth), '2px');
+      assert.equal(await cta.evaluate(n => getComputedStyle(n).borderTopColor), 'rgb(0, 0, 0)', 'borde visible aun con color incompatible');
+      if (width === 1440 && format === 'story') await page.locator('.marketing-preview').screenshot({path:path.join(out,`ficha-cta-${id}.png`)});
+      // Recuperar una composición moderada para las verificaciones de cabida posteriores.
+      await page.getByRole('button', {name:'Restaurar apariencia original',exact:true}).click();
+      await page.getByRole('button', {name:'Deshacer',exact:true}).click();
+      assert.equal(await page.getByLabel('Estilo del borde de la ficha').inputValue(), 'dashed');
+      await page.getByRole('button', {name:'Rehacer',exact:true}).click();
+      assert.equal(await page.getByLabel('Estilo del borde de la ficha').inputValue(), 'original');
+      // Conservar la expectativa de undo/redo del control compartido de Parte 2.
+      await page.getByLabel('Estilo de llamada a la acción').selectOption('ghost');
+      await page.getByLabel('Estilo de llamada a la acción').selectOption('solid');
       await measure(`${name}/${format}`);
       await page.getByRole('button', { name: 'Deshacer', exact: true }).click();
       assert.equal(await page.getByLabel('Estilo de llamada a la acción').inputValue(), 'ghost');
@@ -115,7 +177,7 @@ module.exports = async (page, { width, choose, formats }) => {
       for (const [field, value] of [['Fondo de la pieza','#184b45'], ['Texto principal','#ffffff'], ['Acento e imagen','#e8ddc0'], ['Etiqueta y botón','#172b3a']]) await color(field, value);
       await measure(`${name}/${format}/colores`);
       await page.getByRole('button', { name: 'Colores de mi tienda', exact: true }).click();
-      console.log(`OK personalización ${width}px ${name}/${format}: siete bloques, fuentes, imagen, logo, ficha, bordes, sombra, CTA, paletas, undo/redo`);
+      console.log(`OK personalización ${width}px ${name}/${format}: ocho bloques, fuentes, imagen, logo, ficha, bordes, sombra, CTA, paletas, undo/redo`);
     }
   }
   // Recuperación independiente: no basta con que el selector muestre otra etiqueta.

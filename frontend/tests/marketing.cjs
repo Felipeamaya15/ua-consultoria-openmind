@@ -40,6 +40,15 @@ test('fuente administrativa conserva imágenes, ID y flags de variantes; no crea
   assert.throws(() => parser.readMarketingProducts([{ id: 'demo', nombre: 'Ejemplo', activo: true }]), /catálogo/);
   for (const value of ['javascript:alert(1)', 'data:text/html,test', 'https://user:password@example.test/x', '']) assert.equal(parser.marketingImage(value), null);
 });
+
+test('la descripción opcional procede del mismo producto y no modifica datos comerciales', () => {
+  const p = product({ ...raw(), descripcion: 'Descripción real <img src=x onerror=alert(1)>' });
+  const before = JSON.stringify(p);
+  assert.equal(domain.buildPublication(p, 'product').description, p.description);
+  assert.equal(domain.buildPublication(p, 'promotion').description, p.description);
+  assert.equal(domain.buildPublication(product({ ...raw(), descripcion: null }), 'product').description, '');
+  assert.equal(JSON.stringify(p), before);
+});
 test('Desde considera solo variantes activas disponibles; original y oferta siempre de la misma variante', () => {
   const p = product(), before = JSON.stringify(p);
   const normal = domain.buildPublication(p, 'product');

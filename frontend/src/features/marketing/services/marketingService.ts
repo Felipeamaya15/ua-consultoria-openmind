@@ -24,6 +24,7 @@ export function readMarketingProducts(data: unknown): MarketingProduct[] {
     }
     return {
       id: item.id, name: item.nombre, category: typeof item.categoria === 'string' ? item.categoria : '', active: item.activo,
+      description: typeof item.descripcion === 'string' ? item.descripcion : '',
       images: Array.isArray(item.imagenes) ? item.imagenes.map(marketingImage).filter((v): v is string => v !== null) : [],
       variants: Array.isArray(item.variantes) ? item.variantes.filter(record).map(v => ({
         sku: typeof v.sku === 'string' ? v.sku : '', price: v.precio, offerPrice: v.precio_oferta, stock: v.stock,

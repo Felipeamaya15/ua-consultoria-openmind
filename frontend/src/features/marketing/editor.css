@@ -33,6 +33,7 @@
 .marketing-art.is-editable .marketing-art-title{font-size:calc(4.3cqw * var(--mk-fit) * var(--mk-block-size,1));font-weight:700;letter-spacing:-.02em}
 .marketing-art.is-editable .marketing-art-heading{font-size:calc(4cqw * var(--mk-fit) * var(--mk-block-size,1));letter-spacing:.01em}
 .marketing-art.is-editable .marketing-art-subtitle{font-size:calc(2.8cqw * var(--mk-fit) * var(--mk-block-size,1))}
+.marketing-art.is-editable .marketing-art-description{font-size:calc(2.5cqw * var(--mk-fit) * var(--mk-block-size,1))}
 .marketing-art.is-editable .marketing-art-offer{align-self:flex-start;font-size:calc(2.5cqw * var(--mk-fit));background:var(--mk-label);color:var(--mk-on-label);padding:.7cqw 1.2cqw}
 .marketing-art.is-editable .marketing-art-prices{display:flex;align-items:baseline;flex-wrap:wrap;gap:.6cqw 2cqw}
 .marketing-art.is-editable .marketing-art-original{font-size:calc(2.4cqw * var(--mk-fit));order:1}
@@ -65,6 +66,7 @@
 .marketing-art.is-editable[data-format=banner] .marketing-art-title{font-size:calc(3.2cqw * var(--mk-fit) * var(--mk-block-size,1))}
 .marketing-art.is-editable[data-format=banner] .marketing-art-heading{font-size:calc(3.2cqw * var(--mk-fit) * var(--mk-block-size,1))}
 .marketing-art.is-editable[data-format=banner] .marketing-art-subtitle{font-size:calc(2.2cqw * var(--mk-fit) * var(--mk-block-size,1))}
+.marketing-art.is-editable[data-format=banner] .marketing-art-description{font-size:calc(2cqw * var(--mk-fit) * var(--mk-block-size,1))}
 .marketing-art.is-editable[data-format=banner] .marketing-art-price{font-size:calc(4.8cqw * var(--mk-fit) * var(--mk-block-size,1))}
 .marketing-art.is-editable[data-format=banner] :is(.marketing-art-offer,.marketing-art-original,.marketing-art-variant){font-size:calc(2cqw * var(--mk-fit) * var(--mk-block-size,1))}
 .marketing-art.is-editable[data-format=banner] .marketing-art-cta{font-size:calc(2cqw * var(--mk-fit) * var(--mk-block-size,1))}

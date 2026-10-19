@@ -9,7 +9,7 @@ export const TEMPLATES = [
 ] as const;
 export type Template = typeof TEMPLATES[number]['id'];
 export type EditorialBlock = 'heading' | 'subtitle' | 'cta';
-export type TextBlock = EditorialBlock | 'title' | 'price' | 'variant' | 'brand';
+export type TextBlock = EditorialBlock | 'title' | 'price' | 'variant' | 'brand' | 'description';
 // Reutiliza el catálogo de la tienda, conservando los tres alias de Marketing 1/2.
 export const FONT_FAMILIES = { ...fonts, sans: 'Arial, sans-serif', serif: 'Georgia, serif', mono: '"Courier New", monospace', jakarta: fonts.sans, display: fonts.serif } as const;
 export interface Appearance {
@@ -18,15 +18,25 @@ export interface Appearance {
   imageRadius: number | null; imagePadding: number | null; imageX: number | null; imageY: number | null; mediaShare: number | null;
   logoSize: number | null; buttonRadius: number | null; buttonStyle: 'solid' | 'outline' | 'ghost'; buttonFullWidth: boolean;
   showButton: boolean; buttonPaddingX: number | null; buttonPaddingY: number | null;
+  copyBackground: string | null; copyRadius: number | null;
+  copyBorderStyle: 'original' | 'none' | 'solid' | 'dashed'; copyBorderWidth: number; copyBorderColor: string | null;
+  copyShadow: 'original' | 'none' | 'soft' | 'medium' | 'strong';
+  buttonBackground: string | null; buttonAlign: 'inherit' | 'left' | 'center' | 'right';
+  buttonShape: 'original' | 'square' | 'rounded' | 'pill'; buttonWidth: number | null;
+  buttonBorderStyle: 'solid' | 'dashed'; buttonBorderWidth: number; buttonBorderColor: string | null;
 }
 export const defaultAppearance = (): Appearance => ({ radius: null, borderStyle: 'original', borderWidth: 1, borderColor: null,
   shadow: 'original', padding: null, gap: null, copyPadding: null, imageRadius: null, imagePadding: null, imageX: null, imageY: null,
   mediaShare: null, logoSize: null, buttonRadius: null, buttonStyle: 'solid', buttonFullWidth: true, showButton: true,
-  buttonPaddingX: null, buttonPaddingY: null });
+  buttonPaddingX: null, buttonPaddingY: null, copyBackground: null, copyRadius: null,
+  copyBorderStyle: 'original', copyBorderWidth: 1, copyBorderColor: null, copyShadow: 'original',
+  buttonBackground: null, buttonAlign: 'inherit', buttonShape: 'original', buttonWidth: null,
+  buttonBorderStyle: 'solid', buttonBorderWidth: 1, buttonBorderColor: null });
 export interface TextStyle { size: number; bold: boolean; italic: boolean; align: 'inherit' | 'left' | 'center' | 'right'; color: string | null }
 export interface DesignState {
   template: Template;
   heading: string; subtitle: string; cta: string; showSubtitle: boolean;
+  showDescription: boolean;
   font: keyof typeof FONT_FAMILIES;
   headingFont: keyof typeof FONT_FAMILIES | null;
   appearance: Appearance;
@@ -38,8 +48,8 @@ export interface DesignState {
 export const TEXT_LIMITS = { heading: 48, subtitle: 72, cta: 48 } as const;
 const style = (bold = false): TextStyle => ({ size: 100, bold, italic: false, align: 'left', color: null });
 export function defaultDesign(template: Template = 'photo'): DesignState {
-  return { template, heading: '', subtitle: '', cta: 'Disponible en nuestra tienda', showSubtitle: false, font: 'sans', headingFont: null, appearance: defaultAppearance(),
-    textStyles: { heading: style(true), subtitle: style(), cta: style(), title: { ...style(true), align: 'inherit' }, price: { ...style(true), align: 'inherit' }, variant: { ...style(), align: 'inherit' }, brand: { ...style(true), align: 'inherit' } },
+  return { template, heading: '', subtitle: '', cta: 'Disponible en nuestra tienda', showSubtitle: false, showDescription: false, font: 'sans', headingFont: null, appearance: defaultAppearance(),
+    textStyles: { heading: style(true), subtitle: style(), cta: style(), title: { ...style(true), align: 'inherit' }, price: { ...style(true), align: 'inherit' }, variant: { ...style(), align: 'inherit' }, brand: { ...style(true), align: 'inherit' }, description: { ...style(), align: 'inherit' } },
     colors: { background: null, text: null, accent: null, label: null }, showLogo: true, imageIndex: 0,
     fit: 'contain', position: 'center', zoom: 100, spacing: 'comfortable', alignment: 'left', mediaSide: template === 'minimal' ? 'end' : 'start' };
 }
@@ -50,7 +60,7 @@ const bound = (v: unknown, low: number, high: number, fallback: number) => typeo
 export function normalizeDesign(value: DesignState): DesignState {
   const defaults = defaultDesign();
   const textStyles = { ...defaults.textStyles };
-  for (const key of ['heading', 'subtitle', 'cta', 'title', 'price', 'variant', 'brand'] as const) {
+  for (const key of ['heading', 'subtitle', 'cta', 'title', 'price', 'variant', 'brand', 'description'] as const) {
     const raw = value.textStyles?.[key];
     textStyles[key] = { size: bound(raw?.size, 60, 160, 100), bold: raw?.bold === undefined ? defaults.textStyles[key].bold : raw.bold === true, italic: raw?.italic === true,
       align: choice(raw?.align, ['inherit', 'left', 'center', 'right'], defaults.textStyles[key].align), color: hex(raw?.color) };
@@ -65,9 +75,16 @@ export function normalizeDesign(value: DesignState): DesignState {
     imagePadding: optional('imagePadding', 10), imageX: optional('imageX', 100), imageY: optional('imageY', 100), mediaShare: optional('mediaShare', 70, 25),
     logoSize: optional('logoSize', 15, 2), buttonRadius: optional('buttonRadius', 12), buttonStyle: choice(raw.buttonStyle, ['solid', 'outline', 'ghost'], 'solid'),
     buttonFullWidth: raw.buttonFullWidth !== false, showButton: raw.showButton !== false, buttonPaddingX: optional('buttonPaddingX', 8), buttonPaddingY: optional('buttonPaddingY', 5),
+    copyBackground: hex(raw.copyBackground), copyRadius: optional('copyRadius', 12),
+    copyBorderStyle: choice(raw.copyBorderStyle, ['original', 'none', 'solid', 'dashed'], 'original'),
+    copyBorderWidth: bound(raw.copyBorderWidth, 0, 8, 1), copyBorderColor: hex(raw.copyBorderColor),
+    copyShadow: choice(raw.copyShadow, ['original', 'none', 'soft', 'medium', 'strong'], 'original'),
+    buttonBackground: hex(raw.buttonBackground), buttonAlign: choice(raw.buttonAlign, ['inherit', 'left', 'center', 'right'], 'inherit'),
+    buttonShape: choice(raw.buttonShape, ['original', 'square', 'rounded', 'pill'], 'original'), buttonWidth: optional('buttonWidth', 100, 20),
+    buttonBorderStyle: choice(raw.buttonBorderStyle, ['solid', 'dashed'], 'solid'), buttonBorderWidth: bound(raw.buttonBorderWidth, 0, 8, 1), buttonBorderColor: hex(raw.buttonBorderColor),
   };
   return { template: choice(value.template, ['photo', 'feature', 'minimal'], 'photo'), heading: text('heading'), subtitle: text('subtitle'), cta: text('cta'),
-    showSubtitle: value.showSubtitle === true, font: choice(value.font, Object.keys(FONT_FAMILIES) as (keyof typeof FONT_FAMILIES)[], 'sans'),
+    showSubtitle: value.showSubtitle === true, showDescription: value.showDescription === true, font: choice(value.font, Object.keys(FONT_FAMILIES) as (keyof typeof FONT_FAMILIES)[], 'sans'),
     headingFont: value.headingFont && Object.prototype.hasOwnProperty.call(FONT_FAMILIES, value.headingFont) ? value.headingFont : null, appearance, textStyles,
     colors: { background: hex(value.colors?.background), text: hex(value.colors?.text), accent: hex(value.colors?.accent), label: hex(value.colors?.label) },
     showLogo: value.showLogo !== false, imageIndex: bound(value.imageIndex, 0, 9999, 0),
@@ -90,7 +107,9 @@ export function safeTextColor(candidate: string | null, background: string): str
 }
 export function designPalette(brand: MarketingPalette, design: DesignState) {
   const background = design.colors.background || brand.primary, accent = design.colors.accent || brand.secondary;
+  const copyBackground = design.appearance.copyBackground || background;
   return { background, accent, text: safeTextColor(design.colors.text, background), label: design.colors.label || accent,
+    copyBackground, copyText: safeTextColor(design.colors.text, copyBackground), buttonBackground: design.appearance.buttonBackground || design.colors.label || accent,
     onAccent: foregroundFor(accent), onLabel: foregroundFor(design.colors.label || accent) };
 }
 export const PALETTES = [

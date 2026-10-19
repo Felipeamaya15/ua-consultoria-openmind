@@ -9,12 +9,14 @@ export interface MarketingVariant {
 }
 export interface MarketingProduct {
   id: string; name: string; category: string; active: boolean; images: string[];
+  description?: string;
   variants: MarketingVariant[];
 }
 export type ContentSource = 'product' | 'promotion';
 export interface PricedVariant { variant: MarketingVariant; price: number; originalPrice: number | null }
 export interface PublicationContent {
   productId: string; productName: string; category: string; image: string | null;
+  description?: string;
   /** Importes en centavos CLP, redondeados como el checkout (half-up). */
   price: number; originalPrice: number | null; discountLabel: string | null;
   fromPrice: boolean; variantLabel: string; hasMultipleVariants: boolean; source: ContentSource;

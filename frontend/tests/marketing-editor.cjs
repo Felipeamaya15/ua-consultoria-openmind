@@ -103,3 +103,55 @@ test('apariencia limita valores y rechaza CSS arbitrario; fuente heredada y dato
   assert.equal(legacy.textStyles.price.bold, true); assert.equal(legacy.appearance.radius, null);
   assert.equal(e.FONT_FAMILIES.calibri.includes('Calibri'), true);
 });
+
+test('ficha y CTA nuevos aceptan documentos anteriores, limitan medidas y contrastan fondos independientes', () => {
+  const old = e.defaultDesign();
+  for (const key of ['copyBackground','copyRadius','copyBorderStyle','copyBorderWidth','copyBorderColor','copyShadow','buttonBackground','buttonAlign','buttonShape','buttonWidth','buttonBorderStyle','buttonBorderWidth','buttonBorderColor']) delete old.appearance[key];
+  const migrated = e.normalizeDesign(old);
+  assert.equal(migrated.appearance.copyBackground, null); assert.equal(migrated.appearance.copyBorderStyle, 'original');
+  assert.equal(migrated.appearance.copyShadow, 'original'); assert.equal(migrated.appearance.buttonShape, 'original');
+  assert.equal(migrated.appearance.buttonWidth, null); assert.equal(migrated.appearance.buttonBorderWidth, 1);
+  const n = e.normalizeDesign({ ...migrated, appearance: { ...migrated.appearance,
+    copyBackground: '#ffffff', copyRadius: 900, copyBorderStyle: 'url(x)', copyBorderWidth: -5, copyBorderColor: 'red', copyShadow: '__proto__',
+    buttonBackground: '#ffffff', buttonAlign: 'absolute', buttonShape: 'expression(x)', buttonWidth: 5, buttonBorderStyle: 'url(x)', buttonBorderWidth: 999, buttonBorderColor: '<svg>' } });
+  assert.equal(n.appearance.copyRadius, 12); assert.equal(n.appearance.copyBorderStyle, 'original');
+  assert.equal(n.appearance.copyBorderWidth, 0); assert.equal(n.appearance.copyBorderColor, null); assert.equal(n.appearance.copyShadow, 'original');
+  assert.equal(n.appearance.buttonAlign, 'inherit'); assert.equal(n.appearance.buttonShape, 'original'); assert.equal(n.appearance.buttonWidth, 20);
+  assert.equal(n.appearance.buttonBorderStyle, 'solid'); assert.equal(n.appearance.buttonBorderWidth, 8); assert.equal(n.appearance.buttonBorderColor, null);
+  const p = e.designPalette(branding.marketingPalette('#172b3a', '#e8ddc0'), n);
+  assert.equal(p.background, '#172b3a'); assert.equal(p.copyBackground, '#ffffff'); assert.equal(p.buttonBackground, '#ffffff');
+  assert(e.contrast(p.copyText, p.copyBackground) >= 4.5); assert(e.contrast(p.text, p.background) >= 4.5);
+});
+
+test('estilos independientes de ficha y CTA se recuperan con undo/redo sin contaminar otras plantillas', () => {
+  let s = e.initialTemplateHistory();
+  const initial = JSON.stringify(s.documents.feature);
+  const appearance = { ...s.documents.photo.present.appearance, copyBackground: '#ffffff', copyRadius: 3, copyBorderStyle: 'dashed', copyShadow: 'soft', buttonBackground: '#172b3a', buttonAlign: 'right', buttonShape: 'pill', buttonWidth: 65 };
+  s = e.templateHistory(s, { type: 'change', next: { ...s.documents.photo.present, appearance } });
+  s = e.templateHistory(s, { type: 'change', next: { ...s.documents.photo.present, template: 'feature' } });
+  assert.equal(JSON.stringify(s.documents.feature), initial);
+  s = e.templateHistory(s, { type: 'change', next: { ...s.documents.feature.present, template: 'photo' } });
+  assert.equal(s.documents.photo.present.appearance.copyBackground, '#ffffff');
+  assert.equal(s.documents.photo.present.appearance.buttonAlign, 'right');
+  s = e.templateHistory(s, { type: 'undo' }); assert.equal(s.documents.photo.present.appearance.copyBackground, null);
+  s = e.templateHistory(s, { type: 'redo' }); assert.equal(s.documents.photo.present.appearance.buttonWidth, 65);
+  assert.equal(JSON.stringify(s.documents.feature), initial);
+});
+
+test('descripción real es opcional, escapa HTML y se presenta en todas las plantillas y formatos', () => {
+  const { PublicationPreview } = load('components/PublicationPreview.tsx');
+  const content = { productId: 'a'.repeat(24), productName: 'Producto real', description: 'Contenido real <script>alert(1)</script>', category: '', image: null,
+    price: 1500000, originalPrice: 2000000, discountLabel: '25% menos', fromPrice: false, variantLabel: 'Única', hasMultipleVariants: false, source: 'product' };
+  const brand = { name: 'Tienda real', logo: null, palette: branding.marketingPalette('#172b3a', '#e8ddc0') };
+  const before = JSON.stringify([content, brand]);
+  for (const template of e.TEMPLATES) for (const format of ['square','story','banner']) {
+    const editor = { ...e.defaultDesign(template.id), showDescription: true };
+    const render = () => renderToStaticMarkup(React.createElement(PublicationPreview, { content, brand, design: { format, layout: 'product-spotlight', editor } }));
+    let html = render();
+    assert(html.includes('marketing-art-description')); assert(html.includes('Contenido real &lt;script&gt;'));
+    assert(!html.includes('<script>')); assert(html.includes('$15.000')); assert(html.includes('$20.000'));
+    editor.showDescription = false; html = render(); assert(!html.includes('marketing-art-description'));
+    assert.equal(e.normalizeDesign({ template: template.id }).showDescription, false);
+  }
+  assert.equal(JSON.stringify([content, brand]), before);
+});

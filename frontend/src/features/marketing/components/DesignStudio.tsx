@@ -15,7 +15,7 @@ function DesignSession({ sourceData, brandData, design, images, notices, empty }
   const history = session.documents[session.active];
   return <>
     <div className="marketing-preview-panel">{notices}{sourceData && brandData ? <PublicationPreview content={sourceData} brand={brandData} design={{ ...design, editor: history.present }} images={images} /> : empty}</div>
-    {sourceData && brandData && <DesignControls value={history.present} brand={brandData} images={images} onChange={next => dispatch({ type: 'change', next })}
+    {sourceData && brandData && <DesignControls value={history.present} brand={brandData} images={images} hasDescription={!!sourceData.description?.trim()} onChange={next => dispatch({ type: 'change', next })}
       onReset={() => dispatch({ type: 'reset' })} onUndo={() => dispatch({ type: 'undo' })} onRedo={() => dispatch({ type: 'redo' })} canUndo={!!history.past.length} canRedo={!!history.future.length} />
     }
   </>;

@@ -9,7 +9,7 @@ const image = 'data:image/png;base64,' + fs.readFileSync(path.join(fixtures, 'pr
 const pid = n => n.toString(16).padStart(24, '0');
 const variant = (sku, price, stock = 3, offer = null) => ({ sku, precio: price, stock, precio_oferta: offer, atributos_variante: [{ etiqueta: 'Color', clave: 'color', valor: sku }] });
 const productsFixture = () => [
-  { id: pid(1), nombre: 'Mochila de prueba para todos los días', categoria: 'Accesorios', activo: true, imagenes: [image, 'http://127.0.0.1:8000/media/logo-qa.png'], variantes: [variant('AZUL', 30000, 3, 24000), variant('ROJO', 32000), variant('AGOTADA', 500, 0, 1), { ...variant('INACTIVA', 500, 3, 1), es_activa: false }] },
+  { id: pid(1), nombre: 'Mochila de prueba para todos los días', descripcion: 'Material resistente para acompañarte cada día.', categoria: 'Accesorios', activo: true, imagenes: [image, 'http://127.0.0.1:8000/media/logo-qa.png'], variantes: [variant('AZUL', 30000, 3, 24000), variant('ROJO', 32000), variant('AGOTADA', 500, 0, 1), { ...variant('INACTIVA', 500, 3, 1), es_activa: false }] },
   { id: pid(2), nombre: 'Producto de prueba sin descuento', categoria: 'Accesorios', activo: true, imagenes: [image], variantes: [variant('NORMAL', 15000)] },
   { id: pid(3), nombre: 'Producto inactivo', categoria: 'Accesorios', activo: false, imagenes: [image], variantes: [variant('INACTIVO', 100)] },
   { id: pid(4), nombre: 'Producto agotado', categoria: 'Accesorios', activo: true, imagenes: [image], variantes: [variant('AGOTADO', 100, 0)] },
@@ -116,7 +116,7 @@ const settle = async page => page.locator('.marketing-preview-empty, .marketing-
       assert.equal(requests.filter(r => r.p === '/api/catalog/productos/admin/listado/').length, countBeforeFormat, 'formato no guarda ni consulta de nuevo');
       assert.equal(await page.evaluate(() => JSON.stringify(Object.entries(localStorage).filter(([key]) => key.includes('ua-entrepreneur-demo-v1')))), storageBeforeFormat, 'los cambios de formato no persisten publicaciones');
       if (process.env.MARKETING_EDITOR_TESTS === '1') await require('./marketing-editor-browser.cjs')(page, { width, out, pid, choose, formats });
-      if (process.env.MARKETING_CUSTOMIZATION_TESTS === '1') await require('./marketing-customization-browser.cjs')(page, { width, choose, formats });
+      if (process.env.MARKETING_CUSTOMIZATION_TESTS === '1') await require('./marketing-customization-browser.cjs')(page, { width, choose, formats, out });
       await page.getByLabel('Variante de la publicación').selectOption('ROJO');
       assert.equal(await art.locator('.marketing-art-offer').count(), 0);
       assert((await art.innerText()).includes('$32.000')); assert(!(await art.innerText()).includes('Desde'));

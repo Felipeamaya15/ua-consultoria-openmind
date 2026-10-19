@@ -41,7 +41,7 @@ export function PublicationPreview({ content, brand, design, images = [] }: { co
   const textStyle = (key: TextBlock): CSSProperties => ({ textAlign: editor.textStyles[key].align,
     fontWeight: editor.textStyles[key].bold ? key === 'price' ? editor.template === 'minimal' ? 600 : 800 : key === 'brand' ? 600 : 700 : 400, fontStyle: editor.textStyles[key].italic ? 'italic' : 'normal',
     ...((key === 'title' || key === 'heading') && editor.headingFont ? { fontFamily: FONT_FAMILIES[editor.headingFont] } : {}),
-    color: safeTextColor(editor.textStyles[key].color || palette.text, palette.background), '--mk-block-size': editor.textStyles[key].size / 100 } as CSSProperties);
+    color: safeTextColor(editor.textStyles[key].color || (key === 'brand' ? palette.text : palette.copyText), key === 'brand' ? palette.background : palette.copyBackground), '--mk-block-size': editor.textStyles[key].size / 100 } as CSSProperties);
   const editorial = (key: EditorialBlock) => !editorialProblem(editor[key]) ? editor[key].trim() : '';
   const appearance = editor.appearance;
   const proportional = (value: number | null) => value === null ? undefined : `${value}cqw`;
@@ -55,7 +55,14 @@ export function PublicationPreview({ content, brand, design, images = [] }: { co
   const firstShare = editor.mediaSide === 'start' ? appearance.mediaShare : appearance.mediaShare === null ? null : 100 - appearance.mediaShare;
   const tracks = firstShare === null ? undefined : `minmax(0,${firstShare}fr) minmax(0,${100 - firstShare}fr)`;
   const compositionStyle: CSSProperties = { gap: proportional(appearance.gap), ...(hasImage ? horizontal ? { gridTemplateColumns: tracks } : { gridTemplateRows: tracks } : {}) };
-  const buttonColor = appearance.buttonStyle === 'solid' ? safeTextColor(editor.textStyles.cta.color, palette.label) : safeTextColor(editor.textStyles.cta.color || palette.text, palette.background);
+  const buttonColor = appearance.buttonStyle === 'solid' ? safeTextColor(editor.textStyles.cta.color, palette.buttonBackground) : safeTextColor(editor.textStyles.cta.color || palette.copyText, palette.copyBackground);
+  const buttonAlign = appearance.buttonAlign === 'inherit' ? editor.alignment : appearance.buttonAlign;
+  const copyStyle: CSSProperties = {
+    order: editor.mediaSide === 'start' ? 1 : 0, padding: proportional(appearance.copyPadding), gap: proportional(appearance.gap),
+    background: appearance.copyBackground || undefined, color: palette.copyText, borderRadius: proportional(appearance.copyRadius),
+    ...(appearance.copyBorderStyle !== 'original' ? { border: `${appearance.copyBorderWidth}px ${appearance.copyBorderStyle} ${appearance.copyBorderColor || palette.copyText}` } : {}),
+    ...(appearance.copyShadow !== 'original' ? { boxShadow: shadows[appearance.copyShadow] } : {}),
+  };
   const priceAlign = editor.textStyles.price.align === 'inherit' ? editor.alignment : editor.textStyles.price.align;
   const variables = {
     '--mk-primary': palette.background, '--mk-secondary': palette.accent,
@@ -76,11 +83,12 @@ export function PublicationPreview({ content, brand, design, images = [] }: { co
         </div>
         <div className="marketing-art-composition" style={compositionStyle}>
           {hasImage && <div className="marketing-art-media" style={{ order: editor.mediaSide === 'start' ? 0 : 1, borderRadius: proportional(appearance.imageRadius) }}><img key={image} src={image!} alt={content.productName} referrerPolicy="no-referrer" style={{ objectFit: editor.fit, objectPosition: `${appearance.imageX ?? 50}% ${appearance.imageY ?? (editor.position === 'top' ? 0 : editor.position === 'bottom' ? 100 : 50)}%`, padding: proportional(appearance.imagePadding), transform: `scale(${editor.zoom / 100})` }} onError={() => setFailedImage(image)} /></div>}
-          <div className="marketing-art-copy" style={{ order: editor.mediaSide === 'start' ? 1 : 0, padding: proportional(appearance.copyPadding), gap: proportional(appearance.gap) }}>
+          <div className="marketing-art-copy" style={copyStyle}>
             {content.category && <p className="marketing-art-category">{content.category}</p>}
             {editorial('heading') && <p className="marketing-art-heading" style={textStyle('heading')}>{editorial('heading')}</p>}
             <h3 className="marketing-art-title" style={textStyle('title')} title={content.productName}>{content.productName}</h3>
             {editor.showSubtitle && editorial('subtitle') && <p className="marketing-art-subtitle" style={textStyle('subtitle')}>{editorial('subtitle')}</p>}
+            {editor.showDescription && content.description?.trim() && <p className="marketing-art-description" style={textStyle('description')}>{content.description}</p>}
             {content.discountLabel && <p className="marketing-art-offer">{content.discountLabel}{content.hasMultipleVariants && <span> en esta variante</span>}</p>}
             <div className="marketing-art-prices" style={{ justifyContent: priceAlign === 'right' ? 'flex-end' : priceAlign === 'center' ? 'center' : 'flex-start' }}>
               {content.originalPrice !== null && <p className="marketing-art-original"><span>Precio regular </span><s>{formatMarketingMoney(content.originalPrice)}</s></p>}
@@ -88,8 +96,11 @@ export function PublicationPreview({ content, brand, design, images = [] }: { co
             </div>
             {content.hasMultipleVariants && <p className="marketing-art-variant" style={textStyle('variant')} title={content.variantLabel}>{content.variantLabel}</p>}
             {appearance.showButton && <p className="marketing-art-cta" style={{ ...textStyle('cta'), color: buttonColor,
-              background: appearance.buttonStyle === 'solid' ? palette.label : 'transparent', border: appearance.buttonStyle === 'outline' ? `1px solid ${buttonColor}` : 'none',
-              width: appearance.buttonFullWidth ? '100%' : 'fit-content', borderRadius: proportional(appearance.buttonRadius),
+              background: appearance.buttonStyle === 'solid' ? palette.buttonBackground : 'transparent',
+              border: appearance.buttonStyle === 'outline' ? `${appearance.buttonBorderWidth}px ${appearance.buttonBorderStyle} ${safeTextColor(appearance.buttonBorderColor || buttonColor, palette.copyBackground)}` : 'none',
+              alignSelf: buttonAlign === 'right' ? 'flex-end' : buttonAlign === 'center' ? 'center' : 'flex-start',
+              width: appearance.buttonFullWidth ? '100%' : appearance.buttonWidth === null ? 'fit-content' : `${appearance.buttonWidth}%`,
+              borderRadius: appearance.buttonShape === 'pill' ? '999px' : appearance.buttonShape === 'square' ? '0' : appearance.buttonShape === 'rounded' ? '2cqw' : proportional(appearance.buttonRadius),
               paddingLeft: proportional(appearance.buttonPaddingX), paddingRight: proportional(appearance.buttonPaddingX),
               paddingTop: proportional(appearance.buttonPaddingY), paddingBottom: proportional(appearance.buttonPaddingY),
             }}>{editorial('cta') || 'Disponible en nuestra tienda'} <span aria-hidden="true">↗</span></p>}

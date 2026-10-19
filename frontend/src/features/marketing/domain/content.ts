@@ -46,6 +46,7 @@ export function buildPublication(product: MarketingProduct, source: ContentSourc
   const basisPoints = original ? Number((BigInt(original - selected.price) * 10000n) / BigInt(original)) : 0;
   return {
     productId: product.id, productName: product.name, category: product.category, image: product.images[0] || null,
+    description: product.description || '',
     price: selected.price, originalPrice: original,
     discountLabel: original !== null ? (basisPoints ? `${(basisPoints / 100).toLocaleString('es-CL', { maximumFractionDigits: 2 })}% menos` : 'Precio de oferta') : null,
     fromPrice: !sku && source === 'product' && new Set(choices.map(v => v.price)).size > 1,
