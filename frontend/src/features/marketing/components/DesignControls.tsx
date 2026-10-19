@@ -27,7 +27,7 @@ export function DesignControls({ value: d, brand, images, hasDescription, onChan
   const color = (label: string, current: string, update: (color: string) => void) => <label className="marketing-color"><span>{label}</span><input type="color" value={current} onChange={e => update(e.target.value)} /></label>;
   const range = (label: string, current: number, min: number, max: number, update: (n: number) => void) => <label className="marketing-range"><span>{label} · {current}%</span><input type="range" min={min} max={max} step="1" value={current} onChange={e => update(Number(e.target.value))} /></label>;
   return <details className="marketing-editor" open>
-    <summary>Personalizar diseño <span>Temporal · sin guardar</span></summary>
+    <summary>Personalizar diseño <span>Vista previa editable</span></summary>
     <p className="marketing-hint">El catálogo conserva el nombre, precio, variante y descuento. Aquí solo cambias esta pieza.</p>
     <div className="marketing-editor-sections" role="group" aria-label="Secciones de personalización">
       {sections.map(name => <button type="button" key={name} aria-pressed={name === section} aria-controls={id} onClick={() => setSection(name)}>{name}</button>)}

@@ -3,7 +3,7 @@ import { formatMarketingMoney } from '../domain/content';
 import { defaultDesign, designPalette, editorialProblem, FONT_FAMILIES, normalizeDesign, safeTextColor, type EditorialBlock, type TextBlock } from '../domain/editor';
 import { PUBLICATION_FORMATS, type PublicationContent, type PublicationDesign, type StoreBrand } from '../domain/types';
 
-/** Render puro de datos + marca + diseño; no consulta ni guarda, reutilizable por un exportador futuro. */
+/** Render compartido por la vista previa y su captura de exportación; no consulta ni guarda. */
 export function PublicationPreview({ content, brand, design, images = [] }: { content: PublicationContent; brand: StoreBrand; design: PublicationDesign; images?: readonly string[] }) {
   const [failedImage, setFailedImage] = useState<string | null>(null);
   const [failedLogo, setFailedLogo] = useState<string | null>(null);
@@ -76,6 +76,7 @@ export function PublicationPreview({ content, brand, design, images = [] }: { co
       <article ref={artRef} className="marketing-art is-editable" data-format={design.format} data-image={hasImage ? 'present' : 'none'} data-layout={design.layout}
         style={artStyle}
         data-template={editor.template} data-spacing={editor.spacing} data-align={editor.alignment} data-media-side={editor.mediaSide} data-blocked={fit.blocked}
+        data-resource-error={!!image && !hasImage || editor.showLogo && !!brand.logo && !hasLogo}
         aria-label={`Publicación de ${content.productName} para ${brand.name}`}>
         <div className="marketing-art-brand">
           {hasLogo && <img src={brand.logo!} alt={`Logo de ${brand.name}`} style={{ height: proportional(appearance.logoSize) }} referrerPolicy="no-referrer" onError={() => setFailedLogo(brand.logo)} />}

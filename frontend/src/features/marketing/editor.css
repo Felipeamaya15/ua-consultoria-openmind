@@ -1,4 +1,9 @@
 .marketing-editor{min-width:0;background:#fff;color:#172033;border:1px solid #ccd5df;border-radius:12px;padding:16px;font-family:Arial,sans-serif;container-type:inline-size}
+.marketing-publication-actions,.marketing-drafts{background:#fff;border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:20px;min-width:0}
+.marketing-publication-actions>div:first-child{max-width:440px}
+.marketing-drafts h3{font-weight:700}.marketing-drafts ul{display:grid;gap:16px;list-style:none;padding:0;margin:16px 0}
+.marketing-drafts li{border:1px solid var(--border);border-radius:10px;padding:14px;overflow-wrap:anywhere;min-width:0}
+.marketing-drafts small{display:block;margin-top:4px;color:var(--muted-foreground)}.marketing-drafts form{margin-top:16px}
 .marketing-editor summary{cursor:pointer;font-size:16px;font-weight:700;min-height:36px}
 .marketing-editor summary span{display:block;font-size:12px;font-weight:400;color:#52617a;margin:6px 0 12px}
 .marketing-editor-sections{display:flex;flex-wrap:wrap;gap:6px;margin:16px 0}

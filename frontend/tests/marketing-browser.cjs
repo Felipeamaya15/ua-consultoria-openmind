@@ -48,6 +48,7 @@ const settle = async page => page.locator('.marketing-preview-empty, .marketing-
         requests.push({ method: request.method(), p, headers: request.headers(), query: url.search });
         let data = {};
         if (p === '/api/visual-config/plantilla-seleccionada/') data = { tienda_id: 1, plantilla_seleccionada: 'minimal' };
+        else if (p === '/api/auth/me/') data = { id: 7, is_store_owner: true, is_staff: false };
         else if (p === '/api/auth/emprendedor/perfil/') data = { email: 'qa@example.test', first_name: 'QA', last_name: 'Marketing' };
         else if (p === '/api/tienda/configuracion/') {
           if (brandFail) return route.fulfill({ status: 500, json: { exito: false } });
@@ -77,7 +78,7 @@ const settle = async page => page.locator('.marketing-preview-empty, .marketing-
       });
       await context.route('**/media/no-existe-qa.png', route => route.fulfill({ status: 404, body: '' }));
       await context.route('**/media/logo-qa.png', route => route.fulfill(failLogo ? { status: 404 } : { contentType: 'image/png', body: fs.readFileSync(path.join(fixtures, 'producto-qa.png')) }));
-      const page = await context.newPage(); page.on('pageerror', e => errors.push(e.message));
+      const page = await context.newPage(); page.on('pageerror', e => errors.push(e.message)); page.on('dialog', dialog => dialog.accept());
       await page.goto(base + '/emprendedor/marketing', { waitUntil: 'domcontentloaded' });
       await page.getByText('Cargando productos e identidad de tu tienda...', { exact: true }).waitFor();
       assert.equal(await page.getByText('Tu catálogo está vacío.', { exact: false }).count(), 0);

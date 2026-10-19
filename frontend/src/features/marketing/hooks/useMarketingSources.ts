@@ -26,5 +26,5 @@ export function useMarketingSources() {
   const colors = resolveStoreVisualConfig(config, config.template).global.colors;
   const brand: StoreBrand | null = state.brand ? { name: state.brand.name, logo: state.brand.logo,
     palette: marketingPalette(colors.primary, colors.secondary) } : null;
-  return { ...state, brand, brandWarning: state.brand?.warning || '', refresh: () => setAttempt(n => n + 1) };
+  return { ...state, brand, brandWarning: state.brand?.warning || '', refresh: () => { setState(value => ({ ...value, loading: true })); setAttempt(n => n + 1); } };
 }
