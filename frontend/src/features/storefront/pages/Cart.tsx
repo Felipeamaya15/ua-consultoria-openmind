@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 
 import { StockFeedback } from '../components/store/StockFeedback';
@@ -14,9 +14,11 @@ export default function Cart() {
     updateQuantity,
     subtotal,
     discount,
+    promoCode,
     shipping,
     total,
     applyPromo,
+    promoNotice,
     count,
     loading,
   } = useCart();
@@ -29,17 +31,27 @@ export default function Cart() {
   const [promoError, setPromoError] = useState('');
   const [promoSuccess, setPromoSuccess] = useState('');
 
-  const handleApplyPromo = () => {
-    const ok = applyPromo(promoInput);
+  const [promoBusy, setPromoBusy] = useState(false);
 
-    if (ok) {
-      setPromoSuccess('¡Código aplicado correctamente!');
+  const handleApplyPromo = async () => {
+    if (promoBusy) return;
+    setPromoBusy(true);
+    const result = await applyPromo(promoInput);
+    setPromoBusy(false);
+
+    if (result.ok) {
+      setPromoSuccess(result.message);
       setPromoError('');
     } else {
-      setPromoError('Código inválido o expirado.');
+      setPromoError(result.message);
       setPromoSuccess('');
     }
   };
+  useEffect(() => {
+    if (!promoNotice) return;
+    setPromoError(promoNotice);
+    setPromoSuccess('');
+  }, [promoNotice]);
 
   if (loading && items.length === 0) return <p role="status" className="p-8 text-center">Cargando carrito…</p>;
 
@@ -300,7 +312,7 @@ export default function Cart() {
 
                   {discount > 0 && (
                     <div className="flex justify-between gap-4 text-[var(--primary)]">
-                      <span>Descuento</span>
+                      <span>Descuento{promoCode ? ` (${promoCode})` : ''}</span>
                       <span className="font-semibold">−{formatPrice(discount)}</span>
                     </div>
                   )}
@@ -549,7 +561,7 @@ export default function Cart() {
 
                   {discount > 0 && (
                     <div className="flex justify-between gap-4">
-                      <span className="text-[var(--visual-page-color)]">Descuento</span>
+                      <span className="text-[var(--visual-page-color)]">Descuento{promoCode ? ` (${promoCode})` : ''}</span>
                       <span>−{formatPrice(discount)}</span>
                     </div>
                   )}
@@ -751,7 +763,7 @@ export default function Cart() {
 
               {discount > 0 && (
                 <div className="flex justify-between">
-                  <span className="text-[var(--muted-foreground)]">Descuento</span>
+                  <span className="text-[var(--muted-foreground)]">Descuento{promoCode ? ` (${promoCode})` : ''}</span>
                   <span>−{formatPrice(discount)}</span>
                 </div>
               )}

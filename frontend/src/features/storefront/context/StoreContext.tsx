@@ -1,5 +1,6 @@
 import {
   createContext,
+  useCallback,
   useContext,
   useEffect,
   useMemo,
@@ -23,6 +24,8 @@ import { readPublishedLegalPages } from '../data/legalPublication';
 import { templateFromPath } from '../visual/templates';
 import { findImageSetting, captureOriginalImage, isLegacyEditableImage, readThemeImages, restoreOriginalImage, type OriginalImageStyle } from '../visual/imageSettings';
 import { getStoreConfigKey, readStoredStoreConfig, isStoreConfigChange, STORE_CONFIG_CHANGED_EVENT } from '../visual/storage';
+import { legalService } from '../services/legalService';
+import { type LegalType, type LegalPage } from '../data/legalContent';
 
 const StoreContext = createContext({
   config: { ...defaultStoreConfig, name: '', description: '', logo: '' },
@@ -33,6 +36,11 @@ const StoreContext = createContext({
   landingProducts: [] as Product[],
   landingCatalogError: '',
   legalPages: readPublishedLegalPages(undefined),
+  legalVerified: false,
+  legalScopeKey: '',
+  legalLoading: true,
+  legalError: '',
+  refreshLegal: async () => {},
 });
 
 function readTheme(saved: Record<string, unknown>, template: TemplateId): Record<string, unknown> | null {
@@ -97,7 +105,6 @@ export function StoreProvider({
     };
   }, [storageKey]);
   const savedConfig = useMemo(() => readStoredStoreConfig(identity), [identity, storageRevision]);
-  const legalPages = useMemo(() => readPublishedLegalPages(savedConfig), [savedConfig]);
   const activeTemplate = templateFromPath(pathname) ?? savedConfig.template;
   const visualConfig = useMemo(() => {
     return resolveStoreVisualConfig(savedConfig, activeTemplate);
@@ -164,6 +171,27 @@ export function StoreProvider({
     };
   }, [identity, storageKey]);
 
+  const [legalRevision, setLegalRevision] = useState(0);
+  const [legalResult, setLegalResult] = useState<{ key: string; pages: Record<LegalType, LegalPage> | null; loading: boolean; error: string } | null>(null);
+  const currentLegal = legalResult?.key === storageKey ? legalResult : null;
+  const legalPages = currentLegal?.pages ?? readPublishedLegalPages(undefined);
+  const legalLoading = currentLegal?.loading ?? true;
+  const legalError = currentLegal?.error ?? '';
+  const legalVerified = !!currentLegal?.pages;
+  const refreshLegal = useCallback(async () => { setLegalRevision(value => value + 1); }, []);
+  useEffect(() => {
+    if (!storageKey) return;
+    const controller = new AbortController();
+    setLegalResult(previous => ({ key: storageKey, pages: previous?.key === storageKey ? previous.pages : null, loading: true, error: '' }));
+    legalService.fetchPublicLegalPages({ signal: controller.signal }).then(pages => {
+      if (!controller.signal.aborted) setLegalResult({ key: storageKey, pages, loading: false, error: '' });
+    }).catch(() => {
+      if (!controller.signal.aborted) setLegalResult(previous => ({ key: storageKey, pages: previous?.key === storageKey ? previous.pages : null, loading: false, error: 'No pudimos confirmar el contenido legal de esta tienda.' }));
+    });
+    return () => controller.abort();
+  }, [storageKey, storageRevision, legalRevision]);
+
+
   useEffect(() => {
     const template = templateFromPath(pathname);
     if (!template || typeof document === 'undefined' || typeof MutationObserver === 'undefined') return;
@@ -191,7 +219,8 @@ export function StoreProvider({
 
   return (
     <StoreContext.Provider
-      value={{ config: { ...defaultStoreConfig, name: business?.nombre ?? '', description: business?.descripcion ?? '', logo: landing?.logo || '', primaryColor: visualConfig.global.colors.primary, secondaryColor: visualConfig.global.colors.secondary, accentColor: visualConfig.global.colors.accent }, visualConfig, landing, landingLoading, landingError, landingProducts, landingCatalogError, legalPages }}
+      value={{ config: { ...defaultStoreConfig, name: business?.nombre ?? '', description: business?.descripcion ?? '', logo: landing?.logo || '', primaryColor: visualConfig.global.colors.primary, secondaryColor: visualConfig.global.colors.secondary, accentColor: visualConfig.global.colors.accent }, visualConfig, landing, landingLoading, landingError, landingProducts, landingCatalogError, legalPages, legalLoading, legalError, legalVerified, legalScopeKey: storageKey ?? '', refreshLegal }}
+
     >
       {children}
     </StoreContext.Provider>

@@ -3,6 +3,7 @@ const fs = require('node:fs'), path = require('node:path'), assert = require('no
 const { chromium } = require(process.env.DASHBOARD_PLAYWRIGHT_MODULE || 'playwright');
 const base = process.env.MARKETING_TEST_URL || 'http://127.0.0.1:5173';
 const fixtures = path.resolve(__dirname, '../../docs/marketing-parte1/evidencias');
+const reportFixtures = process.env.REPORTS_FIXTURE_DIR ? path.resolve(process.env.REPORTS_FIXTURE_DIR) : path.resolve(fixtures, '../../mejoras-informes-configuracion/evidencias');
 const out = process.env.MARKETING_EVIDENCE_DIR ? path.resolve(process.env.MARKETING_EVIDENCE_DIR) : fixtures;
 fs.mkdirSync(out, { recursive: true });
 const image = 'data:image/png;base64,' + fs.readFileSync(path.join(fixtures, 'producto-qa.png')).toString('base64');
@@ -60,8 +61,8 @@ const settle = async page => page.locator('.marketing-preview-empty, .marketing-
           data = products;
         } else if (p === '/api/tienda/dashboard/') data = { fecha_desde: '2026-10-09', fecha_hasta: '2026-10-15', moneda: 'CLP', zona_horaria: 'America/Santiago', total_ventas: '0.00', total_pedidos: 0, por_despachar: 0, historico: [] };
         else if (p === '/api/tienda/pedidos/ultimos/' || p === '/api/catalog/productos/') data = [];
-        else if (p === '/api/tienda/informes/') data = JSON.parse(fs.readFileSync(path.resolve(fixtures, '../../mejoras-informes-configuracion/evidencias/informe-ventas-pedidos-2025.json'), 'utf8'));
-        else if (p === '/api/tienda/informes/pdf/') return route.fulfill({ contentType: 'application/pdf', body: fs.readFileSync(path.resolve(fixtures, '../../mejoras-informes-configuracion/evidencias/informe-ventas-pedidos-2025.pdf')) });
+        else if (p === '/api/tienda/informes/') data = JSON.parse(fs.readFileSync(path.join(reportFixtures, 'informe-ventas-pedidos-2025.json'), 'utf8'));
+        else if (p === '/api/tienda/informes/pdf/') return route.fulfill({ contentType: 'application/pdf', body: fs.readFileSync(path.join(reportFixtures, 'informe-ventas-pedidos-2025.pdf')) });
         else if (p === '/api/promociones/') {
           // Contrato persistido de develop, únicamente en el transporte simulado de QA.
           if (request.method() === 'POST') {
@@ -193,17 +194,17 @@ const settle = async page => page.locator('.marketing-preview-empty, .marketing-
       await page.goto(base + '/emprendedor/promociones', { waitUntil: 'domcontentloaded' });
       await page.getByRole('button', { name: 'Nueva promoción' }).click();
       await page.getByLabel('Nombre interno').fill('Campaña QA independiente');
-      await page.getByLabel('Valor', { exact: true }).fill('10');
+      await page.getByLabel('Valor (%)', { exact: true }).fill('10');
       const codeInput = page.getByLabel('Código de descuento (obligatorio)', { exact: true });
       assert.equal(await codeInput.getAttribute('maxlength'), '40');
       assert.notEqual(await codeInput.getAttribute('required'), null);
-      await page.getByText('El cliente debe ingresar este código en el checkout para aplicar la promoción.', { exact: true }).waitFor();
+      await page.getByText('Usa letras, números y guiones (ej: BIENVENIDA-10)', { exact: true }).waitFor();
       await page.getByRole('button', { name: 'Guardar promoción', exact: true }).click();
       assert(await codeInput.evaluate(input => input.validity.valueMissing), 'el formulario identifica el código obligatorio');
       assert.equal(requests.filter(r => r.method === 'POST').length, 0, 'código vacío no llega a la API');
       await codeInput.fill('   ');
       await page.getByRole('button', { name: 'Guardar promoción', exact: true }).click();
-      await page.getByText('Ingresa el código de descuento. Es obligatorio para usar la promoción.', { exact: true }).waitFor();
+      await page.getByText('Ingresa un código promocional (ej: VERANO20).', { exact: true }).waitFor();
       assert.equal(requests.filter(r => r.method === 'POST').length, 0, 'solo espacios no llega a la API');
       await codeInput.fill(' qa-campania ');
       await page.getByRole('button', { name: 'Guardar promoción', exact: true }).click();

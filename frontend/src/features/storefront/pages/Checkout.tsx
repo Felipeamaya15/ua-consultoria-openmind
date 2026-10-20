@@ -1816,14 +1816,22 @@ export default function Checkout() {
                   target="_blank"
                 >
                   condiciones de uso
-                </Link>{' '}
-                y{' '}
+                </Link>
+                , nuestra{' '}
                 <Link data-page-action="ghost"
                   to={route('legal/privacy')}
                   className="font-semibold underline"
                   target="_blank"
                 >
                   política de privacidad
+                </Link>{' '}
+                y nuestra{' '}
+                <Link data-page-action="ghost"
+                  to={route('legal/refund')}
+                  className="font-semibold underline"
+                  target="_blank"
+                >
+                  política de reembolso
                 </Link>
                 .
               </Alert>
@@ -1987,9 +1995,21 @@ export default function Checkout() {
                     </p>
                   </div>
 
-                  <p data-page-price className="text-xs font-semibold">
-                    {formatPrice(item.price * item.quantity)}
-                  </p>
+                  <div className="text-right">
+                    {item.comparePrice !== undefined && item.comparePrice > item.price && (
+                      <p
+                        data-page-price
+                        className="text-[10px] text-[var(--visual-page-color)] line-through"
+                        aria-label={`Precio original ${formatPrice(item.comparePrice * item.quantity)}`}
+                      >
+                        {formatPrice(item.comparePrice * item.quantity)}
+                      </p>
+                    )}
+
+                    <p data-page-price className="text-xs font-semibold">
+                      {formatPrice(item.price * item.quantity)}
+                    </p>
+                  </div>
                 </div>
               ))}
             </div>
@@ -2028,7 +2048,7 @@ export default function Checkout() {
 
               {effectiveDiscount > 0 && (
                 <div className="flex justify-between text-[var(--success)]">
-                  <span>Descuento</span>
+                  <span>Descuento{checkoutPromoCode ? ` (${checkoutPromoCode})` : ''}</span>
 
                   <span>
                     −{formatPrice(effectiveDiscount)}

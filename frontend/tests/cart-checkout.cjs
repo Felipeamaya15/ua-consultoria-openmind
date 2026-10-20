@@ -218,6 +218,7 @@ const result = {id_pedido: 42, identificador: 'PEDIDO-BACKEND-42', tienda_id: 9,
     require: name => {
       if (name.includes('StoreIdentityContext')) return {useStoreIdentity: () => ({identity: null})};
       if (name.includes('guestCartStorage')) return {guestCartKey: () => null};
+      if (name.includes('promotionService')) return {validatePromotion: async () => ({code: 'TEST', type: 'fixed', discount: 0, shipping: 0, message: ''})};
       if (name === '../visual/pages') return {isActiveEditorPreview: () => editorPreview};
       if (name === 'react/jsx-runtime') return {jsx, jsxs: jsx};
       if (name === 'react') return {createContext: () => ({Provider: 'Provider'}), useContext() {}, useEffect() {}, useCallback: fn => fn,

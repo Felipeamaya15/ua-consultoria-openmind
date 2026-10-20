@@ -3,8 +3,9 @@
 const fs = require('node:fs'), path = require('node:path'), assert = require('node:assert/strict');
 const { chromium } = require(process.env.DASHBOARD_PLAYWRIGHT_MODULE || 'playwright');
 const base = process.env.REPORTS_TEST_URL || 'http://127.0.0.1:5180';
-const out = path.resolve(__dirname, '../../docs/mejoras-informes-configuracion/evidencias');
-const fixture = name => JSON.parse(fs.readFileSync(path.join(out, `informe-ventas-pedidos-${name}.json`), 'utf8'));
+const out = process.env.REPORTS_EVIDENCE_DIR ? path.resolve(process.env.REPORTS_EVIDENCE_DIR) : path.resolve(__dirname, '../../docs/mejoras-informes-configuracion/evidencias');
+const fixtures = process.env.REPORTS_FIXTURE_DIR ? path.resolve(process.env.REPORTS_FIXTURE_DIR) : out;
+const fixture = name => JSON.parse(fs.readFileSync(path.join(fixtures, `informe-ventas-pedidos-${name}.json`), 'utf8'));
 const annual = fixture('2025'), monthly = fixture('2025-10'), empty = fixture('2024');
 const envelope = data => ({ exito: true, mensaje: '', data });
 const zeroCurrent = { ...empty, anio: 2026, fecha_desde: '2026-01-01', fecha_hasta: '2026-12-31', anios_disponibles: [2026, 2025] };
@@ -60,7 +61,7 @@ const currentDashboard = { fecha_desde: '2026-10-09', fecha_hasta: '2026-10-15',
         else if (p === '/api/tienda/informes/pdf/') {
           if (failDownload) return route.fulfill({ status: 500, json: { exito: false } });
           const suffix = url.searchParams.get('anio') + (url.searchParams.has('mes') ? '-' + url.searchParams.get('mes').padStart(2, '0') : '');
-          return route.fulfill({ contentType: 'application/pdf', body: fs.readFileSync(path.join(out, `informe-ventas-pedidos-${suffix}.pdf`)) });
+          return route.fulfill({ contentType: 'application/pdf', body: fs.readFileSync(path.join(fixtures, `informe-ventas-pedidos-${suffix}.pdf`)) });
         } else if (p === '/api/tienda/informes/') {
           if (failReport) return route.fulfill({ status: 500, json: { exito: false } });
           data = url.searchParams.get('anio') === '2025' ? (url.searchParams.get('mes') === '10' ? monthly : annual) : zeroCurrent;
@@ -107,19 +108,19 @@ const currentDashboard = { fecha_desde: '2026-10-09', fecha_hasta: '2026-10-15',
       await page.waitForURL('**/emprendedor/landing');
       await page.getByLabel('Nombre de la tienda (obligatorio)').waitFor();
       assert.equal(await page.getByLabel('Nombre de la tienda (obligatorio)').inputValue(), business.nombre);
-      await page.getByRole('link', { name: 'Información del negocio', exact: true }).focus();
-      await page.keyboard.press('Enter');
+      await page.goto(base + '/emprendedor/landing#informacion-negocio');
       assert.equal(new URL(page.url()).hash, '#informacion-negocio');
-      await page.getByRole('link', { name: 'Página principal y contacto', exact: true }).focus();
-      await page.keyboard.press('Enter');
+      await page.getByLabel('Nombre de la tienda (obligatorio)').focus();
+      await page.keyboard.press('Tab');
+      assert(await page.getByLabel('Descripción del negocio', { exact: true }).evaluate(node => node === document.activeElement));
+      await page.goto(base + '/emprendedor/landing#pagina-principal');
       assert.equal(new URL(page.url()).hash, '#pagina-principal');
       assert.equal(await page.getByLabel('Correo electrónico', { exact: true }).count(), 1);
       assert.equal(await page.getByLabel('Teléfono (con código de país)').count(), 1);
       assert.equal(await page.getByRole('heading', { name: 'Logo', exact: true }).count(), 1);
       assert.equal(await page.locator('nav[aria-label="Panel del emprendedor"] a[href="/emprendedor/landing"]').count(), 1);
-      await page.getByRole('button', { name: 'Recuperar nombre y descripción de este navegador' }).click();
-      assert.equal(await page.getByLabel('Nombre de la tienda (obligatorio)').inputValue(), 'Nombre anterior local');
-      await page.getByRole('button', { name: 'Recuperar logo y contacto locales' }).click();
+      assert.equal(await page.getByRole('button', { name: /Recuperar .*local|Recuperar nombre/ }).count(), 0);
+      assert.equal(await page.getByLabel('Nombre de la tienda (obligatorio)').inputValue(), business.nombre);
       assert.equal(await page.getByLabel('Correo electrónico', { exact: true }).inputValue(), 'servidor@example.test');
       assert.equal(await page.getByLabel('Teléfono (con código de país)').inputValue(), '+56 9 1111 2222');
       await page.getByLabel('Nombre de la tienda (obligatorio)').fill('Nombre persistido de prueba');
@@ -158,7 +159,7 @@ const currentDashboard = { fecha_desde: '2026-10-09', fecha_hasta: '2026-10-15',
       assert(await page.getByRole('button', { name: 'Guardar página principal' }).isDisabled());
       assert(requests.filter(r => r.p.startsWith('/api/tienda/informes/')).every(r => r.auth === 'Token qa-test-token'));
       assert.equal(errors.length, 0, errors.join('\n'));
-      console.log(`OK ${width}px: anual/mensual/PDF, filtros independientes, errores/reintento, configuración/persistencia/redirección, recuperación local y teclado, cuatro plantillas, sin desbordamiento`);
+      console.log(`OK ${width}px: anual/mensual/PDF, filtros independientes, errores/reintento, configuración/persistencia/redirección/hash, aislamiento de datos locales y teclado, cuatro plantillas, sin desbordamiento`);
       await context.close();
     }
   } finally { await browser.close(); }

@@ -47,7 +47,7 @@ export default function EmailTemplates() {
   }
 
   return (
-    <div className="max-w-6xl space-y-6 animate-fade-in">
+    <div className="w-full space-y-6 animate-fade-in">
       <Alert variant="info" title="Envío automático aún no disponible">
         Puedes preparar y guardar estos mensajes. Por ahora no se envían correos automáticos a tus clientes.
       </Alert>

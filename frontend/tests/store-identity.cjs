@@ -7,7 +7,7 @@ function harness() {
   let identity = { apiBaseUrl: 'https://installation.test', storeId: '1' }, stateIndex=0, effectIndex=0;
   const states=[], effects=[], pending=[], requests=[], storage=new Map(), window=new EventTarget(), modules=new Map();
   const react = {
-    createContext: value => ({Provider:'Provider',value}), useContext: c=>c.value, useMemo: f=>f(),
+    createContext: value => ({Provider:'Provider',value}), useContext: c=>c.value, useMemo: f=>f(), useCallback: f=>f,
     useState: initial => { const i=stateIndex++; if (!(i in states)) states[i]=typeof initial==='function'?initial():initial; return [states[i],next=>{states[i]=typeof next==='function'?next(states[i]):next;}]; },
     useEffect: (run,deps) => { const i=effectIndex++, previous=effects[i]; if(!previous || deps.some((d,j)=>!Object.is(d,previous.deps[j]))) pending.push(()=>{previous?.cleanup?.();effects[i]={deps,cleanup:run()};}); },
   };
@@ -28,6 +28,7 @@ function harness() {
       if(id.includes('storeInformationService'))return {fetchStoreInformation:signal=>request('business',{signal}),STORE_INFORMATION_CHANGED:'business-saved'};
       if(id.includes('landingService'))return {fetchLandingConfig:options=>request('landing',options),LANDING_CONFIG_CHANGED:'landing-saved'};
       if(id.includes('catalogService'))return {fetchPublicProducts:options=>request('catalog',options)};
+      if(id.includes('legalService'))return {legalService:{fetchPublicLegalPages:options=>request('legal',options)}};
       const target=path.resolve(path.dirname(file),id);
       return load(['.ts','.tsx','/index.ts'].map(ext=>target+ext).find(fs.existsSync));
     };
@@ -52,13 +53,16 @@ const landing=(tienda,extra={})=>({id:1,tienda,titulo:'Título editorial distint
   first.find(r=>r.kind==='business').resolve({nombre:'Comercial A',descripcion:'Negocio A'});
   first.find(r=>r.kind==='landing').resolve(landing(1,{logo:'/logo-a.png'}));
   first.find(r=>r.kind==='catalog').resolve([{catalogId:'a',name:'Producto A'}]);
+  first.find(r=>r.kind==='legal').resolve({terms:{published:'Legal A',version:1}});
   await tick();value=h.render();h.commit();
   assert.equal(value.config.name,'Comercial A');assert.equal(value.config.description,'Negocio A');assert.equal(value.landing.descripcion,'Portada distinta');assert.equal(value.config.logo,'/logo-a.png');assert.equal(value.config.primaryColor,'#123456');
+  assert.equal(value.legalVerified,true);assert.equal(value.legalPages.terms.published,'Legal A');
   // A request already in flight must not overwrite a later store or a later refresh.
   h.window.dispatchEvent(new Event('focus'));const late=h.requests.slice(first.length);
   h.seed({name:'Otro nombre antiguo',logo:'/local-b.png',primaryColor:'#654321'},'2');
   h.switchStore({apiBaseUrl:'https://installation.test',storeId:'2'});value=h.render();
   assert.equal(value.config.name,'');assert.equal(value.config.logo,'');assert.equal(value.landing,null);assert.equal(value.landingProducts.length,0);assert.equal(value.config.primaryColor,'#654321');h.commit();
+  assert.equal(value.legalVerified,false);assert.notEqual(value.legalPages.terms.published,'Legal A');
   assert(late.every(r=>r.signal.aborted));
   late.find(r=>r.kind==='business').resolve({nombre:'Respuesta tardía A',descripcion:''});late.find(r=>r.kind==='landing').resolve(landing(1,{logo:'/late-a.png'}));
   const next=h.requests.filter(r=>r.store==='2');next.find(r=>r.kind==='business').resolve({nombre:'Comercial B',descripcion:null});next.find(r=>r.kind==='catalog').resolve([]);next.find(r=>r.kind==='landing').resolve(landing(2));await tick();

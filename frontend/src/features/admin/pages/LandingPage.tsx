@@ -9,7 +9,7 @@ export default function LandingPage() {
     const target = hash === '#pagina-principal' ? 'pagina-principal' : hash === '#informacion-negocio' ? 'informacion-negocio' : null;
     if (target) document.getElementById(target)?.scrollIntoView();
   }, [hash]);
-  return <div className="max-w-3xl space-y-5">
+  return <div className="w-full max-w-3xl space-y-5">
     <BusinessInformation />
     <section id="pagina-principal" aria-label="Contenido de la página principal" className="scroll-mt-24">
       <LandingPageContent />

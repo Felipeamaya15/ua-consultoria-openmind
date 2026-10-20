@@ -311,10 +311,6 @@ export function EditorialLayout() {
               {config.description}
             </p>
 
-            <div className="mt-4">
-              <div data-visual-part="branding"><InstitutionalBadge /></div>
-            </div>
-
           </div>
 
           {/* Tienda */}
@@ -374,6 +370,12 @@ export function EditorialLayout() {
                 Reembolsos
               </Link>
 
+              <Link
+                to="legal/cookies"
+                className="hover:text-white transition-colors"
+              >
+                Cookies
+              </Link>
             </div>
 
           </div>
@@ -381,8 +383,9 @@ export function EditorialLayout() {
         </div>
 
         {/* Copyright */}
-        <div data-visual-part="branding" className="border-t border-white/10 py-4 text-center text-xs text-white/40 px-4">
-          © 2025 {config.name} · Plataforma e-commerce Universidad Autónoma de Chile
+        <div data-visual-part="branding" className="border-t border-white/10 py-4 text-xs text-white/40 px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+          <InstitutionalBadge compact showVersion={true} />
+          <p className="text-center sm:text-right">© 2025 {config.name} · Plataforma e-commerce Universidad Autónoma de Chile</p>
         </div>
 
       </footer>

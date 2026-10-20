@@ -44,6 +44,13 @@ export function MinimalFooter() {
             </Link>
 
             <Link
+              to="legal/cookies"
+              className="hover:text-white transition-colors"
+            >
+              Cookies
+            </Link>
+
+            <Link
               to="seguimiento"
               className="hover:text-white transition-colors"
             >
@@ -53,7 +60,7 @@ export function MinimalFooter() {
         </div>
 
         <div data-visual-part="branding" className="border-t border-white/10 mt-8 pt-5 text-[11px] text-white/35">
-          <InstitutionalBadge /><p>© 2025 {config.name}</p>
+          <InstitutionalBadge showVersion={true} /><p>© 2025 {config.name}</p>
         </div>
       </div>
     </footer>

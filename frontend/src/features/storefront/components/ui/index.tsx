@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { VISUAL_SECTION } from '../../visual/sectionIds';
-import React, { useId, useEffect, ReactNode, ButtonHTMLAttributes, InputHTMLAttributes, SelectHTMLAttributes, TextareaHTMLAttributes } from 'react';
+import React, { useState, useId, useEffect, ReactNode, ButtonHTMLAttributes, InputHTMLAttributes, SelectHTMLAttributes, TextareaHTMLAttributes } from 'react';
 
 // ── Button ────────────────────────────────────────────────────────────────────
 type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger' | 'accent';
@@ -375,17 +375,38 @@ export function Toggle({ checked, onChange, label, id }: { checked: boolean; onC
   );
 }
 
+import { SoftwareVersionModal } from './SoftwareVersionModal';
+
 // ── Institutional Badge ───────────────────────────────────────────────────────
-export function InstitutionalBadge({ compact = false }: { compact?: boolean }) {
+export function InstitutionalBadge({ compact = false, showVersion = false }: { compact?: boolean; showVersion?: boolean }) {
+  const [modalOpen, setModalOpen] = useState(false);
+
   return (
-    <div data-institutional-branding className={`flex items-center gap-2 text-xs ua-institutional-badge ${compact ? 'ua-institutional-badge--compact' : ''}`}>
-      <img
-        src="/logo-universidad-autonoma.png"
-        alt="Logo Universidad Autónoma de Chile"
-        className={compact ? 'w-6 h-6 object-contain bg-white rounded-md p-0.5 shadow-sm' : 'w-8 h-8 object-contain bg-white rounded-md p-1 shadow-sm'}
-      />
-      <span>Universidad Autónoma de Chile</span>
-    </div>
+    <>
+      <div data-institutional-branding className={`flex items-center gap-2 text-xs ua-institutional-badge ${compact ? 'ua-institutional-badge--compact' : ''}`}>
+        <img
+          src="/logo-universidad-autonoma.png"
+          alt="Logo Universidad Autónoma de Chile"
+          className={compact ? 'w-6 h-6 object-contain bg-white rounded-md p-0.5 shadow-sm' : 'w-8 h-8 object-contain bg-white rounded-md p-1 shadow-sm'}
+        />
+        <span>Universidad Autónoma de Chile</span>
+        {showVersion && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setModalOpen(true);
+            }}
+            title="Consultar versión vigente del software"
+            className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium text-black border border-neutral-300 bg-white/90 hover:bg-neutral-100 transition-colors shadow-2xs cursor-pointer select-none"
+          >
+            v1.0.0
+          </button>
+        )}
+      </div>
+      <SoftwareVersionModal open={modalOpen} onClose={() => setModalOpen(false)} />
+    </>
   );
 }
 export { Icon } from './Icon';
+export { SoftwareVersionModal } from './SoftwareVersionModal';

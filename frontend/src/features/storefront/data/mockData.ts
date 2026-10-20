@@ -104,7 +104,7 @@ export interface Promotion {
   id: string;
   name: string;
   code?: string;
-  type: 'percentage' | 'fixed' | 'free_shipping';
+  type: 'percentage' | 'fixed' | 'free_shipping' | 'precio_oferta';
   value: number;
   minAmount?: number;
   maxUses?: number;

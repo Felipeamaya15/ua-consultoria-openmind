@@ -10,7 +10,7 @@ if(!fontFile)throw new Error('Define MARKETING_TEST_FONT con la fuente de QA Plu
   const browser=await chromium.launch({channel:'msedge',headless:true}),context=await browser.newContext({viewport:{width:1440,height:1000},acceptDownloads:true});
   await context.addInitScript(()=>localStorage.setItem('token','qa-owner-seven'));
   await context.route('https://fonts.googleapis.com/**',route=>route.fulfill({contentType:'text/css',body:''}));
-  const page=await context.newPage();let permit=true,downloads=0;page.on('dialog',d=>permit?d.accept():d.dismiss());page.on('download',()=>downloads++);
+  const page=await context.newPage();let permit=true,downloads=0,settleDialog=Promise.resolve();page.on('dialog',d=>{settleDialog=permit?d.accept():d.dismiss();});page.on('download',()=>downloads++);
   const button=name=>page.getByRole('button',{name,exact:true}).click();
   try{
     await page.goto(base+'/emprendedor/marketing');await page.getByLabel('Producto para publicar',{exact:true}).selectOption('1'.padStart(24,'0'));
@@ -37,13 +37,15 @@ if(!fontFile)throw new Error('Define MARKETING_TEST_FONT con la fuente de QA Plu
     count=downloads;await button('Descargar PNG');await page.getByRole('alert').filter({hasText:'archivo completo'}).waitFor();assert.equal(downloads,count);
     await page.evaluate(()=>HTMLCanvasElement.prototype.toBlob=window.qaToBlob);
     // Cancelar una navegación conserva el diseño; la confirmación de salida es accesible nativa.
-    permit=false;await page.getByRole('link',{name:'Administrar productos →',exact:true}).click();assert(page.url().includes('/marketing'));permit=true;
+    permit=false;const cancelled=page.waitForEvent('dialog');await page.getByRole('link',{name:'Administrar productos →',exact:true}).click();await cancelled;await settleDialog;assert(page.url().includes('/marketing'));permit=true;
     // Los controles nuevos y los nombres largos no generan desplazamiento horizontal.
     const longName='Colección para acompañarte en cada aventura de primavera y verano';
     await page.getByLabel('Nombre del borrador',{exact:true}).fill(longName);await button('Guardar borrador');await button('Mis borradores');
     for(const width of [375,768]){
       await page.setViewportSize({width,height:1000});assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),`${width}: responsive con borrador de nombre largo`);
-      event=page.waitForEvent('download');await button('Descargar PNG');await(await event).saveAs(path.join(out,`exportacion-${width}.png`));
+      event=page.waitForEvent('download').catch(error=>({error}));await button('Descargar PNG');
+      const downloaded=await event;if(downloaded.error)throw new Error(`Exportación ${width}px: ${await page.getByRole('alert').allTextContents()}; bloqueada=${await art.getAttribute('data-blocked')}`,{cause:downloaded.error});
+      await downloaded.saveAs(path.join(out,`exportacion-${width}.png`));
     }
     await page.setViewportSize({width:1440,height:1000});await button('Mis borradores');
     // Producto con nombre largo: fuente, imagen y precio permanecen completos en el archivo.

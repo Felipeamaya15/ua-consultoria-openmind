@@ -12,6 +12,7 @@ import {
   type LegalPage,
   type LegalType,
 } from './legalContent';
+import { resolveCurrentLegalVersion } from './legalCurrentVersion';
 
 type LegalPages = Record<LegalType, LegalPage>;
 
@@ -49,6 +50,17 @@ export function validateLegalContent(content: unknown): string | null {
  */
 export function readPublishedLegalPage(entry: unknown, type: LegalType): LegalPage {
   const fallback = defaultLegalPages[type];
+  if (isRecord(entry)) {
+    const currentVersion = resolveCurrentLegalVersion(entry.versions, entry.currentVersionId, type);
+    if (currentVersion) {
+      return {
+        title: fallback.title,
+        draft: currentVersion.content,
+        published: currentVersion.content,
+        lastPublished: currentVersion.publishedAt,
+      };
+    }
+  }
   if (!isRecord(entry) || typeof entry.published !== 'string' || !entry.published.trim()) {
     return fallback;
   }

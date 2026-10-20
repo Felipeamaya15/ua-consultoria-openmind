@@ -12,7 +12,7 @@ const root = path.resolve(__dirname, '..');
       <button id="save-fixture" onClick={()=>setErrors(validatePickup(value,configured===true))}>Validar configuración de prueba</button><output id="validation-errors">{Object.keys(errors).length}</output></main>}
     createRoot(document.getElementById('root')).render(<App/>);`;
   const bundle = await esbuild.build({ stdin: { contents: entry, loader: 'tsx', resolveDir: root }, jsx: 'automatic', bundle: true, write: false, format: 'iife',
-    define: { 'process.env.NODE_ENV': '"production"' }, plugins: [{ name: 'address-fixture', setup(build) {
+    define: { 'process.env.NODE_ENV': '"production"', 'import.meta.env': '{}' }, plugins: [{ name: 'address-fixture', setup(build) {
       build.onLoad({ filter: /shippingService\.ts$/ }, () => ({ loader: 'js', contents: `
         export async function getPickupAddressStatus(){return{configured:window.PICKUP_TEST_PROVIDER}}
         export async function searchPickupAddresses(){return[{region:'Metropolitana de Santiago',comuna:'Providencia',street:'Avenida Providencia',number:'1234',reference:'',verification:'fixture-not-real'}]}` }));

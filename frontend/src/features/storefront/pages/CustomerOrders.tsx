@@ -40,6 +40,7 @@ export default function CustomerOrders() {
           <p><time dateTime={order.fecha_creacion}>{new Date(order.fecha_creacion).toLocaleString('es-CL')}</time></p>
           <p>Estado: <span className="inline-block rounded bg-[var(--visual-page-panel-background)] px-2 py-1">{order.estado_etiqueta}</span></p>
           <p>Productos: {order.cantidad_productos}</p>
+          {Number(order.descuento) > 0 && <p>Descuento aplicado: −{order.descuento}</p>}
           <p>Total: {order.monto_total}</p>
           
           {!id && <Link data-page-action="ghost" to={route(`mis-pedidos/${order.id_pedido}`)} className="font-medium text-[var(--primary)] hover:underline">Ver detalle y seguimiento</Link>}

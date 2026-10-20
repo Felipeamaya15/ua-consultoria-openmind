@@ -53,7 +53,7 @@ export default function LandingPageContent() {
     finally { setSaving(false); }
   }
   if (loading) return <p role="status">Cargando configuración...</p>;
-  return <form className="flex flex-col gap-5 max-w-3xl" onSubmit={e => { e.preventDefault(); void save(); }}>
+  return <form className="flex flex-col gap-5 w-full max-w-3xl" onSubmit={e => { e.preventDefault(); void save(); }}>
     {error && <div role="alert"><Alert variant="error">{error}</Alert></div>}
     <fieldset disabled={saving || loadFailed} className="flex flex-col gap-5">
       {([{ key: 'titulo', label: 'Título principal', maxLength: 255, help: 'Este texto aparecerá destacado al entrar a tu tienda. Es obligatorio.' }, { key: 'descripcion', label: 'Descripción de portada', maxLength: undefined, help: 'Cuenta brevemente qué ofrece tu negocio. Puedes dejar este campo vacío.' }, { key: 'texto_boton', label: 'Texto del botón principal', maxLength: 100, help: 'Escribe la invitación que verán tus clientes, por ejemplo: Ver productos. Es obligatorio.' }] as const).map(field =>
@@ -63,7 +63,7 @@ export default function LandingPageContent() {
       {catalogLoading && <p role="status">Cargando productos y categorías...</p>}
       {catalogError && <div role="alert"><Alert variant="error">{catalogError}</Alert></div>}
       <LandingContentEditor catalogReady={!catalogLoading && !catalogError} value={normalizeLandingContent(form.contenido)} flags={form.secciones} products={products} onChange={contenido => change({ ...form, contenido })} onToggle={(name, enabled) => change({ ...form, secciones: { ...form.secciones, [name]: enabled } })} />
-      <Button type="submit">{saving ? 'Guardando...' : 'Guardar página principal'}</Button>
+      <div><Button type="submit">{saving ? 'Guardando...' : 'Guardar página principal'}</Button></div>
     </fieldset>
     {saved && <Alert variant="success">Página principal guardada en tu tienda.</Alert>}
     <a href={templatePaths[config.template]} target="_blank" rel="noreferrer">Ver página principal de mi tienda</a>

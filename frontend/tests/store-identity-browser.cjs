@@ -2,7 +2,7 @@
 const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
 const {chromium}=require(process.env.DASHBOARD_PLAYWRIGHT_MODULE||'playwright');
 const base=process.env.IDENTITY_TEST_URL||'http://localhost:5173';
-const out=path.resolve(__dirname,'../../docs/identidad-visual-plantillas');
+const out=process.env.IDENTITY_EVIDENCE_DIR?path.resolve(process.env.IDENTITY_EVIDENCE_DIR):path.resolve(__dirname,'../../docs/identidad-visual-plantillas');
 const envelope=data=>({exito:true,mensaje:'',data});
 const logo='data:image/svg+xml,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="120" height="50"><rect width="120" height="50" fill="#157347"/><text x="10" y="30" fill="white">MARCA QA</text></svg>');
 const productId='123456789012345678901234', secondId='123456789012345678901235';
