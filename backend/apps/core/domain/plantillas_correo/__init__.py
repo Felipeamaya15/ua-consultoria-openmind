@@ -1,9 +1,11 @@
 """Plantillas de correo del pedido. Punto de entrada: construir_correo(tipo, pedido)."""
 from .base import PlantillaCorreo, PlantillaCorreoInvalida
+from .pago_exitoso import PLANTILLA_PAGO_EXITOSO, renderizar_pago_exitoso
 from .recepcion_pedido import PLANTILLA_RECEPCION_PEDIDO, renderizar_recepcion_pedido
 
 TIPOS = {
     'order_received': (renderizar_recepcion_pedido, PLANTILLA_RECEPCION_PEDIDO),
+    'payment_success': (renderizar_pago_exitoso, PLANTILLA_PAGO_EXITOSO),
 }
 
 
