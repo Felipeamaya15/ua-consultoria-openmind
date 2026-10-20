@@ -1,10 +1,11 @@
 """Dashboard comercial: agregación acotada por fecha/estado, sin joins a pagos o ítems."""
-from datetime import date, datetime, time, timedelta
+from datetime import date, timedelta
 from decimal import Decimal, ROUND_HALF_UP
 
 from django.db.models import Count, Sum
 from django.db.models.functions import TruncDate
 from apps.core.models import Pedido
+from apps.core.domain.periodos import limites_rango
 
 
 def _variation(current, previous):
@@ -17,8 +18,7 @@ def consultar_dashboard(tienda, inicio, fin, zona):
     days = (fin - inicio).days + 1
     previous_start = date.fromordinal(max(1, inicio.toordinal() - days))
     previous_end = inicio - timedelta(days=1) if inicio > date.min else None
-    desde = datetime.combine(previous_start, time.min, tzinfo=zona)
-    hasta = datetime.combine(fin + timedelta(days=1), time.min, tzinfo=zona)
+    desde, hasta = limites_rango(previous_start, fin, zona)
     rows = (Pedido.objects.filter(tienda=tienda, fecha_creacion__gte=desde, fecha_creacion__lt=hasta)
         .annotate(fecha=TruncDate('fecha_creacion', tzinfo=zona)).values('fecha', 'estado')
         .annotate(pedidos=Count('pk'), monto=Sum('monto_total')).order_by('fecha', 'estado'))

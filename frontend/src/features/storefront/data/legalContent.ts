@@ -33,6 +33,7 @@ export interface LegalPage {
   vigente?: boolean;
   estado?: string;
   banner?: CookieBannerConfig;
+  historial?: { version: number; fecha_vigencia: string; content: string }[];
   versions?: LegalContentVersion[];
   currentVersionId?: string | null;
 }

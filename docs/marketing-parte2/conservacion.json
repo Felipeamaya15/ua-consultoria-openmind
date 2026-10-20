@@ -1,0 +1,21 @@
+{
+  "previos_informes_configuracion": {
+    "modificados": [
+      "frontend/src/features/admin/config/navigation.ts",
+      "frontend/src/features/admin/config/pageHelp.ts",
+      "frontend/src/features/admin/routes.tsx"
+    ],
+    "total": 78,
+    "faltantes": []
+  },
+  "baseline_parte1": {
+    "extendidos": [
+      "C:\\Users\\maria\\Ecommerce\\ua-consultoria-openmind\\frontend\\src\\features\\marketing\\domain\\types.ts",
+      "C:\\Users\\maria\\Ecommerce\\ua-consultoria-openmind\\frontend\\src\\features\\marketing\\pages\\Marketing.tsx",
+      "C:\\Users\\maria\\Ecommerce\\ua-consultoria-openmind\\frontend\\tests\\marketing-browser.cjs",
+      "C:\\Users\\maria\\Ecommerce\\ua-consultoria-openmind\\frontend\\src\\features\\marketing\\components\\PublicationPreview.tsx"
+    ],
+    "total": 103,
+    "faltantes": []
+  }
+}

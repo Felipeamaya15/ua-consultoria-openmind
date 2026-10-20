@@ -2,6 +2,8 @@ import { fetchInitialLoad, type InitialLoadOptions } from '../../../core/http/in
 import { API_BASE_URL } from '../../../api';
 import type { LandingConfig, LandingInput } from '../types/landing.types';
 
+export const LANDING_CONFIG_CHANGED = 'openmind:landing-config-changed';
+
 const endpoint = `${API_BASE_URL}/api/landing/configuracion/`;
 
 function normalizeMediaUrl(value: string | null): string | null {
@@ -76,5 +78,6 @@ export async function saveLandingConfig(config: LandingInput): Promise<LandingCo
     method: 'PUT', headers: { Authorization: `Token ${token}` }, body,
   }));
   if (!saved) throw new Error('El backend no devolvió la configuración guardada.');
+  if (typeof window !== 'undefined') window.dispatchEvent(new Event(LANDING_CONFIG_CHANGED));
   return saved;
 }

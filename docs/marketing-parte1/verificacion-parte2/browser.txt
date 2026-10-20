@@ -1,0 +1,3 @@
+OK 375px: tres formatos, variantes/ofertas de fixture, vacíos/errores/carga, logo/imagen ausentes, teclado, acceso contextual, formato sin persistencia, PDF/configuración/promociones conservados
+OK 768px: tres formatos, variantes/ofertas de fixture, vacíos/errores/carga, logo/imagen ausentes, teclado, acceso contextual, formato sin persistencia, PDF/configuración/promociones conservados
+OK 1440px: tres formatos, variantes/ofertas de fixture, vacíos/errores/carga, logo/imagen ausentes, teclado, acceso contextual, formato sin persistencia, PDF/configuración/promociones conservados

@@ -426,5 +426,3 @@ class LegalPagesAPITestCase(APITestCase):
         self.assertEqual(res.status_code, status.HTTP_200_OK)
         self.assertIn('Texto público vigente', res.data['data']['content'])
         self.assertNotIn('Borrador Secreto', res.data['data']['content'])
-
-

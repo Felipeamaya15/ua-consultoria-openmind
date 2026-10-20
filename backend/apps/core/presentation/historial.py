@@ -2,6 +2,7 @@ from decimal import Decimal
 
 from django.db.models import Count, Q, Sum
 from django.db.models.functions import TruncDay, TruncMonth
+from apps.core.domain.periodos import ZONA_COMERCIAL
 from rest_framework import serializers
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
@@ -96,6 +97,7 @@ class HistorialVentasAPIView(APIView):
         total = resumen['total'] or Decimal('0')
         promedio = (total / cantidad).quantize(CENTAVOS) if cantidad else Decimal('0')
 
+        zona = ZONA_COMERCIAL
         truncar = TruncDay if agrupacion == 'dia' else TruncMonth
         formato = '%Y-%m-%d' if agrupacion == 'dia' else '%Y-%m'
         serie = (

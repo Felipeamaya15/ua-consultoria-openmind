@@ -1,3 +1,4 @@
+import { businessDateParts } from './businessTime';
 import { API_BASE_URL } from '../../../api';
 import { authService } from '../../auth/services/authService';
 
@@ -74,13 +75,12 @@ export async function getRecentOrders(limit: number = RECENT_ORDERS_LIMIT, signa
 }
 
 const MONTHS = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
-const twoDigits = (value: number) => String(value).padStart(2, '0');
 
-/** "2026-10-13T18:30:00Z" -> "13 oct 2026, 15:30" (hora local). Devuelve '' si la fecha no es válida. */
+/** "2026-10-13T18:30:00Z" -> "13 oct 2026, 15:30" (America/Santiago). Devuelve '' si la fecha no es válida. */
 export function formatRecentOrderDate(value: string): string {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return '';
-  return `${date.getDate()} ${MONTHS[date.getMonth()]} ${date.getFullYear()}, ${twoDigits(date.getHours())}:${twoDigits(date.getMinutes())}`;
+  const parts = businessDateParts(value);
+  if (!parts) return '';
+  return `${Number(parts.day)} ${MONTHS[Number(parts.month) - 1]} ${parts.year}, ${parts.hour}:${parts.minute}`;
 }
 
 export const updateOrderStatus = async (pedidoId: number, nuevoEstado: string) => {

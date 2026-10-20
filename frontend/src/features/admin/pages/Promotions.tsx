@@ -15,18 +15,19 @@ import { promotionService } from "../services/promotionService"
 const CODE_REGEX = /^[A-Z0-9]+(?:-[A-Z0-9]+)*$/
 
 function formatPromoDate(value?: string): string {
-  if (!value) return ""
+  if (!value) return "Sin límite"
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value.trim())
   if (match) {
     return `${match[3]}-${match[2]}-${match[1]}`
   }
   const parsed = new Date(value)
-  return Number.isNaN(parsed.getTime()) ? value : parsed.toLocaleDateString("es-CL")
+  return Number.isNaN(parsed.getTime()) ? value : parsed.toLocaleString("es-CL", { timeZone: "America/Santiago", timeZoneName: "short" })
 }
 
 export default function Promotions() {
   const { config, setConfig } = useAdmin()
   const [promos, setPromotionRows] = useState<Promotion[]>([])
+  const [original, setOriginal] = useState<Promotion | null>(null)
   const [error, setError] = useState("")
   const [statusMessage, setStatusMessage] = useState("")
   const [loading, setLoading] = useState(true)
@@ -78,16 +79,16 @@ export default function Promotions() {
     }
 
     const code = editPromo.code?.trim().toUpperCase() ?? ""
-    if (!code) {
+    if (!code && editPromo.type !== "precio_oferta") {
       setError("Ingresa un código promocional (ej: VERANO20).")
       return
     }
-    if (!CODE_REGEX.test(code)) {
+    if (code && !CODE_REGEX.test(code)) {
       setError("El código solo puede contener letras, números y guiones.")
       return
     }
     if (
-      promos.some(
+      code && promos.some(
         (p) => p.id !== editPromo.id && p.code?.trim().toUpperCase() === code
       )
     ) {
@@ -106,18 +107,15 @@ export default function Promotions() {
       return
     }
 
-    if (
-      !editPromo.startsAt ||
-      (editPromo.endsAt && editPromo.endsAt < editPromo.startsAt)
-    ) {
-      setError("Revisa las fechas de inicio y fin.")
-      return
+    const validDate = (raw?: string) => !raw || /^\d{4}-\d{2}-\d{2}$/.test(raw) || (/^\d{4}-\d{2}-\d{2}T.*(Z|[+-]\d{2}:\d{2})$/.test(raw) && Number.isFinite(Date.parse(raw)));
+    if (!validDate(editPromo.startsAt) || !validDate(editPromo.endsAt)) {
+      setError('Usa una fecha de calendario o un instante con zona horaria.'); return;
     }
 
     if (
       (editPromo.minAmount ?? 0) < 0 ||
       (editPromo.maxUses !== undefined &&
-        (!Number.isInteger(editPromo.maxUses) || editPromo.maxUses < 1))
+        (!Number.isInteger(editPromo.maxUses) || editPromo.maxUses < 0))
     ) {
       setError("Revisa el monto mínimo y el límite de usos.")
       return
@@ -137,10 +135,13 @@ export default function Promotions() {
       active: editPromo.active ?? true,
     }
 
+    // Compare the edited fields before normalization: renaming must preserve
+    // historical codes, free-shipping amounts and complete validity instants.
+    const changes = original ? Object.fromEntries(Object.entries(draft).filter(([key]) => key !== 'id' && key !== 'usedCount' && editPromo[key as keyof Promotion] !== original[key as keyof Promotion])) : draft;
     setSaving(true)
     try {
       const promo = editPromo.id
-        ? await promotionService.update(draft as Promotion)
+        ? await promotionService.update({ ...changes, id: editPromo.id })
         : await promotionService.create(draft)
       if (
         setPromos((previous) =>
@@ -174,7 +175,7 @@ export default function Promotions() {
     setStatusMessage("")
     try {
       const updated = await promotionService.update({
-        ...current,
+        id: current.id,
         active: !current.active,
       })
       setPromos((prev) => prev.map((p) => (p.id === id ? updated : p)))
@@ -217,10 +218,12 @@ export default function Promotions() {
       percentage: <Badge variant="info">% Descuento</Badge>,
       fixed: <Badge variant="accent">$ Fijo</Badge>,
       free_shipping: <Badge variant="success">Envío gratis</Badge>,
+      precio_oferta: <Badge variant="info">Oferta de producto</Badge>,
     })[type]
 
   return (
     <div className="flex flex-col gap-5">
+      <p className="text-sm">Vigencias en America/Santiago. Los precios de oferta se configuran en Productos; sus registros no son cupones.</p>
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <p className="text-sm text-[var(--muted-foreground)]">
@@ -234,6 +237,7 @@ export default function Promotions() {
           onClick={() => {
             setError("")
             setStatusMessage("")
+            setOriginal(null)
             setEditPromo({
               type: "percentage",
               startsAt: new Date().toISOString().slice(0, 10),
@@ -296,7 +300,7 @@ export default function Promotions() {
                         ? `${promo.value}%`
                         : promo.type === "fixed"
                           ? formatPrice(promo.value)
-                          : "Envío gratis"}
+                          : promo.type === "precio_oferta" ? "Precio configurado en producto/variante" : "Envío gratis"}
                     </strong>
                   </span>
                   {Boolean(promo.minAmount && promo.minAmount > 0) && (
@@ -354,6 +358,7 @@ export default function Promotions() {
                   onClick={() => {
                     setError("")
                     setStatusMessage("")
+                    setOriginal(promo)
                     setEditPromo({ ...promo })
                     setShowModal(true)
                   }}
@@ -396,7 +401,8 @@ export default function Promotions() {
             placeholder="Ej: Descuento Verano 2026"
           />
           <Input
-            label="Código de descuento"
+            label={editPromo?.type === "precio_oferta" ? "Código de referencia (opcional)" : "Código de descuento (obligatorio)"}
+            required={editPromo?.type !== "precio_oferta"} maxLength={40} persistentHint
             value={editPromo?.code ?? ""}
             onChange={(e) => patch({ code: e.target.value.toUpperCase() })}
             placeholder="VERANO20"
@@ -416,6 +422,7 @@ export default function Promotions() {
               { value: "percentage", label: "Porcentaje (%)" },
               { value: "fixed", label: "Monto fijo ($)" },
               { value: "free_shipping", label: "Envío gratis" },
+              ...(editPromo?.type === "precio_oferta" ? [{ value: "precio_oferta", label: "Oferta de producto (sin cupón)" }] : []),
             ]}
           />
           <div className="grid grid-cols-2 gap-3">
@@ -428,7 +435,8 @@ export default function Promotions() {
                     : "Valor"
               }
               type="number"
-              min={editPromo?.type === "free_shipping" ? 0 : 1}
+              min={editPromo?.type === "free_shipping" || editPromo?.type === "precio_oferta" ? 0 : 0.01}
+              step="0.01"
               max={editPromo?.type === "percentage" ? 100 : undefined}
               disabled={editPromo?.type === "free_shipping"}
               value={
@@ -465,14 +473,17 @@ export default function Promotions() {
           </div>
           <div className="grid grid-cols-2 gap-3">
             <Input
-              label="Fecha de inicio"
-              type="date"
+              label="Inicio de vigencia"
+              type="text"
+              placeholder="2026-10-19 o instante con zona"
+              hint="Una fecha incluye el día en America/Santiago. Vacío: sin límite. Los instantes conservan su hora y zona."
               value={editPromo?.startsAt ?? ""}
               onChange={(e) => patch({ startsAt: e.target.value })}
             />
             <Input
-              label="Fecha de fin"
-              type="date"
+              label="Fin de vigencia"
+              type="text"
+              placeholder="2026-10-19 o instante con zona"
               value={editPromo?.endsAt ?? ""}
               onChange={(e) => patch({ endsAt: e.target.value })}
               hint="Opcional"
@@ -481,7 +492,7 @@ export default function Promotions() {
           <Input
             label="Límite de usos"
             type="number"
-            min={1}
+            min={0}
             value={editPromo?.maxUses ?? ""}
             onChange={(e) =>
               patch({
@@ -490,7 +501,7 @@ export default function Promotions() {
               })
             }
             placeholder="Sin límite"
-            hint="Opcional"
+            hint="Opcional. Cero impide nuevos usos; vacío significa sin límite."
           />
           <div className="flex justify-end gap-2 pt-2">
             <Button

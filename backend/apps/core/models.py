@@ -2,6 +2,8 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.db import models
 from django.db.models import Q
+from django.db.models.functions import Upper
+from apps.core.promotion_dates import promotion_instant
 from django.utils import timezone
 from django.utils.crypto import get_random_string
 
@@ -77,8 +79,8 @@ class Promocion(models.Model):
     maximo_usos = models.PositiveIntegerField(null=True, blank=True)
     usos = models.PositiveIntegerField(default=0)
     activa = models.BooleanField(default=True)
-    fecha_inicio = models.DateField(null=True, blank=True)
-    fecha_fin = models.DateField(null=True, blank=True)
+    fecha_inicio = models.DateTimeField(null=True, blank=True)
+    fecha_fin = models.DateTimeField(null=True, blank=True)
     fecha_creacion = models.DateTimeField(auto_now_add=True)
     fecha_actualizacion = models.DateTimeField(auto_now=True)
 
@@ -86,7 +88,7 @@ class Promocion(models.Model):
         db_table = 'promocion'
         constraints = [
             models.UniqueConstraint(
-                fields=['tienda', 'codigo'],
+                Upper('codigo'), 'tienda',
                 condition=~Q(codigo=''),
                 name='uq_promocion_codigo_por_tienda',
             ),
@@ -100,16 +102,15 @@ class Promocion(models.Model):
             ),
             models.CheckConstraint(condition=Q(valor__gte=0), name='chk_promocion_valor_no_negativo'),
             models.CheckConstraint(condition=Q(monto_minimo__gte=0), name='chk_promocion_minimo_no_negativo'),
+            models.CheckConstraint(condition=Q(tipo='precio_oferta') | ~Q(codigo=''), name='chk_promocion_codigo_cupon'),
+            models.CheckConstraint(condition=Q(tipo__in=('percentage','fixed','free_shipping','descuento_porcentual','descuento_monto_fijo','envio_gratuito','precio_oferta')), name='chk_promocion_tipo_valido'),
+            models.CheckConstraint(condition=(~Q(tipo__in=('percentage','descuento_porcentual')) | Q(valor__gt=0,valor__lte=100)) & (~Q(tipo__in=('fixed','descuento_monto_fijo')) | Q(valor__gt=0)), name='chk_promocion_descuento_valido'),
         ]
 
     def save(self, *args, **kwargs):
-        self.codigo = self.codigo.strip().upper()
-        alias_tipo = {
-            'descuento_porcentual': self.TIPO_PORCENTAJE,
-            'descuento_monto_fijo': self.TIPO_MONTO_FIJO,
-            'envio_gratuito': self.TIPO_ENVIO_GRATIS,
-        }
-        self.tipo = alias_tipo.get(self.tipo, self.tipo)
+        # No cambia tipos/códigos históricos al editar otro atributo.
+        self.fecha_inicio = promotion_instant(self.fecha_inicio)
+        self.fecha_fin = promotion_instant(self.fecha_fin, end=True)
         super().save(*args, **kwargs)
 
     def __str__(self):

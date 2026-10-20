@@ -24,7 +24,7 @@ from copy import deepcopy
 from rest_framework import generics, serializers
 # Compatibilidad: una sola implementación de seguimiento con validación y aislamiento por tienda.
 from apps.core.presentation.order_tracking import OrderTrackingAPIView
-from .serializers import PedidoTiendaSerializer, TransferenciaPendienteSerializer       
+from .serializers import PedidoTiendaSerializer, TransferenciaPendienteSerializer
 
 class RegistrarCompraView(GuestCheckoutOrderAPIView):
     """Compatibilidad SCRUM-289: reutiliza la creación y seguridad de SCRUM-291."""

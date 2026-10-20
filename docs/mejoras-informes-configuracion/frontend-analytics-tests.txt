@@ -1,0 +1,112 @@
+
+> frontend@0.0.0 test:analytics
+> node tests/dashboard.cjs && node tests/dashboard-navigation.cjs && node tests/analytics-checkout.cjs && node tests/checkout-shipping.cjs && node tests/cart-checkout.cjs
+
+OK metadatos analíticos válidos conservan porcentajes, estados y ticket; rechaza campos inválidos
+OK contrato, token, período y cancelación viajan al endpoint real
+OK sesión ausente no consulta y 401/403/500 se explican
+OK red, JSON inválido, respuesta malformada y abort son tratados
+OK carga, error, reintento y vacío no inventan ventas
+OK histórico muestra fechas CLP, filas y estructura responsiva accesible
+OK cambia período sin recarga y descarta respuesta anterior
+OK error permite reintento y conserva últimas órdenes independientes
+8 pruebas OK
+✔ cada tarjeta transmite fechas exactas y período; ventas solo estados confirmados (4.5297ms)
+✔ órdenes cuenta todos y por despachar coincide con los cuatro estados del backend (2.1356ms)
+✔ fechas inclusivas interpretadas en Chile, sin depender de zona del navegador (0.3451ms)
+✔ histórico de un día y detalle emplean la página existente (0.8052ms)
+✔ rangos inválidos no amplían la consulta; fechas, estado e identificador se validan (0.4296ms)
+ℹ tests 5
+ℹ suites 0
+ℹ pass 5
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 16.0427
+✔ agrupación diaria/semanal/mensual conserva todas las ventas y pedidos e intervalos (7.0103ms)
+✔ picos, empates, ausencia de actividad y porcentajes no inventan resultados (30.5697ms)
+✔ desplegable inicia cerrado, expande/contrae y no propaga selección ni envía formulario (66.5396ms)
+✔ dirección y horario legacy se conservan sin inventar estructura ni horarios (38.6973ms)
+ℹ tests 4
+ℹ suites 0
+ℹ pass 4
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 194.8237
+✔ Catálogo territorial: 16 regiones, alias y comunas consistentes con backend (13.4115ms)
+✔ Servicio: request, referencia, precio y errores de contrato (200.0352ms)
+▶ Plantilla 1: checkout y despacho
+  ✔ solo muestra métodos habilitados desde API (12.6396ms)
+  ✔ sin alternativas y error de carga no hay fallback (3.46ms)
+  ✔ seleccionar región y comuna carga catálogo correcto (7.8688ms)
+  ✔ Chilexpress muestra tarifa y total exactos sobre 50.000 (1.0839ms)
+  ✔ seleccionar Starken invalida Chilexpress y usa su tarifa (2.257ms)
+  ✔ cambiar comuna invalida inmediatamente e impide confirmar durante carga (1.7816ms)
+  ✔ cambiar región no reutiliza cotización aunque la comuna sea anterior (1.2776ms)
+  ✔ respuesta tardía de destino anterior no restaura tarifa (2.2277ms)
+  ✔ fallo al cotizar bloquea y permite reintento sin 3.490 (2.4118ms)
+  ✔ cotización vencida bloquea confirmación (1.1902ms)
+  ✔ Retiro usa cero, dirección/horario y no cotiza con o sin destino (1.2161ms)
+  ✔ payload conserva dirección, operador y referencia sin precios de cliente (1.0913ms)
+✔ Plantilla 1: checkout y despacho (148.684ms)
+▶ Plantilla 2: checkout y despacho
+  ✔ solo muestra métodos habilitados desde API (3.1755ms)
+  ✔ sin alternativas y error de carga no hay fallback (0.7353ms)
+  ✔ seleccionar región y comuna carga catálogo correcto (1.8436ms)
+  ✔ Chilexpress muestra tarifa y total exactos sobre 50.000 (1.039ms)
+  ✔ seleccionar Starken invalida Chilexpress y usa su tarifa (1.3046ms)
+  ✔ cambiar comuna invalida inmediatamente e impide confirmar durante carga (1.3223ms)
+  ✔ cambiar región no reutiliza cotización aunque la comuna sea anterior (1.0239ms)
+  ✔ respuesta tardía de destino anterior no restaura tarifa (1.8351ms)
+  ✔ fallo al cotizar bloquea y permite reintento sin 3.490 (1.8435ms)
+  ✔ cotización vencida bloquea confirmación (0.856ms)
+  ✔ Retiro usa cero, dirección/horario y no cotiza con o sin destino (1.41ms)
+  ✔ payload conserva dirección, operador y referencia sin precios de cliente (1.4906ms)
+✔ Plantilla 2: checkout y despacho (132.5354ms)
+▶ Plantilla 3: checkout y despacho
+  ✔ solo muestra métodos habilitados desde API (2.0331ms)
+  ✔ sin alternativas y error de carga no hay fallback (0.7968ms)
+  ✔ seleccionar región y comuna carga catálogo correcto (5.5781ms)
+  ✔ Chilexpress muestra tarifa y total exactos sobre 50.000 (0.779ms)
+  ✔ seleccionar Starken invalida Chilexpress y usa su tarifa (1.1969ms)
+  ✔ cambiar comuna invalida inmediatamente e impide confirmar durante carga (1.264ms)
+  ✔ cambiar región no reutiliza cotización aunque la comuna sea anterior (1.0212ms)
+  ✔ respuesta tardía de destino anterior no restaura tarifa (1.4115ms)
+  ✔ fallo al cotizar bloquea y permite reintento sin 3.490 (1.3331ms)
+  ✔ cotización vencida bloquea confirmación (0.9664ms)
+  ✔ Retiro usa cero, dirección/horario y no cotiza con o sin destino (0.8088ms)
+  ✔ payload conserva dirección, operador y referencia sin precios de cliente (1.0996ms)
+✔ Plantilla 3: checkout y despacho (125.09ms)
+▶ Plantilla 4: checkout y despacho
+  ✔ solo muestra métodos habilitados desde API (1.9545ms)
+  ✔ sin alternativas y error de carga no hay fallback (1.1943ms)
+  ✔ seleccionar región y comuna carga catálogo correcto (1.9158ms)
+  ✔ Chilexpress muestra tarifa y total exactos sobre 50.000 (0.9743ms)
+  ✔ seleccionar Starken invalida Chilexpress y usa su tarifa (1.2559ms)
+  ✔ cambiar comuna invalida inmediatamente e impide confirmar durante carga (1.2175ms)
+  ✔ cambiar región no reutiliza cotización aunque la comuna sea anterior (0.8939ms)
+  ✔ respuesta tardía de destino anterior no restaura tarifa (2.003ms)
+  ✔ fallo al cotizar bloquea y permite reintento sin 3.490 (1.5366ms)
+  ✔ cotización vencida bloquea confirmación (0.8577ms)
+  ✔ Retiro usa cero, dirección/horario y no cotiza con o sin destino (1.1578ms)
+  ✔ payload conserva dirección, operador y referencia sin precios de cliente (1.5375ms)
+✔ Plantilla 4: checkout y despacho (107.1838ms)
+✔ Servicio: los errores de cotización se clasifican por código y no filtran textos técnicos (92.3318ms)
+✔ Entrega: sin tarifa para el destino ofrece otras alternativas en vez de reintentar (135.0948ms)
+✔ Entrega: sin otras alternativas se sugiere cambiar la comuna o contactar a la tienda (84.7924ms)
+✔ Entrega: destino inválido pide revisar la dirección y no ofrece otras alternativas (86.8461ms)
+✔ Entrega: un fallo técnico o una cotización vencida sí permiten volver a cotizar (88.5461ms)
+✔ Confirmar: si la tarifa venció o cambió vuelve a Entrega y vuelve a cotizar (72.0587ms)
+✔ Pedido: los errores conservan su código y no muestran textos técnicos (12.9878ms)
+ℹ tests 61
+ℹ suites 0
+ℹ pass 61
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1306.6044
+OK: contrato real, Token/invitado, errores, doble envío, reintento, Webpay, cuatro plantillas, stock independiente y limpieza del carrito

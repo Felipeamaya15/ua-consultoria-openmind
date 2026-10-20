@@ -1,0 +1,11 @@
+Found 5 test(s).
+ Índices del catálogo creados exitosamente
+ Índices del catálogo creados exitosamente
+ Índices del catálogo creados exitosamente
+ Índices del catálogo creados exitosamente
+ Índices del catálogo creados exitosamente
+.....
+----------------------------------------------------------------------
+Ran 5 tests in 3.206s
+
+OK

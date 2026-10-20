@@ -5,6 +5,7 @@ import { adminRepository } from '../data/adminRepository';
 import { useStoreIdentity } from '../../storefront/context/StoreIdentityContext';
 import { humanizeAdminError } from '../utils/humanizeError';
 import { getStoreConfigKey, isStoreConfigChange, STORE_CONFIG_CHANGED_EVENT, type StoreIdentity } from '../../storefront/visual/storage';
+import { fetchStoreInformation, STORE_INFORMATION_CHANGED, type StoreInformation } from '../../storefront/services/storeInformationService';
 interface AdminContextValue {
   config: AdminConfig; setConfig: (next: AdminConfig) => boolean;
   previewTemplate: TemplateId | null; setPreviewTemplate: (template: TemplateId | null) => void;
@@ -13,6 +14,15 @@ interface AdminContextValue {
 const AdminContext = createContext<AdminContextValue | null>(null);
 function ScopedAdminProvider({children, identity}: {children:ReactNode; identity: StoreIdentity}) {
   const [config, setState] = useState(() => adminRepository.load(identity));
+  const [business, setBusiness] = useState<StoreInformation | null>(null);
+  useEffect(() => {
+    const controller = new AbortController();
+    const refresh = () => { void fetchStoreInformation(controller.signal).then(value => { if (!controller.signal.aborted) setBusiness(value); }).catch(() => {}); };
+    refresh();
+    window.addEventListener(STORE_INFORMATION_CHANGED, refresh);
+    window.addEventListener('focus', refresh);
+    return () => { controller.abort(); window.removeEventListener(STORE_INFORMATION_CHANGED, refresh); window.removeEventListener('focus', refresh); };
+  }, [identity]);
   const [storageError,setStorageError] = useState('');
   const [previewTemplate,setPreviewTemplate] = useState<TemplateId|null>(null);
   useEffect(() => {
@@ -33,7 +43,7 @@ function ScopedAdminProvider({children, identity}: {children:ReactNode; identity
     catch { setStorageError('No se pudo guardar. Revisa el espacio o los permisos del navegador; reduce el tamaño de las imágenes e intenta nuevamente.'); return false; }
   }
   function updateTemplate(template:TemplateId) { if (setConfig({...config,template})) setPreviewTemplate(null); }
-  return <AdminContext.Provider value={{config,setConfig,previewTemplate,setPreviewTemplate,updateTemplate,storageError}}>{children}</AdminContext.Provider>;
+  return <AdminContext.Provider value={{config: business ? {...config, name: business.nombre, description: business.descripcion || ''} : config,setConfig,previewTemplate,setPreviewTemplate,updateTemplate,storageError}}>{children}</AdminContext.Provider>;
 }
 export function AdminProvider({children}: {children:ReactNode}) {
   const { identity, loading, error, retry } = useStoreIdentity();

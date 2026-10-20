@@ -43,6 +43,7 @@ function harness(fetchImpl) {
       useEffect: (fn, deps) => { const i = effectIndex++; effects[i] ??= {}; effects[i].next = { fn, deps }; },
     }, '../components/ui': { Select: () => null },
     '../components/dashboard/RecentOrders': { default: () => React.createElement('div', null, 'ORDENES-REALES') },
+    '../components/dashboard/Reports': { default: () => null },
     '../components/dashboard/DashboardMetrics': view,
     '../services/dashboardService': { getDashboard: fetchImpl },
   });

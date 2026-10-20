@@ -1,128 +1,73 @@
-import { useEffect, useMemo, useState } from "react";
-import { Link, useParams } from "react-router-dom";
-import { createDefaultLegalPages, legalPageTemplates, LegalPageType } from "../data/mockAdminData";
-import { legalSlugs, templatePaths } from "../config/navigation";
-import { useAdmin } from "../context/AdminContext";
-import { Alert, Badge, Button, Textarea } from "../components/ui";
-import {
-  LEGAL_MAX_LENGTH,
-  LEGAL_STORAGE_ERROR,
-  formatLegalDate,
-  publishLegalPage,
-} from "../../storefront/data/legalPublication";
-import { legalService } from "../../storefront/services/legalService";
-import { STORE_CONFIG_CHANGED_EVENT } from "../../storefront/visual/storage";
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Link, useParams } from 'react-router-dom';
+import { createDefaultLegalPages, legalPageTemplates, type LegalPageType } from '../data/mockAdminData';
+import { legalSlugs, templatePaths } from '../config/navigation';
+import { useAdmin } from '../context/AdminContext';
+import { Alert, Badge, Button, Textarea } from '../components/ui';
+import { LEGAL_MAX_LENGTH, formatLegalDate } from '../../storefront/data/legalPublication';
+import { legalService } from '../../storefront/services/legalService';
+import type { LegalPage, LegalType } from '../../storefront/data/legalContent';
+import { useVerifiedLegalScope } from '../../storefront/hooks/useVerifiedLegalScope';
+import { getStoreConfigKey, STORE_CONFIG_CHANGED_EVENT } from '../../storefront/visual/storage';
 
-const pageTypes: LegalPageType[] = ["terms", "privacy", "refund", "cookies"];
-
+const pageTypes: LegalPageType[] = ['terms', 'privacy', 'refund', 'cookies'];
 export default function LegalEditor() {
-  const { type = "terms" } = useParams();
-  const current: LegalPageType = pageTypes.find((item) => legalSlugs[item] === type) ?? "terms";
-  const { config, setConfig } = useAdmin();
-
-  const pages = { ...createDefaultLegalPages(), ...config.legalPages };
-  const page = pages[current] ?? createDefaultLegalPages()[current];
-  const meta = legalPageTemplates[current] ?? {
-    title: "Página Legal",
-    description: "Configuración legal de la tienda",
-    content: "",
-  };
-
+  const session = useVerifiedLegalScope();
+  if (!session.ready) return <p role={session.error ? 'alert' : 'status'}>{session.error || 'Confirmando tienda y sesión...'}</p>;
+  if (!session.owner) return <p role="alert">Inicia sesión como propietario para administrar las páginas legales.</p>;
+  return <ScopedLegalEditor key={session.key} isCurrent={session.isCurrent} storageKey={getStoreConfigKey(session.identity!)} />;
+}
+function ScopedLegalEditor({ isCurrent, storageKey }: { isCurrent: () => boolean; storageKey: string }) {
+  const { type = 'terms' } = useParams();
+  const current: LegalPageType = pageTypes.find(item => legalSlugs[item] === type) ?? 'terms';
+  const { config } = useAdmin();
+  const [pages, setPages] = useState<Record<LegalType, LegalPage>>(createDefaultLegalPages);
+  const [loading, setLoading] = useState(true);
+  const [loadFailed, setLoadFailed] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState("");
-  const [notice, setNotice] = useState<"draft" | "published" | "restored" | "error" | null>(null);
-
-  // Sincronización inicial desde el backend en tiempo de ejecución
+  const [error, setError] = useState('');
+  const [notice, setNotice] = useState<'draft' | 'published' | 'restored' | 'recovered' | 'error' | null>(null);
+  const pending = useRef<AbortController | null>(null);
+  const alive = useRef(true);
+  const busy = useRef(false);
+  const selected = useRef(current); selected.current = current;
   useEffect(() => {
-    let active = true;
-    const loadBackend = async () => {
-      try {
-        const data = await legalService.fetchAdminLegalPages();
-        if (active && data) {
-          setConfig({ ...config, legalPages: { ...pages, ...data } });
-        }
-      } catch {
-        // Fallback transparente a la configuración local
-      }
-    };
-    void loadBackend();
-    return () => {
-      active = false;
-    };
+    const controller = new AbortController(); pending.current = controller; alive.current = true;
+    legalService.fetchAdminLegalPages(controller.signal).then(data => { if (alive.current && isCurrent()) setPages(data); })
+      .catch(() => { if (alive.current && isCurrent()) { setLoadFailed(true); setError('No pudimos cargar el contenido legal del servidor. Recarga para reintentar.'); setNotice('error'); } })
+      .finally(() => { if (alive.current && isCurrent()) setLoading(false); });
+    return () => { alive.current = false; pending.current?.abort(); };
   }, []);
-
+  const page = pages[current];
+  const meta = legalPageTemplates[current];
   const hasUnpublishedChanges = page.draft !== page.published;
-  const wordCount = useMemo(
-    () => (page.draft.trim() ? page.draft.trim().split(/\s+/).length : 0),
-    [page.draft],
-  );
-
-  const updateDraft = (draft: string) => {
-    setConfig({
-      ...config,
-      legalPages: { ...pages, [current]: { ...page, draft } },
-    });
-    setNotice(null);
-    setError("");
-  };
-
-  const handleRestore = async () => {
-    const content = legalPageTemplates[current]?.content || "";
-    setConfig({
-      ...config,
-      legalPages: { ...pages, [current]: { ...page, draft: content } },
-    });
-    setNotice("restored");
-    setError("");
+  const wordCount = useMemo(() => page.draft.trim() ? page.draft.trim().split(/\s+/).length : 0, [page.draft]);
+  const updateDraft = (draft: string) => { setPages(previous => ({ ...previous, [current]: { ...previous[current], draft } })); setNotice(null); setError(''); };
+  async function perform(action: 'draft' | 'published' | 'restored', historicContent?: string) {
+    if (busy.current || loading || loadFailed || !isCurrent()) return;
+    const target = current;
+    const text = historicContent ?? page.draft;
+    if (action === 'published' && (!text.trim() || text.length > LEGAL_MAX_LENGTH)) { setError('Escribe un contenido válido antes de publicar.'); setNotice('error'); return; }
+    busy.current = true; setSaving(true); setNotice(null); setError('');
+    const controller = new AbortController(); pending.current = controller;
     try {
-      await legalService.restore(current);
+      const data = action === 'published' ? await legalService.publish(target, text, controller.signal)
+        : action === 'restored' && historicContent === undefined ? await legalService.restore(target, controller.signal)
+        : await legalService.saveDraft(target, text, undefined, undefined, controller.signal);
+      if (!alive.current || !isCurrent()) return;
+      // Solo reemplaza la página que guardó; no descarta ediciones de otra pestaña legal.
+      setPages(previous => ({ ...previous, [target]: data[target] }));
+      if (selected.current === target) setNotice(historicContent !== undefined ? 'recovered' : action);
+      if (action === 'published') window.dispatchEvent(new CustomEvent(STORE_CONFIG_CHANGED_EVENT, { detail: { storageKey } }));
     } catch {
-      // Ignorar error si no hay conexión al backend
-    }
-  };
-
-  const handleSaveDraft = async () => {
-    setNotice("draft");
-    setError("");
-    try {
-      await legalService.saveDraft(current, page.draft);
-    } catch {
-      // Ignorar error de red para conservar borrador en navegador
-    }
-  };
-
-  const handlePublish = async () => {
-    const result = publishLegalPage(pages, current);
-    if (!result.ok) {
-      setError(result.error);
-      setNotice("error");
-      return;
-    }
-
-    const savedOk = setConfig({ ...config, legalPages: result.pages });
-    if (savedOk === false) {
-      setError(LEGAL_STORAGE_ERROR);
-      setNotice("error");
-      return;
-    }
-
-    setError("");
-    setNotice("published");
-
-    // Notificar al backend y a la tienda pública
-    setSaving(true);
-    try {
-      await legalService.publish(current, page.draft);
-      if (typeof window !== "undefined") {
-        window.dispatchEvent(new Event(STORE_CONFIG_CHANGED_EVENT));
-      }
-    } catch {
-      // Si falla la red, la publicación local ya quedó guardada
-    } finally {
-      setSaving(false);
-    }
-  };
-
+      if (alive.current && isCurrent()) { setError('No pudimos guardar en el servidor. Conservamos tu edición y la versión publicada. Intenta nuevamente.'); setNotice('error'); }
+    } finally { busy.current = false; if (alive.current && isCurrent()) setSaving(false); }
+  }
+  const handleRestore = () => perform('restored');
+  const handleSaveDraft = () => perform('draft');
+  const handlePublish = () => perform('published');
+  if (loading) return <p role="status">Cargando contenido legal del servidor...</p>;
+  if (loadFailed) return <p role="alert">{error}</p>;
   return (
     <div className="w-full space-y-5">
       <div className="flex items-start justify-between gap-4 flex-wrap">
@@ -136,7 +81,7 @@ export default function LegalEditor() {
       </div>
 
       <Alert variant="info">
-        Lo que publiques es lo que ven tus clientes en la tienda; el borrador no se muestra hasta que lo publiques. Por ahora la publicación se guarda en este navegador, igual que el resto de la personalización de tu tienda.
+        Lo que publiques es lo que ven tus clientes en la tienda; el borrador no se muestra hasta que lo publiques. La publicación y su historial se confirman y guardan en el servidor de tu tienda.
       </Alert>
 
       <nav className="flex gap-2 overflow-x-auto border-b border-[var(--border)]" aria-label="Páginas legales">
@@ -165,6 +110,8 @@ export default function LegalEditor() {
             ? "Borrador guardado. Todavía no es visible en la tienda."
             : notice === "published"
             ? "Página publicada. Tus clientes ya ven esta versión en la tienda."
+            : notice === "recovered"
+            ? "Se recuperó la versión elegida como borrador."
             : "Se restauró la plantilla base en el borrador."}
         </Alert>
       )}
@@ -183,23 +130,24 @@ export default function LegalEditor() {
             aria-label={`Editar ${meta.title}`}
             value={page.draft}
             onChange={(event) => updateDraft(event.target.value)}
+            disabled={saving || loadFailed}
             rows={20}
             maxLength={LEGAL_MAX_LENGTH}
             className="font-mono text-xs leading-relaxed"
           />
 
           <div className="flex flex-wrap gap-2 pt-1">
-            <Button variant="ghost" size="sm" onClick={handleRestore}>
+            <Button variant="ghost" size="sm" onClick={handleRestore} disabled={saving || loadFailed}>
               Restaurar plantilla
             </Button>
-            <Button variant="outline" size="sm" onClick={handleSaveDraft}>
+            <Button variant="outline" size="sm" onClick={handleSaveDraft} disabled={saving || loadFailed}>
               Guardar borrador
             </Button>
             <Button
               variant="primary"
               size="sm"
               onClick={handlePublish}
-              disabled={!hasUnpublishedChanges || saving}
+              disabled={!hasUnpublishedChanges || saving || loadFailed}
             >
               Publicar
             </Button>
@@ -228,6 +176,7 @@ export default function LegalEditor() {
             </Link>
           </div>
 
+          {!!page.historial?.length && <details className="my-4"><summary>Historial publicado</summary><ul>{page.historial.map(entry => <li key={entry.version}>Versión {entry.version} · {formatLegalDate(entry.fecha_vigencia)} <Button size="sm" variant="outline" disabled={saving || loadFailed} onClick={() => void perform('restored', entry.content)}>Recuperar como borrador</Button></li>)}</ul></details>}
           <article className="text-sm text-[var(--muted-foreground)] leading-relaxed">
             {page.published.split("\n\n").map((paragraph, index) =>
               paragraph.startsWith("**") ? (

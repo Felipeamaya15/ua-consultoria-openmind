@@ -410,4 +410,3 @@ export function InstitutionalBadge({ compact = false, showVersion = false }: { c
 }
 export { Icon } from './Icon';
 export { SoftwareVersionModal } from './SoftwareVersionModal';
-

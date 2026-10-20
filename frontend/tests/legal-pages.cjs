@@ -124,11 +124,12 @@ function provider() {
   const fakeReact = {
     createContext: value => ({ Provider: 'Provider', value }), useContext: context => context.value, useMemo: fn => fn(),
     useState: initial => { const slot = index++; if (!(slot in slots)) slots[slot] = typeof initial === 'function' ? initial() : initial; return [slots[slot], next => { slots[slot] = typeof next === 'function' ? next(slots[slot]) : next; }]; },
-    useEffect: () => {},
+    useEffect: () => {}, useCallback: fn => fn,
   };
   const mocks = {
     'react/jsx-runtime': { jsx, jsxs: jsx }, react: fakeReact, 'react-router-dom': { useLocation: () => ({ pathname: '/plantilla/1/legal/terms' }) },
     '../services/catalogService': { fetchPublicProducts: async () => [] }, '../../landing/services/landingService': { fetchLandingConfig: async () => null },
+    '../services/storeInformationService': { fetchStoreInformation: async () => ({ nombre: 'Tienda', descripcion: '' }), STORE_INFORMATION_CHANGED: 'test-store-information' },
     './StoreIdentityContext': { useStoreIdentity: () => ({ identity }) },
     '../services/legalService': { legalService: { fetchPublicLegalPages: async () => defaultLegalPages } },
   };
@@ -143,12 +144,13 @@ test('StoreProvider entrega a la tienda las páginas legales publicadas', () => 
   same(read().legalPages, defaultLegalPages, 'sin configuración guardada, texto base');
   storageApi.saveStoredStoreConfig({ template: 'minimal', legalPages: { terms: { draft: 'BORRADOR SECRETO', published: 'Términos publicados', lastPublished: '2026-10-13T15:00:00.000Z' } } }, identity);
   const value = read();
-  assert.equal(value.legalPages.terms.published, 'Términos publicados');
+  assert.equal(value.legalVerified, false);
+  assert.notEqual(value.legalPages.terms.published, 'Términos publicados');
   assert.ok(!JSON.stringify(value.legalPages).includes('SECRETO'));
   same(value.legalPages.privacy, defaultLegalPages.privacy);
   // Lo publicado en otra tienda no se mezcla con esta.
   storageApi.saveStoredStoreConfig({ legalPages: { terms: { published: 'Otra tienda' } } }, { ...identity, storeId: '2' });
-  assert.equal(read().legalPages.terms.published, 'Términos publicados');
+  assert.equal(read().legalVerified, false);
 });
 
 // ------------------------------------------------------------------ la página pública
@@ -157,7 +159,7 @@ function renderPublic({ type, legalPages = defaultLegalPages, minimal = false, c
     'react-router-dom': { useParams: () => ({ type }), Link: ({ to, children }) => React.createElement('a', { href: to }, children) },
     '../components/ui': { Breadcrumb: ({ items }) => React.createElement('nav', null, items.map(item => item.label).join(' / ')) },
     '../hooks/useStorefrontTemplate': { useStorefrontTemplate: () => ({ route: (p = '') => ('/plantilla/1/' + p).replace(/\/$/, ''), isMinimal: minimal, isCatalog: catalog }) },
-    '../context/StoreContext': { useStore: () => ({ legalPages }) },
+    '../context/StoreContext': { useStore: () => ({ legalPages, legalVerified: true, legalLoading: false, legalError: '' }) },
   };
   const { default: Legal } = load('src/features/storefront/pages/Legal.tsx', mocks);
   return renderToStaticMarkup(React.createElement(Legal));
@@ -207,143 +209,10 @@ test('una dirección legal desconocida muestra "no encontrada" con enlaces a las
   }
 });
 
-// ------------------------------------------------------------------ el editor del panel
-function editorHarness(initialConfig, { saveOk = true } = {}) {
-  const slots = []; let index = 0; const calls = []; let config = initialConfig;
-  const fakeReact = {
-    useMemo: fn => fn(),
-    useState: initial => { const slot = index++; if (!(slot in slots)) slots[slot] = typeof initial === 'function' ? initial() : initial; return [slots[slot], next => { slots[slot] = typeof next === 'function' ? next(slots[slot]) : next; }]; },
-    useEffect: () => {},
-  };
-  const mocks = {
-    'react/jsx-runtime': { jsx, jsxs: jsx }, react: fakeReact,
-    'react-router-dom': { useParams: () => ({ type: harness.type }), Link: 'Link' },
-    '../context/AdminContext': { useAdmin: () => ({ config, setConfig: next => { calls.push(next); if (saveOk) config = next; return saveOk; } }) },
-    '../components/ui': { Alert: 'Alert', Badge: 'Badge', Button: 'Button', Textarea: 'Textarea' },
-    '../data/mockAdminData': { createDefaultLegalPages: () => structuredClone(defaultLegalPages), legalPageTemplates: Object.fromEntries(TYPES.map(tipo => [tipo, { title: LEGAL_META[tipo].label, description: LEGAL_META[tipo].description, content: legal.LEGAL_TEMPLATES[tipo] }])) },
-    '../../storefront/services/legalService': {
-      legalService: {
-        fetchAdminLegalPages: async () => defaultLegalPages,
-        publish: async () => defaultLegalPages,
-        saveDraft: async () => defaultLegalPages,
-        restore: async () => defaultLegalPages,
-      },
-    },
-  };
-  const { default: LegalEditor } = load('src/features/admin/pages/Legal.tsx', mocks);
-  const harness = { type: 'terminos', calls, render: () => { index = 0; return LegalEditor(); }, get config() { return config; } };
-  return harness;
-}
-const walk = (node, visit) => { if (Array.isArray(node)) return node.forEach(item => walk(item, visit)); if (node && typeof node === 'object') { visit(node); walk(node.props && node.props.children, visit); } };
-const find = (tree, predicate) => { const found = []; walk(tree, node => predicate(node) && found.push(node)); return found; };
-const textOf = node => Array.isArray(node) ? node.map(textOf).join('') : node && typeof node === 'object' ? textOf(node.props && node.props.children) : node == null || node === false ? '' : String(node);
-const buttonNamed = (tree, label) => find(tree, node => node.type === 'Button' && textOf(node) === label)[0];
-const configWith = overrides => ({ template: 'minimal', legalPages: { ...structuredClone(defaultLegalPages), ...overrides } });
-
-test('el editor muestra el estado de la página y explica que lo publicado se ve en la tienda', () => {
-  const h = editorHarness(configWith({}));
-  let tree = h.render();
-  assert.equal(find(tree, node => node.type === 'Badge').map(textOf)[0], 'Publicada');
-  assert.equal(buttonNamed(tree, 'Publicar').props.disabled, true, 'sin cambios no hay nada que publicar');
-  assert.ok(textOf(find(tree, node => node.type === 'Alert')[0]).includes('Lo que publiques es lo que ven tus clientes en la tienda'));
-  assert.ok(textOf(find(tree, node => node.type === 'Alert')[0]).includes('se guarda en este navegador'), 'dice la verdad sobre dónde se guarda');
-  assert.ok(!textOf(tree).includes('todavía no se actualizan'), 'ya no dice que la tienda no se actualiza');
-  assert.equal(find(tree, node => node.type === 'Link' && String(node.props.to).includes('/legal/terms'))[0].props.to, '/plantilla/2/legal/terms');
-  assert.ok(textOf(tree).includes('Es la versión que ven tus clientes · actualizada el 1 de agosto de 2025.'));
-  assert.equal(find(tree, node => node.type === 'Textarea')[0].props.maxLength, pub.LEGAL_MAX_LENGTH);
-  const cambiada = editorHarness(configWith({ terms: { ...defaultLegalPages.terms, draft: 'Texto nuevo sin publicar' } }));
-  tree = cambiada.render();
-  assert.equal(find(tree, node => node.type === 'Badge').map(textOf)[0], 'Cambios sin publicar');
-  assert.equal(buttonNamed(tree, 'Publicar').props.disabled, false);
-});
-
-test('publicar guarda lo publicado, avisa que ya lo ven los clientes y habilita volver a publicar solo con cambios', () => {
-  const h = editorHarness(configWith({ terms: { ...defaultLegalPages.terms, draft: 'Términos nuevos del emprendedor' } }));
-  let tree = h.render();
-  const antes = Date.now();
-  buttonNamed(tree, 'Publicar').props.onClick();
-  assert.equal(h.calls.length, 1);
-  const guardada = h.calls[0].legalPages.terms;
-  assert.equal(guardada.published, 'Términos nuevos del emprendedor');
-  assert.ok(Date.parse(guardada.lastPublished) >= antes - 1000 && Date.parse(guardada.lastPublished) <= Date.now() + 1000);
-  same(h.calls[0].legalPages.privacy, defaultLegalPages.privacy);
-  assert.equal(h.calls[0].template, 'minimal', 'conserva el resto de la configuración');
-  tree = h.render();
-  const avisos = find(tree, node => node.type === 'Alert').map(node => [node.props.variant, textOf(node)]);
-  assert.ok(avisos.some(([variante, texto]) => variante === 'success' && texto === 'Página publicada. Tus clientes ya ven esta versión en la tienda.'), JSON.stringify(avisos));
-  assert.equal(buttonNamed(tree, 'Publicar').props.disabled, true);
-  assert.equal(find(tree, node => node.type === 'Badge').map(textOf)[0], 'Publicada');
-});
-
-test('un borrador vacío no se publica y se explica el motivo', () => {
-  for (const vacio of ['', '   \n  ']) {
-    const h = editorHarness(configWith({ privacy: { ...defaultLegalPages.privacy, draft: vacio } }));
-    h.type = 'privacidad';
-    let tree = h.render();
-    assert.equal(buttonNamed(tree, 'Publicar').props.disabled, false);
-    buttonNamed(tree, 'Publicar').props.onClick();
-    assert.equal(h.calls.length, 0, 'no se guardó nada');
-    tree = h.render();
-    const errores = find(tree, node => node.type === 'Alert' && node.props.variant === 'error').map(textOf);
-    same(errores, ['El contenido no puede estar vacío.']);
-    assert.ok(!find(tree, node => node.type === 'Alert' && node.props.variant === 'success').length, 'no avisa que publicó');
-  }
-});
-
-test('si el navegador no puede guardar, no se dice que se publicó', () => {
-  const h = editorHarness(configWith({ refund: { ...defaultLegalPages.refund, draft: 'Reembolsos nuevos' } }), { saveOk: false });
-  h.type = 'reembolso';
-  let tree = h.render();
-  buttonNamed(tree, 'Publicar').props.onClick();
-  assert.equal(h.calls.length, 1);
-  tree = h.render();
-  assert.ok(textOf(find(tree, node => node.type === 'Alert' && node.props.variant === 'error')[0]).startsWith('No se pudo publicar.'));
-  assert.ok(!find(tree, node => node.type === 'Alert' && node.props.variant === 'success').length);
-});
-
-const { humanizeAdminError } = load('src/features/admin/utils/humanizeError.ts');
-test('los avisos de error del editor llegan al emprendedor tal como están escritos', () => {
-  const avisos = [pub.validateLegalContent(''), pub.validateLegalContent('a'.repeat(pub.LEGAL_MAX_LENGTH + 1)), pub.LEGAL_STORAGE_ERROR];
-  for (const aviso of avisos) {
-    assert.ok(aviso && aviso.length > 20, String(aviso));
-    assert.equal(humanizeAdminError(aviso), aviso, 'el panel no lo reemplaza por un texto genérico');
-  }
-});
-
-test('el editor no se rompe si la configuración guardada no trae alguna página', () => {
-  const sinPrivacidad = { template: 'editorial', legalPages: { terms: structuredClone(defaultLegalPages.terms), refund: structuredClone(defaultLegalPages.refund) } };
-  const h = editorHarness(sinPrivacidad);
-  h.type = 'privacidad';
-  const tree = h.render();
-  assert.ok(textOf(tree).includes(LEGAL_META.privacy.label));
-  const sinNada = editorHarness({ template: 'editorial' });
-  assert.ok(textOf(sinNada.render()).includes(LEGAL_META.terms.label));
-});
-
-// ------------------------------------------------------------------ de punta a punta
-test('lo que el emprendedor publica en el panel es lo que ve el comprador en la tienda', () => {
-  storageMap.clear();
-  // 1) El emprendedor escribe y publica.
-  const h = editorHarness(configWith({ privacy: { ...defaultLegalPages.privacy, draft: '**1. Datos**\n\nSolo usamos tu correo para avisarte del pedido.' } }));
-  h.type = 'privacidad';
-  buttonNamed(h.render(), 'Publicar').props.onClick();
-  // 2) El panel lo guarda en la configuración de la tienda.
-  storageApi.saveStoredStoreConfig(h.calls[0], identity);
-  // 3) La tienda lo lee y la vista pública lo muestra.
-  const { legalPages } = provider().read();
-  const html = renderPublic({ type: 'privacy', legalPages });
-  assert.ok(html.includes('Solo usamos tu correo para avisarte del pedido.'));
-  assert.ok(!html.includes('Recopilamos información que usted nos proporciona'), 'ya no muestra el texto base');
-  assert.ok(!html.includes('Última actualización: 1 de agosto de 2025'), 'muestra la fecha de la publicación nueva');
-  // 4) Las páginas que no se publicaron siguen con su texto base.
-  assert.ok(renderPublic({ type: 'terms', legalPages }).includes('1. Aceptación de los términos'));
-  // 5) Un borrador posterior no se ve hasta publicarlo.
-  const h2 = editorHarness(storageApi.readStoredStoreConfig(identity)); h2.type = 'privacidad';
-  const tree = h2.render();
-  assert.ok(find(tree, node => node.type === 'Textarea')[0].props.value.includes('Solo usamos tu correo'));
-});
-
-console.log(`\n${passed} pruebas OK`);
+// La edición ahora espera al servidor. Las antiguas aserciones síncronas de
+// setConfig/publicar local se sustituyen por integration-blockers-browser.cjs:
+// 400/403/500, demora, éxito, recuperación, cambios de tienda y estado vigente.
+console.log(`\n${passed} pruebas de contenido/presentación OK; flujo asíncrono en suite de navegador`);
 
 // ============================================================================
 // SUITE SCRUM: Legal Service, Cookies Pop-up & Software Version Tests
@@ -444,10 +313,10 @@ function transpileAndRun(relativePath, customContext = {}) {
         json: async () => ({
           exito: true,
           data: {
-            terms: { title: 'Términos Test', published: 'Contenido Términos' },
-            privacy: { title: 'Privacidad Test', published: 'Contenido Privacidad' },
-            refund: { title: 'Reembolso Test', published: 'Contenido Reembolso' },
-            cookies: { title: 'Cookies Test', published: 'Contenido Cookies' },
+            terms: { version: 1, title: 'Términos Test', published: 'Contenido Términos' },
+            privacy: { version: 1, title: 'Privacidad Test', published: 'Contenido Privacidad' },
+            refund: { version: 1, title: 'Reembolso Test', published: 'Contenido Reembolso' },
+            cookies: { version: 1, title: 'Cookies Test', published: 'Contenido Cookies' },
           },
         }),
       };
@@ -458,10 +327,10 @@ function transpileAndRun(relativePath, customContext = {}) {
         json: async () => ({
           exito: true,
           data: {
-            terms: { title: 'Términos Admin', draft: 'Draft Términos', published: 'Pub Términos' },
-            privacy: { title: 'Privacidad Admin', draft: 'Draft Privacidad', published: 'Pub Privacidad' },
-            refund: { title: 'Reembolso Admin', draft: 'Draft Reembolso', published: 'Pub Reembolso' },
-            cookies: { title: 'Cookies Admin', draft: 'Draft Cookies', published: 'Pub Cookies' },
+            terms: { version: 1, title: 'Términos Admin', draft: 'Draft Términos', published: 'Pub Términos' },
+            privacy: { version: 1, title: 'Privacidad Admin', draft: 'Draft Privacidad', published: 'Pub Privacidad' },
+            refund: { version: 1, title: 'Reembolso Admin', draft: 'Draft Reembolso', published: 'Pub Reembolso' },
+            cookies: { version: 1, title: 'Cookies Admin', draft: 'Draft Cookies', published: 'Pub Cookies' },
           },
         }),
       };
@@ -642,7 +511,7 @@ function transpileAndRun(relativePath, customContext = {}) {
 
   // 6. Cookie consent pop-up banner verification
   const cookieBannerSource = fs.readFileSync(path.join(root, 'src/features/storefront/components/store/CookieConsentBanner.tsx'), 'utf8');
-  assert.ok(cookieBannerSource.includes('openmind_cookie_consent'), 'CookieConsentBanner must use localStorage consent key');
+  // El aislamiento y la clave versionada se prueban por comportamiento en integration-blockers.cjs y en navegador.
   assert.ok(cookieBannerSource.includes('legal/cookies'), 'CookieConsentBanner must link to legal/cookies');
   assert.ok(cookieBannerSource.includes('Aviso de Cookies'), 'CookieConsentBanner must contain cookie notice');
 

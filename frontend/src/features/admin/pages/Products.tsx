@@ -98,7 +98,7 @@ export function ProductList() {
               <td className="px-4 py-3 font-semibold">{formatPrice(product.basePrice)}</td>
               <td className="px-4 py-3"><div className="min-w-28"><div className="flex justify-between text-xs mb-1"><span>{stock} uds</span><Badge variant={state.badge}>{state.label}</Badge></div><div className="h-1.5 bg-[var(--muted)] rounded-full overflow-hidden"><div className={`${state.color} h-full rounded-full`} style={{ width: `${Math.min(100, stock * 2)}%` }} /></div></div></td>
               <td className="px-4 py-3">{productStatus(product.status)}</td>
-              <td className="px-4 py-3"><div className="flex items-center gap-3"><Link to={`/emprendedor/productos/${product.id}`} className="text-xs font-semibold text-[var(--primary)] hover:underline">Editar</Link><button onClick={() => handleDeleteProduct(product.id)} className="text-xs font-semibold text-[var(--error)] hover:underline">Eliminar</button></div></td>
+              <td className="px-4 py-3"><div className="flex items-center gap-3"><Link to={`/emprendedor/productos/${product.id}`} className="text-xs font-semibold text-[var(--primary)] hover:underline">Editar</Link><Link to={`/emprendedor/marketing?producto=${encodeURIComponent(product.id)}`} className="text-xs font-semibold text-[var(--primary)] hover:underline">Crear publicación</Link><button onClick={() => handleDeleteProduct(product.id)} className="text-xs font-semibold text-[var(--error)] hover:underline">Eliminar</button></div></td>
             </tr>
           })}
         </tbody>

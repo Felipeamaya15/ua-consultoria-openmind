@@ -1,3 +1,4 @@
+
 from apps.core.presentation.customer_orders import CustomerOrdersAPIView
 from apps.core.presentation.order_tracking import OrderTrackingAPIView
 from apps.core.presentation.checkout import CheckoutOrderAPIView
@@ -14,6 +15,8 @@ from apps.core.presentation.software_version import SoftwareVersionAPIView
 from apps.core.presentation.recent_orders import UltimasOrdenesAPIView, ActualizarEstadoPedidoAPIView
 from apps.core.presentation.historial import HistorialPedidosAPIView, HistorialVentasAPIView
 from apps.core.presentation.dashboard import DashboardAPIView
+from apps.core.presentation.reports import InformeAPIView, InformePDFAPIView
+from apps.core.presentation.store_configuration import InformacionTiendaAPIView
 from apps.core.presentation.pickup_address import PickupAddressAPIView
 from apps.core.presentation.promotions import PromocionesAPIView, PromocionDetalleAPIView, ValidarPromocionAPIView
 from django.urls import path
@@ -25,9 +28,9 @@ from apps.core.presentation.views import (
     MetodosPagoActivosAPIView,
     RegistrarCompraView,
     TiendaPagoActualAPIView,
-    IniciarPagoPayPalView, 
+    IniciarPagoPayPalView,
     CapturarPagoPayPalView,
-    WebhookLinkifyAPIView, 
+    WebhookLinkifyAPIView,
     VerificarTransferenciaLinkifyAPIView,
     TransferenciasPendientesAPIView,
     AprobarTransferenciaManualAPIView,
@@ -36,6 +39,9 @@ from apps.core.presentation.views import (
 )
 
 urlpatterns = [
+    path('tienda/informes/', InformeAPIView.as_view(), name='tienda-informes'),
+    path('tienda/informes/pdf/', InformePDFAPIView.as_view(), name='tienda-informes-pdf'),
+    path('tienda/configuracion/', InformacionTiendaAPIView.as_view(), name='tienda-configuracion'),
     path('promociones/', PromocionesAPIView.as_view(), name='promotions'),
     path('promociones/validar/', ValidarPromocionAPIView.as_view(), name='promotion-validate'),
     path('promociones/<int:promotion_id>/', PromocionDetalleAPIView.as_view(), name='promotion-detail'),

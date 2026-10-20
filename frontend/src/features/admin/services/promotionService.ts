@@ -1,7 +1,7 @@
 import { API_BASE_URL } from '../../../api';
 import type { Promotion } from '../../storefront/data/mockData';
 
-type ApiPromotion = Omit<Promotion, 'id' | 'value' | 'minAmount'> & {
+type ApiPromotion = Omit<Promotion, 'id' | 'value' | 'minAmount' | 'maxUses' | 'endsAt'> & {
   id: number;
   value: string | number;
   minAmount?: string | number;
@@ -20,6 +20,7 @@ function normalize(row: ApiPromotion): Promotion {
     value: Number(row.value),
     minAmount: row.minAmount === undefined || row.minAmount === null ? undefined : Number(row.minAmount),
     maxUses: row.maxUses === undefined || row.maxUses === null ? undefined : Number(row.maxUses),
+    startsAt: row.startsAt || '',
     endsAt: row.endsAt || undefined,
   };
 }
@@ -36,7 +37,7 @@ async function request(path = '', init: RequestInit = {}): Promise<any> {
     },
   });
   const body = await response.json().catch(() => ({}));
-  if (!response.ok || body.exito === false) {
+  if (!response.ok || body.exito !== true) {
     const details = body.error?.detalles;
     const first =
       details && typeof details === 'object'
@@ -50,17 +51,15 @@ async function request(path = '', init: RequestInit = {}): Promise<any> {
 }
 
 function payload(promotion: Partial<Promotion>) {
-  return {
-    name: promotion.name?.trim(),
-    code: promotion.code?.trim().toUpperCase(),
-    type: promotion.type,
-    value: promotion.type === 'free_shipping' ? 0 : (promotion.value ?? 0),
-    minAmount: promotion.minAmount ?? 0,
-    maxUses: promotion.maxUses ?? null,
-    startsAt: promotion.startsAt,
-    endsAt: promotion.endsAt || null,
-    active: promotion.active ?? true,
-  };
+  const fields = ['name', 'code', 'type', 'value', 'minAmount', 'maxUses', 'startsAt', 'endsAt', 'active'] as const;
+  const result: Record<string, unknown> = {};
+  for (const field of fields) {
+    if (!Object.prototype.hasOwnProperty.call(promotion, field)) continue;
+    const value = promotion[field];
+    result[field] = field === 'name' ? String(value ?? '').trim() : field === 'code' ? String(value ?? '').trim().toUpperCase()
+      : field === 'startsAt' || field === 'endsAt' ? (value || null) : field === 'maxUses' ? (value ?? null) : value;
+  }
+  return result;
 }
 
 export const promotionService = {
@@ -75,7 +74,7 @@ export const promotionService = {
       }),
     );
   },
-  async update(promotion: Promotion): Promise<Promotion> {
+  async update(promotion: Partial<Promotion> & Pick<Promotion, 'id'>): Promise<Promotion> {
     return normalize(
       await request(`${promotion.id}/`, {
         method: 'PATCH',

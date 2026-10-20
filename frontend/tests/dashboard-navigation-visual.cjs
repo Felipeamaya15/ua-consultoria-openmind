@@ -70,6 +70,7 @@ function metrics(period) {
                 serie: perDay(inRange.filter(o => paid.includes(o.estado)), () => 1).map(([periodo, n]) => ({ periodo, cantidad_ventas: n, total_vendido: `${n * 1000}.00` })) }, paginacion: pagination }
             : { exito: true, data: [], agrupacion: 'dia', serie: perDay(inRange, () => 1).map(([periodo, n]) => ({ periodo, cantidad_pedidos: n })), paginacion: pagination };
         }
+        else if (url.pathname === '/api/tienda/informes/') body = { exito:true,data:{tienda:'QA',anio:2026,mes:null,anios_disponibles:[2026],fecha_desde:'2026-01-01',fecha_hasta:'2026-12-31',moneda:'CLP',zona_horaria:'America/Santiago',total_ventas:'0.00',total_pedidos:0,pedidos_pagados:0,ticket_promedio:null,meses:[],distribucion_estados:[],mejores_meses:{ventas:[],pedidos:[]},nota_fechas:''} };
         else if (url.pathname === '/api/tienda/pedidos/ultimos/') body = { exito: true, data: orders.slice(0, 5).map(o => ({ ...o, estado_etiqueta: o.estado })) };
         else if (url.pathname === '/api/tienda/pedidos/') body = orders.map(order => order.id_pedido === 3 && updatedState ? {...order,estado:updatedState} : order);
         else if (url.pathname === '/api/tienda/pedidos/3/estado/') {

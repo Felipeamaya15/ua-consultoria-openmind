@@ -1,7 +1,7 @@
 """Dashboard operativo (SCRUM-366 a 370, 372 y 373)."""
 import re
 from datetime import date, timedelta
-from zoneinfo import ZoneInfo
+from apps.core.domain.periodos import ZONA_COMERCIAL as ZONA
 
 from django.utils import timezone
 from rest_framework.permissions import IsAuthenticated
@@ -11,7 +11,6 @@ from apps.core.infrastructure.dashboard import consultar_dashboard
 from apps.core.infrastructure.tenant import resolver_tienda
 from apps.core.presentation.responses import error_response, success_response
 
-ZONA = ZoneInfo('America/Santiago')
 
 
 def leer_periodo(parametros):

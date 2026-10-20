@@ -4,6 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "test:reports": "node tests/reports.cjs",
     "test:analytics": "node tests/dashboard.cjs && node tests/dashboard-navigation.cjs && node tests/analytics-checkout.cjs && node tests/checkout-shipping.cjs && node tests/cart-checkout.cjs",
     "test:dashboard": "node tests/dashboard.cjs && node tests/recent-orders.cjs",
     "test:visual": "node tests/visual-config.cjs",
