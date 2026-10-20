@@ -28,17 +28,19 @@ function loadAdmin(fetch) {
 }
 
 (async () => {
-  // 1. Creación de descuento porcentual en el panel de administración
   let adminReq;
   const adminService = loadAdmin(async (url, options) => {
     adminReq = {url, options};
+    const body = JSON.parse(options.body);
     return {ok: true, json: async () => ({exito: true, data: {
-      id: 7, name: 'Descuento Verano', code: 'VERANO20', type: 'percentage',
-      value: '20.00', minAmount: '10000.00', maxUses: 50, usedCount: 0,
-      startsAt: '2026-10-16', endsAt: '2026-11-16', active: true,
+      id: body.type === 'percentage' ? 7 : 8,
+      name: body.name, code: body.code, type: body.type,
+      value: String(body.value), minAmount: String(body.minAmount ?? 0), maxUses: body.maxUses ?? null, usedCount: 0,
+      startsAt: body.startsAt, endsAt: body.endsAt ?? null, active: true,
     }})};
   });
-  const created = await adminService.promotionService.create({
+
+  const createdPct = await adminService.promotionService.create({
     name: ' Descuento Verano ', code: ' verano20 ', type: 'percentage',
     value: 20, minAmount: 10000, maxUses: 50, startsAt: '2026-10-16', endsAt: '2026-11-16', active: true,
   });
@@ -46,24 +48,46 @@ function loadAdmin(fetch) {
   assert.equal(adminReq.options.method, 'POST');
   assert.equal(JSON.parse(adminReq.options.body).type, 'percentage');
   assert.equal(JSON.parse(adminReq.options.body).value, 20);
-  assert.equal(created.type, 'percentage');
-  assert.equal(created.value, 20);
-  assert.equal(created.code, 'VERANO20');
+  assert.equal(createdPct.type, 'percentage');
+  assert.equal(createdPct.value, 20);
+  assert.equal(createdPct.code, 'VERANO20');
 
-  // 2. Validación de descuento porcentual y envío gratis en checkout
+  const createdFixed = await adminService.promotionService.create({
+    name: ' Bienvenida Fijo ', code: ' nuevo-5000 ', type: 'fixed',
+    value: 5000, minAmount: 15000, maxUses: 20, startsAt: '2026-10-16', active: true,
+  });
+  assert.equal(JSON.parse(adminReq.options.body).type, 'fixed');
+  assert.equal(JSON.parse(adminReq.options.body).value, 5000);
+  assert.equal(createdFixed.type, 'fixed');
+  assert.equal(createdFixed.value, 5000);
+  assert.equal(createdFixed.code, 'NUEVO-5000');
+
   let request;
-  const service = loadStorefront(async (url, options) => {
+  const pctService = loadStorefront(async (url, options) => {
     request = {url, options};
     return {ok: true, json: async () => ({exito: true, data: {
       code: 'VERANO20', type: 'percentage', discount: '5000.00', shipping: '3990.00',
       message: 'Codigo promocional aplicado correctamente.',
     }})};
   });
-  const pctResult = await service.validatePromotion(' verano20 ', 25000, 3990);
+  const pctResult = await pctService.validatePromotion(' verano20 ', 25000, 3990);
   assert.equal(request.url, 'http://localhost:8000/api/promociones/validar/');
   assert.equal(pctResult.type, 'percentage');
   assert.equal(pctResult.discount, 5000);
   assert.equal(pctResult.shipping, 3990);
+
+  const fixedService = loadStorefront(async (url, options) => {
+    request = {url, options};
+    return {ok: true, json: async () => ({exito: true, data: {
+      code: 'NUEVO-5000', type: 'fixed', discount: '5000.00', shipping: '3990.00',
+      message: 'Codigo promocional aplicado correctamente.',
+    }})};
+  });
+  const fixedResult = await fixedService.validatePromotion(' nuevo-5000 ', 25000, 3990);
+  assert.deepEqual(JSON.parse(request.options.body), {code: 'nuevo-5000', subtotal: 25000, shipping: 3990});
+  assert.equal(fixedResult.type, 'fixed');
+  assert.equal(fixedResult.discount, 5000);
+  assert.equal(fixedResult.shipping, 3990);
 
   const freeShipService = loadStorefront(async (url, options) => {
     request = {url, options};
@@ -79,5 +103,5 @@ function loadAdmin(fetch) {
 
   const invalid = loadStorefront(async () => ({ok: false, json: async () => ({exito: false, mensaje: 'El codigo promocional expiro.'})}));
   await assert.rejects(invalid.validatePromotion('EXPIRADA', 10000, 0), /expiro/);
-  console.log('OK: creacion de descuento porcentual y validacion de promociones en checkout');
+  console.log('OK: creacion y validacion de descuento porcentual, monto fijo y envio gratis en checkout');
 })().catch(error => {console.error(error); process.exitCode = 1;});
