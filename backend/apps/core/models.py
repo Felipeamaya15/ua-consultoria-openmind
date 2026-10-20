@@ -420,3 +420,17 @@ class ConfiguracionLegal(models.Model):
 
     def __str__(self):
         return f"Configuración legal - Tienda {self.tienda_id}"
+
+class ConfiguracionCorreo(models.Model):
+    tienda = models.OneToOneField(
+        'core.Tienda',
+        on_delete=models.CASCADE,
+        related_name='configuracion_correo',
+    )
+    plantillas = models.JSONField(default=dict, blank=True)
+    fecha_actualizacion = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'configuracion_correo'
+        verbose_name = 'Configuración de correo'
+        verbose_name_plural = 'Configuraciones de correo'
