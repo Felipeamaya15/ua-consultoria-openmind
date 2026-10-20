@@ -60,6 +60,16 @@ function metrics(period) {
         assert.equal(route.request().headers().authorization, 'Token fixture-owner');
         let body;
         if (url.pathname === '/api/tienda/dashboard/') body = { exito: true, data: metrics(url.searchParams.get('periodo')) };
+        else if (url.pathname === '/api/tienda/ventas/historial/' || url.pathname === '/api/tienda/pedidos/historial/') {
+          const from = url.searchParams.get('fecha_desde'), to = url.searchParams.get('fecha_hasta');
+          const inRange = orders.filter(o => chileDay(o.fecha_creacion) >= from && chileDay(o.fecha_creacion) <= to);
+          const perDay = (list, value) => { const map = new Map(); list.forEach(o => map.set(chileDay(o.fecha_creacion), (map.get(chileDay(o.fecha_creacion)) || 0) + value(o))); return [...map].sort(); };
+          const pagination = { pagina: 1, tamano: 1, total: inRange.length, total_paginas: inRange.length };
+          body = url.pathname.includes('/ventas/')
+            ? { exito: true, data: { resumen: { cantidad_ventas: 0, total_vendido: '0.00', ticket_promedio: '0.00' }, agrupacion: 'dia', ventas: [],
+                serie: perDay(inRange.filter(o => paid.includes(o.estado)), () => 1).map(([periodo, n]) => ({ periodo, cantidad_ventas: n, total_vendido: `${n * 1000}.00` })) }, paginacion: pagination }
+            : { exito: true, data: [], agrupacion: 'dia', serie: perDay(inRange, () => 1).map(([periodo, n]) => ({ periodo, cantidad_pedidos: n })), paginacion: pagination };
+        }
         else if (url.pathname === '/api/tienda/pedidos/ultimos/') body = { exito: true, data: orders.slice(0, 5).map(o => ({ ...o, estado_etiqueta: o.estado })) };
         else if (url.pathname === '/api/tienda/pedidos/') body = orders.map(order => order.id_pedido === 3 && updatedState ? {...order,estado:updatedState} : order);
         else if (url.pathname === '/api/tienda/pedidos/3/estado/') {

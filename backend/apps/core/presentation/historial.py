@@ -32,6 +32,13 @@ def _solo_campos_de_la_tabla(queryset):
                          'monto_total', 'fecha_creacion')
 
 
+def _serie(queryset, agrupacion, nombre, conteo):
+    truncar = TruncDay if agrupacion == 'dia' else TruncMonth
+    formato = '%Y-%m-%d' if agrupacion == 'dia' else '%Y-%m'
+    filas = (queryset.annotate(periodo=truncar('fecha_creacion', tzinfo=reglas.ZONA))
+             .values('periodo').annotate(cantidad=conteo).order_by('periodo'))
+    return [{'periodo': fila['periodo'].strftime(formato), nombre: fila['cantidad']} for fila in filas]
+
 def _sin_cache(response):
     response['Cache-Control'] = 'no-store'
     return response
@@ -48,6 +55,7 @@ class HistorialPedidosAPIView(APIView):
             texto = reglas.leer_busqueda(params)
             orden = reglas.leer_orden(params)
             pagina = reglas.leer_pagina(params)
+            agrupacion = reglas.leer_agrupacion(params, rango) if 'agrupacion' in params else None
         except reglas.ParametroInvalido as error:
             return error_response(error.mensaje, error.codigo)
 
@@ -58,11 +66,16 @@ class HistorialPedidosAPIView(APIView):
             pedidos = pedidos.filter(Q(identificador__icontains=texto) | Q(nombre_contacto__icontains=texto))
         total = pedidos.count()
         filas = _solo_campos_de_la_tabla(pedidos).order_by(*orden)[pagina.inicio:pagina.fin]
-        return _sin_cache(success_response(
+        respuesta = success_response(
             data=FilaHistorialSerializer(filas, many=True).data,
             mensaje='Historial de pedidos obtenido correctamente.',
             paginacion=pagina.metadatos(total),
-        ))
+        )
+        if agrupacion: 
+            # Opcional por día o mes
+            respuesta.data['agrupacion'] = agrupacion
+            respuesta.data['serie'] = _serie(pedidos, agrupacion, 'cantidad_pedidos', Count('id_pedido'))
+        return _sin_cache(respuesta)
 
 class HistorialVentasAPIView(APIView):
     permission_classes = [IsAuthenticated]

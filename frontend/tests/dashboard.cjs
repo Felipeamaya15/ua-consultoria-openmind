@@ -20,6 +20,7 @@ const ui = {
   'react-router-dom': { Link: ({ to, children, ...props }) => React.createElement('a', { href: to, ...props }, children) },
   '../../data/mockAdminData': { formatPrice: value => new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 }).format(value) },
   '../ui': { Icon: () => React.createElement('span', {'aria-hidden': true}), Alert: ({ children }) => React.createElement('div', { role: 'alert' }, children), Button: ({ children, onClick }) => React.createElement('button', { onClick }, children) },
+  '../../../api': { API_BASE_URL: 'http://api.test' }, '../../auth/services/authService': { authService: { getToken: () => 'abc' } },
 };
 let passed = 0;
 async function test(name, fn) { await fn(); console.log('OK ' + name); passed++; }
@@ -99,12 +100,43 @@ const select = tree => tree.props.children[0].props.children[1].props.children;
     const empty = html({ status: 'ready', data: { ...data, total_pedidos: 0, total_ventas: '0.00', por_despachar: 0 } });
     assert.ok(empty.includes('$0') && empty.includes('No hay pedidos')); assert.ok(!empty.includes('<table'));
   });
-  await test('histórico muestra fechas CLP, filas y estructura responsiva accesible', () => {
+  await test('la tabla diaria solo consulta al abrir el detalle', () => {
     const output = html({ status: 'ready', data });
-    assert.ok(output.includes('$12.000') && output.includes('08/10/2026'));
-    assert.ok(output.includes('sm:grid-cols-2') && output.includes('overflow-x-auto'));
+    assert.ok(output.includes('$12.000') && output.includes('08/10/2026') && output.includes('sm:grid-cols-2'));
+    assert.ok(output.includes('Ver tabla diaria de ventas y pedidos') && output.includes('Hora de Chile'));
+    assert.equal((output.match(/<tr[ >]/g) || []).length, 0, 'sin abrir el detalle no se consulta ni se dibuja la tabla');
+  });
+  await test('tabla diaria: fechas, CLP, pedidos, estructura accesible y estados', () => {
+    const table = load('src/features/admin/components/dashboard/DailyHistoryTable.tsx', ui);
+    const view = state => renderToStaticMarkup(React.createElement(table.DailyHistoryView, { state, period: '7', onRetry() {} }));
+    const rows = [{ fecha: '2026-10-08', ventas: '12000.00', pedidos: 2 }, { fecha: '2026-10-09', ventas: '0.00', pedidos: 0 }];
+    const output = view({ status: 'ready', rows });
+    assert.ok(output.includes('$12.000') && output.includes('08/10/2026') && output.includes('09/10/2026'));
     assert.equal((output.match(/<tr[ >]/g) || []).length, 3);
-    assert.ok(output.includes('scope="col"') && output.includes('tabindex="0"'));
+    assert.ok(output.includes('overflow-x-auto') && output.includes('scope="col"') && output.includes('tabindex="0"'));
+    assert.ok(output.includes('href="/emprendedor/pedidos?fecha_desde=2026-10-08&amp;fecha_hasta=2026-10-08&amp;periodo=7"'));
+    assert.ok(view({ status: 'loading' }).includes('role="status"'));
+    assert.ok(view({ status: 'error', message: 'Falló' }).includes('role="alert"'));
+    assert.ok(view({ status: 'ready', rows: [{ fecha: '2026-10-08', ventas: '0.00', pedidos: 0 }] }).includes('No hay pedidos en el período seleccionado.'));
+  });
+  await test('servicio diario: une ventas y pedidos  y completa los días en cero', async () => {
+    const calls = [];
+    const sales = { exito: true, data: { resumen: {}, serie: [{ periodo: '2026-10-08', cantidad_ventas: 1, total_vendido: '12000.00' }], ventas: [] }, paginacion: {} };
+    const orders = { exito: true, data: [], serie: [{ periodo: '2026-10-08', cantidad_pedidos: 2 }, { periodo: '2026-10-10', cantidad_pedidos: 1 }], paginacion: {} };
+    const svc = (salesStatus = 200, ordersStatus = 200) => load('src/features/admin/services/dailyHistoryService.ts', ui, { fetch: async (url, init) => {
+      calls.push({ url: new URL(url), init });
+      return new URL(url).pathname.includes('/ventas/') ? response(salesStatus, sales) : response(ordersStatus, orders);
+    } });
+    const rows = await svc().getDailyHistory('2026-10-08', '2026-10-10');
+    assert.deepEqual(JSON.parse(JSON.stringify(rows)), [
+      { fecha: '2026-10-08', ventas: '12000.00', pedidos: 2 }, { fecha: '2026-10-09', ventas: '0.00', pedidos: 0 }, { fecha: '2026-10-10', ventas: '0.00', pedidos: 1 }]);
+    assert.deepEqual(calls.map(call => call.url.pathname).sort(), ['/api/tienda/pedidos/historial/', '/api/tienda/ventas/historial/']);
+    for (const call of calls) {
+      assert.deepEqual([...call.url.searchParams], [['fecha_desde', '2026-10-08'], ['fecha_hasta', '2026-10-10'], ['agrupacion', 'dia'], ['pagina', '1'], ['tamano', '1']]);
+      assert.equal(call.init.headers.Authorization, 'Token abc');
+    }
+    await assert.rejects(svc(403).getDailyHistory('2026-10-08', '2026-10-10'), /propietario/);
+    await assert.rejects(svc(200, 401).getDailyHistory('2026-10-08', '2026-10-10'), /sesión venció/);
   });
   await test('cambia período sin recarga y descarta respuesta anterior', async () => {
     const calls = []; const c = harness((period, signal) => new Promise(resolve => calls.push({ period, signal, resolve })));

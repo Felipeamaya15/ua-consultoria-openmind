@@ -144,3 +144,23 @@ class HistorialTests(TestCase):
         self.assertEqual([p['monto_total'] for p in por_monto], ['1000.00', '2000.00', '3000.00'])
         self.assertEqual(self.codigo_de_error(PEDIDOS, {'estado': 'inexistente'}), 'ESTADO_INVALIDO')
         self.assertEqual(self.codigo_de_error(PEDIDOS, {'orden': 'azar'}), 'ORDEN_INVALIDO')
+
+    def test_historial_de_pedidos_con_serie_por_dia_y_mes(self):
+        self.crear('2026-08-31T22:30:00-04:00', estado='pendiente')   # 01/09 UTC, 31/08 en Chile
+        self.crear('2026-09-01T10:00:00-04:00', estado='cancelado')
+        self.crear('2026-09-01T12:00:00-04:00', estado='pagado')
+        self.crear('2026-09-01T12:00:00-04:00', estado='pagado', propia=False)   # sin tienda
+        rango = {'fecha_desde': '2026-08-01', 'fecha_hasta': '2026-09-30'}
+        sin_serie = self.get(PEDIDOS, rango).json()
+        self.assertNotIn('serie', sin_serie)
+        por_dia = self.get(PEDIDOS, {**rango, 'agrupacion': 'dia'}).json()
+        self.assertEqual(por_dia['agrupacion'], 'dia')
+        self.assertEqual(por_dia['serie'], [{'periodo': '2026-08-31', 'cantidad_pedidos': 1},
+                                            {'periodo': '2026-09-01', 'cantidad_pedidos': 2}])
+        self.assertEqual(len(por_dia['data']), 3)
+        por_mes = self.get(PEDIDOS, {**rango, 'agrupacion': 'mes'}).json()['serie']
+        self.assertEqual(por_mes, [{'periodo': '2026-08', 'cantidad_pedidos': 1}, {'periodo': '2026-09', 'cantidad_pedidos': 2}])
+        con_estado = self.get(PEDIDOS, {**rango, 'agrupacion': 'dia', 'estado': 'pagado'}).json()['serie']
+        self.assertEqual(con_estado, [{'periodo': '2026-09-01', 'cantidad_pedidos': 1}])
+        self.assertEqual(self.codigo_de_error(PEDIDOS, {'agrupacion': 'dia'}), 'RANGO_DEMASIADO_AMPLIO')
+        self.assertEqual(self.codigo_de_error(PEDIDOS, {'agrupacion': 'semana'}), 'AGRUPACION_INVALIDA')
