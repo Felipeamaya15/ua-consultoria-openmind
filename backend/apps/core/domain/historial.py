@@ -1,8 +1,8 @@
 import re
 from dataclasses import dataclass
-from datetime import date, datetime, time, timedelta
+from datetime import date
 
-from django.utils import timezone
+from apps.core.domain.periodos import limites_rango
 
 TAMANO_POR_DEFECTO = 20
 TAMANO_MAXIMO = 100
@@ -31,10 +31,7 @@ class Rango:
     hasta: date | None
 
     def limites(self):
-        zona = timezone.get_current_timezone()
-        inicio = timezone.make_aware(datetime.combine(self.desde, time.min), zona) if self.desde else None
-        fin = timezone.make_aware(datetime.combine(self.hasta + timedelta(days=1), time.min), zona) if self.hasta else None
-        return inicio, fin
+        return limites_rango(self.desde, self.hasta)
 
     def aplicar(self, queryset):
         inicio, fin = self.limites()
@@ -82,8 +79,12 @@ def leer_fecha(valor, nombre):
 
 
 def leer_rango(params):
+    if hasattr(params, 'getlist') and any(len(params.getlist(key)) > 1 for key in ('fecha_desde', 'fecha_hasta')):
+        raise ParametroInvalido('No se permiten parámetros de fechas repetidos.', 'FECHA_INVALIDA')
     desde = leer_fecha(params['fecha_desde'], 'fecha_desde') if 'fecha_desde' in params else None
     hasta = leer_fecha(params['fecha_hasta'], 'fecha_hasta') if 'fecha_hasta' in params else None
+    if hasta == date.max:
+        raise ParametroInvalido('fecha_hasta debe permitir calcular el día siguiente.', 'FECHA_INVALIDA')
     if desde and hasta and desde > hasta:
         raise ParametroInvalido('fecha_desde no puede ser posterior a fecha_hasta.', 'RANGO_FECHAS_INVALIDO')
     return Rango(desde, hasta)

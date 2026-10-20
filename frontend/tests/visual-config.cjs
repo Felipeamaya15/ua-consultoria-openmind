@@ -190,7 +190,9 @@ test('StoreContext resolves routes, legacy data and live storage updates', () =>
     if (id === 'react-router-dom') return { useLocation: () => ({ pathname }) };
     if (id.includes('catalogService')) return { fetchPublicProducts: async () => [] };
     if (id.includes('landingService')) return { fetchLandingConfig: async () => null };
+    if (id.includes('storeInformationService')) return { fetchStoreInformation: async () => ({ nombre: 'Tienda', descripcion: '' }), STORE_INFORMATION_CHANGED: 'test-store-information' };
     if (id.includes('legalService')) return { legalService: { fetchPublicLegalPages: async () => ({}) } };
+
     if (id.includes('StoreIdentityContext')) return { useStoreIdentity: () => ({ identity: identityA }) };
     return load(path.resolve(root, 'src/features/storefront/context', id + '.ts'));
   };
@@ -198,13 +200,13 @@ test('StoreContext resolves routes, legacy data and live storage updates', () =>
     getAttribute() { return this.src; }, setAttribute(_key, value) { this.src = value; }, removeAttribute() { this.src = ''; } };
   const document = { querySelectorAll: () => [image], get documentElement() { throw Error('Theme must never mutate documentElement'); }, body: {} };
   let disconnected = 0;
-  vm.runInNewContext(code, { module, exports: module.exports, require: req, localStorage, document, CustomEvent: TestCustomEvent, window: { addEventListener: (name, fn) => listeners.set(name, fn), removeEventListener: name => listeners.delete(name) }, MutationObserver: class { observe() {} disconnect() { disconnected++; } } });
+  vm.runInNewContext(code, { module, exports: module.exports, require: req, localStorage, document, AbortController, CustomEvent: TestCustomEvent, window: { addEventListener: (name, fn) => listeners.set(name, fn), removeEventListener: name => listeners.delete(name) }, MutationObserver: class { observe() {} disconnect() { disconnected++; } } });
   const render = () => { index = 0; effects.length = 0; return module.exports.StoreProvider({ children: 'store' }).props.value; };
   seed({ template: 'catalog', primaryColor: '#123456', visualConfig: { hero: { gap: 0 } }, themeEditor: { minimal: { images: { 'image-0': { src: '/custom.png', scale: 150, x: 0, radius: 0 } } } } });
   let value = render();
   assert.equal(value.visualConfig.global.radius, 28); assert.equal(value.config.primaryColor, '#123456'); assert.equal(value.visualConfig.hero.gap, 0);
   const cleanupStorage = effects[0]();
-  const cleanupImages = effects[2]();
+  const cleanupImages = effects[effects.length - 1]();
   assert.equal(image.src, '/custom.png'); assert.equal(image.style.transform, 'scale(1.5)'); assert.equal(image.style.objectPosition, '0% 50%');
   seed({ themeEditor: { minimal: { visualConfig: { topBar: { visible: false }, productCard: { radius: 0 } } } } });
   listeners.get('ua-store-config-changed')(new TestCustomEvent('ua-store-config-changed', { detail: { storageKey: ADMIN_STORAGE_KEY } }));
@@ -403,6 +405,7 @@ test('StoreProvider and StoreVisualRoot render in SSR without browser globals', 
       if (id.includes('legalService')) return { legalService: { fetchPublicLegalPages: () => { throw Error('SSR must not fetch legal'); } } };
       const target = path.resolve(path.dirname(path.join(root, file)), id);
       if (fs.existsSync(target + '.tsx')) return moduleFor(path.relative(root, target + '.tsx'));
+      if (id.endsWith('/storeInformationService')) return { fetchStoreInformation: async () => ({ nombre: 'Tienda', descripcion: '' }), STORE_INFORMATION_CHANGED: 'test-store-information' };
       return load(target + '.ts');
     };
     vm.runInNewContext(code, { module, exports: module.exports, require: req });

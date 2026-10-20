@@ -1,3 +1,4 @@
+import { businessDateParts } from './businessTime';
 import { CONFIRMED_ORDER_STATES, DISPATCH_ORDER_STATES, ORDER_STATUS_BADGE } from '../data/orderStatus';
 
 export type OrderFilter = string;
@@ -33,13 +34,9 @@ export function readOrderFilters(params: URLSearchParams): OrderFilters {
   return { status, from, to, selectedId, error };
 }
 
-const chileDate = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Santiago', year: 'numeric', month: '2-digit', day: '2-digit' });
 export function orderDateInChile(value: string): string {
-  const date = new Date(value);
-  if (!Number.isFinite(date.getTime())) return '';
-  const parts = chileDate.formatToParts(date);
-  const part = (type: string) => parts.find(p => p.type === type)?.value;
-  return `${part('year')}-${part('month')}-${part('day')}`;
+  const parts = businessDateParts(value);
+  return parts ? `${parts.year}-${parts.month}-${parts.day}` : '';
 }
 
 /** Filtra el listado autorizado que ya entrega la API; no utiliza pedidos simulados. */

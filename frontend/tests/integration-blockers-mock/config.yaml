@@ -1,0 +1,7 @@
+name: integration-blockers-qa
+version: 1
+interceptRequests: true
+scenarios:
+  - name: default
+    path: default.js
+    default: true

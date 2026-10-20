@@ -3,9 +3,11 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useGoogleLogin } from '@react-oauth/google';
 import { authService } from '../../auth/services/authService';
 import { Button, Input, Alert, InstitutionalBadge } from '../components/ui';
+import { useStore } from '../context/StoreContext';
 import { useStorefrontTemplate } from '../hooks/useStorefrontTemplate';
 
 export default function Login() {
+  const { config } = useStore();
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const { route, isMinimal, isVisual, isCatalog } =
@@ -168,7 +170,7 @@ export default function Login() {
             </div>
 
             <p className="text-[var(--primary)] text-[10px] font-black uppercase tracking-[0.16em]">
-              Mi Tienda · Tu cuenta
+              {config.name} · Tu cuenta
             </p>
 
             <h1 className="mt-3 text-[42px] md:text-[50px] leading-none tracking-[-0.045em] font-black">
@@ -349,7 +351,7 @@ export default function Login() {
         <div className="w-full max-w-[460px]">
           <div className="text-center mb-8">
             <p className="mb-3 text-[9px] font-medium uppercase tracking-[0.18em] text-[var(--visual-page-color)]">
-              Velta · Tu cuenta
+              {config.name} · Tu cuenta
             </p>
 
             <h1 className="font-serif text-[42px] md:text-[50px] leading-none tracking-[-0.025em]">
@@ -545,7 +547,7 @@ export default function Login() {
 
           {isMinimal && (
             <p className="text-xs text-[var(--visual-page-color)] mb-2">
-              Mi Tienda.
+              {config.name}
             </p>
           )}
 

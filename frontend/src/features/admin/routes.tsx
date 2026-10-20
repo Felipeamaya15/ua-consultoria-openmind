@@ -1,6 +1,6 @@
 import { lazyPage } from '../../app/LazyPage';
 import EntrepreneurProfile from './pages/Profile';
-import { Navigate, type RouteObject } from 'react-router-dom';
+import { Navigate, useLocation, type RouteObject } from 'react-router-dom';
 
 import { RequireAdmin } from './auth/RequireAdmin';
 import { AdminProvider } from './context/AdminContext';
@@ -11,15 +11,20 @@ import { ProductList, ProductForm } from './pages/Products';
 import Orders from './pages/Orders';
 import Design from './pages/Design';
 const ThemeEditor = lazyPage(() => import('./pages/ThemeEditor'));
-import LandingPage from './pages/LandingPage';
+const Marketing = lazyPage(() => import('../marketing/pages/Marketing'));
 import Promotions from './pages/Promotions';
 import Payments from './pages/Payments';
 import Shipping from './pages/Shipping';
 import Authentication from './pages/Authentication';
 import Emails from './pages/Emails';
 import SeoAnalytics from './pages/SeoAnalytics';
-import Settings from './pages/Settings';
+import LandingPage from './pages/LandingPage';
 import Legal from './pages/Legal';
+
+function LegacySettingsRedirect() {
+  const { search, hash, state } = useLocation();
+  return <Navigate to={{ pathname: '/emprendedor/landing', search, hash }} state={state} replace />;
+}
 
 function ThemeEditorRoute() {
   return (
@@ -73,6 +78,10 @@ export const adminRoute: RouteObject = {
           element: <Promotions />,
         },
         {
+          path: 'marketing',
+          element: <Marketing />,
+        },
+        {
           path: 'pagos',
           element: <Payments />,
         },
@@ -94,7 +103,7 @@ export const adminRoute: RouteObject = {
         },
         {
           path: 'configuracion',
-          element: <Settings />,
+          element: <LegacySettingsRedirect />,
         },
         {
           path: 'legal',

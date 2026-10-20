@@ -1,0 +1,3 @@
+OK 375px: anual/mensual/PDF, filtros independientes, errores/reintento, configuración/persistencia/redirección, recuperación local y teclado, cuatro plantillas, sin desbordamiento
+OK 768px: anual/mensual/PDF, filtros independientes, errores/reintento, configuración/persistencia/redirección, recuperación local y teclado, cuatro plantillas, sin desbordamiento
+OK 1440px: anual/mensual/PDF, filtros independientes, errores/reintento, configuración/persistencia/redirección, recuperación local y teclado, cuatro plantillas, sin desbordamiento

@@ -49,12 +49,14 @@ async function verifyPageLoading() {
   const normalize = require('typescript').transpileModule(fs.readFileSync(path.join(root, 'src/features/landing/types/landingContent.ts'), 'utf8'), { compilerOptions: { module: 1 } }).outputText;
   const normalizedModule = { exports: {} };
   vm.runInNewContext(normalize, { module: normalizedModule, exports: normalizedModule.exports });
-  const Page = load('src/features/admin/pages/LandingPage.tsx', { AbortController, require: id => {
+  const Page = load('src/features/admin/components/LandingPageContent.tsx', { AbortController, require: id => {
     if (id === 'react/jsx-runtime') return { jsx, jsxs: jsx };
     if (id === 'react') return { useState: initial => { const i = index++; if (!(i in slots)) slots[i] = initial; return [slots[i], next => { slots[i] = next; }]; }, useEffect: fn => { effect = fn; } };
     if (id.includes('landingContent')) return normalizedModule.exports;
     if (id.includes('landingService')) return { fetchLandingConfig: options => { requested.push(options); return configLoad; } };
     if (id.includes('catalogService')) return { fetchPublicProducts: options => { requested.push(options); return catalogLoad; } };
+    if (id.includes('StoreIdentityContext')) return { useStoreIdentity: () => ({ identity: null }) };
+    if (id.includes('visual/storage')) return { readStoredStoreConfig: () => ({}) };
     if (id.includes('AdminContext')) return { useAdmin: () => ({ config: { template: 'editorial' } }) };
     if (id.includes('navigation')) return { templatePaths: { editorial: '/plantilla/1' } };
     return new Proxy({}, { get: (_, key) => key });

@@ -70,7 +70,7 @@ function load(file, globals) {
       if (name === 'react') return requireMock(name);
       if (name === 'react-router-dom') return {Link: 'Link', useSearchParams: () => [new URLSearchParams(), () => {}]};
       if (name.includes('orderStatus')) return load('src/features/admin/data/orderStatus.ts', {});
-      if (name.includes('orderNavigation')) return load('src/features/admin/services/orderNavigation.ts', {require: () => load('src/features/admin/data/orderStatus.ts', {})});
+      if (name.includes('orderNavigation')) return load('src/features/admin/services/orderNavigation.ts', {require: id => { if (id.includes('businessTime')) return load('src/features/admin/services/businessTime.ts', {}); if (id.includes('orderStatus')) return load('src/features/admin/data/orderStatus.ts', {}); throw Error(id); }});
       if (name.endsWith('/api')) return {API_BASE_URL: 'https://configured.example.test'};
       if (name.includes('authService')) return {authService: {getToken: () => storeToken}};
       if (name.includes('pendingTransfersService')) return {approveManualTransfer: async () => {throw Error('No se debe aprobar durante la lectura');}, verifyTransfer: async () => {throw Error('No se debe verificar durante la lectura');}};

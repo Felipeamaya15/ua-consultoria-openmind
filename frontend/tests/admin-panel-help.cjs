@@ -27,10 +27,11 @@ test('headers and contextual explanations follow the same toggle, actions and ti
 });
 test('every main panel and nested product/legal route has a friendly description; visual editor is excluded',()=>{
   const {ADMIN_PAGE_HELP,getAdminPageHelp}=load('src/features/admin/config/pageHelp.ts');
-  assert.equal(Object.keys(ADMIN_PAGE_HELP).length,14);
+  const {menuItems}=load('src/features/admin/config/navigation.ts');
+  for(const item of menuItems) assert(getAdminPageHelp(item.path), item.path);
   for(const [route,help] of Object.entries(ADMIN_PAGE_HELP)){assert.equal(getAdminPageHelp(route).description,help.description);assert(!/backend|frontend|\bAPI\b|endpoint|JSON|token|base de datos/i.test(help.description));}
   assert.equal(getAdminPageHelp('/emprendedor/productos/nuevo').title,'Productos');assert.equal(getAdminPageHelp('/emprendedor/legal/privacidad').title,'Páginas legales');assert.equal(getAdminPageHelp('/emprendedor/diseno/editor'),undefined);
-  assert.equal(ADMIN_PAGE_HELP['/emprendedor/landing'].description,'Personaliza la página principal de tu tienda: cambia el título, la descripción, la imagen y el botón que verán tus clientes.');
+  assert.equal(ADMIN_PAGE_HELP['/emprendedor/landing'].description,'Administra la información del negocio, la página principal, el logo y los datos de contacto. Guarda los cambios de cada apartado.');
 });
 test('technical errors become human messages while actionable validation and session errors survive',()=>{
   const {humanizeAdminError}=load('src/features/admin/utils/humanizeError.ts');
@@ -49,7 +50,7 @@ test('critical alerts and confirmations do not depend on optional help visibilit
 test('visible panel copy no longer promises backend operations and landing explains required and optional fields',()=>{
   const files=['LandingPage','Payments','Shipping','Legal','Emails','Authentication'];
   for(const name of files){const source=fs.readFileSync(path.join(root,'src/features/admin/pages/'+name+'.tsx'),'utf8');const ast=ts.createSourceFile(name+'.tsx',source,ts.ScriptTarget.Latest,true,ts.ScriptKind.TSX);function visit(node){if(ts.isJsxText(node)||ts.isStringLiteral(node))assert(!/\bbackend\b|base de datos|API Conectada|API CONECTADA/i.test(node.text),name+': '+node.text);ts.forEachChild(node,visit);}visit(ast);}
-  const landing=fs.readFileSync(path.join(root,'src/features/admin/pages/LandingPage.tsx'),'utf8');assert(!landing.includes('Texto del botón CTA'));assert(!landing.includes('Imagen principal (Hero)'));assert(landing.includes('Es obligatorio.'));assert(landing.includes('Es opcional.'));assert(landing.includes('<AdminHelp>'));
+  const landing=fs.readFileSync(path.join(root,'src/features/admin/components/LandingPageContent.tsx'),'utf8');assert(!landing.includes('Texto del botón CTA'));assert(!landing.includes('Imagen principal (Hero)'));assert(landing.includes('Es obligatorio.'));assert(landing.includes('Es opcional.'));assert(landing.includes('<AdminHelp>'));
 });
 test('form hints follow the preference but validation and operational hints remain visible',()=>{
   let showHelp=false;

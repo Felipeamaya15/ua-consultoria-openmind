@@ -1,0 +1,31 @@
+Found 324 test(s).
+ Índices del catálogo creados exitosamente
+ Índices del catálogo creados exitosamente
+ Índices del catálogo creados exitosamente
+ Índices del catálogo creados exitosamente
+ Índices del catálogo creados exitosamente
+ Índices del catálogo creados exitosamente
+ Índices del catálogo creados exitosamente
+ Índices del catálogo creados exitosamente
+ Índices del catálogo creados exitosamente
+ Índices del catálogo creados exitosamente
+ Índices del catálogo creados exitosamente
+ Índices del catálogo creados exitosamente
+ Índices del catálogo creados exitosamente
+ Índices del catálogo creados exitosamente
+ Índices del catálogo creados exitosamente
+ Índices del catálogo creados exitosamente
+ Índices del catálogo creados exitosamente
+ Índices del catálogo creados exitosamente
+ Índices del catálogo creados exitosamente
+.............................................................................................................................................................................................................Linkify: aviso rechazado (PEDIDO_YA_ENVIADO) pedido=1: El pedido ya esta en preparacion o despacho: la anulacion del pago requiere revision manual.
+Linkify: aviso rechazado (PEDIDO_YA_ENVIADO) pedido=2: El pedido ya esta en preparacion o despacho: la anulacion del pago requiere revision manual.
+Linkify: aviso rechazado (PEDIDO_YA_ENVIADO) pedido=3: El pedido ya esta en preparacion o despacho: la anulacion del pago requiere revision manual.
+Linkify: aviso rechazado (PEDIDO_YA_ENVIADO) pedido=4: El pedido ya esta en preparacion o despacho: la anulacion del pago requiere revision manual.
+Linkify: aviso rechazado (PEDIDO_YA_ENVIADO) pedido=5: El pedido ya esta en preparacion o despacho: la anulacion del pago requiere revision manual.
+...Linkify: aviso rechazado (PEDIDO_NO_DISPONIBLE) pedido=6: El pedido no admite este cobro.
+...................................................................................................................
+----------------------------------------------------------------------
+Ran 323 tests in 14.138s
+
+OK

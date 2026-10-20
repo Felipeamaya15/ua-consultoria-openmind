@@ -1,0 +1,23 @@
+Found 57 test(s).
+Creating test database for alias 'default'...
+System check identified no issues (0 silenced).
+........E.......................................Linkify: aviso rechazado (PEDIDO_YA_ENVIADO) pedido=168: El pedido ya esta en preparacion o despacho: la anulacion del pago requiere revision manual.
+Linkify: aviso rechazado (PEDIDO_YA_ENVIADO) pedido=169: El pedido ya esta en preparacion o despacho: la anulacion del pago requiere revision manual.
+Linkify: aviso rechazado (PEDIDO_YA_ENVIADO) pedido=170: El pedido ya esta en preparacion o despacho: la anulacion del pago requiere revision manual.
+Linkify: aviso rechazado (PEDIDO_YA_ENVIADO) pedido=171: El pedido ya esta en preparacion o despacho: la anulacion del pago requiere revision manual.
+Linkify: aviso rechazado (PEDIDO_YA_ENVIADO) pedido=172: El pedido ya esta en preparacion o despacho: la anulacion del pago requiere revision manual.
+...Linkify: aviso rechazado (PEDIDO_NO_DISPONIBLE) pedido=184: El pedido no admite este cobro.
+......
+======================================================================
+ERROR: test_real_pdf_annual_monthly_and_empty (apps.core.test_reports.ReportTests.test_real_pdf_annual_monthly_and_empty)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/app/apps/core/test_reports.py", line 147, in test_real_pdf_annual_monthly_and_empty
+    from pypdf import PdfReader
+ModuleNotFoundError: No module named 'pypdf'
+
+----------------------------------------------------------------------
+Ran 57 tests in 3.764s
+
+FAILED (errors=1)
+Destroying test database for alias 'default'...

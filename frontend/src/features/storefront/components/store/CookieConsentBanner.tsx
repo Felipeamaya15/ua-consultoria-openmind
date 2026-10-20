@@ -1,125 +1,45 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useStorefrontTemplate } from '../../hooks/useStorefrontTemplate';
 import { useStore } from '../../context/StoreContext';
-import { authService } from '../../../auth/services/authService';
-import { useStorefrontIdentity } from './AccountNavigation';
+import { useVerifiedLegalScope } from '../../hooks/useVerifiedLegalScope';
+import { consentKey, readConsent, saveConsent, resetConsent, type ConsentScope } from '../../services/cookieConsent';
+import { getStoreConfigKey } from '../../visual/storage';
 import { isActiveEditorPreview } from '../../visual/pages';
-
 export const COOKIE_CONSENT_EVENT_OPEN = 'openmind_open_cookie_banner';
 export const COOKIE_CONSENT_EVENT_RESET = 'openmind_reset_cookie_consent';
-
 export function CookieConsentBanner() {
-  const [visible, setVisible] = useState(false);
+  const session = useVerifiedLegalScope();
   const { route } = useStorefrontTemplate();
-  const { legalPages } = useStore();
-  const { user, loading: identityLoading } = useStorefrontIdentity();
-
-  const bannerConfig = legalPages?.cookies?.banner;
+  const { legalPages, legalLoading, legalError, legalVerified, legalScopeKey } = useStore();
+  const bannerConfig = legalPages.cookies.banner;
   const isEnabled = bannerConfig?.enabled !== false;
-
-  const getStorageKey = useCallback(() => {
-    if (user && (user.id || user.email || user.username)) {
-      const id = user.id ?? user.email ?? user.username;
-      return `openmind_cookie_consent_user_${id}`;
-    }
-    const token = authService.getToken();
-    if (token) {
-      return `openmind_cookie_consent_token_${token.slice(-10)}`;
-    }
-    return 'openmind_cookie_consent_guest';
-  }, [user]);
-
-  const checkConsent = useCallback(() => {
-    if (isActiveEditorPreview()) {
-      setVisible(false);
-      return;
-    }
-    if (!isEnabled) {
-      setVisible(false);
-      return;
-    }
-
-    try {
-      const key = getStorageKey();
-      const consent = typeof localStorage !== 'undefined' ? localStorage.getItem(key) : null;
-      if (!consent) {
-        setVisible(true);
-      } else {
-        setVisible(false);
-      }
-    } catch {
-      setVisible(true);
-    }
-  }, [getStorageKey, isEnabled]);
-
+  const page = legalPages.cookies;
+  const legalVersion = JSON.stringify([page.version, page.fecha_vigencia ?? page.lastPublished]);
+  const ready = session.ready && session.identity && legalVerified && !legalLoading && !legalError && legalScopeKey === getStoreConfigKey(session.identity) && !isActiveEditorPreview();
+  const scope = useMemo<ConsentScope | null>(() => ready && session.identity ? { ...session.identity, principal: session.principal, legalVersion } : null, [ready, session.key, legalVersion]);
+  const key = scope ? consentKey(scope) : '';
+  const [state, setState] = useState({ key: '', visible: false, message: '' });
   useEffect(() => {
-    if (!identityLoading) {
-      checkConsent();
-    }
-  }, [identityLoading, checkConsent]);
-
-  useEffect(() => {
-    const handleOpen = () => setVisible(true);
-    const handleReset = () => {
-      try {
-        if (typeof localStorage !== 'undefined') {
-          const keysToRemove: string[] = [];
-          for (let i = 0; i < localStorage.length; i++) {
-            const k = localStorage.key(i);
-            if (k && k.startsWith('openmind_cookie_consent')) {
-              keysToRemove.push(k);
-            }
-          }
-          keysToRemove.forEach(k => localStorage.removeItem(k));
-        }
-      } catch (e) {
-        console.warn('Error al restablecer cookies:', e);
-      }
-      setVisible(true);
-    };
-
-    window.addEventListener(COOKIE_CONSENT_EVENT_OPEN, handleOpen);
-    window.addEventListener(COOKIE_CONSENT_EVENT_RESET, handleReset);
-    return () => {
-      window.removeEventListener(COOKIE_CONSENT_EVENT_OPEN, handleOpen);
-      window.removeEventListener(COOKIE_CONSENT_EVENT_RESET, handleReset);
-    };
-  }, []);
-
-  const handleAccept = () => {
-    try {
-      if (typeof localStorage !== 'undefined') {
-        const key = getStorageKey();
-        localStorage.setItem(key, 'accepted');
-        localStorage.setItem(`${key}_date`, new Date().toISOString());
-        // Compatibilidad general
-        localStorage.setItem('openmind_cookie_consent', 'accepted');
-      }
-    } catch (e) {
-      console.warn('No se pudo guardar la preferencia de cookies:', e);
-    }
-    setVisible(false);
+    if (!scope) return;
+    const check = () => { let choice = null; try { choice = readConsent(localStorage, scope); } catch { /* mostrar elección */ } setState({ key, visible: !choice, message: '' }); };
+    const open = () => setState({ key, visible: true, message: '' });
+    const reset = () => { try { resetConsent(localStorage, scope); setState({ key, visible: true, message: '' }); } catch { setState({ key, visible: true, message: 'No pudimos guardar el cambio de preferencia en este navegador.' }); } };
+    const storage = (event: StorageEvent) => { if (event.key === key || event.key === null) check(); };
+    check();
+    window.addEventListener(COOKIE_CONSENT_EVENT_OPEN, open); window.addEventListener(COOKIE_CONSENT_EVENT_RESET, reset); window.addEventListener('storage', storage);
+    return () => { window.removeEventListener(COOKIE_CONSENT_EVENT_OPEN, open); window.removeEventListener(COOKIE_CONSENT_EVENT_RESET, reset); window.removeEventListener('storage', storage); };
+  }, [key]);
+  const choose = (choice: 'accepted' | 'essential_only') => {
+    if (!scope || !session.isCurrent()) return;
+    let message = '';
+    try { saveConsent(localStorage, scope, choice); } catch { message = 'Tu elección se aplica en esta sesión; el navegador no permite recordarla.'; }
+    setState({ key, visible: false, message });
   };
-
-  const handleDecline = () => {
-    try {
-      if (typeof localStorage !== 'undefined') {
-        const key = getStorageKey();
-        localStorage.setItem(key, 'essential_only');
-        localStorage.setItem(`${key}_date`, new Date().toISOString());
-        localStorage.setItem('openmind_cookie_consent', 'essential_only');
-      }
-    } catch (e) {
-      console.warn('No se pudo guardar la preferencia de cookies:', e);
-    }
-    setVisible(false);
-  };
-
-  if (!visible || !isEnabled) {
-    return null;
-  }
-
+  const handleAccept = () => choose('accepted');
+  const handleDecline = () => choose('essential_only');
+  if (!scope || state.key !== key || !isEnabled) return null;
+  if (!state.visible) return state.message ? <p role="status">{state.message}</p> : null;
   const cookieUrl = route ? route('legal/cookies') : '/legal/cookies';
   const title = bannerConfig?.title || 'Aviso de Cookies';
   const message =
@@ -135,6 +55,7 @@ export function CookieConsentBanner() {
       aria-label={title}
       className="fixed bottom-0 inset-x-0 z-[9999] p-3 sm:p-4 md:p-6 pointer-events-none"
     >
+      {state.message && <p role="alert">{state.message}</p>}
       <div className="max-w-4xl mx-auto bg-white/95 text-neutral-900 backdrop-blur-md border border-neutral-200/90 rounded-2xl shadow-[0_12px_36px_-6px_rgba(0,0,0,0.14),0_2px_8px_-2px_rgba(0,0,0,0.06)] p-4 sm:p-5 pointer-events-auto flex flex-col md:flex-row items-start md:items-center justify-between gap-4 transition-all">
         <div className="flex items-start gap-3.5 flex-1 min-w-0">
           <div className="w-9 h-9 rounded-xl bg-neutral-100 border border-neutral-200/70 flex items-center justify-center text-neutral-700 shrink-0 mt-0.5 select-none" aria-hidden="true">

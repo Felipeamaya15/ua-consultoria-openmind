@@ -1,0 +1,52 @@
+
+> frontend@0.0.0 test:visual
+> node tests/visual-config.cjs
+
+OK global defaults produce a complete config
+OK old colors and template remain compatible
+OK template preset applies layout, spacing, hero, card and footer
+OK store overrides win over preset and legacy colors
+OK template overrides win over store-wide overrides
+OK deep partial fields preserve siblings
+OK zero is preserved for radius, gap, padding, height, border and opacity
+OK valid false remains false while institutional visibility stays mandatory
+OK unknown fields and prototype keys are ignored
+OK invalid data never replaces known defaults
+OK future config version is safely ignored
+OK all four presets produce complete and distinct styles
+OK resolving does not mutate defaults, presets or input
+OK responsive overrides cascade desktop → tablet → mobile
+OK partial breakpoint data does not freeze desktop changes
+OK responsive rejects invalid values and preserves valid false/zero
+OK CSS bridge provides responsive colors, visibility and grid counts
+OK catalog grid and card overrides are independent of landing
+OK legacy persisted colors with no themeEditor survive admin hydration
+OK partial themes get defaults without losing overrides or images
+OK store and template overrides round trip in existing v1 storage
+OK color editing preserves section settings, images, false and zero
+OK color editing can override store-wide visual colors
+OK hydration displays effective section colors in the existing editor
+OK StoreContext resolves routes, legacy data and live storage updates
+OK malformed storage returns defaults without throwing
+OK partial editor updates deep merge and preserve sibling overrides
+OK resetting an override restores inheritance without losing siblings
+OK two stores on the same API are isolated across read and save
+OK API installations and envelopes cannot share a store namespace
+OK unidentified v1 data is preserved without being assigned to any store
+OK identity-tagged legacy v1 remains compatible and saves into its own key
+OK unknown identity never reads or saves local customizations
+OK corrupt scoped data never falls back to unidentified global data
+OK image and template saves do not freeze effective preset colors or sections
+OK changing presets and their defaults preserves explicit overrides
+OK template color changes do not contaminate other templates or duplicate legacy colors
+OK valid empty image source and palette names survive hydration and save
+OK SSR and denied storage safely return defaults without touching window
+OK CSS variables are valid strings, consistently named and preserve line clamp
+OK legacy image normalization rejects invalid values and preserves valid zero
+OK preview variables survive asynchronous updates and observers disconnect
+OK checkout preferences follow store identity and preserve false
+OK StoreProvider and StoreVisualRoot render in SSR without browser globals
+OK identity service validates public backend identity
+OK missing, invalid and unsafe store IDs are rejected
+OK identity failures never fall back to store 1
+47 visual configuration tests passed.

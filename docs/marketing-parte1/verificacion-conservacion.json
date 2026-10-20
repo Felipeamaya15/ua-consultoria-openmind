@@ -1,0 +1,12 @@
+{
+  "archivos_previos": 78,
+  "identicos": 75,
+  "faltantes": [],
+  "modificados_por_integracion": [
+    "frontend/src/features/admin/config/navigation.ts",
+    "frontend/src/features/admin/config/pageHelp.ts",
+    "frontend/src/features/admin/routes.tsx"
+  ],
+  "solo_cambios_esperados": true,
+  "revision_adicional": "Se compararon los contenidos originales de rutas, navegación, ayuda y Productos: solo se añadieron los puntos de integración de Marketing. package.json sigue idéntico."
+}

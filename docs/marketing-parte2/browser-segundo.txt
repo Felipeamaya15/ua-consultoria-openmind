@@ -1,0 +1,6 @@
+OK editor 375px: 3 plantillas × 3 formatos, tipografía, textos, contraste, paletas, imagen, composición, reset/undo/redo, fuente nueva, XSS y teclado
+OK 375px: tres formatos, variantes/ofertas de fixture, vacíos/errores/carga, logo/imagen ausentes, teclado, acceso contextual, formato sin persistencia, PDF/configuración/promociones conservados
+OK editor 768px: 3 plantillas × 3 formatos, tipografía, textos, contraste, paletas, imagen, composición, reset/undo/redo, fuente nueva, XSS y teclado
+OK 768px: tres formatos, variantes/ofertas de fixture, vacíos/errores/carga, logo/imagen ausentes, teclado, acceso contextual, formato sin persistencia, PDF/configuración/promociones conservados
+OK editor 1440px: 3 plantillas × 3 formatos, tipografía, textos, contraste, paletas, imagen, composición, reset/undo/redo, fuente nueva, XSS y teclado
+OK 1440px: tres formatos, variantes/ofertas de fixture, vacíos/errores/carga, logo/imagen ausentes, teclado, acceso contextual, formato sin persistencia, PDF/configuración/promociones conservados

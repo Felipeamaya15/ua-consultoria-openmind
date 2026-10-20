@@ -1,5 +1,9 @@
-from datetime import datetime
-from django.db import IntegrityError, connection
+from datetime import date, datetime
+import re
+from django.utils.dateparse import parse_datetime
+from django.utils import timezone
+from apps.core.promotion_dates import promotion_instant
+from django.db import IntegrityError, transaction
 from rest_framework import serializers, status
 from rest_framework.authentication import TokenAuthentication
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -8,55 +12,46 @@ from rest_framework.views import APIView
 from apps.authentication.permissions import IsStoreOwner
 from apps.core.infrastructure.tenant import resolver_tienda
 from apps.core.models import Promocion
-from apps.core.promotions import PromotionError, calculate_promotion
+from apps.core.promotions import PromotionError, calculate_promotion, CANONICAL_TYPES
 from apps.core.presentation.responses import error_response, success_response
 
-TIPO_TO_CANONICAL = {
-    'percentage': 'percentage',
-    'descuento_porcentual': 'percentage',
-    'fixed': 'fixed',
-    'descuento_monto_fijo': 'fixed',
-    'free_shipping': 'free_shipping',
-    'envio_gratuito': 'free_shipping',
-}
+TIPO_TO_CANONICAL = CANONICAL_TYPES
 
 
-def ensure_promocion_schema():
-    try:
-        with connection.cursor() as cursor:
-            table_names = connection.introspection.table_names(cursor)
-            if 'promocion' not in table_names:
-                with connection.schema_editor() as schema_editor:
-                    schema_editor.create_model(Promocion)
-                return
-            columns = {
-                col.name
-                for col in connection.introspection.get_table_description(cursor, 'promocion')
-            }
-            if 'id' in columns and 'id_promocion' not in columns:
-                cursor.execute('ALTER TABLE promocion RENAME COLUMN id TO id_promocion;')
-    except Exception:
-        pass
+class PromotionDateField(serializers.DateTimeField):
+    """YYYY-MM-DD incluye todo el día Santiago; ISO requiere offset explícito."""
+    def __init__(self, *args, end=False, **kwargs):
+        self.end = end
+        super().__init__(*args, **kwargs)
 
+    def to_internal_value(self, value):
+        try:
+            if isinstance(value, date) and not isinstance(value, datetime):
+                return promotion_instant(value, end=self.end)
+            if isinstance(value, str) and re.fullmatch(r'\d{4}-\d{2}-\d{2}', value):
+                return promotion_instant(date.fromisoformat(value), end=self.end)
+            parsed = parse_datetime(value) if isinstance(value, str) else value
+            if isinstance(parsed, datetime) and timezone.is_naive(parsed):
+                raise ValueError('Indica Z o el offset horario de la vigencia.')
+            return promotion_instant(super().to_internal_value(value))
+        except (ValueError, OverflowError) as exc:
+            raise serializers.ValidationError(str(exc))
 
-class FlexibleDateField(serializers.DateField):
     def to_representation(self, value):
-        if isinstance(value, datetime):
-            value = value.date()
-        return super().to_representation(value)
+        return promotion_instant(value, end=self.end).isoformat().replace('+00:00', 'Z')
 
 
 class PromocionSerializer(serializers.ModelSerializer):
     id = serializers.IntegerField(source='pk', read_only=True)
-    code = serializers.CharField(source='codigo', max_length=40)
+    code = serializers.CharField(source='codigo', max_length=40, allow_blank=True, required=False)
     name = serializers.CharField(source='nombre', max_length=150)
     type = serializers.ChoiceField(source='tipo', choices=list(TIPO_TO_CANONICAL.keys()))
-    value = serializers.DecimalField(source='valor', max_digits=12, decimal_places=2)
-    minAmount = serializers.DecimalField(source='monto_minimo', max_digits=12, decimal_places=2, required=False, default=0)
+    value = serializers.DecimalField(source='valor', max_digits=12, decimal_places=2, min_value=0)
+    minAmount = serializers.DecimalField(source='monto_minimo', max_digits=12, decimal_places=2, min_value=0, required=False, default=0)
     maxUses = serializers.IntegerField(source='maximo_usos', min_value=1, allow_null=True, required=False)
     usedCount = serializers.IntegerField(source='usos', read_only=True)
-    startsAt = FlexibleDateField(source='fecha_inicio')
-    endsAt = FlexibleDateField(source='fecha_fin', allow_null=True, required=False)
+    startsAt = PromotionDateField(source='fecha_inicio', allow_null=True, required=False)
+    endsAt = PromotionDateField(source='fecha_fin', allow_null=True, required=False, end=True)
     active = serializers.BooleanField(source='activa', required=False, default=True)
 
     class Meta:
@@ -65,7 +60,7 @@ class PromocionSerializer(serializers.ModelSerializer):
 
     def validate_code(self, value):
         normalized = value.strip().upper()
-        if not normalized or not normalized.replace('-', '').isalnum():
+        if normalized and not re.fullmatch(r'[A-Z0-9]+(?:-[A-Z0-9]+)*', normalized):
             raise serializers.ValidationError('Usa solo letras, numeros y guiones.')
         return normalized
 
@@ -86,15 +81,14 @@ class PromocionSerializer(serializers.ModelSerializer):
         valor = attrs.get('valor', getattr(self.instance, 'valor', 0))
         inicio = attrs.get('fecha_inicio', getattr(self.instance, 'fecha_inicio', None))
         fin = attrs.get('fecha_fin', getattr(self.instance, 'fecha_fin', None))
-        if isinstance(inicio, datetime):
-            inicio = inicio.date()
-        if isinstance(fin, datetime):
-            fin = fin.date()
+        code = attrs.get('codigo', getattr(self.instance, 'codigo', ''))
+        if tipo != 'precio_oferta' and not code:
+            raise serializers.ValidationError({'code': 'El código del cupón es obligatorio.'})
         if tipo == 'fixed' and valor <= 0:
             raise serializers.ValidationError({'value': 'El monto fijo debe ser mayor que cero.'})
         if tipo == 'percentage' and (valor <= 0 or valor > 100):
             raise serializers.ValidationError({'value': 'El porcentaje debe estar entre 0 y 100.'})
-        if tipo == 'free_shipping':
+        if tipo == 'free_shipping' and ('tipo' in attrs or 'valor' in attrs):
             attrs['valor'] = 0
         if inicio and fin and fin < inicio:
             raise serializers.ValidationError({'endsAt': 'La fecha de fin no puede ser anterior al inicio.'})
@@ -106,18 +100,17 @@ class PromocionesAPIView(APIView):
     permission_classes = [IsAuthenticated, IsStoreOwner]
 
     def get(self, request):
-        ensure_promocion_schema()
         tienda = resolver_tienda(request, exigir_propietario=True)
         rows = Promocion.objects.filter(tienda=tienda).order_by('-fecha_creacion')
         return success_response(data=PromocionSerializer(rows, many=True).data)
 
     def post(self, request):
-        ensure_promocion_schema()
         tienda = resolver_tienda(request, exigir_propietario=True)
         serializer = PromocionSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         try:
-            promocion = serializer.save(tienda=tienda)
+            with transaction.atomic():
+                promocion = serializer.save(tienda=tienda)
         except IntegrityError:
             return error_response('Ya existe una promocion con ese codigo.', 'CODIGO_DUPLICADO', status=status.HTTP_409_CONFLICT)
         return success_response(data=PromocionSerializer(promocion).data, mensaje='Promocion creada correctamente.', status=status.HTTP_201_CREATED)
@@ -128,7 +121,6 @@ class PromocionDetalleAPIView(APIView):
     permission_classes = [IsAuthenticated, IsStoreOwner]
 
     def _get(self, request, promotion_id):
-        ensure_promocion_schema()
         tienda = resolver_tienda(request, exigir_propietario=True)
         return Promocion.objects.filter(tienda=tienda, pk=promotion_id).first()
 
@@ -139,7 +131,8 @@ class PromocionDetalleAPIView(APIView):
         serializer = PromocionSerializer(promocion, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         try:
-            serializer.save()
+            with transaction.atomic():
+                serializer.save()
         except IntegrityError:
             return error_response('Ya existe una promocion con ese codigo.', 'CODIGO_DUPLICADO', status=status.HTTP_409_CONFLICT)
         return success_response(data=serializer.data, mensaje='Promocion actualizada correctamente.')
@@ -162,7 +155,6 @@ class ValidarPromocionAPIView(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
-        ensure_promocion_schema()
         tienda = resolver_tienda(request)
         serializer = ValidarPromocionSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)

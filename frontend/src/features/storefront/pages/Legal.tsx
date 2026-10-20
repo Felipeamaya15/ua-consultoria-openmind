@@ -18,7 +18,8 @@ export default function Legal() {
   const { route, isMinimal, isCatalog } =
     useStorefrontTemplate();
 
-  const { legalPages } = useStore();
+  const { legalPages, legalVerified, legalError, legalLoading } = useStore();
+  if (!legalVerified) return <p role={legalError ? 'alert' : 'status'}>{legalError || (legalLoading ? 'Consultando contenido legal vigente...' : 'Contenido legal no disponible.')}</p>;
 
   if (!isLegalType(type)) {
     return (

@@ -1,0 +1,5 @@
+simulation: integration-blockers-qa
+routing: path
+mocks:
+  - routeKey: openmind
+    path: ./integration-blockers-mock/config.yaml

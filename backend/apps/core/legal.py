@@ -1,3 +1,5 @@
+from copy import deepcopy
+from django.db import transaction
 """Dominio y lógica de negocio para las páginas legales de la tienda."""
 
 from django.utils import timezone
@@ -215,6 +217,9 @@ def legal_for_store(tienda, *, for_admin=False) -> dict:
                 'estado': estado,
             }
 
+        if for_admin:
+            result[key]['historial'] = deepcopy(stored_item.get('historial', []))
+
         if key == 'cookies':
             banner_data = stored_item.get('banner') if isinstance(stored_item.get('banner'), dict) else {}
             result[key]['banner'] = {**DEFAULT_COOKIE_BANNER, **banner_data}
@@ -222,6 +227,7 @@ def legal_for_store(tienda, *, for_admin=False) -> dict:
     return result
 
 
+@transaction.atomic
 def create_legal_for_store(tienda, payload: dict) -> dict:
     """Implementa la creación de contenido legal para la tienda."""
     from apps.core.models import ConfiguracionLegal
@@ -230,7 +236,8 @@ def create_legal_for_store(tienda, payload: dict) -> dict:
     if not isinstance(payload, dict):
         raise ValidationError('Los datos deben enviarse como un objeto JSON.')
 
-    configuracion, _ = ConfiguracionLegal.objects.get_or_create(tienda=tienda)
+    ConfiguracionLegal.objects.get_or_create(tienda=tienda)
+    configuracion = ConfiguracionLegal.objects.select_for_update().get(tienda=tienda)
     current_stored = configuracion.datos if isinstance(configuracion.datos, dict) else {}
     current_pages = legal_for_store(tienda, for_admin=True)
 
@@ -301,12 +308,14 @@ def update_legal_for_store(tienda, payload: dict) -> dict:
     return save_legal_for_store(tienda, payload)
 
 
+@transaction.atomic
 def publish_legal_for_store(tienda, tipo: str, content: str = None) -> dict:
     """Implementa la publicación de contenido legal en la tienda."""
     from apps.core.models import ConfiguracionLegal
     from rest_framework.exceptions import ValidationError
 
-    configuracion, _ = ConfiguracionLegal.objects.get_or_create(tienda=tienda)
+    ConfiguracionLegal.objects.get_or_create(tienda=tienda)
+    configuracion = ConfiguracionLegal.objects.select_for_update().get(tienda=tienda)
     current_stored = configuracion.datos if isinstance(configuracion.datos, dict) else {}
     current_pages = legal_for_store(tienda, for_admin=True)
 
@@ -358,6 +367,7 @@ def publish_legal_for_store(tienda, tipo: str, content: str = None) -> dict:
     return legal_for_store(tienda, for_admin=True)
 
 
+@transaction.atomic
 def save_legal_for_store(tienda, payload: dict) -> dict:
     from apps.core.models import ConfiguracionLegal
     from rest_framework.exceptions import ValidationError
@@ -365,7 +375,8 @@ def save_legal_for_store(tienda, payload: dict) -> dict:
     if not isinstance(payload, dict):
         raise ValidationError('Los datos deben enviarse como un objeto JSON.')
 
-    configuracion, _ = ConfiguracionLegal.objects.get_or_create(tienda=tienda)
+    ConfiguracionLegal.objects.get_or_create(tienda=tienda)
+    configuracion = ConfiguracionLegal.objects.select_for_update().get(tienda=tienda)
     current_stored = configuracion.datos if isinstance(configuracion.datos, dict) else {}
     current_pages = legal_for_store(tienda, for_admin=True)
 
@@ -542,4 +553,3 @@ def get_version_vigente(tienda, tipo: str = None) -> dict:
         result[key] = item_data
 
     return result
-

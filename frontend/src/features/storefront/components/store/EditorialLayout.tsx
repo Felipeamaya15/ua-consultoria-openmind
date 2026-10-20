@@ -59,7 +59,7 @@ function CartIcon({ count }: { count: number }) {
 export function EditorialLayout() {
 
 
-  const { config, landing } = useStore();
+  const { config } = useStore();
   const { count } = useCart();
   const navigate = useNavigate();
 
@@ -117,12 +117,12 @@ export function EditorialLayout() {
           {/* Logo / nombre de tienda */}
           <Link data-visual-part="logo"
             to="."
-            className="flex items-center gap-3"
-            aria-label={`Ir al inicio de ${config.name}`}
+            className="flex min-w-0 max-w-full items-center gap-3"
+            aria-label={`Ir al inicio de ${config.name || 'la tienda'}`}
           >
             {config.logo ? (
               <img
-                data-landing-image={landing?.logo ? true : undefined}
+                data-landing-image
                 src={config.logo}
                 alt={`Logo de ${config.name}`}
                 className="block w-auto h-auto max-w-[80px] sm:max-w-[120px] xl:max-w-[160px] max-h-10 sm:max-h-11 shrink-0 object-contain object-center"
@@ -133,7 +133,7 @@ export function EditorialLayout() {
               </div>
             )}
 
-            <span className="font-display text-xl text-[var(--foreground)]">
+            <span className="font-display text-xl truncate text-[var(--foreground)]">
               {config.name}
             </span>
           </Link>
