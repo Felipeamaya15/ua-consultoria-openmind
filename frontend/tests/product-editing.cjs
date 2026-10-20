@@ -35,12 +35,18 @@ async function main() {
   assert.equal(list[0].id, id);
   assert.equal(list[0].status, 'archived');
   assert.equal(list[0].variants[0].stock, 5);
+  assert.equal(list[0].basePrice, 80);
+  assert.equal(list[0].comparePrice, 100);
   reply = ok(raw);
   const product = await service.fetchAdminProduct(id);
   assert.equal(request.url, `http://test/api/catalog/productos/${id}/admin/`);
   assert.equal(product.generalAttributes[0].valor, 'QA');
   assert.equal(product.attributes.talla[0], 'M');
   assert.equal(product.seoTitle, 'SEO');
+  assert.equal(product.basePrice, 80);
+  assert.equal(product.comparePrice, 100);
+  assert.equal(product.variants[0].price, 80);
+  assert.equal(product.variants[0].comparePrice, 100);
   product.name = 'Editado'; product.variants[0].stock = 7;
   reply = ok({ ...raw, nombre: 'Editado', revision: 'revision-nueva' });
   const saved = await service.updateCatalogProduct(product);

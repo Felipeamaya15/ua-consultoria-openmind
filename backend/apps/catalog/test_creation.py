@@ -60,6 +60,15 @@ class ProductCreationTests(CatalogAPITestCase):
         self.assertEqual(detail.data['data']['variantes'][0]['precio_oferta'], 80)
         self.assertEqual(detail.data['data']['imagenes'], self.payload['imagenes'])
 
+    def test_rejects_invalid_offer_price_greater_or_equal_to_regular_price(self):
+        for invalid_offer in (-10, 100, 150):
+            payload = deepcopy(self.payload)
+            payload['variantes'][0]['precio'] = 100
+            payload['variantes'][0]['precio_oferta'] = invalid_offer
+            response = self.api.post(self.url, payload, format='json')
+            self.assertEqual(response.status_code, 400, (invalid_offer, response.data))
+        self.assertEqual(self.db.productos.count_documents({}), 0)
+
     def test_inactive_product_is_persisted_and_hidden(self):
         self.payload['activo'] = False
         pk = self.create()
