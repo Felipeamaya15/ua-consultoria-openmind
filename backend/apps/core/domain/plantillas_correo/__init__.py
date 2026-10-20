@@ -1,5 +1,5 @@
 """Plantillas de correo del pedido. Punto de entrada: construir_correo(tipo, pedido)."""
-from .base import PlantillaCorreo, PlantillaCorreoInvalida
+from .base import CorreoRenderizado, PlantillaCorreo, PlantillaCorreoInvalida, VARIABLES_PERMITIDAS
 from .pago_exitoso import PLANTILLA_PAGO_EXITOSO, renderizar_pago_exitoso
 from .pago_rechazado import PLANTILLA_PAGO_RECHAZADO, renderizar_pago_rechazado
 from .recepcion_pedido import PLANTILLA_RECEPCION_PEDIDO, renderizar_recepcion_pedido
