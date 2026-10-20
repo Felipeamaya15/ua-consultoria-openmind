@@ -1,9 +1,11 @@
 import re
 from dataclasses import dataclass
 from datetime import date, datetime, time, timedelta
+from zoneinfo import ZoneInfo
 
 from django.utils import timezone
 
+ZONA = ZoneInfo('America/Santiago')
 TAMANO_POR_DEFECTO = 20
 TAMANO_MAXIMO = 100
 BUSQUEDA_MAXIMA = 100
@@ -31,9 +33,8 @@ class Rango:
     hasta: date | None
 
     def limites(self):
-        zona = timezone.get_current_timezone()
-        inicio = timezone.make_aware(datetime.combine(self.desde, time.min), zona) if self.desde else None
-        fin = timezone.make_aware(datetime.combine(self.hasta + timedelta(days=1), time.min), zona) if self.hasta else None
+        inicio = timezone.make_aware(datetime.combine(self.desde, time.min), ZONA) if self.desde else None
+        fin = timezone.make_aware(datetime.combine(self.hasta + timedelta(days=1), time.min), ZONA) if self.hasta else None
         return inicio, fin
 
     def aplicar(self, queryset):

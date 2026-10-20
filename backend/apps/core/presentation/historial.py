@@ -2,7 +2,6 @@ from decimal import Decimal
 
 from django.db.models import Count, Q, Sum
 from django.db.models.functions import TruncDay, TruncMonth
-from django.utils import timezone
 from rest_framework import serializers
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
@@ -84,11 +83,10 @@ class HistorialVentasAPIView(APIView):
         total = resumen['total'] or Decimal('0')
         promedio = (total / cantidad).quantize(CENTAVOS) if cantidad else Decimal('0')
 
-        zona = timezone.get_current_timezone()
         truncar = TruncDay if agrupacion == 'dia' else TruncMonth
         formato = '%Y-%m-%d' if agrupacion == 'dia' else '%Y-%m'
         serie = (
-            ventas.annotate(periodo=truncar('fecha_creacion', tzinfo=zona))
+            ventas.annotate(periodo=truncar('fecha_creacion', tzinfo=reglas.ZONA))
             .values('periodo').annotate(cantidad=Count('id_pedido'), total=Sum('monto_total'))
             .order_by('periodo')
         )
