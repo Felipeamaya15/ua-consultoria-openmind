@@ -1,4 +1,5 @@
 from datetime import date, timedelta
+from decimal import Decimal
 
 from django.contrib.auth import get_user_model
 from django.test import TestCase
@@ -29,8 +30,24 @@ class PromocionesAdminTests(TestCase):
         self.assertEqual(response.data['data']['type'], 'percentage')
 
         amounts = calculate_promotion(self.store, 'verano-20', 25000, 3500)
-        self.assertEqual(amounts.discount, 5000)
+        self.assertEqual(amounts.discount, Decimal('5000'))
         self.assertEqual(amounts.shipping, 3500)
+
+    def test_valida_endpoint_descuento_porcentual_con_redondeo_half_up(self):
+        Promocion.objects.create(
+            tienda=self.store, nombre='Quince por ciento', codigo='QUINCE15',
+            tipo='percentage', valor=Decimal('15.00'), monto_minimo=1000,
+            fecha_inicio=date.today() - timedelta(days=1),
+            fecha_fin=date.today() + timedelta(days=1), activa=True,
+        )
+        self.client.credentials()
+        response = self.client.post('/api/promociones/validar/', {
+            'code': ' quince15 ', 'subtotal': '1990.00', 'shipping': '3000.00',
+        }, format='json')
+        self.assertEqual(response.status_code, 200, response.data)
+        self.assertEqual(response.data['data']['type'], 'percentage')
+        self.assertEqual(response.data['data']['discount'], '299.00')
+        self.assertEqual(response.data['data']['shipping'], '3000.00')
 
     def test_rechaza_descuento_porcentual_fuera_de_rango(self):
         for invalid_value in (0, -10, 101, 150):
@@ -51,6 +68,20 @@ class PromocionesAdminTests(TestCase):
         self.assertEqual(promotion.codigo, 'NUEVO-5000')
         self.assertEqual(str(promotion.valor), '5000.00')
         self.assertEqual(response.data['data']['type'], 'fixed')
+
+        amounts = calculate_promotion(self.store, 'nuevo-5000', Decimal('20000'), Decimal('3500'))
+        self.assertEqual(amounts.discount, Decimal('5000.00'))
+        self.assertEqual(amounts.shipping, Decimal('3500'))
+
+    def test_descuento_monto_fijo_no_supera_el_subtotal(self):
+        Promocion.objects.create(
+            tienda=self.store, nombre='Diez mil', codigo='FIJO10000',
+            tipo='fixed', valor=Decimal('10000.00'), monto_minimo=0,
+            fecha_inicio=date.today() - timedelta(days=1), activa=True,
+        )
+        amounts = calculate_promotion(self.store, 'FIJO10000', Decimal('6500.00'), Decimal('2500.00'))
+        self.assertEqual(amounts.discount, Decimal('6500.00'))
+        self.assertEqual(amounts.shipping, Decimal('2500.00'))
 
     def test_rechaza_monto_fijo_no_positivo_y_codigo_duplicado(self):
         base = {'name': 'Promo', 'code': 'FIJO', 'type': 'fixed', 'value': 0, 'startsAt': date.today()}
@@ -86,6 +117,7 @@ class PromocionesAdminTests(TestCase):
             'code': ' fijo5000 ', 'subtotal': '12000.00', 'shipping': '3500.00',
         }, format='json')
         self.assertEqual(response.status_code, 200, response.data)
+        self.assertEqual(response.data['data']['type'], 'fixed')
         self.assertEqual(response.data['data']['discount'], '5000.00')
         self.assertEqual(response.data['data']['shipping'], '3500.00')
 

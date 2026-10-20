@@ -7,7 +7,7 @@ const ts = require('typescript');
 const root = path.resolve(__dirname, '..');
 const product = {
   id: 'local', name: 'Polera', description: 'Algodón', category: 'Ropa', status: 'active',
-  images: [], basePrice: 80, attributes: { Talla: ['M'] }, tags: [],
+  images: [], basePrice: 80, comparePrice: 100, attributes: { Talla: ['M'] }, tags: [],
   variants: [{ id: 'v', sku: ' pol-m ', price: 80, comparePrice: 100, stock: 3, attributes: { Talla: 'M' } }],
 };
 function load(file, globals) {
