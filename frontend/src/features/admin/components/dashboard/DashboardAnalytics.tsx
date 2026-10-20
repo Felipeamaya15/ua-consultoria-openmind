@@ -4,6 +4,7 @@ import { formatPrice } from '../../data/mockAdminData';
 import type { DashboardData } from '../../services/dashboardService';
 import { dashboardBuckets, dashboardPeak, displayDashboardDate, type ChartBucket } from '../../services/dashboardAnalytics';
 import { ordersDestination } from '../../services/orderNavigation';
+import DailyHistoryTable from './DailyHistoryTable';
 
 const focus = 'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--primary)] rounded';
 const panel = 'bg-white border border-[var(--border)] rounded-2xl p-5 sm:p-6 shadow-sm min-w-0';
@@ -98,13 +99,6 @@ export default function DashboardAnalytics({ data, period }: { data: DashboardDa
           : <p className="text-sm mt-2">Sin actividad para este indicador.</p>}
       </div>)}</div>
     </section>
-    <details className={panel}><summary className={`cursor-pointer font-semibold text-sm ${focus}`}>Ver tabla diaria de ventas y pedidos</summary>
-      <p className="text-xs text-[var(--muted-foreground)] mt-3">{displayDashboardDate(data.fecha_desde)} al {displayDashboardDate(data.fecha_hasta)} · Hora de Chile · Fecha de registro del pedido</p>
-      {data.total_pedidos === 0 ? <p className="py-5 text-sm">No hay pedidos en el período seleccionado.</p> : <div className="overflow-x-auto max-h-96 mt-4" tabIndex={0} role="region" aria-label="Histórico diario">
-        <table className="w-full text-left border-collapse text-sm"><caption className="sr-only">Ventas confirmadas y pedidos registrados por día</caption>
-          <thead><tr className="border-b border-[var(--border)]"><th scope="col" className="p-3">Fecha</th><th scope="col" className="p-3 text-right">Ventas (CLP)</th><th scope="col" className="p-3 text-right">Pedidos</th></tr></thead>
-          <tbody className="divide-y divide-[var(--border)]">{data.historico.map(row => <tr key={row.fecha}><td className="p-3 whitespace-nowrap"><Link to={ordersDestination(row.fecha, row.fecha, 'all', period)} aria-label={`Ver pedidos del ${displayDashboardDate(row.fecha)}`} className={`text-[var(--primary)] hover:underline ${focus}`}>{displayDashboardDate(row.fecha)} <span aria-hidden="true">→</span></Link></td><td className="p-3 text-right whitespace-nowrap">{formatPrice(Number(row.ventas))}</td><td className="p-3 text-right">{row.pedidos}</td></tr>)}</tbody>
-        </table></div>}
-    </details>
+    <DailyHistoryTable key={`${data.fecha_desde}_${data.fecha_hasta}`} from={data.fecha_desde} to={data.fecha_hasta} period={period} />
   </div>;
 }

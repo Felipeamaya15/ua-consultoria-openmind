@@ -2,8 +2,9 @@ import re
 from dataclasses import dataclass
 from datetime import date
 
-from apps.core.domain.periodos import limites_rango
+from apps.core.domain.periodos import limites_rango,  ZONA_COMERCIAL
 
+ZONA = ZONA_COMERCIAL
 TAMANO_POR_DEFECTO = 20
 TAMANO_MAXIMO = 100
 BUSQUEDA_MAXIMA = 100
