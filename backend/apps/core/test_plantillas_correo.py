@@ -57,6 +57,18 @@ class PlantillaPagoExitosoTests(PlantillasCorreoBase):
             with self.assertRaises(PlantillaCorreoInvalida):
                 construir_correo('payment_success', self.pedido(estado=estado))
 
+class PlantillaPagoRechazadoTests(PlantillasCorreoBase):
+    def test_renderiza_los_datos_del_pedido(self):
+        pedido = self.pedido(estado='pendiente')
+        correo = construir_correo('payment_rejected', pedido)
+        self.assertEqual(correo.asunto, f'No pudimos confirmar tu pago · {pedido.identificador}')
+        for esperado in ('Hola Ana', 'No se realizó ningún cobro', 'Tienda Demo'):
+            self.assertIn(esperado, correo.cuerpo)
+
+    def test_rechaza_pedido_que_no_esta_pendiente(self):
+        for estado in ('pagado', 'cancelado', 'entregado'):
+            with self.assertRaises(PlantillaCorreoInvalida):
+                construir_correo('payment_rejected', self.pedido(estado=estado))
 
 class PlantillasPersonalizadasTests(PlantillasCorreoBase):
     URL = '/api/tienda/correos/'
@@ -75,7 +87,7 @@ class PlantillasPersonalizadasTests(PlantillasCorreoBase):
 
     def test_get_devuelve_las_plantillas_por_defecto(self):
         datos = self.api.get(self.URL).json()['data']['plantillas']
-        self.assertEqual(set(datos), {'payment_success', 'order_received'})
+        self.assertEqual(set(datos), {'order_received', 'payment_rejected', 'payment_success'})
         self.assertEqual(datos['order_received']['subject'], 'Recibimos tu pedido {{orderNumber}}')
 
     def test_la_plantilla_guardada_reemplaza_a_la_de_por_defecto(self):
@@ -121,4 +133,3 @@ class PlantillasPersonalizadasTests(PlantillasCorreoBase):
         self.assertEqual(datos['plantillas']['order_received']['subject'], 'Otro asunto')
         self.assertEqual(datos['por_defecto']['order_received']['subject'], 'Recibimos tu pedido {{orderNumber}}')
         self.assertTrue(datos['por_defecto']['order_received']['enabled'])
-
