@@ -64,7 +64,7 @@ class PromocionSerializer(serializers.ModelSerializer):
             return super().to_internal_value(data)
 
         normalized = data.copy()
-        aliases = ('monto_minimo', 'montoMinimo', 'minimumAmount')
+        aliases = ('monto_minimo', 'montoMinimo', 'minimumAmount', 'minimum_amount')
         provided_aliases = [alias for alias in aliases if alias in normalized]
 
         if ('minAmount' in normalized and provided_aliases) or len(provided_aliases) > 1:

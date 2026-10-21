@@ -112,12 +112,25 @@ class PromocionesAdminTests(TestCase):
             'value': 0, 'startsAt': date.today(), 'active': True,
         }
 
-        for alias in ('monto_minimo', 'montoMinimo', 'minimumAmount'):
+        for alias in ('minAmount', 'monto_minimo', 'montoMinimo', 'minimumAmount', 'minimum_amount'):
             response = self.client.post('/api/promociones/', {
                 **base, alias: -1000,
             }, format='json')
             self.assertEqual(response.status_code, 400, (alias, response.data))
 
+        self.assertFalse(Promocion.objects.filter(codigo='ENVIO-QA').exists())
+
+        required_fields = ('name', 'code', 'type', 'value')
+        for field in required_fields:
+            payload = {**base, 'minAmount': 15000}
+            payload.pop(field)
+            response = self.client.post('/api/promociones/', payload, format='json')
+            self.assertEqual(response.status_code, 400, (field, response.data))
+
+        duplicate_amount = self.client.post('/api/promociones/', {
+            **base, 'minAmount': 15000, 'monto_minimo': 15000,
+        }, format='json')
+        self.assertEqual(duplicate_amount.status_code, 400, duplicate_amount.data)
         self.assertFalse(Promocion.objects.filter(codigo='ENVIO-QA').exists())
 
         response = self.client.post('/api/promociones/', {
