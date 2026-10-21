@@ -58,6 +58,27 @@ class PromocionSerializer(serializers.ModelSerializer):
         model = Promocion
         fields = ('id', 'name', 'code', 'type', 'value', 'minAmount', 'maxUses', 'usedCount', 'startsAt', 'endsAt', 'active')
 
+    def to_internal_value(self, data):
+        """Normaliza nombres históricos sin omitir silenciosamente el monto mínimo."""
+        if not hasattr(data, 'copy'):
+            return super().to_internal_value(data)
+
+        normalized = data.copy()
+        aliases = ('monto_minimo', 'montoMinimo', 'minimumAmount', 'minimum_amount')
+        provided_aliases = [alias for alias in aliases if alias in normalized]
+
+        if ('minAmount' in normalized and provided_aliases) or len(provided_aliases) > 1:
+            raise serializers.ValidationError({
+                'minAmount': 'Envia el monto minimo una sola vez usando minAmount.',
+            })
+
+        if provided_aliases:
+            alias = provided_aliases[0]
+            normalized['minAmount'] = normalized.get(alias)
+            normalized.pop(alias)
+
+        return super().to_internal_value(normalized)
+
     def validate_code(self, value):
         normalized = value.strip().upper()
         if normalized and not re.fullmatch(r'[A-Z0-9]+(?:-[A-Z0-9]+)*', normalized):
