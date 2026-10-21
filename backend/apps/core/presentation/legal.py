@@ -144,7 +144,13 @@ class ConfiguracionLegalAPIView(APIView):
 
         if accion == 'publish':
             raw_type = _requested_legal_type(request.data)
+            if raw_type is None:
+                raise ValidationError({'tipo': 'Debes indicar una página legal válida.'})
+
             content = _first_present(request.data, 'content', 'published', 'draft')
+            if content is None:
+                raise ValidationError({'content': 'El contenido legal es obligatorio.'})
+
             pages = publish_legal_for_store(tienda, raw_type, content)
             return success_response(
                 data=pages,

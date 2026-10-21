@@ -266,10 +266,13 @@ def create_legal_for_store(tienda, payload: dict) -> dict:
         page = current_pages[canonical]
         page['title'] = title.strip()
         page['draft'] = initial_content
-        if payload.get('published'):
-            if not isinstance(payload['published'], str):
-                raise ValidationError({'published': 'El contenido publicado debe ser texto.'})
-            page['published'] = payload['published']
+        if 'published' in payload:
+            published = payload['published']
+            if not isinstance(published, str) or not published.strip():
+                raise ValidationError({'published': 'El contenido publicado no puede estar vacío.'})
+            if len(published) > 50000:
+                raise ValidationError({'published': 'El texto excede el límite máximo permitido (50.000 caracteres).'})
+            page['published'] = published
             page['lastPublished'] = now_iso
 
         current_stored[canonical] = page
@@ -294,10 +297,13 @@ def create_legal_for_store(tienda, payload: dict) -> dict:
                 raise ValidationError({key: {'draft': 'El texto excede el límite máximo permitido (50.000 caracteres).'}})
             page['draft'] = draft
 
-            if item.get('published'):
-                if not isinstance(item['published'], str):
-                    raise ValidationError({key: {'published': 'El contenido publicado debe ser texto.'}})
-                page['published'] = item['published']
+            if 'published' in item:
+                published = item['published']
+                if not isinstance(published, str) or not published.strip():
+                    raise ValidationError({key: {'published': 'El contenido publicado no puede estar vacío.'}})
+                if len(published) > 50000:
+                    raise ValidationError({key: {'published': 'El texto excede el límite máximo permitido (50.000 caracteres).'}})
+                page['published'] = published
                 page['lastPublished'] = now_iso
 
             title = item.get('title') or LEGAL_META[key]['title']

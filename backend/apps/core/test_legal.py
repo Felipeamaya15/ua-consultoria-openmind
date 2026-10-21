@@ -333,10 +333,29 @@ class LegalPagesAPITestCase(APITestCase):
             configuracion.refresh_from_db()
             self.assertEqual(configuracion.datos, before)
 
+        invalid_put_payloads = (
+            {'accion': 'publish', 'content': 'Texto sin página'},
+            {'accion': 'publish', 'tipo': 'terms'},
+            {'accion': 'publish', 'tipo': 'terms', 'content': ''},
+            {'accion': 'publish', 'pageType': 'pagina-inexistente', 'content': 'Texto'},
+        )
+        for payload in invalid_put_payloads:
+            response = self.client.put('/api/legal/configuracion/', payload, format='json')
+            self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST, (payload, response.data))
+            configuracion.refresh_from_db()
+            self.assertEqual(configuracion.datos, before)
+
     def test_creacion_rechaza_contenido_vacio_o_sin_pagina(self):
         self.client.credentials(HTTP_AUTHORIZATION=f'Token {self.token_propietario.key}')
 
-        for payload in ({'tipo': 'terms', 'content': ''}, {'content': 'Sin página'}, {}):
+        invalid_payloads = (
+            {'tipo': 'terms', 'content': ''},
+            {'tipo': 'terms', 'content': 'Texto', 'published': ''},
+            {'terms': {'content': 'Texto', 'published': '   '}},
+            {'content': 'Sin página'},
+            {},
+        )
+        for payload in invalid_payloads:
             response = self.client.post('/api/legal/configuracion/', payload, format='json')
             self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST, (payload, response.data))
 
