@@ -1,4 +1,5 @@
 from rest_framework import status
+from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.views import APIView
 
@@ -14,6 +15,18 @@ from apps.core.legal import (
     update_legal_for_store,
 )
 from apps.core.presentation.responses import error_response, success_response
+
+
+def _first_present(data, *keys):
+    """Devuelve el primer campo enviado, conservando valores vacíos para validarlos."""
+    for key in keys:
+        if key in data:
+            return data[key]
+    return None
+
+
+def _requested_legal_type(data):
+    return _first_present(data, 'tipo', 'type', 'pageType', 'page')
 
 
 class ConsultaVersionVigenteAPIView(APIView):
@@ -130,8 +143,8 @@ class ConfiguracionLegalAPIView(APIView):
         accion = request.data.get('accion') or request.data.get('action')
 
         if accion == 'publish':
-            raw_type = request.data.get('tipo') or request.data.get('type')
-            content = request.data.get('published') or request.data.get('draft')
+            raw_type = _requested_legal_type(request.data)
+            content = _first_present(request.data, 'content', 'published', 'draft')
             pages = publish_legal_for_store(tienda, raw_type, content)
             return success_response(
                 data=pages,
@@ -157,8 +170,14 @@ class PublicarContenidoLegalAPIView(APIView):
 
     def post(self, request, tipo=None):
         tienda = resolver_tienda(request, exigir_propietario=True)
-        target_tipo = tipo or request.data.get('tipo') or request.data.get('type') or 'all'
-        content = request.data.get('content') or request.data.get('published') or request.data.get('draft')
+        target_tipo = tipo if tipo is not None else _requested_legal_type(request.data)
+        if target_tipo is None:
+            raise ValidationError({'tipo': 'Debes indicar una página legal válida.'})
+
+        content = _first_present(request.data, 'content', 'published', 'draft')
+        if content is None:
+            raise ValidationError({'content': 'El contenido legal es obligatorio.'})
+
         pages = publish_legal_for_store(tienda, target_tipo, content)
         return success_response(
             data=pages,

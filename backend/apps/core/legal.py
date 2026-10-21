@@ -243,17 +243,21 @@ def create_legal_for_store(tienda, payload: dict) -> dict:
 
     now_iso = timezone.now().isoformat()
 
-    if 'tipo' in payload or 'type' in payload:
-        raw_type = payload.get('tipo') or payload.get('type')
+    type_key = next((key for key in ('tipo', 'type', 'pageType', 'page') if key in payload), None)
+    if type_key is not None:
+        raw_type = payload[type_key]
         canonical = normalize_legal_type(raw_type)
         if not canonical:
             raise ValidationError({'tipo': f"Tipo inválido. Opciones válidas: {', '.join(CANONICAL_TYPES)}"})
 
-        initial_content = payload.get('draft') or payload.get('content') or LEGAL_META[canonical]['content']
-        if not isinstance(initial_content, str):
-            raise ValidationError({'draft': 'El contenido legal debe ser texto.'})
+        content_key = next((key for key in ('draft', 'content') if key in payload), None)
+        if content_key is None:
+            raise ValidationError({'content': 'El contenido legal es obligatorio.'})
+        initial_content = payload[content_key]
+        if not isinstance(initial_content, str) or not initial_content.strip():
+            raise ValidationError({'content': 'El contenido legal no puede estar vacío.'})
         if len(initial_content) > 50000:
-            raise ValidationError({'draft': 'El texto excede el límite máximo permitido (50.000 caracteres).'})
+            raise ValidationError({'content': 'El texto excede el límite máximo permitido (50.000 caracteres).'})
 
         title = payload.get('title') or LEGAL_META[canonical]['title']
         if not isinstance(title, str) or not title.strip():
@@ -270,32 +274,38 @@ def create_legal_for_store(tienda, payload: dict) -> dict:
 
         current_stored[canonical] = page
     else:
-        for key in CANONICAL_TYPES:
-            if key in payload:
-                item = payload[key]
-                if not isinstance(item, dict):
-                    raise ValidationError({key: 'Cada página debe ser un objeto con sus campos.'})
+        requested_pages = [key for key in CANONICAL_TYPES if key in payload]
+        if not requested_pages:
+            raise ValidationError({'tipo': 'Debes indicar una página legal válida.'})
 
-                page = current_pages[key]
-                draft = item.get('draft') or item.get('content') or LEGAL_META[key]['content']
-                if not isinstance(draft, str):
-                    raise ValidationError({key: {'draft': 'El contenido debe ser texto.'}})
-                if len(draft) > 50000:
-                    raise ValidationError({key: {'draft': 'El texto excede el límite máximo permitido (50.000 caracteres).'}} )
-                page['draft'] = draft
+        for key in requested_pages:
+            item = payload[key]
+            if not isinstance(item, dict):
+                raise ValidationError({key: 'Cada página debe ser un objeto con sus campos.'})
 
-                if item.get('published'):
-                    if not isinstance(item['published'], str):
-                        raise ValidationError({key: {'published': 'El contenido publicado debe ser texto.'}})
-                    page['published'] = item['published']
-                    page['lastPublished'] = now_iso
+            page = current_pages[key]
+            content_key = next((field for field in ('draft', 'content') if field in item), None)
+            if content_key is None:
+                raise ValidationError({key: {'content': 'El contenido legal es obligatorio.'}})
+            draft = item[content_key]
+            if not isinstance(draft, str) or not draft.strip():
+                raise ValidationError({key: {'content': 'El contenido no puede estar vacío.'}})
+            if len(draft) > 50000:
+                raise ValidationError({key: {'draft': 'El texto excede el límite máximo permitido (50.000 caracteres).'}})
+            page['draft'] = draft
 
-                title = item.get('title') or LEGAL_META[key]['title']
-                if not isinstance(title, str) or not title.strip():
-                    raise ValidationError({key: {'title': 'El título no puede estar vacío.'}})
-                page['title'] = title.strip()
+            if item.get('published'):
+                if not isinstance(item['published'], str):
+                    raise ValidationError({key: {'published': 'El contenido publicado debe ser texto.'}})
+                page['published'] = item['published']
+                page['lastPublished'] = now_iso
 
-                current_stored[key] = page
+            title = item.get('title') or LEGAL_META[key]['title']
+            if not isinstance(title, str) or not title.strip():
+                raise ValidationError({key: {'title': 'El título no puede estar vacío.'}})
+            page['title'] = title.strip()
+
+            current_stored[key] = page
 
     configuracion.datos = current_stored
     configuracion.save(update_fields=['datos', 'fecha_actualizacion'])

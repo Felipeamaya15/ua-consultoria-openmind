@@ -307,6 +307,47 @@ class LegalPagesAPITestCase(APITestCase):
         )
         self.assertEqual(res_vacio.status_code, status.HTTP_400_BAD_REQUEST)
 
+    def test_publicacion_rechaza_content_vacio_o_pagina_invalida_sin_crear_version(self):
+        self.client.credentials(HTTP_AUTHORIZATION=f'Token {self.token_propietario.key}')
+        configuracion = ConfiguracionLegal.objects.create(
+            tienda=self.tienda,
+            datos={
+                'terms': {
+                    'title': 'Términos', 'draft': 'Borrador vigente',
+                    'published': 'Versión vigente', 'version': 3, 'historial': [],
+                },
+            },
+        )
+        before = configuracion.datos
+
+        invalid_payloads = (
+            {'tipo': 'terms', 'content': ''},
+            {'tipo': 'terms', 'content': '   '},
+            {'tipo': 'pagina-inexistente', 'content': 'Texto'},
+            {'pageType': 'pagina-inexistente', 'content': 'Texto'},
+            {'content': 'Texto sin página'},
+        )
+        for payload in invalid_payloads:
+            response = self.client.post('/api/legal/configuracion/publicar/', payload, format='json')
+            self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST, (payload, response.data))
+            configuracion.refresh_from_db()
+            self.assertEqual(configuracion.datos, before)
+
+    def test_creacion_rechaza_contenido_vacio_o_sin_pagina(self):
+        self.client.credentials(HTTP_AUTHORIZATION=f'Token {self.token_propietario.key}')
+
+        for payload in ({'tipo': 'terms', 'content': ''}, {'content': 'Sin página'}, {}):
+            response = self.client.post('/api/legal/configuracion/', payload, format='json')
+            self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST, (payload, response.data))
+
+        self.assertFalse(ConfiguracionLegal.objects.filter(tienda=self.tienda).exists())
+
+        response = self.client.post('/api/legal/configuracion/', {
+            'pageType': 'terms', 'content': 'Contenido válido mediante alias',
+        }, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED, response.data)
+        self.assertEqual(response.data['data']['terms']['draft'], 'Contenido válido mediante alias')
+
     def test_consulta_version_vigente_todas_las_paginas(self):
         """Implementar la consulta de la versión vigente: GET /api/legal/vigente/ retorna todas las políticas vigentes."""
         response = self.client.get('/api/legal/vigente/')
