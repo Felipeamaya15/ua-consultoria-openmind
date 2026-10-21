@@ -26,6 +26,7 @@ import { findImageSetting, captureOriginalImage, isLegacyEditableImage, readThem
 import { getStoreConfigKey, readStoredStoreConfig, isStoreConfigChange, STORE_CONFIG_CHANGED_EVENT } from '../visual/storage';
 import { legalService } from '../services/legalService';
 import { type LegalType, type LegalPage } from '../data/legalContent';
+import { initMetaPixel } from '../services/metaPixelService';
 
 const StoreContext = createContext({
   config: { ...defaultStoreConfig, name: '', description: '', logo: '' },
@@ -193,6 +194,12 @@ export function StoreProvider({
 
 
   useEffect(() => {
+    if (savedConfig.pixelId && typeof savedConfig.pixelId === 'string') {
+      initMetaPixel(savedConfig.pixelId);
+    }
+  }, [savedConfig.pixelId]);
+
+  useEffect(() => {
     const template = templateFromPath(pathname);
     if (!template || typeof document === 'undefined' || typeof MutationObserver === 'undefined') return;
     const theme = readTheme(savedConfig, template);
@@ -217,9 +224,11 @@ export function StoreProvider({
     };
   }, [pathname, savedConfig]);
 
+
+
   return (
     <StoreContext.Provider
-      value={{ config: { ...defaultStoreConfig, name: business?.nombre ?? '', description: business?.descripcion ?? '', logo: landing?.logo || '', primaryColor: visualConfig.global.colors.primary, secondaryColor: visualConfig.global.colors.secondary, accentColor: visualConfig.global.colors.accent }, visualConfig, landing, landingLoading, landingError, landingProducts, landingCatalogError, legalPages, legalLoading, legalError, legalVerified, legalScopeKey: storageKey ?? '', refreshLegal }}
+      value={{ config: { ...defaultStoreConfig, ...savedConfig, name: business?.nombre ?? ((typeof savedConfig.name === 'string' ? savedConfig.name : '') || defaultStoreConfig.name), description: business?.descripcion ?? ((typeof savedConfig.description === 'string' ? savedConfig.description : '') || defaultStoreConfig.description), logo: landing?.logo || (typeof savedConfig.logo === 'string' ? savedConfig.logo : '') || '', primaryColor: visualConfig.global.colors.primary, secondaryColor: visualConfig.global.colors.secondary, accentColor: visualConfig.global.colors.accent }, visualConfig, landing, landingLoading, landingError, landingProducts, landingCatalogError, legalPages, legalLoading, legalError, legalVerified, legalScopeKey: storageKey ?? '', refreshLegal }}
 
     >
       {children}
