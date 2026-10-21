@@ -114,6 +114,31 @@ function isTrackingDetail(value: unknown, expectedTracking: string): value is De
       ));
 }
 
+function isOpcionCotizacion(value: unknown): value is OpcionCotizacion {
+  if (!value || typeof value !== 'object') return false;
+  const option = value as Record<string, unknown>;
+  return typeof option.proveedor === 'string' && option.proveedor.trim().length > 0
+    && typeof option.servicio === 'string' && option.servicio.trim().length > 0
+    && typeof option.costo === 'number' && Number.isFinite(option.costo) && option.costo >= 0
+    && typeof option.dias_habiles_entrega === 'number' && Number.isInteger(option.dias_habiles_entrega) && option.dias_habiles_entrega >= 0
+    && typeof option.es_cobertura_valida === 'boolean'
+    && typeof option.es_gratis === 'boolean';
+}
+
+function isResultadoCotizacion(value: unknown): value is ResultadoCotizacion {
+  if (!value || typeof value !== 'object') return false;
+  const result = value as Record<string, unknown>;
+  const destino = result.destino as Record<string, unknown> | null;
+  return Boolean(destino && typeof destino === 'object'
+    && typeof destino.comuna === 'string'
+    && typeof destino.region === 'string')
+    && typeof result.total_items === 'number' && Number.isInteger(result.total_items) && result.total_items > 0
+    && typeof result.total_carrito === 'number' && Number.isFinite(result.total_carrito) && result.total_carrito >= 0
+    && (result.opcion_recomendada === null || isOpcionCotizacion(result.opcion_recomendada))
+    && Array.isArray(result.opciones)
+    && result.opciones.every(isOpcionCotizacion);
+}
+
 async function requestTracking(
   path: string,
   tracking: string,
@@ -121,13 +146,41 @@ async function requestTracking(
   expectedProvider?: DetalleSeguimiento['proveedor'],
 ): Promise<DetalleSeguimiento> {
   const response = await fetch(`${API_BASE}${path}`, { signal });
-  const data = await response.json();
+  const data = await readJson(response);
+  if (!data) {
+    throw new Error('La información de seguimiento recibida es inválida.');
+  }
   if (!response.ok || !data.exito) {
     throw new Error(data.mensaje || 'No se encontró información de seguimiento para este código.');
   }
   if (!isTrackingDetail(data.data, tracking)
     || (expectedProvider && data.data.proveedor !== expectedProvider)) {
     throw new Error('La información de seguimiento recibida es inválida.');
+  }
+  return data.data;
+}
+
+async function requestCarrierQuote(
+  path: string,
+  payload: Record<string, unknown>,
+  fallbackError: string,
+): Promise<ResultadoCotizacion> {
+  const response = await fetch(`${API_BASE}${path}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload),
+  });
+  const data = await readJson(response);
+  if (!data) {
+    throw new Error('La respuesta de cotización recibida es inválida.');
+  }
+  if (!response.ok || !data.exito) {
+    throw new Error(data.mensaje || fallbackError);
+  }
+  if (!isResultadoCotizacion(data.data)) {
+    throw new Error('La respuesta de cotización recibida es inválida.');
   }
   return data.data;
 }
@@ -171,66 +224,45 @@ export const shippingService = {
   },
 
   async quote(params: CotizacionParams): Promise<ResultadoCotizacion> {
-    const response = await fetch(`${API_BASE}/api/logistica/cotizar/`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
+    return requestCarrierQuote(
+      '/api/logistica/cotizar/',
+      {
         ...params,
         total_carrito: Number(params.total_carrito || 0).toFixed(2),
         proveedor: params.proveedor || 'todos',
-      }),
-    });
-    const data = await response.json();
-    if (!response.ok || !data.exito) {
-      throw new Error(data.mensaje || 'Error al cotizar envío.');
-    }
-    return data.data;
+      },
+      'Error al cotizar envío.',
+    );
   },
 
   /**
    * Implementa la solicitud de cotización a Chilexpress
    */
   async quoteChilexpress(params: Omit<CotizacionParams, 'proveedor'>): Promise<ResultadoCotizacion> {
-    const response = await fetch(`${API_BASE}/api/logistica/cotizar/chilexpress/`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
+    return requestCarrierQuote(
+      '/api/logistica/cotizar/chilexpress/',
+      {
         ...params,
         total_carrito: Number(params.total_carrito || 0).toFixed(2),
         proveedor: 'chilexpress',
-      }),
-    });
-    const data = await response.json();
-    if (!response.ok || !data.exito) {
-      throw new Error(data.mensaje || 'Error al cotizar con Chilexpress.');
-    }
-    return data.data;
+      },
+      'Error al cotizar con Chilexpress.',
+    );
   },
 
   /**
    * Implementa la solicitud de cotización a Starken
    */
   async quoteStarken(params: Omit<CotizacionParams, 'proveedor'>): Promise<ResultadoCotizacion> {
-    const response = await fetch(`${API_BASE}/api/logistica/cotizar/starken/`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
+    return requestCarrierQuote(
+      '/api/logistica/cotizar/starken/',
+      {
         ...params,
         total_carrito: Number(params.total_carrito || 0).toFixed(2),
         proveedor: 'starken',
-      }),
-    });
-    const data = await response.json();
-    if (!response.ok || !data.exito) {
-      throw new Error(data.mensaje || 'Error al cotizar con Starken.');
-    }
-    return data.data;
+      },
+      'Error al cotizar con Starken.',
+    );
   },
 };
 

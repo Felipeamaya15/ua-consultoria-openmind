@@ -22,6 +22,7 @@ from apps.shipping.domain.exceptions import (
     LogisticaException,
     DireccionFueraDeCoberturaException,
     ProveedorLogisticoError,
+    RespuestaLogisticaInvalidaException,
     NumeroSeguimientoNoEncontradoException,
     FormatoSeguimientoInvalidoException
 )
@@ -37,18 +38,23 @@ class SeguimientoLogisticoView(APIView):
 
     def get(self, request, numero_seguimiento):
         try:
-            # La ruta dedicada permite consultar ordenes de flete numericas sin
-            # confundirlas con numeros de transporte de otros operadores.
             adaptador = get_logistics_adapter(self.proveedor_fijo or numero_seguimiento)
             caso_uso = ConsultarSeguimientoUseCase(logistics_port=adaptador)
 
             resultado = caso_uso.execute(numero_seguimiento=numero_seguimiento)
-            serializer = DetalleSeguimientoResponseSerializer(resultado)
+            serializer = DetalleSeguimientoResponseSerializer(data=resultado)
+            if not serializer.is_valid():
+                logger.warning("Seguimiento: payload de respuesta invalido (%s)", serializer.errors)
+                return Response({
+                    "exito": False,
+                    "mensaje": "La información de seguimiento recibida desde el operador es inválida.",
+                    "error": {"codigo": "RESPUESTA_OPERADOR_INVALIDA"}
+                }, status=status.HTTP_502_BAD_GATEWAY)
 
             return Response({
                 "exito": True,
                 "mensaje": "Información de seguimiento obtenida exitosamente.",
-                "data": serializer.data
+                "data": serializer.validated_data
             }, status=status.HTTP_200_OK)
 
         except FormatoSeguimientoInvalidoException as e:
@@ -65,6 +71,22 @@ class SeguimientoLogisticoView(APIView):
                 "error": {"codigo": "TRACKING_NO_ENCONTRADO"}
             }, status=status.HTTP_404_NOT_FOUND)
 
+        except (RespuestaLogisticaInvalidaException, ValueError):
+            logger.warning("Seguimiento: respuesta invalida del operador", exc_info=True)
+            return Response({
+                "exito": False,
+                "mensaje": "La información de seguimiento recibida desde el operador es inválida.",
+                "error": {"codigo": "RESPUESTA_OPERADOR_INVALIDA"}
+            }, status=status.HTTP_502_BAD_GATEWAY)
+
+        except ProveedorLogisticoError:
+            logger.warning("Seguimiento: el transportista no estuvo disponible", exc_info=True)
+            return Response({
+                "exito": False,
+                "mensaje": "El servicio de seguimiento del transportista no está disponible en este momento.",
+                "error": {"codigo": "PROVEEDOR_NO_DISPONIBLE"}
+            }, status=status.HTTP_502_BAD_GATEWAY)
+
         except LogisticaException as e:
             return Response({
                 "exito": False,
@@ -72,7 +94,13 @@ class SeguimientoLogisticoView(APIView):
                 "error": {"codigo": "ERROR_LOGISTICA"}
             }, status=status.HTTP_400_BAD_REQUEST)
 
-
+        except Exception:
+            logger.exception("Seguimiento: error inesperado")
+            return Response({
+                "exito": False,
+                "mensaje": "Error interno al consultar el seguimiento.",
+                "error": {"codigo": "ERROR_INTERNO"}
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class CotizacionEnvioView(APIView):
@@ -121,6 +149,13 @@ class CotizacionEnvioView(APIView):
                 "mensaje": str(e),
                 "error": {"codigo": "SIN_COBERTURA"}
             }, status=status.HTTP_400_BAD_REQUEST)
+        except (RespuestaLogisticaInvalidaException, ValueError):
+            logger.warning("Cotizacion: respuesta invalida del operador", exc_info=True)
+            return Response({
+                "exito": False,
+                "mensaje": "La respuesta recibida del transportista es inválida. Intenta nuevamente.",
+                "error": {"codigo": "RESPUESTA_OPERADOR_INVALIDA"}
+            }, status=status.HTTP_502_BAD_GATEWAY)
         except ProveedorLogisticoError:
             logger.warning("Cotizacion: los transportistas no respondieron", exc_info=True)
             return Response({
@@ -135,7 +170,6 @@ class CotizacionEnvioView(APIView):
                 "error": {"codigo": "ERROR_LOGISTICA_CALCULO"}
             }, status=status.HTTP_400_BAD_REQUEST)
         except Exception:
-            # No se expone el texto del error: puede contener datos internos.
             logger.exception("Cotizacion: error inesperado")
             return Response({
                 "exito": False,
