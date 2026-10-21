@@ -1,3 +1,4 @@
+import math
 from typing import Dict, Any
 
 from apps.catalog.infrastructure.repositories import ProductRepository
@@ -8,6 +9,39 @@ class VariantService:
     def __init__(self, repository=None, tienda_id=None):
         self.repo = repository if repository is not None else ProductRepository()
         self.tienda_id = tienda_id
+
+    @staticmethod
+    def _validar_precios_variante(precio, precio_oferta=None):
+        if isinstance(precio, bool):
+            raise ValueError("El precio debe ser un número válido.")
+        try:
+            precio_float = float(precio)
+        except (ValueError, TypeError) as error:
+            raise ValueError("El precio debe ser un número válido.") from error
+
+        if not math.isfinite(precio_float):
+            raise ValueError("Los precios deben ser números finitos.")
+        if precio_float < 0:
+            raise ValueError("El precio no puede ser negativo.")
+
+        if precio_oferta is None:
+            return precio_float, None
+
+        if isinstance(precio_oferta, bool):
+            raise ValueError("El precio de oferta debe ser un número válido.")
+        try:
+            oferta_float = float(precio_oferta)
+        except (ValueError, TypeError) as error:
+            raise ValueError("El precio de oferta debe ser un número válido.") from error
+
+        if not math.isfinite(oferta_float):
+            raise ValueError("Los precios deben ser números finitos.")
+        if oferta_float < 0:
+            raise ValueError("El precio de oferta no puede ser negativo.")
+        if oferta_float >= precio_float:
+            raise ValueError("El precio de oferta debe ser menor al precio normal.")
+
+        return precio_float, oferta_float
 
     @staticmethod
     def _normalizar_atributos_variante(atributos):
@@ -62,7 +96,6 @@ class VariantService:
 
         return normalizados
 
-
     def _obtener_esquema_atributos_producto(
         self,
         product_id: str,
@@ -70,7 +103,6 @@ class VariantService:
     ):
         variantes = self.get_variants(product_id)
 
-        # Primero intentamos obtener el esquema desde otra variante.
         for variante in variantes:
             sku_actual = str(variante.get("sku", "")).strip().upper()
 
@@ -91,8 +123,6 @@ class VariantService:
                     and str(attr.get("clave", "")).strip()
                 }
 
-        # Si estamos actualizando la única variante del producto,
-        # utilizamos su propio esquema actual como referencia.
         if excluir_sku:
             for variante in variantes:
                 sku_actual = str(variante.get("sku", "")).strip().upper()
@@ -113,7 +143,6 @@ class VariantService:
                         }
 
         return set()
-
 
     def _validar_atributos_contra_producto(
         self,
@@ -177,7 +206,6 @@ class VariantService:
             raise ValueError(f"No se encontró el producto con ID '{product_id}'.")
 
         return producto.get("variantes", [])
-    
 
     def get_variant_by_sku(self, product_id: str, sku: str) -> dict:
         """Recupera una variante por SKU, id interno o índice numérico."""
@@ -291,8 +319,13 @@ class VariantService:
             )
         )
 
-        if data.get("precio", 0) < 0:
-            raise ValueError("El precio no puede ser negativo.")
+        precio, precio_oferta = self._validar_precios_variante(
+            data.get("precio", 0),
+            data.get("precio_oferta"),
+        )
+        data["precio"] = precio
+        if "precio_oferta" in data:
+            data["precio_oferta"] = precio_oferta
 
         validate_stock(data.get("stock", 0))
 
@@ -331,16 +364,24 @@ class VariantService:
             sku = str(sku_or_update_data)
             data = dict(update_data)
 
-        if "precio" in data:
-            try:
-                precio = float(data["precio"])
-            except (ValueError, TypeError) as error:
-                raise ValueError("El precio debe ser un número válido.") from error
+        variante_existente = self.get_variant_by_sku(product_id, sku)
+        sku_real = variante_existente.get("sku")
 
-            if precio < 0:
-                raise ValueError("El precio no puede ser negativo.")
-
-            data["precio"] = precio
+        if "precio" in data or "precio_oferta" in data:
+            precio_base = data.get("precio", variante_existente.get("precio", 0))
+            oferta_actual = (
+                data["precio_oferta"]
+                if "precio_oferta" in data
+                else variante_existente.get("precio_oferta")
+            )
+            precio_validado, oferta_validada = self._validar_precios_variante(
+                precio_base,
+                oferta_actual,
+            )
+            if "precio" in data:
+                data["precio"] = precio_validado
+            if "precio_oferta" in data:
+                data["precio_oferta"] = oferta_validada
 
         if "stock" in data:
             try:
@@ -350,9 +391,6 @@ class VariantService:
 
             validate_stock(stock)
             data["stock"] = stock
-
-        variante_existente = self.get_variant_by_sku(product_id, sku)
-        sku_real = variante_existente.get("sku")
 
         if "atributos" in data and "atributos_variante" not in data:
             data["atributos_variante"] = data.pop("atributos")
@@ -384,11 +422,6 @@ class VariantService:
     def process_purchase(self, product_or_store_id: str, sku: str, cantidad: int = 1):
         """
         Procesa una compra/decremento de stock sin permitir valores negativos.
-
-        Para el flujo nuevo de variantes, `product_or_store_id` es product_id y retorna
-        la variante actualizada. Para compatibilidad con el flujo anterior basado en
-        tienda, si no se puede resolver como producto se intenta el decremento por
-        tienda y retorna True.
         """
         try:
             cantidad = int(cantidad)
@@ -400,13 +433,11 @@ class VariantService:
         if cantidad <= 0:
             raise ValueError("La cantidad a comprar debe ser mayor a 0.")
 
-        # Flujo nuevo: resolver producto + variante y devolver la variante actualizada.
         try:
             variante = self.get_variant_by_sku(product_or_store_id, sku)
         except ValueError:
             if self.tienda_id is not None:
                 raise
-            # Compatibilidad con el flujo anterior: primer argumento = tienda_id.
             actualizado = self.repo.decrease_stock(
                 product_or_store_id,
                 str(sku).strip().upper(),

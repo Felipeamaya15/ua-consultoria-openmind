@@ -861,13 +861,25 @@ class ModificarCantidadDTO:
 
 
 def precio_efectivo_variante(variante: Dict[str, Any]) -> Optional[Decimal]:
-    precio = variante.get("precio")
-    oferta = variante.get("precio_oferta")
-    if precio is None:
+    precio_raw = variante.get("precio")
+    oferta_raw = variante.get("precio_oferta")
+    if precio_raw is None or isinstance(precio_raw, bool):
         return None
-    if oferta is not None and oferta < precio:
-        precio = oferta
-    return Decimal(str(precio))
+    try:
+        precio = Decimal(str(precio_raw))
+    except (InvalidOperation, TypeError, ValueError):
+        return None
+    if not precio.is_finite() or precio < 0:
+        return None
+
+    if oferta_raw is not None and not isinstance(oferta_raw, bool):
+        try:
+            oferta = Decimal(str(oferta_raw))
+            if oferta.is_finite() and Decimal("0") <= oferta < precio:
+                return oferta
+        except (InvalidOperation, TypeError, ValueError):
+            pass
+    return precio
 
 
 def resolver_datos_item(item: ItemCarrito, variant_service: Optional[VariantService] = None):
@@ -1029,7 +1041,10 @@ class AgregarItemCarritoUseCase:
         en el documento del catálogo; el stock y el precio reales siguen saliendo de las variantes.
         """
         variantes = documento.get("variantes") or []
-        precios = [Decimal(str(v["precio"])) for v in variantes if v.get("precio") is not None]
+        precios = [
+            p for p in (precio_efectivo_variante(v) for v in variantes if isinstance(v, dict))
+            if p is not None
+        ]
         if not precios:
             raise ProductoNoEncontradoException(
                 f"El producto '{documento.get('slug')}' no tiene variantes con precio disponibles para la compra."

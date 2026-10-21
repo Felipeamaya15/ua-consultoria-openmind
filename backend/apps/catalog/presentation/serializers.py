@@ -30,9 +30,27 @@ class ProductPublicListItemSerializer(serializers.Serializer):
     def _variantes(self, producto):
         return [variant for variant in producto.get("variantes", []) if is_variant_active(variant)]
 
+    @staticmethod
+    def _oferta_valida(variant):
+        precio = variant.get('precio')
+        oferta = variant.get('precio_oferta')
+        if (
+            precio is None or oferta is None
+            or isinstance(precio, bool) or isinstance(oferta, bool)
+        ):
+            return None
+        try:
+            return oferta if 0 <= float(oferta) < float(precio) else None
+        except (TypeError, ValueError):
+            return None
+
     def _price_variant(self, producto):
         variants = [v for v in self._variantes(producto) if v.get('precio') is not None]
-        return min(variants, key=lambda v: min(v['precio'], v.get('precio_oferta') if v.get('precio_oferta') is not None else v['precio']), default=None)
+        return min(
+            variants,
+            key=lambda v: self._oferta_valida(v) if self._oferta_valida(v) is not None else v['precio'],
+            default=None,
+        )
 
     def get_precio(self, producto):
         variant = self._price_variant(producto)
@@ -40,7 +58,7 @@ class ProductPublicListItemSerializer(serializers.Serializer):
 
     def get_precio_oferta(self, producto):
         variant = self._price_variant(producto)
-        return variant.get('precio_oferta') if variant else None
+        return self._oferta_valida(variant) if variant else None
 
     def get_disponible(self, producto):
         return any((v.get("stock") or 0) > 0 for v in self._variantes(producto))
@@ -140,7 +158,7 @@ class ProductoCreateSerializer(serializers.ModelSerializer):
                 'required': True,
                 'allow_blank': False,
                 'error_messages': {
-                    'required': 'El campo nombre es obligatorio.',
+                    'required': 'El campo nombre is obligatorio.',
                     'blank': 'El nombre no puede estar vacío.'
                 }
             },
@@ -463,7 +481,7 @@ class ConfiguracionPayPalResponseSerializer(serializers.Serializer):
     client_id = serializers.CharField(allow_blank=True)
     ambiente = serializers.CharField()
     activo = serializers.BooleanField()
-    client_secret_enmascarado = serializers.CharField(allow_blank=True, required=False)
+    client_secret_enmascarada = serializers.CharField(allow_blank=True, required=False)
     fecha_actualizacion = serializers.DateTimeField(allow_null=True, required=False)
     configurado = serializers.BooleanField(default=False)
 

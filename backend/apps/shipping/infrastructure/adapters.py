@@ -17,9 +17,11 @@ from apps.shipping.domain.exceptions import (
     NumeroSeguimientoNoEncontradoException,
     FormatoSeguimientoInvalidoException,
     ProveedorLogisticoError,
+    RespuestaLogisticaInvalidaException,
 )
 
 logger = logging.getLogger(__name__)
+
 
 class StandardLogisticsAdapter(LogisticsPort):
     """Adaptador logístico estándar con soporte de cotización, despacho y seguimiento."""
@@ -85,19 +87,16 @@ class StandardLogisticsAdapter(LogisticsPort):
     def consultar_seguimiento(self, numero_seguimiento: str) -> DetalleSeguimientoDTO:
         codigo = numero_seguimiento.strip().upper()
 
-        # Validación de formato (debe empezar con TRK- y tener al menos 6 caracteres)
         if not codigo.startswith("TRK-") or len(codigo) < 8:
             raise FormatoSeguimientoInvalidoException(
                 "El número de seguimiento debe tener el formato estándar 'TRK-XXXXXXXX'."
             )
 
-        # Simulación de código no existente
         if codigo.endswith("0000") or codigo == "TRK-NOTFOUND":
             raise NumeroSeguimientoNoEncontradoException(
                 f"No se encontraron registros de despacho para el seguimiento '{codigo}'."
             )
 
-        # Mock de eventos cronológicos del courier
         eventos = [
             EventoSeguimientoDTO(
                 fecha_hora="2026-10-06T10:30:00Z",
@@ -226,6 +225,18 @@ class ChilexpressAdapter(LogisticsPort):
             estado="EMITIDO"
         )
 
+    def _obtener_respuesta_seguimiento(self, codigo: str) -> dict:
+        return {
+            "data": {
+                "statusList": [
+                    {"date": "2026-10-07T09:00:00Z", "status": "RECEPCION_EN_SUCURSAL", "description": "Envío admitido en sucursal Chilexpress origen.", "location": "Sucursal Santiago Centro"},
+                    {"date": "2026-10-07T18:30:00Z", "status": "CLASIFICACION_HUB_CENTRAL", "description": "Paquete clasificado en Centro de Distribución Enea.", "location": "Hub Enea Pudahuel"},
+                    {"date": "2026-10-08T06:15:00Z", "status": "EN_TRANSITO_REGIONAL", "description": "Carga despachada hacia el centro de distribución de destino.", "location": "Centro Operativo Regional"},
+                    {"date": "2026-10-08T11:45:00Z", "status": "EN_DISTRIBUCION", "description": "Envío asignado a móvil para entrega final en domicilio.", "location": "Ruta Última Milla"},
+                ]
+            }
+        }
+
     def consultar_seguimiento(self, numero_seguimiento: str) -> DetalleSeguimientoDTO:
         codigo = (numero_seguimiento or "").strip().upper()
 
@@ -239,17 +250,20 @@ class ChilexpressAdapter(LogisticsPort):
                 f"No se registraron envíos en Chilexpress para el seguimiento '{codigo}'."
             )
 
-        # Respuesta del operador (simulado).
-        respuesta = {
-            "data": {
-                "statusList": [
-                    {"date": "2026-10-07T09:00:00Z", "status": "RECEPCION_EN_SUCURSAL", "description": "Envío admitido en sucursal Chilexpress origen.", "location": "Sucursal Santiago Centro"},
-                    {"date": "2026-10-07T18:30:00Z", "status": "CLASIFICACION_HUB_CENTRAL", "description": "Paquete clasificado en Centro de Distribución Enea.", "location": "Hub Enea Pudahuel"},
-                    {"date": "2026-10-08T06:15:00Z", "status": "EN_TRANSITO_REGIONAL", "description": "Carga despachada hacia el centro de distribución de destino.", "location": "Centro Operativo Regional"},
-                    {"date": "2026-10-08T11:45:00Z", "status": "EN_DISTRIBUCION", "description": "Envío asignado a móvil para entrega final en domicilio.", "location": "Ruta Última Milla"},
-                ]
-            }
-        }
+        respuesta = self._obtener_respuesta_seguimiento(codigo)
+        try:
+            eventos_normalizados = procesar_respuesta_seguimiento("Chilexpress", respuesta)
+        except (ValueError, TypeError, KeyError) as exc:
+            logger.warning("Seguimiento Chilexpress: respuesta invalida del operador (%s)", exc)
+            raise RespuestaLogisticaInvalidaException(
+                "La respuesta recibida desde Chilexpress es inválida o incompleta."
+            ) from exc
+
+        if not eventos_normalizados:
+            raise RespuestaLogisticaInvalidaException(
+                "La respuesta de seguimiento de Chilexpress no contiene eventos válidos."
+            )
+
         eventos = [
             EventoSeguimientoDTO(
                 fecha_hora=evento["fecha"],
@@ -257,13 +271,14 @@ class ChilexpressAdapter(LogisticsPort):
                 descripcion=evento["descripcion"],
                 ubicacion=evento["ubicacion"],
             )
-            for evento in procesar_respuesta_seguimiento("Chilexpress", respuesta)
+            for evento in eventos_normalizados
         ]
 
+        ultimo_estado = eventos[-1].estado or "EN_DISTRIBUCION"
         return DetalleSeguimientoDTO(
             numero_seguimiento=codigo,
             proveedor="CHILEXPRESS",
-            estado_actual="EN_DISTRIBUCION",
+            estado_actual=ultimo_estado,
             descripcion_estado="Tu envío Chilexpress va en camino con el transportista para entrega final.",
             fecha_estimada_entrega="2026-10-08T19:00:00Z",
             historial_eventos=eventos
@@ -374,6 +389,16 @@ class StarkenAdapter(LogisticsPort):
             estado="EMITIDO"
         )
 
+    def _obtener_respuesta_seguimiento(self, codigo: str) -> dict:
+        return {
+            "eventos": [
+                {"fecha": "2026-10-07T08:30:00Z", "estado": "INGRESO_EN_AGENCIA", "descripcion": "Carga recepcionada y documentada en agencia Starken.", "ciudad": "Agencia Alameda Santiago"},
+                {"fecha": "2026-10-07T20:15:00Z", "estado": "EN_CENTRO_DISTRIBUCION", "descripcion": "Procesamiento y consolidación de carga en Centro de Distribución.", "ciudad": "Hub San Bernardo"},
+                {"fecha": "2026-10-08T05:40:00Z", "estado": "EN_TRANSITO_INTERURBANO", "descripcion": "Camión troncal en traslado interurbano hacia terminal de destino.", "ciudad": "Ruta Interurbana"},
+                {"fecha": "2026-10-08T10:20:00Z", "estado": "EN_REPARTO_DOMICILIO", "descripcion": "Carga a bordo de vehículo de reparto para entrega en domicilio.", "ciudad": "Sector Destino Final"},
+            ]
+        }
+
     def consultar_seguimiento(self, numero_seguimiento: str) -> DetalleSeguimientoDTO:
         codigo = (numero_seguimiento or "").strip().upper()
 
@@ -387,15 +412,20 @@ class StarkenAdapter(LogisticsPort):
                 f"No se registraron envíos en Starken para el seguimiento '{codigo}'."
             )
 
-        # Respuesta del operador (simulada hasta conectar la API real).
-        respuesta = {
-            "eventos": [
-                {"fecha": "2026-10-07T08:30:00Z", "estado": "INGRESO_EN_AGENCIA", "descripcion": "Carga recepcionada y documentada en agencia Starken.", "ciudad": "Agencia Alameda Santiago"},
-                {"fecha": "2026-10-07T20:15:00Z", "estado": "EN_CENTRO_DISTRIBUCION", "descripcion": "Procesamiento y consolidación de carga en Centro de Distribución.", "ciudad": "Hub San Bernardo"},
-                {"fecha": "2026-10-08T05:40:00Z", "estado": "EN_TRANSITO_INTERURBANO", "descripcion": "Camión troncal en traslado interurbano hacia terminal de destino.", "ciudad": "Ruta Interurbana"},
-                {"fecha": "2026-10-08T10:20:00Z", "estado": "EN_REPARTO_DOMICILIO", "descripcion": "Carga a bordo de vehículo de reparto para entrega en domicilio.", "ciudad": "Sector Destino Final"},
-            ]
-        }
+        respuesta = self._obtener_respuesta_seguimiento(codigo)
+        try:
+            eventos_normalizados = procesar_respuesta_seguimiento("Starken", respuesta)
+        except (ValueError, TypeError, KeyError) as exc:
+            logger.warning("Seguimiento Starken: respuesta invalida del operador (%s)", exc)
+            raise RespuestaLogisticaInvalidaException(
+                "La respuesta recibida desde Starken es inválida o incompleta."
+            ) from exc
+
+        if not eventos_normalizados:
+            raise RespuestaLogisticaInvalidaException(
+                "La respuesta de seguimiento de Starken no contiene eventos válidos."
+            )
+
         eventos = [
             EventoSeguimientoDTO(
                 fecha_hora=evento["fecha"],
@@ -403,13 +433,14 @@ class StarkenAdapter(LogisticsPort):
                 descripcion=evento["descripcion"],
                 ubicacion=evento["ubicacion"],
             )
-            for evento in procesar_respuesta_seguimiento("Starken", respuesta)
+            for evento in eventos_normalizados
         ]
 
+        ultimo_estado = eventos[-1].estado or "EN_REPARTO_DOMICILIO"
         return DetalleSeguimientoDTO(
             numero_seguimiento=codigo,
             proveedor="STARKEN",
-            estado_actual="EN_REPARTO_DOMICILIO",
+            estado_actual=ultimo_estado,
             descripcion_estado="Tu envío Starken se encuentra en ruta de entrega hacia el domicilio acordado.",
             fecha_estimada_entrega="2026-10-08T18:00:00Z",
             historial_eventos=eventos
@@ -444,7 +475,6 @@ class MultiCarrierLogisticsAdapter(LogisticsPort):
                 logger.exception("Cotizacion: fallo el transportista %s", type(adapter).__name__)
         if not todas_las_cotizaciones:
             if fallos_de_proveedor:
-                # Distinto de "sin cobertura": los transportistas fallaron y reintentar puede funcionar.
                 raise ProveedorLogisticoError(
                     "No pudimos obtener tarifas de los transportistas en este momento. Intenta nuevamente."
                 )

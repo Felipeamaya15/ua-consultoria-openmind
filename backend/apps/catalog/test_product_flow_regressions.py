@@ -1,9 +1,16 @@
 from copy import deepcopy
+from decimal import Decimal
 from unittest.mock import Mock
 
 from django.test import SimpleTestCase
 
-from apps.catalog.application.use_cases import GetPublicProductDetailUseCase, resolver_datos_item
+from apps.catalog.application.services import VariantService
+from apps.catalog.application.use_cases import (
+    GetPublicProductDetailUseCase,
+    precio_efectivo_variante,
+    resolver_datos_item,
+)
+from apps.catalog.domain.models import Variante
 from apps.catalog.presentation.serializers import ProductPublicListItemSerializer
 from apps.core.test_checkout import CheckoutOrderTests
 from apps.core.models import Producto
@@ -24,6 +31,45 @@ class PublicVariantRegressionTests(SimpleTestCase):
         self.product['variantes'][1]['precio_oferta'] = 80
         result = ProductPublicListItemSerializer(self.product).data
         self.assertEqual((result['precio'], result['precio_oferta']), (200, 80))
+
+    def test_list_ignores_invalid_or_non_discounted_offer_price(self):
+        for invalid_offer in (-20, 100, 150):
+            product = deepcopy(self.product)
+            product['variantes'] = [{'sku': 'A', 'precio': 100, 'precio_oferta': invalid_offer, 'stock': 2}]
+            result = ProductPublicListItemSerializer(product).data
+            self.assertEqual(result['precio'], 100)
+            self.assertIsNone(result['precio_oferta'])
+
+    def test_precio_efectivo_variante_calcula_oferta_y_descarta_valores_invalidos(self):
+        self.assertEqual(precio_efectivo_variante({'precio': 19990, 'precio_oferta': 14990}), Decimal('14990'))
+        self.assertEqual(precio_efectivo_variante({'precio': 19990, 'precio_oferta': None}), Decimal('19990'))
+        for invalid_offer in (-500, 19990, 25000, 'invalido', True):
+            self.assertEqual(
+                precio_efectivo_variante({'precio': 19990, 'precio_oferta': invalid_offer}),
+                Decimal('19990'),
+            )
+
+    def test_modelo_dominio_variante_calcula_precio_efectivo_y_porcentaje_descuento(self):
+        con_oferta = Variante(sku='pol-m', precio=20000, precio_oferta=15000, stock=4, atributos={})
+        self.assertTrue(con_oferta.tiene_oferta)
+        self.assertEqual(con_oferta.precio_efectivo, 15000)
+        self.assertEqual(con_oferta.porcentaje_descuento, 25)
+
+        sin_oferta = Variante(sku='pol-l', precio=20000, stock=4, atributos={})
+        self.assertFalse(sin_oferta.tiene_oferta)
+        self.assertEqual(sin_oferta.precio_efectivo, 20000)
+        self.assertEqual(sin_oferta.porcentaje_descuento, 0)
+
+        for oferta_invalida in (-1, 20000, 25000, True, float('inf')):
+            with self.assertRaises(ValueError):
+                Variante(sku='pol-x', precio=20000, precio_oferta=oferta_invalida, stock=1, atributos={})
+
+    def test_variant_service_valida_precio_oferta_menor_al_precio_normal(self):
+        self.assertEqual(VariantService._validar_precios_variante(10000, 7500), (10000.0, 7500.0))
+        self.assertEqual(VariantService._validar_precios_variante(10000, None), (10000.0, None))
+        for oferta_invalida in (-10, 10000, 12000, True, 'abc'):
+            with self.assertRaises(ValueError):
+                VariantService._validar_precios_variante(10000, oferta_invalida)
 
     def test_soft_deleted_variants_do_not_reach_detail_or_availability(self):
         original = deepcopy(self.product)
