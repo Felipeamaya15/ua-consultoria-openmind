@@ -91,3 +91,33 @@ Las credenciales van solo en el `.env`, que no se sube al repositorio.
 ## Límites conocidos
 
 - Los correos se envían en el mismo momento de la operación (no hay cola de envíos); el tiempo de espera es `EMAIL_TIMEOUT`.
+
+## Correo de pedido despachado (SCRUM-427, 431 y 434)
+
+El tipo de correo `order_shipped` ("Pedido despachado") se suma a los de recepción, pago exitoso y pago rechazado.
+Su plantilla está en `backend/apps/core/domain/plantillas_correo/pedido_despachado.py` y el propietario puede
+editarla desde el panel (Correos automáticos), igual que las otras.
+
+Texto por defecto:
+
+~~~
+Asunto:   Tu pedido ya fue despachado · {{orderNumber}}
+Resumen:  Tu compra va en camino.
+
+Hola {{customerName}},
+
+Tu pedido {{orderNumber}} ya fue despachado y va en camino.
+
+Transportista: {{carrier}}
+Código de seguimiento: {{trackingCode}}
+
+Gracias por comprar en {{storeName}}.
+~~~
+
+Reglas de la plantilla:
+
+- Solo se genera para pedidos que ya fueron enviados (`enviado`, `en_reparto` o `entregado`). Un pedido sin despachar,
+  cancelado o con retiro en tienda no tiene correo de despacho.
+- Las líneas cuyos datos no existen se omiten: si el pedido no tiene código de seguimiento, la línea
+  "Código de seguimiento" no aparece (no queda una línea vacía).
+- El texto por defecto está también en `frontend/src/features/admin/data/emailTemplates.ts`; si se cambia uno, hay que cambiar el otro.
