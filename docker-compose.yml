@@ -55,6 +55,14 @@ services:
       - MONGO_DB_NAME=${MONGO_DB_NAME}
       - PICKUP_GEOCODING_PROVIDER=${PICKUP_GEOCODING_PROVIDER:-}
       - PICKUP_GOOGLE_GEOCODING_KEY=${PICKUP_GOOGLE_GEOCODING_KEY:-}
+      - EMAIL_BACKEND=${EMAIL_BACKEND:-}
+      - EMAIL_HOST=${EMAIL_HOST:-}
+      - EMAIL_PORT=${EMAIL_PORT:-}
+      - EMAIL_HOST_USER=${EMAIL_HOST_USER:-}
+      - EMAIL_HOST_PASSWORD=${EMAIL_HOST_PASSWORD:-}
+      - EMAIL_USE_TLS=${EMAIL_USE_TLS:-}
+      - EMAIL_USE_SSL=${EMAIL_USE_SSL:-}
+      - DEFAULT_FROM_EMAIL=${DEFAULT_FROM_EMAIL:-}
     depends_on:
       - db
       - mongodb
@@ -76,6 +84,17 @@ services:
       - "5173:5173"
     depends_on:
       - backend
+
+  # 5. BUZON DE PRUEBA DE CORREO (opcional): docker compose --profile correo up -d mailpit
+  #    Se ven los correos en http://localhost:8025 (ver docs/correo-despacho.md).
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: mailpit_consultoria
+    profiles: ["correo"]
+    restart: unless-stopped
+    ports:
+      - "8025:8025"
+      - "1025:1025"
 
 volumes:
   postgres_data:
