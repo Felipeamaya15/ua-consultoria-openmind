@@ -45,6 +45,9 @@ async function readResponse(response: Response): Promise<LandingConfig | null> {
 
   return {
     ...body.data,
+    ...(body.data.contenido ? { contenido: { ...body.data.contenido,
+      ...(Array.isArray(body.data.contenido.bloques) ? { bloques: body.data.contenido.bloques.map((block: import('../types/landing.types').BloqueLanding) => ({...block, imagenes: block.imagenes.map(image => ({...image,src:normalizeMediaUrl(image.src) || ''}))})) } : {}),
+    } } : {}),
     imagen_principal: normalizeMediaUrl(body.data.imagen_principal),
     logo: normalizeMediaUrl(body.data.logo),
   };
@@ -80,4 +83,14 @@ export async function saveLandingConfig(config: LandingInput): Promise<LandingCo
   if (!saved) throw new Error('El backend no devolvió la configuración guardada.');
   if (typeof window !== 'undefined') window.dispatchEvent(new Event(LANDING_CONFIG_CHANGED));
   return saved;
+}
+
+/** Appearance writes cannot replace content, and are authorized by the store resolver. */
+export async function saveBlockStyles(template: string, styles: import('../../storefront/visual/blockAppearance').BlockStyles): Promise<void> {
+  const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+  if (!token) throw new Error('Inicia sesión como propietario para guardar el diseño.');
+  const response = await fetch(`${API_BASE_URL}/api/landing/apariencia/`, {method:'PATCH',headers:{'Content-Type':'application/json',Authorization:`Token ${token}`},body:JSON.stringify({plantilla:template,bloques:styles})});
+  const body = await response.json();
+  if (!response.ok || !body.exito) throw new Error(body.mensaje || 'No se pudo publicar la apariencia de las secciones.');
+  window.dispatchEvent(new Event(LANDING_CONFIG_CHANGED));
 }

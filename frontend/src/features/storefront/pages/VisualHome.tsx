@@ -1,3 +1,4 @@
+import { LandingBlocks } from '../../landing/components/LandingBlocks';
 import { VISUAL_SECTION } from '../visual/sectionIds';
 import { useLandingContent } from '../../landing/hooks/useLandingContent';
 import { LandingDetails } from '../../landing/components/LandingDetails';
@@ -194,6 +195,7 @@ export default function VisualHome() {
         </div>
       </section>)}
 
+      {!Array.isArray(landing?.contenido?.bloques) && <>
       {/* ======================================================
           HISTORIA
       ====================================================== */}
@@ -336,6 +338,8 @@ export default function VisualHome() {
           </div>
         </div>
       </section>
+      </>}
+      <LandingBlocks />
       <LandingDetails />
     </>
   );

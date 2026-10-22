@@ -30,6 +30,7 @@ export interface CarrierConnection {
 }
 
 export interface ThemeTemplateCustomization {
+  blockStyles?: import('../../storefront/visual/blockAppearance').BlockStyles;
   visualConfig?: VisualConfigOverrides;
   primaryColor: string;
   secondaryColor: string;

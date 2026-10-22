@@ -1,3 +1,4 @@
+import { readBlockStyles } from '../../storefront/visual/blockAppearance';
 import type { TemplateId } from '../../storefront/data/mockData';
 import { isRecord, mergeVisualOverrides, resolveStoreVisualConfig } from '../../storefront/visual/resolveVisualConfig';
 import type { LegacyThemeColors } from '../../storefront/visual/types';
@@ -10,6 +11,7 @@ export function loadThemeCustomization(template: TemplateId, value?: unknown, le
   const colors = resolveStoreVisualConfig({ ...legacyColors, visualConfig: storeCustomization }, template, saved).global.colors;
   return {
     ...saved,
+    ...(saved.blockStyles ? {blockStyles:readBlockStyles(saved.blockStyles)} : {}),
     primaryColor: colors.primary, secondaryColor: colors.secondary, accentColor: colors.accent,
     paletteName: typeof saved.paletteName === 'string' ? saved.paletteName : 'Original',
     images: readThemeImages(saved.images),

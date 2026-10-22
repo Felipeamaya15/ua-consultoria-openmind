@@ -494,7 +494,7 @@ class PedidoTiendaSerializer(serializers.ModelSerializer):
         fields = [
             'id_pedido', 'identificador', 'nombre_contacto', 'correo_contacto', 
             'monto_total', 'estado', 'fecha_creacion', 'metodo_pago', 
-            'costo_envio', 'descuento', 'items'
+            'costo_envio', 'descuento', 'items', 'entrega'
         ]
 
 class PedidoEstadoDetalleSerializer(serializers.ModelSerializer):

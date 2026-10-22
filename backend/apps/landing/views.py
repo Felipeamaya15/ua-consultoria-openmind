@@ -6,6 +6,9 @@ from apps.core.infrastructure.tenant import resolver_tienda
 from apps.core.presentation.responses import success_response
 from apps.landing.models import ConfiguracionLanding
 from apps.landing.serializers import ConfiguracionLandingSerializer
+from apps.landing.block_appearance import BlockAppearanceSerializer
+from django.db import transaction
+from rest_framework.exceptions import ValidationError
 
 
 class ConfiguracionLandingAPIView(APIView):
@@ -39,13 +42,14 @@ class ConfiguracionLandingAPIView(APIView):
             status=status.HTTP_200_OK,
         )
 
+    @transaction.atomic
     def put(self, request):
         tienda = resolver_tienda(
             request,
             exigir_propietario=True,
         )
 
-        configuracion = ConfiguracionLanding.objects.filter(
+        configuracion = ConfiguracionLanding.objects.select_for_update().filter(
             tienda=tienda
         ).first()
 
@@ -73,3 +77,21 @@ class ConfiguracionLandingAPIView(APIView):
                 else status.HTTP_200_OK
             ),
         )
+
+
+class AparienciaBloquesAPIView(APIView):
+    def patch(self, request):
+        tienda = resolver_tienda(request, exigir_propietario=True)
+        serializer = BlockAppearanceSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        with transaction.atomic():
+            config = ConfiguracionLanding.objects.select_for_update().filter(tienda=tienda).first()
+            if config is None:
+                raise ValidationError('Guarda primero el contenido desde Página principal.')
+            content = dict(config.contenido)
+            styles = dict(content.get('apariencia_bloques', {}))
+            styles[serializer.validated_data['plantilla']] = serializer.validated_data['bloques']
+            content['apariencia_bloques'] = styles
+            config.contenido = content
+            config.save(update_fields=['contenido'])
+        return success_response(data={'tienda': tienda.pk}, mensaje='Apariencia de secciones guardada.')

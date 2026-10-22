@@ -38,7 +38,7 @@ export default function EmailTemplates() {
     setSaved(false)
   }
 
- 
+
   useEffect(() => {
     fetchEmailTemplates()
       .then((remote) => {

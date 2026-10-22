@@ -1,0 +1,5 @@
+simulation: editor-redesign-qa
+routing: path
+mocks:
+  - routeKey: openmind
+    path: ./editor-redesign-mock/config.yaml

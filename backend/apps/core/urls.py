@@ -14,6 +14,9 @@ from apps.core.presentation.legal import (
 from apps.core.presentation.software_version import SoftwareVersionAPIView
 from apps.core.presentation.recent_orders import UltimasOrdenesAPIView, ActualizarEstadoPedidoAPIView
 from apps.core.presentation.historial import HistorialPedidosAPIView, HistorialVentasAPIView
+from apps.core.presentation.historial import PedidoDetallePrivadoAPIView
+from apps.core.presentation.commercial_exports import (InformeXLSXAPIView, PedidosExportAPIView,
+    VentasExportAPIView, ContactosAPIView, ContactosExportAPIView)
 from apps.core.presentation.dashboard import DashboardAPIView
 from apps.core.presentation.reports import InformeAPIView, InformePDFAPIView
 from apps.core.presentation.store_configuration import InformacionTiendaAPIView
@@ -42,6 +45,12 @@ from apps.core.presentation.views import (
 urlpatterns = [
     path('tienda/informes/', InformeAPIView.as_view(), name='tienda-informes'),
     path('tienda/informes/pdf/', InformePDFAPIView.as_view(), name='tienda-informes-pdf'),
+    path('tienda/informes/xlsx/', InformeXLSXAPIView.as_view(), name='tienda-informes-xlsx'),
+    path('tienda/pedidos/exportar/', PedidosExportAPIView.as_view(), name='tienda-pedidos-exportar'),
+    path('tienda/pedidos/<int:id_pedido>/detalle/', PedidoDetallePrivadoAPIView.as_view(), name='tienda-pedido-detalle'),
+    path('tienda/ventas/exportar/', VentasExportAPIView.as_view(), name='tienda-ventas-exportar'),
+    path('tienda/contactos/', ContactosAPIView.as_view(), name='tienda-contactos'),
+    path('tienda/contactos/exportar/', ContactosExportAPIView.as_view(), name='tienda-contactos-exportar'),
     path('tienda/configuracion/', InformacionTiendaAPIView.as_view(), name='tienda-configuracion'),
     path('tienda/correos/', PlantillasCorreoAPIView.as_view(), name='tienda-correos'),
     path('promociones/', PromocionesAPIView.as_view(), name='promotions'),

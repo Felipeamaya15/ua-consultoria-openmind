@@ -3,6 +3,9 @@ import { Link, useParams } from 'react-router-dom';
 import { authService, type CustomerOrder } from '../../auth/services/authService';
 import { useStorefrontTemplate } from '../hooks/useStorefrontTemplate';
 import { CustomerAccountNavigation } from '../components/store/CustomerAccountNavigation';
+import { formatBusinessDate } from '../../admin/services/businessTime';
+import { formatReportMoney } from '../../admin/services/reportFormatting';
+import { PickupSelectionSummary } from '../components/checkout/PickupSchedule';
 
 export default function CustomerOrders() {
   const { id } = useParams();
@@ -37,11 +40,12 @@ export default function CustomerOrders() {
           <h2 className="font-semibold text-lg">
             {order.identificador || `Pedido #${order.id_pedido}`}
           </h2>
-          <p><time dateTime={order.fecha_creacion}>{new Date(order.fecha_creacion).toLocaleString('es-CL')}</time></p>
+          <p><time dateTime={order.fecha_creacion}>{formatBusinessDate(order.fecha_creacion, true)}</time></p>
           <p>Estado: <span className="inline-block rounded bg-[var(--visual-page-panel-background)] px-2 py-1">{order.estado_etiqueta}</span></p>
           <p>Productos: {order.cantidad_productos}</p>
-          {Number(order.descuento) > 0 && <p>Descuento aplicado: −{order.descuento}</p>}
-          <p>Total: {order.monto_total}</p>
+          {Number(order.descuento) > 0 && <p>Descuento aplicado: −{formatReportMoney(order.descuento!)}</p>}
+          <p>Total: {formatReportMoney(order.monto_total)}</p>
+          <PickupSelectionSummary selection={order.entrega?.retiro?.seleccion} />
           
           {!id && <Link data-page-action="ghost" to={route(`mis-pedidos/${order.id_pedido}`)} className="font-medium text-[var(--primary)] hover:underline">Ver detalle y seguimiento</Link>}
           
@@ -68,8 +72,8 @@ export default function CustomerOrders() {
                         )}
                       </td>
                       <td className="py-3">{item.cantidad}</td>
-                      <td className="py-3">{item.precio_unitario}</td>
-                      <td className="py-3">{item.subtotal}</td>
+                      <td className="py-3">{formatReportMoney(item.precio_unitario)}</td>
+                      <td className="py-3">{formatReportMoney(item.subtotal)}</td>
                     </tr>
                   ))}
                 </tbody>

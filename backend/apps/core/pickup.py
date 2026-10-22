@@ -1,11 +1,46 @@
 """Contrato v2 de retiro; los textos legacy se conservan sin inferir horarios."""
 import re
+from datetime import datetime, timezone as datetime_timezone
+from zoneinfo import ZoneInfo
+from django.utils import timezone
 from django.core import signing
 
 DAYS = [('mon', 'Lunes'), ('tue', 'Martes'), ('wed', 'Miércoles'), ('thu', 'Jueves'),
         ('fri', 'Viernes'), ('sat', 'Sábado'), ('sun', 'Domingo')]
 LOCATION_FIELDS = ('region', 'comuna', 'street', 'number', 'reference', 'verification')
 SALT = 'core.pickup.address.v2'
+
+
+def validate_pickup_selection(pickup, selection, now=None):
+    """Calendario Santiago, precisión de un minuto; no inventa cupos ni intervalos.
+
+    La selección es aditiva para conservar clientes antiguos y retiro legacy.
+    Toda selección enviada se valida de nuevo con la configuración vigente.
+    """
+    from rest_framework.exceptions import ValidationError
+    if selection is None:
+        return None
+    message = 'Selecciona una fecha y hora de retiro disponibles dentro del horario del local.'
+    try:
+        if pickup.get('version') != 2 or not pickup.get('enabled'):
+            raise ValueError()
+        date, hour = selection['fecha'], selection['hora']
+        if not re.fullmatch(r'\d{4}-\d{2}-\d{2}', date) or not re.fullmatch(r'(?:[01]\d|2[0-3]):[0-5]\d', hour):
+            raise ValueError()
+        calendar = datetime.strptime(f'{date} {hour}', '%Y-%m-%d %H:%M')
+        zone = ZoneInfo('America/Santiago')
+        selected = calendar.replace(tzinfo=zone)
+        # El salto de horario de verano puede eliminar minutos del calendario local.
+        if selected.astimezone(datetime_timezone.utc).astimezone(zone).replace(tzinfo=None) != calendar:
+            raise ValueError()
+        current = (now or timezone.now()).astimezone(zone)
+        row = pickup.get('hours', {}).get(DAYS[calendar.weekday()][0], {})
+        if (selected <= current or not row.get('enabled')
+                or not row.get('start') or not row.get('end') or not row['start'] <= hour <= row['end']):
+            raise ValueError()
+        return {'fecha': date, 'hora': hour, 'zona_horaria': 'America/Santiago'}
+    except (ValueError, TypeError, KeyError, AttributeError):
+        raise ValidationError({'retiro_seleccion': message})
 
 
 def grouped_hours(hours):

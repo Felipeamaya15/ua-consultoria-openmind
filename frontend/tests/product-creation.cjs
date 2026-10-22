@@ -11,6 +11,7 @@ const product = {
   variants: [{ id: 'v', sku: ' pol-m ', price: 80, comparePrice: 100, stock: 3, attributes: { Talla: 'M' } }],
 };
 function load(file, globals) {
+  if (file.endsWith('productService.ts')) return require('./source-loader.cjs').load(file, {}, {sessionStorage: {getItem: () => null}, ...globals});
   const module = { exports: {} };
   const source = fs.readFileSync(path.join(root, file), 'utf8').replace('(import.meta as any).env.VITE_API_URL', '"http://test"');
   const code = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020, jsx: ts.JsxEmit.ReactJSX } }).outputText;
@@ -24,8 +25,8 @@ async function main() {
     sessionStorage: { getItem: () => sessionToken },
     fetch: async (url, options) => { request = { url, options }; return reply; },
   });
-  reply = { ok: true, json: async () => ({ exito: true, data: { id: 'mongo-id' } }) };
-  assert.equal(await service.createPublicProduct(product), 'mongo-id');
+  reply = { ok: true, json: async () => ({ exito: true, data: { id: '0123456789abcdef01234567' } }) };
+  assert.equal(await service.createPublicProduct(product), '0123456789abcdef01234567');
   assert.equal(request.url, 'http://test/api/catalog/productos/crear/');
   assert.equal(request.options.headers.Authorization, 'Token owner-token');
   const body = JSON.parse(request.options.body);
@@ -46,7 +47,7 @@ async function main() {
   token = null;
   await assert.rejects(() => service.createPublicProduct(product), /Inicia sesión/);
   sessionToken = 'session-owner';
-  reply = {ok: true, json: async () => ({exito: true, data: {id: 'mongo-id'}})};
+  reply = {ok: true, json: async () => ({exito: true, data: {id: '0123456789abcdef01234567'}})};
   await service.createPublicProduct(product);
   assert.equal(request.options.headers.Authorization, 'Token session-owner');
 
@@ -70,7 +71,7 @@ async function main() {
         if (id === 'react-router-dom') return { Link: 'Link', useNavigate: () => () => {}, useParams: () => ({ id: 'nuevo' }) };
         if (id.includes('mockAdminData')) return { mockProducts: [], formatPrice: String };
         if (id.includes('productService')) return {
-          createPublicProduct: async () => { assert.equal(editing, false); calls++; if (fails) throw new Error('Servidor caído'); return 'mongo-id'; },
+          createPublicProduct: async () => { assert.equal(editing, false); calls++; if (fails) throw new Error('Servidor caído'); return '0123456789abcdef01234567'; },
           updateCatalogProduct: async p => { assert.equal(editing, true); calls++; if (fails) throw new Error('Servidor caído'); return { ...p, revision: 'new-revision' }; },
         };
         if (id.includes('components/ui')) return Object.fromEntries(['Alert','Badge','Button','Input','Select','Tabs','Textarea','Toggle'].map(x => [x, x]));

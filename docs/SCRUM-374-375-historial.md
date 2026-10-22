@@ -1,6 +1,6 @@
 # Consulta histórica de ventas y de pedidos (SCRUM-374 y SCRUM-375)
 
-Dos consultas de solo lectura para el propietario de la tienda. 
+Dos consultas de solo lectura para el propietario de la tienda.
 
 
 ## Zona horaria
@@ -40,5 +40,3 @@ Parámetro adicional: `agrupacion` (`dia` o `mes`, por defecto `mes`). Agrupar p
 Incluye pedidos de cualquier estado. Parámetros adicionales: `estado` (uno de los estados del
 pedido), `q` (búsqueda por número de orden o nombre, hasta 100 caracteres) y `orden`
 (`fecha_desc`, `fecha_asc`, `monto_desc` o `monto_asc`; por defecto `fecha_desc`).
-
-

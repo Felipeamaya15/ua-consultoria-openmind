@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { formatPrice, Promotion } from "../data/mockAdminData"
 import { useAdmin } from "../context/AdminContext"
 import {
@@ -11,17 +11,13 @@ import {
   Alert,
 } from "../components/ui"
 import { promotionService } from "../services/promotionService"
+import { formatBusinessDate } from '../services/businessTime'
 
 const CODE_REGEX = /^[A-Z0-9]+(?:-[A-Z0-9]+)*$/
 
 function formatPromoDate(value?: string): string {
   if (!value) return "Sin límite"
-  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value.trim())
-  if (match) {
-    return `${match[3]}-${match[2]}-${match[1]}`
-  }
-  const parsed = new Date(value)
-  return Number.isNaN(parsed.getTime()) ? value : parsed.toLocaleString("es-CL", { timeZone: "America/Santiago", timeZoneName: "short" })
+  return formatBusinessDate(value.trim(), true) || 'Fecha no disponible'
 }
 
 export default function Promotions() {
@@ -34,6 +30,7 @@ export default function Promotions() {
   const [saving, setSaving] = useState(false)
   const [showModal, setShowModal] = useState(false)
   const [editPromo, setEditPromo] = useState<Partial<Promotion> | null>(null)
+  const mutation = useRef(false)
 
   const setPromos = (update: (previous: Promotion[]) => Promotion[]) => {
     const next = update(promos)
@@ -70,6 +67,7 @@ export default function Promotions() {
     setEditPromo((current) => ({ ...current, ...changes }))
 
   const save = async () => {
+    if (mutation.current) return
     setError("")
     setStatusMessage("")
 
@@ -115,7 +113,7 @@ export default function Promotions() {
     if (
       (editPromo.minAmount ?? 0) < 0 ||
       (editPromo.maxUses !== undefined &&
-        (!Number.isInteger(editPromo.maxUses) || editPromo.maxUses < 0))
+        (!Number.isInteger(editPromo.maxUses) || editPromo.maxUses < 0 || (editPromo.maxUses === 0 && original?.maxUses !== 0)))
     ) {
       setError("Revisa el monto mínimo y el límite de usos.")
       return
@@ -138,6 +136,7 @@ export default function Promotions() {
     // Compare the edited fields before normalization: renaming must preserve
     // historical codes, free-shipping amounts and complete validity instants.
     const changes = original ? Object.fromEntries(Object.entries(draft).filter(([key]) => key !== 'id' && key !== 'usedCount' && editPromo[key as keyof Promotion] !== original[key as keyof Promotion])) : draft;
+    mutation.current = true
     setSaving(true)
     try {
       const promo = editPromo.id
@@ -164,13 +163,17 @@ export default function Promotions() {
           : "No se pudo guardar la promoción."
       )
     } finally {
+      mutation.current = false
       setSaving(false)
     }
   }
 
   const toggleActive = async (id: string) => {
+    if (mutation.current) return
     const current = promos.find((p) => p.id === id)
     if (!current) return
+    mutation.current = true
+    setSaving(true)
     setError("")
     setStatusMessage("")
     try {
@@ -188,16 +191,22 @@ export default function Promotions() {
           ? cause.message
           : "No se pudo actualizar la promoción."
       )
+    } finally {
+      mutation.current = false
+      setSaving(false)
     }
   }
 
   const handleDelete = async (promo: Promotion) => {
+    if (mutation.current) return
     if (
       typeof window !== "undefined" &&
       !window.confirm(`¿Eliminar la promoción "${promo.name}" (${promo.code})?`)
     ) {
       return
     }
+    mutation.current = true
+    setSaving(true)
     setError("")
     setStatusMessage("")
     try {
@@ -210,6 +219,9 @@ export default function Promotions() {
           ? cause.message
           : "No se pudo eliminar la promoción."
       )
+    } finally {
+      mutation.current = false
+      setSaving(false)
     }
   }
 
@@ -501,7 +513,7 @@ export default function Promotions() {
               })
             }
             placeholder="Sin límite"
-            hint="Opcional. Cero impide nuevos usos; vacío significa sin límite."
+            hint="Opcional: entero mayor que cero. Vacío significa sin límite; un cero histórico se conserva al editar otros campos."
           />
           <div className="flex justify-end gap-2 pt-2">
             <Button

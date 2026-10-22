@@ -43,7 +43,54 @@ class UbicacionSerializer(serializers.Serializer):
         return value
 
 
+class ImagenBloqueSerializer(serializers.Serializer):
+    id = serializers.UUIDField(format='hex_verbose')
+    src = serializers.CharField(max_length=2800000)
+    alt = serializers.CharField(max_length=250, allow_blank=True, default='')
+
+    def validate_id(self, value):
+        return str(value)
+
+    def validate_src(self, value):
+        from apps.landing.block_images import validate_block_image
+        return validate_block_image(value)
+
+
+class BloqueLandingSerializer(serializers.Serializer):
+    id = serializers.UUIDField(format='hex_verbose')
+    tipo = serializers.ChoiceField(choices=['historia', 'imagen_texto', 'texto', 'galeria', 'cita'])
+    visible = serializers.BooleanField(default=True)
+    titulo = serializers.CharField(max_length=255, allow_blank=True, default='')
+    subtitulo = serializers.CharField(max_length=500, allow_blank=True, default='')
+    texto = serializers.CharField(max_length=10000, allow_blank=True, default='')
+    imagenes = ImagenBloqueSerializer(many=True, required=False, default=list)
+
+    def validate_id(self, value):
+        return str(value)
+
+    def validate(self, value):
+        images = value['imagenes']
+        limit = 8 if value['tipo'] == 'galeria' else 1 if value['tipo'] in ['historia', 'imagen_texto'] else 0
+        if len(images) > limit:
+            raise serializers.ValidationError({'imagenes': f'Este bloque permite hasta {limit} imágenes.'})
+        if len({i['id'] for i in images}) != len(images):
+            raise serializers.ValidationError({'imagenes': 'Los identificadores deben ser únicos.'})
+        return value
+
+
 class ContenidoLandingSerializer(serializers.Serializer):
+    bloques = BloqueLandingSerializer(many=True, required=False)
+
+    def validate_bloques(self, value):
+        if len(value) > 20:
+            raise serializers.ValidationError('Se permiten hasta 20 secciones.')
+        if len({b['id'] for b in value}) != len(value):
+            raise serializers.ValidationError('Los identificadores de las secciones deben ser únicos.')
+        uploads = [i['src'] for b in value for i in b['imagenes'] if i['src'].startswith('data:')]
+        if sum(len(src) for src in uploads) > 14000000:
+            raise serializers.ValidationError('Guarda las imágenes en grupos de hasta 10 MB.')
+        return value
+
     productos_destacados = serializers.ListField(child=serializers.RegexField(r'^[0-9a-f]{24}$'), max_length=6, required=False)
     categorias = serializers.ListField(child=serializers.CharField(max_length=100), max_length=6, required=False)
     beneficios = BeneficioSerializer(many=True, required=False)

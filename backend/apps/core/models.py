@@ -257,6 +257,36 @@ class ItemPedido(models.Model):
             models.CheckConstraint(check=Q(precio_unitario__gte=0), name='chk_item_pedido_precio_valido'),
         ]
 
+
+class ConsentimientoComercial(models.Model):
+    """Evidencia separada de compras/cookies. Sin registro nunca significa autorizado.
+
+    No hay API que permita al vendedor conceder consentimiento por el cliente.
+    La captura del comprador exige texto aprobado y verificación de identidad.
+    """
+    tienda = models.ForeignKey(Tienda, on_delete=models.CASCADE)
+    email = models.EmailField(max_length=320)
+    estado = models.CharField(max_length=15, choices=[('autorizado', 'Autorizado'), ('retirado', 'Retirado')])
+    version_texto = models.CharField(max_length=100, blank=True, default='')
+    referencia_evidencia = models.CharField(max_length=250, blank=True, default='')
+    fecha_actualizacion = models.DateTimeField(default=timezone.now)
+
+    def save(self, *args, **kwargs):
+        from django.core.exceptions import ValidationError
+        from django.core.validators import validate_email
+        self.email = self.email.strip().lower()
+        validate_email(self.email)
+        if self.estado == 'autorizado' and (not self.version_texto.strip() or not self.referencia_evidencia.strip()):
+            raise ValidationError('La autorización requiere versión del texto y referencia de evidencia.')
+        return super().save(*args, **kwargs)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['tienda', 'email'], name='uq_consentimiento_tienda_email'),
+            models.CheckConstraint(condition=Q(estado='retirado') | (Q(estado='autorizado') & ~Q(version_texto='') & ~Q(referencia_evidencia='')), name='chk_consentimiento_evidencia'),
+            models.CheckConstraint(condition=Q(email=models.functions.Lower(models.functions.Trim('email'))), name='chk_consentimiento_normalizado'),
+        ]
+
 class ConfiguracionTransbank(models.Model):
     AMBIENTE_CHOICES = [
         ('INTEGRACION', 'Integración'),

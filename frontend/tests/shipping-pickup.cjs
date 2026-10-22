@@ -73,6 +73,7 @@ function harness(s) {
     if (name.includes('shippingService')) return service;
     if (name.includes('pickupConfiguration')) return helper;
     if (name.includes('PickupEditor')) return editor;
+    if (name.includes('TimePicker')) return load('src/shared/components/TimePicker.tsx', dependencies);
     if (name.includes('chileTerritory')) return { default: require('../src/features/admin/data/chileTerritory.json') };
     if (name.includes('comunasChile')) return { comunasDeRegion: () => [] };
     throw Error(name);
@@ -128,7 +129,7 @@ test('formulario usa selectores dependientes, siete checkboxes y horas; muestra 
   assert.equal(tree.find(n => n.type === 'fieldset').props.disabled, true);
   tree = await h.settle(); assert.ok(tree.includes('Retiro en tienda'));
   assert.equal(tree.filter(n => n.type === 'input' && n.props.type === 'checkbox').length, 7);
-  assert.equal(field(tree, 'pickup-mon-start').props.type, 'time');
+  assert.equal(field(tree, 'pickup-mon-start').type.name, 'TimePicker');
   assert.equal(field(tree, 'pickup-mon-start').props.disabled, true);
   toggle(tree).props.onChange(true); await save(h.render()).props.onClick(); tree = h.render();
   assert.ok(field(tree, 'pickup-region').props.error);
@@ -154,7 +155,7 @@ test('guardar y recargar horarios y dirección conserva transportistas', async (
   const s = server(); s.data.pickup = validPickup();
   const carriers = clone({ chilexpress: s.data.chilexpress, starken: s.data.starken });
   const h = harness(s); h.render(); let tree = await h.settle();
-  field(tree, 'pickup-mon-end').props.onChange({ target: { value: '19:00' } }); await save(h.render()).props.onClick(); tree = await h.settle();
+  field(tree, 'pickup-mon-end').props.onChange('19:00'); await save(h.render()).props.onClick(); tree = await h.settle();
   assert.ok(tree.includes('Configuración de entregas guardada.'));
   same({ chilexpress: s.data.chilexpress, starken: s.data.starken }, carriers);
   assert.equal(s.data.pickup.hours.mon.end, '19:00');
@@ -167,7 +168,9 @@ test('guardar y recargar horarios y dirección conserva transportistas', async (
 
 test('sin proveedor permite entrada manual y no ofrece una búsqueda ficticia', async () => {
   const s = server(); s.addressConfigured = false; const h = harness(s); h.render(); let tree = await h.settle();
-  assert.ok(tree.some(n => typeof n === 'string' && n.includes('Búsqueda externa no configurada')));
+  assert.ok(!tree.some(n => typeof n === 'string' && n.includes('Búsqueda externa no configurada')));
+  assert.ok(field(tree, 'pickup-street') && field(tree, 'pickup-number'), 'la dirección manual sigue disponible');
+  assert.ok(!tree.find(n => n.type === 'Button' && n.props.children === 'Reintentar comprobación'), 'sin fallo real no hay reintento');
   assert.ok(!tree.find(n => n.type === 'Button' && n.props.children === 'Buscar dirección'));
   await save(tree).props.onClick(); assert.ok(s.calls.some(c => c.options.method === 'PUT'));
   h.unmount();

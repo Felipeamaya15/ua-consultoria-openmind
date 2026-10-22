@@ -3,6 +3,7 @@ import type { AdminConfig } from '../types';
 import { loadThemeCustomization } from './themeCustomization';
 import { isRecord } from '../../storefront/visual/resolveVisualConfig';
 import { readStoredStoreConfig, saveStoredStoreConfig, type StoreIdentity } from '../../storefront/visual/storage';
+import { withoutPrivateCredentials } from '../../../shared/services/sensitiveConfiguration';
 const templates = ['editorial', 'minimal', 'visual', 'catalog'] as const;
 const colorKeys = ['primaryColor', 'secondaryColor', 'accentColor'] as const;
 const visualColorKeys = { primaryColor: 'primary', secondaryColor: 'secondary', accentColor: 'accent' } as const;
@@ -54,10 +55,10 @@ function storedOverrides(config: AdminConfig, previous: Record<string, unknown>)
 // Single persistence boundary: replace with the Django repository later.
 export const adminRepository = {
   load(identity: StoreIdentity | null = null): AdminConfig {
-    return hydrate(readStoredStoreConfig(identity));
+    return hydrate(withoutPrivateCredentials(readStoredStoreConfig(identity)));
   },
   save(config: AdminConfig, identity: StoreIdentity) {
     if (!identity) throw new Error('No se ha confirmado la identidad de la tienda.');
-    saveStoredStoreConfig(storedOverrides(config, readStoredStoreConfig(identity)), identity);
+    saveStoredStoreConfig(withoutPrivateCredentials(storedOverrides(config, readStoredStoreConfig(identity))), identity);
   },
 };

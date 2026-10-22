@@ -6,6 +6,7 @@ const assert = require('node:assert/strict');
 const ts = require('typescript');
 const root = path.resolve(__dirname, '..');
 function load(file, globals) {
+  if (file.endsWith('productService.ts')) return require('./source-loader.cjs').load(file, {}, {sessionStorage: {getItem: () => null}, ...globals});
   const module = { exports: {} };
   const source = fs.readFileSync(path.join(root, file), 'utf8').replace('(import.meta as any).env.VITE_API_URL', '"http://test"');
   const code = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020, jsx: ts.JsxEmit.ReactJSX } }).outputText;

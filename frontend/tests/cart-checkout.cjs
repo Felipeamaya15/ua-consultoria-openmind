@@ -94,6 +94,8 @@ const result = {id_pedido: 42, identificador: 'PEDIDO-BACKEND-42', tienda_id: 9,
     if (name.includes('storePreferences')) return {readCheckoutAuthSettings: () => ({emailPassword: true, google: true, guestCheckout: true, requiresAuth: 'optional'})};
     if (name.includes('useStorefrontTemplate')) return {useStorefrontTemplate: () => ({route: p => `/plantilla/1/${p}`, isCatalog: template === 'catalog', isVisual: template === 'visual', isMinimal: template === 'minimal'})};
     if (name.includes('mockData')) return {formatPrice: n => `CLP ${n}`};
+    if (name.includes('PickupSchedule')) return {default: 'PickupSchedule'};
+    if (name.includes('pickupSchedule')) return {pickupTimes: () => [], pickupSelectionLabel: () => ''};
     if (name.includes('orderService')) return {orderService: {create: async data => {createCalls.push(data); if (pending) await pending; if (fail) throw Error('Stock insuficiente'); return result;}}};
     if (name.includes('promotionService')) return {validatePromotion: async code => ({code, type: 'fixed', discount: 1000, shipping: 0, message: 'Aplicado'})};
     if (name.includes('shippingService')) return {getDeliveryAlternatives: async () => ({pickup: {enabled: true}, chilexpress: {enabled: false}, starken: {enabled: false}}), getShippingQuotes: async () => []};

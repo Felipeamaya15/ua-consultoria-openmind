@@ -2038,14 +2038,15 @@
 [data-storefront-visual] [data-visual-layout="stack"] [data-visual-part="heroCtaLayout"] { margin-top: min(var(--visual-hero-gap),calc(var(--visual-hero-height) * .05)); }
 [data-storefront-visual] [data-visual-part="heroDecorations"] img { object-position: var(--visual-hero-image-position); }
 [data-storefront-visual] [data-visual-part="heroImageFallback"] { max-height: min(180px,calc(var(--visual-hero-height) * .3)); object-position: var(--visual-hero-image-position); }
-[data-storefront-visual] [data-visual-section="topBar"][data-institutional-bar] { display: flex; min-height: max(48px,var(--visual-topbar-height)); }
+[data-storefront-visual] [data-visual-section="topBar"][data-institutional-bar] { display: flex; min-height: max(64px,var(--visual-topbar-height)); }
 [data-storefront-visual] .ua-institutional-badge {
   display: flex; align-items: center; gap: 10px; width: fit-content; max-width: 100%; min-height: 48px;
-  padding: 8px 12px; border-radius: 8px; background: #1a3a6b; color: #fff;
+  padding: 4px 0; border-radius: 0; background: transparent; color: inherit;
   font: 600 12px/1.5 system-ui,sans-serif; text-align: left; opacity: 1; visibility: visible;
 }
-[data-storefront-visual] .ua-institutional-badge img { display: block; width: 32px; height: 32px; min-width: 32px; max-width: 32px; flex-shrink: 0; object-fit: contain; transform: none; border-radius: 4px; background: #fff; }
-[data-storefront-visual] .ua-institutional-badge span { display: block; color: #fff; font: inherit; overflow-wrap: anywhere; }
+/* Only the badge container is transparent. Preserve the original logo on its white surface. */
+[data-storefront-visual] .ua-institutional-badge img { display: block; width: 56px; height: 48px; min-width: 56px; max-width: 56px; flex-shrink: 0; object-fit: contain; object-position: center; transform: none; border-radius: 6px; background: #fff; padding: 4px; box-shadow: 0 1px 2px #0000000d; }
+[data-storefront-visual] .ua-institutional-badge span { display: block; color: inherit; font: inherit; overflow-wrap: anywhere; }
 @media(max-width:639px) {
   [data-storefront-visual] [data-visual-part="headerLayout"] { flex-wrap: wrap; }
   [data-storefront-visual] [data-visual-part="catalogLayout"] { flex-direction: column; }
@@ -2673,3 +2674,12 @@
   --visual-page-button-font-size: var(--visual-page-story-button-font-size);
 }
 /* Generated page aliases end */
+
+/* Mandatory institutional identity follows its bar, including responsive colors. */
+[data-storefront-visual] [data-institutional-bar] { color: var(--visual-topbar-brand-color); }
+[data-storefront-visual] [data-visual-section="footer"] .ua-institutional-badge { color: var(--visual-footer-brand-color); }
+[data-storefront-visual] .ua-institutional-badge button { color: inherit; background: transparent; border-color: currentColor; box-shadow: none; }
+
+[data-storefront-visual] { --visual-topbar-brand-color: var(--visual-topbar-brand-color-desktop); --visual-footer-brand-color: var(--visual-footer-brand-color-desktop); }
+@media(max-width:1023px) { [data-storefront-visual] { --visual-topbar-brand-color: var(--visual-topbar-brand-color-tablet); --visual-footer-brand-color: var(--visual-footer-brand-color-tablet); } }
+@media(max-width:639px) { [data-storefront-visual] { --visual-topbar-brand-color: var(--visual-topbar-brand-color-mobile); --visual-footer-brand-color: var(--visual-footer-brand-color-mobile); } }

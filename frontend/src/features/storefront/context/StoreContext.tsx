@@ -1,3 +1,5 @@
+import { readBlockStyles } from '../visual/blockAppearance';
+import { isActiveEditorPreview } from '../visual/pages';
 import {
   createContext,
   useCallback,
@@ -13,7 +15,6 @@ import {
   type TemplateId,
   type Product,
 } from '../data/mockData';
-
 import { fetchPublicProducts } from '../services/catalogService';
 import { LANDING_CONFIG_CHANGED, fetchLandingConfig } from '../../landing/services/landingService';
 import { fetchStoreInformation, STORE_INFORMATION_CHANGED, type StoreInformation } from '../services/storeInformationService';
@@ -26,10 +27,10 @@ import { findImageSetting, captureOriginalImage, isLegacyEditableImage, readThem
 import { getStoreConfigKey, readStoredStoreConfig, isStoreConfigChange, STORE_CONFIG_CHANGED_EVENT } from '../visual/storage';
 import { legalService } from '../services/legalService';
 import { type LegalType, type LegalPage } from '../data/legalContent';
-
 const StoreContext = createContext({
   config: { ...defaultStoreConfig, name: '', description: '', logo: '' },
   visualConfig: resolveVisualConfig(),
+  blockStyles: readBlockStyles(undefined),
   landing: null as LandingConfig | null,
   landingLoading: true,
   landingError: '',
@@ -42,7 +43,6 @@ const StoreContext = createContext({
   legalError: '',
   refreshLegal: async () => {},
 });
-
 function readTheme(saved: Record<string, unknown>, template: TemplateId): Record<string, unknown> | null {
   try {
     const theme = isRecord(saved.themeEditor) ? saved.themeEditor[template] : null;
@@ -51,38 +51,29 @@ function readTheme(saved: Record<string, unknown>, template: TemplateId): Record
     return null;
   }
 }
-
 function applyImageCustomizations(theme: Record<string, unknown> | null, originals: Map<HTMLImageElement, OriginalImageStyle>) {
   const settings = readThemeImages(theme?.images);
-
   const images = Array.from(
     document.querySelectorAll<HTMLImageElement>('img'),
   );
-
   images.forEach((img, index) => {
     if (!isLegacyEditableImage(img)) return;
     const setting = findImageSetting(settings, img, index);
-
     if (!setting) return;
     if (!originals.has(img)) originals.set(img, captureOriginalImage(img));
-
     if (setting.src && img.src !== setting.src) {
       img.src = setting.src;
     }
-
     img.style.objectPosition =
       `${setting.x ?? 50}% ${setting.y ?? 50}%`;
-
     img.style.transform =
       `scale(${(setting.scale ?? 100) / 100})`;
-
     img.style.transformOrigin = 'center';
     img.style.objectFit = setting.fit ?? originals.get(img)?.fit ?? '';
     img.style.borderRadius =
       `${setting.radius ?? 0}px`;
   });
 }
-
 export function StoreProvider({
   children,
 }: {
@@ -105,7 +96,7 @@ export function StoreProvider({
     };
   }, [storageKey]);
   const savedConfig = useMemo(() => readStoredStoreConfig(identity), [identity, storageRevision]);
-  const activeTemplate = templateFromPath(pathname) ?? savedConfig.template;
+  const activeTemplate: TemplateId = templateFromPath(pathname) ?? (['editorial','minimal','visual','catalog'].includes(String(savedConfig.template)) ? savedConfig.template as TemplateId : 'editorial');
   const visualConfig = useMemo(() => {
     return resolveStoreVisualConfig(savedConfig, activeTemplate);
   }, [activeTemplate, savedConfig]);
@@ -135,7 +126,17 @@ export function StoreProvider({
   const [landingResult, setLanding] = useState<{ key: string; value: LandingConfig | null; error: string; loading: boolean } | null>(null);
   const [catalogResult, setCatalog] = useState<{ key: string; products: Product[]; error: string } | null>(null);
   const currentLanding = landingResult?.key === storageKey ? landingResult : null;
-  const landing = currentLanding?.value ?? null;
+  const [editorLanding, setEditorLanding] = useState<{key: string | null; value: LandingConfig} | null>(null);
+  useEffect(() => {
+    if (!isActiveEditorPreview()) return;
+    const preview = (event: Event) => {
+      const value = (event as CustomEvent<LandingConfig>).detail;
+      if (value && String(value.tienda) === identity?.storeId) setEditorLanding({key:storageKey,value});
+    };
+    window.addEventListener('openmind:editor-landing-preview', preview);
+    return () => window.removeEventListener('openmind:editor-landing-preview', preview);
+  }, [identity?.storeId, storageKey]);
+  const landing = editorLanding?.key === storageKey ? editorLanding.value : currentLanding?.value ?? null;
   const landingLoading = currentLanding?.loading ?? true;
   const landingError = currentLanding?.error ?? '';
   const landingProducts = catalogResult?.key === storageKey ? catalogResult.products : [];
@@ -170,7 +171,6 @@ export function StoreProvider({
       window.removeEventListener('focus', refresh);
     };
   }, [identity, storageKey]);
-
   const [legalRevision, setLegalRevision] = useState(0);
   const [legalResult, setLegalResult] = useState<{ key: string; pages: Record<LegalType, LegalPage> | null; loading: boolean; error: string } | null>(null);
   const currentLegal = legalResult?.key === storageKey ? legalResult : null;
@@ -190,25 +190,19 @@ export function StoreProvider({
     });
     return () => controller.abort();
   }, [storageKey, storageRevision, legalRevision]);
-
-
   useEffect(() => {
     const template = templateFromPath(pathname);
     if (!template || typeof document === 'undefined' || typeof MutationObserver === 'undefined') return;
     const theme = readTheme(savedConfig, template);
-
     const originals = new Map<HTMLImageElement, OriginalImageStyle>();
     applyImageCustomizations(theme, originals);
-
     const observer = new MutationObserver(() => {
       applyImageCustomizations(theme, originals);
     });
-
     observer.observe(document.body, {
       childList: true,
       subtree: true,
     });
-
     return () => {
       observer.disconnect();
       for (const [img, original] of originals) {
@@ -216,18 +210,32 @@ export function StoreProvider({
       }
     };
   }, [pathname, savedConfig]);
-
-
-
   return (
     <StoreContext.Provider
-      value={{ config: { ...defaultStoreConfig, ...savedConfig, name: business?.nombre ?? ((typeof savedConfig.name === 'string' ? savedConfig.name : '') || defaultStoreConfig.name), description: business?.descripcion ?? ((typeof savedConfig.description === 'string' ? savedConfig.description : '') || defaultStoreConfig.description), logo: landing?.logo || (typeof savedConfig.logo === 'string' ? savedConfig.logo : '') || '', primaryColor: visualConfig.global.colors.primary, secondaryColor: visualConfig.global.colors.secondary, accentColor: visualConfig.global.colors.accent }, visualConfig, landing, landingLoading, landingError, landingProducts, landingCatalogError, legalPages, legalLoading, legalError, legalVerified, legalScopeKey: storageKey ?? '', refreshLegal }}
-
+      value={{
+        config: {
+          ...defaultStoreConfig,
+          ...savedConfig,
+          name: business?.nombre ?? ((typeof savedConfig.name === 'string' ? savedConfig.name : '') || defaultStoreConfig.name),
+          description: business?.descripcion ?? ((typeof savedConfig.description === 'string' ? savedConfig.description : '') || defaultStoreConfig.description),
+          logo: landing?.logo || (typeof savedConfig.logo === 'string' ? savedConfig.logo : '') || '',
+          primaryColor: visualConfig.global.colors.primary,
+          secondaryColor: visualConfig.global.colors.secondary,
+          accentColor: visualConfig.global.colors.accent,
+        },
+        visualConfig,
+        blockStyles: readBlockStyles(
+          landing?.contenido?.apariencia_bloques?.[activeTemplate] ??
+          readTheme(savedConfig, activeTemplate)?.blockStyles
+        ),
+        landing, landingLoading, landingError, landingProducts, landingCatalogError,
+        legalPages, legalLoading, legalError, legalVerified,
+        legalScopeKey: storageKey ?? '', refreshLegal,
+      }}
     >
       {children}
     </StoreContext.Provider>
   );
 }
-
 export const useStore = () =>
   useContext(StoreContext);

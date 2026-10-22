@@ -41,6 +41,10 @@ urlpatterns = [
     path("api/logistica/", include("apps.shipping.presentation.urls")),
 ]
 
+# Dedicated subtree: never expose the backend folder when MEDIA_ROOT is empty.
+from apps.landing.block_images import block_storage
+urlpatterns += static('/media/landing/blocks/', document_root=block_storage().location)
+
 # Servir las imágenes de landing durante desarrollo local.
 urlpatterns += static(
     settings.MEDIA_URL,

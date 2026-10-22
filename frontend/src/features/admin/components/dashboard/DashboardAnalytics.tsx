@@ -1,14 +1,11 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { formatPrice } from '../../data/mockAdminData';
+import { formatReportMoney as formatPrice } from '../../services/reportFormatting';
 import type { DashboardData } from '../../services/dashboardService';
 import { dashboardBuckets, dashboardPeak, displayDashboardDate, type ChartBucket } from '../../services/dashboardAnalytics';
 import { ordersDestination } from '../../services/orderNavigation';
-import DailyHistoryTable from './DailyHistoryTable';
-
 const focus = 'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--primary)] rounded';
 const panel = 'bg-white border border-[var(--border)] rounded-2xl p-5 sm:p-6 shadow-sm min-w-0';
-
 function EvolutionChart({ buckets, type, period }: { buckets: ChartBucket[]; type: 'sales' | 'orders'; period: string }) {
   const [active, setActive] = useState<number | null>(null);
   const sales = type === 'sales';
@@ -23,11 +20,11 @@ function EvolutionChart({ buckets, type, period }: { buckets: ChartBucket[]; typ
   const ticks = [maximum, maximum / 2, 0];
   const labels = [...new Set([0, Math.floor((buckets.length - 1) / 2), buckets.length - 1])].filter(i => i >= 0);
   const compact = (value: number) => sales
-    ? new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', notation: 'compact', maximumFractionDigits: 1 }).format(value)
+    ? `${new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', notation: 'compact', maximumFractionDigits: 1 }).format(value)} CLP`
     : String(value);
   return <figure className="mt-5">
     <div className="flex gap-2">
-      <div aria-hidden="true" className="w-12 shrink-0 flex flex-col justify-between pb-5 text-[10px] sm:text-xs text-[var(--muted-foreground)]">
+      <div aria-hidden="true" className="w-20 shrink-0 flex flex-col justify-between pb-5 text-[10px] sm:text-xs text-[var(--muted-foreground)]">
         {ticks.map(tick => <span key={tick}>{compact(tick)}</span>)}
       </div>
       <div className="min-w-0 flex-1">
@@ -63,14 +60,13 @@ function EvolutionChart({ buckets, type, period }: { buckets: ChartBucket[]; typ
     </figcaption>
   </figure>;
 }
-
 export default function DashboardAnalytics({ data, period }: { data: DashboardData; period: string }) {
   const { buckets, granularity } = dashboardBuckets(data.historico);
   const salesPeak = dashboardPeak(data.historico, 'ventas'), ordersPeak = dashboardPeak(data.historico, 'pedidos');
   return <div className="space-y-5">
     <section className={panel} aria-label="Evolución de ventas">
       <div className="flex flex-wrap justify-between gap-3"><div><h2 className="font-bold text-base">Evolución de ventas</h2><p className="text-xs text-[var(--muted-foreground)] mt-1">Ingresos confirmados · {granularity.toLowerCase()} · CLP</p></div>
-        <p className="text-xl font-bold">{formatPrice(Number(data.total_ventas))}</p></div>
+        <p className="text-xl font-bold">{formatPrice(data.total_ventas, data.moneda)}</p></div>
       {Number(data.total_ventas) === 0 && <p className="mt-4 text-sm text-[var(--muted-foreground)]">No hay ventas confirmadas para este período.</p>}
       <EvolutionChart buckets={buckets} type="sales" period={period} />
     </section>
@@ -99,6 +95,13 @@ export default function DashboardAnalytics({ data, period }: { data: DashboardDa
           : <p className="text-sm mt-2">Sin actividad para este indicador.</p>}
       </div>)}</div>
     </section>
-    <DailyHistoryTable key={`${data.fecha_desde}_${data.fecha_hasta}`} from={data.fecha_desde} to={data.fecha_hasta} period={period} />
+    <details className={panel}><summary className={`cursor-pointer font-semibold text-sm ${focus}`}>Ver tabla diaria de ventas y pedidos</summary>
+      <p className="text-xs text-[var(--muted-foreground)] mt-3">{displayDashboardDate(data.fecha_desde)} al {displayDashboardDate(data.fecha_hasta)} · Hora de Chile · Fecha de registro del pedido</p>
+      {data.total_pedidos === 0 ? <p className="py-5 text-sm">No hay pedidos en el período seleccionado.</p> : <div className="overflow-x-auto max-h-96 mt-4" tabIndex={0} role="region" aria-label="Histórico diario">
+        <table className="w-full text-left border-collapse text-sm"><caption className="sr-only">Ventas confirmadas y pedidos registrados por día</caption>
+          <thead><tr className="border-b border-[var(--border)]"><th scope="col" className="p-3">Fecha</th><th scope="col" className="p-3 text-right">Ventas (CLP)</th><th scope="col" className="p-3 text-right">Pedidos</th></tr></thead>
+          <tbody className="divide-y divide-[var(--border)]">{data.historico.map(row => <tr key={row.fecha}><td className="p-3 whitespace-nowrap"><Link to={ordersDestination(row.fecha, row.fecha, 'all', period)} aria-label={`Ver pedidos del ${displayDashboardDate(row.fecha)}`} className={`text-[var(--primary)] hover:underline ${focus}`}>{displayDashboardDate(row.fecha)} <span aria-hidden="true">→</span></Link></td><td className="p-3 text-right whitespace-nowrap">{formatPrice(row.ventas, data.moneda)}</td><td className="p-3 text-right">{row.pedidos}</td></tr>)}</tbody>
+        </table></div>}
+    </details>
   </div>;
 }

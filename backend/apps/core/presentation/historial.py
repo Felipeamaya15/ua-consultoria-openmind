@@ -1,48 +1,34 @@
 from decimal import Decimal
 
-from django.db.models import Count, Q, Sum
+from django.db.models import Count, Sum
 from django.db.models.functions import TruncDay, TruncMonth
-from apps.core.domain.periodos import ZONA_COMERCIAL
-from rest_framework import serializers
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
+from django.shortcuts import get_object_or_404
 
 from apps.core.domain import historial as reglas
 from apps.core.infrastructure.tenant import resolver_tienda
 from apps.core.models import Pedido
+from apps.core.infrastructure.commercial import order_query, serialize_order, paid_summary, product_totals
 from apps.core.presentation.responses import error_response, success_response
 
-CAMPOS = [
-    'id_pedido', 'identificador', 'nombre_contacto', 'estado', 'estado_etiqueta',
-    'medio_pago', 'monto_total', 'fecha_creacion',
-]
 CENTAVOS = Decimal('0.01')
-
-
-class FilaHistorialSerializer(serializers.ModelSerializer):
-    estado_etiqueta = serializers.CharField(source='get_estado_display', read_only=True)
-
-    class Meta:
-        model = Pedido
-        fields = CAMPOS
-        read_only_fields = CAMPOS
-
-
-def _solo_campos_de_la_tabla(queryset):
-    return queryset.only('id_pedido', 'identificador', 'nombre_contacto', 'estado', 'medio_pago',
-                         'monto_total', 'fecha_creacion')
 
 
 def _serie(queryset, agrupacion, nombre, conteo):
     truncar = TruncDay if agrupacion == 'dia' else TruncMonth
     formato = '%Y-%m-%d' if agrupacion == 'dia' else '%Y-%m'
-    filas = (queryset.annotate(periodo=truncar('fecha_creacion', tzinfo=reglas.ZONA))
-             .values('periodo').annotate(cantidad=conteo).order_by('periodo'))
+    filas = (
+        queryset.annotate(periodo=truncar('fecha_creacion', tzinfo=reglas.ZONA))
+        .values('periodo').annotate(cantidad=conteo).order_by('periodo')
+    )
     return [{'periodo': fila['periodo'].strftime(formato), nombre: fila['cantidad']} for fila in filas]
+
 
 def _sin_cache(response):
     response['Cache-Control'] = 'no-store'
     return response
+
 
 class HistorialPedidosAPIView(APIView):
     permission_classes = [IsAuthenticated]
@@ -51,32 +37,24 @@ class HistorialPedidosAPIView(APIView):
         tienda = resolver_tienda(request, exigir_propietario=True)
         params = request.query_params
         try:
-            rango = reglas.leer_rango(params)
-            estado = reglas.leer_estado(params, {valor for valor, _ in Pedido.ESTADO_CHOICES})
-            texto = reglas.leer_busqueda(params)
-            orden = reglas.leer_orden(params)
+            pedidos, rango = order_query(tienda, params)
             pagina = reglas.leer_pagina(params)
             agrupacion = reglas.leer_agrupacion(params, rango) if 'agrupacion' in params else None
         except reglas.ParametroInvalido as error:
             return error_response(error.mensaje, error.codigo)
 
-        pedidos = rango.aplicar(Pedido.objects.filter(tienda=tienda))
-        if estado:
-            pedidos = pedidos.filter(estado=estado)
-        if texto:
-            pedidos = pedidos.filter(Q(identificador__icontains=texto) | Q(nombre_contacto__icontains=texto))
         total = pedidos.count()
-        filas = _solo_campos_de_la_tabla(pedidos).order_by(*orden)[pagina.inicio:pagina.fin]
+        filas = pedidos.prefetch_related('itempedido_set')[pagina.inicio:pagina.fin]
         respuesta = success_response(
-            data=FilaHistorialSerializer(filas, many=True).data,
+            data=[serialize_order(row) for row in filas],
             mensaje='Historial de pedidos obtenido correctamente.',
             paginacion=pagina.metadatos(total),
         )
-        if agrupacion: 
-            # Opcional por día o mes
+        if agrupacion:
             respuesta.data['agrupacion'] = agrupacion
             respuesta.data['serie'] = _serie(pedidos, agrupacion, 'cantidad_pedidos', Count('id_pedido'))
         return _sin_cache(respuesta)
+
 
 class HistorialVentasAPIView(APIView):
     permission_classes = [IsAuthenticated]
@@ -85,19 +63,16 @@ class HistorialVentasAPIView(APIView):
         tienda = resolver_tienda(request, exigir_propietario=True)
         params = request.query_params
         try:
-            rango = reglas.leer_rango(params)
+            ventas, rango = order_query(tienda, params, sales=True)
             agrupacion = reglas.leer_agrupacion(params, rango)
             pagina = reglas.leer_pagina(params)
         except reglas.ParametroInvalido as error:
             return error_response(error.mensaje, error.codigo)
 
-        ventas = rango.aplicar(Pedido.objects.filter(tienda=tienda, estado__in=Pedido.ESTADOS_PAGADOS))
         resumen = ventas.aggregate(cantidad=Count('id_pedido'), total=Sum('monto_total'))
         cantidad = resumen['cantidad']
         total = resumen['total'] or Decimal('0')
         promedio = (total / cantidad).quantize(CENTAVOS) if cantidad else Decimal('0')
-
-        zona = ZONA_COMERCIAL
         truncar = TruncDay if agrupacion == 'dia' else TruncMonth
         formato = '%Y-%m-%d' if agrupacion == 'dia' else '%Y-%m'
         serie = (
@@ -105,7 +80,7 @@ class HistorialVentasAPIView(APIView):
             .values('periodo').annotate(cantidad=Count('id_pedido'), total=Sum('monto_total'))
             .order_by('periodo')
         )
-        filas = _solo_campos_de_la_tabla(ventas).order_by(*reglas.ORDENES['fecha_desc'])[pagina.inicio:pagina.fin]
+        filas = ventas.prefetch_related('itempedido_set')[pagina.inicio:pagina.fin]
         return _sin_cache(success_response(
             data={
                 'resumen': {
@@ -119,8 +94,21 @@ class HistorialVentasAPIView(APIView):
                      'total_vendido': format(fila['total'], '.2f')}
                     for fila in serie
                 ],
-                'ventas': FilaHistorialSerializer(filas, many=True).data,
+                'ventas': [serialize_order(row) for row in filas],
+                'importes': paid_summary(ventas),
+                'productos': [{'nombre': row['nombre_producto'], 'sku': row['sku'], 'cantidad': row['unidades'],
+                               'bruto_lineas': format(row['bruto_lineas'], '.2f')}
+                              for row in product_totals(ventas).order_by('-unidades', 'nombre_producto', 'sku')[:10]],
             },
             mensaje='Historial de ventas obtenido correctamente.',
             paginacion=pagina.metadatos(cantidad),
         ))
+
+
+class PedidoDetallePrivadoAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, id_pedido):
+        tienda = resolver_tienda(request, exigir_propietario=True)
+        pedido = get_object_or_404(Pedido.objects.filter(tienda=tienda).prefetch_related('itempedido_set'), pk=id_pedido)
+        return _sin_cache(success_response(data=serialize_order(pedido)))

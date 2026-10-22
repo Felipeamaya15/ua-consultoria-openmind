@@ -17,6 +17,7 @@ export type CheckoutInput = {
   paymentMethod: string; shippingMethod: string; promoCode: string;
   address: {street: string; number: string; apt: string; city: string; region: string};
   shippingQuote?: string;
+  pickupSelection?: { fecha: string; hora: string };
 };
 
 
@@ -157,6 +158,7 @@ export const orderService = {
           medio_pago: input.paymentMethod, metodo_entrega: input.shippingMethod,
           direccion: input.address, codigo_promocional: input.promoCode,
           ...(input.shippingMethod !== 'Retiro' && input.shippingQuote ? {cotizacion: input.shippingQuote} : {}),
+          ...(input.shippingMethod === 'Retiro' && input.pickupSelection ? {retiro_seleccion: input.pickupSelection} : {}),
         }),
       });
     } catch {

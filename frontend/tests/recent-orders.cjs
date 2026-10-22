@@ -163,9 +163,9 @@ async function pruebasDeEstadosYFechas() {
   });
 
   await test('la fecha se muestra en español con hora de Santiago independiente del navegador', async () => {
-    assert.equal(fechas.formatRecentOrderDate('2026-10-13T18:05:00Z'), '13 oct 2026, 15:05');
-    assert.equal(fechas.formatRecentOrderDate('2026-01-02T12:00:00Z'), '2 ene 2026, 09:00');
-    assert.equal(fechas.formatRecentOrderDate('2027-01-01T02:59:00Z'), '31 dic 2026, 23:59');
+    assert.equal(fechas.formatRecentOrderDate('2026-10-13T18:05:00Z'), '13/10/2026, 15:05');
+    assert.equal(fechas.formatRecentOrderDate('2026-01-02T12:00:00Z'), '02/01/2026, 09:00');
+    assert.equal(fechas.formatRecentOrderDate('2027-01-01T02:59:00Z'), '31/12/2026, 23:59');
     for (const mala of ['', 'ayer', 'no es fecha']) assert.equal(fechas.formatRecentOrderDate(mala), '', mala);
   });
 }
@@ -197,9 +197,9 @@ async function pruebasDeLaVista() {
     assert.equal((salida.split('<tbody')[1].match(/<tr /g) || []).length, 5, 'una fila por orden');
     for (const [i, etiqueta] of ['Pendiente', 'Pagado', 'En preparación', 'En origen', 'En tránsito'].entries()) {
       assert.ok(salida.includes(`ORD-20261013-A${i + 1}BC`) && salida.includes(`Cliente ${i + 1}`) && salida.includes(`>${etiqueta}</span>`), etiqueta);
-      assert.ok(salida.includes(`$${1001 + i}`), 'total');
+      assert.ok(salida.includes(`$${(1001 + i).toLocaleString('es-CL')} CLP`), 'total y moneda explícita');
     }
-    assert.ok(salida.includes('13 oct 2026, 15:05'));
+    assert.ok(salida.includes('13/10/2026, 15:05'));
     assert.ok(salida.indexOf('ORD-20261013-A1BC') < salida.indexOf('ORD-20261013-A5BC'), 'conserva el orden recibido');
     assert.ok(!salida.includes('Cargando') && !salida.includes('Reintentar') && !salida.includes('Aún no hay'));
   });

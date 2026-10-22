@@ -114,7 +114,9 @@ class MergeCompatibilityTests(TestCase):
                 response = self.api.post('/api/promociones/', payload, format='json')
                 self.assertEqual(response.status_code, 400, response.data)
                 self.assertIn('code', response.data)
-                self.assertEqual(response.data['code'][0].code, 'required' if code is None else 'blank')
+                # La validación de cupones de QA también admite promociones de precio sin código;
+                # el error de código obligatorio para cupones se genera al validar el objeto.
+                self.assertEqual(response.data['code'][0].code, 'invalid')
                 self.assertFalse(self.store.promociones.exists())
 
     def test_current_promotion_api_preserves_code_length_limit(self):

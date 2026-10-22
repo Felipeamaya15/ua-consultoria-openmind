@@ -9,6 +9,9 @@ function load(relative, mocks = {}) {
   const code = ts.transpileModule(fs.readFileSync(file, 'utf8'), { compilerOptions: { target: ts.ScriptTarget.ES2020, module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX } }).outputText;
   const req = id => {
     if (Object.prototype.hasOwnProperty.call(mocks, id)) return mocks[id];
+    if(id==='../visualEditor/content')return {ContentInspector:()=>null};
+    if(id==='../../landing/services/landingService')return {fetchLandingConfig:async()=>null,saveLandingConfig:async value=>value};
+    if(id==='../../storefront/services/catalogService')return {fetchPublicProducts:async()=>[]};
     if (id.endsWith('.css')) return {};
     if (!id.startsWith('.')) return require(id);
     const target = path.resolve(path.dirname(file), id), resolved = ['.ts','.tsx'].map(ext => target + ext).find(fs.existsSync);
@@ -88,7 +91,7 @@ test('all emitted variables have responsive aliases and public consumers', () =>
 test('selection listeners prevent navigation only while connected and clean up', () => {
   const {connectVisualPreview}=load('src/features/admin/visualEditor/preview.ts'), handlers=new Map(), styles=[], elements=[]; let callback, disconnected=0, selected;
   const element={dataset:{visualSection:'heroCta'},removeAttribute(){},scrollIntoView(){},getAttribute(){return 'heroCta';}}; elements.push(element);
-  const doc={body:{},head:{appendChild:e=>styles.push(e)},createElement:()=>({remove(){}}),querySelectorAll:selector=>selector==='img'?[]:elements,querySelector:()=>element,addEventListener:(type,fn)=>handlers.set(type,fn),removeEventListener:(type,fn)=>{assert.equal(handlers.get(type),fn);handlers.delete(type);},defaultView:{MutationObserver:class{constructor(fn){callback=fn;}observe(){}disconnect(){disconnected++;}}}};
+  const doc={body:{},head:{appendChild:e=>styles.push(e)},createElement:()=>({remove(){}}),querySelectorAll:selector=>selector==='img'||selector==='[data-content-block-id]'?[]:elements,querySelector:()=>element,addEventListener:(type,fn)=>handlers.set(type,fn),removeEventListener:(type,fn)=>{assert.equal(handlers.get(type),fn);handlers.delete(type);},defaultView:{MutationObserver:class{constructor(fn){callback=fn;}observe(){}disconnect(){disconnected++;}}}};
   const connection=connectVisualPreview(doc,value=>selected=value,()=>{});connection.update(resolver.resolveVisualConfig(),{});
   let prevented=0,stopped=0;handlers.get('click')({target:{closest:selector=>selector==='[data-visual-section]'?element:null},preventDefault(){prevented++;},stopPropagation(){},stopImmediatePropagation(){stopped++;}});
   assert.equal(selected,'heroCta');assert.equal(prevented,1);assert.equal(stopped,1);callback();assert.equal(styles.length,2);connection.disconnect();assert.equal(handlers.size,0);assert.equal(disconnected,1);
@@ -188,7 +191,7 @@ test('public layouts share the protected fixed university logo and reference',()
   const ui=fs.readFileSync(path.join(root,'src/features/storefront/components/ui/index.tsx'),'utf8');
   assert(ui.includes('data-institutional-branding')); assert(ui.includes('src="/logo-universidad-autonoma.png"')); assert(ui.includes('<span>Universidad Autónoma de Chile</span>'));
   for(const file of ['EditorialLayout.tsx','minimal/MinimalFooter.tsx','visual/VisualFooter.tsx','catalog/CatalogFooter.tsx']) assert(fs.readFileSync(path.join(root,'src/features/storefront/components/store',file),'utf8').includes('<InstitutionalBadge'));
-  const source=fs.readFileSync(path.join(root,'src/styles/visual-config.css'),'utf8'); assert(source.includes('min-width: 32px')); assert(source.includes('[data-institutional-bar] { display: flex;'));
+  const source=fs.readFileSync(path.join(root,'src/styles/visual-config.css'),'utf8'); assert(source.includes('min-width: 56px')); assert(source.includes('[data-institutional-bar] { display: flex;'));
 });
 test('category navigation lives in the existing landing category section',()=>{
   const header=fs.readFileSync(path.join(root,'src/features/storefront/components/store/EditorialLayout.tsx'),'utf8');

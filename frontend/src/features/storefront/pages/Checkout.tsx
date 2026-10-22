@@ -282,9 +282,9 @@ export default function Checkout() {
   const {
     items,
     subtotal,
-    discount,
     clearCart,
     promoCode,
+    removePromo,
     shippingMethod,
     setShippingMethod,
   } = useCart();
@@ -501,6 +501,9 @@ export default function Checkout() {
   const [promoLoading, setPromoLoading] = useState(false);
   const [promoError, setPromoError] = useState('');
   const [promoMessage, setPromoMessage] = useState('');
+  const [promotionBasis, setPromotionBasis] = useState('');
+  const promotionRequest = useRef(0);
+  const applyingPromotion = useRef(false);
   
   const destinationKey = JSON.stringify([shippingMethod, address.region, address.city]);
   const selectedShippingOption = shippingOptions.find(option => option.id === shippingMethod);
@@ -510,17 +513,23 @@ export default function Checkout() {
     
   // => CÁLCULO DEL TOTAL DEL PEDIDO SUMANDO EL COSTO DE DESPACHO <=
   const quotedShipping = shippingMethod === 'Retiro' ? 0 : selectedQuote?.monto ?? null;
-  const shipping = validatedPromotion ? validatedPromotion.shipping : quotedShipping;
-  const effectiveDiscount = validatedPromotion ? validatedPromotion.discount : discount;
+  const currentPromotionBasis = JSON.stringify([subtotal, quotedShipping, checkoutPromoCode]);
+  const currentPromotion = promotionBasis === currentPromotionBasis ? validatedPromotion : null;
+  const shipping = currentPromotion ? currentPromotion.shipping : quotedShipping;
+  const effectiveDiscount = currentPromotion ? Math.min(subtotal, currentPromotion.discount) : 0;
   const total = subtotal - effectiveDiscount + (shipping ?? 0);
 
   useEffect(() => {
+    promotionRequest.current += 1;
+    applyingPromotion.current = false;
+    setPromoLoading(false);
     setValidatedPromotion(null);
     setPromoMessage('');
     if (checkoutPromoCode) setPromoError('Vuelve a aplicar el codigo porque cambio el pedido o el envio.');
   }, [subtotal, quotedShipping]);
 
   const handleApplyPromotion = async () => {
+    if (applyingPromotion.current) return;
     const code = promoInput.trim();
     if (!code) {
       setValidatedPromotion(null);
@@ -534,26 +543,31 @@ export default function Checkout() {
       return;
     }
     setPromoLoading(true);
+    applyingPromotion.current = true;
+    const requestId = ++promotionRequest.current;
     setPromoError('');
     setPromoMessage('');
     try {
       const result = await validatePromotion(code, subtotal, quotedShipping);
+      if (requestId !== promotionRequest.current) return;
       setValidatedPromotion(result);
+      setPromotionBasis(JSON.stringify([subtotal, quotedShipping, result.code]));
       setCheckoutPromoCode(result.code);
       setPromoInput(result.code);
       setPromoMessage(result.message);
     } catch (cause) {
+      if (requestId !== promotionRequest.current) return;
       setValidatedPromotion(null);
       setCheckoutPromoCode('');
       setPromoError(cause instanceof Error ? cause.message : 'El codigo promocional no es valido.');
     } finally {
-      setPromoLoading(false);
+      if (requestId === promotionRequest.current) { setPromoLoading(false); applyingPromotion.current = false; }
     }
   };
   
   // Validamos que exista un costo real de despacho, o sea retiro en tienda.
   const deliveryReady = !shippingLoading && !shippingError && !!selectedShippingOption
-    && (shippingMethod === 'Retiro' || (!!selectedQuote && !quoteLoading && !quoteError));
+    && (shippingMethod === 'Retiro' ? true : (!!selectedQuote && !quoteLoading && !quoteError));
 
   // Si no hay tarifa para el destino, reintentar no sirve: se ofrece cambiar de alternativa o de comuna.
   const quoteNeedsOtherOption = ['sin_tarifa', 'no_disponible', 'destino'].includes(quoteErrorKind);
@@ -723,6 +737,10 @@ export default function Checkout() {
    */
   const handleConfirm = async () => {
     if (submitting.current || loading || !items.length) return;
+    if (promoLoading || (checkoutPromoCode && !currentPromotion)) {
+      setPromoError('Vuelve a aplicar o quita el código para confirmar el total actualizado.');
+      return;
+    }
     if (!['contact', 'delivery', 'payment'].every(validate)) return;
     submitting.current = true;
     setLoading(true);
@@ -886,7 +904,7 @@ export default function Checkout() {
       : 'bg-white border border-[var(--border)] rounded-2xl p-6 flex flex-col gap-5';
 
 
-  const isPaymentDisabled = loading || !deliveryReady || (shipping === null && shippingMethod !== 'Retiro');
+  const isPaymentDisabled = loading || promoLoading || (!!checkoutPromoCode && !currentPromotion) || !deliveryReady || (shipping === null && shippingMethod !== 'Retiro');
 
   return (
     <div
@@ -1280,7 +1298,14 @@ export default function Checkout() {
                           : method.priceLabel}
                     </span>
                     </label>
-                    {method.id === 'Retiro' && method.pickup && <div className="px-4 pb-3"><PickupDetails pickup={method.pickup} /></div>}
+                    {method.id === 'Retiro' && method.pickup && <div className="px-4 pb-3"><PickupDetails pickup={method.pickup} />
+                      {method.id === shippingMethod && (
+                        <p role="status" className="mt-3 rounded-lg bg-[var(--muted)] p-3 text-xs leading-relaxed">
+                          La tienda te informará cuando tu pedido esté listo para retirar.
+                          No necesitas seleccionar una fecha ni una hora durante la compra.
+                        </p>
+                      )}
+                    </div>}
                   </div>
                 ))}
               </div>
@@ -1775,6 +1800,11 @@ export default function Checkout() {
                   <p className={isCatalog ? "font-medium text-[var(--visual-page-color)]" : "font-medium"}>
                     {shippingMethod}
                   </p>
+                  {shippingMethod === 'Retiro' && (
+                    <p className="mt-2 text-xs text-[var(--visual-page-color)]">
+                      Retiro sin costo. La tienda te informará cuando tu pedido esté listo.
+                    </p>
+                  )}
 
                   {selectedShippingOption?.requiresAddress && (
                     <p className="text-[var(--visual-page-color)] text-xs mt-0.5">
@@ -2032,6 +2062,11 @@ export default function Checkout() {
                   <Button type="button" variant="secondary" disabled={promoLoading} onClick={() => void handleApplyPromotion()}>
                     {promoLoading ? 'Validando...' : 'Aplicar'}
                   </Button>
+                  {(checkoutPromoCode || validatedPromotion) && <Button type="button" variant="secondary" onClick={() => {
+                    promotionRequest.current += 1; applyingPromotion.current = false; setPromoLoading(false);
+                    setCheckoutPromoCode(''); setPromoInput(''); setValidatedPromotion(null); setPromoError(''); setPromoMessage('Promoción eliminada.');
+                    removePromo?.();
+                  }}>Quitar</Button>}
                 </div>
                 {promoError && <p role="alert" className="mt-2 text-xs text-[var(--error)]">{promoError}</p>}
                 {promoMessage && <p role="status" className="mt-2 text-xs text-[var(--success)]">{promoMessage}</p>}

@@ -1,10 +1,6 @@
 const {test}=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),vm=require('node:vm'),ts=require('typescript');
 const root=path.resolve(__dirname,'..');
-function load(relative,mocks={},globals={}){
-  const module={exports:{}};
-  const source=ts.transpileModule(fs.readFileSync(path.join(root,relative),'utf8'),{compilerOptions:{target:ts.ScriptTarget.ES2020,module:ts.ModuleKind.CommonJS,jsx:ts.JsxEmit.ReactJSX}}).outputText;
-  vm.runInNewContext(source,{module,exports:module.exports,require:id=>{if(id in mocks)return mocks[id];throw Error(id);},DOMException,console,...globals});return module.exports;
-}
+const { load } = require('./source-loader.cjs');
 const consent=load('src/features/storefront/services/cookieConsent.ts');
 const scope={apiBaseUrl:'https://api.example.test',storeId:'1',principal:'user:7',legalVersion:'3'};
 const memory=()=>{const map=new Map();return {map,getItem:key=>map.get(key)??null,setItem:(key,value)=>map.set(key,value),removeItem:key=>map.delete(key)};};
@@ -26,9 +22,9 @@ test('storage denegado no inventa consentimiento ni borra otras claves',()=>{
  const storage={getItem(){throw Error('denegado')},setItem(){throw Error('denegado')},removeItem(){throw Error('denegado')}};
  assert.equal(consent.readConsent(storage,scope),null);assert.throws(()=>consent.saveConsent(storage,scope,'accepted'));assert.throws(()=>consent.resetConsent(storage,scope));
 });
-function promotion(fetch){return load('src/features/admin/services/promotionService.ts',{'../../../api':{API_BASE_URL:'http://qa.test'}},{localStorage:{getItem:()=>null},sessionStorage:{getItem:()=>null},fetch}).promotionService;}
+function promotion(fetch){return load('src/features/admin/services/promotionService.ts',{'../../../api':{API_BASE_URL:'http://qa.test'}},{localStorage:{getItem:()=>'owner-fixture'},sessionStorage:{getItem:()=>null},fetch}).promotionService;}
 test('PATCH de nombre/estado no reenvía ni trunca fechas; instantes explícitos conservan microsegundos',async()=>{
- const calls=[];const service=promotion(async(url,options)=>{calls.push(JSON.parse(options.body));return {ok:true,json:async()=>({exito:true,data:{id:1,value:'10',startsAt:'2026-09-06T02:45:12.123456Z'}})};});
+ const calls=[];const service=promotion(async(url,options)=>{calls.push(JSON.parse(options.body));return {ok:true,json:async()=>({exito:true,data:{id:1,name:'Nombre',code:'CODE',type:'percentage',active:true,value:'10',startsAt:'2026-09-06T02:45:12.123456Z'}})};});
  await service.update({id:'1',name:'Nombre'});await service.update({id:'1',active:false});
  assert.deepEqual(calls,[{name:'Nombre'},{active:false}]);
  await service.update({id:'1',startsAt:'2026-09-05T22:45:12.123456-04:00'});assert.equal(calls[2].startsAt,'2026-09-05T22:45:12.123456-04:00');
@@ -36,7 +32,7 @@ test('PATCH de nombre/estado no reenvía ni trunca fechas; instantes explícitos
 });
 test('errores 400/403/409/500 rechazan la operación sin fabricar una respuesta exitosa',async()=>{
  for(const status of [400,403,409,500]){
-  const service=promotion(async()=>({ok:false,status,json:async()=>({exito:false,mensaje:'No se guardó'})}));await assert.rejects(service.update({id:'1',active:false}),/No se guardó/);
+  const service=promotion(async()=>({ok:false,status,json:async()=>({exito:false,mensaje:'No se guardó'})}));await assert.rejects(service.update({id:'1',active:false}),status===403?/permiso/:status===500?/disponible/:/No se guardó/);
  }
 });
 
@@ -46,7 +42,7 @@ test('editar el nombre en el componente conserva campos históricos y permite va
   const states=[],effects=[],calls=[];let index=0;
   const jsx=(type,props)=>({type,props});
   const mocks={
-   react:{useState:initial=>{const i=index++;if(!(i in states))states[i]=initial;return [states[i],next=>states[i]=typeof next==='function'?next(states[i]):next];},useEffect:fn=>{if(!effects.length)effects.push(fn);}},
+   react:{useRef:()=>({current:false}),useState:initial=>{const i=index++;if(!(i in states))states[i]=initial;return [states[i],next=>states[i]=typeof next==='function'?next(states[i]):next];},useEffect:fn=>{if(!effects.length)effects.push(fn);}},
    'react/jsx-runtime':{jsx,jsxs:jsx},
    '../data/mockAdminData':{formatPrice:String},
    '../context/AdminContext':{useAdmin:()=>({config:{},setConfig:()=>true})},
