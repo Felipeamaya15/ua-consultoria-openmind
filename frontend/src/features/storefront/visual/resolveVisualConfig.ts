@@ -127,8 +127,8 @@ export function resolveVisualConfig(options: ResolveVisualOptions = {}): VisualC
   return {
     ...base, version,
     responsive: {
-      tablet: mergeOverrides(base, defaultResponsive.tablet, responsiveFor(preset, 'tablet'), responsiveFor(store, 'tablet'), responsiveFor(template, 'tablet')),
-      mobile: mergeOverrides(base, defaultResponsive.mobile, responsiveFor(preset, 'mobile'), responsiveFor(store, 'mobile'), responsiveFor(template, 'mobile')),
+      tablet: mergeOverrides(base, defaultResponsive.tablet, responsiveFor(preset, 'tablet'), compatibleDimensions(store), compatibleDimensions(template), responsiveFor(store, 'tablet'), responsiveFor(template, 'tablet')),
+      mobile: mergeOverrides(base, defaultResponsive.mobile, responsiveFor(preset, 'mobile'), compatibleDimensions(store), compatibleDimensions(template), responsiveFor(store, 'mobile'), responsiveFor(template, 'mobile')),
     },
   };
 }

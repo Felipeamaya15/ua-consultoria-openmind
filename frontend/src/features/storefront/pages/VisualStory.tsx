@@ -1,6 +1,10 @@
+import { LandingBlocks } from '../../landing/components/LandingBlocks';
+import { useStore } from '../context/StoreContext';
 import { Link } from 'react-router-dom';
 
 export default function VisualStory() {
+  const {landing} = useStore();
+  if (Array.isArray(landing?.contenido?.bloques)) return <LandingBlocks onlyHistory />;
   return (
     <div className="max-w-6xl mx-auto px-5 py-20 md:py-28">
 

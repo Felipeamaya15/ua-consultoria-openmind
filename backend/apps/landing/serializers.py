@@ -79,4 +79,15 @@ class ConfiguracionLandingSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError({'productos_destacados': 'Selecciona productos activos de esta tienda.'})
             if any(category not in valid_categories for category in categorias):
                 raise serializers.ValidationError({'categorias': 'Selecciona categorías disponibles de esta tienda.'})
+        if self.instance:
+            # An older client may not know optional keys; preserve them on update.
+            data = {**self.instance.contenido, **data}
         return data
+
+    def save(self, **kwargs):
+        from apps.landing.block_images import store_block_images
+        content = self.validated_data.get('contenido')
+        if content is not None and 'bloques' in content:
+            tienda = kwargs.get('tienda') or self.context['tienda']
+            self.validated_data['contenido'] = store_block_images(content, tienda.pk)
+        return super().save(**kwargs)

@@ -1,5 +1,6 @@
 import { API_BASE_URL } from '../../../api';
 import type { Promotion } from '../../storefront/data/mockData';
+import { requestJson } from '../../../shared/services/apiRequest';
 
 type ApiPromotion = Omit<Promotion, 'id' | 'value' | 'minAmount' | 'maxUses' | 'endsAt'> & {
   id: number;
@@ -14,6 +15,12 @@ function token() {
 }
 
 function normalize(row: ApiPromotion): Promotion {
+  if (!row || !Number.isSafeInteger(row.id) || row.id <= 0 || typeof row.name !== 'string' || typeof row.code !== 'string'
+    || !['percentage', 'fixed', 'free_shipping', 'precio_oferta'].includes(row.type) || typeof row.active !== 'boolean'
+    || (typeof row.value !== 'string' && typeof row.value !== 'number') || String(row.value).trim() === '' || !Number.isFinite(Number(row.value)) || Number(row.value) < 0
+    || (row.minAmount != null && (String(row.minAmount).trim() === '' || !Number.isFinite(Number(row.minAmount)) || Number(row.minAmount) < 0))) {
+    throw new Error('La promoción recibida no es válida. Actualiza la página e intenta nuevamente.');
+  }
   return {
     ...row,
     id: String(row.id),
@@ -27,7 +34,8 @@ function normalize(row: ApiPromotion): Promotion {
 
 async function request(path = '', init: RequestInit = {}): Promise<any> {
   const auth = token();
-  const response = await fetch(`${API_BASE_URL}/api/promociones/${path}`, {
+  if (!auth) throw new Error('Inicia sesión para administrar promociones.');
+  return requestJson(`${API_BASE_URL}/api/promociones/${path}`, {
     ...init,
     headers: {
       Accept: 'application/json',
@@ -35,19 +43,7 @@ async function request(path = '', init: RequestInit = {}): Promise<any> {
       ...(auth ? { Authorization: `Token ${auth}` } : {}),
       ...init.headers,
     },
-  });
-  const body = await response.json().catch(() => ({}));
-  if (!response.ok || body.exito !== true) {
-    const details = body.error?.detalles;
-    const first =
-      details && typeof details === 'object'
-        ? Object.values(details)
-            .flat()
-            .find((value) => typeof value === 'string')
-        : null;
-    throw new Error(first || body.mensaje || 'No se pudo procesar la promoción.');
-  }
-  return body.data;
+  }, 'No se pudo procesar la promoción.');
 }
 
 function payload(promotion: Partial<Promotion>) {
@@ -64,7 +60,9 @@ function payload(promotion: Partial<Promotion>) {
 
 export const promotionService = {
   async list(): Promise<Promotion[]> {
-    return (await request()).map(normalize);
+    const rows = await request();
+    if (!Array.isArray(rows)) throw new Error('El listado de promociones no es válido.');
+    return rows.map(normalize);
   },
   async create(promotion: Partial<Promotion>): Promise<Promotion> {
     return normalize(

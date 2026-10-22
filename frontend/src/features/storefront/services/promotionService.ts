@@ -21,8 +21,14 @@ export async function validatePromotion(code: string, subtotal: number, shipping
   const result = body.data;
   const discount = Number(result.discount), adjustedShipping = Number(result.shipping);
   if (!result.code || !['percentage', 'fixed', 'free_shipping'].includes(result.type)
-      || !Number.isFinite(discount) || discount < 0
-      || !Number.isFinite(adjustedShipping) || adjustedShipping < 0) {
+      || typeof result.code !== 'string' || result.code !== code.trim().toUpperCase()
+      || !['string', 'number'].includes(typeof result.discount) || String(result.discount).trim() === ''
+      || !['string', 'number'].includes(typeof result.shipping) || String(result.shipping).trim() === ''
+      || typeof result.message !== 'string'
+      || !Number.isFinite(discount) || discount < 0 || discount > subtotal
+      || !Number.isFinite(adjustedShipping) || adjustedShipping < 0 || adjustedShipping > shipping
+      || (result.type === 'free_shipping' && (discount !== 0 || adjustedShipping !== 0))
+      || (result.type !== 'free_shipping' && adjustedShipping !== shipping)) {
     throw new Error('La respuesta de la promocion es invalida.');
   }
   return {...result, discount, shipping: adjustedShipping};

@@ -1,5 +1,6 @@
 """PDF vectorial A4 a partir del mismo agregado que consume la interfaz."""
 from decimal import Decimal
+from datetime import date
 from io import BytesIO
 from xml.sax.saxutils import escape
 
@@ -75,7 +76,7 @@ def generar_pdf(data, generado):
         ]))
         return result
     story.extend([p(data['tienda'], 'Store'), p('Informe de ventas y pedidos', 'Title'),
-                  p(f'{periodo} | {data["fecha_desde"]} al {data["fecha_hasta"]}'),
+                  p(f'{periodo} | {date.fromisoformat(data["fecha_desde"]):%d/%m/%Y} al {date.fromisoformat(data["fecha_hasta"]):%d/%m/%Y}'),
                   p(f'Generado: {generado:%d/%m/%Y %H:%M} | America/Santiago', 'SmallNote')])
     heading('Resumen comercial')
     story.append(table([

@@ -14,6 +14,7 @@ interface CartState {
   clearCart: () => Promise<void>;
   promoCode: string;
   applyPromo: (code: string) => Promise<{ ok: boolean; message: string }>;
+  removePromo: () => void;
   promoNotice: string;
   discount: number;
   shipping: number | null;
@@ -239,6 +240,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const removePromo = () => { setPromoCode(''); setPromoDiscount(0); setPromoSubtotal(0); setPromoNotice('Promoción eliminada.'); };
+
   useEffect(() => {
     if (!promoCode || promoSubtotal === subtotal) return;
     let active = true;
@@ -275,6 +278,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         clearCart,
         promoCode,
         applyPromo,
+        removePromo,
         promoNotice,
         discount,
         shipping,

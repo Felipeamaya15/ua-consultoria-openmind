@@ -145,3 +145,6 @@ MONGO_DB_NAME = os.getenv('MONGO_DB_NAME', 'logs_db')
 MONGO_URI = f"mongodb://{MONGO_USER}:{MONGO_PASSWORD}@{MONGO_HOST}:{MONGO_PORT}/?authSource=admin"
 
 PAYMENT_CREDENTIALS_KEY = os.getenv('PAYMENT_CREDENTIALS_KEY', '')
+# Content blocks accept bounded inline uploads (2 MB each, 10 MB per save).
+# File content is converted to managed media before JSON persistence.
+DATA_UPLOAD_MAX_MEMORY_SIZE = 16 * 1024 * 1024

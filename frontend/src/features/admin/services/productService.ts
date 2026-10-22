@@ -1,4 +1,5 @@
 import type { Product } from "../data/mockAdminData";
+import { requestJson } from '../../../shared/services/apiRequest';
 
 const API_URL =
   (import.meta as any).env.VITE_API_URL || "http://localhost:8000";
@@ -50,34 +51,22 @@ export async function createPublicProduct(
 ): Promise<string> {
   const token = (localStorage.getItem("token") || sessionStorage.getItem("token"));
   if (!token) throw new Error("Inicia sesión para crear productos.");
-  const response = await fetch(`${API_URL}/api/catalog/productos/crear/`, {
+  const data = await requestJson(`${API_URL}/api/catalog/productos/crear/`, {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Token ${token}` },
     body: JSON.stringify(toBackendPayload(product)),
-  });
-
-  const body = await response.json().catch(() => null);
-
-  if (!response.ok || !body?.exito || !body?.data?.id) {
-    throw new Error(
-      body?.mensaje || (body ? JSON.stringify(body) : "No se pudo guardar el producto en el catálogo."),
-    );
-  }
-
-  return body.data.id;
+  }) as { id?: unknown } | null;
+  if (!data || typeof data.id !== 'string' || !/^[a-f0-9]{24}$/i.test(data.id)) throw new Error('No se pudo confirmar el producto guardado. Actualiza el listado antes de reintentar.');
+  return data.id;
 }
 
 export async function deleteCatalogProduct(productId: string): Promise<void> {
   const token = (localStorage.getItem("token") || sessionStorage.getItem("token"));
   if (!token) throw new Error("Inicia sesión para eliminar productos.");
-  const response = await fetch(`${API_URL}/api/catalog/productos/${productId}/eliminar/`, {
+  await requestJson(`${API_URL}/api/catalog/productos/${productId}/eliminar/`, {
     method: "DELETE",
     headers: { Authorization: `Token ${token}` },
   });
-  const body = await response.json().catch(() => null);
-  if (!response.ok || !body?.exito) {
-    throw new Error(body?.mensaje || "No se pudo eliminar el producto.");
-  }
 }
 
 
@@ -113,15 +102,10 @@ function adaptAdminProduct(item: any): AdminProduct {
 async function adminRequest(path: string, options: RequestInit = {}): Promise<any> {
   const token = (localStorage.getItem('token') || sessionStorage.getItem('token'));
   if (!token) throw new Error('Inicia sesión para administrar productos.');
-  const response = await fetch(`${API_URL}/api/catalog/productos/${path}`, {
+  return requestJson(`${API_URL}/api/catalog/productos/${path}`, {
     ...options,
     headers: { 'Content-Type': 'application/json', Authorization: `Token ${token}` },
-  });
-  const body = await response.json().catch(() => null);
-  if (!response.ok || !body?.exito) {
-    throw new Error(body?.mensaje || (body ? JSON.stringify(body) : 'No se pudo consultar o guardar el catálogo.'));
-  }
-  return body.data;
+  }, 'No se pudo consultar o guardar el catálogo.');
 }
 
 export async function fetchAdminProducts(): Promise<AdminProduct[]> {

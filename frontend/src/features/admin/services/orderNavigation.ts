@@ -27,7 +27,7 @@ export function readOrderFilters(params: URLSearchParams): OrderFilters {
   const selectedId = rawId && /^[1-9]\d*$/.test(rawId) && Number.isSafeInteger(Number(rawId)) ? Number(rawId) : null;
   let error = '';
   if (!['all', 'confirmed', 'dispatch'].includes(status) && !Object.prototype.hasOwnProperty.call(ORDER_STATUS_BADGE, status)) error = 'El filtro de estado no es válido.';
-  if ((from && !validOrderDate(from)) || (to && !validOrderDate(to))) error = 'Indica fechas válidas con formato AAAA-MM-DD.';
+  if ((from && !validOrderDate(from)) || (to && !validOrderDate(to))) error = 'Indica fechas válidas con formato DD/MM/AAAA.';
   else if (from && to && from > to) error = 'La fecha inicial debe ser anterior o igual a la final.';
   if (rawId !== null && selectedId === null) error = 'El identificador del pedido no es válido.';
   if (['estado', 'fecha_desde', 'fecha_hasta', 'pedido'].some(key => params.getAll(key).length > 1)) error = 'Los filtros no pueden tener parámetros repetidos.';

@@ -1,3 +1,4 @@
+import { LandingBlocks } from '../../landing/components/LandingBlocks';
 import { VISUAL_SECTION } from '../visual/sectionIds';
 import { useLandingContent } from '../../landing/hooks/useLandingContent';
 import { LandingDetails } from '../../landing/components/LandingDetails';
@@ -198,6 +199,7 @@ export default function CatalogHome() {
           Ver todos los productos →
         </Link>
       </section>)}
+      <LandingBlocks />
       <LandingDetails />
     </div>
   );

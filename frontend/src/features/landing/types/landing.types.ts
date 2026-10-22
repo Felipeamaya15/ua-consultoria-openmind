@@ -10,7 +10,16 @@ export interface ContactoLanding {
 export interface UbicacionLanding {
   direccion: string; comuna: string; ciudad: string; region: string; enlace_maps: string;
 }
+export type TipoBloqueLanding = 'historia' | 'imagen_texto' | 'texto' | 'galeria' | 'cita';
+export interface ImagenBloqueLanding { id: string; src: string; alt: string }
+export interface BloqueLanding {
+  id: string; tipo: TipoBloqueLanding; visible: boolean;
+  titulo: string; subtitulo: string; texto: string; imagenes: ImagenBloqueLanding[];
+}
 export interface ContenidoLanding {
+  /** Absent keeps legacy template content; an explicit empty list hides it. */
+  bloques?: BloqueLanding[];
+  apariencia_bloques?: Partial<Record<'editorial' | 'minimal' | 'visual' | 'catalog', import('../../storefront/visual/blockAppearance').BlockStyles>>;
   productos_destacados: string[];
   categorias: string[];
   beneficios: BeneficioLanding[];

@@ -2,6 +2,7 @@ import type { CSSProperties } from 'react';
 import type { FontFamily, Shadow, VisualConfig, VisualSections, Viewport } from './types';
 import { resolveVisualViewport } from './resolveVisualConfig';
 import { VIEWPORTS } from './types';
+import { institutionalTextColor } from './contrast';
 
 export const fonts: Record<FontFamily, string> = { sans: '"Plus Jakarta Sans", sans-serif', serif: '"DM Serif Display", Georgia, serif', system: 'system-ui, sans-serif', arial: 'Arial, Helvetica, sans-serif', calibri: 'Calibri, "Segoe UI", Arial, sans-serif', cambria: 'Cambria, Georgia, serif', georgia: 'Georgia, serif', times: '"Times New Roman", Times, serif', verdana: 'Verdana, sans-serif', tahoma: 'Tahoma, sans-serif', trebuchet: '"Trebuchet MS", sans-serif', courier: '"Courier New", Courier, monospace', garamond: 'Garamond, Georgia, serif', palatino: '"Palatino Linotype", Palatino, serif', comic: '"Comic Sans MS", cursive' };
 const shadows: Record<Shadow, string> = { none: 'none', soft: '0 2px 8px #0000000d', medium: '0 6px 20px #00000014', strong: '0 12px 32px #00000026' };
@@ -37,6 +38,8 @@ function sectionVariables(config: VisualSections, viewport: Viewport): Record<st
       fieldBackground: f.background === 'currentColor' ? colors.surface : f.background, fieldColor: f.textColor === 'currentColor' ? colors.text : f.textColor, fieldRadius: px(f.radius), fieldPadding: px(f.padding), fieldBorder: pageBorder(f.border),
       buttonBackground: b.background === 'currentColor' ? colors.primary : b.background, buttonColor: b.textColor, buttonRadius: px(b.radius), buttonPaddingX: px(b.paddingX), buttonPaddingY: px(b.paddingY), buttonFontSize: px(b.fontSize) });
   }
+  variables['--visual-topbar-brand-color'] = institutionalTextColor(config.topBar.background, colors.background);
+  variables['--visual-footer-brand-color'] = institutionalTextColor(config.footer.background, colors.background);
   const h = config.header;
   add('header', { bg: h.background, color: h.textColor, height: px(h.height), logoSize: px(h.logoSize), logoOrder: h.logoPosition === 'right' ? '3' : h.logoPosition === 'center' ? '1' : '0', navAlign: flexAlign(h.navAlign), gap: px(h.gap), border: border(h.border), shadow: shadows[h.shadow], position: h.sticky ? 'sticky' : 'relative', direction: h.layout === 'centered' ? 'column' : 'row' });
   const hero = config.hero;

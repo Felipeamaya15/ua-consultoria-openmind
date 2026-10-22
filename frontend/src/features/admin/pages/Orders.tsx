@@ -1,36 +1,17 @@
 import { useState, useEffect, useRef } from "react"
-import { formatPrice } from "../data/mockAdminData"
-import { Badge, Icon, Input, Button } from "../components/ui"
-import { API_BASE_URL } from "../../../api"
-import { authService } from "../../auth/services/authService"
+import { formatReportMoney as formatPrice } from "../services/reportFormatting"
+import { formatBusinessDate, chileanDateInput } from '../services/businessTime'
+import { PickupSelectionSummary } from '../../storefront/components/checkout/PickupSchedule'
+import { Badge, Icon, Input, Button, Select } from "../components/ui"
+import { HistoryPagination } from '../components/HistoryControls'
+import { useCommercialExport } from '../hooks/useCommercialHistory'
+import { getOrderHistory, getOrderDetail, historyParams, emptyPagination, type HistoryOrder as StoreOrder } from '../services/commercialService'
 import { approveManualTransfer, verifyTransfer } from "../services/pendingTransfersService"
 import { updateOrderStatus } from '../services/recentOrdersService';
 
 import { Link, useSearchParams } from 'react-router-dom'
 import { ORDER_STATUS_BADGE as STATUS_BADGE } from '../data/orderStatus'
-import { readOrderFilters, filterStoreOrders, orderDateInChile } from '../services/orderNavigation'
-
-type StoreOrder = {
-  id_pedido: number; identificador: string | null; nombre_contacto: string; correo_contacto: string;
-  monto_total: string; estado: string; fecha_creacion: string; metodo_pago: string;
-  costo_envio: string; descuento: string;
-  items: { nombre_producto: string; cantidad: number; precio_unitario: string }[];
-}
-
-function isStoreOrder(value: unknown): value is StoreOrder {
-  if (!value || typeof value !== 'object') return false
-  const order = value as Record<string, unknown>
-  return typeof order.id_pedido === 'number'
-    && (typeof order.identificador === 'string' || order.identificador === null)
-    && ['nombre_contacto', 'correo_contacto', 'estado', 'metodo_pago'].every(key => typeof order[key] === 'string')
-    && typeof order.fecha_creacion === 'string' && Number.isFinite(Date.parse(order.fecha_creacion))
-    && ['monto_total', 'costo_envio', 'descuento'].every(key => typeof order[key] === 'string'
-      && String(order[key]).trim() !== '' && Number.isFinite(Number(order[key])))
-    && Array.isArray(order.items) && order.items.every(item => item && typeof item === 'object'
-      && typeof item.nombre_producto === 'string' && Number.isInteger(item.cantidad) && item.cantidad > 0
-      && typeof item.precio_unitario === 'string' && item.precio_unitario.trim() !== ''
-      && Number.isFinite(Number(item.precio_unitario)))
-}
+import { readOrderFilters, orderDateInChile } from '../services/orderNavigation'
 
 export default function Orders() {
   const [pedidos, setPedidos] = useState<StoreOrder[]>([])
@@ -38,11 +19,17 @@ export default function Orders() {
   const filters = readOrderFilters(params)
   const filter = filters.status
   const selectedId = filters.selectedId
+  const queryKey = historyParams(params).toString()
+  const [pagination, setPagination] = useState(emptyPagination)
+  const [detail, setDetail] = useState<StoreOrder | null>(null)
+  const [detailError, setDetailError] = useState('')
+  const file = useCommercialExport(queryKey)
   const detailRef = useRef<HTMLDivElement>(null)
   const updateParams = (changes: Record<string, string | null>) => {
     setParams(previous => {
       const next = new URLSearchParams(previous)
       Object.entries(changes).forEach(([key, value]) => { if (value) next.set(key, value); else next.delete(key) })
+      if (!('pagina' in changes) && !('pedido' in changes)) next.delete('pagina')
       return next
     })
   }
@@ -60,27 +47,12 @@ export default function Orders() {
   useEffect(() => {
     const controller = new AbortController()
     setError('')
+    if (filters.error) { setCargando(false); setPedidos([]); setPagination(emptyPagination); return () => controller.abort() }
+    setCargando(true)
     const fetchPedidos = async () => {
       try {
-        const token = authService.getToken();
-        if (!token) throw new Error('Inicia sesión para consultar los pedidos.');
-
-        const response = await fetch(`${API_BASE_URL}/api/tienda/pedidos/`, {
-          method: 'GET',
-          signal: controller.signal,
-          headers: {
-            'Authorization': `Token ${token}`,
-            'Content-Type': 'application/json'
-          }
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          if (!Array.isArray(data) || !data.every(isStoreOrder)) throw new Error('El listado de pedidos recibido es inválido.');
-          if (!controller.signal.aborted) setPedidos(data);
-        } else {
-          throw new Error('No se pudieron consultar los pedidos.');
-        }
+        const result = await getOrderHistory(new URLSearchParams(queryKey), controller.signal)
+        if (!controller.signal.aborted) { setPedidos(result.data); setPagination(result.paginacion) }
       } catch (error) {
         if (!controller.signal.aborted) setError(error instanceof Error ? error.message : 'No se pudieron consultar los pedidos.');
       } finally {
@@ -90,7 +62,14 @@ export default function Orders() {
 
     fetchPedidos();
     return () => controller.abort();
-  }, [refreshKey]);
+  }, [refreshKey, queryKey, filters.error]);
+
+  useEffect(() => {
+    const controller = new AbortController(); setDetail(null); setDetailError('');
+    if (selectedId) getOrderDetail(selectedId, controller.signal).then(value => { if (!controller.signal.aborted) setDetail(value) })
+      .catch(cause => { if (!controller.signal.aborted) setDetailError(cause instanceof Error ? cause.message : 'No se pudo cargar el detalle.') })
+    return () => controller.abort()
+  }, [selectedId, refreshKey])
 
   // Manejador del botón verificar pagos
   const handlePaymentConfirmation = async (order: StoreOrder) => {
@@ -120,6 +99,7 @@ export default function Orders() {
       setPedidos(previous => previous.map(order =>
         order.id_pedido === pedidoId ? { ...order, estado: updated.estado } : order
       ));
+      setRefreshKey(n => n + 1)
       setVerifyMessage({ type: 'success', text: `Estado logístico actualizado a: ${updated.estado_etiqueta}` });
     } catch (cause) {
       setVerifyMessage({ type: 'error', text: cause instanceof Error ? cause.message : 'Error al actualizar el estado.' });
@@ -128,10 +108,10 @@ export default function Orders() {
     }
   };
 
-  const filtered = filterStoreOrders(pedidos, filters)
+  const filtered = filters.error ? [] : pedidos
 
   const selectedOrder = selectedId
-    ? pedidos.find((p) => p.id_pedido === selectedId)
+    ? (detail?.id_pedido === selectedId ? detail : pedidos.find((p) => p.id_pedido === selectedId))
     : null
 
   // Limpiamos el mensaje de alerta si se cambia de pedido
@@ -143,25 +123,28 @@ export default function Orders() {
     if (!cargando && selectedId) detailRef.current?.focus()
   }, [selectedId, cargando])
 
-  if (cargando) {
-    return <div className="p-10 text-center">Cargando pedidos...</div>
-  }
-  if (error) return <p role="alert" className="p-5 text-red-700">{error}</p>
-
   const isVerifiableMethod = selectedOrder?.metodo_pago?.toLowerCase() === 'transferencia' || selectedOrder?.metodo_pago?.toLowerCase() === 'linkify';
 
   return (
-    <div className="space-y-4">
+    <div className="commercial-section space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-3"><p className="text-sm">Histórico de pedidos de tu tienda, incluidos pendientes y cancelados. Solo los pagos confirmados suman ingresos en los informes.</p>
+        <Button variant="outline" disabled={cargando || !!error || !!filters.error || file.busy} onClick={() => void file.download('pedidos/exportar/', historyParams(params), 'historico-pedidos.xlsx')}>{file.busy ? 'Preparando Excel...' : 'Exportar pedidos Excel'}</Button></div>
+      {file.message && <p role="status">{file.message}</p>}{file.error && <p role="alert" className="text-red-700">{file.error}</p>}
       {['7', '30', 'year'].includes(params.get('periodo') || '') && <Link
         to={`/emprendedor?periodo=${params.get('periodo')}`} className="text-sm text-[var(--primary)] hover:underline focus-visible:outline focus-visible:outline-2 rounded">← Volver al dashboard</Link>}
       <div className="flex flex-wrap items-end gap-3">
-        <Input id="orders-from" type="date" label="Desde" value={filters.from}
-          onChange={event => updateParams({ fecha_desde: event.target.value, periodo: null })} />
-        <Input id="orders-to" type="date" label="Hasta" value={filters.to}
-          onChange={event => updateParams({ fecha_hasta: event.target.value, periodo: null })} />
-        <Button variant="outline" onClick={() => updateParams({ estado: null, fecha_desde: null, fecha_hasta: null, periodo: null })}>Limpiar filtros</Button>
+        <Input id="orders-from" type="text" inputMode="numeric" placeholder="DD/MM/AAAA" label="Desde (DD/MM/AAAA)" value={/^\d{4}-\d{2}-\d{2}$/.test(filters.from) ? formatBusinessDate(filters.from) || filters.from : filters.from}
+          onChange={event => updateParams({ fecha_desde: chileanDateInput(event.target.value), periodo: null })} />
+        <Input id="orders-to" type="text" inputMode="numeric" placeholder="DD/MM/AAAA" label="Hasta (DD/MM/AAAA)" value={/^\d{4}-\d{2}-\d{2}$/.test(filters.to) ? formatBusinessDate(filters.to) || filters.to : filters.to}
+          onChange={event => updateParams({ fecha_hasta: chileanDateInput(event.target.value), periodo: null })} />
+        <Input id="orders-search" label="Buscar pedido, producto o SKU" maxLength={100} value={params.get('q') || ''} onChange={event => updateParams({ q: event.target.value || null })} />
+        <Input id="orders-method" label="Método de pago" placeholder="Ej.: Transferencia" maxLength={50} value={params.get('metodo_pago') || ''} onChange={event => updateParams({ metodo_pago: event.target.value || null })} />
+        <Select label="Estado de pago" value={params.get('pago') || ''} onChange={event => updateParams({ pago: event.target.value || null })} options={[{ value: '', label: 'Todos' }, { value: 'confirmado', label: 'Confirmado' }, { value: 'pendiente', label: 'Pendiente' }, { value: 'cancelado', label: 'Cancelado' }]} />
+        <Select label="Método de entrega" value={params.get('entrega') || ''} onChange={event => updateParams({ entrega: event.target.value || null })} options={[{ value: '', label: 'Todos' }, { value: 'retiro', label: 'Retiro en tienda' }, { value: 'envio', label: 'Envío' }]} />
+        <Button variant="outline" onClick={() => updateParams({ estado: null, fecha_desde: null, fecha_hasta: null, periodo: null, q: null, metodo_pago: null, pago: null, entrega: null })}>Limpiar filtros</Button>
       </div>
-      <p className="text-xs text-[var(--muted-foreground)]">Fechas de registro del pedido en hora de Chile. {filtered.length} pedidos coinciden con los filtros.</p>
+      {(filters.from || filters.to) && <p className="text-sm">Período: {formatBusinessDate(filters.from) || 'Sin inicio'} al {formatBusinessDate(filters.to) || 'Sin término'}</p>}
+      <p className="text-xs text-[var(--muted-foreground)]">Fechas de registro del pedido en hora de Chile. {pagination.total} pedidos coinciden con los filtros. La exportación incluye todas las páginas filtradas.</p>
       {filters.error && <p role="alert" className="text-sm text-[var(--error)]">{filters.error}</p>}
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-5">
       <div className="lg:col-span-3">
@@ -196,7 +179,7 @@ export default function Orders() {
         </div>
 
         <div className="bg-white border border-[var(--border)] rounded-xl overflow-hidden">
-          {filtered.length === 0 ? (
+          {cargando ? <p role="status" className="p-5">Cargando pedidos...</p> : error ? <div role="alert" className="p-5"><p>{error}</p><Button onClick={() => setRefreshKey(n => n + 1)}>Reintentar pedidos</Button></div> : filtered.length === 0 ? (
             <div className="p-10 text-center text-[var(--muted-foreground)] text-sm">
               No hay pedidos que coincidan con los filtros.
             </div>
@@ -232,7 +215,7 @@ export default function Orders() {
                         </p>
                       </div>
                       <div className="text-right">
-                        <p className="font-bold">{formatPrice(Number(order.monto_total))}</p>
+                        <p className="font-bold">{formatPrice(order.monto_total)}</p>
                         <Badge variant={st.variant} className="mt-1">
                           {st.label}
                         </Badge>
@@ -240,6 +223,8 @@ export default function Orders() {
                     </div>
                     <div className="flex items-center gap-3 mt-2 text-xs text-[var(--muted-foreground)]">
                       <span>{order.metodo_pago || "No especificado"}</span>
+                      <span>· Pago {order.pago_estado}</span>
+                      <span>· {order.entrega?.metodo || 'Entrega sin registro'} · {order.items.reduce((sum, item) => sum + item.cantidad, 0)} unidades</span>
                       <span>·</span>
                       <span>
                         {orderDateInChile(order.fecha_creacion).split("-").reverse().join("/")}
@@ -251,6 +236,7 @@ export default function Orders() {
             </div>
           )}
         </div>
+        <HistoryPagination page={pagination} disabled={cargando || !!error || !!filters.error} onPage={n => updateParams({ pagina: String(n) })} />
       </div>
 
       {/* Order detail panel */}
@@ -328,28 +314,33 @@ export default function Orders() {
                     <p className="text-[var(--muted-foreground)]">
                       Cantidad: {item.cantidad}
                     </p>
+                    {item.sku && <p className="text-[var(--muted-foreground)]">SKU: {item.sku}</p>}
                   </div>
                   <p className="text-xs font-semibold">
-                    {formatPrice(Number(item.precio_unitario) * item.cantidad)}
+                    {formatPrice(item.total_linea)}
                   </p>
                 </div>
               ))}
             </div>
 
             <div className="border-t border-[var(--border)] pt-3 text-sm space-y-1">
+              <PickupSelectionSummary selection={selectedOrder.entrega?.retiro?.seleccion} />
+              <p className="text-xs">Entrega: {selectedOrder.entrega?.metodo || 'Sin registro'} · Pago {selectedOrder.pago_estado}</p>
+              {selectedOrder.entrega?.retiro?.address && <p className="text-xs">Retiro: {selectedOrder.entrega.retiro.address}</p>}
+              {selectedOrder.entrega?.direccion && <p className="text-xs">{Object.entries(selectedOrder.entrega.direccion).filter(([key, value]) => ['region', 'comuna', 'calle', 'numero', 'departamento', 'direccion'].includes(key) && typeof value === 'string').map(([, value]) => String(value)).join(', ')}</p>}
               {Number(selectedOrder.descuento) > 0 && (
                 <div className="flex justify-between text-[var(--success)]">
                   <span>Descuento</span>
-                  <span>−{formatPrice(Number(selectedOrder.descuento))}</span>
+                  <span>−{formatPrice(selectedOrder.descuento)}</span>
                 </div>
               )}
               <div className="flex justify-between text-[var(--muted-foreground)]">
                 <span>Envío</span>
-                <span>{formatPrice(Number(selectedOrder.costo_envio))}</span>
+                <span>{formatPrice(selectedOrder.costo_envio)}</span>
               </div>
               <div className="flex justify-between font-bold">
                 <span>Total</span>
-                <span>{formatPrice(Number(selectedOrder.monto_total))}</span>
+                <span>{formatPrice(selectedOrder.monto_total)}</span>
               </div>
             </div>
 
@@ -358,7 +349,7 @@ export default function Orders() {
           <div className="bg-white border border-[var(--border)] rounded-xl p-10 text-center text-[var(--muted-foreground)]">
             <Icon name="file" className="w-9 h-9 mx-auto mb-3" />
             <p className="text-sm">
-              {selectedId ? "El pedido solicitado no se encuentra disponible en esta tienda." : "Selecciona un pedido para ver sus detalles"}
+              {selectedId ? (detailError || "Consultando detalle del pedido...") : "Selecciona un pedido para ver sus detalles"}
             </p>
           </div>
         )}

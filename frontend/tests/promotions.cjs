@@ -14,17 +14,8 @@ function loadStorefront(fetch) {
 }
 
 function loadAdmin(fetch) {
-  const module = {exports: {}};
-  vm.runInNewContext(ts.transpileModule(adminSource, {compilerOptions: {target: ts.ScriptTarget.ES2020, module: ts.ModuleKind.CommonJS}}).outputText,
-    {
-      module,
-      exports: module.exports,
-      fetch,
-      localStorage: {getItem: () => 'owner-token'},
-      sessionStorage: {getItem: () => null},
-      require: () => ({API_BASE_URL: 'http://localhost:8000'}),
-    });
-  return module.exports;
+  return require('./source-loader.cjs').load('src/features/admin/services/promotionService.ts', {'../../../api': {API_BASE_URL:'http://localhost:8000'}}, {fetch,localStorage:{getItem:()=>'owner-fixture'},sessionStorage:{getItem:()=>null}});
+
 }
 
 (async () => {

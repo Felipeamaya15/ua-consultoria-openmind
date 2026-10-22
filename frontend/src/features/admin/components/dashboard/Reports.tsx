@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { AdminCard, Alert, Button, Select } from '../ui';
 import { formatReportMoney } from '../../services/reportFormatting';
-import { downloadReport, getReport, type SalesReport } from '../../services/reportService';
+import { downloadReport, getReport, reportFilename, type SalesReport } from '../../services/reportService';
+import { useCommercialExport } from '../../hooks/useCommercialHistory';
+import { Link } from 'react-router-dom';
 
 const months = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
 function Bars({ data, sales }: { data: SalesReport; sales: boolean }) {
@@ -45,6 +47,7 @@ export default function Reports() {
   const [downloadError, setDownloadError] = useState('');
   const [downloaded, setDownloaded] = useState(false);
   const downloadController = useRef<AbortController | null>(null);
+  const excel = useCommercialExport(`${year ?? ''}:${month ?? ''}:${attempt}`);
   useEffect(() => {
     const controller = new AbortController();
     setLoading(true); setError(''); setDownloaded(false); setDownloadError('');
@@ -62,15 +65,19 @@ export default function Reports() {
     catch { if (!controller.signal.aborted) setDownloadError('No se pudo descargar el PDF. Intenta nuevamente.'); }
     finally { if (!controller.signal.aborted) setDownloading(false); }
   }
-  return <section aria-labelledby="reports-title" className="space-y-5 border-t border-[var(--border)] pt-6">
+  return <section aria-labelledby="reports-title" className="commercial-section space-y-5 border-t border-[var(--border)] pt-6">
     <div><h2 id="reports-title" className="text-xl font-bold">Historial e informes</h2><p className="text-sm mt-2 text-[var(--muted-foreground)]">Consulta años anteriores y descarga informes comerciales de tu tienda.</p></div>
     <AdminCard><div className="flex flex-wrap items-end gap-4">
-      <div className="w-full sm:w-40"><Select label="Año del informe" value={String(year ?? data?.anio ?? '')} disabled={!years.length || downloading} options={years.map(y => ({ value: String(y), label: String(y) }))} onChange={e => setYear(Number(e.target.value))} /></div>
-      <div className="w-full sm:w-52"><Select label="Mes (opcional)" value={month ? String(month) : ''} disabled={downloading} options={[{ value: '', label: 'Todo el año' }, ...months.map((m, i) => ({ value: String(i + 1), label: m }))]} onChange={e => setMonth(e.target.value ? Number(e.target.value) : null)} /></div>
-      <Button type="button" disabled={loading || !!error || !data || downloading} onClick={() => void download()}>{downloading ? 'Generando PDF...' : 'Descargar informe PDF'}</Button>
+      <div className="w-full sm:w-40"><Select label="Año del informe" value={String(year ?? data?.anio ?? '')} disabled={!years.length || downloading || excel.busy} options={years.map(y => ({ value: String(y), label: String(y) }))} onChange={e => setYear(Number(e.target.value))} /></div>
+      <div className="w-full sm:w-52"><Select label="Mes (opcional)" value={month ? String(month) : ''} disabled={downloading || excel.busy} options={[{ value: '', label: 'Todo el año' }, ...months.map((m, i) => ({ value: String(i + 1), label: m }))]} onChange={e => setMonth(e.target.value ? Number(e.target.value) : null)} /></div>
+      <Button type="button" disabled={loading || !!error || !data || downloading || excel.busy} onClick={() => void download()}>{downloading ? 'Generando PDF...' : 'Descargar informe PDF'}</Button>
+      <Button type="button" variant="outline" disabled={loading || !!error || !data || downloading || excel.busy} onClick={() => { if (data) { const p = new URLSearchParams({ anio: String(data.anio) }); if (data.mes) p.set('mes', String(data.mes)); void excel.download('informes/xlsx/', p, reportFilename(data.anio, data.mes).replace(/\.pdf$/, '.xlsx')); } }}>{excel.busy ? 'Generando Excel...' : 'Descargar informe Excel'}</Button>
     </div></AdminCard>
+    <nav aria-label="Consultar históricos detallados" className="flex flex-wrap gap-5 text-sm underline"><Link to="/emprendedor/pedidos">Ver pedidos</Link><Link to="/emprendedor/ventas">Ver ventas</Link><Link to="/emprendedor/contactos">Contactos de clientes</Link></nav>
     {loading ? <p role="status">Consultando historial...</p> : error ? <div role="alert"><Alert variant="error">{error}</Alert><Button onClick={() => setAttempt(n => n + 1)}>Reintentar historial</Button></div> : data && <ReportResults data={data} />}
     {downloadError && <div role="alert"><Alert variant="error">{downloadError}</Alert></div>}
     {downloaded && <p role="status" className="text-sm">Informe PDF descargado.</p>}
+    {excel.message && <p role="status" className="text-sm">{excel.message}</p>}
+    {excel.error && <p role="alert" className="text-red-700">{excel.error}</p>}
   </section>;
 }

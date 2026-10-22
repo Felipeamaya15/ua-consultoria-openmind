@@ -132,6 +132,7 @@ export function ProductForm() {
 
 export function ProductEditor({ initial, editing }: { initial: AdminProduct; editing: boolean }) {
   const navigate = useNavigate(); const imageInput = useRef<HTMLInputElement>(null)
+  const savingRequest = useRef(false)
   const [activeTab, setActiveTab] = useState("info"); const [saved, setSaved] = useState(false); const [saving, setSaving] = useState(false)
   const [product, setProduct] = useState<AdminProduct>({ ...initial, images: [...initial.images], variants: initial.variants.map((variant) => ({ ...variant, attributes: { ...variant.attributes } })), attributes: { ...initial.attributes }, tags: [...initial.tags] })
   const [error, setError] = useState("");
@@ -170,6 +171,7 @@ export function ProductEditor({ initial, editing }: { initial: AdminProduct; edi
   const addVariant = () => setProduct((current) => ({ ...current, variants: [...current.variants, { id: `v-${Date.now()}`, sku: generateSku(current.variants), attributes: Object.fromEntries(Object.entries(current.attributes).map(([name, values]) => [name, values[0] ?? ""])), price: current.basePrice, comparePrice: current.comparePrice, stock: 0, available: true }] }))
   const addImages = (files?: FileList | null) => { if (!files) return; if(Array.from(files).some(file => file.size > 1024 * 1024 || !["image/png","image/jpeg","image/webp"].includes(file.type))) {setError("Usa imágenes JPG, PNG o WebP de hasta 1 MB.");return;} Array.from(files).filter((file) => file.type.startsWith("image/")).forEach((file) => { const reader = new FileReader(); reader.onload = () => setProduct((current) => ({ ...current, images: [...current.images, String(reader.result)] })); reader.readAsDataURL(file) }) }
   const save = async () => {
+    if (savingRequest.current) return;
     if (!product.name.trim()) { setError("Ingresa el nombre del producto."); setActiveTab("info"); return; }
     if (product.variants.length === 0) { setError("Agrega al menos una variante con precio y stock."); setActiveTab("variants"); return; }
     const duplicatedSku = findDuplicatedSku();
@@ -178,6 +180,7 @@ export function ProductEditor({ initial, editing }: { initial: AdminProduct; edi
     const finalProduct = { ...product, basePrice: Number(product.basePrice) || 0 };
 
 
+    savingRequest.current = true;
     setSaving(true);
     setError("");
 
@@ -195,6 +198,7 @@ export function ProductEditor({ initial, editing }: { initial: AdminProduct; edi
     } catch (error) {
       setError(error instanceof Error ? error.message : "No se pudo guardar el producto.");
     } finally {
+      savingRequest.current = false;
       setSaving(false);
     }
   };

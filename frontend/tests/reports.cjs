@@ -60,6 +60,7 @@ test('tabla mensual completa, totales, empates y cero accesibles sin pedidos ind
   const component = load('src/features/admin/components/dashboard/Reports.tsx', {
     '../ui': { AdminCard: ({ children }) => React.createElement('section', null, children), Alert: ({ children }) => React.createElement('p', null, children) },
     '../../data/mockAdminData': { formatPrice: n => `$${n}` }, '../../services/reportService': {},
+    '../../hooks/useCommercialHistory': {},
   });
   const html = renderToStaticMarkup(React.createElement(component.ReportResults, { data }));
   assert(html.includes('Evolución mensual')); assert(html.includes('scope="col"'));
@@ -82,7 +83,7 @@ test('información del negocio persiste con Token, solo sus campos y evento de a
 });
 test('CLP conserva los centavos del backend incluso en importes mayores que Number.MAX_SAFE_INTEGER', () => {
   const { formatReportMoney } = load('src/features/admin/services/reportFormatting.ts');
-  assert.equal(formatReportMoney('12345678.50'), '$12.345.678,50');
-  assert.equal(formatReportMoney('0.10'), '$0,10');
-  assert.equal(formatReportMoney('9007199254740993.25'), '$9.007.199.254.740.993,25');
+  assert.equal(formatReportMoney('12345678.50'), '$12.345.678,50 CLP');
+  assert.equal(formatReportMoney('0.10'), '$0,10 CLP');
+  assert.equal(formatReportMoney('9007199254740993.25'), '$9.007.199.254.740.993,25 CLP');
 });

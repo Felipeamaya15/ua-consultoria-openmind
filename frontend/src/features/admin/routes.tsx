@@ -9,6 +9,8 @@ import { AdminLayout } from './components/layout/AdminLayout';
 import Dashboard from './pages/Dashboard';
 import { ProductList, ProductForm } from './pages/Products';
 import Orders from './pages/Orders';
+const Sales = lazyPage(() => import('./pages/Sales'));
+const Contacts = lazyPage(() => import('./pages/Contacts'));
 import Design from './pages/Design';
 const ThemeEditor = lazyPage(() => import('./pages/ThemeEditor'));
 const Marketing = lazyPage(() => import('../marketing/pages/Marketing'));
@@ -65,6 +67,8 @@ export const adminRoute: RouteObject = {
           path: 'pedidos',
           element: <Orders />,
         },
+        { path: 'ventas', element: <Sales /> },
+        { path: 'contactos', element: <Contacts /> },
         {
           path: 'diseno',
           element: <Design />,

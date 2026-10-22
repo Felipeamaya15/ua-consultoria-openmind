@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { withoutPrivateCredentials } from '../../../shared/services/sensitiveConfiguration';
 
 import { useAdminForm } from '../hooks/useAdminForm';
 import { AdminCard, Alert, Input, Toggle, Button, Icon, Select, Textarea } from '../components/ui';
@@ -52,6 +53,7 @@ const boolValue = (value?: string) => value === 'true';
 export default function Payments() {
 
   const { form, setForm, save, saved } = useAdminForm('paymentConfiguration');
+  const syncing = useRef(false);
 
 
 
@@ -962,27 +964,31 @@ export default function Payments() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (syncing.current) return;
     const errorMsg = validate();
     if (errorMsg) {
       setValidationError(errorMsg);
       return;
     }
     setValidationError('');
-    save();
+    syncing.current = true;
     setIsSyncing(true);
     setBackendError('');
 
     try {
       await syncLinkify();
-      await Promise.all([
+      const results = await Promise.all([
         handleSaveTransbank(),
         handleSavePayPal(),
         handleSaveMercadoPago(),
         handleSaveTransfer(),
       ]);
+      if (results.every(result => result === true)) save(withoutPrivateCredentials(form));
+      else setBackendError('Algunas configuraciones no se guardaron. Revisa los mensajes de cada medio de pago y vuelve a intentarlo.');
     } catch (err) {
       setBackendError(err instanceof Error ? err.message : 'Error desconocido al guardar.');
     } finally {
+      syncing.current = false;
       setIsSyncing(false);
     }
   };

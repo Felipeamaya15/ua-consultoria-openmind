@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { formatPrice } from '../../data/mockAdminData';
+import { formatReportMoney } from '../../services/reportFormatting';
 import { Alert, Button, Icon } from '../ui';
 import type { DashboardData } from '../../services/dashboardService';
 import { ordersDestination } from '../../services/orderNavigation';
@@ -12,10 +12,10 @@ export type DashboardState =
 export function DashboardMetrics({ state, onRetry, period = '30' }: { state: DashboardState; onRetry: () => void; period?: string }) {
   const data = state.status === 'ready' ? state.data : null;
   const cards = [
-    { title: 'Ventas Totales', value: data ? formatPrice(Number(data.total_ventas)) : '—', detail: 'Solo pagos confirmados', filter: 'confirmed', icon: 'card', variation: data?.comparacion?.variacion_ventas },
+    { title: 'Ventas Totales', value: data ? formatReportMoney(data.total_ventas, data.moneda) : '—', detail: 'Solo pagos confirmados', filter: 'confirmed', icon: 'card', variation: data?.comparacion?.variacion_ventas },
     { title: 'Órdenes Totales', value: data?.total_pedidos ?? '—', detail: 'Pedidos registrados en el período', filter: 'all', icon: 'orders', variation: data?.comparacion?.variacion_pedidos },
     { title: 'Por Despachar', value: data?.por_despachar ?? '—', detail: 'Pendientes de pago, preparación o despacho', filter: 'dispatch', icon: 'truck' },
-    { title: 'Ticket promedio', value: data ? data.ticket_promedio ? formatPrice(Number(data.ticket_promedio)) : '—' : '—', detail: data?.ticket_promedio === null ? 'Sin pedidos con pago confirmado' : 'Ingresos / pedidos con pago confirmado', filter: 'confirmed', icon: 'wallet' },
+    { title: 'Ticket promedio', value: data ? data.ticket_promedio ? formatReportMoney(data.ticket_promedio, data.moneda) : '—' : '—', detail: data?.ticket_promedio === null ? 'Sin pedidos con pago confirmado' : 'Ingresos / pedidos con pago confirmado', filter: 'confirmed', icon: 'wallet' },
   ];
   return <section className="space-y-5" aria-label="Estadísticas de la tienda" aria-busy={state.status === 'loading'}>
     <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">

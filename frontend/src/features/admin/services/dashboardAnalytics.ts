@@ -1,6 +1,7 @@
 import type { DashboardData } from './dashboardService';
+import { formatBusinessDate } from './businessTime';
 export interface ChartBucket { from: string; to: string; sales: number; orders: number; label: string }
-export const displayDashboardDate = (date: string) => date.split('-').reverse().join('/');
+export const displayDashboardDate = formatBusinessDate;
 
 /** Cada registro diario participa exactamente una vez; nunca se recortan fechas al navegar. */
 export function dashboardBuckets(history: DashboardData['historico']): { buckets: ChartBucket[]; granularity: string } {

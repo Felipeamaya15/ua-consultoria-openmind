@@ -71,7 +71,7 @@ function Layout() {
         />
 
         <main className="p-5 md:p-8 w-full">
-          {pageHelp && <AdminPageHeader {...pageHelp} />}
+          {pageHelp && pathname !== '/emprendedor/landing' && <AdminPageHeader {...pageHelp} />}
           {storageError && (
             <div className="mb-5">
               <Alert variant="error">

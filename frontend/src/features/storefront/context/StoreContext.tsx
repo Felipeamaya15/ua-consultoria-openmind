@@ -1,3 +1,5 @@
+import { readBlockStyles } from '../visual/blockAppearance';
+import { isActiveEditorPreview } from '../visual/pages';
 import {
   createContext,
   useCallback,
@@ -30,6 +32,7 @@ import { type LegalType, type LegalPage } from '../data/legalContent';
 const StoreContext = createContext({
   config: { ...defaultStoreConfig, name: '', description: '', logo: '' },
   visualConfig: resolveVisualConfig(),
+  blockStyles: readBlockStyles(undefined),
   landing: null as LandingConfig | null,
   landingLoading: true,
   landingError: '',
@@ -105,7 +108,7 @@ export function StoreProvider({
     };
   }, [storageKey]);
   const savedConfig = useMemo(() => readStoredStoreConfig(identity), [identity, storageRevision]);
-  const activeTemplate = templateFromPath(pathname) ?? savedConfig.template;
+  const activeTemplate: TemplateId = templateFromPath(pathname) ?? (['editorial','minimal','visual','catalog'].includes(String(savedConfig.template)) ? savedConfig.template as TemplateId : 'editorial');
   const visualConfig = useMemo(() => {
     return resolveStoreVisualConfig(savedConfig, activeTemplate);
   }, [activeTemplate, savedConfig]);
@@ -135,7 +138,17 @@ export function StoreProvider({
   const [landingResult, setLanding] = useState<{ key: string; value: LandingConfig | null; error: string; loading: boolean } | null>(null);
   const [catalogResult, setCatalog] = useState<{ key: string; products: Product[]; error: string } | null>(null);
   const currentLanding = landingResult?.key === storageKey ? landingResult : null;
-  const landing = currentLanding?.value ?? null;
+  const [editorLanding, setEditorLanding] = useState<{key: string | null; value: LandingConfig} | null>(null);
+  useEffect(() => {
+    if (!isActiveEditorPreview()) return;
+    const preview = (event: Event) => {
+      const value = (event as CustomEvent<LandingConfig>).detail;
+      if (value && String(value.tienda) === identity?.storeId) setEditorLanding({key:storageKey,value});
+    };
+    window.addEventListener('openmind:editor-landing-preview', preview);
+    return () => window.removeEventListener('openmind:editor-landing-preview', preview);
+  }, [identity?.storeId, storageKey]);
+  const landing = editorLanding?.key === storageKey ? editorLanding.value : currentLanding?.value ?? null;
   const landingLoading = currentLanding?.loading ?? true;
   const landingError = currentLanding?.error ?? '';
   const landingProducts = catalogResult?.key === storageKey ? catalogResult.products : [];
@@ -219,7 +232,7 @@ export function StoreProvider({
 
   return (
     <StoreContext.Provider
-      value={{ config: { ...defaultStoreConfig, name: business?.nombre ?? '', description: business?.descripcion ?? '', logo: landing?.logo || '', primaryColor: visualConfig.global.colors.primary, secondaryColor: visualConfig.global.colors.secondary, accentColor: visualConfig.global.colors.accent }, visualConfig, landing, landingLoading, landingError, landingProducts, landingCatalogError, legalPages, legalLoading, legalError, legalVerified, legalScopeKey: storageKey ?? '', refreshLegal }}
+      value={{ config: { ...defaultStoreConfig, name: business?.nombre ?? '', description: business?.descripcion ?? '', logo: landing?.logo || '', primaryColor: visualConfig.global.colors.primary, secondaryColor: visualConfig.global.colors.secondary, accentColor: visualConfig.global.colors.accent }, visualConfig, blockStyles:readBlockStyles(landing?.contenido?.apariencia_bloques?.[activeTemplate] ?? readTheme(savedConfig, activeTemplate)?.blockStyles), landing, landingLoading, landingError, landingProducts, landingCatalogError, legalPages, legalLoading, legalError, legalVerified, legalScopeKey: storageKey ?? '', refreshLegal }}
 
     >
       {children}

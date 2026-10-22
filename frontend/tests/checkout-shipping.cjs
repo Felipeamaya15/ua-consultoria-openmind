@@ -25,7 +25,7 @@ function harness(template) {
   let quoteCalls, created, request, timerId, timers, now, networkReply, createError;
   class Clock extends Date {static now() {return now;}}
   const cart = {items: [{productId: 'real-product', variantId: 'SKU', sku: 'SKU', name: 'Real', attributes: {}, price: 60000, quantity: 1, image: ''}],
-    subtotal: 60000, discount: 12000, shipping: 3490, total: 51490, promoCode: 'VERANO20', shippingMethod: 'Retiro',
+    subtotal: 60000, discount: 12000, shipping: 3490, total: 51490, promoCode: '', shippingMethod: 'Retiro',
     clearCart: async () => {}, setShippingMethod: value => {cart.shippingMethod = value;}};
   const realShipping = load('src/features/storefront/services/shippingService.ts', {
     Date: Clock,
@@ -76,6 +76,8 @@ function harness(template) {
         getShippingQuotes: realShipping.getShippingQuotes,
       };
       if (name.includes('PickupDetails')) return {default: 'PickupDetails'};
+      if (name.includes('PickupSchedule')) return {default: 'PickupSchedule'};
+      if (name.includes('pickupSchedule')) return {pickupTimes: () => [], pickupSelectionLabel: () => ''};
       if (name.includes('orderService')) return {orderService: {create: async data => {created.push(data); throw createError || Error('Stop after payload');}}};
       if (name.includes('promotionService')) return {validatePromotion: async code => ({code, type: 'fixed', discount: 1000, shipping: 0, message: 'Aplicado'})};
       if (name.includes('PaymentService')) return {};
@@ -177,7 +179,7 @@ for (const template of [1,2,3,4]) test(`Plantilla ${template}: checkout y despac
   });
   await t.test('Chilexpress muestra tarifa y total exactos sobre 50.000', async () => {
     h.reset(); const tree = await h.ready();
-    assert.ok(tree.includes('CLP 4500')); assert.ok(tree.includes('CLP 52500'));
+    assert.ok(tree.includes('CLP 4500')); assert.ok(tree.includes('CLP 64500'));
     assert.ok(!tree.includes('CLP 3490') && !tree.includes('CLP 51490'));
     assert.equal(h.calls.length,1); assert.equal(h.calls[0].query.operador,'Chilexpress');
     assert.equal(h.confirm(h.toConfirm()).props.disabled,false);
@@ -186,7 +188,7 @@ for (const template of [1,2,3,4]) test(`Plantilla ${template}: checkout y despac
     h.reset(); let tree = await h.ready();
     radios(tree).find(node=>node.props.value==='Starken').props.onChange();
     tree = h.toConfirm(); assert.equal(h.confirm(tree).props.disabled,true);
-    tree = await h.settle(); assert.ok(tree.includes('CLP 54900'));
+    tree = await h.settle(); assert.ok(tree.includes('CLP 66900'));
     assert.equal(h.confirm(tree).props.disabled,false);
     assert.equal(h.calls.at(-1).query.operador,'Starken');
     await h.confirm(tree).props.onClick(); assert.equal(h.created[0].shippingQuote,'signed:Starken:Providencia');
@@ -195,15 +197,15 @@ for (const template of [1,2,3,4]) test(`Plantilla ${template}: checkout y despac
     h.reset(); await h.ready(); let release;
     h.request = query => new Promise(resolve=>{release=()=>resolve(h.response(query,{monto:'8500'}));});
     h.setAddress({city:'Santiago'}); let tree = h.toConfirm();
-    assert.equal(h.confirm(tree).props.disabled,true); assert.ok(!tree.includes('CLP 52500'));
+    assert.equal(h.confirm(tree).props.disabled,true); assert.ok(!tree.includes('CLP 64500'));
     await h.confirm(tree).props.onClick(); assert.equal(h.created.length,0);
-    release(); tree = await h.settle(); assert.ok(tree.includes('CLP 56500'));
+    release(); tree = await h.settle(); assert.ok(tree.includes('CLP 68500'));
     assert.equal(h.confirm(tree).props.disabled,false);
   });
   await t.test('cambiar región no reutiliza cotización aunque la comuna sea anterior', async () => {
     h.reset(); await h.ready(); h.setAddress({region:'Valparaíso'});
     const tree = h.toConfirm(); assert.equal(h.confirm(tree).props.disabled,true);
-    assert.ok(!tree.includes('CLP 52500')); assert.equal(h.calls.length,1);
+    assert.ok(!tree.includes('CLP 64500')); assert.equal(h.calls.length,1);
   });
   await t.test('respuesta tardía de destino anterior no restaura tarifa', async () => {
     h.reset(); let finishOld;
@@ -222,13 +224,13 @@ for (const template of [1,2,3,4]) test(`Plantilla ${template}: checkout y despac
     await h.confirm().props.onClick(); assert.equal(h.created.length,0);
     h.states[4]='delivery'; tree=h.render(); h.request=null;
     tree.find(node=>node.props?.onClick && nodes(node).includes('Volver a cotizar')).props.onClick();
-    tree=await h.settle(); assert.ok(tree.includes('CLP 52500'));
+    tree=await h.settle(); assert.ok(tree.includes('CLP 64500'));
   });
   await t.test('cotización vencida bloquea confirmación', async () => {
     h.reset(); await h.ready(); h.expire();
     const tree=h.toConfirm(); assert.equal(h.confirm(tree).props.disabled,true);
     assert.ok(tree.includes('La cotización venció. Vuelve a cotizar el envío.'));
-    assert.ok(!tree.includes('CLP 52500'));
+    assert.ok(!tree.includes('CLP 64500'));
   });
   await t.test('Retiro usa cero, dirección/horario y no cotiza con o sin destino', async () => {
     h.reset(); h.render(); await h.settle(); h.cart.shippingMethod='Retiro'; h.states[8]='Transferencia'; let tree=await h.settle();
@@ -239,7 +241,7 @@ for (const template of [1,2,3,4]) test(`Plantilla ${template}: checkout y despac
     assert.ok(tree.includes('Gratis ($0)'));
     assert.equal(h.calls.length,0); assert.ok(!tree.some(node=>node.props?.label==='Región'));
     h.setAddress({city:'Providencia'}); tree=await h.settle(); assert.equal(h.calls.length,0);
-    tree=h.toConfirm(); assert.ok(tree.includes('CLP 48000')); assert.equal(h.confirm(tree).props.disabled,false);
+    tree=h.toConfirm(); assert.ok(tree.includes('CLP 60000')); assert.equal(h.confirm(tree).props.disabled,false);
     await h.confirm(tree).props.onClick(); assert.equal(h.created[0].shippingQuote,undefined);
   });
   await t.test('payload conserva dirección, operador y referencia sin precios de cliente', async () => {

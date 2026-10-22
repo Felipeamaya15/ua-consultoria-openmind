@@ -1,4 +1,4 @@
-import { businessDateParts } from './businessTime';
+import { formatBusinessDate } from './businessTime';
 import { API_BASE_URL } from '../../../api';
 import { authService } from '../../auth/services/authService';
 
@@ -74,13 +74,9 @@ export async function getRecentOrders(limit: number = RECENT_ORDERS_LIMIT, signa
   return data.data;
 }
 
-const MONTHS = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
-
-/** "2026-10-13T18:30:00Z" -> "13 oct 2026, 15:30" (America/Santiago). Devuelve '' si la fecha no es válida. */
+/** Fecha y hora del pedido en America/Santiago, sin depender del navegador. */
 export function formatRecentOrderDate(value: string): string {
-  const parts = businessDateParts(value);
-  if (!parts) return '';
-  return `${Number(parts.day)} ${MONTHS[Number(parts.month) - 1]} ${parts.year}, ${parts.hour}:${parts.minute}`;
+  return formatBusinessDate(value, true);
 }
 
 export const updateOrderStatus = async (pedidoId: number, nuevoEstado: string) => {

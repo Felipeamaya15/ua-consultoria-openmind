@@ -200,8 +200,9 @@ class BusinessPeriodConsistencyTests(TestCase):
             reader = PdfReader(BytesIO(response.content))
             text = '\n'.join(page.extract_text() for page in reader.pages)
             self.assertIn(label, text)
-            self.assertIn(expected['fecha_desde'], text)
-            self.assertIn(expected['fecha_hasta'], text)
+            # QA de formato chileno: ISO se conserva en API y DD/MM/YYYY en PDF visible.
+            self.assertIn(date.fromisoformat(expected['fecha_desde']).strftime('%d/%m/%Y'), text)
+            self.assertIn(date.fromisoformat(expected['fecha_hasta']).strftime('%d/%m/%Y'), text)
             self.assertEqual(response['Cache-Control'], 'no-store')
 
     def test_zero_paid_contracts_and_rounding_remain_distinct(self):

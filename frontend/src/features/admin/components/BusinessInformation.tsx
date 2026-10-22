@@ -2,6 +2,10 @@ import { useEffect, useState } from 'react';
 import { AdminCard, Alert, Input, Textarea, Button } from './ui';
 import { fetchStoreInformation, saveStoreInformation } from '../../storefront/services/storeInformationService';
 
+export function BusinessInformationFields({value,onChange}:{value:{nombre:string;descripcion:string};onChange:(value:{nombre:string;descripcion:string})=>void}) {
+  return <div className="lp-business-fields"><Input label="Nombre de la tienda (obligatorio)" required maxLength={150} value={value.nombre} onChange={e => onChange({...value,nombre:e.target.value})} /><Textarea label="Descripción del negocio" value={value.descripcion} rows={4} onChange={e => onChange({...value,descripcion:e.target.value})} /></div>;
+}
+
 export function BusinessInformation() {
   const [form, setForm] = useState({ nombre: '', descripcion: '' });
   const [loading, setLoading] = useState(true);

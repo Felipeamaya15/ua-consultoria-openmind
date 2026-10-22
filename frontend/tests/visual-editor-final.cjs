@@ -5,7 +5,10 @@ const localStorage={getItem:key=>storage.get(key)||null,setItem:(key,value)=>sto
 function load(relative,mocks={}) {
   const file=path.resolve(root,relative);if(!Object.keys(mocks).length&&cache.has(file))return cache.get(file);
   const module={exports:{}};const code=ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2020,jsx:ts.JsxEmit.ReactJSX}}).outputText;
-  const req=id=>{if(id in mocks)return mocks[id];if(id.endsWith('.css'))return {};if(!id.startsWith('.'))return require(id);const p=path.resolve(path.dirname(file),id);return load(['.ts','.tsx'].map(ext=>p+ext).find(fs.existsSync)||path.join(p,'index.ts'),mocks);};
+  const req=id=>{if(id in mocks)return mocks[id];
+    if(id==='../visualEditor/content')return {ContentInspector:()=>null};
+    if(id==='../../landing/services/landingService')return {fetchLandingConfig:async()=>null,saveLandingConfig:async value=>value};
+    if(id==='../../storefront/services/catalogService')return {fetchPublicProducts:async()=>[]};if(id.endsWith('.css'))return {};if(!id.startsWith('.'))return require(id);const p=path.resolve(path.dirname(file),id);return load(['.ts','.tsx'].map(ext=>p+ext).find(fs.existsSync)||path.join(p,'index.ts'),mocks);};
   vm.runInNewContext(code,{module,exports:module.exports,require:req,requestAnimationFrame: callback => callback(), structuredClone,URLSearchParams,localStorage,window:{dispatchEvent(){}},Event,CustomEvent:class extends Event{},ResizeObserver:undefined});
   if(!Object.keys(mocks).length)cache.set(file,module.exports);return module.exports;
 }
@@ -72,4 +75,44 @@ test('stable image keys survive reordered DOM and replacements while reading old
   const normalized=api.readThemeImages({[key]:setting,'image-7':setting});assert.equal(api.findImageSetting(normalized,img,99).radius,3);assert.equal(api.findImageSetting({'image-7':setting},img,7).radius,3);
 });
 test('contrast warnings distinguish insufficient contrast from dynamic colors',()=>{const {contrastRatio}=load('src/features/admin/visualEditor/contrast.ts');assert.equal(contrastRatio('#000','#fff'),21);assert.equal(contrastRatio('#fff','#fff'),1);assert(contrastRatio('#777777','#ffffff')<4.5);assert.equal(contrastRatio('currentColor','#fff'),null);});
+test('general edits override responsive preset defaults without duplicating persisted data',()=>{
+  let document=model.editScopedProperty(base,'editorial','hero.titleSize',83);
+  let result=model.resolveEditorDocument(document,'editorial');
+  for(const device of ['desktop','tablet','mobile'])assert.equal(resolver.resolveVisualViewport(result,device).hero.titleSize,83);
+  assert.equal(document.overrides.responsive,undefined);
+  document=model.editScopedProperty(document,'editorial','responsive.mobile.hero.titleSize',29,'device','mobile');
+  assert.equal(resolver.resolveVisualViewport(model.resolveEditorDocument(document,'editorial'),'desktop').hero.titleSize,83);
+  document=model.editScopedProperty(document,'editorial','hero.titleSize',71);
+  assert.equal(document.overrides.responsive,undefined);
+  assert.equal(resolver.resolveVisualViewport(model.resolveEditorDocument(document,'editorial'),'mobile').hero.titleSize,71);
+});
+test('tablet and desktop exclusive edits preserve the other two devices',()=>{
+  for(const template of ['editorial','minimal','visual','catalog']){
+    const before=model.resolveEditorDocument(base,template);
+    const tablet=model.editScopedProperty(base,template,'responsive.tablet.hero.titleSize',91,'device','tablet');
+    let result=model.resolveEditorDocument(tablet,template);
+    assert.equal(resolver.resolveVisualViewport(result,'tablet').hero.titleSize,91);
+    for(const device of ['desktop','mobile'])assert.equal(resolver.resolveVisualViewport(result,device).hero.titleSize,resolver.resolveVisualViewport(before,device).hero.titleSize);
+    const desktop=model.editScopedProperty(tablet,template,'hero.titleSize',107,'device','desktop');result=model.resolveEditorDocument(desktop,template);
+    assert.equal(result.hero.titleSize,107);assert.equal(resolver.resolveVisualViewport(result,'tablet').hero.titleSize,91);
+    assert.equal(resolver.resolveVisualViewport(result,'mobile').hero.titleSize,resolver.resolveVisualViewport(before,'mobile').hero.titleSize);
+  }
+});
+test('content participates in undo and discard but is never written to the appearance envelope',()=>{
+  const history=load('src/features/admin/visualEditor/history.ts');
+  const original={...base,landing:{tienda:1,titulo:'Original',texto_boton:'Ver',secciones:{}}};
+  let state=history.createHistory(original);state=history.recordHistory(state,{...original,landing:{...original.landing,titulo:'Nuevo'}});
+  assert.equal(history.undoHistory(state).present.landing.titulo,'Original');
+  assert.equal(history.redoHistory(history.undoHistory(state)).present.landing.titulo,'Nuevo');
+  const config={template:'editorial',themeEditor:{editorial:{images:{}}}};
+  const published=model.publishEditorDocument(config,'editorial',state.present);
+  assert.equal(published.landing,undefined);assert.equal(published.themeEditor.editorial.landing,undefined);
+});
+test('institutional contrast follows light, dark, transparent and alpha surfaces',()=>{
+  const {institutionalTextColor,contrastRatio}=load('src/features/storefront/visual/contrast.ts');
+  for(const color of ['#ffffff','#000000','#fafafa','#123456','#ff0000','#7f7f7f'])assert(contrastRatio(institutionalTextColor(color),color)>=4.5);
+  assert.equal(institutionalTextColor('transparent','#111111'),'#ffffff');
+  assert.equal(institutionalTextColor('#ffffff00','#111111'),'#ffffff');
+  assert.equal(institutionalTextColor('#ffffffee','#111111'),'#000000');
+});
 console.log(`${count} final editor tests passed.`);

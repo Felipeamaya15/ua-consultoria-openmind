@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Alert, Badge, Button } from '../ui';
-import { formatPrice } from '../../data/mockAdminData';
+import { formatReportMoney as formatPrice } from '../../services/reportFormatting';
 import { orderStatusBadge } from '../../data/orderStatus';
 import { orderDetailDestination } from '../../services/orderNavigation';
 import {
@@ -85,7 +85,7 @@ export function RecentOrdersView({ state, onRetry }: { state: RecentOrdersState;
                       <Badge variant={badge.variant}>{badge.label}</Badge>
                     </td>
                     <td className="py-3 px-2 text-right font-bold">
-                      {formatPrice(Number(order.monto_total))}
+                      {formatPrice(order.monto_total)}
                     </td>
                   </tr>
                 );

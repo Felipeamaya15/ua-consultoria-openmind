@@ -25,6 +25,7 @@ from apps.core.infrastructure.linkify_client import LinkifyAdapter
 from apps.core.delivery import DELIVERY_METHODS, delivery_for_store
 from apps.core.presentation.shipping import ErroresDeCotizacionMixin
 from apps.core.shipping import validate_quote
+from apps.core.pickup import validate_pickup_selection
 from apps.core.payments import PAYMENT_METHODS, payment_methods_for_store
 
 logger = logging.getLogger(__name__)
@@ -66,8 +67,11 @@ class CheckoutSerializer(StrictSerializer):
     direccion = AddressSerializer(required=False)
     cotizacion = serializers.CharField(max_length=4096, required=False)
     codigo_promocional = serializers.CharField(max_length=40, default='', allow_blank=True, trim_whitespace=True)
+    retiro_seleccion = serializers.DictField(child=serializers.CharField(max_length=10), required=False)
 
     def validate(self, data):
+        if 'retiro_seleccion' in data and (data['metodo_entrega'] != 'Retiro' or set(data['retiro_seleccion']) != {'fecha', 'hora'}):
+            raise serializers.ValidationError({'retiro_seleccion': 'Indica fecha y hora únicamente para retiro en local.'})
         if data['metodo_entrega'] != 'Retiro':
             address = data.get('direccion', {})
             if not all(address.get(key, '').strip() for key in ('street', 'number', 'city')):
@@ -124,6 +128,9 @@ class CheckoutOrderAPIView(ErroresDeCotizacionMixin, APIView):
                 for key in ('version', 'location', 'hours', 'validation_method'):
                     if key in delivery['pickup']:
                         delivery_snapshot['retiro'][key] = delivery['pickup'][key]
+                selection = validate_pickup_selection(delivery['pickup'], data.get('retiro_seleccion'))
+                if selection:
+                    delivery_snapshot['retiro']['seleccion'] = selection
             repository = ProductRepository()
             lines = {}
             for item in data['items']:
