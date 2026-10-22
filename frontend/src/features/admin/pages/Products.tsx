@@ -205,7 +205,19 @@ export function ProductEditor({ initial, editing }: { initial: AdminProduct; edi
     const duplicatedSku = findDuplicatedSku();
     if(product.basePrice < 0 || (product.comparePrice !== undefined && product.comparePrice < 0) || product.variants.some(v => !v.sku.trim() || v.price < 0 || (v.comparePrice !== undefined && v.comparePrice < 0) || !Number.isInteger(v.stock) || v.stock < 0) || duplicatedSku) {setError(duplicatedSku ? `El SKU ${duplicatedSku} ya existe en otra variante o producto.` : "Revisa los precios, el stock entero y los SKU únicos de las variantes.");setActiveTab("variants");return;}
 
-    const finalProduct = { ...product, basePrice: Number(product.basePrice) || 0 };
+    const seoTitle = (product.seoTitle ?? "").trim();
+    const seoDescription = (product.seoDescription ?? "").trim();
+    if (seoTitle.length > 150 || seoDescription.length > 320) {
+      setError("Los metadatos SEO exceden la longitud permitida (150/320 caracteres).");
+      setActiveTab("seo");
+      return;
+    }
+    const finalProduct = {
+      ...product,
+      basePrice: Number(product.basePrice) || 0,
+      seoTitle,
+      seoDescription,
+    };
 
 
     savingRequest.current = true;
@@ -260,7 +272,7 @@ export function ProductEditor({ initial, editing }: { initial: AdminProduct; edi
           maxLength={150}
           onChange={(event) => setField("seoTitle", event.target.value)}
           placeholder={product.name || "Ej: Polera Esencial de Algodón"}
-          hint={`${(product.seoTitle ?? "").length}/70 caracteres (recomendado: hasta 70 caracteres)`}
+          hint={`${(product.seoTitle ?? "").length}/150 caracteres (recomendado: 50-70)`}
         />
         <Textarea
           label="Meta descripción del producto"
@@ -269,7 +281,7 @@ export function ProductEditor({ initial, editing }: { initial: AdminProduct; edi
           rows={3}
           onChange={(event) => setField("seoDescription", event.target.value)}
           placeholder={product.description ? product.description.slice(0, 160) : "Descripción breve para buscadores..."}
-          hint={`${(product.seoDescription ?? "").length}/160 caracteres (recomendado: 120-160 caracteres)`}
+          hint={`${(product.seoDescription ?? "").length}/320 caracteres (recomendado: 120-160)`}
         />
         <div className="bg-gray-50 border border-[var(--border)] rounded-lg p-3 grid gap-1 text-sm">
           <span className="text-[11px] font-semibold text-[var(--muted-foreground)] uppercase tracking-wider">Vista previa en Google</span>
