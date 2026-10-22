@@ -162,8 +162,14 @@ async function testSeoAnalyticsComponent() {
       if (id.includes('components/ui')) {
         return Object.fromEntries(['AdminCard', 'Alert', 'Input', 'Textarea', 'Button', 'Badge'].map(x => [x, x]));
       }
+      if (id.includes('GoogleAnalyticsField')) {
+        return { GoogleAnalyticsField: 'GoogleAnalyticsField' };
+      }
       if (id.includes('metaPixelService')) {
         return loadModule('src/features/storefront/services/metaPixelService.ts');
+      }
+      if (id.includes('googleAnalyticsService')) {
+        return loadModule('src/features/storefront/services/googleAnalyticsService.ts');
       }
       throw new Error(`Dependencia no esperada: ${id}`);
     },
