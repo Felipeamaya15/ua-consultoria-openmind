@@ -165,6 +165,9 @@ async function testSeoAnalyticsComponent() {
       if (id.includes('GoogleAnalyticsField')) {
         return { GoogleAnalyticsField: 'GoogleAnalyticsField' };
       }
+      if (id.includes('MetaPixelField')) {
+        return { MetaPixelField: 'MetaPixelField' };
+      }
       if (id.includes('metaPixelService')) {
         return loadModule('src/features/storefront/services/metaPixelService.ts');
       }
