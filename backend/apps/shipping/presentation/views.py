@@ -1,4 +1,6 @@
 import logging
+import socket
+import requests
 
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -23,11 +25,14 @@ from apps.shipping.domain.exceptions import (
     DireccionFueraDeCoberturaException,
     ProveedorLogisticoError,
     RespuestaLogisticaInvalidaException,
+    TiempoEsperaLogisticoException,
     NumeroSeguimientoNoEncontradoException,
     FormatoSeguimientoInvalidoException
 )
 
 logger = logging.getLogger(__name__)
+
+ERRORES_TIMEOUT = (TiempoEsperaLogisticoException, TimeoutError, socket.timeout, requests.exceptions.Timeout)
 
 
 class SeguimientoLogisticoView(APIView):
@@ -70,6 +75,16 @@ class SeguimientoLogisticoView(APIView):
                 "mensaje": str(e),
                 "error": {"codigo": "TRACKING_NO_ENCONTRADO"}
             }, status=status.HTTP_404_NOT_FOUND)
+
+        except ERRORES_TIMEOUT:
+            logger.warning("Seguimiento: tiempo de espera agotado con el operador", exc_info=True)
+            respuesta = Response({
+                "exito": False,
+                "mensaje": "El operador logístico tardó demasiado en responder. Intenta nuevamente en unos momentos.",
+                "error": {"codigo": "TIEMPO_ESPERA_AGOTADO"}
+            }, status=status.HTTP_504_GATEWAY_TIMEOUT)
+            respuesta["Retry-After"] = "30"
+            return respuesta
 
         except (RespuestaLogisticaInvalidaException, ValueError):
             logger.warning("Seguimiento: respuesta invalida del operador", exc_info=True)
@@ -149,6 +164,15 @@ class CotizacionEnvioView(APIView):
                 "mensaje": str(e),
                 "error": {"codigo": "SIN_COBERTURA"}
             }, status=status.HTTP_400_BAD_REQUEST)
+        except ERRORES_TIMEOUT:
+            logger.warning("Cotizacion: tiempo de espera agotado con los transportistas", exc_info=True)
+            respuesta = Response({
+                "exito": False,
+                "mensaje": "El servicio de cotización tardó demasiado en responder. Intenta nuevamente.",
+                "error": {"codigo": "TIEMPO_ESPERA_AGOTADO"}
+            }, status=status.HTTP_504_GATEWAY_TIMEOUT)
+            respuesta["Retry-After"] = "30"
+            return respuesta
         except (RespuestaLogisticaInvalidaException, ValueError):
             logger.warning("Cotizacion: respuesta invalida del operador", exc_info=True)
             return Response({
