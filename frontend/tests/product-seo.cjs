@@ -19,6 +19,17 @@ function loadModule(file, globals = {}) {
   }).outputText;
 
   const defaultRequire = (id) => {
+    if (id === '../../../shared/services/apiRequest') {
+      // El test ejecuta TypeScript transpiliado en VM: simular la frontera HTTP.
+      return {
+        requestJson: async (url, options) => {
+          const response = await globals.fetch(url, options);
+          const body = await response.json();
+          if (!response.ok || body.exito === false) throw new Error(body.mensaje || 'Error de API');
+          return body.data;
+        },
+      };
+    }
     if (id === './resolveVisualConfig') {
       return { isRecord: (v) => typeof v === 'object' && v !== null && !Array.isArray(v) };
     }
@@ -68,7 +79,7 @@ function testSeoService() {
           elem[k] = v;
           elem.attributes[k] = v;
         },
-        getAttribute: (k) => elem[k] || elem.attributes[k] || null,
+        getAttribute: (k) => elem.attributes[k] ?? null,
       };
       return elem;
     },
@@ -115,12 +126,31 @@ function testSeoService() {
   assert.equal(descFallback.getAttribute('content'), 'Taza artesanal hecha a mano.');
   cleanupFallback();
 
+  // Una página de producto sin descripción no debe conservar la de otra página.
+  const restoreStore = seoService.updateStoreSeo({
+    name: 'Mi Tienda',
+    metaTitle: 'Portada',
+    metaDescription: 'Descripción de portada',
+  });
+  const restoreEmptyProduct = seoService.updateProductSeo({
+    name: 'Producto sin descripción',
+    seoTitle: '',
+    seoDescription: '',
+  }, 'Mi Tienda');
+  assert.equal(mockDocument.querySelector('meta[name="description"]').getAttribute('content'), '');
+  assert.equal(mockDocument.querySelector('meta[property="og:description"]').getAttribute('content'), '');
+  assert.equal(mockDocument.title, 'Producto sin descripción · Mi Tienda');
+  restoreEmptyProduct();
+  assert.equal(mockDocument.querySelector('meta[name="description"]').getAttribute('content'), 'Descripción de portada');
+  restoreStore();
+  assert.equal(mockDocument.title, 'Tienda Original');
+
   console.log('OK: updateProductSeo aplica meta-título, meta-descripción y restaura al desmontar');
 }
 
 async function testProductServiceSeoPayload() {
   let request = null;
-  const reply = { ok: true, json: async () => ({ exito: true, data: { id: 'mongo-id-123' } }) };
+  const reply = { ok: true, json: async () => ({ exito: true, data: { id: '0123456789abcdef01234567' } }) };
   const service = loadModule('src/features/admin/services/productService.ts', {
     localStorage: { getItem: () => 'token-test' },
     sessionStorage: { getItem: () => null },
@@ -141,8 +171,8 @@ async function testProductServiceSeoPayload() {
     attributes: { Talla: ['M'] },
     tags: [],
     variants: [{ id: 'v1', sku: 'POL-SEO-M', price: 100, stock: 5, attributes: { Talla: 'M' } }],
-    seoTitle: 'Meta Título Personalizado',
-    seoDescription: 'Meta Descripción Personalizada para Google',
+    seoTitle: '  Meta Título Personalizado  ',
+    seoDescription: '  Meta Descripción Personalizada para Google  ',
   };
 
   // Crear producto con SEO

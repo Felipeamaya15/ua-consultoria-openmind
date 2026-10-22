@@ -40,8 +40,8 @@ function toBackendPayload(product: AdminProduct) {
       };
     }),
     seo: {
-      meta_titulo: product.seoTitle || "",
-      meta_descripcion: product.seoDescription || "",
+      meta_titulo: product.seoTitle?.trim() || "",
+      meta_descripcion: product.seoDescription?.trim() || "",
     },
   };
 }
