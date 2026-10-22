@@ -79,8 +79,8 @@ class AtributoGeneralSerializer(serializers.Serializer):
 
 
 class SeoSerializer(serializers.Serializer):
-    meta_titulo = serializers.CharField(required=False, allow_null=True)
-    meta_descripcion = serializers.CharField(required=False, allow_null=True)
+    meta_titulo = serializers.CharField(required=False, allow_null=True, allow_blank=True)
+    meta_descripcion = serializers.CharField(required=False, allow_null=True, allow_blank=True)
 
 
 class ProductPublicDetailSerializer(serializers.Serializer):
@@ -268,8 +268,32 @@ class AtributoGeneralInputSerializer(serializers.Serializer):
 
 
 class SeoInputSerializer(serializers.Serializer):
-    meta_titulo = serializers.CharField(required=False, allow_blank=True)
-    meta_descripcion = serializers.CharField(required=False, allow_blank=True)
+    meta_titulo = serializers.CharField(
+        required=False,
+        allow_blank=True,
+        allow_null=True,
+        max_length=200,
+        error_messages={
+            'max_length': 'El meta-título no puede superar los 200 caracteres.'
+        }
+    )
+    meta_descripcion = serializers.CharField(
+        required=False,
+        allow_blank=True,
+        allow_null=True,
+        max_length=500,
+        error_messages={
+            'max_length': 'La meta-descripción no puede superar los 500 caracteres.'
+        }
+    )
+
+    def to_internal_value(self, data):
+        ret = super().to_internal_value(data)
+        if ret.get('meta_titulo') is not None:
+            ret['meta_titulo'] = ret['meta_titulo'].strip()
+        if ret.get('meta_descripcion') is not None:
+            ret['meta_descripcion'] = ret['meta_descripcion'].strip()
+        return ret
 
 
 class ProductCreateSerializer(serializers.Serializer):

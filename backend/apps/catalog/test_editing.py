@@ -152,3 +152,19 @@ class ProductEditingTests(CatalogAPITestCase):
             response = self.api.put(self.update_url, payload, format='json')
         self.assertEqual(response.status_code, 503)
         self.assertFalse(response.data['exito'])
+
+
+    def test_seo_meta_fields_update_and_retrieval(self):
+        payload = self.edit_payload()
+        payload['seo'] = {
+            'meta_titulo': 'Título Editado SEO',
+            'meta_descripcion': 'Descripción Editada para Buscadores'
+        }
+        response = self.api.put(self.update_url, payload, format='json')
+        self.assertEqual(response.status_code, 200, response.data)
+        doc = self.read(self.pk)
+        self.assertEqual(doc['seo']['meta_titulo'], 'Título Editado SEO')
+        self.assertEqual(doc['seo']['meta_descripcion'], 'Descripción Editada para Buscadores')
+        public = self.api.get(f'/api/catalog/productos/{doc["slug"]}/')
+        self.assertEqual(public.data['data']['seo']['meta_titulo'], 'Título Editado SEO')
+        self.assertEqual(public.data['data']['seo']['meta_descripcion'], 'Descripción Editada para Buscadores')

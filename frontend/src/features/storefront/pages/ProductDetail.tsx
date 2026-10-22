@@ -13,6 +13,9 @@ import {
   fetchPublicProductDetail,
   fetchPublicProducts,
 } from '../services/catalogService';
+import { useStore } from '../context/StoreContext';
+import { updateProductSeo } from '../services/seoService';
+import { trackMetaPixelEvent } from '../services/metaPixelService';
 
 const previewAttributes = [{ clave: 'material', etiqueta: 'Material', valor: '100% algodón' }, { clave: 'medidas', etiqueta: 'Medidas', valor: '38 × 42 cm' }, { clave: 'cuidados', etiqueta: 'Cuidados', valor: 'Lavado a mano' }];
 
@@ -20,6 +23,7 @@ export default function ProductDetail({ previewProduct }: { previewProduct?: Pro
   const { id } = useParams();
   const { addItem, items } = useCart();
   const { route, isMinimal, isVisual, isCatalog } = useStorefrontTemplate();
+  const { config } = useStore();
 
   const [product, setProduct] = useState<Product | null>(previewProduct ?? null);
   const [related, setRelated] = useState<Product[]>([]);
@@ -30,6 +34,19 @@ export default function ProductDetail({ previewProduct }: { previewProduct?: Pro
   const [qty, setQty] = useState(1);
   const [activeImg, setActiveImg] = useState(0);
   const [added, setAdded] = useState(false);
+
+  useEffect(() => {
+    if (!product) return;
+    const cleanup = updateProductSeo(product, config?.name);
+    trackMetaPixelEvent('ViewContent', {
+      content_name: product.name,
+      content_ids: [product.catalogId || product.id],
+      content_type: 'product',
+      value: product.basePrice,
+      currency: 'CLP',
+    });
+    return cleanup;
+  }, [product, config?.name]);
 
   useEffect(() => {
     setSelectedAttrs({});
@@ -256,6 +273,14 @@ export default function ProductDetail({ previewProduct }: { previewProduct?: Pro
       attributes: selectedVariant.attributes,
       sku: selectedVariant.sku,
       maxStock: selectedVariant.stock,
+    });
+
+    trackMetaPixelEvent('AddToCart', {
+      content_name: product.name,
+      content_ids: [product.catalogId || product.id],
+      content_type: 'product',
+      value: selectedVariant.price,
+      currency: 'CLP',
     });
 
     setAdded(true);
