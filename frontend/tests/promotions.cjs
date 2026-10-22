@@ -15,7 +15,6 @@ function loadStorefront(fetch) {
 
 function loadAdmin(fetch) {
   return require('./source-loader.cjs').load('src/features/admin/services/promotionService.ts', {'../../../api': {API_BASE_URL:'http://localhost:8000'}}, {fetch,localStorage:{getItem:()=>'owner-fixture'},sessionStorage:{getItem:()=>null}});
-
 }
 
 (async () => {
@@ -24,9 +23,9 @@ function loadAdmin(fetch) {
     adminReq = {url, options};
     const body = JSON.parse(options.body);
     return {ok: true, json: async () => ({exito: true, data: {
-      id: body.type === 'percentage' ? 7 : 8,
+      id: body.type === 'percentage' ? 7 : body.type === 'fixed' ? 8 : 9,
       name: body.name, code: body.code, type: body.type,
-      value: String(body.value), minAmount: String(body.minAmount ?? 0), maxUses: body.maxUses ?? null, usedCount: 0,
+      value: String(body.value ?? 0), minAmount: String(body.minAmount ?? 0), maxUses: body.maxUses ?? null, usedCount: 0,
       startsAt: body.startsAt, endsAt: body.endsAt ?? null, active: true,
     }})};
   });
@@ -52,6 +51,16 @@ function loadAdmin(fetch) {
   assert.equal(createdFixed.type, 'fixed');
   assert.equal(createdFixed.value, 5000);
   assert.equal(createdFixed.code, 'NUEVO-5000');
+
+  const createdFreeShipping = await adminService.promotionService.create({
+    name: ' Envío Gratis Sobre 25000 ', code: ' envio-25k ', type: 'free_shipping',
+    value: 0, minAmount: 25000, startsAt: '2026-10-16', active: true,
+  });
+  assert.equal(JSON.parse(adminReq.options.body).type, 'free_shipping');
+  assert.equal(JSON.parse(adminReq.options.body).minAmount, 25000);
+  assert.equal(createdFreeShipping.type, 'free_shipping');
+  assert.equal(createdFreeShipping.minAmount, 25000);
+  assert.equal(createdFreeShipping.code, 'ENVIO-25K');
 
   let request;
   const pctService = loadStorefront(async (url, options) => {
@@ -92,7 +101,13 @@ function loadAdmin(fetch) {
   assert.equal(result.shipping, 0);
   assert.equal(result.code, 'ENVIO-GRATIS');
 
+  const belowMinimum = loadStorefront(async () => ({
+    ok: false,
+    json: async () => ({exito: false, mensaje: 'La compra minima para este codigo es $25000.'}),
+  }));
+  await assert.rejects(belowMinimum.validatePromotion('ENVIO-GRATIS', 15000, 3990), /compra minima para este codigo es \$25000/);
+
   const invalid = loadStorefront(async () => ({ok: false, json: async () => ({exito: false, mensaje: 'El codigo promocional expiro.'})}));
   await assert.rejects(invalid.validatePromotion('EXPIRADA', 10000, 0), /expiro/);
-  console.log('OK: creacion y validacion de descuento porcentual, monto fijo y envio gratis en checkout');
+  console.log('OK: creacion y validacion de descuento porcentual, monto fijo y monto minimo de envio gratis en checkout');
 })().catch(error => {console.error(error); process.exitCode = 1;});
