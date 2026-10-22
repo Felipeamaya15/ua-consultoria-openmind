@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useAdmin } from '../context/AdminContext';
 import { AdminCard, Alert, Input, Textarea, Button, Badge } from '../components/ui';
+import { GoogleAnalyticsField } from '../components/GoogleAnalyticsField';
 import { validatePixelId } from '../../storefront/services/metaPixelService';
 
 export default function SeoAnalytics() {
@@ -97,12 +98,9 @@ export default function SeoAnalytics() {
           onChange={(e) => update('pixelId', e.target.value)}
         />
 
-        <Input
-          label="Identificador de Google Analytics (opcional)"
-          placeholder="G-XXXXXXXXXX"
-          hint="Mide el tráfico y comportamiento en tu tienda."
+        <GoogleAnalyticsField
           value={form.gaId}
-          onChange={(e) => update('gaId', e.target.value)}
+          onChange={(value) => update('gaId', value)}
         />
       </AdminCard>
 
