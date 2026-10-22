@@ -8,6 +8,8 @@ declare global {
     fbq?: any;
     _fbq?: any;
     __metaPixelId?: string;
+    __metaPixelConsent?: 'granted' | 'revoked';
+    __metaPixelLastPage?: string;
   }
 }
 
@@ -64,8 +66,10 @@ export function initMetaPixel(pixelIdInput: unknown): boolean {
     return false;
   }
 
-  // Evitar inicializaciones duplicadas para el mismo pixelId
+  // Evitar inicializaciones duplicadas para el mismo pixelId.
   if (window.__metaPixelId === pixelId && typeof window.fbq === 'function') {
+    window.fbq('consent', 'grant');
+    window.__metaPixelConsent = 'granted';
     return true;
   }
 
@@ -102,9 +106,40 @@ export function initMetaPixel(pixelIdInput: unknown): boolean {
   }
 
   try {
+    window.fbq('consent', 'grant');
     window.fbq('init', pixelId);
-    window.fbq('track', 'PageView');
     window.__metaPixelId = pixelId;
+    window.__metaPixelConsent = 'granted';
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Revoca la medición y bloquea eventos posteriores hasta un nuevo consentimiento. */
+export function revokeMetaPixelConsent(): void {
+  if (typeof window === 'undefined') return;
+  if (typeof window.fbq === 'function') {
+    try { window.fbq('consent', 'revoke'); } catch { /* La tienda debe seguir operativa. */ }
+  }
+  window.__metaPixelConsent = 'revoked';
+  window.__metaPixelLastPage = undefined;
+}
+
+/** Registra una vista por ruta en la navegación SPA, evitando duplicados. */
+export function trackMetaPixelPageView(path: string): boolean {
+  if (
+    typeof window === 'undefined'
+    || typeof window.fbq !== 'function'
+    || window.__metaPixelConsent !== 'granted'
+  ) return false;
+
+  const page = String(path || '/').trim() || '/';
+  if (window.__metaPixelLastPage === page) return false;
+
+  try {
+    window.fbq('track', 'PageView');
+    window.__metaPixelLastPage = page;
     return true;
   } catch {
     return false;
@@ -118,7 +153,11 @@ export function trackMetaPixelEvent(
   eventName: 'PageView' | 'ViewContent' | 'AddToCart' | 'InitiateCheckout' | 'Purchase' | string,
   params?: Record<string, unknown>
 ): void {
-  if (typeof window === 'undefined' || typeof window.fbq !== 'function') {
+  if (
+    typeof window === 'undefined'
+    || typeof window.fbq !== 'function'
+    || window.__metaPixelConsent !== 'granted'
+  ) {
     return;
   }
 
