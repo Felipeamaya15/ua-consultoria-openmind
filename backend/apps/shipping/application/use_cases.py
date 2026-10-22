@@ -3,7 +3,9 @@ from typing import List, Dict, Any, Optional
 from apps.catalog.domain.seguimiento import estandarizar_estado
 from apps.shipping.domain.ports import LogisticsPort
 from apps.shipping.domain.dtos import DireccionDespachoDTO, PaqueteDTO
-from apps.shipping.domain.exceptions import DireccionFueraDeCoberturaException
+from apps.shipping.domain.exceptions import DireccionFueraDeCoberturaException, LogisticaException
+from apps.shipping.domain.services import ShippingDomainService
+
 
 class CotizarDespachoEcommerceUseCase:
     """
@@ -12,12 +14,11 @@ class CotizarDespachoEcommerceUseCase:
     """
 
     # Reglas comerciales de la tienda
-    UMBRAL_ENVIO_GRATIS = Decimal("30000.00")
-    REGIONES_PROMOCION_GRATIS = ["METROPOLITANA", "REGION METROPOLITANA", "RM"]
+    UMBRAL_ENVIO_GRATIS = ShippingDomainService.UMBRAL_ENVIO_GRATIS
+    REGIONES_PROMOCION_GRATIS = ShippingDomainService.REGIONES_PROMOCION_GRATIS
 
     def __init__(self, logistics_port: LogisticsPort):
         self.logistics_port = logistics_port
-
 
     def cotizar(self, datos_cotizacion: Dict[str, Any]) -> Dict[str, Any]:
         """Método invocado por la vista API."""
@@ -25,25 +26,40 @@ class CotizarDespachoEcommerceUseCase:
             datos_destino=datos_cotizacion,
             total_carrito=Decimal(str(datos_cotizacion["total_carrito"])),
             total_items=int(datos_cotizacion["total_items"]),
-            peso_kg=datos_cotizacion.get("peso_kg")
+            peso_kg=datos_cotizacion.get("peso_kg"),
+            monto_minimo_envio_gratis=datos_cotizacion.get("monto_minimo_envio_gratis"),
         )
-    
+
     def execute(
-        self, 
-        datos_destino: Dict[str, Any], 
-        total_carrito: Decimal, 
+        self,
+        datos_destino: Dict[str, Any],
+        total_carrito: Decimal,
         total_items: int,
-        peso_kg: Optional[Decimal] = None
+        peso_kg: Optional[Decimal] = None,
+        monto_minimo_envio_gratis: Optional[Decimal] = None,
     ) -> Dict[str, Any]:
         """
         Calcula las alternativas de despacho disponibles, aplicando políticas
-        comerciales (descuentos, gratuidad) y ordenando por conveniencia.
+        comerciales (descuentos, gratuidad por monto mínimo) y ordenando por conveniencia.
         """
         region = datos_destino.get("region", "").strip()
         comuna = datos_destino.get("comuna", "").strip()
 
         if not region or not comuna:
             raise DireccionFueraDeCoberturaException("La región y comuna de destino son obligatorias para cotizar.")
+
+        umbral_efectivo = (
+            self.UMBRAL_ENVIO_GRATIS
+            if monto_minimo_envio_gratis is None
+            else monto_minimo_envio_gratis
+        )
+        try:
+            cumple_monto_minimo = ShippingDomainService.cumple_monto_minimo_envio_gratis(
+                total_carrito,
+                monto_minimo=umbral_efectivo,
+            )
+        except ValueError as exc:
+            raise LogisticaException(str(exc)) from exc
 
         # 1. Construcción de DTOs de dirección
         destino = DireccionDespachoDTO(
@@ -74,7 +90,7 @@ class CotizarDespachoEcommerceUseCase:
                 alto_cm=Decimal("15"),
                 ancho_cm=Decimal("20"),
                 largo_cm=Decimal("30"),
-                valor_declarado=total_carrito
+                valor_declarado=Decimal(str(total_carrito))
             )
         ]
 
@@ -84,7 +100,7 @@ class CotizarDespachoEcommerceUseCase:
         # 4. Aplicación de políticas comerciales (Envío gratis por compra sobre umbral)
         region_upper = region.upper()
         aplica_envio_gratis = (
-            total_carrito >= self.UMBRAL_ENVIO_GRATIS and
+            cumple_monto_minimo and
             any(r in region_upper for r in self.REGIONES_PROMOCION_GRATIS)
         )
 
@@ -119,7 +135,7 @@ class CotizarDespachoEcommerceUseCase:
                 "region": region
             },
             "total_items": total_items,
-            "total_carrito": int(total_carrito),
+            "total_carrito": int(Decimal(str(total_carrito))),
             "opcion_recomendada": opciones_procesadas[0] if opciones_procesadas else None,
             "opciones": opciones_procesadas
         }
@@ -162,6 +178,7 @@ class ConsultarSeguimientoUseCase:
                 for e in detalle.historial_eventos
             ]
         }
+
 
 # Alias para mantener coherencia semántica con el nombre del servicio
 ShippingQuotationService = CotizarDespachoEcommerceUseCase

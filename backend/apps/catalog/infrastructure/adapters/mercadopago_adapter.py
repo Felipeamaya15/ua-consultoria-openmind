@@ -1,3 +1,4 @@
+import math
 from decimal import Decimal
 
 import requests
@@ -12,9 +13,10 @@ from apps.catalog.domain.ports.payment_gateway import (
 
 
 class MercadoPagoAdapter(PaymentGatewayPort):
-    """Adaptador de Mercado Pago  que implementa el puerto de pagos."""
+    """Adaptador de Mercado Pago que implementa el puerto de pagos."""
 
     BASE_URL = "https://api.mercadopago.com"
+    DEFAULT_TIMEOUT = 15
 
     ESTADOS = {
         "approved": EstadoPago.APROBADO,
@@ -28,10 +30,13 @@ class MercadoPagoAdapter(PaymentGatewayPort):
         "charged_back": EstadoPago.RECHAZADO,
     }
 
-    def __init__(self, access_token: str, ambiente: str = "SANDBOX", moneda: str = "CLP"):
+    def __init__(self, access_token: str, ambiente: str = "SANDBOX", moneda: str = "CLP", timeout: float = DEFAULT_TIMEOUT):
+        if isinstance(timeout, bool) or not isinstance(timeout, (int, float)) or not math.isfinite(timeout) or timeout <= 0:
+            raise ValueError("El tiempo de espera de Mercado Pago debe ser un número positivo.")
         self.access_token = str(access_token).strip()
         self.ambiente = str(ambiente).strip().upper()
         self.moneda = moneda
+        self.timeout = float(timeout)
 
     def _headers(self) -> dict:
         return {
@@ -62,7 +67,7 @@ class MercadoPagoAdapter(PaymentGatewayPort):
             },
         }
 
-        datos = self._request("POST", f"{self.BASE_URL}/checkout/preferences", json=payload, timeout=15)
+        datos = self._request("POST", f"{self.BASE_URL}/checkout/preferences", json=payload, timeout=self.timeout)
 
         url_pago = datos.get("sandbox_init_point") if self.ambiente == "SANDBOX" else datos.get("init_point")
         if not datos.get("id") or not url_pago:
@@ -70,7 +75,7 @@ class MercadoPagoAdapter(PaymentGatewayPort):
         return PagoIniciado(referencia=str(datos["id"]), url_pago=url_pago)
 
     def consultar_pago(self, id_transaccion: str) -> ResultadoPago:
-        datos = self._request("GET", f"{self.BASE_URL}/v1/payments/{id_transaccion}", timeout=20)
+        datos = self._request("GET", f"{self.BASE_URL}/v1/payments/{id_transaccion}", timeout=max(self.timeout, 20))
 
         status = datos.get("status", "")
         return ResultadoPago(
@@ -82,10 +87,17 @@ class MercadoPagoAdapter(PaymentGatewayPort):
         )
 
     def _request(self, metodo: str, url: str, **kwargs) -> dict:
+        kwargs.setdefault("timeout", self.timeout)
         try:
             response = requests.request(metodo, url, headers=self._headers(), **kwargs)
-        except requests.exceptions.RequestException as e:
-            raise PagoGatewayException(f"Fallo de conexión con Mercado Pago: {e}")
+        except requests.exceptions.Timeout as exc:
+            raise PagoGatewayException(
+                "Tiempo de espera agotado al comunicarse con Mercado Pago. Intenta nuevamente."
+            ) from exc
+        except requests.exceptions.RequestException as exc:
+            raise PagoGatewayException(
+                "Fallo de conexión con Mercado Pago. Intenta nuevamente más tarde."
+            ) from exc
 
         if response.status_code not in (200, 201):
             detalle = response.text

@@ -1,4 +1,4 @@
-"""SCRUM-458: los fallos de pasarelas externas no alteran las órdenes."""
+"""SCRUM-458: los fallos y tiempos de espera de pasarelas externas no alteran las órdenes."""
 from decimal import Decimal
 from unittest.mock import Mock, patch
 
@@ -9,11 +9,14 @@ from rest_framework.authtoken.models import Token
 from rest_framework.test import APIClient
 
 from apps.catalog.domain.exceptions import (
+    PagoGatewayException,
     TransbankServicioNoDisponibleException,
     TransbankTransaccionException,
 )
 from apps.catalog.infrastructure.adapters.transbank_adapter import TransbankWebpayAdapter
 from apps.catalog.infrastructure.adapters.linkify_adapter import LinkifyAdapter
+from apps.catalog.infrastructure.adapters.mercadopago_adapter import MercadoPagoAdapter
+from apps.catalog.infrastructure.adapters.paypal_adapter import PayPalAdapter
 from apps.core.models import ConfiguracionTransbank, ConfiguracionPago, Pedido, Tienda
 
 
@@ -48,6 +51,30 @@ class TransbankUnavailableAdapterTests(SimpleTestCase):
         self.assertEqual(result["codigo"], "LINKIFY_NO_DISPONIBLE")
         self.assertNotIn("secret connection", str(result))
         self.assertEqual(urlopen.call_args.kwargs["timeout"], 8)
+
+    @patch("apps.catalog.infrastructure.adapters.paypal_adapter.urllib.request.urlopen")
+    def test_paypal_timeout_is_bounded_and_does_not_leak_secrets(self, urlopen):
+        urlopen.side_effect = TimeoutError("secret-paypal-host")
+        adapter = PayPalAdapter("client", "secret", timeout=12)
+        with self.assertRaises(PagoGatewayException) as error:
+            adapter.iniciar_pago("ORD-1", Decimal("25.00"), "Pedido", "http://localhost")
+        self.assertIn("Tiempo de espera agotado", str(error.exception))
+        self.assertNotIn("secret-paypal-host", str(error.exception))
+        self.assertEqual(urlopen.call_args.kwargs["timeout"], 12.0)
+
+        capture = adapter.capture_order("ORDER-123")
+        self.assertFalse(capture["exito"])
+        self.assertEqual(capture["codigo"], "PAYPAL_TIMEOUT")
+
+    @patch("apps.catalog.infrastructure.adapters.mercadopago_adapter.requests.request")
+    def test_mercadopago_timeout_is_bounded_and_safe(self, request_mock):
+        request_mock.side_effect = requests.Timeout("secret-mp-token")
+        adapter = MercadoPagoAdapter("token-mp", timeout=10)
+        with self.assertRaises(PagoGatewayException) as error:
+            adapter.iniciar_pago("ORD-1", Decimal("15000"), "Pedido", "http://localhost")
+        self.assertIn("Tiempo de espera agotado", str(error.exception))
+        self.assertNotIn("secret-mp-token", str(error.exception))
+        self.assertEqual(request_mock.call_args.kwargs["timeout"], 10.0)
 
 
 class ProviderUnavailableViewsTests(TestCase):
