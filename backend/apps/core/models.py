@@ -213,6 +213,9 @@ class Pedido(models.Model):
     tienda = models.ForeignKey(Tienda, on_delete=models.PROTECT, null=True, blank=True)
     clave_checkout = models.UUIDField(unique=True, null=True, blank=True)
     huella_checkout = models.CharField(max_length=64, blank=True, default='')
+    # Se conserva el inicio exitoso de Webpay para que un reintento no cree otro cobro.
+    webpay_token = models.CharField(max_length=512, blank=True, default='')
+    webpay_url = models.CharField(max_length=2048, blank=True, default='')
     contacto = models.JSONField(default=dict, blank=True)
     entrega = models.JSONField(default=dict, blank=True)
     medio_pago = models.CharField(max_length=40, blank=True, default='')
