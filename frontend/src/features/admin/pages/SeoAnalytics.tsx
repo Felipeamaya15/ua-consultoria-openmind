@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useAdmin } from '../context/AdminContext';
 import { AdminCard, Alert, Input, Textarea, Button, Badge } from '../components/ui';
 import { GoogleAnalyticsField } from '../components/GoogleAnalyticsField';
+import { MetaPixelField } from '../components/MetaPixelField';
 import { validatePixelId } from '../../storefront/services/metaPixelService';
 import { validateGoogleAnalyticsId } from '../../storefront/services/googleAnalyticsService';
 
@@ -103,12 +104,9 @@ export default function SeoAnalytics() {
           </div>
         </div>
 
-        <Input
-          label="Identificador de medición de Meta/Facebook (Pixel ID)"
-          placeholder="Ej: 1234567890123456"
-          hint="Identificador numérico de 9 a 16 dígitos de tu cuenta de anuncios de Meta/Facebook."
+        <MetaPixelField
           value={form.pixelId}
-          onChange={(e) => update('pixelId', e.target.value)}
+          onChange={(value) => update('pixelId', value)}
         />
 
         <GoogleAnalyticsField
