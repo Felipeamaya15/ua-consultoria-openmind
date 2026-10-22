@@ -121,3 +121,25 @@ Reglas de la plantilla:
 - Las líneas cuyos datos no existen se omiten: si el pedido no tiene código de seguimiento, la línea
   "Código de seguimiento" no aparece (no queda una línea vacía).
 - El texto por defecto está también en `frontend/src/features/admin/data/emailTemplates.ts`; si se cambia uno, hay que cambiar el otro.
+
+## Envío del correo de despacho (SCRUM-431)
+
+Cuando el propietario cambia un pedido a "Enviado" (En tránsito) desde el panel de Pedidos, el sistema envía el correo
+`order_shipped` al comprador. Lo hace `backend/apps/core/infrastructure/notificaciones_pedido.py`, que usa la plantilla
+de la tienda y el servicio de envío descrito arriba.
+
+- Solo se envía al **entrar** en "Enviado": repetir el mismo estado no envía nada, y los otros estados no generan correo.
+- Se envía **una sola vez por pedido**: en el pedido queda una marca en `entrega.notificaciones.order_shipped`
+  (`enviado`, `codigo`, `fecha` e `intentos`). Si el pedido sale de "Enviado" y vuelve a entrar, no se duplica.
+- Si el envío **falla**, el pedido igual cambia de estado, el fallo queda en el log y la marca guarda `enviado: false`;
+  la próxima vez que el pedido entre en "Enviado" se reintenta.
+- No se envía si el propietario desactivó la plantilla, si el pedido es con retiro en tienda o si el pedido no tiene
+  un correo válido del comprador.
+- La respuesta del cambio de estado trae `data.correo` con `enviado` y `codigo`, y la pantalla de Pedidos se lo muestra
+  al propietario.
+
+Códigos de `data.correo.codigo`: `enviado`, `ya_enviado`, `envio_en_curso`, `plantilla_desactivada`, `no_corresponde`,
+`destinatario_invalido`, `error_de_envio` y `error_inesperado`.
+
+Para probarlo a mano, con el buzón de prueba (Mailpit) levantado: en el panel de Pedidos abre un pedido con envío a
+domicilio (no retiro), cámbialo a "Enviado" y mira el correo en `http://localhost:8025`.

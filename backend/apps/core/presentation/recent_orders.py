@@ -11,6 +11,7 @@ from rest_framework import serializers
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
 from apps.core.presentation.serializers import PedidoEstadoUpdateSerializer
+from apps.core.infrastructure.notificaciones_pedido import notificar_cambio_de_estado
 from apps.core.infrastructure.tenant import resolver_tienda
 from apps.core.models import Pedido
 from apps.core.presentation.responses import error_response, success_response
@@ -92,8 +93,10 @@ class ActualizarEstadoPedidoAPIView(APIView):
                 status=status.HTTP_404_NOT_FOUND,
             )
 
+        estado_anterior = pedido.estado
         pedido.estado = estado_normalizado
         pedido.save(update_fields=['estado'])
+        correo = notificar_cambio_de_estado(pedido, estado_anterior)
 
         return success_response(
             data={
@@ -101,6 +104,7 @@ class ActualizarEstadoPedidoAPIView(APIView):
                 "identificador": pedido.identificador,
                 "estado": pedido.estado,
                 "estado_etiqueta": pedido.get_estado_display(),
+                "correo": None if correo is None else {"enviado": correo.enviado, "codigo": correo.codigo},
             },
             mensaje=f"El estado de la orden fue actualizado a '{pedido.get_estado_display()}' exitosamente.",
         )

@@ -106,5 +106,27 @@ export const updateOrderStatus = async (pedidoId: number, nuevoEstado: string) =
     || typeof updated.estado_etiqueta !== 'string') {
     throw new Error('La respuesta del estado del pedido es inválida. Recarga los pedidos para consultar su estado actual.');
   }
-  return updated as {id_pedido: number; estado: string; estado_etiqueta: string};
+  const correo = isRecord(updated.correo) && typeof updated.correo.enviado === 'boolean' && typeof updated.correo.codigo === 'string'
+    ? { enviado: updated.correo.enviado, codigo: updated.correo.codigo }
+    : null;
+  return { ...(updated as {id_pedido: number; estado: string; estado_etiqueta: string}), correo };
 };
+
+export interface OrderEmailOutcome {
+  enviado: boolean;
+  codigo: string;
+}
+
+/** Frase sobre el aviso por correo al comprador tras cambiar un estado; vacía si ese cambio no genera correo. */
+export function describeShipmentEmail(correo: OrderEmailOutcome | null | undefined): { text: string; failed: boolean } {
+  if (!correo) return { text: '', failed: false };
+  if (correo.enviado) return { text: 'Se envió el aviso de despacho al comprador por correo.', failed: false };
+  switch (correo.codigo) {
+    case 'ya_enviado': return { text: 'El aviso de despacho ya se había enviado antes a este comprador.', failed: false };
+    case 'envio_en_curso': return { text: 'El aviso de despacho se está enviando.', failed: false };
+    case 'plantilla_desactivada': return { text: 'No se envió correo: el correo "Pedido despachado" está desactivado.', failed: false };
+    case 'no_corresponde': return { text: '', failed: false };
+    case 'destinatario_invalido': return { text: 'No se pudo enviar el aviso: el pedido no tiene un correo válido del comprador.', failed: true };
+    default: return { text: 'No se pudo enviar el aviso de despacho al comprador. Revisa la configuración de correo.', failed: true };
+  }
+}
