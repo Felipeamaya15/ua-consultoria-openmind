@@ -110,22 +110,26 @@ async function testPixelInitAndTracking() {
   assert.equal(insertedScripts[0].src, 'https://connect.facebook.net/en_US/fbevents.js');
 
   // Tracking de eventos
+  assert.equal(pixelService.trackMetaPixelPageView('/plantilla/1'), true);
+  assert.equal(pixelService.trackMetaPixelPageView('/plantilla/1'), false);
   pixelService.trackMetaPixelEvent('ViewContent', { content_name: 'Polera', value: 9990 });
   pixelService.trackMetaPixelEvent('AddToCart', { content_name: 'Polera', value: 9990 });
   pixelService.trackMetaPixelEvent('Purchase', { content_name: 'ORD-1234', value: 19980 });
 
   // Verificar que la cola capturó los eventos
-  assert.equal(mockWindow.fbq.queue.length, 5); // init, PageView, ViewContent, AddToCart, Purchase
-  assert.equal(mockWindow.fbq.queue[0][0], 'init');
-  assert.equal(mockWindow.fbq.queue[0][1], '1234567890123456');
-  assert.equal(mockWindow.fbq.queue[1][0], 'track');
-  assert.equal(mockWindow.fbq.queue[1][1], 'PageView');
-  assert.equal(mockWindow.fbq.queue[2][0], 'track');
-  assert.equal(mockWindow.fbq.queue[2][1], 'ViewContent');
-  assert.equal(mockWindow.fbq.queue[3][0], 'track');
-  assert.equal(mockWindow.fbq.queue[3][1], 'AddToCart');
-  assert.equal(mockWindow.fbq.queue[4][0], 'track');
-  assert.equal(mockWindow.fbq.queue[4][1], 'Purchase');
+  assert.equal(mockWindow.fbq.queue.length, 6); // consent, init, PageView y tres eventos
+  assert.deepEqual(Array.from(mockWindow.fbq.queue[0]), ['consent', 'grant']);
+  assert.equal(mockWindow.fbq.queue[1][0], 'init');
+  assert.equal(mockWindow.fbq.queue[1][1], '1234567890123456');
+  assert.equal(mockWindow.fbq.queue[2][1], 'PageView');
+  assert.equal(mockWindow.fbq.queue[3][1], 'ViewContent');
+  assert.equal(mockWindow.fbq.queue[4][1], 'AddToCart');
+  assert.equal(mockWindow.fbq.queue[5][1], 'Purchase');
+
+  pixelService.revokeMetaPixelConsent();
+  const revokedLength = mockWindow.fbq.queue.length;
+  pixelService.trackMetaPixelEvent('AddToCart');
+  assert.equal(mockWindow.fbq.queue.length, revokedLength, 'no registra eventos sin consentimiento');
 
   console.log('OK: Inicialización del SDK de Meta Pixel y tracking de eventos');
 }

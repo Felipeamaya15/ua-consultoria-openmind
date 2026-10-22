@@ -26,7 +26,6 @@ import { findImageSetting, captureOriginalImage, isLegacyEditableImage, readThem
 import { getStoreConfigKey, readStoredStoreConfig, isStoreConfigChange, STORE_CONFIG_CHANGED_EVENT } from '../visual/storage';
 import { legalService } from '../services/legalService';
 import { type LegalType, type LegalPage } from '../data/legalContent';
-import { initMetaPixel } from '../services/metaPixelService';
 
 const StoreContext = createContext({
   config: { ...defaultStoreConfig, name: '', description: '', logo: '' },
@@ -192,12 +191,6 @@ export function StoreProvider({
     return () => controller.abort();
   }, [storageKey, storageRevision, legalRevision]);
 
-
-  useEffect(() => {
-    if (savedConfig.pixelId && typeof savedConfig.pixelId === 'string') {
-      initMetaPixel(savedConfig.pixelId);
-    }
-  }, [savedConfig.pixelId]);
 
   useEffect(() => {
     const template = templateFromPath(pathname);
