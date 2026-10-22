@@ -35,6 +35,7 @@ import { StoreProvider } from '../../features/storefront/context/StoreContext';
 import { CartProvider } from '../../features/storefront/context/CartContext';
 import { OrderProvider } from '../../features/storefront/context/OrderContext';
 import { CookieConsentBanner } from '../../features/storefront/components/store/CookieConsentBanner';
+import { StoreSeoMetadata } from '../../features/storefront/components/store/StoreSeoMetadata';
 
 function StorefrontProviders({
   children,
@@ -43,6 +44,7 @@ function StorefrontProviders({
 }) {
   return (
     <StoreProvider>
+      <StoreSeoMetadata />
       <CartProvider>
         <OrderProvider>
           {children}

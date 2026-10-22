@@ -319,6 +319,7 @@ async function pruebasDelDashboard() {
       '../components/dashboard/Reports': { default: () => null },
       '../../data/mockAdminData': { formatPrice: valor => `$${valor}` },
       '../ui': { Alert: () => null, Button: () => null, Icon: () => null },
+      '../../../api': { API_BASE_URL: 'http://api.test' }, '../../auth/services/authService': { authService: { getToken: () => null } },
     };
     const { default: Dashboard } = load('src/features/admin/pages/Dashboard.tsx', mocks);
     const salida = renderToStaticMarkup(React.createElement(Dashboard));

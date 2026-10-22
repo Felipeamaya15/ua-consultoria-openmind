@@ -101,7 +101,15 @@ export const orderService = {
       signal,
     });
 
-    const body = await response.json();
+    let body: any = null;
+    try {
+      body = await response.json();
+    } catch {
+      body = null;
+    }
+    if (!body || typeof body !== 'object') {
+      throw new Error('La respuesta del pedido es inválida.');
+    }
     if (!response.ok || body.exito !== true) {
       throw new Error(body.detail || body.mensaje || 'No se pudo consultar el pedido. Verifica el número y correo.');
     }

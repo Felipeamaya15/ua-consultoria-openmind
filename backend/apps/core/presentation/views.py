@@ -208,7 +208,14 @@ class VerificarTransferenciaLinkifyAPIView(APIView):
             
             identificador = pedido.identificador or str(pedido.id_pedido)
             resultado = adapter.verificar_transferencia(identificador, float(pedido.monto_total))
-            
+            if not resultado.get("exito"):
+                respuesta = error_response(
+                    "Linkify no está disponible temporalmente. Puedes reintentar la verificación.",
+                    "LINKIFY_NO_DISPONIBLE", status=503,
+                )
+                respuesta["Retry-After"] = "30"
+                return respuesta
+
             if resultado.get("verificado"):
                 with transaction.atomic():
                     pedido = Pedido.objects.select_for_update().get(pk=pedido.pk, tienda=tienda)

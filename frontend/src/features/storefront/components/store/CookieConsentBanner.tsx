@@ -1,17 +1,20 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { useStorefrontTemplate } from '../../hooks/useStorefrontTemplate';
 import { useStore } from '../../context/StoreContext';
 import { useVerifiedLegalScope } from '../../hooks/useVerifiedLegalScope';
 import { consentKey, readConsent, saveConsent, resetConsent, type ConsentScope } from '../../services/cookieConsent';
 import { getStoreConfigKey } from '../../visual/storage';
 import { isActiveEditorPreview } from '../../visual/pages';
+import { disableGoogleAnalytics, initGoogleAnalytics } from '../../services/googleAnalyticsService';
+import { initMetaPixel, revokeMetaPixelConsent, trackMetaPixelPageView } from '../../services/metaPixelService';
 export const COOKIE_CONSENT_EVENT_OPEN = 'openmind_open_cookie_banner';
 export const COOKIE_CONSENT_EVENT_RESET = 'openmind_reset_cookie_consent';
 export function CookieConsentBanner() {
+  const { pathname, search } = useLocation();
   const session = useVerifiedLegalScope();
   const { route } = useStorefrontTemplate();
-  const { legalPages, legalLoading, legalError, legalVerified, legalScopeKey } = useStore();
+  const { config, legalPages, legalLoading, legalError, legalVerified, legalScopeKey } = useStore();
   const bannerConfig = legalPages.cookies.banner;
   const isEnabled = bannerConfig?.enabled !== false;
   const page = legalPages.cookies;
@@ -22,18 +25,41 @@ export function CookieConsentBanner() {
   const [state, setState] = useState({ key: '', visible: false, message: '' });
   useEffect(() => {
     if (!scope) return;
-    const check = () => { let choice = null; try { choice = readConsent(localStorage, scope); } catch { /* mostrar elección */ } setState({ key, visible: !choice, message: '' }); };
+    const check = () => {
+      let choice = null;
+      try { choice = readConsent(localStorage, scope); } catch { /* mostrar elección */ }
+      if (choice === 'accepted') {
+        initGoogleAnalytics(config.gaId);
+        if (initMetaPixel(config.pixelId)) trackMetaPixelPageView(`${pathname}${search}`);
+      } else {
+        disableGoogleAnalytics();
+        revokeMetaPixelConsent();
+      }
+      setState({ key, visible: !choice, message: '' });
+    };
     const open = () => setState({ key, visible: true, message: '' });
-    const reset = () => { try { resetConsent(localStorage, scope); setState({ key, visible: true, message: '' }); } catch { setState({ key, visible: true, message: 'No pudimos guardar el cambio de preferencia en este navegador.' }); } };
+    const reset = () => {
+      disableGoogleAnalytics();
+      revokeMetaPixelConsent();
+      try { resetConsent(localStorage, scope); setState({ key, visible: true, message: '' }); }
+      catch { setState({ key, visible: true, message: 'No pudimos guardar el cambio de preferencia en este navegador.' }); }
+    };
     const storage = (event: StorageEvent) => { if (event.key === key || event.key === null) check(); };
     check();
     window.addEventListener(COOKIE_CONSENT_EVENT_OPEN, open); window.addEventListener(COOKIE_CONSENT_EVENT_RESET, reset); window.addEventListener('storage', storage);
     return () => { window.removeEventListener(COOKIE_CONSENT_EVENT_OPEN, open); window.removeEventListener(COOKIE_CONSENT_EVENT_RESET, reset); window.removeEventListener('storage', storage); };
-  }, [key]);
+  }, [key, config.gaId, config.pixelId, pathname, search]);
   const choose = (choice: 'accepted' | 'essential_only') => {
     if (!scope || !session.isCurrent()) return;
     let message = '';
     try { saveConsent(localStorage, scope, choice); } catch { message = 'Tu elección se aplica en esta sesión; el navegador no permite recordarla.'; }
+    if (choice === 'accepted') {
+      initGoogleAnalytics(config.gaId);
+      if (initMetaPixel(config.pixelId)) trackMetaPixelPageView(`${pathname}${search}`);
+    } else {
+      disableGoogleAnalytics();
+      revokeMetaPixelConsent();
+    }
     setState({ key, visible: false, message });
   };
   const handleAccept = () => choose('accepted');

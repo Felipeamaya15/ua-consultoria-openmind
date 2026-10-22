@@ -69,7 +69,6 @@ export async function deleteCatalogProduct(productId: string): Promise<void> {
   });
 }
 
-
 function adaptAdminProduct(item: any): AdminProduct {
   if (!/^[a-f0-9]{24}$/i.test(item.id)) throw new Error("El backend devolvió un ID de producto inválido.");
   const attributes: Record<string, string[]> = {};
@@ -83,19 +82,48 @@ function adaptAdminProduct(item: any): AdminProduct {
       if (!attributes[a.clave].includes(a.valor)) attributes[a.clave].push(a.valor);
     }
     const offer = v.precio_oferta != null && v.precio_oferta < v.precio;
-    return { id: `variant-${index}`, sku: v.sku, attributes: values,
-      price: offer ? v.precio_oferta : v.precio, comparePrice: offer ? v.precio : undefined,
-      stock: v.stock, available: v.stock > 0 };
+    return {
+      id: `variant-${index}`,
+      sku: v.sku,
+      attributes: values,
+      price: offer ? v.precio_oferta : v.precio,
+      comparePrice: offer ? v.precio : undefined,
+      stock: v.stock,
+      available: v.stock > 0,
+    };
   });
+
+  const minVariant = variants.length
+    ? variants.reduce((lowest: any, current: any) =>
+        current.price < lowest.price ? current : lowest,
+      )
+    : undefined;
+  const compareCandidates = variants
+    .map((v: any) => v.comparePrice)
+    .filter((p: any): p is number => typeof p === "number" && Number.isFinite(p));
+
   return {
-    id: item.id, catalogId: item.id, revision: item.revision,
-    name: item.nombre, description: item.descripcion ?? '', category: item.categoria,
-    images: item.imagenes ?? [], variants, attributes, attributeLabels: labels,
+    id: item.id,
+    catalogId: item.id,
+    revision: item.revision,
+    name: item.nombre,
+    description: item.descripcion ?? "",
+    category: item.categoria,
+    images: item.imagenes ?? [],
+    variants,
+    attributes,
+    attributeLabels: labels,
     generalAttributes: item.atributos_generales ?? [],
-    basePrice: variants.length ? Math.min(...variants.map((v: any) => v.price)) : 0,
-    tags: [], featured: false, status: item.activo ? 'active' : 'archived',
-    seoTitle: item.seo?.meta_titulo ?? '', seoDescription: item.seo?.meta_descripcion ?? '',
-    createdAt: item.fecha_creacion ?? '',
+    basePrice: minVariant ? minVariant.price : 0,
+    comparePrice:
+      minVariant?.comparePrice ??
+      (compareCandidates.length ? Math.max(...compareCandidates) : undefined),
+    tags: [],
+    featured: false,
+    status: item.activo ? "active" : "archived",
+    seoTitle: item.seo?.meta_titulo ?? "",
+    seoDescription: item.seo?.meta_descripcion ?? "",
+    createdAt: item.fecha_creacion ?? "",
   };
 }
 

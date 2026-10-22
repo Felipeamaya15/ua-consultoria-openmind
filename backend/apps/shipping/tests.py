@@ -1,8 +1,12 @@
 from decimal import Decimal
+from unittest.mock import patch
 from django.test import SimpleTestCase
 from rest_framework.test import APIClient
 from rest_framework import status
 
+from apps.catalog.infrastructure.adapters.chilexpress_response import procesar_respuesta_chilexpress
+from apps.catalog.infrastructure.adapters.starken_response import procesar_respuesta_starken
+from apps.catalog.infrastructure.adapters.seguimiento_response import procesar_respuesta_seguimiento
 from apps.shipping.domain.dtos import (
     DireccionDespachoDTO,
     PaqueteDTO,
@@ -11,6 +15,7 @@ from apps.shipping.domain.exceptions import (
     DireccionFueraDeCoberturaException,
     FormatoSeguimientoInvalidoException,
     NumeroSeguimientoNoEncontradoException,
+    RespuestaLogisticaInvalidaException,
 )
 from apps.shipping.infrastructure.adapters import (
     ChilexpressAdapter,
@@ -472,3 +477,92 @@ class StarkenAdapterTestCase(SimpleTestCase):
         self.assertEqual(estandar["costo"], 0)
         self.assertTrue(estandar["es_gratis"])
         self.assertIn("ENVÍO GRATIS", estandar["servicio"])
+
+
+class ManejoRespuestasInvalidasTests(SimpleTestCase):
+    def setUp(self):
+        self.client = APIClient()
+
+    def test_procesador_chilexpress_rechaza_estructuras_invalidas(self):
+        for invalida in (
+            None,
+            [],
+            "texto",
+            {},
+            {"data": None},
+            {"data": {"courierServiceOptions": []}},
+            {"data": {"courierServiceOptions": [{"serviceValue": -100}]}},
+            {"data": {"courierServiceOptions": [{"serviceValue": True}]}},
+        ):
+            with self.subTest(invalida=invalida):
+                with self.assertRaises(ValueError):
+                    procesar_respuesta_chilexpress(invalida)
+
+    def test_procesador_starken_rechaza_estructuras_invalidas(self):
+        for invalida in (
+            None,
+            [],
+            "texto",
+            {},
+            {"valor": None},
+            {"valor": "abc"},
+            {"valor": -50},
+            {"valor": False},
+        ):
+            with self.subTest(invalida=invalida):
+                with self.assertRaises(ValueError):
+                    procesar_respuesta_starken(invalida)
+
+    def test_procesador_seguimiento_rechaza_respuestas_y_eventos_invalidos(self):
+        for operador in ("Chilexpress", "Starken"):
+            for invalida in (
+                None,
+                [],
+                "texto",
+                {},
+                {"data": {"statusList": "no-lista"}},
+                {"eventos": ["no-dict"]},
+            ):
+                with self.subTest(operador=operador, invalida=invalida):
+                    with self.assertRaises(ValueError):
+                        procesar_respuesta_seguimiento(operador, invalida)
+
+        with self.assertRaises(ValueError):
+            procesar_respuesta_seguimiento(
+                "Chilexpress",
+                {"data": {"statusList": [{"date": "2026-10-08", "status": "", "description": ""}]}},
+            )
+        with self.assertRaises(ValueError):
+            procesar_respuesta_seguimiento(
+                "Starken",
+                {"eventos": [{"fecha": 12345, "estado": "EN_REPARTO"}]},
+            )
+
+    def test_adaptadores_traducen_respuesta_invalida_a_excepcion_de_dominio(self):
+        with patch.object(
+            ChilexpressAdapter,
+            "_obtener_respuesta_seguimiento",
+            return_value={"data": {"statusList": None}},
+        ):
+            with self.assertRaises(RespuestaLogisticaInvalidaException):
+                ChilexpressAdapter().consultar_seguimiento("CHILEX-ABC12345")
+
+        with patch.object(
+            StarkenAdapter,
+            "_obtener_respuesta_seguimiento",
+            return_value={"eventos": []},
+        ):
+            with self.assertRaises(RespuestaLogisticaInvalidaException):
+                StarkenAdapter().consultar_seguimiento("STK-ABC12345")
+
+    def test_endpoint_seguimiento_responde_502_ante_respuesta_invalida_del_operador(self):
+        with patch.object(
+            ChilexpressAdapter,
+            "_obtener_respuesta_seguimiento",
+            return_value={"corrupto": True},
+        ):
+            response = self.client.get("/api/logistica/seguimiento/chilexpress/CHILEX-ABC12345/")
+        self.assertEqual(response.status_code, status.HTTP_502_BAD_GATEWAY)
+        body = response.json()
+        self.assertFalse(body["exito"])
+        self.assertEqual(body["error"]["codigo"], "RESPUESTA_OPERADOR_INVALIDA")

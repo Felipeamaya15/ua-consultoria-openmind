@@ -1,5 +1,6 @@
 from copy import deepcopy
-from datetime import date
+from datetime import timedelta
+from django.utils import timezone
 from decimal import Decimal
 from unittest.mock import patch
 from uuid import uuid4
@@ -204,8 +205,13 @@ class CheckoutOrderTests(TestCase):
 
     def test_shipping_discount_and_offer_are_computed_on_server(self):
         promotion = Promocion.objects.create(
-            tienda=self.store, nombre='Verano', codigo='VERANO20', tipo='percentage',
-            valor=20, fecha_inicio=date.today(), activa=True,
+            tienda=self.store,
+            nombre='Verano',
+            codigo='VERANO20',
+            tipo='percentage',
+            valor=20,
+            fecha_inicio=timezone.now() - timedelta(days=1),
+            activa=True,
         )
         config = ConfiguracionEntrega.objects.get(tienda=self.store)
         config.datos['chilexpress']['tarifas'] = [
@@ -217,7 +223,8 @@ class CheckoutOrderTests(TestCase):
         data = dict(self.payload, metodo_entrega='Chilexpress', codigo_promocional='VERANO20',
                     cotizacion=quote.data['data']['tarifas'][0]['cotizacion'],
                     direccion={'street': 'Calle', 'number': '1', 'apt': '', 'city': 'Santiago', 'region': 'Metropolitana'})
-        self.assertEqual(self.create(data).status_code, 201)
+        response = self.create(data)
+        self.assertEqual(response.status_code, 201, response.data)
         order = Pedido.objects.get()
         self.assertEqual(order.costo_envio, Decimal(4500))
         self.assertEqual(order.descuento, Decimal(6000))

@@ -20,6 +20,7 @@ from apps.core.presentation.commercial_exports import (InformeXLSXAPIView, Pedid
 from apps.core.presentation.dashboard import DashboardAPIView
 from apps.core.presentation.reports import InformeAPIView, InformePDFAPIView
 from apps.core.presentation.store_configuration import InformacionTiendaAPIView
+from apps.core.presentation.plantillas_correo import PlantillasCorreoAPIView
 from apps.core.presentation.pickup_address import PickupAddressAPIView
 from apps.core.presentation.promotions import PromocionesAPIView, PromocionDetalleAPIView, ValidarPromocionAPIView
 from django.urls import path
@@ -51,6 +52,7 @@ urlpatterns = [
     path('tienda/contactos/', ContactosAPIView.as_view(), name='tienda-contactos'),
     path('tienda/contactos/exportar/', ContactosExportAPIView.as_view(), name='tienda-contactos-exportar'),
     path('tienda/configuracion/', InformacionTiendaAPIView.as_view(), name='tienda-configuracion'),
+    path('tienda/correos/', PlantillasCorreoAPIView.as_view(), name='tienda-correos'),
     path('promociones/', PromocionesAPIView.as_view(), name='promotions'),
     path('promociones/validar/', ValidarPromocionAPIView.as_view(), name='promotion-validate'),
     path('promociones/<int:promotion_id>/', PromocionDetalleAPIView.as_view(), name='promotion-detail'),

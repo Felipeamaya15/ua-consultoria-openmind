@@ -15,7 +15,6 @@ import {
   type TemplateId,
   type Product,
 } from '../data/mockData';
-
 import { fetchPublicProducts } from '../services/catalogService';
 import { LANDING_CONFIG_CHANGED, fetchLandingConfig } from '../../landing/services/landingService';
 import { fetchStoreInformation, STORE_INFORMATION_CHANGED, type StoreInformation } from '../services/storeInformationService';
@@ -28,7 +27,6 @@ import { findImageSetting, captureOriginalImage, isLegacyEditableImage, readThem
 import { getStoreConfigKey, readStoredStoreConfig, isStoreConfigChange, STORE_CONFIG_CHANGED_EVENT } from '../visual/storage';
 import { legalService } from '../services/legalService';
 import { type LegalType, type LegalPage } from '../data/legalContent';
-
 const StoreContext = createContext({
   config: { ...defaultStoreConfig, name: '', description: '', logo: '' },
   visualConfig: resolveVisualConfig(),
@@ -45,7 +43,6 @@ const StoreContext = createContext({
   legalError: '',
   refreshLegal: async () => {},
 });
-
 function readTheme(saved: Record<string, unknown>, template: TemplateId): Record<string, unknown> | null {
   try {
     const theme = isRecord(saved.themeEditor) ? saved.themeEditor[template] : null;
@@ -54,38 +51,29 @@ function readTheme(saved: Record<string, unknown>, template: TemplateId): Record
     return null;
   }
 }
-
 function applyImageCustomizations(theme: Record<string, unknown> | null, originals: Map<HTMLImageElement, OriginalImageStyle>) {
   const settings = readThemeImages(theme?.images);
-
   const images = Array.from(
     document.querySelectorAll<HTMLImageElement>('img'),
   );
-
   images.forEach((img, index) => {
     if (!isLegacyEditableImage(img)) return;
     const setting = findImageSetting(settings, img, index);
-
     if (!setting) return;
     if (!originals.has(img)) originals.set(img, captureOriginalImage(img));
-
     if (setting.src && img.src !== setting.src) {
       img.src = setting.src;
     }
-
     img.style.objectPosition =
       `${setting.x ?? 50}% ${setting.y ?? 50}%`;
-
     img.style.transform =
       `scale(${(setting.scale ?? 100) / 100})`;
-
     img.style.transformOrigin = 'center';
     img.style.objectFit = setting.fit ?? originals.get(img)?.fit ?? '';
     img.style.borderRadius =
       `${setting.radius ?? 0}px`;
   });
 }
-
 export function StoreProvider({
   children,
 }: {
@@ -183,7 +171,6 @@ export function StoreProvider({
       window.removeEventListener('focus', refresh);
     };
   }, [identity, storageKey]);
-
   const [legalRevision, setLegalRevision] = useState(0);
   const [legalResult, setLegalResult] = useState<{ key: string; pages: Record<LegalType, LegalPage> | null; loading: boolean; error: string } | null>(null);
   const currentLegal = legalResult?.key === storageKey ? legalResult : null;
@@ -203,25 +190,19 @@ export function StoreProvider({
     });
     return () => controller.abort();
   }, [storageKey, storageRevision, legalRevision]);
-
-
   useEffect(() => {
     const template = templateFromPath(pathname);
     if (!template || typeof document === 'undefined' || typeof MutationObserver === 'undefined') return;
     const theme = readTheme(savedConfig, template);
-
     const originals = new Map<HTMLImageElement, OriginalImageStyle>();
     applyImageCustomizations(theme, originals);
-
     const observer = new MutationObserver(() => {
       applyImageCustomizations(theme, originals);
     });
-
     observer.observe(document.body, {
       childList: true,
       subtree: true,
     });
-
     return () => {
       observer.disconnect();
       for (const [img, original] of originals) {
@@ -229,16 +210,32 @@ export function StoreProvider({
       }
     };
   }, [pathname, savedConfig]);
-
   return (
     <StoreContext.Provider
-      value={{ config: { ...defaultStoreConfig, name: business?.nombre ?? '', description: business?.descripcion ?? '', logo: landing?.logo || '', primaryColor: visualConfig.global.colors.primary, secondaryColor: visualConfig.global.colors.secondary, accentColor: visualConfig.global.colors.accent }, visualConfig, blockStyles:readBlockStyles(landing?.contenido?.apariencia_bloques?.[activeTemplate] ?? readTheme(savedConfig, activeTemplate)?.blockStyles), landing, landingLoading, landingError, landingProducts, landingCatalogError, legalPages, legalLoading, legalError, legalVerified, legalScopeKey: storageKey ?? '', refreshLegal }}
-
+      value={{
+        config: {
+          ...defaultStoreConfig,
+          ...savedConfig,
+          name: business?.nombre ?? ((typeof savedConfig.name === 'string' ? savedConfig.name : '') || defaultStoreConfig.name),
+          description: business?.descripcion ?? ((typeof savedConfig.description === 'string' ? savedConfig.description : '') || defaultStoreConfig.description),
+          logo: landing?.logo || (typeof savedConfig.logo === 'string' ? savedConfig.logo : '') || '',
+          primaryColor: visualConfig.global.colors.primary,
+          secondaryColor: visualConfig.global.colors.secondary,
+          accentColor: visualConfig.global.colors.accent,
+        },
+        visualConfig,
+        blockStyles: readBlockStyles(
+          landing?.contenido?.apariencia_bloques?.[activeTemplate] ??
+          readTheme(savedConfig, activeTemplate)?.blockStyles
+        ),
+        landing, landingLoading, landingError, landingProducts, landingCatalogError,
+        legalPages, legalLoading, legalError, legalVerified,
+        legalScopeKey: storageKey ?? '', refreshLegal,
+      }}
     >
       {children}
     </StoreContext.Provider>
   );
 }
-
 export const useStore = () =>
   useContext(StoreContext);

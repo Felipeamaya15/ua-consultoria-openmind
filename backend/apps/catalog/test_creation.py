@@ -60,6 +60,15 @@ class ProductCreationTests(CatalogAPITestCase):
         self.assertEqual(detail.data['data']['variantes'][0]['precio_oferta'], 80)
         self.assertEqual(detail.data['data']['imagenes'], self.payload['imagenes'])
 
+    def test_rejects_invalid_offer_price_greater_or_equal_to_regular_price(self):
+        for invalid_offer in (-10, 100, 150):
+            payload = deepcopy(self.payload)
+            payload['variantes'][0]['precio'] = 100
+            payload['variantes'][0]['precio_oferta'] = invalid_offer
+            response = self.api.post(self.url, payload, format='json')
+            self.assertEqual(response.status_code, 400, (invalid_offer, response.data))
+        self.assertEqual(self.db.productos.count_documents({}), 0)
+
     def test_inactive_product_is_persisted_and_hidden(self):
         self.payload['activo'] = False
         pk = self.create()
@@ -139,3 +148,36 @@ class ProductCreationTests(CatalogAPITestCase):
         self.assertIsNotNone(self.read(pk))
         self.assertFalse(self.read(pk)['activo'])
         self.assertEqual(self.api.get('/api/catalog/productos/').data['data'], [])
+
+
+    def test_seo_meta_fields_validation_and_trimming(self):
+        payload = deepcopy(self.payload)
+        payload['seo'] = {
+            'meta_titulo': '   Título SEO Optimizado   ',
+            'meta_descripcion': '   Descripción breve para indexación en motores de búsqueda   '
+        }
+        payload['variantes'][0]['sku'] = 'SEO-TRIM-M'
+        payload['variantes'][1]['sku'] = 'SEO-TRIM-L'
+        response = self.api.post(self.url, payload, format='json')
+        self.assertEqual(response.status_code, 201, response.data)
+        pk = response.data['data']['id']
+        doc = self.read(pk)
+        self.assertEqual(doc['seo']['meta_titulo'], 'Título SEO Optimizado')
+        self.assertEqual(doc['seo']['meta_descripcion'], 'Descripción breve para indexación en motores de búsqueda')
+        detail = self.api.get(f'/api/catalog/productos/{doc["slug"]}/')
+        self.assertEqual(detail.data['data']['seo']['meta_titulo'], 'Título SEO Optimizado')
+        self.assertEqual(detail.data['data']['seo']['meta_descripcion'], 'Descripción breve para indexación en motores de búsqueda')
+
+    def test_seo_meta_fields_reject_excessive_length(self):
+        payload = deepcopy(self.payload)
+        payload['variantes'][0]['sku'] = 'SEO-LEN-M'
+        payload['variantes'][1]['sku'] = 'SEO-LEN-L'
+        payload['seo'] = {'meta_titulo': 'A' * 201, 'meta_descripcion': 'Normal'}
+        response = self.api.post(self.url, payload, format='json')
+        self.assertEqual(response.status_code, 400)
+        self.assertIn('meta_titulo', response.data.get('seo', {}))
+
+        payload['seo'] = {'meta_titulo': 'Normal', 'meta_descripcion': 'B' * 501}
+        response = self.api.post(self.url, payload, format='json')
+        self.assertEqual(response.status_code, 400)
+        self.assertIn('meta_descripcion', response.data.get('seo', {}))

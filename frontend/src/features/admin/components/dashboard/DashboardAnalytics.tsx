@@ -4,10 +4,9 @@ import { formatReportMoney as formatPrice } from '../../services/reportFormattin
 import type { DashboardData } from '../../services/dashboardService';
 import { dashboardBuckets, dashboardPeak, displayDashboardDate, type ChartBucket } from '../../services/dashboardAnalytics';
 import { ordersDestination } from '../../services/orderNavigation';
-
+import DailyHistoryTable from './DailyHistoryTable';
 const focus = 'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--primary)] rounded';
 const panel = 'bg-white border border-[var(--border)] rounded-2xl p-5 sm:p-6 shadow-sm min-w-0';
-
 function EvolutionChart({ buckets, type, period }: { buckets: ChartBucket[]; type: 'sales' | 'orders'; period: string }) {
   const [active, setActive] = useState<number | null>(null);
   const sales = type === 'sales';
@@ -62,7 +61,6 @@ function EvolutionChart({ buckets, type, period }: { buckets: ChartBucket[]; typ
     </figcaption>
   </figure>;
 }
-
 export default function DashboardAnalytics({ data, period }: { data: DashboardData; period: string }) {
   const { buckets, granularity } = dashboardBuckets(data.historico);
   const salesPeak = dashboardPeak(data.historico, 'ventas'), ordersPeak = dashboardPeak(data.historico, 'pedidos');
@@ -106,5 +104,6 @@ export default function DashboardAnalytics({ data, period }: { data: DashboardDa
           <tbody className="divide-y divide-[var(--border)]">{data.historico.map(row => <tr key={row.fecha}><td className="p-3 whitespace-nowrap"><Link to={ordersDestination(row.fecha, row.fecha, 'all', period)} aria-label={`Ver pedidos del ${displayDashboardDate(row.fecha)}`} className={`text-[var(--primary)] hover:underline ${focus}`}>{displayDashboardDate(row.fecha)} <span aria-hidden="true">→</span></Link></td><td className="p-3 text-right whitespace-nowrap">{formatPrice(row.ventas, data.moneda)}</td><td className="p-3 text-right">{row.pedidos}</td></tr>)}</tbody>
         </table></div>}
     </details>
+    <DailyHistoryTable key={`${data.fecha_desde}_${data.fecha_hasta}`} from={data.fecha_desde} to={data.fecha_hasta} period={period} />
   </div>;
 }

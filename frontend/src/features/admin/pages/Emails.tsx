@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useAdmin } from "../context/AdminContext"
 import {
   createDefaultEmailTemplates,
@@ -6,6 +6,7 @@ import {
   EmailTemplateType,
 } from "../data/mockAdminData"
 import { Alert, Button, Input, Textarea, Toggle } from "../components/ui"
+import { fetchEmailTemplates, saveEmailTemplates, type RemoteEmailTemplates } from "../services/emailTemplateService"
 
 const templateTypes = Object.keys(emailTemplateDefinitions) as EmailTemplateType[]
 
@@ -25,6 +26,8 @@ export default function EmailTemplates() {
   const [templates, setTemplates] = useState(() => config.emailTemplates ?? createDefaultEmailTemplates())
   const [activeType, setActiveType] = useState<EmailTemplateType>("order_received")
   const [saved, setSaved] = useState(false)
+  const [error, setError] = useState("")
+  const [remoteDefaults, setRemoteDefaults] = useState<RemoteEmailTemplates["por_defecto"]>({})
   const activeTemplate = templates[activeType]
 
   const updateTemplate = (changes: Partial<typeof activeTemplate>) => {
@@ -35,13 +38,32 @@ export default function EmailTemplates() {
     setSaved(false)
   }
 
-  const save = () => {
-    setSaved(setConfig({ ...config, emailTemplates: templates }))
-    window.setTimeout(() => setSaved(false), 2600)
+
+  useEffect(() => {
+    fetchEmailTemplates()
+      .then((remote) => {
+        setRemoteDefaults(remote.por_defecto)
+        setTemplates((current) => ({ ...current, ...(remote.plantillas as Partial<typeof current>) }))
+      })
+      .catch((reason) => setError(reason instanceof Error ? reason.message : "No se pudieron cargar las plantillas."))
+  }, [])
+
+  const save = async () => {
+    setError("")
+    try {
+      const remoteTypes = Object.keys(remoteDefaults)
+      const toSave = Object.fromEntries(remoteTypes.map((type) => [type, templates[type as EmailTemplateType]]))
+      if (remoteTypes.length) await saveEmailTemplates(toSave)
+      setSaved(setConfig({ ...config, emailTemplates: templates }))
+      window.setTimeout(() => setSaved(false), 2600)
+    } catch (reason) {
+      setSaved(false)
+      setError(reason instanceof Error ? reason.message : "No se pudieron guardar las plantillas.")
+    }
   }
 
   const restoreSelected = () => {
-    const defaults = createDefaultEmailTemplates()
+    const defaults = { ...createDefaultEmailTemplates(), ...remoteDefaults } as typeof templates
     setTemplates((current) => ({ ...current, [activeType]: defaults[activeType] }))
     setSaved(false)
   }
@@ -145,6 +167,7 @@ export default function EmailTemplates() {
             <Button variant="outline" onClick={restoreSelected}>Restaurar plantilla</Button>
             <Button variant="primary" onClick={save}>Guardar correos automáticos</Button>
           </div>
+          {error && <Alert variant="error">{error}</Alert>}
           {saved && <Alert variant="success">Plantillas guardadas. Quedarán listas para ser enviadas cuando se conecte el servicio de correo.</Alert>}
         </div>
       </div>
