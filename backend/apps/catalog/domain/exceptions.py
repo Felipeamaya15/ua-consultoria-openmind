@@ -52,6 +52,11 @@ class TransbankTransaccionException(CatalogException):
     pass
 
 
+class TransbankServicioNoDisponibleException(TransbankTransaccionException):
+    """Falla temporal de red o del proveedor; permite reintentar sin mostrar datos técnicos."""
+    pass
+
+
 class TransbankRechazoException(CatalogException):
     """Lanzada cuando la transacción es rechazada por el banco emisor o anulada."""
     pass

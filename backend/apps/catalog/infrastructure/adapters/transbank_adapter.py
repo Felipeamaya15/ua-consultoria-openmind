@@ -5,6 +5,7 @@ from apps.catalog.domain.ports.transbank_gateway import TransbankGatewayPort
 from apps.catalog.domain.exceptions import (
     TransbankTransaccionException,
     TransbankRechazoException,
+    TransbankServicioNoDisponibleException,
 )
 
 
@@ -53,19 +54,28 @@ class TransbankWebpayAdapter(TransbankGatewayPort):
                 data=json.dumps(payload),
                 timeout=15,
             )
-        except requests.exceptions.RequestException as e:
-            raise TransbankTransaccionException(
-                "No se pudo contactar a Transbank. Reintenta más tarde."
+        except requests.exceptions.RequestException as exc:
+            raise TransbankServicioNoDisponibleException(
+                "Webpay no responde en este momento. Intenta nuevamente más tarde."
+            ) from exc
+
+        if response.status_code == 429 or response.status_code >= 500:
+            raise TransbankServicioNoDisponibleException(
+                "Webpay no está disponible temporalmente. Intenta nuevamente más tarde."
             )
-
         if response.status_code != 200:
-            raise TransbankTransaccionException("Transbank no pudo iniciar el pago. Reintenta más tarde.")
+            raise TransbankTransaccionException("Webpay rechazó el inicio de la transacción.")
 
-        datos = response.json()
-        return {
-            "token": datos.get("token"),
-            "url": datos.get("url"),
-        }
+        try:
+            datos = response.json()
+        except (ValueError, TypeError) as exc:
+            raise TransbankTransaccionException("Webpay devolvió una respuesta inválida.") from exc
+        if not isinstance(datos, dict) or not all(
+            isinstance(datos.get(campo), str) and datos[campo].strip()
+            for campo in ("token", "url")
+        ):
+            raise TransbankTransaccionException("Webpay devolvió una respuesta incompleta.")
+        return {"token": datos["token"], "url": datos["url"]}
 
     def confirmar_transaccion(self, token_ws: str) -> Dict[str, Any]:
         endpoint = f"{self.base_url}/{token_ws}"
@@ -76,17 +86,24 @@ class TransbankWebpayAdapter(TransbankGatewayPort):
                 headers=self._get_headers(),
                 timeout=20,
             )
-        except requests.exceptions.RequestException as e:
-            raise TransbankTransaccionException(
-                "No se pudo confirmar el pago con Transbank. Reintenta más tarde."
-            )
+        except requests.exceptions.RequestException as exc:
+            raise TransbankServicioNoDisponibleException(
+                "No se pudo contactar a Webpay para confirmar el pago. Intenta nuevamente."
+            ) from exc
 
+        if response.status_code == 429 or response.status_code >= 500:
+            raise TransbankServicioNoDisponibleException(
+                "Webpay no está disponible temporalmente. Intenta nuevamente más tarde."
+            )
         if response.status_code != 200:
-            raise TransbankTransaccionException(
-                f"Error en respuesta de confirmación de Transbank (Status {response.status_code})"
-            )
+            raise TransbankTransaccionException("Webpay rechazó la confirmación del pago.")
 
-        datos = response.json()
+        try:
+            datos = response.json()
+        except (ValueError, TypeError) as exc:
+            raise TransbankTransaccionException("Webpay devolvió una confirmación inválida.") from exc
+        if not isinstance(datos, dict):
+            raise TransbankTransaccionException("Webpay devolvió una confirmación inválida.")
         response_code = datos.get("response_code")
         status = datos.get("status")
 

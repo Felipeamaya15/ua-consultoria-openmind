@@ -498,33 +498,58 @@ class IniciarPagoTransbankUseCase:
 
         tienda_pk = getattr(id_tienda, "id_tienda", None) or getattr(id_tienda, "pk", None) or id_tienda
 
-        config = ConfiguracionTransbank.objects.filter(id_tienda_id=tienda_pk).first()
-        if not config or not config.activo or not config.codigo_comercio.strip() or not config.api_key.strip():
-            raise TransbankConfiguracionFaltanteException(
-                "La tienda no tiene habilitada la pasarela de pagos Transbank Webpay."
-            )
-
-        adaptador = TransbankWebpayAdapter(
-            codigo_comercio=config.codigo_comercio,
-            api_key=config.api_key,
-            ambiente=config.ambiente,
-        )
-
         from apps.core.models import Pedido
-        pedido = (Pedido.objects.filter(identificador=orden_compra, tienda_id=tienda_pk,
-                                        correo_contacto__iexact=email).first() if email else None)
-        if not pedido or pedido.medio_pago != "Transbank" or pedido.estado != "pendiente":
-            raise ConfiguracionPagoInvalidaException("El pedido no está disponible para pagar con Webpay.")
-        monto = pedido.monto_total
-        if not monto.is_finite() or monto <= 0 or monto != monto.to_integral_value():
-            raise ConfiguracionPagoInvalidaException("Webpay requiere un total positivo en pesos enteros.")
 
-        return adaptador.iniciar_transaccion(
-            orden_compra=orden_compra,
-            session_id=session_id,
-            monto=monto,
-            return_url=return_url,
-        )
+        with transaction.atomic():
+            # Este bloqueo serializa intentos simultáneos para el mismo pedido.
+            # El adaptador limita a 15 s la espera de Webpay.
+            pedido = (
+                Pedido.objects.select_for_update().filter(
+                    identificador=orden_compra,
+                    tienda_id=tienda_pk,
+                    correo_contacto__iexact=email,
+                ).first() if email else None
+            )
+            if not pedido or pedido.medio_pago != "Transbank" or pedido.estado != "pendiente":
+                raise ConfiguracionPagoInvalidaException("El pedido no está disponible para pagar con Webpay.")
+            monto = pedido.monto_total
+            if not monto.is_finite() or monto <= 0 or monto != monto.to_integral_value():
+                raise ConfiguracionPagoInvalidaException("Webpay requiere un total positivo en pesos enteros.")
+
+            # Si Webpay ya respondió correctamente, reutilizar el token y la URL.
+            if pedido.webpay_token and pedido.webpay_url:
+                return {"token": pedido.webpay_token, "url": pedido.webpay_url}
+            if pedido.webpay_token or pedido.webpay_url:
+                raise TransbankTransaccionException("El inicio de Webpay requiere revisión.")
+
+            config = ConfiguracionTransbank.objects.filter(id_tienda_id=tienda_pk).first()
+            if not config or not config.activo or not config.codigo_comercio.strip() or not config.api_key.strip():
+                raise TransbankConfiguracionFaltanteException(
+                    "La tienda no tiene habilitada la pasarela de pagos Transbank Webpay."
+                )
+            adaptador = TransbankWebpayAdapter(
+                codigo_comercio=config.codigo_comercio,
+                api_key=config.api_key,
+                ambiente=config.ambiente,
+            )
+            respuesta = adaptador.iniciar_transaccion(
+                orden_compra=orden_compra,
+                session_id=session_id,
+                monto=monto,
+                return_url=return_url,
+            )
+            if (not isinstance(respuesta, dict)
+                    or not isinstance(respuesta.get("token"), str)
+                    or not isinstance(respuesta.get("url"), str)
+                    or not respuesta["token"].strip()
+                    or not respuesta["url"].strip()
+                    or len(respuesta["token"]) > 512
+                    or len(respuesta["url"]) > 2048):
+                raise TransbankTransaccionException("Webpay devolvió una transacción incompleta.")
+            pedido.webpay_token = respuesta["token"]
+            pedido.webpay_url = respuesta["url"]
+            pedido.save(update_fields=["webpay_token", "webpay_url"])
+            return {"token": pedido.webpay_token, "url": pedido.webpay_url}
 
     def ejecutar(self, *args, **kwargs) -> Dict[str, Any]:
         return self.execute(*args, **kwargs)

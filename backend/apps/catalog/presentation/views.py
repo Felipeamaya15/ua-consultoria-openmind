@@ -32,6 +32,7 @@ from apps.catalog.domain.exceptions import (
     TiendaNoAutorizadaException,
     # Nuevas excepciones - Adaptador Transbank
     TransbankTransaccionException,
+    TransbankServicioNoDisponibleException,
     TransbankRechazoException,
     TransbankConfiguracionFaltanteException,
 )
@@ -1622,6 +1623,10 @@ class IniciarPagoTransbankView(APIView):
                 {"exito": False, "mensaje": str(e), "error": {"codigo": "PASARELA_NO_DISPONIBLE", "detalles": None}},
                 status=status.HTTP_400_BAD_REQUEST,
             )
+        except TransbankServicioNoDisponibleException as e:
+            respuesta = error_response(str(e), "PASARELA_TEMPORALMENTE_NO_DISPONIBLE", status=503)
+            respuesta["Retry-After"] = "30"
+            return respuesta
         except TransbankTransaccionException as e:
             return Response(
                 {"exito": False, "mensaje": str(e), "error": {"codigo": "ERROR_TRANSBANK", "detalles": None}},
@@ -1668,6 +1673,10 @@ class ConfirmarPagoTransbankView(APIView):
                 {"exito": False, "mensaje": str(e), "error": {"codigo": "PAGO_RECHAZADO", "detalles": None}},
                 status=status.HTTP_400_BAD_REQUEST,
             )
+        except TransbankServicioNoDisponibleException as e:
+            respuesta = error_response(str(e), "PASARELA_TEMPORALMENTE_NO_DISPONIBLE", status=503)
+            respuesta["Retry-After"] = "30"
+            return respuesta
         except (TransbankConfiguracionFaltanteException, TransbankTransaccionException) as e:
             return Response(
                 {"exito": False, "mensaje": str(e), "error": {"codigo": "ERROR_TRANSBANK", "detalles": None}},
