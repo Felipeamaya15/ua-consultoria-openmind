@@ -3,7 +3,7 @@ import re
 from decimal import Decimal
 
 from django.contrib.auth import get_user_model
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from rest_framework.test import APIClient
 
 from apps.core.domain.plantillas_correo import PlantillaCorreoInvalida, TIPOS, VARIABLES_PERMITIDAS, construir_correo
@@ -28,6 +28,7 @@ class PlantillaDespachoBase(TestCase):
         return Pedido.objects.create(**datos)
 
 
+@override_settings(STOREFRONT_PUBLIC_URL='https://tienda.test/plantilla/1')
 class RenderizadoDelDespachoTests(PlantillaDespachoBase):
     def test_el_tipo_esta_registrado_junto_a_los_otros_tres(self):
         self.assertEqual(set(TIPOS), {'order_received', 'payment_success', 'payment_rejected', 'order_shipped'})
@@ -42,6 +43,7 @@ class RenderizadoDelDespachoTests(PlantillaDespachoBase):
             f'Tu pedido {pedido.identificador} ya fue despachado y va en camino.\n\n'
             'Transportista: Chilexpress\n'
             'Código de seguimiento: CHILEX-12345\n\n'
+            f'Revisa el estado de tu pedido aquí (te pediremos el correo con el que compraste): https://tienda.test/plantilla/1/seguimiento?orden={pedido.identificador}\n\n'
             'Gracias por comprar en Tienda Demo.'
         ))
         self.assertNotIn('{{', correo.cuerpo)

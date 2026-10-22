@@ -161,3 +161,7 @@ EMAIL_USE_SSL = (os.getenv('EMAIL_USE_SSL') or '0') == '1'
 EMAIL_USE_TLS = (os.getenv('EMAIL_USE_TLS') or '1') == '1' and not EMAIL_USE_SSL
 EMAIL_TIMEOUT = int(os.getenv('EMAIL_TIMEOUT') or 10)
 DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL') or 'Tienda <no-reply@tienda.local>'
+
+# Dirección pública de la tienda, base de los enlaces de los correos (SCRUM-434). El enlace de seguimiento queda
+# <STOREFRONT_PUBLIC_URL>/seguimiento?orden=ORD-...; en producción hay que poner la dirección real de la tienda.
+STOREFRONT_PUBLIC_URL = (os.getenv('STOREFRONT_PUBLIC_URL') or 'http://localhost:5173/plantilla/1').rstrip('/')

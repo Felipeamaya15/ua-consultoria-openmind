@@ -63,6 +63,7 @@ services:
       - EMAIL_USE_TLS=${EMAIL_USE_TLS:-}
       - EMAIL_USE_SSL=${EMAIL_USE_SSL:-}
       - DEFAULT_FROM_EMAIL=${DEFAULT_FROM_EMAIL:-}
+      - STOREFRONT_PUBLIC_URL=${STOREFRONT_PUBLIC_URL:-}
     depends_on:
       - db
       - mongodb

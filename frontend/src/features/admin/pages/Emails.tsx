@@ -18,6 +18,7 @@ const variables = [
   "{{shippingMethod}}",
   "{{carrier}}",
   "{{trackingCode}}",
+  "{{trackingLink}}",
   "{{storeName}}",
 ]
 

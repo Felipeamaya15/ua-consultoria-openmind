@@ -14,6 +14,7 @@ PLANTILLA_PEDIDO_DESPACHADO = PlantillaCorreo(
         'Tu pedido {{orderNumber}} ya fue despachado y va en camino.\n\n'
         'Transportista: {{carrier}}\n'
         'Código de seguimiento: {{trackingCode}}\n\n'
+        'Revisa el estado de tu pedido aquí (te pediremos el correo con el que compraste): {{trackingLink}}\n\n'
         'Gracias por comprar en {{storeName}}.'
     ),
 )

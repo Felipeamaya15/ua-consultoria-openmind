@@ -111,6 +111,8 @@ Tu pedido {{orderNumber}} ya fue despachado y va en camino.
 Transportista: {{carrier}}
 Código de seguimiento: {{trackingCode}}
 
+Revisa el estado de tu pedido aquí (te pediremos el correo con el que compraste): {{trackingLink}}
+
 Gracias por comprar en {{storeName}}.
 ~~~
 
@@ -119,7 +121,8 @@ Reglas de la plantilla:
 - Solo se genera para pedidos que ya fueron enviados (`enviado`, `en_reparto` o `entregado`). Un pedido sin despachar,
   cancelado o con retiro en tienda no tiene correo de despacho.
 - Las líneas cuyos datos no existen se omiten: si el pedido no tiene código de seguimiento, la línea
-  "Código de seguimiento" no aparece (no queda una línea vacía).
+  "Código de seguimiento" no aparece (no queda una línea vacía). Lo mismo pasa con la línea del enlace si no hay
+  dirección pública configurada.
 - El texto por defecto está también en `frontend/src/features/admin/data/emailTemplates.ts`; si se cambia uno, hay que cambiar el otro.
 
 ## Envío del correo de despacho (SCRUM-431)
@@ -143,3 +146,20 @@ Códigos de `data.correo.codigo`: `enviado`, `ya_enviado`, `envio_en_curso`, `pl
 
 Para probarlo a mano, con el buzón de prueba (Mailpit) levantado: en el panel de Pedidos abre un pedido con envío a
 domicilio (no retiro), cámbialo a "Enviado" y mira el correo en `http://localhost:8025`.
+
+## Enlace de seguimiento en el correo (SCRUM-434)
+
+La variable `{{trackingLink}}` es el enlace al portal de seguimiento de la tienda con el número de orden ya escrito:
+
+~~~
+<STOREFRONT_PUBLIC_URL>/seguimiento?orden=ORD-20261022-ABCD
+~~~
+
+- **El correo del comprador nunca va en el enlace.** Quien lo abre ve el número de orden escrito y debe ingresar el correo
+  de su compra para consultar el pedido (el acceso seguro del SCRUM-365 sigue igual: máximo 5 intentos fallidos por orden).
+- El número de orden se codifica para que ningún carácter altere la dirección.
+- La dirección base se configura con la variable `STOREFRONT_PUBLIC_URL` (`.env`; por defecto
+  `http://localhost:5173/plantilla/1`, sin barra al final). **En producción hay que poner la dirección real de la tienda**,
+  por ejemplo `https://mitienda.cl/plantilla/1`. Si no es una dirección `http` o `https` válida, el enlace no se agrega.
+- La variable está disponible en todas las plantillas de correo y aparece en la lista de variables del panel.
+- Está en el texto por defecto del correo de despacho; el propietario puede quitarla o moverla al editar su plantilla.
