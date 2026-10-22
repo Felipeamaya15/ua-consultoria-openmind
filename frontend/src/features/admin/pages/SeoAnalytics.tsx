@@ -3,6 +3,7 @@ import { useAdmin } from '../context/AdminContext';
 import { AdminCard, Alert, Input, Textarea, Button, Badge } from '../components/ui';
 import { GoogleAnalyticsField } from '../components/GoogleAnalyticsField';
 import { validatePixelId } from '../../storefront/services/metaPixelService';
+import { validateGoogleAnalyticsId } from '../../storefront/services/googleAnalyticsService';
 
 export default function SeoAnalytics() {
   const { config, setConfig } = useAdmin();
@@ -24,6 +25,13 @@ export default function SeoAnalytics() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
+    const analyticsValidation = validateGoogleAnalyticsId(form.gaId);
+    if (!analyticsValidation.valid) {
+      setError(analyticsValidation.error || 'Identificador de Google Analytics inválido.');
+      setSaved(false);
+      return;
+    }
+
     // Validación del identificador de Meta/Facebook Pixel
     const pixelValidation = validatePixelId(form.pixelId);
     if (!pixelValidation.valid) {
@@ -33,7 +41,7 @@ export default function SeoAnalytics() {
     }
 
     const cleanPixelId = pixelValidation.pixelId;
-    const cleanGaId = form.gaId.trim();
+    const cleanGaId = analyticsValidation.measurementId;
     const cleanMetaTitle = form.metaTitle.trim();
     const cleanMetaDescription = form.metaDescription.trim();
 
@@ -56,6 +64,8 @@ export default function SeoAnalytics() {
   };
 
   const isPixelActive = Boolean(form.pixelId && /^\d{9,16}$/.test(form.pixelId.trim()));
+  const analyticsValidation = validateGoogleAnalyticsId(form.gaId);
+  const isAnalyticsActive = Boolean(analyticsValidation.valid && analyticsValidation.measurementId);
 
   return (
     <form className="w-full flex flex-col gap-5" onSubmit={handleSubmit}>
@@ -87,7 +97,10 @@ export default function SeoAnalytics() {
       <AdminCard className="grid gap-4">
         <div className="flex items-center justify-between">
           <h2 className="font-semibold text-sm">Medición y Analítica</h2>
-          {isPixelActive && <Badge variant="success">Meta Pixel activo</Badge>}
+          <div className="flex flex-wrap gap-2">
+            {isAnalyticsActive && <Badge variant="success">Google Analytics activo</Badge>}
+            {isPixelActive && <Badge variant="success">Meta Pixel activo</Badge>}
+          </div>
         </div>
 
         <Input
