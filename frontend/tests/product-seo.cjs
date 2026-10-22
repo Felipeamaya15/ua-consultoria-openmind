@@ -79,7 +79,7 @@ function testSeoService() {
           elem[k] = v;
           elem.attributes[k] = v;
         },
-        getAttribute: (k) => elem[k] || elem.attributes[k] || null,
+        getAttribute: (k) => elem.attributes[k] ?? null,
       };
       return elem;
     },
@@ -125,6 +125,25 @@ function testSeoService() {
   const descFallback = mockDocument.querySelector('meta[name="description"]');
   assert.equal(descFallback.getAttribute('content'), 'Taza artesanal hecha a mano.');
   cleanupFallback();
+
+  // Una página de producto sin descripción no debe conservar la de otra página.
+  const restoreStore = seoService.updateStoreSeo({
+    name: 'Mi Tienda',
+    metaTitle: 'Portada',
+    metaDescription: 'Descripción de portada',
+  });
+  const restoreEmptyProduct = seoService.updateProductSeo({
+    name: 'Producto sin descripción',
+    seoTitle: '',
+    seoDescription: '',
+  }, 'Mi Tienda');
+  assert.equal(mockDocument.querySelector('meta[name="description"]').getAttribute('content'), '');
+  assert.equal(mockDocument.querySelector('meta[property="og:description"]').getAttribute('content'), '');
+  assert.equal(mockDocument.title, 'Producto sin descripción · Mi Tienda');
+  restoreEmptyProduct();
+  assert.equal(mockDocument.querySelector('meta[name="description"]').getAttribute('content'), 'Descripción de portada');
+  restoreStore();
+  assert.equal(mockDocument.title, 'Tienda Original');
 
   console.log('OK: updateProductSeo aplica meta-título, meta-descripción y restaura al desmontar');
 }
