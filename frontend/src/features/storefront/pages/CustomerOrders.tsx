@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ErrorState, LoadingState } from '../../../shared/components/states';
+import { EmptyListState, ErrorState, LoadingState } from '../../../shared/components/states';
 import { Link, useParams } from 'react-router-dom';
 import { authService, type CustomerOrder } from '../../auth/services/authService';
 import { useStorefrontTemplate } from '../hooks/useStorefrontTemplate';
@@ -35,7 +35,7 @@ export default function CustomerOrders() {
       {id && <Link data-page-action="ghost" to={route('mis-pedidos')} className="underline">Volver a mis pedidos</Link>}
       {error && <ErrorState onRetry={() => setAttempt(n => n + 1)}>{error}</ErrorState>}
       {!error && data === null && <LoadingState align="start" spacing="compact">Cargando pedidos…</LoadingState>}
-      {!id && data?.length === 0 && <p>Aún no tienes pedidos.</p>}
+      {!id && data?.length === 0 && <EmptyListState action={<Link data-page-action="ghost" to={route('catalogo')} className="font-medium text-[var(--primary)] hover:underline">Ver el catálogo</Link>}>Aún no tienes pedidos.</EmptyListState>}
       
       {data?.map(order => (
         <article data-visual-section="pagePanel" data-page-panel key={order.id_pedido} className="border rounded-xl p-5 space-y-3">

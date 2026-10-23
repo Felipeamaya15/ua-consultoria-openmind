@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react"
-import { LoadingState } from "../../../shared/components/states"
+import { EmptyListState, LoadingState } from "../../../shared/components/states"
 import { Link, useNavigate, useParams } from "react-router-dom"
+import { emptyKind } from "../services/emptyStates"
 import { formatPrice, Product, ProductVariant } from "../data/mockAdminData"
 import { createPublicProduct, deleteCatalogProduct, fetchAdminProducts, fetchAdminProduct, updateCatalogProduct, type AdminProduct } from "../services/productService"
 import { Alert, Badge, Button, Input, Tabs, Textarea, Toggle } from "../components/ui"
@@ -34,6 +35,7 @@ export function ProductList() {
     return () => { active = false }
   }, [])
   const filtered = products.filter((product) => `${product.name} ${product.category} ${product.tags.join(" ")}`.toLowerCase().includes(search.toLowerCase()))
+  const vacio = emptyKind({ loading, error, shown: filtered.length, searching: search.trim() !== "" })
 
   const handleDeleteProduct = async (productId: string) => {
     if (!window.confirm("¿Estás seguro de que deseas desactivar este producto? Dejará de ser visible en el catálogo, pero se mantendrá en tu historial de ventas.")) return;
@@ -122,7 +124,8 @@ export function ProductList() {
           })}
         </tbody>
       </table>
-      {filtered.length === 0 && <p className="py-12 text-center text-sm text-[var(--muted-foreground)]">No encontramos productos con esa busqueda.</p>}
+      {vacio === "empty" && <EmptyListState spacing="none" className="py-12" title="Aún no tienes productos" action={<Link to="/emprendedor/productos/nuevo"><Button variant="primary" size="sm">Crear tu primer producto</Button></Link>}>Agrega tu primer producto para empezar a vender.</EmptyListState>}
+      {vacio === "no-results" && <EmptyListState spacing="none" className="py-12" action={<Button variant="outline" size="sm" onClick={() => setSearch("")}>Limpiar búsqueda</Button>}>No encontramos productos con esa búsqueda.</EmptyListState>}
     </div>
   </div>
 }

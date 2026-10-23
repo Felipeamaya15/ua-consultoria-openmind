@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ErrorState, LoadingState } from '../../../../shared/components/states';
+import { EmptyListState, ErrorState, LoadingState } from '../../../../shared/components/states';
 import { humanizeAdminError } from '../../utils/humanizeError';
 import { Link } from 'react-router-dom';
 import { formatPrice } from '../../data/mockAdminData';
@@ -19,7 +19,7 @@ const panel = 'bg-white border border-[var(--border)] rounded-2xl p-5 sm:p-6 sha
 export function DailyHistoryView({ state, period, onRetry }: { state: DailyHistoryState; period: string; onRetry: () => void }) {
   if (state.status === 'loading') return <LoadingState spacing="none" className="py-5">Cargando el historial…</LoadingState>;
   if (state.status === 'error') return <ErrorState className="mt-4" onRetry={onRetry} retryLabel="Reintentar historial">{humanizeAdminError(state.message)}</ErrorState>;
-  if (state.rows.every(row => row.pedidos === 0 && Number(row.ventas) === 0)) return <p className="py-5 text-sm">No hay pedidos en el período seleccionado.</p>;
+  if (state.rows.every(row => row.pedidos === 0 && Number(row.ventas) === 0)) return <EmptyListState align="start" spacing="none" className="py-5">No hay pedidos en el período seleccionado.</EmptyListState>;
   return <div className="overflow-x-auto max-h-96 mt-4" tabIndex={0} role="region" aria-label="Histórico diario">
     <table className="w-full text-left border-collapse text-sm"><caption className="sr-only">Ventas confirmadas y pedidos registrados por día</caption>
       <thead><tr className="border-b border-[var(--border)]"><th scope="col" className="p-3">Fecha</th><th scope="col" className="p-3 text-right">Ventas (CLP)</th><th scope="col" className="p-3 text-right">Pedidos</th></tr></thead>

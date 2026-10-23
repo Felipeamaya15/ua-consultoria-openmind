@@ -1,5 +1,5 @@
 /**
- * Estados de interfaz compartidos: carga (SCRUM-451) y error (SCRUM-452).
+ * Estados de interfaz compartidos: carga (SCRUM-451), error (SCRUM-452) y vacío (SCRUM-454).
  *
  * Este módulo no depende de ningún otro componente de la aplicación (solo de React) para poder usarse en
  * cualquier pantalla, de la tienda o del panel, sin acoplarse a un sistema de diseño en particular.
@@ -61,6 +61,45 @@ export function ErrorState({ children, title, onRetry, retryLabel = 'Reintentar'
         <div className="text-[var(--foreground)]">{sinMensaje ? DEFAULT_ERROR_MESSAGE : children}</div>
       </div>
       {onRetry && <button type="button" onClick={onRetry} className={RETRY_BUTTON}>{retryLabel}</button>}
+    </div>
+  );
+}
+
+const EMPTY_SPACING = { normal: 'py-10', compact: 'py-4', none: '' } as const;
+
+export interface EmptyListStateProps {
+  /** Mensaje: qué falta y, si ayuda, qué hacer. */
+  children: ReactNode;
+  /** Título opcional, en negrita sobre el mensaje. */
+  title?: string;
+  /** Ícono o ilustración opcional (se oculta a los lectores de pantalla). */
+  icon?: ReactNode;
+  /** Acción sugerida para salir del estado vacío: un enlace o un botón. */
+  action?: ReactNode;
+  /** Alineación del contenido: centrado (por defecto) o al inicio, para vacíos dentro de una tarjeta o de un texto corrido. */
+  align?: 'center' | 'start';
+  /** Espacio vertical: `normal` (bloque), `compact` (en línea) o `none` si el contenedor ya tiene su propio espacio. */
+  spacing?: keyof typeof EMPTY_SPACING;
+  className?: string;
+}
+
+/**
+ * Lista, tabla o panel sin datos. Para una pantalla completa vacía (por ejemplo el carrito) se usa el `EmptyState`
+ * del sistema de diseño de la tienda.
+ */
+export function EmptyListState({ children, title, icon, action, align = 'center', spacing = 'normal', className = '' }: EmptyListStateProps) {
+  const classes = [
+    'flex flex-col gap-1 text-sm text-[var(--muted-foreground)]',
+    align === 'center' ? 'items-center text-center' : 'items-start text-left',
+    EMPTY_SPACING[spacing],
+    className,
+  ].filter(Boolean).join(' ');
+  return (
+    <div role="status" className={classes}>
+      {icon && <div aria-hidden="true" className="mb-1">{icon}</div>}
+      {title && <p className="font-semibold text-[var(--foreground)]">{title}</p>}
+      <div>{children}</div>
+      {action && <div className="mt-2">{action}</div>}
     </div>
   );
 }

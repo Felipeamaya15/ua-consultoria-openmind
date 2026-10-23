@@ -29,7 +29,7 @@ function load(file, globals) {
     if (id === 'react') return {useState: initial => {const i = index++; if (!(i in states)) states[i] = initial; return [states[i], value => {states[i] = value;}];}, useEffect: effect => effects.push(effect)};
     if (id === 'react-router-dom') return {Navigate: 'Navigate', Outlet: 'Outlet', useLocation: () => ({pathname: '/admin'})};
     if (id.includes('authService')) return {authService: service};
-    if (id.includes('shared/components/states')) return {LoadingState: 'LoadingState', ErrorState: 'ErrorState'}; if (id.includes('humanizeError')) return {humanizeAdminError: message => message}; throw Error(id);
+    if (id.includes('shared/components/states')) return {LoadingState: 'LoadingState', ErrorState: 'ErrorState', EmptyListState: 'EmptyListState'}; if (id.includes('humanizeError')) return {humanizeAdminError: message => message}; throw Error(id);
   }});
   async function renderGuard() {
     states = []; index = 0; effects = [];
@@ -53,7 +53,7 @@ function load(file, globals) {
     if (id === 'react') return {useState: initial => {const i = index++; if (!(i in states)) states[i] = initial; return [states[i], value => {states[i] = value;}];}, useEffect: effect => effects.push(effect)};
     if (id.includes('authService')) return {authService: service};
     if (id.includes('components/ui')) return {Input: 'Input', Button: 'Button', Alert: 'Alert'};
-    if (id.includes('shared/components/states')) return {LoadingState: 'LoadingState', ErrorState: 'ErrorState'}; if (id.includes('humanizeError')) return {humanizeAdminError: message => message}; throw Error(id);
+    if (id.includes('shared/components/states')) return {LoadingState: 'LoadingState', ErrorState: 'ErrorState', EmptyListState: 'EmptyListState'}; if (id.includes('humanizeError')) return {humanizeAdminError: message => message}; throw Error(id);
   }});
   function nodes(tree, out = []) {if (Array.isArray(tree)) tree.forEach(x => nodes(x, out)); else if (tree && typeof tree === 'object') {out.push(tree); nodes(tree.props?.children, out);} else if (typeof tree === 'string') out.push(tree); return out;}
   function renderProfile() {index = 0; return nodes(Profile());}

@@ -95,7 +95,7 @@ async function main() {
           fetchAdminProducts: async () => { queried++; return [saved]; },
         };
         if (name.includes('components/ui')) return Object.fromEntries(['Alert','Badge','Button','Input','Select','Tabs','Textarea','Toggle'].map(x => [x, x]));
-        if (name.includes('shared/components/states')) return {LoadingState: 'LoadingState', ErrorState: 'ErrorState'}; if (name.includes('humanizeError')) return {humanizeAdminError: message => message}; throw new Error(`Unexpected dependency: ${name}`);
+        if (name.includes('shared/components/states')) return {LoadingState: 'LoadingState', ErrorState: 'ErrorState', EmptyListState: 'EmptyListState'}; if (name.includes('humanizeError')) return {humanizeAdminError: message => message}; if (name.includes('emptyStates')) return require('./source-loader.cjs').load('src/features/admin/services/emptyStates.ts'); throw new Error(`Unexpected dependency: ${name}`);
       },
     });
     const render = mode === 'list' ? components.ProductList : components.ProductForm;

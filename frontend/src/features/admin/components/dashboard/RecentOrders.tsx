@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ErrorState, LoadingState } from '../../../../shared/components/states';
+import { EmptyListState, ErrorState, LoadingState } from '../../../../shared/components/states';
 import { humanizeAdminError } from '../../utils/humanizeError';
 import { Link } from 'react-router-dom';
 import { Badge } from '../ui';
@@ -46,9 +46,7 @@ export function RecentOrdersView({ state, onRetry }: { state: RecentOrdersState;
       )}
 
       {state.status === 'ready' && state.orders.length === 0 && (
-        <p className="py-8 text-center text-sm text-[var(--muted-foreground)]">
-          Aún no hay órdenes registradas en tu tienda.
-        </p>
+        <EmptyListState spacing="none" className="py-8">Aún no hay órdenes registradas en tu tienda.</EmptyListState>
       )}
 
       {state.status === 'ready' && state.orders.length > 0 && (

@@ -75,7 +75,7 @@ async function main() {
           updateCatalogProduct: async p => { assert.equal(editing, true); calls++; if (fails) throw new Error('Servidor caído'); return { ...p, revision: 'new-revision' }; },
         };
         if (id.includes('components/ui')) return Object.fromEntries(['Alert','Badge','Button','Input','Select','Tabs','Textarea','Toggle'].map(x => [x, x]));
-        if (id.includes('shared/components/states')) return {LoadingState: 'LoadingState', ErrorState: 'ErrorState'}; if (id.includes('humanizeError')) return {humanizeAdminError: message => message}; throw new Error(id);
+        if (id.includes('shared/components/states')) return {LoadingState: 'LoadingState', ErrorState: 'ErrorState', EmptyListState: 'EmptyListState'}; if (id.includes('humanizeError')) return {humanizeAdminError: message => message}; if (id.includes('emptyStates')) return require('./source-loader.cjs').load('src/features/admin/services/emptyStates.ts'); throw new Error(id);
       },
     });
     const tree = form.ProductEditor({ initial: structuredClone(product), editing });
