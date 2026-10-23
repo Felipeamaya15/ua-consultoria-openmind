@@ -77,6 +77,11 @@ class PromocionSerializer(serializers.ModelSerializer):
             normalized['minAmount'] = normalized.get(alias)
             normalized.pop(alias)
 
+        if 'minAmount' in normalized and isinstance(normalized.get('minAmount'), bool):
+            raise serializers.ValidationError({
+                'minAmount': 'El monto mínimo debe ser un número válido mayor o igual a cero.',
+            })
+
         return super().to_internal_value(normalized)
 
     def validate_code(self, value):
@@ -100,11 +105,14 @@ class PromocionSerializer(serializers.ModelSerializer):
         if 'tipo' in attrs:
             attrs['tipo'] = tipo
         valor = attrs.get('valor', getattr(self.instance, 'valor', 0))
+        monto_minimo = attrs.get('monto_minimo', getattr(self.instance, 'monto_minimo', 0))
         inicio = attrs.get('fecha_inicio', getattr(self.instance, 'fecha_inicio', None))
         fin = attrs.get('fecha_fin', getattr(self.instance, 'fecha_fin', None))
         code = attrs.get('codigo', getattr(self.instance, 'codigo', ''))
         if tipo != 'precio_oferta' and not code:
             raise serializers.ValidationError({'code': 'El código del cupón es obligatorio.'})
+        if monto_minimo is not None and monto_minimo < 0:
+            raise serializers.ValidationError({'minAmount': 'El monto mínimo no puede ser negativo.'})
         if tipo == 'fixed' and valor <= 0:
             raise serializers.ValidationError({'value': 'El monto fijo debe ser mayor que cero.'})
         if tipo == 'percentage' and (valor <= 0 or valor > 100):

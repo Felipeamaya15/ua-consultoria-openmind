@@ -1,13 +1,18 @@
 from datetime import date, timedelta
 from decimal import Decimal
+from unittest.mock import patch
+from uuid import uuid4
 
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 from rest_framework.authtoken.models import Token
 from rest_framework.test import APIClient
 
-from apps.core.models import Promocion, Tienda
-from apps.core.promotions import calculate_promotion
+from apps.core.delivery import delivery_defaults
+from apps.core.models import ConfiguracionEntrega, ConfiguracionPago, Pedido, Promocion, Tienda
+from apps.core.payments import TRANSFER_PUBLIC_FIELDS
+from apps.core.promotions import PromotionError, calculate_promotion, validar_monto_minimo_envio_gratis
+from apps.shipping.domain.services import ShippingDomainService
 
 
 class PromocionesAdminTests(TestCase):
@@ -113,10 +118,11 @@ class PromocionesAdminTests(TestCase):
         }
 
         for alias in ('minAmount', 'monto_minimo', 'montoMinimo', 'minimumAmount', 'minimum_amount'):
-            response = self.client.post('/api/promociones/', {
-                **base, alias: -1000,
-            }, format='json')
-            self.assertEqual(response.status_code, 400, (alias, response.data))
+            for invalid in (-1000, -0.01, True, 'invalido'):
+                response = self.client.post('/api/promociones/', {
+                    **base, alias: invalid,
+                }, format='json')
+                self.assertEqual(response.status_code, 400, (alias, invalid, response.data))
 
         self.assertFalse(Promocion.objects.filter(codigo='ENVIO-QA').exists())
 
@@ -139,6 +145,109 @@ class PromocionesAdminTests(TestCase):
         self.assertEqual(response.status_code, 201, response.data)
         self.assertEqual(Promocion.objects.get(codigo='ENVIO-QA').monto_minimo, Decimal('15000.00'))
 
+    def test_envio_gratuito_valida_monto_minimo_en_calculo_y_endpoint_validar(self):
+        Promocion.objects.create(
+            tienda=self.store, nombre='Envío gratis sobre 25 mil', codigo='GRATIS25',
+            tipo='free_shipping', valor=0, monto_minimo=Decimal('25000.00'),
+            fecha_inicio=date.today() - timedelta(days=1), activa=True,
+        )
+        self.client.credentials()
+
+        # Subtotal menor al mínimo -> rechaza con mensaje claro y código PROMOCION_INVALIDA
+        below = self.client.post('/api/promociones/validar/', {
+            'code': 'GRATIS25', 'subtotal': '24999.00', 'shipping': '4500.00',
+        }, format='json')
+        self.assertEqual(below.status_code, 400, below.data)
+        self.assertEqual(below.data['error']['codigo'], 'PROMOCION_INVALIDA')
+        self.assertIn('25000', below.data['mensaje'])
+
+        # Subtotal exactamente igual al mínimo -> aplica envío gratis ($0.00)
+        exact = self.client.post('/api/promociones/validar/', {
+            'code': ' gratis25 ', 'subtotal': '25000.00', 'shipping': '4500.00',
+        }, format='json')
+        self.assertEqual(exact.status_code, 200, exact.data)
+        self.assertEqual(exact.data['data']['type'], 'free_shipping')
+        self.assertEqual(exact.data['data']['discount'], '0.00')
+        self.assertEqual(exact.data['data']['shipping'], '0.00')
+
+        # Subtotal superior al mínimo -> aplica envío gratis ($0.00)
+        above = self.client.post('/api/promociones/validar/', {
+            'code': 'GRATIS25', 'subtotal': '40000.00', 'shipping': '4500.00',
+        }, format='json')
+        self.assertEqual(above.status_code, 200, above.data)
+        self.assertEqual(above.data['data']['shipping'], '0.00')
+
+    def test_checkout_valida_monto_minimo_de_envio_gratuito_antes_de_crear_pedido(self):
+        Promocion.objects.create(
+            tienda=self.store, nombre='Envío gratis sobre 30 mil', codigo='ENVIO30K',
+            tipo='free_shipping', valor=0, monto_minimo=Decimal('30000.00'),
+            fecha_inicio=date.today() - timedelta(days=1), activa=True,
+        )
+        delivery_data = delivery_defaults()
+        delivery_data['chilexpress'].update(enabled=True, tarifas=[
+            {'region': 'Metropolitana de Santiago', 'comuna': 'Providencia', 'monto': 4500, 'plazo_dias': 2},
+        ])
+        ConfiguracionEntrega.objects.create(tienda=self.store, datos=delivery_data)
+        ConfiguracionPago.objects.create(tienda=self.store, datos={
+            'transfer': {'enabled': True, 'fields': {field: 'qa' for field in TRANSFER_PUBLIC_FIELDS}},
+        })
+
+        self.client.credentials()
+        quote_res = self.client.post('/api/entregas/cotizacion/', {
+            'operador': 'Chilexpress', 'region': 'Metropolitana', 'comuna': 'Providencia',
+        }, format='json')
+        self.assertEqual(quote_res.status_code, 200, quote_res.data)
+        token_cotizacion = quote_res.data['data']['tarifas'][0]['cotizacion']
+
+        with patch('apps.core.presentation.checkout.ProductRepository') as repo_mock:
+            repo = repo_mock.return_value
+            repo.get_by_id.return_value = {
+                '_id': 'prod-1', 'nombre': 'Producto', 'activo': True,
+                'variantes': [{'sku': 'SKU-1', 'precio': 15000, 'stock': 10}],
+            }
+            repo.decrease_stock.return_value = True
+
+            # 1 unidad ($15.000 < $30.000) -> Checkout rechaza y no descuenta stock ni crea pedido
+            under_min = self.client.post('/api/checkout/pedidos/', {
+                'clave_checkout': str(uuid4()),
+                'items': [{'producto_id': 'prod-1', 'sku': 'SKU-1', 'cantidad': 1}],
+                'contacto': {'nombre': 'Comprador', 'email': 'buyer@example.com'},
+                'medio_pago': 'Transferencia', 'metodo_entrega': 'Chilexpress',
+                'cotizacion': token_cotizacion, 'codigo_promocional': 'ENVIO30K',
+                'direccion': {'street': 'Av. Providencia', 'number': '123', 'apt': '', 'city': 'Providencia', 'region': 'Metropolitana'},
+            }, format='json')
+            self.assertEqual(under_min.status_code, 400, under_min.data)
+            self.assertFalse(Pedido.objects.exists())
+            repo.decrease_stock.assert_not_called()
+
+            # 2 unidades ($30.000 == $30.000) -> Checkout aprueba y deja costo_envio en 0.00
+            meets_min = self.client.post('/api/checkout/pedidos/', {
+                'clave_checkout': str(uuid4()),
+                'items': [{'producto_id': 'prod-1', 'sku': 'SKU-1', 'cantidad': 2}],
+                'contacto': {'nombre': 'Comprador', 'email': 'buyer@example.com'},
+                'medio_pago': 'Transferencia', 'metodo_entrega': 'Chilexpress',
+                'cotizacion': token_cotizacion, 'codigo_promocional': 'ENVIO30K',
+                'direccion': {'street': 'Av. Providencia', 'number': '123', 'apt': '', 'city': 'Providencia', 'region': 'Metropolitana'},
+            }, format='json')
+            self.assertEqual(meets_min.status_code, 201, meets_min.data)
+            pedido = Pedido.objects.get()
+            self.assertEqual(pedido.costo_envio, Decimal('0.00'))
+            self.assertEqual(pedido.monto_total, Decimal('30000.00'))
+
+    def test_funciones_dominio_validan_monto_minimo_envio_gratis(self):
+        self.assertEqual(validar_monto_minimo_envio_gratis(Decimal('20000'), Decimal('20000')), Decimal('20000'))
+        with self.assertRaises(PromotionError):
+            validar_monto_minimo_envio_gratis(Decimal('19999.99'), Decimal('20000'))
+        for invalido in (-1, True, 'abc'):
+            with self.assertRaises(PromotionError):
+                validar_monto_minimo_envio_gratis(invalido, Decimal('10000'))
+
+        self.assertTrue(ShippingDomainService.cumple_monto_minimo_envio_gratis(Decimal('30000'), Decimal('30000')))
+        self.assertFalse(ShippingDomainService.cumple_monto_minimo_envio_gratis(Decimal('29999'), Decimal('30000')))
+        for invalido in (-100, True, 'no-numero'):
+            with self.assertRaises(ValueError):
+                ShippingDomainService.cumple_monto_minimo_envio_gratis(invalido, Decimal('30000'))
+
     def test_valida_codigo_vigente_y_calcula_descuento_fijo(self):
         Promocion.objects.create(
             tienda=self.store, nombre='Cinco mil', codigo='FIJO5000', tipo='fixed', valor=5000,
@@ -160,6 +269,7 @@ class PromocionesAdminTests(TestCase):
             ('EXPIRADA', {'fecha_inicio': date.today() - timedelta(days=5), 'fecha_fin': date.today() - timedelta(days=1)}, 20000),
             ('FUTURA', {'fecha_inicio': date.today() + timedelta(days=1)}, 20000),
             ('MINIMO', {'monto_minimo': 30000}, 20000),
+            ('MINIMO-ENVIO', {'tipo': 'free_shipping', 'valor': 0, 'monto_minimo': 30000}, 20000),
             ('AGOTADA', {'maximo_usos': 1, 'usos': 1}, 20000),
         ]
         for code, changes, subtotal in cases:

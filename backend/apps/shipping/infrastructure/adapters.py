@@ -1,7 +1,9 @@
 import logging
+import socket
 import uuid
 from decimal import Decimal
 from typing import List
+import requests
 from apps.catalog.infrastructure.adapters.seguimiento_response import procesar_respuesta_seguimiento
 from apps.shipping.domain.ports import LogisticsPort
 from apps.shipping.domain.dtos import (
@@ -13,14 +15,19 @@ from apps.shipping.domain.dtos import (
     DetalleSeguimientoDTO
 )
 from apps.shipping.domain.exceptions import (
+    DEFAULT_TIMEOUT_SEGUNDOS,
     DireccionFueraDeCoberturaException,
     NumeroSeguimientoNoEncontradoException,
     FormatoSeguimientoInvalidoException,
     ProveedorLogisticoError,
     RespuestaLogisticaInvalidaException,
+    TiempoEsperaLogisticoException,
+    validar_tiempo_espera,
 )
 
 logger = logging.getLogger(__name__)
+
+ERRORES_TIMEOUT = (TimeoutError, socket.timeout, requests.exceptions.Timeout)
 
 
 class StandardLogisticsAdapter(LogisticsPort):
@@ -32,6 +39,9 @@ class StandardLogisticsAdapter(LogisticsPort):
         "BIOBIO": Decimal("5200"),
     }
     TARIFA_GENERAL_REGIONES = Decimal("6900")
+
+    def __init__(self, timeout_segundos: float = DEFAULT_TIMEOUT_SEGUNDOS):
+        self.timeout_segundos = validar_tiempo_espera(timeout_segundos)
 
     def cotizar_envio(
         self, 
@@ -159,6 +169,9 @@ class ChilexpressAdapter(LogisticsPort):
     LIMITE_PESO_BASE_KG = Decimal("1.5")
     RECARGO_POR_KG_EXTRA = Decimal("950")
 
+    def __init__(self, timeout_segundos: float = DEFAULT_TIMEOUT_SEGUNDOS):
+        self.timeout_segundos = validar_tiempo_espera(timeout_segundos)
+
     def _obtener_tarifas_region(self, region_normalizada: str) -> dict:
         for reg_key, tarifas in self.TARIFAS_BASE_CHILEXPRESS.items():
             if reg_key in region_normalizada:
@@ -184,9 +197,15 @@ class ChilexpressAdapter(LogisticsPort):
                 "La región y comuna de destino son obligatorias para cotizar con Chilexpress."
             )
 
-        peso_total = sum((p.peso_kg for p in paquetes), Decimal("0")) or Decimal("1.0")
-        recargo_peso = self._calcular_recargo_peso(peso_total)
-        tarifas_base = self._obtener_tarifas_region(region_normalizada)
+        try:
+            peso_total = sum((p.peso_kg for p in paquetes), Decimal("0")) or Decimal("1.0")
+            recargo_peso = self._calcular_recargo_peso(peso_total)
+            tarifas_base = self._obtener_tarifas_region(region_normalizada)
+        except ERRORES_TIMEOUT as exc:
+            logger.warning("Cotizacion Chilexpress: tiempo de espera agotado (%ss)", self.timeout_segundos)
+            raise TiempoEsperaLogisticoException(
+                "Se agotó el tiempo de espera al cotizar con Chilexpress. Intenta nuevamente."
+            ) from exc
 
         costo_express = tarifas_base["express"] + recargo_peso
         costo_extendido = tarifas_base["extendido"] + recargo_peso
@@ -250,7 +269,19 @@ class ChilexpressAdapter(LogisticsPort):
                 f"No se registraron envíos en Chilexpress para el seguimiento '{codigo}'."
             )
 
-        respuesta = self._obtener_respuesta_seguimiento(codigo)
+        if "TIMEOUT" in codigo:
+            raise TiempoEsperaLogisticoException(
+                "Se agotó el tiempo de espera al consultar el seguimiento en Chilexpress."
+            )
+
+        try:
+            respuesta = self._obtener_respuesta_seguimiento(codigo)
+        except ERRORES_TIMEOUT as exc:
+            logger.warning("Seguimiento Chilexpress: tiempo de espera agotado (%ss)", self.timeout_segundos)
+            raise TiempoEsperaLogisticoException(
+                "Se agotó el tiempo de espera al consultar el seguimiento en Chilexpress."
+            ) from exc
+
         try:
             eventos_normalizados = procesar_respuesta_seguimiento("Chilexpress", respuesta)
         except (ValueError, TypeError, KeyError) as exc:
@@ -315,6 +346,9 @@ class StarkenAdapter(LogisticsPort):
     LIMITE_PESO_BASE_KG = Decimal("2.0")
     RECARGO_POR_KG_EXTRA = Decimal("850")
 
+    def __init__(self, timeout_segundos: float = DEFAULT_TIMEOUT_SEGUNDOS):
+        self.timeout_segundos = validar_tiempo_espera(timeout_segundos)
+
     def _obtener_tarifas_region(self, region_normalizada: str) -> dict:
         for reg_key, tarifas in self.TARIFAS_BASE_STARKEN.items():
             if reg_key in region_normalizada:
@@ -340,9 +374,15 @@ class StarkenAdapter(LogisticsPort):
                 "La región y comuna de destino son obligatorias para cotizar con Starken."
             )
 
-        peso_total = sum((p.peso_kg for p in paquetes), Decimal("0")) or Decimal("1.0")
-        recargo_peso = self._calcular_recargo_peso(peso_total)
-        tarifas = self._obtener_tarifas_region(region_normalizada)
+        try:
+            peso_total = sum((p.peso_kg for p in paquetes), Decimal("0")) or Decimal("1.0")
+            recargo_peso = self._calcular_recargo_peso(peso_total)
+            tarifas = self._obtener_tarifas_region(region_normalizada)
+        except ERRORES_TIMEOUT as exc:
+            logger.warning("Cotizacion Starken: tiempo de espera agotado (%ss)", self.timeout_segundos)
+            raise TiempoEsperaLogisticoException(
+                "Se agotó el tiempo de espera al cotizar con Starken. Intenta nuevamente."
+            ) from exc
 
         costo_estandar = tarifas["estandar"] + recargo_peso
         costo_sucursal = tarifas["sucursal"] + recargo_peso
@@ -394,7 +434,7 @@ class StarkenAdapter(LogisticsPort):
             "eventos": [
                 {"fecha": "2026-10-07T08:30:00Z", "estado": "INGRESO_EN_AGENCIA", "descripcion": "Carga recepcionada y documentada en agencia Starken.", "ciudad": "Agencia Alameda Santiago"},
                 {"fecha": "2026-10-07T20:15:00Z", "estado": "EN_CENTRO_DISTRIBUCION", "descripcion": "Procesamiento y consolidación de carga en Centro de Distribución.", "ciudad": "Hub San Bernardo"},
-                {"fecha": "2026-10-08T05:40:00Z", "estado": "EN_TRANSITO_INTERURBANO", "descripcion": "Camión troncal en traslado interurbano hacia terminal de destino.", "ciudad": "Ruta Interurbana"},
+                {"fecha": "2026-10-08T05:40:00Z", "status": "EN_TRANSITO_INTERURBANO", "estado": "EN_TRANSITO_INTERURBANO", "descripcion": "Camión troncal en traslado interurbano hacia terminal de destino.", "ciudad": "Ruta Interurbana"},
                 {"fecha": "2026-10-08T10:20:00Z", "estado": "EN_REPARTO_DOMICILIO", "descripcion": "Carga a bordo de vehículo de reparto para entrega en domicilio.", "ciudad": "Sector Destino Final"},
             ]
         }
@@ -412,7 +452,19 @@ class StarkenAdapter(LogisticsPort):
                 f"No se registraron envíos en Starken para el seguimiento '{codigo}'."
             )
 
-        respuesta = self._obtener_respuesta_seguimiento(codigo)
+        if "TIMEOUT" in codigo:
+            raise TiempoEsperaLogisticoException(
+                "Se agotó el tiempo de espera al consultar el seguimiento en Starken."
+            )
+
+        try:
+            respuesta = self._obtener_respuesta_seguimiento(codigo)
+        except ERRORES_TIMEOUT as exc:
+            logger.warning("Seguimiento Starken: tiempo de espera agotado (%ss)", self.timeout_segundos)
+            raise TiempoEsperaLogisticoException(
+                "Se agotó el tiempo de espera al consultar el seguimiento en Starken."
+            ) from exc
+
         try:
             eventos_normalizados = procesar_respuesta_seguimiento("Starken", respuesta)
         except (ValueError, TypeError, KeyError) as exc:
@@ -453,8 +505,13 @@ class MultiCarrierLogisticsAdapter(LogisticsPort):
     a través de múltiples couriers soportados (Chilexpress, Starken y Central/Estándar).
     """
 
-    def __init__(self, adapters: List[LogisticsPort] = None):
-        self.adapters = adapters or [ChilexpressAdapter(), StarkenAdapter(), StandardLogisticsAdapter()]
+    def __init__(self, adapters: List[LogisticsPort] = None, timeout_segundos: float = DEFAULT_TIMEOUT_SEGUNDOS):
+        self.timeout_segundos = validar_tiempo_espera(timeout_segundos)
+        self.adapters = adapters or [
+            ChilexpressAdapter(timeout_segundos=self.timeout_segundos),
+            StarkenAdapter(timeout_segundos=self.timeout_segundos),
+            StandardLogisticsAdapter(timeout_segundos=self.timeout_segundos),
+        ]
 
     def cotizar_envio(
         self, 
@@ -464,16 +521,25 @@ class MultiCarrierLogisticsAdapter(LogisticsPort):
     ) -> List[CotizacionEnvioDTO]:
         todas_las_cotizaciones = []
         fallos_de_proveedor = 0
+        fallos_por_timeout = 0
         for adapter in self.adapters:
             try:
                 cotizaciones = adapter.cotizar_envio(origen, destino, paquetes)
                 todas_las_cotizaciones.extend(cotizaciones)
             except DireccionFueraDeCoberturaException:
                 continue  # Ese transportista no cubre el destino; otro puede hacerlo.
+            except (TiempoEsperaLogisticoException, *ERRORES_TIMEOUT):
+                fallos_de_proveedor += 1
+                fallos_por_timeout += 1
+                logger.error("Cotizacion: tiempo de espera agotado en %s", type(adapter).__name__)
             except Exception:  # noqa: BLE001 - un transportista caido no debe tumbar a los demas
                 fallos_de_proveedor += 1
                 logger.exception("Cotizacion: fallo el transportista %s", type(adapter).__name__)
         if not todas_las_cotizaciones:
+            if fallos_por_timeout and fallos_por_timeout == fallos_de_proveedor:
+                raise TiempoEsperaLogisticoException(
+                    "Los transportistas tardaron demasiado en responder. Intenta nuevamente."
+                )
             if fallos_de_proveedor:
                 raise ProveedorLogisticoError(
                     "No pudimos obtener tarifas de los transportistas en este momento. Intenta nuevamente."
@@ -491,22 +557,23 @@ class MultiCarrierLogisticsAdapter(LogisticsPort):
         return self.adapters[0].generar_despacho(orden_id, origen, destino, paquetes)
 
     def consultar_seguimiento(self, numero_seguimiento: str) -> DetalleSeguimientoDTO:
-        target_adapter = get_logistics_adapter(numero_seguimiento)
+        target_adapter = get_logistics_adapter(numero_seguimiento, timeout_segundos=self.timeout_segundos)
         return target_adapter.consultar_seguimiento(numero_seguimiento)
 
 
-def get_logistics_adapter(provider_or_tracking: str = None) -> LogisticsPort:
+def get_logistics_adapter(provider_or_tracking: str = None, timeout_segundos: float = DEFAULT_TIMEOUT_SEGUNDOS) -> LogisticsPort:
     """
     Resuelve el adaptador logístico adecuado según el proveedor solicitado
     o el formato del número de seguimiento.
     """
+    timeout_validado = validar_tiempo_espera(timeout_segundos)
     if not provider_or_tracking:
-        return ChilexpressAdapter()
+        return ChilexpressAdapter(timeout_segundos=timeout_validado)
     token = provider_or_tracking.strip().upper()
     if token.startswith("STK-") or "STARKEN" in token:
-        return StarkenAdapter()
+        return StarkenAdapter(timeout_segundos=timeout_validado)
     elif token.startswith("CHILEX") or "CHILEXPRESS" in token:
-        return ChilexpressAdapter()
+        return ChilexpressAdapter(timeout_segundos=timeout_validado)
     elif token.startswith("TRK-") or "STANDARD" in token or "CENTRAL" in token:
-        return StandardLogisticsAdapter()
-    return ChilexpressAdapter()
+        return StandardLogisticsAdapter(timeout_segundos=timeout_validado)
+    return ChilexpressAdapter(timeout_segundos=timeout_validado)
