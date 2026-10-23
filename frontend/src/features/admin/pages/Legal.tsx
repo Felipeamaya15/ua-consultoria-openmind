@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { ErrorState, LoadingState } from '../../../shared/components/states';
+import { humanizeAdminError } from '../utils/humanizeError';
 import { Link, useParams } from 'react-router-dom';
 import { createDefaultLegalPages, legalPageTemplates, type LegalPageType } from '../data/mockAdminData';
 import { legalSlugs, templatePaths } from '../config/navigation';
@@ -66,8 +68,8 @@ function ScopedLegalEditor({ isCurrent, storageKey }: { isCurrent: () => boolean
   const handleRestore = () => perform('restored');
   const handleSaveDraft = () => perform('draft');
   const handlePublish = () => perform('published');
-  if (loading) return <p role="status">Cargando contenido legal del servidor...</p>;
-  if (loadFailed) return <p role="alert">{error}</p>;
+  if (loading) return <LoadingState align="start" spacing="compact">Cargando contenido legal del servidor...</LoadingState>;
+  if (loadFailed) return <ErrorState>{humanizeAdminError(error)}</ErrorState>;
   return (
     <div className="w-full space-y-5">
       <div className="flex items-start justify-between gap-4 flex-wrap">

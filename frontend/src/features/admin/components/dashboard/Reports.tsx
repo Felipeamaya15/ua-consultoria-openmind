@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
+import { ErrorState } from '../../../../shared/components/states';
+import { humanizeAdminError } from '../../utils/humanizeError';
 import { AdminCard, Alert, Button, Select } from '../ui';
 import { formatReportMoney } from '../../services/reportFormatting';
 import { downloadReport, getReport, reportFilename, type SalesReport } from '../../services/reportService';
@@ -74,7 +76,7 @@ export default function Reports() {
       <Button type="button" variant="outline" disabled={loading || !!error || !data || downloading || excel.busy} onClick={() => { if (data) { const p = new URLSearchParams({ anio: String(data.anio) }); if (data.mes) p.set('mes', String(data.mes)); void excel.download('informes/xlsx/', p, reportFilename(data.anio, data.mes).replace(/\.pdf$/, '.xlsx')); } }}>{excel.busy ? 'Generando Excel...' : 'Descargar informe Excel'}</Button>
     </div></AdminCard>
     <nav aria-label="Consultar históricos detallados" className="flex flex-wrap gap-5 text-sm underline"><Link to="/emprendedor/pedidos">Ver pedidos</Link><Link to="/emprendedor/ventas">Ver ventas</Link><Link to="/emprendedor/contactos">Contactos de clientes</Link></nav>
-    {loading ? <p role="status">Consultando historial...</p> : error ? <div role="alert"><Alert variant="error">{error}</Alert><Button onClick={() => setAttempt(n => n + 1)}>Reintentar historial</Button></div> : data && <ReportResults data={data} />}
+    {loading ? <p role="status">Consultando historial...</p> : error ? <ErrorState onRetry={() => setAttempt(n => n + 1)} retryLabel="Reintentar historial">{humanizeAdminError(error)}</ErrorState> : data && <ReportResults data={data} />}
     {downloadError && <div role="alert"><Alert variant="error">{downloadError}</Alert></div>}
     {downloaded && <p role="status" className="text-sm">Informe PDF descargado.</p>}
     {excel.message && <p role="status" className="text-sm">{excel.message}</p>}

@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
+import { EmptyListState, ErrorState, LoadingState } from '../../../shared/components/states';
+import { humanizeAdminError } from '../utils/humanizeError';
 import { useSearchParams } from 'react-router-dom';
 import { AdminCard, Button } from '../components/ui';
 import { HistoryPagination } from '../components/HistoryControls';
@@ -71,12 +73,12 @@ export default function Contacts() {
       {file.busy && <p role="status" className="text-sm">Preparando exportación…</p>}
       {file.message && <p role="status" className="text-sm text-[#1a3a6b]">{file.message}</p>}
       {file.error && <p role="alert" className="text-sm text-red-700">{file.error}</p>}
-      {result.loading && <p role="status" className="text-sm">Cargando contactos…</p>}
-      {result.error && <div role="alert" className="flex flex-wrap items-center gap-3 text-sm text-red-700"><span>{result.error}</span><Button onClick={result.retry}>Reintentar</Button></div>}
+      {result.loading && <LoadingState size="sm" align="start" spacing="compact">Cargando contactos…</LoadingState>}
+      {result.error && <ErrorState onRetry={result.retry}>{humanizeAdminError(result.error)}</ErrorState>}
       {result.data && (
         <AdminCard>
           <div className="mb-4 flex flex-wrap justify-between gap-2"><h3 className="font-semibold">Listado de contactos</h3><span className="text-xs text-[#52617a]">{result.page.total} contactos</span></div>
-          {!result.data.length ? <p className="py-6 text-sm text-[#52617a]">No hay contactos que coincidan con los filtros.</p> : (
+          {!result.data.length ? <EmptyListState>No hay contactos que coincidan con los filtros.</EmptyListState> : (
             <>
               {/* En móvil: tarjetas sin desplazamiento horizontal */}
               <div className="space-y-2 md:hidden">

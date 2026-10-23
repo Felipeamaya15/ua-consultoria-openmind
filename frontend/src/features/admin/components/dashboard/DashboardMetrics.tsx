@@ -1,6 +1,8 @@
 import { Link } from 'react-router-dom';
+import { ErrorState, LoadingState } from '../../../../shared/components/states';
+import { humanizeAdminError } from '../../utils/humanizeError';
 import { formatReportMoney } from '../../services/reportFormatting';
-import { Alert, Button, Icon } from '../ui';
+import { Icon } from '../ui';
 import type { DashboardData } from '../../services/dashboardService';
 import { ordersDestination } from '../../services/orderNavigation';
 import { displayDashboardDate, variationLabel } from '../../services/dashboardAnalytics';
@@ -34,8 +36,8 @@ export function DashboardMetrics({ state, onRetry, period = '30' }: { state: Das
           : <div key={card.title} className={className}>{content}</div>;
       })}
     </div>
-    {state.status === 'loading' && <p role="status" aria-live="polite" className="rounded-2xl border border-[var(--border)] bg-white p-8 text-center text-sm text-[var(--muted-foreground)]">Cargando estadísticas…</p>}
-    {state.status === 'error' && <div className="space-y-3"><Alert variant="error">{state.message}</Alert><Button variant="outline" size="sm" onClick={onRetry}>Reintentar estadísticas</Button></div>}
+    {state.status === 'loading' && <LoadingState spacing="none" className="rounded-2xl border border-[var(--border)] bg-white p-8">Cargando estadísticas…</LoadingState>}
+    {state.status === 'error' && <ErrorState onRetry={onRetry} retryLabel="Reintentar estadísticas">{humanizeAdminError(state.message)}</ErrorState>}
     {data && <>
       <p className="text-xs text-[var(--muted-foreground)]">{displayDashboardDate(data.fecha_desde)} al {displayDashboardDate(data.fecha_hasta)} · Hora de Chile
         {data.comparacion?.fecha_hasta && <> · Comparación: {displayDashboardDate(data.comparacion.fecha_desde)} al {displayDashboardDate(data.comparacion.fecha_hasta)}</>}</p>

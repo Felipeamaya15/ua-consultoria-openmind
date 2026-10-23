@@ -1,4 +1,5 @@
 import type { StorePageId } from '../../visual/pages';
+import { LoadingState } from '../../../../shared/components/states';
 import { lazy, Suspense, type ReactNode } from 'react';
 import type { Product } from '../../data/mockData';
 const ProductDetail = lazy(() => import('../../pages/ProductDetail'));
@@ -20,7 +21,7 @@ function Summary() { return <Section title="Resumen del pedido"><p>Bolso de algo
 function Order() { return <Section title="Pedido de ejemplo #EJEMPLO-001"><p>Bolso de algodón · Natural · 2 unidades</p><p>Total: $43.970 · Transferencia</p><ol className="ve-example-timeline"><li>✓ Recibido</li><li>✓ Pago confirmado</li><li>Preparando tu pedido</li><li>En camino</li><li>Entregado</li></ol></Section>; }
 export const EXAMPLE_PAGES: readonly StorePageId[] = ['product', 'cart', 'login', 'checkout', 'confirmation', 'tracking', 'profile', 'orders'];
 export function EditorPageExample({ page, search }: { page: StorePageId; search: string }) {
-  if (page === 'product') return <><p role="note">Datos ficticios para editar el diseño. No se realiza ninguna compra.</p><Suspense fallback={<p role="status">Cargando vista previa del producto…</p>}><ProductDetail previewProduct={exampleProduct} /></Suspense></>;
+  if (page === 'product') return <><p role="note">Datos ficticios para editar el diseño. No se realiza ninguna compra.</p><Suspense fallback={<LoadingState align="start" spacing="compact">Cargando vista previa del producto…</LoadingState>}><ProductDetail previewProduct={exampleProduct} /></Suspense></>;
   const params = new URLSearchParams(search);
   const step = params.get('visualStep') || 'contact';
   const register = params.get('modo') === 'registro';

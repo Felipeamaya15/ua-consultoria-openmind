@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { LoadingState } from '../../../shared/components/states';
 import { AdminCard, Alert, Input, Textarea, Button } from './ui';
 import { fetchStoreInformation, saveStoreInformation } from '../../storefront/services/storeInformationService';
 
@@ -31,7 +32,7 @@ export function BusinessInformation() {
   return <section id="informacion-negocio" aria-labelledby="business-title" className="scroll-mt-24">
     <AdminCard className="space-y-4">
       <h2 id="business-title" className="text-sm font-semibold">Información del negocio</h2>
-      {loading ? <p role="status">Cargando información del negocio...</p> : <form onSubmit={e => { e.preventDefault(); void save(); }} className="space-y-4">
+      {loading ? <LoadingState align="start" spacing="compact">Cargando información del negocio...</LoadingState> : <form onSubmit={e => { e.preventDefault(); void save(); }} className="space-y-4">
         {error && <div role="alert"><Alert variant="error">{error}</Alert></div>}
         {loadFailed && <Button type="button" onClick={() => setAttempt(n => n + 1)}>Reintentar</Button>}
         <fieldset disabled={saving || loadFailed} className="space-y-4">

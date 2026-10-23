@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { EmptyListState, ErrorState, LoadingState } from '../../../shared/components/states';
 import { Link, useParams } from 'react-router-dom';
 import { authService, type CustomerOrder } from '../../auth/services/authService';
 import { useStorefrontTemplate } from '../hooks/useStorefrontTemplate';
@@ -12,6 +13,7 @@ export default function CustomerOrders() {
   const { route } = useStorefrontTemplate();
   const [data, setData] = useState<CustomerOrder[] | null>(null);
   const [error, setError] = useState('');
+  const [attempt, setAttempt] = useState(0);
   
   useEffect(() => {
     let active = true;
@@ -20,7 +22,7 @@ export default function CustomerOrders() {
     request.then(orders => {if (active) setData(orders);})
       .catch(err => {if (active) setError(err instanceof Error ? err.message : 'No se pudieron cargar los pedidos.');});
     return () => {active = false;};
-  }, [id]);
+  }, [id, attempt]);
 
   const mainOrderNumber = id && data?.[0] ? (data[0].identificador || `Pedido #${id}`) : (id ? `Pedido #${id}` : 'Mis pedidos');
 
@@ -31,9 +33,9 @@ export default function CustomerOrders() {
       <h1 className="text-2xl font-semibold">{mainOrderNumber}</h1>
       
       {id && <Link data-page-action="ghost" to={route('mis-pedidos')} className="underline">Volver a mis pedidos</Link>}
-      {error && <p role="alert" className="text-red-700">{error}</p>}
-      {!error && data === null && <p role="status">Cargando pedidos…</p>}
-      {!id && data?.length === 0 && <p>Aún no tienes pedidos.</p>}
+      {error && <ErrorState onRetry={() => setAttempt(n => n + 1)}>{error}</ErrorState>}
+      {!error && data === null && <LoadingState align="start" spacing="compact">Cargando pedidos…</LoadingState>}
+      {!id && data?.length === 0 && <EmptyListState action={<Link data-page-action="ghost" to={route('catalogo')} className="font-medium text-[var(--primary)] hover:underline">Ver el catálogo</Link>}>Aún no tienes pedidos.</EmptyListState>}
       
       {data?.map(order => (
         <article data-visual-section="pagePanel" data-page-panel key={order.id_pedido} className="border rounded-xl p-5 space-y-3">

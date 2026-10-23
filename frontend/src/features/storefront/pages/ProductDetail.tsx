@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { LoadingState } from '../../../shared/components/states';
 import { Link, useParams } from 'react-router-dom';
 
 import { formatPrice, type Product } from '../data/mockData';
@@ -132,9 +133,7 @@ export default function ProductDetail({ previewProduct }: { previewProduct?: Pro
               : 'max-w-7xl mx-auto px-4 py-16 text-center'
         }
       >
-        <p className="text-sm text-[var(--muted-foreground)]">
-          Cargando producto...
-        </p>
+        <LoadingState spacing="none">Cargando producto...</LoadingState>
       </div>
     );
   }

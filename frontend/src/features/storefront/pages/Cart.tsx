@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { LoadingState } from '../../../shared/components/states';
 import { Link, useNavigate } from 'react-router-dom';
 
 import { StockFeedback } from '../components/store/StockFeedback';
@@ -53,7 +54,7 @@ export default function Cart() {
     setPromoSuccess('');
   }, [promoNotice]);
 
-  if (loading && items.length === 0) return <p role="status" className="p-8 text-center">Cargando carrito…</p>;
+  if (loading && items.length === 0) return <LoadingState spacing="none" className="p-8">Cargando carrito…</LoadingState>;
 
   // ==========================================================
   // CARRITO VACÍO — PLANTILLA 4 / CATALOG

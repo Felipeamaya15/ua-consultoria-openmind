@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
+import { EmptyListState, ErrorState, LoadingState } from '../../../../shared/components/states';
+import { humanizeAdminError } from '../../utils/humanizeError';
 import { Link } from 'react-router-dom';
-import { Alert, Badge, Button } from '../ui';
+import { Badge } from '../ui';
 import { formatReportMoney as formatPrice } from '../../services/reportFormatting';
 import { orderStatusBadge } from '../../data/orderStatus';
 import { orderDetailDestination } from '../../services/orderNavigation';
@@ -36,22 +38,15 @@ export function RecentOrdersView({ state, onRetry }: { state: RecentOrdersState;
       </div>
 
       {state.status === 'loading' && (
-        <p role="status" aria-live="polite" className="py-8 text-center text-sm text-[var(--muted-foreground)]">
-          Cargando las últimas órdenes…
-        </p>
+        <LoadingState spacing="none" className="py-8">Cargando las últimas órdenes…</LoadingState>
       )}
 
       {state.status === 'error' && (
-        <div className="py-4 space-y-3">
-          <Alert variant="error">{state.message}</Alert>
-          <Button variant="outline" size="sm" onClick={onRetry}>Reintentar</Button>
-        </div>
+        <ErrorState className="my-4" onRetry={onRetry}>{humanizeAdminError(state.message)}</ErrorState>
       )}
 
       {state.status === 'ready' && state.orders.length === 0 && (
-        <p className="py-8 text-center text-sm text-[var(--muted-foreground)]">
-          Aún no hay órdenes registradas en tu tienda.
-        </p>
+        <EmptyListState spacing="none" className="py-8">Aún no hay órdenes registradas en tu tienda.</EmptyListState>
       )}
 
       {state.status === 'ready' && state.orders.length > 0 && (

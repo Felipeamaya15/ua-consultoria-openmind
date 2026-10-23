@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { LoadingState } from '../../../shared/components/states';
 import { paypalService } from '../services/paypalService';
 import { ConfiguracionPayPalInput } from '../types/paypal.types';
 import { humanizeAdminError } from '../utils/humanizeError';
@@ -78,9 +79,7 @@ export const PayPalConfigForm: React.FC<Props> = ({ tiendaId = 1 }) => {
 
   if (initialLoading) {
     return (
-      <div className="bg-white rounded-xl border border-gray-200 p-6 flex justify-center items-center text-gray-500">
-        Cargando configuración de PayPal...
-      </div>
+      <LoadingState spacing="none" className="bg-white rounded-xl border border-gray-200 p-6">Cargando configuración de PayPal...</LoadingState>
     );
   }
 

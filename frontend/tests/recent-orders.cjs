@@ -229,11 +229,11 @@ async function pruebasDeLaVista() {
     let reintentos = 0;
     const estado = { status: 'error', message: 'No se pudo conectar con el servidor. Revisa tu conexión e inténtalo nuevamente.' };
     const salida = html(estado, () => reintentos++);
-    assert.ok(salida.includes('data-alert="error"') && salida.includes(estado.message) && salida.includes('Reintentar'));
+    assert.ok(salida.includes('role="alert"') && salida.includes(estado.message) && salida.includes('Reintentar'));
     assert.ok(!salida.includes('<table') && !salida.includes('Aún no hay'));
     const arbol = componente.RecentOrdersView({ state: estado, onRetry: () => reintentos++ });
-    const boton = find(arbol, nodo => nodo.props && nodo.props.onClick)[0];
-    boton.props.onClick();
+    const boton = find(arbol, nodo => nodo.props && nodo.props.onRetry)[0];
+    boton.props.onRetry();
     assert.equal(reintentos, 1);
   });
 }

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react"
+import { EmptyListState, LoadingState } from "../../../shared/components/states"
 import { formatPrice, Promotion } from "../data/mockAdminData"
 import { useAdmin } from "../context/AdminContext"
 import {
@@ -268,15 +269,11 @@ export default function Promotions() {
 
       <div className="grid grid-cols-1 gap-3">
         {loading && (
-          <p role="status" className="text-sm text-[var(--muted-foreground)]">
-            Cargando promociones...
-          </p>
+          <LoadingState size="sm" align="start" spacing="compact">Cargando promociones...</LoadingState>
         )}
         {!loading && error && !showModal && <Alert variant="error">{error}</Alert>}
         {!loading && !error && promos.length === 0 && (
-          <div className="bg-white border border-[var(--border)] rounded-xl p-8 text-center text-sm text-[var(--muted-foreground)]">
-            Aún no hay promociones creadas en tu tienda. Crea tu primera promoción con el botón «Nueva promoción».
-          </div>
+          <EmptyListState spacing="none" className="bg-white border border-[var(--border)] rounded-xl p-8">Aún no hay promociones creadas en tu tienda. Crea tu primera promoción con el botón «Nueva promoción».</EmptyListState>
         )}
         {promos.map((promo) => (
           <div

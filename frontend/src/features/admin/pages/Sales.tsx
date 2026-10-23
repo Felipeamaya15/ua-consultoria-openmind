@@ -1,4 +1,6 @@
 import { Link, useSearchParams } from 'react-router-dom';
+import { EmptyListState, ErrorState, LoadingState } from '../../../shared/components/states';
+import { humanizeAdminError } from '../utils/humanizeError';
 import { AdminCard, Button } from '../components/ui';
 import { HistoryPagination } from '../components/HistoryControls';
 import CommercialFilters from '../components/CommercialFilters';
@@ -83,8 +85,8 @@ export default function Sales() {
       <CommercialFilters key={queryKey} params={params} onApply={update} />
       {file.message && <p role="status" className="text-sm text-[#1a3a6b]">{file.message}</p>}
       {file.error && <p role="alert" className="text-sm text-red-700">{file.error}</p>}
-      {result.loading && <p role="status" className="text-sm">Cargando ventas…</p>}
-      {result.error && <div role="alert" className="flex flex-wrap items-center gap-3 text-sm text-red-700"><span>{result.error}</span><Button onClick={result.retry}>Reintentar</Button></div>}
+      {result.loading && <LoadingState size="sm" align="start" spacing="compact">Cargando ventas…</LoadingState>}
+      {result.error && <ErrorState onRetry={result.retry}>{humanizeAdminError(result.error)}</ErrorState>}
 
       {data && (
         <div
@@ -107,7 +109,7 @@ export default function Sales() {
               </div>
               <AdminCard>
                 <div className="mb-3 flex flex-wrap justify-between gap-2"><h3 className="font-semibold">Productos más vendidos</h3><span className="text-xs text-[#52617a]">Hasta 10 productos o SKU</span></div>
-                {!data.productos.length ? <p className="text-sm text-[#52617a]">No hay líneas de productos disponibles para el período.</p> : (
+                {!data.productos.length ? <EmptyListState align="start" spacing="compact">No hay líneas de productos disponibles para el período.</EmptyListState> : (
                   <div className="overflow-x-auto" role="region" aria-label="Productos más vendidos" tabIndex={0}>
                     <table className="w-full min-w-[440px] border-collapse"><thead className="bg-[#f6f8fc]"><tr><th scope="col" className={head}>Producto</th><th scope="col" className={head}>SKU</th><th scope="col" className={head}>Unidades</th><th scope="col" className={head}>Importe bruto</th></tr></thead>
                       <tbody>{data.productos.map((p, i) => <tr key={`${p.sku}-${i}`} className="border-t border-[#e7eaf1]"><th scope="row" className={`${cell} font-medium`}>{p.nombre}</th><td className={cell}>{p.sku || '—'}</td><td className={cell}>{p.cantidad}</td><td className={`${cell} whitespace-nowrap`}>{formatReportMoney(p.bruto_lineas)}</td></tr>)}</tbody>
@@ -121,7 +123,7 @@ export default function Sales() {
                     const max = Math.max(1, ...data.serie.map(v => Number(v.total_vendido)));
                     const width = Math.max(0, Math.min(100, Number(item.total_vendido) / max * 100));
                     return <div key={item.periodo} className="text-xs"><div className="mb-1 flex justify-between gap-3"><span>{period(item.periodo)}</span><strong>{formatReportMoney(item.total_vendido)}</strong></div><div className="h-2 overflow-hidden rounded-full bg-[#edf1f7]" aria-hidden="true"><div className="h-full rounded-full bg-[#44699f]" style={{ width: `${width}%` }} /></div></div>;
-                  })}</div> : <p className="text-sm text-[#52617a]">Sin ventas confirmadas en este período.</p>}
+                  })}</div> : <EmptyListState align="start" spacing="compact">Sin ventas confirmadas en este período.</EmptyListState>}
                 </AdminCard>
                 <AdminCard><h3 className="mb-4 font-semibold">Detalle de ingresos</h3>
                   <dl className="space-y-3">{[
@@ -140,7 +142,7 @@ export default function Sales() {
           ) : (
             <AdminCard>
               <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2"><h3 className="font-semibold">Historial de ventas</h3><p className="text-xs text-[#52617a]">Fecha de creación del pedido, no fecha bancaria de pago.</p></div>
-              {!data.ventas.length ? <p className="py-6 text-sm text-[#52617a]">No hay ventas confirmadas para estos filtros.</p> : (
+              {!data.ventas.length ? <EmptyListState>No hay ventas confirmadas para estos filtros.</EmptyListState> : (
                 <div className="space-y-2">
                   {data.ventas.map(order => (
                     <details key={order.id_pedido} className="rounded-lg border border-[#e2e8f0] bg-white open:border-[#b7c7df]">

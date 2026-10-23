@@ -60,7 +60,7 @@ test('tabla mensual completa, totales, empates y cero accesibles sin pedidos ind
   const component = load('src/features/admin/components/dashboard/Reports.tsx', {
     '../ui': { AdminCard: ({ children }) => React.createElement('section', null, children), Alert: ({ children }) => React.createElement('p', null, children) },
     '../../data/mockAdminData': { formatPrice: n => `$${n}` }, '../../services/reportService': {},
-    '../../hooks/useCommercialHistory': {},
+    '../../hooks/useCommercialHistory': {}, '../../../../shared/components/states': {},
   });
   const html = renderToStaticMarkup(React.createElement(component.ReportResults, { data }));
   assert(html.includes('Evolución mensual')); assert(html.includes('scope="col"'));

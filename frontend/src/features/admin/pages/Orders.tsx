@@ -1,4 +1,6 @@
 import { useState, useEffect, useRef } from "react"
+import { EmptyListState, ErrorState, LoadingState } from "../../../shared/components/states"
+import { humanizeAdminError } from "../utils/humanizeError"
 import { formatReportMoney as formatPrice } from "../services/reportFormatting"
 import { formatBusinessDate, chileanDateInput } from '../services/businessTime'
 import { PickupSelectionSummary } from '../../storefront/components/checkout/PickupSchedule'
@@ -8,6 +10,7 @@ import { useCommercialExport } from '../hooks/useCommercialHistory'
 import { getOrderHistory, getOrderDetail, historyParams, emptyPagination, type HistoryOrder as StoreOrder } from '../services/commercialService'
 import { approveManualTransfer, verifyTransfer } from "../services/pendingTransfersService"
 import { describeShipmentEmail, updateOrderStatus } from '../services/recentOrdersService';
+import { hasOrderFilters } from '../services/emptyStates';
 
 import { Link, useSearchParams } from 'react-router-dom'
 import { ORDER_STATUS_BADGE as STATUS_BADGE } from '../data/orderStatus'
@@ -183,10 +186,8 @@ export default function Orders() {
         </div>
 
         <div className="bg-white border border-[var(--border)] rounded-xl overflow-hidden">
-          {cargando ? <p role="status" className="p-5">Cargando pedidos...</p> : error ? <div role="alert" className="p-5"><p>{error}</p><Button onClick={() => setRefreshKey(n => n + 1)}>Reintentar pedidos</Button></div> : filtered.length === 0 ? (
-            <div className="p-10 text-center text-[var(--muted-foreground)] text-sm">
-              No hay pedidos que coincidan con los filtros.
-            </div>
+          {cargando ? <LoadingState spacing="none" className="p-5">Cargando pedidos...</LoadingState> : error ? <ErrorState className="m-5" onRetry={() => setRefreshKey(n => n + 1)} retryLabel="Reintentar pedidos">{humanizeAdminError(error)}</ErrorState> : filtered.length === 0 ? (
+            <EmptyListState spacing="none" className="p-10">{hasOrderFilters(params) ? 'No hay pedidos que coincidan con los filtros.' : 'Aún no hay pedidos en tu tienda.'}</EmptyListState>
           ) : (
             <div className="divide-y divide-[var(--border)]">
               {filtered.map((order) => {
