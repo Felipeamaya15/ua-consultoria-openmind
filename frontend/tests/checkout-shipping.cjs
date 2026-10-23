@@ -83,7 +83,7 @@ function harness(template) {
       if (name.includes('PaymentService')) return {};
       if (name.endsWith('visual/pages')) return load('src/features/storefront/visual/pages.ts', {URLSearchParams});
       if (name.includes('components/ui')) return Object.fromEntries(['Stepper','Button','Input','Select','Alert','Icon'].map(type => [type,type]));
-      throw Error(name);
+      if (name.includes('shared/components/states')) return {LoadingState: 'LoadingState'}; throw Error(name);
     },
   }).default;
   function reset() {

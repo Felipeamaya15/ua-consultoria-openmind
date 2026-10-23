@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react"
+import { LoadingState } from "../../../shared/components/states"
 import { Link, useNavigate, useParams } from "react-router-dom"
 import { formatPrice, Product, ProductVariant } from "../data/mockAdminData"
 import { createPublicProduct, deleteCatalogProduct, fetchAdminProducts, fetchAdminProduct, updateCatalogProduct, type AdminProduct } from "../services/productService"
@@ -47,7 +48,7 @@ export function ProductList() {
     }
   };
   return <div>
-    {loading && <Alert variant="info">Cargando productos reales…</Alert>}
+    {loading && <LoadingState align="start" spacing="compact">Cargando productos reales…</LoadingState>}
     {error && <Alert variant="error">{error}</Alert>}
     <div className="flex items-center justify-between flex-wrap gap-3 mb-5">
       <div>
@@ -143,7 +144,7 @@ export function ProductForm() {
     }
     return () => { active = false }
   }, [id])
-  if (id !== "nuevo" && (loading || (loaded && loaded.id !== id))) return <Alert variant="info">Cargando producto real…</Alert>
+  if (id !== "nuevo" && (loading || (loaded && loaded.id !== id))) return <LoadingState align="start" spacing="compact">Cargando producto real…</LoadingState>
   if (id !== "nuevo" && !loaded) return <Alert variant="error">{loadError || "Producto no encontrado"}. <Link to="/emprendedor/productos">Volver al catálogo real</Link></Alert>
   return <ProductEditor key={id} initial={loaded ?? blankProduct()} editing={id !== "nuevo"} />
 }

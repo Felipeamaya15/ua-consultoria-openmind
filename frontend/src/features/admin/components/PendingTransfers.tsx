@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { LoadingState } from '../../../shared/components/states';
 import { Alert, Button } from './ui';
 import { formatPrice } from '../data/mockAdminData';
 import {
@@ -79,7 +80,7 @@ export function PendingTransfers() {
         {error ? 'Reintentar' : 'Actualizar'}
       </Button>
     </div>
-    {loading && <p className="text-sm text-[var(--muted-foreground)]" role="status">Cargando transferencias pendientes…</p>}
+    {loading && <LoadingState size="sm" align="start" spacing="compact">Cargando transferencias pendientes…</LoadingState>}
     {!loading && error && <Alert variant="error">{error}</Alert>}
     {!loading && feedback && <Alert variant="success">{feedback}</Alert>}
     {!loading && !error && (transfers.length === 0

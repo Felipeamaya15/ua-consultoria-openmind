@@ -1,4 +1,5 @@
 import React, { useState, useEffect, ChangeEvent, FormEvent } from 'react';
+import { LoadingState } from '../../../shared/components/states';
 import { transbankService } from '../services/transbankService';
 import { GuardarTransbankDTO } from '../types/transbank.types';
 import { Button, Input, Select, Alert, Icon } from '../components/ui';
@@ -112,9 +113,7 @@ export const TransbankConfigForm: React.FC<Props> = ({ idTienda = 1 }) => {
 
   if (loading) {
     return (
-      <div className="bg-white border border-[var(--border)] rounded-2xl p-6 text-center text-[#667085] text-sm">
-        Cargando credenciales de Transbank...
-      </div>
+      <LoadingState spacing="none" className="bg-white border border-[var(--border)] rounded-2xl p-6">Cargando credenciales de Transbank...</LoadingState>
     );
   }
 

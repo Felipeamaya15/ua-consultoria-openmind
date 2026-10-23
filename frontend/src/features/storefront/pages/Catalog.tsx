@@ -1,4 +1,5 @@
 import { VISUAL_SECTION } from '../visual/sectionIds';
+import { LoadingState } from '../../../shared/components/states';
 import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 
@@ -235,9 +236,7 @@ export default function Catalog() {
 
   if (loading) {
     return (
-      <div className="max-w-7xl mx-auto px-4 py-20 text-center text-sm text-[var(--muted-foreground)]">
-        Cargando catálogo...
-      </div>
+      <LoadingState spacing="none" className="max-w-7xl mx-auto px-4 py-20">Cargando catálogo...</LoadingState>
     );
   }
 

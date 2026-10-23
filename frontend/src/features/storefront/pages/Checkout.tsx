@@ -1,4 +1,5 @@
 import { checkoutPreviewStep } from '../visual/pages';
+import { LoadingState } from '../../../shared/components/states';
 import { useEffect, useMemo, useState, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 
@@ -1207,7 +1208,7 @@ export default function Checkout() {
                 </Alert>
               )}
 
-              {shippingLoading && <Alert variant="info">Cargando alternativas de entrega…</Alert>}
+              {shippingLoading && <LoadingState align="start" spacing="compact">Cargando alternativas de entrega…</LoadingState>}
               {shippingError && <><Alert variant="error">{shippingError}</Alert><Button variant="outline" onClick={() => setShippingLoadAttempt(value => value + 1)}>Reintentar carga</Button></>}
               {!shippingLoading && !shippingError && !shippingOptions.length && <Alert variant="info">La tienda todavía no tiene alternativas de entrega habilitadas.</Alert>}
               {quoteLoading && <Alert variant="info">Cotizando envío…</Alert>}
@@ -1445,7 +1446,7 @@ export default function Checkout() {
               )}
 
               {paymentsLoading ? (
-                <p role="status">Cargando medios de pago…</p>
+                <LoadingState align="start" spacing="compact">Cargando medios de pago…</LoadingState>
               ) : paymentsError ? (
                 <Alert variant="error">{paymentsError}</Alert>
               ) : paymentOptions.length === 0 ? (

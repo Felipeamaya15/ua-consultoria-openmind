@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { LoadingState } from '../../../../shared/components/states';
 import { Link } from 'react-router-dom';
 import { Alert, Badge, Button } from '../ui';
 import { formatReportMoney as formatPrice } from '../../services/reportFormatting';
@@ -36,9 +37,7 @@ export function RecentOrdersView({ state, onRetry }: { state: RecentOrdersState;
       </div>
 
       {state.status === 'loading' && (
-        <p role="status" aria-live="polite" className="py-8 text-center text-sm text-[var(--muted-foreground)]">
-          Cargando las últimas órdenes…
-        </p>
+        <LoadingState spacing="none" className="py-8">Cargando las últimas órdenes…</LoadingState>
       )}
 
       {state.status === 'error' && (

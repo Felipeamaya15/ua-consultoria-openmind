@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { LoadingState } from '../../../shared/components/states';
 import { Link, useParams } from 'react-router-dom';
 import { createDefaultLegalPages, legalPageTemplates, type LegalPageType } from '../data/mockAdminData';
 import { legalSlugs, templatePaths } from '../config/navigation';
@@ -66,7 +67,7 @@ function ScopedLegalEditor({ isCurrent, storageKey }: { isCurrent: () => boolean
   const handleRestore = () => perform('restored');
   const handleSaveDraft = () => perform('draft');
   const handlePublish = () => perform('published');
-  if (loading) return <p role="status">Cargando contenido legal del servidor...</p>;
+  if (loading) return <LoadingState align="start" spacing="compact">Cargando contenido legal del servidor...</LoadingState>;
   if (loadFailed) return <p role="alert">{error}</p>;
   return (
     <div className="w-full space-y-5">

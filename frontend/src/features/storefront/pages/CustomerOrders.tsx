@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { LoadingState } from '../../../shared/components/states';
 import { Link, useParams } from 'react-router-dom';
 import { authService, type CustomerOrder } from '../../auth/services/authService';
 import { useStorefrontTemplate } from '../hooks/useStorefrontTemplate';
@@ -32,7 +33,7 @@ export default function CustomerOrders() {
       
       {id && <Link data-page-action="ghost" to={route('mis-pedidos')} className="underline">Volver a mis pedidos</Link>}
       {error && <p role="alert" className="text-red-700">{error}</p>}
-      {!error && data === null && <p role="status">Cargando pedidos…</p>}
+      {!error && data === null && <LoadingState align="start" spacing="compact">Cargando pedidos…</LoadingState>}
       {!id && data?.length === 0 && <p>Aún no tienes pedidos.</p>}
       
       {data?.map(order => (

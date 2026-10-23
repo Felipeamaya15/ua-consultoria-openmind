@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { LoadingState } from '../../../shared/components/states';
 import { Link, useBlocker, useSearchParams } from 'react-router-dom';
 import { Alert, Button, Input } from '../../admin/components/ui';
 import { buildPublication, productProblem } from '../domain/content';
@@ -133,7 +134,7 @@ function MarketingWorkspace({ scope, isCurrent }: { scope: DraftScope; isCurrent
       onDelete={draft => run(() => { repository.remove(draft.id, draft.updatedAt); if (opened?.id === draft.id) { setOpened(null); setBaseline(''); } setDrafts(repository.list()); setNotice('Borrador eliminado.'); })} />}
     <div className="marketing-intro"><p>Elige un producto y su formato. Tu publicación se compone con los datos y colores de tu tienda.</p>
       <Button type="button" variant="outline" size="sm" disabled={busy || sources.loading} onClick={refresh}>Actualizar datos</Button></div>
-    {sources.loading && <p role="status" className="marketing-loading">Cargando productos e identidad de tu tienda...</p>}
+    {sources.loading && <LoadingState align="start" spacing="none" className="marketing-loading">Cargando productos e identidad de tu tienda...</LoadingState>}
     {sources.productError && <div role="alert"><Alert variant="error">{sources.productError}</Alert></div>}
     {sources.brandError && <div role="alert"><Alert variant="error">{sources.brandError}</Alert></div>}
     {!sources.loading && (sources.productError || sources.brandError) && <Button type="button" onClick={refresh}>Reintentar carga</Button>}

@@ -39,7 +39,7 @@ function load(file, globals) {
     if (name.includes('authService')) return {authService: service};
     if (name.includes('useStorefrontTemplate')) return {useStorefrontTemplate: () => ({route: p => '/plantilla/' + template + '/' + p})};
     if (name.includes('CustomerAccountNavigation')) return {CustomerAccountNavigation: 'AccountNav'};
-    throw Error(name);
+    if (name.includes('shared/components/states')) return {LoadingState: 'LoadingState'}; throw Error(name);
   };
   const {default: Orders} = load('src/features/storefront/pages/CustomerOrders.tsx', {require: requireMock});
   function nodes(tree, out = []) {if (Array.isArray(tree)) tree.forEach(x => nodes(x, out)); else if (tree && typeof tree === 'object') {out.push(tree); nodes(tree.props?.children, out);} else if (typeof tree === 'string') out.push(tree); return out;}
@@ -81,7 +81,7 @@ function load(file, globals) {
         '../../auth/services/authService': {authService: {getToken: () => storeToken}},
       }, {fetch: async (url, options) => {storeCalls.push({url, options}); return storeReply;}});
       if (name.includes('orderStatus')) return load('src/features/admin/data/orderStatus.ts', {});
-      if (name.includes('orderNavigation')) return load('src/features/admin/services/orderNavigation.ts', {require: id => { if (id.includes('businessTime')) return load('src/features/admin/services/businessTime.ts', {}); if (id.includes('orderStatus')) return load('src/features/admin/data/orderStatus.ts', {}); throw Error(id); }});
+      if (name.includes('orderNavigation')) return load('src/features/admin/services/orderNavigation.ts', {require: id => { if (id.includes('businessTime')) return load('src/features/admin/services/businessTime.ts', {}); if (id.includes('orderStatus')) return load('src/features/admin/data/orderStatus.ts', {}); if (id.includes('shared/components/states')) return {LoadingState: 'LoadingState'}; throw Error(id); }});
       if (name.endsWith('/api')) return {API_BASE_URL: 'https://configured.example.test'};
       if (name.includes('authService')) return {authService: {getToken: () => storeToken}};
       if (name.includes('PickupSchedule')) return {PickupSelectionSummary: 'PickupSelectionSummary'};
@@ -91,7 +91,7 @@ function load(file, globals) {
       if (name.includes('businessTime')) return require('./source-loader.cjs').load('src/features/admin/services/businessTime.ts');
       if (name.includes('mockAdminData')) return {formatPrice: String};
       if (name.includes('components/ui')) return {Badge: 'Badge', Icon: 'Icon', Input: 'Input', Button: 'Button', Select: 'Select'};
-      throw Error(name);
+      if (name.includes('shared/components/states')) return {LoadingState: 'LoadingState'}; throw Error(name);
     },
   });
   async function renderStore() {

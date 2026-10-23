@@ -3,6 +3,7 @@ import {
   useState,
   type FormEvent,
 } from 'react';
+import { LoadingState } from '../../../shared/components/states';
 import { useNavigate } from 'react-router-dom';
 
 import { authService } from '../../auth/services/authService';
@@ -93,7 +94,7 @@ export default function EntrepreneurProfile() {
       {success && <Alert variant="success">{success}</Alert>}
 
       {email === null ? (
-        !error && <p role="status">Cargando cuenta...</p>
+        !error && <LoadingState align="start" spacing="compact">Cargando cuenta...</LoadingState>
       ) : (
         <>
           <section className="bg-white border rounded-xl p-5 space-y-3">

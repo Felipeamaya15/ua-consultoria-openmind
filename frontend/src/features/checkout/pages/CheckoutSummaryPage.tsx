@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { LoadingState } from '../../../shared/components/states';
 import { API_BASE_URL } from '../../../api';
 
 const items = [
@@ -89,7 +90,7 @@ export const CheckoutSummaryPage: React.FC = () => {
               <h2 style={{ color: '#111827', marginTop: 0 }}>Medio de pago</h2>
 
               {loadingPayments ? (
-                <p style={{ color: '#6b7280', fontSize: '0.9rem' }}>Cargando medios de pago disponibles...</p>
+                <LoadingState size="sm" align="start" spacing="compact">Cargando medios de pago disponibles...</LoadingState>
               ) : activePaymentMethods.length === 0 ? (
                 <p style={{ color: '#dc2626', fontWeight: 600, fontSize: '0.9rem' }}>No hay medios de pago configurados en la tienda.</p>
               ) : (

@@ -106,7 +106,7 @@ const result = {id_pedido: 42, identificador: 'PEDIDO-BACKEND-42', tienda_id: 9,
     if (name.includes('transbankPaymentService')) return {transbankPaymentService: {iniciarPago: async (...args) => {assert.equal(args[0], 9); assert.equal(args[1], result.identificador); assert.equal(args[2], 30000); return {exito: true, data: {url: 'webpay', token: 'token'}};}, redirigirAWebpay() {}}};
     if (name.includes('StockFeedback')) return {StockFeedback: 'StockFeedback'};
     if (name.includes('components/ui')) return Object.fromEntries(['Stepper','Button','Input','Select','Alert','Icon','EmptyState'].map(label => [label, label]));
-    throw Error(name);
+    if (name.includes('shared/components/states')) return {LoadingState: 'LoadingState'}; throw Error(name);
   };
   const receiptStorage = new Map();
   const globals = {require: requireMock, localStorage: {getItem: () => null}, sessionStorage: {setItem: (key, value) => receiptStorage.set(key, value)}, crypto: {randomUUID: () => 'fixed-checkout-key'}, window: {location: {origin: 'http://localhost:5173'}},
@@ -229,7 +229,7 @@ const result = {id_pedido: 42, identificador: 'PEDIDO-BACKEND-42', tienda_id: 9,
         obtenerCarrito: async () => { cartReads++; return persistedCart; },
         agregarItem: async id => {addedToSql.push(id);}, eliminarItem: async id => {deleted.push(id);},
       }};
-      throw Error(name);
+      if (name.includes('shared/components/states')) return {LoadingState: 'LoadingState'}; throw Error(name);
     },
   }).CartProvider;
   const context = () => {cursor = 0; return Provider({children: null}).props.value;};

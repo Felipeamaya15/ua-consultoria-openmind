@@ -95,7 +95,7 @@ async function main() {
           fetchAdminProducts: async () => { queried++; return [saved]; },
         };
         if (name.includes('components/ui')) return Object.fromEntries(['Alert','Badge','Button','Input','Select','Tabs','Textarea','Toggle'].map(x => [x, x]));
-        throw new Error(`Unexpected dependency: ${name}`);
+        if (name.includes('shared/components/states')) return {LoadingState: 'LoadingState'}; throw new Error(`Unexpected dependency: ${name}`);
       },
     });
     const render = mode === 'list' ? components.ProductList : components.ProductForm;

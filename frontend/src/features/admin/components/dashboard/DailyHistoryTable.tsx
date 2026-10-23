@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { LoadingState } from '../../../../shared/components/states';
 import { Link } from 'react-router-dom';
 import { Alert, Button } from '../ui';
 import { formatPrice } from '../../data/mockAdminData';
@@ -16,7 +17,7 @@ const panel = 'bg-white border border-[var(--border)] rounded-2xl p-5 sm:p-6 sha
 
 /** Tabla diaria de ventas y pedidos. */
 export function DailyHistoryView({ state, period, onRetry }: { state: DailyHistoryState; period: string; onRetry: () => void }) {
-  if (state.status === 'loading') return <p role="status" aria-live="polite" className="py-5 text-sm">Cargando el historial…</p>;
+  if (state.status === 'loading') return <LoadingState spacing="none" className="py-5">Cargando el historial…</LoadingState>;
   if (state.status === 'error') return <div className="mt-4 space-y-3"><Alert variant="error">{state.message}</Alert><Button variant="outline" size="sm" onClick={onRetry}>Reintentar historial</Button></div>;
   if (state.rows.every(row => row.pedidos === 0 && Number(row.ventas) === 0)) return <p className="py-5 text-sm">No hay pedidos en el período seleccionado.</p>;
   return <div className="overflow-x-auto max-h-96 mt-4" tabIndex={0} role="region" aria-label="Histórico diario">

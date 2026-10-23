@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { LoadingState } from '../../../shared/components/states';
 import { withoutPrivateCredentials } from '../../../shared/services/sensitiveConfiguration';
 
 import { useAdminForm } from '../hooks/useAdminForm';
@@ -1082,7 +1083,7 @@ export default function Payments() {
 
           <div className="border-t border-[var(--border)] pt-3 text-xs text-[var(--muted-foreground)]">
 
-            Cargando credenciales de pasarela...
+            <LoadingState size="sm" align="start" spacing="none">Cargando credenciales de pasarela...</LoadingState>
 
           </div>
 
@@ -1259,7 +1260,7 @@ export default function Payments() {
 
           <div className="border-t border-[var(--border)] pt-3 text-xs text-[var(--muted-foreground)]">
 
-            Cargando credenciales de Mercado Pago...
+            <LoadingState size="sm" align="start" spacing="none">Cargando credenciales de Mercado Pago...</LoadingState>
 
           </div>
 
@@ -1436,7 +1437,7 @@ export default function Payments() {
 
           <div className="border-t border-[var(--border)] pt-3 text-xs text-[var(--muted-foreground)]">
 
-            Cargando credenciales de PayPal...
+            <LoadingState size="sm" align="start" spacing="none">Cargando credenciales de PayPal...</LoadingState>
 
           </div>
 
@@ -1612,9 +1613,7 @@ export default function Payments() {
                 </div>
                 <div className="flex flex-col gap-3 pt-3">
                   {transferLoading && (
-                    <p className="text-xs text-[var(--muted-foreground)]">
-                      Cargando datos bancarios guardados...
-                    </p>
+                    <LoadingState size="sm" align="start" spacing="none">Cargando datos bancarios guardados...</LoadingState>
                   )}
                   {transferFeedback && (
                     <Alert variant={transferFeedback.type}>{transferFeedback.message}</Alert>
