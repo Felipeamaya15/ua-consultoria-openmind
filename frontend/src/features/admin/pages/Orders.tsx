@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react"
-import { LoadingState } from "../../../shared/components/states"
+import { ErrorState, LoadingState } from "../../../shared/components/states"
+import { humanizeAdminError } from "../utils/humanizeError"
 import { formatReportMoney as formatPrice } from "../services/reportFormatting"
 import { formatBusinessDate, chileanDateInput } from '../services/businessTime'
 import { PickupSelectionSummary } from '../../storefront/components/checkout/PickupSchedule'
@@ -180,7 +181,7 @@ export default function Orders() {
         </div>
 
         <div className="bg-white border border-[var(--border)] rounded-xl overflow-hidden">
-          {cargando ? <LoadingState spacing="none" className="p-5">Cargando pedidos...</LoadingState> : error ? <div role="alert" className="p-5"><p>{error}</p><Button onClick={() => setRefreshKey(n => n + 1)}>Reintentar pedidos</Button></div> : filtered.length === 0 ? (
+          {cargando ? <LoadingState spacing="none" className="p-5">Cargando pedidos...</LoadingState> : error ? <ErrorState className="m-5" onRetry={() => setRefreshKey(n => n + 1)} retryLabel="Reintentar pedidos">{humanizeAdminError(error)}</ErrorState> : filtered.length === 0 ? (
             <div className="p-10 text-center text-[var(--muted-foreground)] text-sm">
               No hay pedidos que coincidan con los filtros.
             </div>

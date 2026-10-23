@@ -1,5 +1,6 @@
 import { Link, useSearchParams } from 'react-router-dom';
-import { LoadingState } from '../../../shared/components/states';
+import { ErrorState, LoadingState } from '../../../shared/components/states';
+import { humanizeAdminError } from '../utils/humanizeError';
 import { AdminCard, Button } from '../components/ui';
 import { HistoryPagination } from '../components/HistoryControls';
 import CommercialFilters from '../components/CommercialFilters';
@@ -85,7 +86,7 @@ export default function Sales() {
       {file.message && <p role="status" className="text-sm text-[#1a3a6b]">{file.message}</p>}
       {file.error && <p role="alert" className="text-sm text-red-700">{file.error}</p>}
       {result.loading && <LoadingState size="sm" align="start" spacing="compact">Cargando ventas…</LoadingState>}
-      {result.error && <div role="alert" className="flex flex-wrap items-center gap-3 text-sm text-red-700"><span>{result.error}</span><Button onClick={result.retry}>Reintentar</Button></div>}
+      {result.error && <ErrorState onRetry={result.retry}>{humanizeAdminError(result.error)}</ErrorState>}
 
       {data && (
         <div

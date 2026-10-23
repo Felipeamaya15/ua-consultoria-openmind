@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
-import { LoadingState } from '../../../../shared/components/states';
+import { ErrorState, LoadingState } from '../../../../shared/components/states';
+import { humanizeAdminError } from '../../utils/humanizeError';
 import { Link } from 'react-router-dom';
-import { Alert, Badge, Button } from '../ui';
+import { Badge } from '../ui';
 import { formatReportMoney as formatPrice } from '../../services/reportFormatting';
 import { orderStatusBadge } from '../../data/orderStatus';
 import { orderDetailDestination } from '../../services/orderNavigation';
@@ -41,10 +42,7 @@ export function RecentOrdersView({ state, onRetry }: { state: RecentOrdersState;
       )}
 
       {state.status === 'error' && (
-        <div className="py-4 space-y-3">
-          <Alert variant="error">{state.message}</Alert>
-          <Button variant="outline" size="sm" onClick={onRetry}>Reintentar</Button>
-        </div>
+        <ErrorState className="my-4" onRetry={onRetry}>{humanizeAdminError(state.message)}</ErrorState>
       )}
 
       {state.status === 'ready' && state.orders.length === 0 && (

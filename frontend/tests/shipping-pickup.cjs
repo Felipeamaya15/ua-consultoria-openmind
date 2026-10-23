@@ -6,7 +6,7 @@ const clone = value => JSON.parse(JSON.stringify(value));
 const territory = require('../src/features/admin/data/chileTerritory.json');
 const helperDependencies = name => name.includes('comunasChile') ? {
   comunasDeRegion: region => territory.find(r => r.nombre === region)?.provincias.flatMap(p => p.comunas) || [],
-} : (() => { if (name.includes('shared/components/states')) return {LoadingState: 'LoadingState'}; throw Error(name); })();
+} : (() => { if (name.includes('shared/components/states')) return {LoadingState: 'LoadingState', ErrorState: 'ErrorState'}; if (name.includes('humanizeError')) return {humanizeAdminError: message => message}; throw Error(name); })();
 function load(file, requireImpl, globals = {}) {
   const module = { exports: {} };
   const source = fs.readFileSync(path.join(root, file), 'utf8').replaceAll('import.meta.env.VITE_API_URL', 'undefined');
@@ -60,7 +60,7 @@ function harness(s) {
     if (name.includes('initialLoad')) return { fetchInitialLoad: fetch };
     if (name.includes('authService')) return { authService: { getToken: () => 'owner-token' } };
     if (name.includes('comunasChile')) return { nombreOficialRegion: n => n };
-    if (name.includes('shared/components/states')) return {LoadingState: 'LoadingState'}; throw Error(name);
+    if (name.includes('shared/components/states')) return {LoadingState: 'LoadingState', ErrorState: 'ErrorState'}; if (name.includes('humanizeError')) return {humanizeAdminError: message => message}; throw Error(name);
   }, { fetch });
   const helper = load('src/features/admin/services/pickupConfiguration.ts', helperDependencies);
   let editor;
@@ -76,7 +76,7 @@ function harness(s) {
     if (name.includes('TimePicker')) return load('src/shared/components/TimePicker.tsx', dependencies);
     if (name.includes('chileTerritory')) return { default: require('../src/features/admin/data/chileTerritory.json') };
     if (name.includes('comunasChile')) return { comunasDeRegion: () => [] };
-    if (name.includes('shared/components/states')) return {LoadingState: 'LoadingState'}; throw Error(name);
+    if (name.includes('shared/components/states')) return {LoadingState: 'LoadingState', ErrorState: 'ErrorState'}; if (name.includes('humanizeError')) return {humanizeAdminError: message => message}; throw Error(name);
   };
   editor = load('src/features/admin/components/shipping/PickupEditor.tsx', dependencies);
   const Shipping = load('src/features/admin/pages/Shipping.tsx', dependencies);
@@ -235,6 +235,6 @@ test('fallo de carga bloquea guardado y permite reintentar', async () => {
   const s = server(); s.failGet = true; const h = harness(s); h.render(); let tree = await h.settle();
   assert.equal(tree.find(n => n.type === 'fieldset').props.disabled, true);
   await save(tree).props.onClick(); assert.ok(!s.calls.some(c => c.options.method === 'PUT'));
-  s.failGet = false; tree.find(n => n.type === 'Button' && n.props.children === 'Reintentar carga').props.onClick();
+  s.failGet = false; tree.find(n => n.type === 'ErrorState' && n.props.retryLabel === 'Reintentar carga').props.onRetry();
   h.render(); tree = await h.settle(); assert.equal(tree.find(n => n.type === 'fieldset').props.disabled, false); h.unmount();
 });

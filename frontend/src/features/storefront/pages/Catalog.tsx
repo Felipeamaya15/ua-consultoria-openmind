@@ -1,5 +1,5 @@
 import { VISUAL_SECTION } from '../visual/sectionIds';
-import { LoadingState } from '../../../shared/components/states';
+import { ErrorState, LoadingState } from '../../../shared/components/states';
 import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 
@@ -36,6 +36,7 @@ export default function Catalog() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -57,7 +58,7 @@ export default function Catalog() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [attempt]);
 
   const categories = useMemo(() => {
     const unique = Array.from(
@@ -242,10 +243,10 @@ export default function Catalog() {
 
   if (loadError) {
     return (
-      <div className="max-w-7xl mx-auto px-4 py-20 text-center">
-        <p className="text-sm text-[var(--muted-foreground)]">
-          No pudimos cargar el catálogo. Intenta recargar la página.
-        </p>
+      <div className="max-w-7xl mx-auto px-4 py-20">
+        <ErrorState onRetry={() => { setLoadError(false); setLoading(true); setAttempt(n => n + 1); }}>
+          No pudimos cargar el catálogo. Intenta nuevamente.
+        </ErrorState>
       </div>
     );
   }

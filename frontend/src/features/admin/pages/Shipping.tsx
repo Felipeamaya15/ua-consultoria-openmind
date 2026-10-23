@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { LoadingState } from '../../../shared/components/states';
+import { ErrorState, LoadingState } from '../../../shared/components/states';
+import { humanizeAdminError } from '../utils/humanizeError';
 import { useAdmin } from '../context/AdminContext';
 import { useAdminForm } from '../hooks/useAdminForm';
 import { AdminCard, Alert, Input, Toggle, Button, Icon, Badge } from '../components/ui';
@@ -90,8 +91,7 @@ export default function Shipping() {
         Configura la tarifa que cobrará tu tienda para cada región y comuna, en pesos chilenos. Estas tarifas se gestionan manualmente y no se consultan a Chilexpress ni Starken. Sin tarifa para el destino, el cliente no podrá confirmar ese despacho.
       </Alert>
       {loading && <LoadingState align="start" spacing="compact">Cargando configuración de entregas…</LoadingState>}
-      {error && <Alert variant="error">{error}</Alert>}
-      {!loading && !loaded && <Button variant="outline" onClick={() => setLoadAttempt(value => value + 1)}>Reintentar carga</Button>}
+      {error && <ErrorState onRetry={!loading && !loaded ? () => setLoadAttempt(value => value + 1) : undefined} retryLabel="Reintentar carga">{humanizeAdminError(error)}</ErrorState>}
 
       <fieldset disabled={loading || saving || !loaded} className="flex flex-col gap-5 min-w-0">
         {(['chilexpress', 'starken'] as const).map(carrier => {

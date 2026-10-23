@@ -52,7 +52,7 @@ async function run() {
     if (id.includes('CustomerAccountNavigation')) return {CustomerAccountNavigation: 'AccountNav'};
     if (id.includes('authService')) return {authService: service};
     if (id.includes('useStorefrontTemplate')) return {useStorefrontTemplate: () => ({route: p => '/plantilla/1/' + p})};
-    if (id.includes('shared/components/states')) return {LoadingState: 'LoadingState'}; throw Error(id);
+    if (id.includes('shared/components/states')) return {LoadingState: 'LoadingState', ErrorState: 'ErrorState'}; if (id.includes('humanizeError')) return {humanizeAdminError: message => message}; throw Error(id);
   }});
   function render() { index = 0; return Profile(); }
   function nodes(tree, result = []) {
