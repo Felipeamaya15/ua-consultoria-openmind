@@ -39,7 +39,7 @@ export const createDefaultEmailTemplates = (): EmailTemplates => ({
     enabled: true,
     subject: "Tu pedido ya fue despachado · {{orderNumber}}",
     preheader: "Tu compra va en camino.",
-    body: "Hola {{customerName}},\n\nTu pedido {{orderNumber}} ya fue despachado mediante {{carrier}}.\n\nCódigo de seguimiento: {{trackingCode}}\n\nGracias por comprar en {{storeName}}.",
+    body: "Hola {{customerName}},\n\nTu pedido {{orderNumber}} ya fue despachado y va en camino.\n\nTransportista: {{carrier}}\nCódigo de seguimiento: {{trackingCode}}\n\nRevisa el estado de tu pedido aquí (te pediremos el correo con el que compraste): {{trackingLink}}\n\nGracias por comprar en {{storeName}}.",
   },
 })
 

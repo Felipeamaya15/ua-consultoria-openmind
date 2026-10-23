@@ -9,7 +9,7 @@ import { HistoryPagination } from '../components/HistoryControls'
 import { useCommercialExport } from '../hooks/useCommercialHistory'
 import { getOrderHistory, getOrderDetail, historyParams, emptyPagination, type HistoryOrder as StoreOrder } from '../services/commercialService'
 import { approveManualTransfer, verifyTransfer } from "../services/pendingTransfersService"
-import { updateOrderStatus } from '../services/recentOrdersService';
+import { describeShipmentEmail, updateOrderStatus } from '../services/recentOrdersService';
 import { hasOrderFilters } from '../services/emptyStates';
 
 import { Link, useSearchParams } from 'react-router-dom'
@@ -103,7 +103,11 @@ export default function Orders() {
         order.id_pedido === pedidoId ? { ...order, estado: updated.estado } : order
       ));
       setRefreshKey(n => n + 1)
-      setVerifyMessage({ type: 'success', text: `Estado logístico actualizado a: ${updated.estado_etiqueta}` });
+      const email = describeShipmentEmail(updated.correo);
+      setVerifyMessage({
+        type: email.failed ? 'error' : 'success',
+        text: `Estado logístico actualizado a: ${updated.estado_etiqueta}${email.text ? `. ${email.text}` : ''}`,
+      });
     } catch (cause) {
       setVerifyMessage({ type: 'error', text: cause instanceof Error ? cause.message : 'Error al actualizar el estado.' });
     } finally {

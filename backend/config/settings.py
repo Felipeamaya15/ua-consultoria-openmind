@@ -148,3 +148,20 @@ PAYMENT_CREDENTIALS_KEY = os.getenv('PAYMENT_CREDENTIALS_KEY', '')
 # Content blocks accept bounded inline uploads (2 MB each, 10 MB per save).
 # File content is converted to managed media before JSON persistence.
 DATA_UPLOAD_MAX_MEMORY_SIZE = 16 * 1024 * 1024
+
+# Correo transaccional (SCRUM-423). Sin configurar, los correos se imprimen en el log del backend
+# (docker compose logs backend). Para enviarlos de verdad: EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend
+# y los datos del servidor SMTP en las variables EMAIL_*. Ver docs/correo-despacho.md.
+EMAIL_BACKEND = os.getenv('EMAIL_BACKEND') or 'django.core.mail.backends.console.EmailBackend'
+EMAIL_HOST = os.getenv('EMAIL_HOST') or 'localhost'
+EMAIL_PORT = int(os.getenv('EMAIL_PORT') or 587)
+EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER') or ''
+EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD') or ''
+EMAIL_USE_SSL = (os.getenv('EMAIL_USE_SSL') or '0') == '1'
+EMAIL_USE_TLS = (os.getenv('EMAIL_USE_TLS') or '1') == '1' and not EMAIL_USE_SSL
+EMAIL_TIMEOUT = int(os.getenv('EMAIL_TIMEOUT') or 10)
+DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL') or 'Tienda <no-reply@tienda.local>'
+
+# Dirección pública de la tienda, base de los enlaces de los correos (SCRUM-434). El enlace de seguimiento queda
+# <STOREFRONT_PUBLIC_URL>/seguimiento?orden=ORD-...; en producción hay que poner la dirección real de la tienda.
+STOREFRONT_PUBLIC_URL = (os.getenv('STOREFRONT_PUBLIC_URL') or 'http://localhost:5173/plantilla/1').rstrip('/')
