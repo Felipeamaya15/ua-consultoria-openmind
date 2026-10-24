@@ -9,7 +9,7 @@ import { fetchStoreInformation, STORE_INFORMATION_CHANGED, type StoreInformation
 interface AdminContextValue {
   config: AdminConfig; setConfig: (next: AdminConfig) => boolean;
   previewTemplate: TemplateId | null; setPreviewTemplate: (template: TemplateId | null) => void;
-  updateTemplate: (template: TemplateId) => void; storageError: string;
+  updateTemplate: (template: TemplateId) => boolean; storageError: string;
 }
 const AdminContext = createContext<AdminContextValue | null>(null);
 function ScopedAdminProvider({children, identity}: {children:ReactNode; identity: StoreIdentity}) {
@@ -42,7 +42,7 @@ function ScopedAdminProvider({children, identity}: {children:ReactNode; identity
     try { adminRepository.save(next, identity); setState(adminRepository.load(identity)); setStorageError(''); return true; }
     catch { setStorageError('No se pudo guardar. Revisa el espacio o los permisos del navegador; reduce el tamaño de las imágenes e intenta nuevamente.'); return false; }
   }
-  function updateTemplate(template:TemplateId) { if (setConfig({...config,template})) setPreviewTemplate(null); }
+  function updateTemplate(template:TemplateId) { const saved = setConfig({...config,template}); if (saved) setPreviewTemplate(null); return saved; }
   return <AdminContext.Provider value={{config: business ? {...config, name: business.nombre, description: business.descripcion || ''} : config,setConfig,previewTemplate,setPreviewTemplate,updateTemplate,storageError}}>{children}</AdminContext.Provider>;
 }
 export function AdminProvider({children}: {children:ReactNode}) {

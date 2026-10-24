@@ -45,6 +45,7 @@ export default function Orders() {
   // Estados para la validación activa de Linkify y cambios de estado
   const [verifying, setVerifying] = useState(false)
   const [updatingStatus, setUpdatingStatus] = useState(false)
+  const operationPending = useRef(false)
   const [verifyMessage, setVerifyMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null)
 
   useEffect(() => {
@@ -76,8 +77,10 @@ export default function Orders() {
 
   // Manejador del botón verificar pagos
   const handlePaymentConfirmation = async (order: StoreOrder) => {
+    if (operationPending.current) return;
     const isManualTransfer = order.metodo_pago.trim().toLowerCase() === 'transferencia';
     if (isManualTransfer && !window.confirm(`¿Confirmas que recibiste el pago del pedido ${order.identificador || `#${order.id_pedido}`}?`)) return;
+    operationPending.current = true;
     setVerifying(true);
     setVerifyMessage(null);
     try {
@@ -89,12 +92,15 @@ export default function Orders() {
     } catch (cause) {
       setVerifyMessage({ type: 'error', text: cause instanceof Error ? cause.message : 'Error al verificar el pago.' });
     } finally {
+      operationPending.current = false;
       setVerifying(false);
     }
   };
 
   // El backend valida la actualización; la tabla usa siempre su estado confirmado.
   const handleStatusChange = async (pedidoId: number, nuevoEstado: string) => {
+    if (operationPending.current) return;
+    operationPending.current = true;
     setUpdatingStatus(true);
     setVerifyMessage(null);
     try {
@@ -104,13 +110,19 @@ export default function Orders() {
       ));
       setRefreshKey(n => n + 1)
       const email = describeShipmentEmail(updated.correo);
+      const estadoActualizado = updated.estado?.toLowerCase() ?? '';
+      const mensajeEstado = estadoActualizado === 'cancelado'
+        ? 'Pedido cancelado correctamente.'
+        : `Estado del pedido actualizado a «${updated.estado_etiqueta}».`;
+
       setVerifyMessage({
         type: email.failed ? 'error' : 'success',
-        text: `Estado logístico actualizado a: ${updated.estado_etiqueta}${email.text ? `. ${email.text}` : ''}`,
+        text: email.text ? `${mensajeEstado} ${email.text}` : mensajeEstado,
       });
     } catch (cause) {
       setVerifyMessage({ type: 'error', text: cause instanceof Error ? cause.message : 'Error al actualizar el estado.' });
     } finally {
+      operationPending.current = false;
       setUpdatingStatus(false);
     }
   };

@@ -13,7 +13,7 @@ function load(relative, mocks = {}, globals = {}) {
     const p = path.resolve(path.dirname(file), id);
     return load(['.ts', '.tsx'].map(ext => p + ext).find(fs.existsSync) || path.join(p, 'index.ts'), mocks, globals);
   };
-  vm.runInNewContext(code, { module, exports: module.exports, require: req, URLSearchParams, ...globals });
+  vm.runInNewContext(code, { module, exports: module.exports, require: req, Error, AbortController, setTimeout, clearTimeout, URLSearchParams, ...globals });
   return module.exports;
 }
 

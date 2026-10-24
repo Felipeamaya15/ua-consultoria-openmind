@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react"
 import { EmptyListState, LoadingState } from "../../../shared/components/states"
-import { Link, useNavigate, useParams } from "react-router-dom"
+import { Link, useLocation, useNavigate, useParams } from "react-router-dom"
 import { emptyKind } from "../services/emptyStates"
 import { formatPrice, Product, ProductVariant } from "../data/mockAdminData"
 import { createPublicProduct, deleteCatalogProduct, fetchAdminProducts, fetchAdminProduct, updateCatalogProduct, type AdminProduct } from "../services/productService"
@@ -27,6 +27,23 @@ export function ProductList() {
   const [products, setProducts] = useState<AdminProduct[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
+  const deactivatingRef = useRef(false)
+  const [deactivating, setDeactivating] = useState(false)
+  const location = useLocation()
+  const navigate = useNavigate()
+  const [successMessage, setSuccessMessage] = useState(
+    (location.state as { successMessage?: string } | null)?.successMessage ?? ""
+  )
+
+  useEffect(() => {
+    // Consumir el mensaje una sola vez, sin modificar manualmente el historial de React Router.
+    if ((location.state as { successMessage?: string } | null)?.successMessage) {
+      navigate(`${location.pathname}${location.search}${location.hash}`, {
+        replace: true,
+        state: null,
+      })
+    }
+  }, [location.state, location.pathname, location.search, location.hash, navigate])
   useEffect(() => {
     let active = true
     fetchAdminProducts().then(data => { if (active) setProducts(data) })
@@ -38,20 +55,31 @@ export function ProductList() {
   const vacio = emptyKind({ loading, error, shown: filtered.length, searching: search.trim() !== "" })
 
   const handleDeleteProduct = async (productId: string) => {
+    if (deactivatingRef.current || products.find(product => product.id === productId)?.status === 'archived') return;
     if (!window.confirm("¿Estás seguro de que deseas desactivar este producto? Dejará de ser visible en el catálogo, pero se mantendrá en tu historial de ventas.")) return;
-
+    deactivatingRef.current = true;
+    setDeactivating(true);
+    setSuccessMessage("");
     try {
       await deleteCatalogProduct(productId);
-
       setProducts(current => current.map(p => p.id === productId ? { ...p, status: "archived" } : p));
       setError("");
+      setSuccessMessage("Producto desactivado correctamente.");
     } catch (error) {
-      setError(error instanceof Error ? error.message : "No se pudo eliminar el producto.");
+      setError(error instanceof Error ? error.message : "No se pudo desactivar el producto.");
+    } finally {
+      deactivatingRef.current = false;
+      setDeactivating(false);
     }
   };
   return <div>
     {loading && <LoadingState align="start" spacing="compact">Cargando productos reales…</LoadingState>}
     {error && <Alert variant="error">{error}</Alert>}
+    {successMessage && (
+      <div role="status" className="mb-4">
+        <Alert variant="success">{successMessage}</Alert>
+      </div>
+    )}
     <div className="flex items-center justify-between flex-wrap gap-3 mb-5">
       <div>
         <h2 className="font-semibold">Productos</h2>
@@ -119,7 +147,20 @@ export function ProductList() {
               </td>
               <td className="px-4 py-3"><div className="min-w-28"><div className="flex justify-between text-xs mb-1"><span>{stock} uds</span><Badge variant={state.badge}>{state.label}</Badge></div><div className="h-1.5 bg-[var(--muted)] rounded-full overflow-hidden"><div className={`${state.color} h-full rounded-full`} style={{ width: `${Math.min(100, stock * 2)}%` }} /></div></div></td>
               <td className="px-4 py-3">{productStatus(product.status)}</td>
-              <td className="px-4 py-3"><div className="flex items-center gap-3"><Link to={`/emprendedor/productos/${product.id}`} className="text-xs font-semibold text-[var(--primary)] hover:underline">Editar</Link><Link to={`/emprendedor/marketing?producto=${encodeURIComponent(product.id)}`} className="text-xs font-semibold text-[var(--primary)] hover:underline">Crear publicación</Link><button onClick={() => handleDeleteProduct(product.id)} className="text-xs font-semibold text-[var(--error)] hover:underline">Eliminar</button></div></td>
+              <td className="px-4 py-3">
+                <div className="flex items-center gap-3">
+                  <Link to={`/emprendedor/productos/${product.id}`} className="text-xs font-semibold text-[var(--primary)] hover:underline">Editar</Link>
+                  <Link to={`/emprendedor/marketing?producto=${encodeURIComponent(product.id)}`} className="text-xs font-semibold text-[var(--primary)] hover:underline">Crear publicación</Link>
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteProduct(product.id)}
+                    disabled={deactivating || product.status === "archived"}
+                    className="text-xs font-semibold text-[var(--error)] hover:underline disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {product.status === "archived" ? "Desactivado" : "Desactivar"}
+                  </button>
+                </div>
+              </td>
             </tr>
           })}
         </tbody>
@@ -196,7 +237,7 @@ export function ProductEditor({ initial, editing }: { initial: AdminProduct; edi
     if (savingRequest.current) return;
     if (!product.name.trim()) { setError("Ingresa el nombre del producto."); setActiveTab("info"); return; }
     if (product.variants.length === 0) { setError("Agrega al menos una variante con precio y stock."); setActiveTab("variants"); return; }
-    if (product.comparePrice !== undefined && product.comparePrice <= product.basePrice) {
+    if (!editing && product.comparePrice !== undefined && product.comparePrice <= product.basePrice) {
       setError("El precio anterior debe ser mayor al precio de oferta.");
       setActiveTab("info");
       return;
@@ -238,7 +279,14 @@ export function ProductEditor({ initial, editing }: { initial: AdminProduct; edi
         setProduct(current => ({ ...current, id }));
       }
       setSaved(true);
-      setTimeout(() => navigate("/emprendedor/productos"), 800);
+      navigate("/emprendedor/productos", {
+        replace: true,
+        state: {
+          successMessage: editing
+            ? "Producto actualizado correctamente."
+            : "Producto creado correctamente.",
+        },
+      });
     } catch (error) {
       setError(error instanceof Error ? error.message : "No se pudo guardar el producto.");
     } finally {
@@ -251,7 +299,40 @@ export function ProductEditor({ initial, editing }: { initial: AdminProduct; edi
     {error && <div className="mb-4"><Alert variant="error">{error}</Alert></div>}
     <div className="flex items-center justify-between mb-5 flex-wrap gap-3"><div className="flex items-center gap-3"><button onClick={() => navigate("/emprendedor/productos")} className="text-[var(--muted-foreground)] hover:text-[var(--foreground)]">← Volver</button><h2 className="font-semibold">{editing ? "Editar producto" : "Nuevo producto"}</h2></div><div className="flex gap-2">{saved && <span className="text-sm text-[var(--success)]">✓ Guardado</span>}<Button variant="primary" size="sm" onClick={save} disabled={saving || saved}>{saving ? "Guardando..." : "Guardar producto"}</Button></div></div>
     <Tabs tabs={[{ id: "info", label: "Información" }, { id: "variants", label: `Variantes (${variants.length})` }, { id: "images", label: `Imágenes (${product.images.length})` }, { id: "seo", label: "SEO" }]} active={activeTab} onChange={setActiveTab} />
-    {activeTab === "info" && <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 mt-5"><div className="lg:col-span-2 flex flex-col gap-5"><div className="bg-white border border-[var(--border)] rounded-xl p-5 flex flex-col gap-4"><Input label="Nombre del producto" value={product.name} onChange={(event) => setField("name", event.target.value)} placeholder="Ej: Polera Esencial" required /><Textarea label="Descripción" value={product.description} onChange={(event) => setField("description", event.target.value)} placeholder="Describe el producto…" /><div className="grid sm:grid-cols-2 gap-4"><Input label="Precio base / oferta (CLP)" type="number" min={0} value={product.basePrice || ""} onChange={(event) => setField("basePrice", Number(event.target.value))} placeholder="Ej: 14990" hint="Precio final de venta al público" /><Input label="Precio anterior (opcional)" type="number" min={0} value={product.comparePrice ?? ""} onChange={(event) => setField("comparePrice", event.target.value ? Number(event.target.value) : undefined)} placeholder="Ej: 19990" hint="Si es mayor al precio base, se mostrará como oferta" /></div><OfertaInfo precio={product.basePrice} anterior={product.comparePrice} /></div><div className="bg-white border border-[var(--border)] rounded-xl p-5"><div className="flex justify-between gap-3 mb-4"><div><p className="font-semibold text-sm">Atributos personalizados</p><p className="text-xs text-[var(--muted-foreground)]">Color, talla, material o cualquier característica.</p></div><Button variant="secondary" size="sm" onClick={addAttribute}>+ Atributo</Button></div><div className="grid gap-3">{attributeNames.map((name) => <div key={name} className="grid sm:grid-cols-2 gap-3 border-b border-[var(--border)] pb-3 last:border-0"><Input label="Nombre" defaultValue={name} onBlur={(event) => renameAttribute(name, event.target.value)} /><Input label="Opciones, separadas por coma" defaultValue={product.attributes[name].join(", ")} onBlur={(event) => updateAttribute(name, event.target.value)} /></div>)}{attributeNames.length === 0 && <p className="text-sm text-[var(--muted-foreground)]">Aún no hay atributos. Agrégalos para crear variantes combinables.</p>}</div></div></div><div className="flex flex-col gap-5"><div className="bg-white border border-[var(--border)] rounded-xl p-5 flex flex-col gap-4"><Input label="Categoría" value={product.category} onChange={(event) => setField("category", event.target.value)} /><Input label="Etiquetas" defaultValue={product.tags.join(", ")} onBlur={(event) => setField("tags", event.target.value.split(",").map((tag) => tag.trim()).filter(Boolean))} hint="Separadas por coma" /><Toggle checked={product.featured} onChange={(featured) => setField("featured", featured)} label="Producto destacado" /></div><div className="bg-white border border-[var(--border)] rounded-xl p-5"><p className="font-semibold text-sm mb-3">Estado de publicación</p>{(["active", "draft", "archived"] as const).map((status) => <label key={status} className="flex gap-2 py-1.5 text-sm capitalize"><input type="radio" checked={product.status === status} onChange={() => setField("status", status)} />{status === "active" ? "Activo" : status === "draft" ? "Borrador" : "Archivado"}</label>)}</div></div></div>}
+    {activeTab === "info" && <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 mt-5"><div className="lg:col-span-2 flex flex-col gap-5"><div className="bg-white border border-[var(--border)] rounded-xl p-5 flex flex-col gap-4"><Input label="Nombre del producto" value={product.name} onChange={(event) => setField("name", event.target.value)} placeholder="Ej: Polera Esencial" required /><Textarea label="Descripción" value={product.description} onChange={(event) => setField("description", event.target.value)} placeholder="Describe el producto…" />{editing ? (
+                  <div className="rounded-xl border border-[var(--border)] bg-[var(--muted)]/30 p-4 flex flex-col gap-3">
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div>
+                        <p className="text-xs font-semibold uppercase tracking-wide text-[var(--muted-foreground)]">Precio desde</p>
+                        <p className="mt-1 text-2xl font-bold text-[var(--foreground)]">
+                          {variants.length ? formatPrice(Math.min(...variants.map(v => v.price))) : "Sin variantes"}
+                        </p>
+                        <p className="mt-1 text-xs text-[var(--muted-foreground)]">Calculado según los precios de las variantes.</p>
+                      </div>
+                      {(() => {
+                        const cheapest = variants.length ? variants.reduce((lowest, current) => current.price < lowest.price ? current : lowest) : null;
+                        return cheapest && cheapest.comparePrice !== undefined && cheapest.comparePrice > cheapest.price ? (
+                          <div className="text-right flex flex-col items-end gap-1">
+                            <Badge variant="success">Oferta activa</Badge>
+                            <span className="text-xs text-[var(--muted-foreground)]">Antes <span className="line-through">{formatPrice(cheapest.comparePrice)}</span></span>
+                          </div>
+                        ) : null;
+                      })()}
+                    </div>
+                    <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[var(--border)] pt-3">
+                      <p className="text-sm text-[var(--muted-foreground)]">Cada variante tiene su propio precio y stock.</p>
+                      <Button type="button" variant="secondary" size="sm" onClick={() => setActiveTab("variants")}>Editar precios →</Button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <div className="grid sm:grid-cols-2 gap-4">
+                      <Input label="Precio inicial (CLP)" type="number" min={0} value={product.basePrice || ""} onChange={(event) => setField("basePrice", Number(event.target.value))} placeholder="Ej: 14990" hint="Precio sugerido al añadir una variante nueva." />
+                      <Input label="Precio anterior inicial (opcional)" type="number" min={0} value={product.comparePrice ?? ""} onChange={(event) => setField("comparePrice", event.target.value ? Number(event.target.value) : undefined)} placeholder="Ej: 19990" hint="Se aplica al añadir nuevas variantes." />
+                    </div>
+                    <OfertaInfo precio={product.basePrice} anterior={product.comparePrice} />
+                  </>
+                )}</div><div className="bg-white border border-[var(--border)] rounded-xl p-5"><div className="flex justify-between gap-3 mb-4"><div><p className="font-semibold text-sm">Atributos personalizados</p><p className="text-xs text-[var(--muted-foreground)]">Color, talla, material o cualquier característica.</p></div><Button variant="secondary" size="sm" onClick={addAttribute}>+ Atributo</Button></div><div className="grid gap-3">{attributeNames.map((name) => <div key={name} className="grid sm:grid-cols-2 gap-3 border-b border-[var(--border)] pb-3 last:border-0"><Input label="Nombre" defaultValue={name} onBlur={(event) => renameAttribute(name, event.target.value)} /><Input label="Opciones, separadas por coma" defaultValue={product.attributes[name].join(", ")} onBlur={(event) => updateAttribute(name, event.target.value)} /></div>)}{attributeNames.length === 0 && <p className="text-sm text-[var(--muted-foreground)]">Aún no hay atributos. Agrégalos para crear variantes combinables.</p>}</div></div></div><div className="flex flex-col gap-5"><div className="bg-white border border-[var(--border)] rounded-xl p-5 flex flex-col gap-4"><Input label="Categoría" value={product.category} onChange={(event) => setField("category", event.target.value)} /><Input label="Etiquetas" defaultValue={product.tags.join(", ")} onBlur={(event) => setField("tags", event.target.value.split(",").map((tag) => tag.trim()).filter(Boolean))} hint="Separadas por coma" /><Toggle checked={product.featured} onChange={(featured) => setField("featured", featured)} label="Producto destacado" /></div><div className="bg-white border border-[var(--border)] rounded-xl p-5"><p className="font-semibold text-sm mb-3">Estado de publicación</p>{(["active", "draft", "archived"] as const).map((status) => <label key={status} className="flex gap-2 py-1.5 text-sm capitalize"><input type="radio" checked={product.status === status} onChange={() => setField("status", status)} />{status === "active" ? "Activo" : status === "draft" ? "Borrador" : "Archivado"}</label>)}</div></div></div>}
     {activeTab === "info" && <div className="mt-5 bg-white border border-[var(--border)] rounded-xl p-5">
       <p className="font-semibold text-sm mb-3">Características generales</p>
       {(product.generalAttributes ?? []).map((attribute, index) => <div key={index} className="flex flex-wrap gap-3 mb-3">

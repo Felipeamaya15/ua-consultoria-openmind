@@ -1,3 +1,4 @@
+import { readApiResponse, requestJson } from '../../../shared/services/apiRequest';
 import { fetchInitialLoad, type InitialLoadOptions } from '../../../core/http/initialLoad';
 import { API_BASE_URL } from '../../../api';
 import type { LandingConfig, LandingInput } from '../types/landing.types';
@@ -7,7 +8,7 @@ export const LANDING_CONFIG_CHANGED = 'openmind:landing-config-changed';
 const endpoint = `${API_BASE_URL}/api/landing/configuracion/`;
 
 function normalizeMediaUrl(value: string | null): string | null {
-  if (!value) return null;
+  if (typeof value !== 'string' || !value) return null;
 
   // Ya es una URL absoluta o una imagen Base64.
   if (
@@ -27,29 +28,23 @@ function normalizeMediaUrl(value: string | null): string | null {
 }
 
 async function readResponse(response: Response): Promise<LandingConfig | null> {
-  const body = await response.json();
+  const data = await readApiResponse(response) as LandingConfig | null;
+  return normalizeConfig(data);
+}
 
-  if (!response.ok || body.exito !== true) {
-    const details = body.error?.detalles;
-
-    throw new Error(
-      `${body.mensaje || 'No se pudo consultar o guardar la landing.'}${
-        details ? `: ${JSON.stringify(details)}` : ''
-      }`
-    );
-  }
-
-  if (!body.data) {
+function normalizeConfig(data: LandingConfig | null): LandingConfig | null {
+  if (!data) {
     return null;
   }
 
+  if (typeof data !== 'object' || Array.isArray(data) || typeof data.titulo !== 'string' || typeof data.descripcion !== 'string' || typeof data.texto_boton !== 'string' || !data.secciones || typeof data.secciones !== 'object' || Array.isArray(data.secciones)) throw new Error('No pudimos confirmar el contenido de la página principal. Comprueba si se guardó antes de reintentar.');
   return {
-    ...body.data,
-    ...(body.data.contenido ? { contenido: { ...body.data.contenido,
-      ...(Array.isArray(body.data.contenido.bloques) ? { bloques: body.data.contenido.bloques.map((block: import('../types/landing.types').BloqueLanding) => ({...block, imagenes: block.imagenes.map(image => ({...image,src:normalizeMediaUrl(image.src) || ''}))})) } : {}),
+    ...data,
+    ...(data.contenido ? { contenido: { ...data.contenido,
+      ...(Array.isArray(data.contenido.bloques) ? { bloques: data.contenido.bloques.map((block: import('../types/landing.types').BloqueLanding) => ({...block, imagenes: block.imagenes.map(image => ({...image,src:normalizeMediaUrl(image.src) || ''}))})) } : {}),
     } } : {}),
-    imagen_principal: normalizeMediaUrl(body.data.imagen_principal),
-    logo: normalizeMediaUrl(body.data.logo),
+    imagen_principal: normalizeMediaUrl(data.imagen_principal),
+    logo: normalizeMediaUrl(data.logo),
   };
 }
 
@@ -77,9 +72,9 @@ export async function saveLandingConfig(config: LandingInput): Promise<LandingCo
     } else if (image === null || image === '') body.append(field, '');
     // Omitir una URL existente conserva el archivo almacenado.
   }
-  const saved = await readResponse(await fetch(endpoint, {
+  const saved = normalizeConfig(await requestJson(endpoint, {
     method: 'PUT', headers: { Authorization: `Token ${token}` }, body,
-  }));
+  }) as LandingConfig | null);
   if (!saved) throw new Error('El backend no devolvió la configuración guardada.');
   if (typeof window !== 'undefined') window.dispatchEvent(new Event(LANDING_CONFIG_CHANGED));
   return saved;
@@ -89,8 +84,6 @@ export async function saveLandingConfig(config: LandingInput): Promise<LandingCo
 export async function saveBlockStyles(template: string, styles: import('../../storefront/visual/blockAppearance').BlockStyles): Promise<void> {
   const token = localStorage.getItem('token') || sessionStorage.getItem('token');
   if (!token) throw new Error('Inicia sesión como propietario para guardar el diseño.');
-  const response = await fetch(`${API_BASE_URL}/api/landing/apariencia/`, {method:'PATCH',headers:{'Content-Type':'application/json',Authorization:`Token ${token}`},body:JSON.stringify({plantilla:template,bloques:styles})});
-  const body = await response.json();
-  if (!response.ok || !body.exito) throw new Error(body.mensaje || 'No se pudo publicar la apariencia de las secciones.');
+  await requestJson(`${API_BASE_URL}/api/landing/apariencia/`, {method:'PATCH',headers:{'Content-Type':'application/json',Authorization:`Token ${token}`},body:JSON.stringify({plantilla:template,bloques:styles})});
   window.dispatchEvent(new Event(LANDING_CONFIG_CHANGED));
 }

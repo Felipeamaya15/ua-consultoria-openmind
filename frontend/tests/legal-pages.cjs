@@ -13,7 +13,7 @@ function load(relative, mocks = {}, globals = {}) {
     const p = path.resolve(path.dirname(file), id);
     return load(['.ts', '.tsx'].map(ext => p + ext).find(fs.existsSync) || path.join(p, 'index.ts'), mocks, globals);
   };
-  vm.runInNewContext(code, { module, exports: module.exports, require: req, structuredClone, ...globals });
+  vm.runInNewContext(code, { module, exports: module.exports, require: req, structuredClone, Error, DOMException, AbortController, setTimeout, clearTimeout, ...globals });
   return module.exports;
 }
 
@@ -268,7 +268,7 @@ function transpileAndRun(relativePath, customContext = {}) {
       throw new Error(`Cannot resolve: ${id}`);
     },
     console,
-    Error,
+    Error, AbortController, DOMException, setTimeout, clearTimeout,
     structuredClone: (x) => JSON.parse(JSON.stringify(x)),
     localStorage: {
       getItem: (k) => (k === 'token' ? 'test-token-123' : null),
@@ -381,7 +381,7 @@ function transpileAndRun(relativePath, customContext = {}) {
         ok: true,
         json: async () => ({
           exito: true,
-          data: { title: 'Términos Detalle', published: 'Pub Detalle' },
+          data: { title: 'Términos Detalle', published: 'Pub Detalle', version: 1 },
         }),
       };
     }

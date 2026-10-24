@@ -1,0 +1,5 @@
+simulation: feedback-scrum455456
+routing: path
+mocks:
+  - routeKey: openmind
+    path: ./feedback-mock/config.yaml

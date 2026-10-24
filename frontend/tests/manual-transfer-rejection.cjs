@@ -7,18 +7,8 @@ const ts = require('typescript');
 const root = path.resolve(__dirname, '..');
 
 function loadService(globals) {
-  const moduleRef = { exports: {} };
-  const source = fs.readFileSync(
-    path.join(root, 'src/features/admin/services/pendingTransfersService.ts'),
-    'utf8',
-  ).replaceAll('import.meta.env.VITE_API_URL', 'undefined');
-  vm.runInNewContext(
-    ts.transpileModule(source, {
-      compilerOptions: { target: ts.ScriptTarget.ES2020, module: ts.ModuleKind.CommonJS },
-    }).outputText,
-    { module: moduleRef, exports: moduleRef.exports, ...globals },
-  );
-  return moduleRef.exports;
+  const { require: legacyRequire, ...context } = globals;
+  return require('./source-loader.cjs').load('src/features/admin/services/pendingTransfersService.ts', { '../../../api': { API_BASE_URL: 'https://api.example.test' }, '../../auth/services/authService': { authService: { getToken: () => 'owner-token' } } }, context);
 }
 
 (async () => {

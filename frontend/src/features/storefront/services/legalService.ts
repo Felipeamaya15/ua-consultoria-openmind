@@ -2,9 +2,15 @@ import { API_BASE_URL } from '../../../api';
 import { authService } from '../../auth/services/authService';
 import { defaultLegalPages, type LegalType, type LegalPage } from '../data/legalContent';
 import type { InitialLoadOptions } from '../../../core/http/initialLoad';
+import { requestJson } from '../../../shared/services/apiRequest';
 
 type Pages = Record<LegalType, LegalPage>;
 const API_BASE = API_BASE_URL.replace(/\/+$/, '');
+function readPage(data: unknown): LegalPage {
+  const page = data as LegalPage | null;
+  if (!page || typeof page.title !== 'string' || typeof page.published !== 'string' || !Number.isSafeInteger(page.version) || Number(page.version) < 1) throw new Error('La versión legal recibida no es válida.');
+  return { ...page, draft: typeof page.draft === 'string' ? page.draft : page.published };
+}
 function normalizePages(data: unknown): Pages {
   if (!data || typeof data !== 'object' || Array.isArray(data)) throw new Error('La respuesta legal no es válida.');
   const raw = data as Record<string, any>;
@@ -20,18 +26,16 @@ function normalizePages(data: unknown): Pages {
 async function request(path: string, method = 'GET', data?: unknown, admin = false, signal?: AbortSignal) {
   const token = admin ? authService.getToken() : null;
   if (admin && !token) throw new Error('Inicia sesión como propietario para administrar las páginas legales.');
-  const response = await fetch(`${API_BASE}/api/legal/${path}`, { method, signal, cache: 'no-store',
+  const result = await requestJson(`${API_BASE}/api/legal/${path}`, { method, signal, cache: 'no-store',
     headers: { ...(token ? { Authorization: `Token ${token}` } : {}), ...(data === undefined ? {} : { 'Content-Type': 'application/json' }) },
     ...(data === undefined ? {} : { body: JSON.stringify(data) }) });
-  const body = await response.json().catch(() => null);
   if (admin && token !== authService.getToken()) throw new DOMException('La sesión cambió.', 'AbortError');
-  if (!response.ok || body?.exito !== true) throw new Error(response.status === 403 ? 'No tienes permiso para administrar esta tienda.' : response.status >= 500 ? 'No pudimos guardar en el servidor. Conservamos tu edición; intenta nuevamente.' : body?.mensaje || 'No pudimos completar la solicitud legal.');
-  return body.data;
+  return result;
 }
 export const legalService = {
   async fetchPublicLegalPages(options?: InitialLoadOptions): Promise<Pages> { return normalizePages(await request('', 'GET', undefined, false, options?.signal)); },
-  async fetchPublicLegalPage(tipo: string, signal?: AbortSignal): Promise<LegalPage> { return request(`${encodeURIComponent(tipo)}/`, 'GET', undefined, false, signal); },
-  async fetchVersionVigente(tipo?: string, signal?: AbortSignal): Promise<LegalPage | Pages> { const data = await request(`vigente/${tipo ? encodeURIComponent(tipo) + '/' : ''}`, 'GET', undefined, false, signal); return tipo ? data : normalizePages(data); },
+  async fetchPublicLegalPage(tipo: string, signal?: AbortSignal): Promise<LegalPage> { return readPage(await request(`${encodeURIComponent(tipo)}/`, 'GET', undefined, false, signal)); },
+  async fetchVersionVigente(tipo?: string, signal?: AbortSignal): Promise<LegalPage | Pages> { const data = await request(`vigente/${tipo ? encodeURIComponent(tipo) + '/' : ''}`, 'GET', undefined, false, signal); return tipo ? readPage(data) : normalizePages(data); },
   async fetchAdminLegalPages(signal?: AbortSignal): Promise<Pages> { return normalizePages(await request('configuracion/', 'GET', undefined, true, signal)); },
   async createLegalContent(payload: unknown): Promise<Pages> { return normalizePages(await request('configuracion/', 'POST', payload, true)); },
   async updateLegalContent(tipo: LegalType, draft: string, title?: string, extra?: Record<string, unknown>, signal?: AbortSignal): Promise<Pages> { return normalizePages(await request('configuracion/', 'PUT', { tipo, draft, ...(title ? { title } : {}), ...extra, accion: 'draft' }, true, signal)); },

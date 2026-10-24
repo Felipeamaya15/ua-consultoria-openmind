@@ -1,6 +1,7 @@
 import { formatBusinessDate } from './businessTime';
 import { API_BASE_URL } from '../../../api';
 import { authService } from '../../auth/services/authService';
+import { requestJson } from '../../../shared/services/apiRequest';
 
 /** Cantidad de órdenes recientes que muestra el dashboard. */
 export const RECENT_ORDERS_LIMIT = 5;
@@ -87,7 +88,7 @@ export const updateOrderStatus = async (pedidoId: number, nuevoEstado: string) =
 
   const token = authService.getToken();
   if (!token) throw new Error('Inicia sesión como propietario para actualizar el estado.');
-  const response = await fetch(`${API_BASE_URL}/api/tienda/pedidos/${pedidoId}/estado/`, {
+  const updated = await requestJson(`${API_BASE_URL}/api/tienda/pedidos/${pedidoId}/estado/`, {
     method: 'PATCH',
     headers: {
       'Content-Type': 'application/json',
@@ -96,11 +97,6 @@ export const updateOrderStatus = async (pedidoId: number, nuevoEstado: string) =
     body: JSON.stringify({ estado: estadoNormalizado })
   });
 
-  const json = await response.json();
-  if (!response.ok || !json.exito) {
-    throw new Error(json.mensaje || json.detail || 'Error al actualizar el estado logístico de la orden.');
-  }
-  const updated = json.data;
   if (!isRecord(updated) || updated.id_pedido !== pedidoId
     || !ALLOWED_ORDER_STATUSES.includes(updated.estado as typeof ALLOWED_ORDER_STATUSES[number])
     || typeof updated.estado_etiqueta !== 'string') {

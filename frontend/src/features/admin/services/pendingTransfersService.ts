@@ -1,3 +1,5 @@
+import { requestEnvelope } from '../../../shared/services/apiRequest';
+import { humanizeAdminError } from '../utils/humanizeError';
 import { API_BASE_URL } from '../../../api';
 import { authService } from '../../auth/services/authService';
 
@@ -27,13 +29,9 @@ function isPendingTransfer(value: unknown): value is PendingTransfer {
 export async function getPendingTransfers(signal?: AbortSignal): Promise<PendingTransfer[]> {
   const token = authService.getToken();
   if (!token) throw new Error('Inicia sesión como propietario para consultar transferencias pendientes.');
-  const response = await fetch(`${API_BASE_URL}/api/pagos/transferencias/pendientes/`, {
+  const body = await requestEnvelope(`${API_BASE_URL}/api/pagos/transferencias/pendientes/`, {
     headers: { Authorization: `Token ${token}` }, signal,
   });
-  const body = await response.json();
-  if (!response.ok || body.exito !== true) {
-    throw new Error(body.mensaje || body.detail || 'No se pudieron consultar las transferencias pendientes.');
-  }
   if (!Array.isArray(body.data) || !body.data.every(isPendingTransfer)) {
     throw new Error('El listado de transferencias recibido es inválido.');
   }
@@ -47,19 +45,16 @@ export async function approveManualTransfer(
   const token = authService.getToken();
   if (!token) throw new Error('Inicia sesión como propietario para aprobar transferencias.');
 
-  const response = await fetch(`${API_BASE_URL}/api/pagos/transferencias/${pedidoId}/aprobar/`, {
+  const body = await requestEnvelope(`${API_BASE_URL}/api/pagos/transferencias/${pedidoId}/aprobar/`, {
     method: 'POST',
     headers: { Authorization: `Token ${token}` },
     signal,
   });
-  const body = await response.json();
-  if (!response.ok || body.exito !== true) {
-    throw new Error(body.mensaje || body.detail || 'No se pudo aprobar la transferencia.');
-  }
-  if (body.data?.id_pedido !== pedidoId || body.data?.estado !== 'pagado') {
+  const data = body.data as { id_pedido?: unknown; estado?: unknown } | null;
+  if (data?.id_pedido !== pedidoId || data?.estado !== 'pagado') {
     throw new Error('La confirmación de la transferencia recibida es inválida.');
   }
-  return { ...body.data, mensaje: body.mensaje };
+  return { id_pedido: pedidoId, estado: data.estado, mensaje: humanizeAdminError(body.mensaje, 'Transferencia aprobada correctamente.') };
 }
 
 export async function rejectManualTransfer(
@@ -69,19 +64,16 @@ export async function rejectManualTransfer(
   const token = authService.getToken();
   if (!token) throw new Error('Inicia sesión como propietario para rechazar transferencias.');
 
-  const response = await fetch(`${API_BASE_URL}/api/pagos/transferencias/${pedidoId}/rechazar/`, {
+  const body = await requestEnvelope(`${API_BASE_URL}/api/pagos/transferencias/${pedidoId}/rechazar/`, {
     method: 'POST',
     headers: { Authorization: `Token ${token}` },
     signal,
   });
-  const body = await response.json();
-  if (!response.ok || body.exito !== true) {
-    throw new Error(body.mensaje || body.detail || 'No se pudo rechazar la transferencia.');
-  }
-  if (body.data?.id_pedido !== pedidoId || body.data?.estado !== 'cancelado') {
+  const data = body.data as { id_pedido?: unknown; estado?: unknown } | null;
+  if (data?.id_pedido !== pedidoId || data?.estado !== 'cancelado') {
     throw new Error('La confirmación del rechazo recibida es inválida.');
   }
-  return { ...body.data, mensaje: body.mensaje };
+  return { id_pedido: pedidoId, estado: data.estado, mensaje: humanizeAdminError(body.mensaje, 'Transferencia rechazada correctamente.') };
 }
 
 // Nueva función de verificación hacia el backend
@@ -89,7 +81,7 @@ export async function verifyTransfer(pedido_id: number, signal?: AbortSignal): P
   const token = authService.getToken();
   if (!token) throw new Error('Inicia sesión como propietario para verificar transferencias.');
   
-  const response = await fetch(`${API_BASE_URL}/api/pagos/linkify/verificar/`, {
+  const body = await requestEnvelope(`${API_BASE_URL}/api/pagos/linkify/verificar/`, {
     method: 'POST',
     headers: { 
       Authorization: `Token ${token}`,
@@ -99,9 +91,5 @@ export async function verifyTransfer(pedido_id: number, signal?: AbortSignal): P
     signal,
   });
   
-  const body = await response.json();
-  if (!response.ok) {
-    throw new Error(body.mensaje || body.detail || 'Error al verificar la transferencia.');
-  }
-  return { exito: body.exito, mensaje: body.mensaje };
+  return { exito: true, mensaje: humanizeAdminError(body.mensaje, 'Transferencia verificada correctamente.') };
 }

@@ -88,7 +88,7 @@ async function main() {
             return [state[index], value => { state[index] = typeof value === 'function' ? value(state[index]) : value; }];
           },
         };
-        if (name === 'react-router-dom') return { Link: 'Link', useParams: () => ({ id }), useNavigate: () => () => {} };
+        if (name === 'react-router-dom') return { Link: 'Link', useLocation: () => ({ state: null }), useParams: () => ({ id }), useNavigate: () => () => {} };
         if (name.includes('mockAdminData')) return { formatPrice: String };
         if (name.includes('productService')) return {
           fetchAdminProduct: async key => { queried++; assert.equal(key, id); if (mode === 'failure') throw new Error('No autorizado'); return saved; },
@@ -99,7 +99,7 @@ async function main() {
       },
     });
     const render = mode === 'list' ? components.ProductList : components.ProductForm;
-    render(); effects[0]();
+    render(); effects.forEach(effect => effect());
     await new Promise(resolve => setImmediate(resolve));
     cursor = 0;
     const tree = render();

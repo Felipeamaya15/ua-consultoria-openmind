@@ -12,7 +12,7 @@ function load(relative, mocks = {}, globals = {}) {
     const p = path.resolve(path.dirname(file), id);
     return load(['.ts', '.tsx'].map(ext => p + ext).find(fs.existsSync) || path.join(p, 'index.ts'), mocks, globals);
   };
-  vm.runInNewContext(code, { module, exports: module.exports, require: req, Error, ...globals });
+  vm.runInNewContext(code, { module, exports: module.exports, require: req, Error, AbortController, setTimeout, clearTimeout, ...globals });
   return module.exports;
 }
 
@@ -94,8 +94,8 @@ const motivo = async promesa => { try { await promesa; } catch (error) { return 
     assert.equal(llamadas.length, 0, 'un estado inválido no llega al servidor');
     const sinSesion = servicio(exito(pedido()), { token: null });
     assert.equal(await motivo(sinSesion.api.updateOrderStatus(7, 'enviado')), 'Inicia sesión como propietario para actualizar el estado.');
-    const rechazo = servicio(resp(403, { exito: false, mensaje: 'Solo el propietario activo puede administrar esta tienda.' }));
-    assert.equal(await motivo(rechazo.api.updateOrderStatus(7, 'enviado')), 'Solo el propietario activo puede administrar esta tienda.');
+    const rechazo = servicio(resp(403, { exito: false, mensaje: 'No tienes permiso para realizar esta operación.' }));
+    assert.equal(await motivo(rechazo.api.updateOrderStatus(7, 'enviado')), 'No tienes permiso para realizar esta operación.');
     const otroPedido = servicio(exito(pedido({ id_pedido: 99 })));
     assert.ok(await motivo(otroPedido.api.updateOrderStatus(7, 'enviado')), 'la respuesta de otro pedido se rechaza');
   });
@@ -104,7 +104,7 @@ const motivo = async promesa => { try { await promesa; } catch (error) { return 
     const codigo = fs.readFileSync(path.join(root, 'src/features/admin/pages/Orders.tsx'), 'utf8').replace(/\r/g, '');
     assert.ok(codigo.includes('describeShipmentEmail(updated.correo)'));
     assert.ok(codigo.includes("type: email.failed ? 'error' : 'success'"));
-    assert.ok(codigo.includes('Estado logístico actualizado a: ${updated.estado_etiqueta}'), 'el texto base no cambia: una prueba visual lo busca');
+    assert.ok(codigo.includes('Estado del pedido actualizado a «${updated.estado_etiqueta}».') && codigo.includes('Pedido cancelado correctamente.'), 'los mensajes usan los estados confirmados');
   });
 
   await test('la pantalla de correos ya no afirma que no se envía ningún correo', async () => {

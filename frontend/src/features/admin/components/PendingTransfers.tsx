@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { EmptyListState, LoadingState } from '../../../shared/components/states';
 import { Alert, Button } from './ui';
 import { formatPrice } from '../data/mockAdminData';
@@ -19,6 +19,7 @@ export function PendingTransfers() {
   const [approvingId, setApprovingId] = useState<number | null>(null);
   const [rejectingId, setRejectingId] = useState<number | null>(null);
   const [feedback, setFeedback] = useState('');
+  const operationPending = useRef(false);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -37,7 +38,9 @@ export function PendingTransfers() {
   }, [refresh]);
 
   const approve = async (transfer: PendingTransfer) => {
+    if (operationPending.current) return;
     if (!window.confirm(`¿Confirmas que recibiste el pago del pedido ${transfer.identificador || `#${transfer.id_pedido}`}?`)) return;
+    operationPending.current = true;
     setApprovingId(transfer.id_pedido);
     setError('');
     setFeedback('');
@@ -48,14 +51,17 @@ export function PendingTransfers() {
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'No se pudo aprobar la transferencia.');
     } finally {
+      operationPending.current = false;
       setApprovingId(null);
     }
   };
 
   const reject = async (transfer: PendingTransfer) => {
+    if (operationPending.current) return;
     const orderLabel = transfer.identificador || `#${transfer.id_pedido}`;
     if (!window.confirm(`¿Confirmas que deseas rechazar la transferencia del pedido ${orderLabel}? El pedido será cancelado.`)) return;
 
+    operationPending.current = true;
     setRejectingId(transfer.id_pedido);
     setError('');
     setFeedback('');
@@ -66,6 +72,7 @@ export function PendingTransfers() {
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'No se pudo rechazar la transferencia.');
     } finally {
+      operationPending.current = false;
       setRejectingId(null);
     }
   };

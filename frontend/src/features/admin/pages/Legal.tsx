@@ -11,6 +11,7 @@ import { legalService } from '../../storefront/services/legalService';
 import type { LegalPage, LegalType } from '../../storefront/data/legalContent';
 import { useVerifiedLegalScope } from '../../storefront/hooks/useVerifiedLegalScope';
 import { getStoreConfigKey, STORE_CONFIG_CHANGED_EVENT } from '../../storefront/visual/storage';
+import { isRequestCancelled } from '../../../shared/services/apiRequest';
 
 const pageTypes: LegalPageType[] = ['terms', 'privacy', 'refund', 'cookies'];
 export default function LegalEditor() {
@@ -35,9 +36,10 @@ function ScopedLegalEditor({ isCurrent, storageKey }: { isCurrent: () => boolean
   const selected = useRef(current); selected.current = current;
   useEffect(() => {
     const controller = new AbortController(); pending.current = controller; alive.current = true;
-    legalService.fetchAdminLegalPages(controller.signal).then(data => { if (alive.current && isCurrent()) setPages(data); })
-      .catch(() => { if (alive.current && isCurrent()) { setLoadFailed(true); setError('No pudimos cargar el contenido legal del servidor. Recarga para reintentar.'); setNotice('error'); } })
-      .finally(() => { if (alive.current && isCurrent()) setLoading(false); });
+    setLoading(true); setLoadFailed(false);
+    legalService.fetchAdminLegalPages(controller.signal).then(data => { if (!controller.signal.aborted && alive.current && isCurrent()) setPages(data); })
+      .catch(cause => { if (!controller.signal.aborted && !isRequestCancelled(cause) && alive.current && isCurrent()) { setLoadFailed(true); setError('No pudimos cargar el contenido legal del servidor. Recarga para reintentar.'); setNotice('error'); } })
+      .finally(() => { if (!controller.signal.aborted && alive.current && isCurrent()) setLoading(false); });
     return () => { alive.current = false; pending.current?.abort(); };
   }, []);
   const page = pages[current];
@@ -61,8 +63,8 @@ function ScopedLegalEditor({ isCurrent, storageKey }: { isCurrent: () => boolean
       setPages(previous => ({ ...previous, [target]: data[target] }));
       if (selected.current === target) setNotice(historicContent !== undefined ? 'recovered' : action);
       if (action === 'published') window.dispatchEvent(new CustomEvent(STORE_CONFIG_CHANGED_EVENT, { detail: { storageKey } }));
-    } catch {
-      if (alive.current && isCurrent()) { setError('No pudimos guardar en el servidor. Conservamos tu edición y la versión publicada. Intenta nuevamente.'); setNotice('error'); }
+    } catch (cause) {
+      if (!isRequestCancelled(cause) && alive.current && isCurrent()) { setError(humanizeAdminError(cause instanceof Error ? cause.message : '', 'No pudimos guardar en el servidor. Conservamos tu edición y la versión publicada. Intenta nuevamente.')); setNotice('error'); }
     } finally { busy.current = false; if (alive.current && isCurrent()) setSaving(false); }
   }
   const handleRestore = () => perform('restored');

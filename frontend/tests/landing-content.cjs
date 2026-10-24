@@ -134,15 +134,8 @@ tree = nodes(Editor({ value: { ...empty, productos_destacados: ['pending-id'], c
 assert(tree.includes('Esperando la carga del catálogo. Tu selección se conserva.'));
 assert(!tree.some(n => typeof n === 'string' && /no disponible|No hay productos|No hay categorías/.test(n)));
 async function verifyMultipart() {
-  const module = { exports: {} };
   let captured;
-  const code = ts.transpileModule(fs.readFileSync(path.join(root, 'src/features/landing/services/landingService.ts'), 'utf8'), { compilerOptions: { module: 1 } }).outputText;
-  vm.runInNewContext(code, {
-    module, exports: module.exports, FormData,
-    localStorage: { getItem: () => 'test-token' },
-    require: () => ({ API_BASE_URL: 'http://testserver' }),
-    fetch: async (url, options) => { captured = options; return { ok: true, json: async () => ({ exito: true, data: { id: 1 } }) }; },
-  });
+  const module = { exports: require('./source-loader.cjs').load('src/features/landing/services/landingService.ts', {'../../../api': { API_BASE_URL: 'http://testserver' }}, { FormData, localStorage: { getItem: () => 'test-token' }, fetch: async (url, options) => { captured = options; return { ok: true, json: async () => ({ exito: true, data: { titulo: 'QA', descripcion: '', texto_boton: 'Ver', secciones: {}, id: 1 } }) }; } }) };
   reset();
   const input = { ...state.landing, logo: 'http://testserver/media/logo.png' };
   await module.exports.saveLandingConfig(input);
