@@ -1,4 +1,7 @@
 """Correos de recepción, pago exitoso y pago rechazado del pedido ."""
+import hashlib
+import hmac
+import json
 from decimal import Decimal
 from unittest.mock import patch
 from uuid import uuid4
@@ -128,3 +131,77 @@ class CorreoRecepcionTests(CorreosPedidoBase):
         self.assertEqual(self.crear().status_code, 201)
         self.assertEqual(mail.outbox, [])
         self.assertIsNone(self.marca(Pedido.objects.get(), 'order_received'))
+
+
+class CorreoPagoExitosoTests(CorreosPedidoBase):
+    def aprobar(self, pedido):
+        return self.api.post(f'/api/pagos/transferencias/{pedido.pk}/aprobar/', {}, format='json')
+
+    def test_al_aprobar_la_transferencia_se_envia_el_correo_de_pago_exitoso(self):
+        pedido = self.pedido()
+        self.assertEqual(self.aprobar(pedido).status_code, 200)
+        self.assertEqual(len(mail.outbox), 1)
+        correo = mail.outbox[0]
+        self.assertEqual(correo.to, ['ana@example.com'])
+        self.assertEqual(correo.subject, f'Tu pago fue confirmado · {pedido.identificador}')
+        self.assertIn('$15.990', correo.body)
+        self.assertEqual(self.marca(pedido, 'payment_success')['codigo'], 'enviado')
+
+    def test_aprobar_dos_veces_envia_un_solo_correo(self):
+        pedido = self.pedido()
+        self.aprobar(pedido)
+        self.aprobar(pedido)
+        self.assertEqual(len(mail.outbox), 1)
+
+    def test_al_marcar_manualmente_como_pagado_tambien_se_envia(self):
+        pedido = self.pedido()
+        respuesta = self.api.patch(f'/api/tienda/pedidos/{pedido.pk}/estado/', {'estado': 'pagado'}, format='json')
+        self.assertEqual(respuesta.status_code, 200, respuesta.content)
+        self.assertEqual(respuesta.json()['data']['correo'], {'enviado': True, 'codigo': 'enviado'})
+        self.assertEqual(len(mail.outbox), 1)
+
+    def test_si_el_correo_falla_el_pedido_queda_pagado(self):
+        pedido = self.pedido()
+        with patch.object(notificaciones_pedido, 'enviar_correo', return_value=ResultadoEnvio(False, 'error_de_envio')):
+            self.assertEqual(self.aprobar(pedido).status_code, 200)
+        self.assertEqual(self.refrescar(pedido).estado, 'pagado')
+        self.assertFalse(self.marca(pedido, 'payment_success')['enviado'])
+
+    def test_si_la_tienda_desactivo_el_correo_no_se_envia(self):
+        ConfiguracionCorreo.objects.create(tienda=self.tienda, plantillas={'payment_success': {
+            'enabled': False, 'subject': 'Pago', 'preheader': '', 'body': 'Texto'}})
+        self.assertEqual(self.aprobar(self.pedido()).status_code, 200)
+        self.assertEqual(mail.outbox, [])
+
+    def test_no_se_envia_si_la_transferencia_no_se_pudo_aprobar(self):
+        pedido = self.pedido(estado='cancelado')
+        self.assertEqual(self.aprobar(pedido).status_code, 409)
+        self.assertEqual(mail.outbox, [])
+
+
+class CorreoPagoExitosoLinkifyTests(CorreosPedidoBase):
+    CLAVE = 'clave-privada-qa'
+    URL = '/api/pagos/linkify/notificacion/'
+
+    def setUp(self):
+        super().setUp()
+        ConfiguracionPago.objects.create(tienda=self.tienda, datos={
+            'linkify': {'enabled': True, 'fields': {'idCuenta': 'CUENTA-QA', 'clavePrivada': self.CLAVE}}})
+        self.pedido_linkify = self.pedido(medio_pago='Linkify')
+
+    def avisar(self, accion):
+        cuerpo = json.dumps({'id_pago': self.pedido_linkify.pk, 'action': accion}).encode()
+        firma = hmac.new(self.CLAVE.encode(), cuerpo, hashlib.sha256).hexdigest()
+        return self.client.post(self.URL, data=cuerpo, content_type='application/json', HTTP_X_LINKIFY_CONFIRMATION=firma)
+
+    def test_el_pago_recibido_por_linkify_envia_el_correo_una_sola_vez(self):
+        self.assertEqual(self.avisar('notification').status_code, 200)
+        self.assertEqual(self.avisar('notification').status_code, 200)
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertEqual(mail.outbox[0].to, ['ana@example.com'])
+
+    def test_si_el_pago_se_anula_y_se_vuelve_a_pagar_no_se_repite_el_correo(self):
+        self.avisar('notification')
+        self.avisar('cancellation')
+        self.avisar('notification')
+        self.assertEqual(len(mail.outbox), 1)

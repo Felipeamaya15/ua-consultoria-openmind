@@ -36,6 +36,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.core.infrastructure.linkify_client import LinkifyAdapter
+from apps.core.infrastructure.notificaciones_pedido import notificar_cambio_de_estado
 from apps.core.models import ConfiguracionPago, Pedido
 from apps.core.presentation.responses import error_response
 
@@ -175,11 +176,14 @@ class LinkifyNotificacionView(APIView):
             if pedido.estado == "cancelado":
                 raise _Rechazo("PEDIDO_CANCELADO", "El pedido esta cancelado y no puede marcarse como pagado.",
                                status.HTTP_409_CONFLICT, pedido)
-            if pedido.estado == "pendiente":
+            pasa_a_pagado = pedido.estado == "pendiente"
+            if pasa_a_pagado:
                 pedido.estado = "pagado"
                 pedido.save(update_fields=["estado"])
                 logger.info("Linkify: pedido %s marcado como pagado", pedido.pk)
             # Ya pagado (o en despacho): el aviso ya se habia procesado (es idempotente).
+        if pasa_a_pagado:
+            notificar_cambio_de_estado(pedido, "pendiente")
         return Response({"exito": True, "mensaje": "Pago registrado.", "estado": pedido.estado})
 
     def _pago_anulado(self, pedido):
