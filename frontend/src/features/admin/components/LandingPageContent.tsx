@@ -1,6 +1,6 @@
 import { useAdminHelp } from '../context/AdminHelpContext';
 import { ErrorState, LoadingState } from '../../../shared/components/states';
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { useBlocker, useLocation } from 'react-router-dom';
 import { LandingBlocksEditor } from './LandingBlocksEditor';
 import { LandingContentEditor } from './LandingContentEditor';
@@ -52,6 +52,8 @@ export default function LandingPageContent() {
   const [loading,setLoading] = useState(true);
   const [businessLoading,setBusinessLoading] = useState(true);
   const [saving,setSaving] = useState(false);
+  const savingRef = useRef(false);
+  const [confirmation,setConfirmation] = useState('');
   const [error,setError] = useState('');
   const [savedAt,setSavedAt] = useState('');
   const [loadFailed,setLoadFailed] = useState(false);
@@ -96,20 +98,21 @@ export default function LandingPageContent() {
   function discard() {setForm(baseline);setPast([]);setFuture([]);setHoursPending(false);setHoursRevision(n=>n+1);setSavedAt('');setError('');}
   async function save(event:FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if(saving || loadFailed || !dirty)return;
+    if(savingRef.current || saving || loadFailed || !dirty)return;
     if(hoursPending){setActive('contact');setError('Agrega o guarda el día que estás editando antes de guardar la página.');return;}
     const rows=parseWeeklyHours(form.contenido?.contacto?.horario || '');
     if(contentDirty && form.secciones['Información de contacto'] && rows?.some(row=>!validHour(row.open)||!validHour(row.close))){setActive('contact');setError('Completa la apertura y el cierre de los días configurados.');return;}
     const invalid=Array.from(event.currentTarget.querySelectorAll<HTMLInputElement>('input:invalid,select:invalid,textarea:invalid')).find(field => field.closest('[data-landing-panel]')?.getAttribute('data-landing-panel') === 'business' ? businessDirty : contentDirty);
     if(invalid){setActive(invalid.closest('[data-landing-panel]')?.getAttribute('data-landing-panel') as Panel || 'cover');requestAnimationFrame(()=>{invalid.focus();invalid.reportValidity();});return;}
-    setSaving(true);setSavedAt('');setError('');
+    savingRef.current=true;setSaving(true);setSavedAt('');setConfirmation('');setError('');
     let next=form, businessSaved=false;
     try {
       if(businessDirty){const result=await saveStoreInformation(form.negocio);const negocio={nombre:result.nombre,descripcion:result.descripcion || ''};next={...next,negocio};setBaseline(current=>({...current,negocio}));setForm(current=>({...current,negocio}));businessSaved=true;}
       if(contentDirty){const result=await saveLandingConfig(contentOf(form));next={...loadedContent(result),negocio:next.negocio};}
       setForm(next);setBaseline(next);setPast([]);setFuture([]);setSavedAt(new Date().toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit'}));
+      setConfirmation(businessDirty && !contentDirty ? 'Información de tu tienda guardada correctamente.' : 'Cambios de la página principal guardados correctamente.');
     } catch(err){setError((businessSaved ? 'La información del negocio se guardó. El contenido sigue pendiente. ' : '')+humanizeAdminError(err instanceof Error ? err.message : '', 'No pudimos guardar los cambios. Tu borrador se conserva.'));}
-    finally{setSaving(false);}
+    finally{savingRef.current=false;setSaving(false);}
   }
   const contentEditor=(sections:string[]) => <LandingContentEditor catalogReady={!catalogLoading&&!catalogError} sections={sections} value={normalizeLandingContent(form.contenido)} flags={form.secciones} products={products} onChange={contenido=>change({...form,contenido})} onToggle={(name,enabled)=>change({...form,secciones:{...form.secciones,[name]:enabled}})} onHoursPending={setHoursPending} />;
   if(loading || businessLoading)return <LoadingState align="start" spacing="compact">Cargando configuración...</LoadingState>;
@@ -128,7 +131,7 @@ export default function LandingPageContent() {
           {panel.id==='contact'&&<div className="lp-contact-layout" id="contacto-horarios" key={hoursRevision}>{contentEditor(['Información de contacto','Mapa / ubicación'])}</div>}
         </section>)}
       </fieldset>
-      <footer className="lp-actionbar" aria-label="Acciones de Página principal"><div className="lp-save-status" role="status" aria-live="polite"><span className={dirty?'lp-status-dot is-dirty':'lp-status-dot'} /><span>{saving?'Guardando…':dirty?'Cambios sin guardar':savedAt?'Página principal guardada en tu tienda.':'Sin cambios pendientes'}{savedAt&&!dirty&&<small>Guardado a las {savedAt}</small>}</span></div><div className="lp-history-actions"><button type="button" className="lp-icon-button" disabled={!past.length||saving||loadFailed} onClick={undo} title="Deshacer" aria-label="Deshacer">↶ <span>Deshacer</span></button><button type="button" className="lp-icon-button" disabled={!future.length||saving||loadFailed} onClick={redo} title="Rehacer" aria-label="Rehacer">↷ <span>Rehacer</span></button><button type="button" className="lp-button" disabled={!dirty||saving||loadFailed} onClick={discard}>Descartar cambios</button></div><button type="submit" className="lp-button lp-button-primary" disabled={!dirty||saving||loadFailed}>{saving?'Guardando…':'Guardar cambios'}</button></footer>
+      <footer className="lp-actionbar" aria-label="Acciones de Página principal"><div className="lp-save-status" role="status" aria-live="polite"><span className={dirty?'lp-status-dot is-dirty':'lp-status-dot'} /><div>{savedAt&&!dirty?<Alert variant="success">{confirmation}<small>Guardado a las {savedAt}</small></Alert>:<>{saving?'Guardando…':dirty?'Cambios sin guardar':'Sin cambios pendientes'}</>}</div></div><div className="lp-history-actions"><button type="button" className="lp-icon-button" disabled={!past.length||saving||loadFailed} onClick={undo} title="Deshacer" aria-label="Deshacer">↶ <span>Deshacer</span></button><button type="button" className="lp-icon-button" disabled={!future.length||saving||loadFailed} onClick={redo} title="Rehacer" aria-label="Rehacer">↷ <span>Rehacer</span></button><button type="button" className="lp-button" disabled={!dirty||saving||loadFailed} onClick={discard}>Descartar cambios</button></div><button type="submit" className="lp-button lp-button-primary" disabled={!dirty||saving||loadFailed}>{saving?'Guardando…':'Guardar cambios'}</button></footer>
     </form>
     <Modal open={blocker.state==='blocked'} onClose={()=>blocker.reset?.()} title="Cambios sin guardar" size="sm"><p>Tienes cambios pendientes en Página principal. Guarda antes de salir para conservarlos.</p><div className="lp-dialog-actions"><button type="button" className="lp-button" onClick={()=>blocker.reset?.()}>Seguir editando</button><button type="button" className="lp-button lp-button-danger" onClick={()=>blocker.proceed?.()}>Descartar y salir</button></div></Modal>
   </div>;

@@ -116,7 +116,7 @@ export default function SeoAnalytics() {
       </AdminCard>
 
       {error && <Alert variant="error">{error}</Alert>}
-      {saved && <Alert variant="success">Datos para buscadores y medición guardados correctamente.</Alert>}
+      {saved && <Alert variant="success">Datos para buscadores y medición guardados correctamente en este navegador.</Alert>}
 
       <div>
         <Button type="submit">Guardar buscadores y medición</Button>

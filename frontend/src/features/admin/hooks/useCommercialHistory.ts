@@ -30,7 +30,7 @@ export function useCommercialExport(key: string) {
     setBusy(true); setMessage(''); setError('');
     try {
       await downloadCommercial(path, params, name, format, request.signal);
-      if (!request.signal.aborted) setMessage(`Archivo ${format.toUpperCase()} descargado con los filtros aplicados.`);
+      if (!request.signal.aborted) setMessage(`Archivo ${format.toUpperCase()} generado con los filtros aplicados. Se solicitó su descarga al navegador.`);
     } catch (cause) { if (!request.signal.aborted) setError(cause instanceof Error ? cause.message : 'No se pudo descargar el archivo.'); }
     finally { if (!request.signal.aborted) { controller.current = null; setBusy(false); } }
   }

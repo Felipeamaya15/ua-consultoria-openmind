@@ -27,6 +27,8 @@ export function ProductList() {
   const [products, setProducts] = useState<AdminProduct[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
+  const deactivatingRef = useRef(false)
+  const [deactivating, setDeactivating] = useState(false)
   const location = useLocation()
   const navigate = useNavigate()
   const [successMessage, setSuccessMessage] = useState(
@@ -53,8 +55,10 @@ export function ProductList() {
   const vacio = emptyKind({ loading, error, shown: filtered.length, searching: search.trim() !== "" })
 
   const handleDeleteProduct = async (productId: string) => {
+    if (deactivatingRef.current || products.find(product => product.id === productId)?.status === 'archived') return;
     if (!window.confirm("¿Estás seguro de que deseas desactivar este producto? Dejará de ser visible en el catálogo, pero se mantendrá en tu historial de ventas.")) return;
-
+    deactivatingRef.current = true;
+    setDeactivating(true);
     setSuccessMessage("");
     try {
       await deleteCatalogProduct(productId);
@@ -63,6 +67,9 @@ export function ProductList() {
       setSuccessMessage("Producto desactivado correctamente.");
     } catch (error) {
       setError(error instanceof Error ? error.message : "No se pudo desactivar el producto.");
+    } finally {
+      deactivatingRef.current = false;
+      setDeactivating(false);
     }
   };
   return <div>
@@ -147,7 +154,7 @@ export function ProductList() {
                   <button
                     type="button"
                     onClick={() => handleDeleteProduct(product.id)}
-                    disabled={product.status === "archived"}
+                    disabled={deactivating || product.status === "archived"}
                     className="text-xs font-semibold text-[var(--error)] hover:underline disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {product.status === "archived" ? "Desactivado" : "Desactivar"}

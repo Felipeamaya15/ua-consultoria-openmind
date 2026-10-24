@@ -99,7 +99,8 @@ export default function Design() {
   }
 
   const handleSave = () => {
-    if (previewTemplate) updateTemplate(previewTemplate)
+    setSaved(false)
+    if (!previewTemplate || !updateTemplate(previewTemplate)) return
     setSaved(true)
     setTimeout(() => setSaved(false), 2000)
   }
@@ -121,12 +122,12 @@ export default function Design() {
 
       {saved && (
         <Alert variant="success">
-          Plantilla seleccionada. El botón Ver tienda abrirá su ruta.
+          Plantilla seleccionada y guardada en este navegador. El botón Ver tienda abrirá su ruta.
         </Alert>
       )}
       {colorsSaved && (
         <Alert variant="success">
-          Colores guardados para la plantilla seleccionada.
+          Colores guardados en este navegador para la plantilla seleccionada.
         </Alert>
       )}
 

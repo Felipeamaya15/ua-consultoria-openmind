@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { useAdmin } from "../context/AdminContext"
 import {
   createDefaultEmailTemplates,
@@ -28,10 +28,14 @@ export default function EmailTemplates() {
   const [activeType, setActiveType] = useState<EmailTemplateType>("order_received")
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState("")
+  const [loaded, setLoaded] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const savingRef = useRef(false)
   const [remoteDefaults, setRemoteDefaults] = useState<RemoteEmailTemplates["por_defecto"]>({})
   const activeTemplate = templates[activeType]
 
   const updateTemplate = (changes: Partial<typeof activeTemplate>) => {
+    if (savingRef.current) return
     setTemplates((current) => ({
       ...current,
       [activeType]: { ...current[activeType], ...changes },
@@ -41,25 +45,37 @@ export default function EmailTemplates() {
 
 
   useEffect(() => {
+    let active = true
     fetchEmailTemplates()
       .then((remote) => {
+        if (!active) return
         setRemoteDefaults(remote.por_defecto)
         setTemplates((current) => ({ ...current, ...(remote.plantillas as Partial<typeof current>) }))
+        setLoaded(true)
       })
-      .catch((reason) => setError(reason instanceof Error ? reason.message : "No se pudieron cargar las plantillas."))
+      .catch((reason) => { if (active) setError(reason instanceof Error ? reason.message : "No se pudieron cargar las plantillas.") })
+    return () => { active = false }
   }, [])
 
   const save = async () => {
+    if (savingRef.current || !loaded) return
+    savingRef.current = true
+    setSaving(true)
+    setSaved(false)
     setError("")
     try {
       const remoteTypes = Object.keys(remoteDefaults)
+      if (!remoteTypes.length) throw new Error('No pudimos confirmar las plantillas disponibles. Recarga antes de guardar.')
       const toSave = Object.fromEntries(remoteTypes.map((type) => [type, templates[type as EmailTemplateType]]))
-      if (remoteTypes.length) await saveEmailTemplates(toSave)
-      setSaved(setConfig({ ...config, emailTemplates: templates }))
-      window.setTimeout(() => setSaved(false), 2600)
+      await saveEmailTemplates(toSave)
+      if (setConfig({ ...config, emailTemplates: templates })) setSaved(true)
+      else setError('Las plantillas se guardaron en el servidor, pero no se pudo actualizar la copia del navegador.')
     } catch (reason) {
       setSaved(false)
       setError(reason instanceof Error ? reason.message : "No se pudieron guardar las plantillas.")
+    } finally {
+      savingRef.current = false
+      setSaving(false)
     }
   }
 
@@ -107,6 +123,7 @@ export default function EmailTemplates() {
                 <p className="text-xs text-[var(--muted-foreground)] mt-1">Destino automático: <span className="font-mono">{"{{customerEmail}}"}</span></p>
               </div>
               <Toggle
+                disabled={saving || !loaded}
                 label="Activar envío automático"
                 checked={activeTemplate.enabled}
                 onChange={(enabled) => updateTemplate({ enabled })}
@@ -117,21 +134,21 @@ export default function EmailTemplates() {
                 label="Asunto"
                 value={activeTemplate.subject}
                 onChange={(event) => updateTemplate({ subject: event.target.value })}
-                disabled={!activeTemplate.enabled}
+                disabled={saving || !loaded || !activeTemplate.enabled}
               />
               <Input
                 label="Texto de vista previa"
                 value={activeTemplate.preheader}
                 onChange={(event) => updateTemplate({ preheader: event.target.value })}
                 hint="Texto breve visible junto al asunto en la bandeja de entrada."
-                disabled={!activeTemplate.enabled}
+                disabled={saving || !loaded || !activeTemplate.enabled}
               />
               <Textarea
                 label="Contenido del correo"
                 value={activeTemplate.body}
                 onChange={(event) => updateTemplate({ body: event.target.value })}
                 rows={13}
-                disabled={!activeTemplate.enabled}
+                disabled={saving || !loaded || !activeTemplate.enabled}
               />
             </div>
             <div className="border-t border-[var(--border)] pt-4">
@@ -165,8 +182,8 @@ export default function EmailTemplates() {
           </section>
 
           <div className="flex flex-col-reverse sm:flex-row sm:justify-between gap-3">
-            <Button variant="outline" onClick={restoreSelected}>Restaurar plantilla</Button>
-            <Button variant="primary" onClick={save}>Guardar correos automáticos</Button>
+            <Button variant="outline" disabled={saving || !loaded} onClick={restoreSelected}>Restaurar plantilla</Button>
+            <Button variant="primary" disabled={saving || !loaded} onClick={save}>{saving ? 'Guardando…' : 'Guardar correos automáticos'}</Button>
           </div>
           {error && <Alert variant="error">{error}</Alert>}
           {saved && <Alert variant="success">Plantillas guardadas. El correo de pedido despachado se envía solo; los demás quedarán listos cuando se conecte su envío.</Alert>}
