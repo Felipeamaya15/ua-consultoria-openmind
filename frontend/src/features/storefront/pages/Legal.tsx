@@ -15,7 +15,7 @@ import { useStorefrontTemplate } from '../hooks/useStorefrontTemplate';
 export default function Legal() {
   const { type } = useParams();
 
-  const { route, isMinimal, isCatalog } =
+  const { route, isMinimal, isVisual, isCatalog } =
     useStorefrontTemplate();
 
   const { legalPages, legalVerified, legalError, legalLoading } = useStore();
@@ -23,7 +23,7 @@ export default function Legal() {
 
   if (!isLegalType(type)) {
     return (
-      <section className="max-w-3xl mx-auto px-4 py-16">
+      <section className="w-full max-w-7xl mx-auto px-4 py-16">
         <h1 className="font-display text-3xl mb-4">Página no encontrada</h1>
         <p className="text-sm mb-6">La página legal que buscas no existe.</p>
         <div className="flex flex-wrap gap-4">
@@ -49,7 +49,7 @@ export default function Legal() {
   if (isCatalog) {
     return (
       <div className="bg-[var(--visual-page-panel-background)] text-[var(--visual-page-color)]">
-        <div className="max-w-[900px] mx-auto px-5 py-10 md:py-14">
+        <div className="w-full max-w-[1160px] mx-auto px-5 py-10 md:py-14">
           <div className="mb-8">
             <Breadcrumb
               items={[
@@ -70,7 +70,7 @@ export default function Legal() {
               {meta.label}
             </h1>
 
-            <p className="mt-4 max-w-2xl text-[13px] leading-6 text-[var(--visual-page-color)]/45">
+            <p className="mt-4 text-[13px] leading-6 text-[var(--visual-page-color)]/45">
               Consulta la información y condiciones asociadas a tu compra.
             </p>
 
@@ -173,8 +173,10 @@ export default function Legal() {
     <div
       className={
         isMinimal
-          ? 'max-w-4xl mx-auto px-4 md:px-8 py-10 md:py-14'
-          : 'max-w-3xl mx-auto px-4 py-10'
+          ? 'w-full max-w-6xl mx-auto px-4 md:px-8 py-10 md:py-14'
+          : isVisual
+            ? 'w-full max-w-[1180px] mx-auto px-5 md:px-8 py-10 md:py-14'
+            : 'w-full max-w-7xl mx-auto px-4 py-10'
       }
     >
       <Breadcrumb
@@ -198,7 +200,7 @@ export default function Legal() {
             {meta.label}
           </h1>
 
-          <p className="text-sm text-[var(--visual-page-color)] mt-3 max-w-2xl">
+          <p className="text-sm text-[var(--visual-page-color)] mt-3">
             Consulta la información y condiciones
             asociadas a tu compra.
           </p>

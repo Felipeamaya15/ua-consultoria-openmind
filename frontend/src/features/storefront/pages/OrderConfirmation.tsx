@@ -63,12 +63,12 @@ export default function OrderConfirmation() {
 
   /*
    * ==========================================================
-   * PLANTILLA 3 — VELTA
+   * PLANTILLA 4 — CATALOG
    * ==========================================================
    */
   if (isCatalog) {
     return (
-      <div className="max-w-[760px] mx-auto px-5 py-16 md:py-20 text-center text-[var(--visual-page-color)]">
+      <div className="w-full max-w-[1160px] mx-auto px-5 py-16 md:py-20 text-center text-[var(--visual-page-color)]">
         <div className="mx-auto w-16 h-16 rounded-full bg-[var(--primary)] flex items-center justify-center">
           <span className="text-2xl font-black" aria-hidden="true">✓</span>
         </div>
@@ -140,7 +140,7 @@ export default function OrderConfirmation() {
   if (isVisual) {
     return (
       <div className="bg-[var(--visual-page-panel-background)] text-[var(--visual-page-color)]">
-        <div className="max-w-[900px] mx-auto px-5 md:px-8 py-14 md:py-20">
+        <div className="w-full max-w-[1180px] mx-auto px-5 md:px-8 py-14 md:py-20">
           <div className="flex flex-col items-center text-center">
             <div className="w-16 h-16 rounded-full bg-[var(--visual-page-panel-background)] text-[var(--visual-page-color)] flex items-center justify-center mb-7">
               <Icon
@@ -157,13 +157,13 @@ export default function OrderConfirmation() {
               ¡Pedido confirmado!
             </h1>
 
-            <p className="mt-5 max-w-lg text-[14px] leading-6 text-[var(--visual-page-color)]">
+            <p className="mt-5 text-[14px] leading-6 text-[var(--visual-page-color)]">
               Tu pedido fue registrado correctamente.
               Guarda tu número de orden para consultar
               su estado cuando quieras.
             </p>
 
-            <div data-page-panel className="mt-9 w-full max-w-lg rounded-[10px] bg-[var(--visual-page-panel-background)] px-6 py-6">
+            <div data-page-panel className="mt-9 w-full rounded-[10px] bg-[var(--visual-page-panel-background)] px-6 py-6">
               <p className="text-[9px] font-medium uppercase tracking-[0.16em] text-[var(--visual-page-color)]">
                 Número de orden
               </p>
@@ -240,7 +240,7 @@ export default function OrderConfirmation() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full max-w-lg mt-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full mt-6">
               <Link data-page-action="primary"
                 to={trackingRoute}
                 state={{ email: state.email ?? '' }}
@@ -269,7 +269,7 @@ export default function OrderConfirmation() {
    */
   if (isMinimal) {
     return (
-      <div className="max-w-3xl mx-auto px-4 md:px-8 py-16 md:py-20">
+      <div className="w-full max-w-6xl mx-auto px-4 md:px-8 py-16 md:py-20">
         <div className="flex flex-col items-center text-center">
 
           <div className="w-20 h-20 rounded-full bg-[var(--primary)] text-[var(--visual-page-color)] flex items-center justify-center mb-7">
@@ -287,13 +287,13 @@ export default function OrderConfirmation() {
             ¡Pedido confirmado!
           </h1>
 
-          <p className="text-sm md:text-base text-[var(--visual-page-color)] mt-3 max-w-md">
+          <p className="text-sm md:text-base text-[var(--visual-page-color)] mt-3">
             Tu pedido fue registrado correctamente.
             Guarda tu número de orden para poder
             consultar su estado.
           </p>
 
-          <div data-page-panel className="mt-8 bg-[var(--visual-page-panel-background)] border border-[var(--visual-global-border)]/5 rounded-[22px] px-7 py-5 w-full max-w-md">
+          <div data-page-panel className="mt-8 bg-[var(--visual-page-panel-background)] border border-[var(--visual-global-border)]/5 rounded-[22px] px-7 py-5 w-full">
             <p className="text-xs text-[var(--visual-page-color)] mb-2">
               Número de orden
             </p>
@@ -399,7 +399,7 @@ export default function OrderConfirmation() {
    * ==========================================================
    */
   return (
-    <div className="max-w-lg mx-auto px-4 py-20 text-center flex flex-col items-center gap-6">
+    <div className="w-full max-w-7xl mx-auto px-4 py-12 text-center flex flex-col items-center gap-6">
 
       <div className="w-20 h-20 rounded-full bg-[var(--success-bg)] flex items-center justify-center text-[var(--success)]">
         <Icon
