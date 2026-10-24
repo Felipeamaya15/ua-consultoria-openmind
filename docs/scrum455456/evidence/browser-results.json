@@ -1,0 +1,92 @@
+[
+  {
+    "action": "Guardar negocio",
+    "expected": "Confirmación visible, hora y nombre persistido en el servidor simulado",
+    "obtained": "Confirmación visible, hora y nombre persistido en el servidor simulado",
+    "status": "APROBADO"
+  },
+  {
+    "action": "Fallo al guardar negocio",
+    "expected": "Error de validación sin confirmación falsa y edición conservada",
+    "obtained": "Error de validación sin confirmación falsa y edición conservada",
+    "status": "APROBADO"
+  },
+  {
+    "action": "Guardar portada y evitar duplicados",
+    "expected": "Una sola escritura y confirmación después de la respuesta",
+    "obtained": "Una sola escritura y confirmación después de la respuesta",
+    "status": "APROBADO"
+  },
+  {
+    "action": "Guardado parcial negocio/portada",
+    "expected": "Negocio confirmado; portada pendiente sin perder borrador",
+    "obtained": "Negocio confirmado; portada pendiente sin perder borrador",
+    "status": "APROBADO"
+  },
+  {
+    "action": "Marketing escritorio",
+    "expected": "Una barra accesible y confirmación local sin publicar",
+    "obtained": "Una barra accesible y confirmación local sin publicar",
+    "status": "APROBADO"
+  },
+  {
+    "action": "Marketing fallo de almacenamiento",
+    "expected": "Aviso de error, sin éxito anterior, edición y borrador conservados",
+    "obtained": "Aviso de error, sin éxito anterior, edición y borrador conservados",
+    "status": "APROBADO"
+  },
+  {
+    "action": "Marketing móvil 375",
+    "expected": "Acciones visibles al personalizar, sin desbordamiento horizontal",
+    "obtained": "Acciones visibles al personalizar, sin desbordamiento horizontal",
+    "status": "APROBADO"
+  },
+  {
+    "action": "Editar producto y precio por variante",
+    "expected": "Producto actualizado y precio de variante intacto",
+    "obtained": "Producto actualizado y precio de variante intacto",
+    "status": "APROBADO"
+  },
+  {
+    "action": "Desactivar producto",
+    "expected": "Confirmación y desactivación deshabilitada después de persistir",
+    "obtained": "Confirmación y desactivación deshabilitada después de persistir",
+    "status": "APROBADO"
+  },
+  {
+    "action": "Promociones crear, editar, activar y eliminar",
+    "expected": "Una confirmación por operación después de persistir",
+    "obtained": "Una confirmación por operación después de persistir",
+    "status": "APROBADO"
+  },
+  {
+    "action": "Estado del pedido y correo fallido",
+    "expected": "Estado confirmado y fallo del aviso comunicados juntos",
+    "obtained": "Estado confirmado y fallo del aviso comunicados juntos",
+    "status": "APROBADO"
+  },
+  {
+    "action": "Legales administración y error de servicio",
+    "expected": "Carga las cuatro páginas; error comprensible al no estar disponible",
+    "obtained": "Carga las cuatro páginas; error comprensible al no estar disponible",
+    "status": "APROBADO"
+  },
+  {
+    "action": "Correos guardados y fallo de guardado",
+    "expected": "Confirmación tras persistir; se limpia al fallar y no se envían correos",
+    "obtained": "Confirmación tras persistir; se limpia al fallar y no se envían correos",
+    "status": "APROBADO"
+  },
+  {
+    "action": "Configuración de pagos",
+    "expected": "Guardado confirmado y fallo del servidor sin aviso de éxito ni transacción",
+    "obtained": "Guardado confirmado y fallo del servidor sin aviso de éxito ni transacción",
+    "status": "APROBADO"
+  },
+  {
+    "action": "Sin fallos React en los flujos",
+    "expected": "Ninguna excepción de página",
+    "obtained": "Ninguna excepción de página",
+    "status": "APROBADO"
+  }
+]

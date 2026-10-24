@@ -2,6 +2,7 @@ const fs = require('node:fs'), path = require('node:path'), vm = require('node:v
 const assert = require('node:assert/strict'), ts = require('typescript');
 const root = path.resolve(__dirname, '..');
 function load(file, globals) {
+  if (file.endsWith('/authService.ts')) return require('./source-loader.cjs').load(file, {}, { sessionStorage: { getItem: () => null }, ...globals });
   const module = {exports: {}};
   const source = fs.readFileSync(path.join(root, file), 'utf8').replace('import.meta.env.VITE_API_URL', 'undefined');
   vm.runInNewContext(ts.transpileModule(source, {compilerOptions: {target: ts.ScriptTarget.ES2020, module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX}}).outputText, {module, exports: module.exports, Error, sessionStorage: {getItem: () => null}, ...globals});
@@ -13,7 +14,7 @@ function load(file, globals) {
   await authService.getEntrepreneurProfile();
   await authService.updateEntrepreneurProfile('new@example.com');
   await authService.changeEntrepreneurPassword('old', 'new');
-  assert.equal(calls[0].url, 'http://localhost:8000/api/auth/emprendedor/perfil/');
+  assert.equal(calls[0].url, 'http://test/api/auth/emprendedor/perfil/');
   assert.equal(calls[0].options.headers.Authorization, 'Token token');
   assert.equal(calls[1].options.body, '{"email":"new@example.com"}');
   assert.equal(calls[1].options.method, 'PATCH');

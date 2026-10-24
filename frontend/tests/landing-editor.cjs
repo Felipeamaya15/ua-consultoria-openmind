@@ -53,7 +53,7 @@ async function verifyPageLoading() {
   const Page = load('src/features/admin/components/LandingPageContent.tsx', { AbortController, require: id => {
     if (id === 'react/jsx-runtime') return { jsx, jsxs: jsx };
     if (id === 'react-router-dom') return {useBlocker:()=>({state:'unblocked'}),useLocation:()=>({hash:''})};
-    if (id === 'react') return { useState: initial => { const i = index++; if (!(i in slots)) slots[i] = typeof initial==='function'?initial():initial; return [slots[i], next => { slots[i] = typeof next==='function'?next(slots[i]):next; }]; }, useEffect: fn => { effect = fn; } };
+    if (id === 'react') return { useState: initial => { const i = index++; if (!(i in slots)) slots[i] = typeof initial==='function'?initial():initial; return [slots[i], next => { slots[i] = typeof next==='function'?next(slots[i]):next; }]; }, useRef: value => ({current:value}), useEffect: fn => { effect = fn; } };
     if (id.includes('storeInformationService')) return {fetchStoreInformation:async()=>({nombre:'Tienda existente',descripcion:'Negocio existente'})};
     if (id.includes('landingContent')) return normalizedModule.exports;
     if (id.includes('landingService')) return { fetchLandingConfig: options => { requested.push(options); return configLoad; } };

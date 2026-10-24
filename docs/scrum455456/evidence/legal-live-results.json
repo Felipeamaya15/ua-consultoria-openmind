@@ -1,0 +1,30 @@
+[
+  {
+    "action": "Leer página legal terms",
+    "expected": "Versión publicada existente visible",
+    "obtained": "HTTP 200 y contenido publicado renderizado",
+    "status": "APROBADO",
+    "version": 4
+  },
+  {
+    "action": "Leer página legal privacy",
+    "expected": "Versión publicada existente visible",
+    "obtained": "HTTP 200 y contenido publicado renderizado",
+    "status": "APROBADO",
+    "version": 1
+  },
+  {
+    "action": "Leer página legal refund",
+    "expected": "Versión publicada existente visible",
+    "obtained": "HTTP 200 y contenido publicado renderizado",
+    "status": "APROBADO",
+    "version": 1
+  },
+  {
+    "action": "Leer página legal cookies",
+    "expected": "Versión publicada existente visible",
+    "obtained": "HTTP 200 y contenido publicado renderizado",
+    "status": "APROBADO",
+    "version": 1
+  }
+]

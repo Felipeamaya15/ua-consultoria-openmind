@@ -2,6 +2,7 @@ const fs = require('node:fs'), path = require('node:path'), vm = require('node:v
 const assert = require('node:assert/strict'), ts = require('typescript');
 const root = path.resolve(__dirname, '..');
 function load(file, globals) {
+  if (file.endsWith('/authService.ts')) return require('./source-loader.cjs').load(file, {}, { sessionStorage: { getItem: () => null }, ...globals });
   const module = { exports: {} };
   const source = fs.readFileSync(path.join(root, file), 'utf8').replace('import.meta.env.VITE_API_URL', 'undefined');
   const code = ts.transpileModule(source, { compilerOptions: { target: ts.ScriptTarget.ES2020, module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX } }).outputText;
@@ -22,7 +23,7 @@ async function run() {
   assert.equal(calls[1].options.method, 'PATCH');
   assert.equal(calls[1].options.body, '{"phone":"123456789"}');
   await authService.changePassword('old', 'new');
-  assert.equal(calls[2].url, 'http://localhost:8000/api/auth/perfil/password/');
+  assert.equal(calls[2].url, 'http://test/api/auth/perfil/password/');
   assert.equal(calls[2].options.method, 'POST');
   reply = {ok: false, json: async () => ({exito: false, error: {detalles: {email: ['Email ocupado.']}}})};
   await assert.rejects(authService.updateProfile({email: 'taken@example.com'}), /Email ocupado/);
