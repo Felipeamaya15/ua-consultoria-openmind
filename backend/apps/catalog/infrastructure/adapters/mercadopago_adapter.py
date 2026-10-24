@@ -83,15 +83,25 @@ class MercadoPagoAdapter(PaymentGatewayPort):
 
     def _request(self, metodo: str, url: str, **kwargs) -> dict:
         try:
-            response = requests.request(metodo, url, headers=self._headers(), **kwargs)
-        except requests.exceptions.RequestException as e:
-            raise PagoGatewayException(f"Fallo de conexión con Mercado Pago: {e}")
+            response = requests.request(
+                metodo,
+                url,
+                headers=self._headers(),
+                **kwargs,
+            )
+        except requests.exceptions.RequestException:
+            raise PagoGatewayException(
+                "No fue posible comunicarse con Mercado Pago."
+            ) from None
 
         if response.status_code not in (200, 201):
-            detalle = response.text
-            try:
-                detalle = response.json().get("message", detalle)
-            except Exception:
-                pass
-            raise PagoGatewayException(f"Mercado Pago respondió con error (Status {response.status_code}): {detalle}")
-        return response.json()
+            raise PagoGatewayException(
+                "Mercado Pago no pudo procesar la solicitud."
+            )
+
+        try:
+            return response.json()
+        except ValueError:
+            raise PagoGatewayException(
+                "Mercado Pago devolvió una respuesta inválida."
+            ) from None

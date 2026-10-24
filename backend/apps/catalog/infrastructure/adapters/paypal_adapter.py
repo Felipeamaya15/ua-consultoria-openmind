@@ -44,8 +44,10 @@ class PayPalAdapter(PaymentGatewayPort):
         try:
             with urllib.request.urlopen(req) as response:
                 return json.loads(response.read().decode())["access_token"]
-        except Exception as e:
-            raise ValueError(f"Error autenticando con PayPal: {str(e)}")
+        except Exception:
+            raise PagoGatewayException(
+                "No fue posible autenticar la conexión con PayPal."
+            ) from None
 
     def create_order(self, amount: float, currency: str, return_url: str, cancel_url: str, reference_id: str, descripcion: str = "") -> Dict[str, Any]:
         token = self._get_access_token()
@@ -85,8 +87,10 @@ class PayPalAdapter(PaymentGatewayPort):
                     "id": data_resp["id"],
                     "approve_url": approve_url
                 }
-        except urllib.error.HTTPError as e:
-            raise ValueError(f"No se pudo crear la orden en PayPal: {e.reason}")
+        except urllib.error.HTTPError:
+            raise PagoGatewayException(
+                "PayPal no pudo crear la orden de pago."
+            ) from None
 
     def capture_order(self, order_id: str) -> Dict[str, Any]:
         token = self._get_access_token()
@@ -103,10 +107,10 @@ class PayPalAdapter(PaymentGatewayPort):
                     "exito": data_resp.get("status") == "COMPLETED",
                     "data": data_resp
                 }
-        except urllib.error.HTTPError as e:
+        except urllib.error.HTTPError:
             return {
                 "exito": False,
-                "mensaje": f"No se pudo capturar el pago en PayPal: {e.reason}"
+                "mensaje": "PayPal no pudo confirmar el pago."
             }
     def iniciar_pago(
         self,
@@ -125,8 +129,10 @@ class PayPalAdapter(PaymentGatewayPort):
                 reference_id=str(orden_compra),
                 descripcion=descripcion,
             )
-        except ValueError as e:
-            raise PagoGatewayException(str(e))
+        except ValueError:
+            raise PagoGatewayException(
+                "No fue posible iniciar el pago con PayPal."
+            ) from None
         if not orden.get("id") or not orden.get("approve_url"):
             raise PagoGatewayException("PayPal no devolvió la orden de pago esperada.")
         return PagoIniciado(referencia=str(orden["id"]), url_pago=orden["approve_url"])
@@ -141,8 +147,10 @@ class PayPalAdapter(PaymentGatewayPort):
         try:
             with urllib.request.urlopen(req) as response:
                 datos = json.loads(response.read().decode())
-        except urllib.error.HTTPError as e:
-            raise PagoGatewayException(f"No se pudo consultar la orden en PayPal: {e.reason}")
+        except urllib.error.HTTPError:
+            raise PagoGatewayException(
+                "No fue posible consultar el estado del pago en PayPal."
+            ) from None
 
         unidad = (datos.get("purchase_units") or [{}])[0]
         status = datos.get("status", "")
