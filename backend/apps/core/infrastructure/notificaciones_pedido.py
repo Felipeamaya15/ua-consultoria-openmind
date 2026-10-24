@@ -101,15 +101,12 @@ def _reservar(pedido, tipo):
     return None, anterior
 
 
-def notificar_cambio_de_estado(pedido, estado_anterior):
-    """Envía el aviso que corresponde cuando un pedido cambió de estado. Nunca lanza.
+def notificar_evento(tipo, pedido):
+    """Envía el aviso `tipo` del pedido una sola vez (ver la marca en el encabezado). Nunca lanza.
 
-    Devuelve un `ResultadoEnvio`, o None si ese cambio de estado no genera ningún correo.
+    Devuelve un `ResultadoEnvio`, o None si falló algo inesperado antes de poder enviar.
     """
     try:
-        tipo = CORREO_POR_ESTADO.get(pedido.estado)
-        if tipo is None or pedido.estado == estado_anterior:
-            return None
         motivo, anterior = _reservar(pedido, tipo)
         if motivo:
             return ResultadoEnvio(False, motivo)
@@ -127,5 +124,21 @@ def notificar_cambio_de_estado(pedido, estado_anterior):
             })
         return resultado
     except Exception:
-        logger.exception('Falló el aviso por correo del pedido %s', getattr(pedido, 'pk', '?'))
+        logger.exception('Falló el aviso por correo %s del pedido %s', tipo, getattr(pedido, 'pk', '?'))
         return None
+
+
+def notificar_cambio_de_estado(pedido, estado_anterior):
+    """Envía el aviso que corresponde cuando un pedido cambió de estado. Nunca lanza.
+
+    Devuelve un `ResultadoEnvio`, o None si ese cambio de estado no genera ningún correo.
+    """
+    tipo = CORREO_POR_ESTADO.get(getattr(pedido, 'estado', None))
+    if tipo is None or pedido.estado == estado_anterior:
+        return None
+    return notificar_evento(tipo, pedido)
+
+
+def notificar_recepcion(pedido):
+    """Correo de confirmación de recepción del pedido (SCRUM-428): se envía al crear el pedido."""
+    return notificar_evento('order_received', pedido)
