@@ -143,20 +143,18 @@ export default function Promotions() {
       const promo = editPromo.id
         ? await promotionService.update({ ...changes, id: editPromo.id })
         : await promotionService.create(draft)
-      if (
-        setPromos((previous) =>
-          previous.some((p) => p.id === promo.id)
-            ? previous.map((p) => (p.id === promo.id ? promo : p))
-            : [promo, ...previous]
-        )
-      ) {
-        setShowModal(false)
-        setStatusMessage(
-          editPromo.id
-            ? "Promoción actualizada correctamente."
-            : "Promoción creada correctamente."
-        )
-      }
+      setPromos((previous) =>
+        previous.some((p) => p.id === promo.id)
+          ? previous.map((p) => (p.id === promo.id ? promo : p))
+          : [promo, ...previous]
+      )
+
+      setShowModal(false)
+      setStatusMessage(
+        editPromo.id
+          ? "Promoción actualizada correctamente."
+          : "Promoción creada correctamente."
+      )
     } catch (cause) {
       setError(
         cause instanceof Error
