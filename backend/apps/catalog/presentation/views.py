@@ -63,6 +63,7 @@ from apps.catalog.application.use_cases import (
     IniciarPagoTransbankDTO,
     IniciarPagoTransbankUseCase,
     ConfirmarPagoTransbankUseCase,
+    RegistrarPagoAbortadoTransbankUseCase,
     #PayPal
     GuardarConfiguracionPayPalDTO,
     ObtenerConfiguracionPayPalUseCase,
@@ -82,7 +83,7 @@ from apps.catalog.infrastructure.attribute_filters import (
 from apps.catalog.infrastructure.repositories import ProductRepository
 
 # 6. Catálogo - Capa de Presentación (Serializadores)
-from .serializers import AgregarItemCarritoRequestSerializer, ConfiguracionTransbankInputSerializer, ConfiguracionTransbankResponseSerializer, ItemCarritoResponseSerializer, ModificarCantidadRequestSerializer, ProductoAdminDetailSerializer, ProductoCreateSerializer, ProductoStockUpdateSerializer, ProductoUpdateSerializer, VarianteStockUpdateSerializer, IniciarPagoTransbankSerializer, ConfirmarPagoTransbankSerializer, ConfiguracionPayPalInputSerializer, ConfiguracionPayPalResponseSerializer, ConfiguracionMercadoPagoInputSerializer, ConfiguracionMercadoPagoResponseSerializer
+from .serializers import AgregarItemCarritoRequestSerializer, ConfiguracionTransbankInputSerializer, ConfiguracionTransbankResponseSerializer, ItemCarritoResponseSerializer, ModificarCantidadRequestSerializer, ProductoAdminDetailSerializer, ProductoCreateSerializer, ProductoStockUpdateSerializer, ProductoUpdateSerializer, VarianteStockUpdateSerializer, IniciarPagoTransbankSerializer, ConfirmarPagoTransbankSerializer, PagoAbortadoTransbankSerializer, ConfiguracionPayPalInputSerializer, ConfiguracionPayPalResponseSerializer, ConfiguracionMercadoPagoInputSerializer, ConfiguracionMercadoPagoResponseSerializer
 
 
 class StorePaymentConfigurationView(APIView):
@@ -1682,6 +1683,32 @@ class ConfirmarPagoTransbankView(APIView):
                 {"exito": False, "mensaje": str(e), "error": {"codigo": "ERROR_TRANSBANK", "detalles": None}},
                 status=status.HTTP_502_BAD_GATEWAY,
             )
+
+class PagoAbortadoTransbankView(APIView):
+    """
+    El comprador anuló el pago en Webpay: avisa por correo que el pago no se completó.
+    POST /api/catalog/pagos/transbank/abortado/
+    """
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        resolver_tienda(request)
+        serializer = PagoAbortadoTransbankSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(
+                {
+                    "exito": False,
+                    "mensaje": "Parámetros de anulación inválidos.",
+                    "error": {"codigo": "DATOS_INVALIDOS", "detalles": serializer.errors},
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        RegistrarPagoAbortadoTransbankUseCase().execute(
+            serializer.validated_data["id_tienda"], serializer.validated_data["tbk_token"]
+        )
+        # La respuesta no revela si el token corresponde a un pedido.
+        return Response({"exito": True, "mensaje": "Anulación del pago registrada."}, status=status.HTTP_200_OK)
+
 
 class ProductoAdminListView(APIView):
     permission_classes = [IsAuthenticated, IsStoreOwner]
