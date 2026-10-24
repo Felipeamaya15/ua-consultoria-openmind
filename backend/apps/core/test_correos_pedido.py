@@ -250,3 +250,51 @@ class CorreoPagoRechazadoTests(CorreosPedidoBase):
         respuesta = self.api.patch(f'/api/tienda/pedidos/{pedido.pk}/estado/', {'estado': 'cancelado'}, format='json')
         self.assertEqual(respuesta.status_code, 200)
         self.assertEqual(mail.outbox, [])
+
+class CorreoDelCompradorTests(CorreosPedidoBase):
+    def aprobar(self, pedido):
+        return self.api.post(f'/api/pagos/transferencias/{pedido.pk}/aprobar/', {}, format='json')
+
+    def test_el_aviso_va_al_correo_de_contacto_del_pedido(self):
+        comprador = get_user_model().objects.create_user(username='correos-comprador', email='cuenta@example.com')
+        pedido = self.pedido(comprador=comprador, correo_contacto='contacto@example.com')
+        self.aprobar(pedido)
+        self.assertEqual(mail.outbox[0].to, ['contacto@example.com'])
+
+    def test_si_el_correo_de_contacto_no_sirve_se_usa_el_de_la_cuenta_del_comprador(self):
+        comprador = get_user_model().objects.create_user(username='correos-comprador', email='cuenta@example.com')
+        pedido = self.pedido(comprador=comprador, correo_contacto='no-es-un-correo')
+        self.aprobar(pedido)
+        self.assertEqual(mail.outbox[0].to, ['cuenta@example.com'])
+
+    def test_la_plantilla_muestra_el_mismo_correo_al_que_se_envia(self):
+        ConfiguracionCorreo.objects.create(tienda=self.tienda, plantillas={'payment_success': {
+            'enabled': True, 'subject': 'Pago {{orderNumber}}', 'preheader': '', 'body': 'Enviado a {{customerEmail}}'}})
+        comprador = get_user_model().objects.create_user(username='correos-comprador', email='cuenta@example.com')
+        self.aprobar(self.pedido(comprador=comprador, correo_contacto=''))
+        self.assertEqual(mail.outbox[0].to, ['cuenta@example.com'])
+        self.assertEqual(mail.outbox[0].body, 'Enviado a cuenta@example.com')
+
+    def test_sin_ningun_correo_valido_no_se_envia_y_queda_registrado(self):
+        pedido = self.pedido(correo_contacto='correo-roto')
+        self.assertEqual(self.aprobar(pedido).status_code, 200)
+        self.assertEqual(self.refrescar(pedido).estado, 'pagado')
+        self.assertEqual(mail.outbox, [])
+        marca = self.marca(pedido, 'payment_success')
+        self.assertEqual((marca['enviado'], marca['codigo'], marca['destinatario']), (False, 'destinatario_invalido', '***'))
+
+    def test_la_marca_guarda_el_destinatario_enmascarado_y_nunca_el_correo_completo(self):
+        pedido = self.pedido()
+        self.aprobar(pedido)
+        marca = self.marca(pedido, 'payment_success')
+        self.assertEqual(marca['destinatario'], 'a***@example.com')
+        self.assertNotIn('ana@example.com', json.dumps(self.refrescar(pedido).entrega))
+
+    def test_cada_aviso_del_pedido_queda_asociado_al_mismo_comprador(self):
+        pedido = self.pedido()
+        notificaciones_pedido.notificar_recepcion(pedido)
+        self.aprobar(self.refrescar(pedido))
+        notificaciones = self.refrescar(pedido).entrega['notificaciones']
+        self.assertEqual({tipo: m['destinatario'] for tipo, m in notificaciones.items()},
+                         {'order_received': 'a***@example.com', 'payment_success': 'a***@example.com'})
+        self.assertEqual([c.to for c in mail.outbox], [['ana@example.com'], ['ana@example.com']])

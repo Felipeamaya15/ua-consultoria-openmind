@@ -9,6 +9,7 @@ Para no enviar dos veces el mismo aviso, en el pedido queda una marca en `entreg
 
     {'enviado': True | False, 'codigo': 'enviado' | 'error_de_envio' | ..., 'fecha': ISO, 'intentos': N}
 
+- La marca guarda también el destinatario enmascarado (`m***@gmail.com`): el correo completo nunca se copia al registro.
 - Si el aviso ya salió (`enviado`), no se repite aunque el pedido vuelva a ese estado.
 - Si falló, se reintenta la próxima vez que el pedido entre en ese estado.
 - Mientras un envío está en curso (`codigo` "enviando", hace menos de 5 minutos) no se inicia otro.
@@ -20,8 +21,8 @@ from django.db import transaction
 from django.utils import timezone
 
 from apps.core.domain.plantillas_correo import PlantillaCorreoInvalida, construir_correo
-from apps.core.domain.plantillas_correo.base import contexto_pedido
-from apps.core.infrastructure.email_service import ResultadoEnvio, enviar_correo
+from apps.core.domain.plantillas_correo.base import contexto_pedido, correo_comprador
+from apps.core.infrastructure.email_service import ResultadoEnvio, correo_enmascarado, enviar_correo
 from apps.core.models import Pedido
 
 logger = logging.getLogger(__name__)
@@ -121,6 +122,7 @@ def notificar_evento(tipo, pedido):
             _guardar_marca(pedido, tipo, {
                 'enviado': resultado.enviado, 'codigo': resultado.codigo, 'fecha': timezone.now().isoformat(),
                 'intentos': anterior.get('intentos', 0) + 1,
+                'destinatario': correo_enmascarado(correo_comprador(pedido)),  # a quién se avisó, sin el correo completo
             })
         return resultado
     except Exception:
