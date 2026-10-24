@@ -41,6 +41,9 @@ test('no filtra secretos, rutas, trazas ni cuerpos externos a mensajes o consola
   }
   const api = make(async () => response(422, { exito: false, error: { detalles: { api_key: ['abc'], provider_response: { private: 'abc' } } } }));
   await assert.rejects(api.requestJson('/test'), /Revisa los datos/);
+  for (const field of ['clavePrivada', 'clave_secreta', 'private_key', 'credencial']) {
+    await assert.rejects(make(async () => response(422, { exito: false, error: { detalles: { [field]: ['valor-privado-qa'] } } })).requestJson('/test'), error => !error.message.includes('valor-privado-qa') && /Revisa los datos/.test(error.message));
+  }
   assert.equal(logs.length, 0);
 });
 

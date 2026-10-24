@@ -96,16 +96,17 @@ const select = tree => tree.props.children[0].props.children[1].props.children;
     assert.ok(html({ status: 'loading' }).includes('role="status"'));
     assert.ok(!html({ status: 'loading' }).includes('$0'));
     let attempts = 0; const tree = view.DashboardMetrics({ state: { status: 'error', message: 'Error de conexión' }, onRetry: () => attempts++ });
-    walk(tree, n => { if (n.props?.onClick) n.props.onClick(); }); assert.equal(attempts, 1);
+    walk(tree, n => { if (typeof n.type === 'function' && n.props?.onRetry) walk(n.type(n.props), child => { if (child.props?.onClick) child.props.onClick(); }); else if (n.props?.onClick) n.props.onClick(); }); assert.equal(attempts, 1);
     assert.ok(html({ status: 'error', message: 'Error de conexión' }).includes('role="alert"'));
     const empty = html({ status: 'ready', data: { ...data, total_pedidos: 0, total_ventas: '0.00', por_despachar: 0 } });
     assert.ok(empty.includes('$0') && empty.includes('No hay pedidos')); assert.ok(!empty.includes('<table'));
   });
-  await test('la tabla diaria solo consulta al abrir el detalle', () => {
+  await test('la tabla diaria mantiene el resumen dentro de un detalle inicialmente plegado', () => {
     const output = html({ status: 'ready', data });
     assert.ok(output.includes('$12.000') && output.includes('08/10/2026') && output.includes('sm:grid-cols-2'));
     assert.ok(output.includes('Ver tabla diaria de ventas y pedidos') && output.includes('Hora de Chile'));
-    assert.equal((output.match(/<tr[ >]/g) || []).length, 0, 'sin abrir el detalle no se consulta ni se dibuja la tabla');
+    assert.equal((output.match(/<tr[ >]/g) || []).length, data.historico.length + 1);
+    assert.match(output, /<details(?![^>]*\bopen\b)[^>]*>/, 'la tabla permanece oculta en un detalle cerrado');
   });
   await test('tabla diaria: fechas, CLP, pedidos, estructura accesible y estados', () => {
     const table = load('src/features/admin/components/dashboard/DailyHistoryTable.tsx', ui);

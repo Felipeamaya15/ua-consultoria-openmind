@@ -41,7 +41,11 @@ function cardHarness(product, template = 'catalog', layout = 'grid') {
   const jsx = (type, props) => ({ type, props });
   const card = load('src/features/storefront/components/store/ProductCard.tsx', {
     require: name => {
-      if (name === 'react/jsx-runtime') return { jsx, jsxs: jsx };
+      if (name.includes('StoreContext')) return { useStore: () => ({config:{}}) };
+        if (name.includes('seoService')) return { updateProductSeo: () => {} };
+        if (name.includes('metaPixelService')) return { trackMetaPixelEvent: () => {} };
+        if (name.includes('shared/components/states')) return { LoadingState: 'LoadingState', ErrorState: 'ErrorState', EmptyListState: 'EmptyListState' };
+        if (name === 'react/jsx-runtime') return { jsx, jsxs: jsx };
       if (name === 'react') return { useState: initial => {
         const index = cursor++;
         if (!(index in state)) state[index] = typeof initial === 'function' ? initial() : initial;
@@ -130,6 +134,10 @@ async function main() {
     const jsx = (type, props) => ({ type, props });
     const detail = load('src/features/storefront/pages/ProductDetail.tsx', {
       require: name => {
+        if (name.includes('StoreContext')) return { useStore: () => ({config:{}}) };
+        if (name.includes('seoService')) return { updateProductSeo: () => {} };
+        if (name.includes('metaPixelService')) return { trackMetaPixelEvent: () => {} };
+        if (name.includes('shared/components/states')) return { LoadingState: 'LoadingState', ErrorState: 'ErrorState', EmptyListState: 'EmptyListState' };
         if (name === 'react/jsx-runtime') return { jsx, jsxs: jsx };
         if (name === 'react') return { useEffect: () => {}, useState: () => {
           const index = cursor++;
