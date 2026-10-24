@@ -1,3 +1,4 @@
+import { ApiError, requestEnvelope } from '../../../shared/services/apiRequest';
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 const TOKEN_KEY = 'token';
 const SESSION_STARTED_AT_KEY = 'entrepreneur_session_started_at';
@@ -14,22 +15,17 @@ function clearStoredSession() {
   localStorage.removeItem(SESSION_STARTED_AT_KEY);
 }
 
-async function profileRequest(path: string, method = 'GET', data?: unknown, base = 'perfil', namespace = 'auth') {
+async function profileRequest<T = CustomerProfile>(path: string, method = 'GET', data?: unknown, base = 'perfil', namespace = 'auth'): Promise<{ data: T }> {
   const token = getStoredToken();
   if (!token) throw new Error('Inicia sesión para acceder a tu perfil.');
-  const res = await fetch(`${API_URL}/api/${namespace ? namespace + '/' : ''}${base}/${path}`, {
+  try { return await requestEnvelope(`${API_URL}/api/${namespace ? namespace + '/' : ''}${base}/${path}`, {
     method,
     headers: { Authorization: `Token ${token}`, 'Content-Type': 'application/json' },
     ...(data === undefined ? {} : { body: JSON.stringify(data) }),
-  });
-  const body = await res.json();
-  if (res.status === 401) clearStoredSession();
-  if (!res.ok || body.exito !== true) {
-    const details = body.error?.detalles;
-    const message = details ? Object.values(details).flat().join(' ') : body.mensaje || body.detail;
-    throw new Error(message || 'No se pudo completar la solicitud.');
+  }) as { data: T }; } catch (cause) {
+    if (cause instanceof ApiError && cause.status === 401 && getStoredToken() === token) clearStoredSession();
+    throw cause;
   }
-  return body;
 }
 
 export type CustomerOrderItem = { id_item_pedido: number; producto_id: number | string; nombre: string; cantidad: number; precio_unitario: string; subtotal: string; sku?: string; atributos_variante?: {clave: string; etiqueta: string; valor: string}[] };
@@ -49,10 +45,10 @@ export const authService = {
   getSessionStartedAt() {
     return localStorage.getItem(SESSION_STARTED_AT_KEY);
   },
-  async getCustomerOrders(): Promise<CustomerOrder[]> { return (await profileRequest('', 'GET', undefined, 'mi-cuenta/pedidos', '')).data; },
+  async getCustomerOrders(): Promise<CustomerOrder[]> { return (await profileRequest<CustomerOrder[]>('', 'GET', undefined, 'mi-cuenta/pedidos', '')).data; },
   async getCustomerOrder(id: string): Promise<CustomerOrder> {
     if (!/^\d+$/.test(id)) throw new Error('Pedido no encontrado.');
-    return (await profileRequest(`${id}/`, 'GET', undefined, 'mi-cuenta/pedidos', '')).data;
+    return (await profileRequest<CustomerOrder>(`${id}/`, 'GET', undefined, 'mi-cuenta/pedidos', '')).data;
   },
   async getEntrepreneurProfile(): Promise<CustomerProfile> { return (await profileRequest('', 'GET', undefined, 'emprendedor/perfil')).data; },
   async updateEntrepreneurProfile(email: string): Promise<CustomerProfile> {

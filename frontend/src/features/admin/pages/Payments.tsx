@@ -1,3 +1,5 @@
+import { requestEnvelope } from '../../../shared/services/apiRequest';
+import { humanizeAdminError } from '../utils/humanizeError';
 import React, { useState, useEffect, useRef } from 'react';
 import { LoadingState } from '../../../shared/components/states';
 import { withoutPrivateCredentials } from '../../../shared/services/sensitiveConfiguration';
@@ -55,6 +57,7 @@ export default function Payments() {
 
   const { form, setForm, save, saved } = useAdminForm('paymentConfiguration');
   const syncing = useRef(false);
+  const pendingSaves = useRef(new Set<string>());
 
 
 
@@ -283,6 +286,7 @@ export default function Payments() {
   // Guardar Transbank
 
   const handleSaveTransbank = async () => {
+    if (pendingSaves.current.has('transbank')) return false;
     if (!tiendaId) {
       setTbFeedback({ type: 'error', message: 'No se pudo identificar la tienda del emprendedor.' });
       return false;
@@ -320,9 +324,10 @@ export default function Payments() {
 
 
 
+    pendingSaves.current.add('transbank');
     try {
 
-      const res = await fetch(`${API_BASE}/api/catalog/tiendas/${tiendaId}/configuracion/transbank/`, {
+      const data: any = await requestEnvelope(`${API_BASE}/api/catalog/tiendas/${tiendaId}/configuracion/transbank/`, {
 
         method: 'POST',
 
@@ -332,11 +337,8 @@ export default function Payments() {
 
       });
 
-      const data = await res.json();
 
-
-
-      if (res.ok && data.exito) {
+      if (data.exito === true && data.data && typeof data.data === 'object') {
 
         setTbFeedback({ type: 'success', message: 'Configuración de Transbank guardada exitosamente.' });
 
@@ -356,19 +358,20 @@ export default function Payments() {
 
           : data.mensaje || 'Error al guardar Transbank.';
 
-        setTbFeedback({ type: 'error', message: errorDetail });
+        setTbFeedback({ type: 'error', message: humanizeAdminError(errorDetail) });
 
         return false;
 
       }
 
-    } catch {
+    } catch (cause) {
 
-      setTbFeedback({ type: 'error', message: 'No pudimos guardar la configuración de pagos. Revisa tu conexión e intenta nuevamente.' });
+      setTbFeedback({ type: 'error', message: humanizeAdminError(cause instanceof Error ? cause.message : '', 'No pudimos guardar la configuración de pagos. Revisa tu conexión e intenta nuevamente.') });
 
       return false;
 
     } finally {
+      pendingSaves.current.delete('transbank');
 
       setTbSaving(false);
 
@@ -381,6 +384,7 @@ export default function Payments() {
   // Guardar PayPal
 
   const handleSavePayPal = async () => {
+    if (pendingSaves.current.has('paypal')) return false;
     if (!tiendaId) {
       setPpFeedback({ type: 'error', message: 'No se pudo identificar la tienda del emprendedor.' });
       return false;
@@ -424,9 +428,10 @@ export default function Payments() {
 
 
 
+    pendingSaves.current.add('paypal');
     try {
 
-      const res = await fetch(`${API_BASE}/api/catalog/tiendas/${tiendaId}/configuracion/paypal/`, {
+      const data: any = await requestEnvelope(`${API_BASE}/api/catalog/tiendas/${tiendaId}/configuracion/paypal/`, {
 
         method: 'POST',
 
@@ -436,11 +441,8 @@ export default function Payments() {
 
       });
 
-      const data = await res.json();
 
-
-
-      if (res.ok && data.exito) {
+      if (data.exito === true && data.data && typeof data.data === 'object') {
 
         setPpFeedback({ type: 'success', message: 'Configuración de PayPal guardada exitosamente.' });
 
@@ -460,19 +462,20 @@ export default function Payments() {
 
           : data.mensaje || 'Error al guardar PayPal.';
 
-        setPpFeedback({ type: 'error', message: errorDetail });
+        setPpFeedback({ type: 'error', message: humanizeAdminError(errorDetail) });
 
         return false;
 
       }
 
-    } catch {
+    } catch (cause) {
 
-      setPpFeedback({ type: 'error', message: 'No pudimos guardar la configuración de pagos. Revisa tu conexión e intenta nuevamente.' });
+      setPpFeedback({ type: 'error', message: humanizeAdminError(cause instanceof Error ? cause.message : '', 'No pudimos guardar la configuración de pagos. Revisa tu conexión e intenta nuevamente.') });
 
       return false;
 
     } finally {
+      pendingSaves.current.delete('paypal');
 
       setPpSaving(false);
 
@@ -485,6 +488,7 @@ export default function Payments() {
   // Guardar Mercado Pago
 
   const handleSaveMercadoPago = async () => {
+    if (pendingSaves.current.has('mercadopago')) return false;
     if (!tiendaId) {
       setMpFeedback({ type: 'error', message: 'No se pudo identificar la tienda del emprendedor.' });
       return false;
@@ -528,9 +532,10 @@ export default function Payments() {
 
 
 
+    pendingSaves.current.add('mercadopago');
     try {
 
-      const res = await fetch(`${API_BASE}/api/catalog/tiendas/${tiendaId}/configuracion/mercadopago/`, {
+      const data: any = await requestEnvelope(`${API_BASE}/api/catalog/tiendas/${tiendaId}/configuracion/mercadopago/`, {
 
         method: 'POST',
 
@@ -540,11 +545,8 @@ export default function Payments() {
 
       });
 
-      const data = await res.json();
 
-
-
-      if (res.ok && data.exito) {
+      if (data.exito === true && data.data && typeof data.data === 'object') {
 
         setMpFeedback({ type: 'success', message: 'Configuración de Mercado Pago guardada exitosamente.' });
 
@@ -592,19 +594,20 @@ export default function Payments() {
 
           : data.mensaje || 'Error al guardar Mercado Pago.';
 
-        setMpFeedback({ type: 'error', message: errorDetail });
+        setMpFeedback({ type: 'error', message: humanizeAdminError(errorDetail) });
 
         return false;
 
       }
 
-    } catch {
+    } catch (cause) {
 
-      setMpFeedback({ type: 'error', message: 'No pudimos guardar la configuración de pagos. Revisa tu conexión e intenta nuevamente.' });
+      setMpFeedback({ type: 'error', message: humanizeAdminError(cause instanceof Error ? cause.message : '', 'No pudimos guardar la configuración de pagos. Revisa tu conexión e intenta nuevamente.') });
 
       return false;
 
     } finally {
+      pendingSaves.current.delete('mercadopago');
 
       setMpSaving(false);
 
@@ -615,6 +618,7 @@ export default function Payments() {
 
 
   const handleSaveTransfer = async () => {
+    if (pendingSaves.current.has('transfer')) return false;
     setTransferSaving(true);
     setTransferFeedback(null);
 
@@ -628,15 +632,12 @@ export default function Payments() {
     }
     setTransferFieldErrors({});
 
+    pendingSaves.current.add('transfer');
     try {
-      const currentResponse = await fetch(`${API_BASE}/api/pagos/configuracion/`, {
+      const currentBody: any = await requestEnvelope(`${API_BASE}/api/pagos/configuracion/`, {
         method: 'GET',
         headers: getAuthHeaders(),
       });
-      const currentBody = await currentResponse.json();
-      if (!currentResponse.ok || currentBody.exito !== true) {
-        throw new Error(currentBody?.mensaje || 'No se pudo consultar la configuración actual.');
-      }
 
       const mergedConfiguration = {
         ...(currentBody.data ?? {}),
@@ -646,19 +647,11 @@ export default function Payments() {
         },
       };
 
-      const response = await fetch(`${API_BASE}/api/pagos/configuracion/`, {
+      await requestEnvelope(`${API_BASE}/api/pagos/configuracion/`, {
         method: 'PUT',
         headers: getAuthHeaders(),
         body: JSON.stringify(mergedConfiguration),
       });
-      const body = await response.json();
-
-      if (!response.ok || body.exito !== true) {
-        const detail = body?.error?.detalles
-          ? Object.values(body.error.detalles).flat().join(' ')
-          : body?.mensaje || 'No se pudo guardar la transferencia bancaria.';
-        throw new Error(detail);
-      }
 
       setTransferFeedback({
         type: 'success',
@@ -668,10 +661,11 @@ export default function Payments() {
     } catch (error) {
       setTransferFeedback({
         type: 'error',
-        message: error instanceof Error ? error.message : 'No se pudo guardar la transferencia bancaria.',
+        message: error instanceof Error ? humanizeAdminError(error.message) : 'No se pudo guardar la transferencia bancaria.',
       });
       return false;
     } finally {
+      pendingSaves.current.delete('transfer');
       setTransferSaving(false);
     }
   };
@@ -934,16 +928,12 @@ export default function Payments() {
       if (validation.invalidFields.length) throw new Error(validation.message);
     }
 
-    const currentResponse = await fetch(`${API_BASE}/api/pagos/configuracion/`, {
+    const currentBody: any = await requestEnvelope(`${API_BASE}/api/pagos/configuracion/`, {
       method: 'GET',
       headers: getAuthHeaders(),
     });
-    const currentBody = await currentResponse.json();
-    if (!currentResponse.ok || currentBody.exito !== true) {
-      throw new Error(currentBody?.mensaje || 'No se pudo consultar la configuración actual.');
-    }
 
-    const response = await fetch(`${API_BASE}/api/pagos/configuracion/`, {
+    await requestEnvelope(`${API_BASE}/api/pagos/configuracion/`, {
       method: 'PUT',
       headers: getAuthHeaders(),
       body: JSON.stringify({
@@ -954,13 +944,6 @@ export default function Payments() {
         },
       }),
     });
-    const body = await response.json();
-    if (!response.ok || body.exito !== true) {
-      const detail = body?.error?.detalles
-        ? Object.values(body.error.detalles).flat().join(' ')
-        : body?.mensaje || 'No se pudo guardar la configuración de Linkify.';
-      throw new Error(detail);
-    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -987,7 +970,7 @@ export default function Payments() {
       if (results.every(result => result === true)) save(withoutPrivateCredentials(form));
       else setBackendError('Algunas configuraciones no se guardaron. Revisa los mensajes de cada medio de pago y vuelve a intentarlo.');
     } catch (err) {
-      setBackendError(err instanceof Error ? err.message : 'Error desconocido al guardar.');
+      setBackendError(err instanceof Error ? humanizeAdminError(err.message) : 'Error desconocido al guardar.');
     } finally {
       syncing.current = false;
       setIsSyncing(false);
