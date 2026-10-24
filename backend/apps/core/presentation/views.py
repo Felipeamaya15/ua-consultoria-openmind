@@ -5,7 +5,7 @@ from rest_framework.exceptions import APIException
 from django.db import transaction
 
 from apps.core.delivery import delivery_data, delivery_for_store
-from apps.core.infrastructure.notificaciones_pedido import notificar_cambio_de_estado
+from apps.core.infrastructure.notificaciones_pedido import notificar_cambio_de_estado, notificar_pago_rechazado
 from apps.core.infrastructure.tenant import resolver_tienda, resolver_tienda_id
 from apps.core.models import (
     ConfiguracionMercadoPago,
@@ -351,6 +351,7 @@ class RechazarTransferenciaManualAPIView(APIView):
             pedido.estado = 'cancelado'
             pedido.save(update_fields=['estado'])
 
+        notificar_pago_rechazado(pedido)
         return success_response(
             data={'id_pedido': pedido.pk, 'estado': pedido.estado},
             mensaje='Transferencia rechazada y pedido cancelado.',

@@ -205,3 +205,48 @@ class CorreoPagoExitosoLinkifyTests(CorreosPedidoBase):
         self.avisar('cancellation')
         self.avisar('notification')
         self.assertEqual(len(mail.outbox), 1)
+
+class CorreoPagoRechazadoTests(CorreosPedidoBase):
+    def rechazar(self, pedido):
+        return self.api.post(f'/api/pagos/transferencias/{pedido.pk}/rechazar/', {}, format='json')
+
+    def test_al_rechazar_la_transferencia_se_envia_el_correo_de_pago_rechazado(self):
+        pedido = self.pedido()
+        self.assertEqual(self.rechazar(pedido).status_code, 200)
+        self.assertEqual(self.refrescar(pedido).estado, 'cancelado')
+        self.assertEqual(len(mail.outbox), 1)
+        correo = mail.outbox[0]
+        self.assertEqual(correo.to, ['ana@example.com'])
+        self.assertEqual(correo.subject, f'No pudimos confirmar tu pago · {pedido.identificador}')
+        self.assertIn('No se realizó ningún cobro', correo.body)
+        self.assertEqual(self.marca(pedido, 'payment_rejected')['codigo'], 'enviado')
+
+    def test_rechazar_dos_veces_envia_un_solo_correo(self):
+        pedido = self.pedido()
+        self.rechazar(pedido)
+        self.assertEqual(self.rechazar(pedido).status_code, 200)
+        self.assertEqual(len(mail.outbox), 1)
+
+    def test_si_el_correo_falla_el_pedido_queda_cancelado(self):
+        pedido = self.pedido()
+        with patch.object(notificaciones_pedido, 'enviar_correo', return_value=ResultadoEnvio(False, 'error_de_envio')):
+            self.assertEqual(self.rechazar(pedido).status_code, 200)
+        self.assertEqual(self.refrescar(pedido).estado, 'cancelado')
+        self.assertFalse(self.marca(pedido, 'payment_rejected')['enviado'])
+
+    def test_si_la_tienda_desactivo_el_correo_no_se_envia(self):
+        ConfiguracionCorreo.objects.create(tienda=self.tienda, plantillas={'payment_rejected': {
+            'enabled': False, 'subject': 'Pago', 'preheader': '', 'body': 'Texto'}})
+        self.assertEqual(self.rechazar(self.pedido()).status_code, 200)
+        self.assertEqual(mail.outbox, [])
+
+    def test_no_se_envia_si_el_pedido_ya_estaba_pagado(self):
+        pedido = self.pedido(estado='pagado')
+        self.assertEqual(self.rechazar(pedido).status_code, 409)
+        self.assertEqual(mail.outbox, [])
+
+    def test_cancelar_el_pedido_por_otro_motivo_no_avisa_de_pago_rechazado(self):
+        pedido = self.pedido()
+        respuesta = self.api.patch(f'/api/tienda/pedidos/{pedido.pk}/estado/', {'estado': 'cancelado'}, format='json')
+        self.assertEqual(respuesta.status_code, 200)
+        self.assertEqual(mail.outbox, [])

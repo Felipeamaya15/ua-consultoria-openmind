@@ -138,6 +138,9 @@ def notificar_cambio_de_estado(pedido, estado_anterior):
         return None
     return notificar_evento(tipo, pedido)
 
+def notificar_pago_rechazado(pedido):
+    """Correo de pago rechazado (SCRUM-430): se envía cuando el propietario rechaza el pago del pedido."""
+    return notificar_evento('payment_rejected', pedido)
 
 def notificar_recepcion(pedido):
     """Correo de confirmación de recepción del pedido (SCRUM-428): se envía al crear el pedido."""
