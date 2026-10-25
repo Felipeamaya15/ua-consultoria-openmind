@@ -133,6 +133,23 @@ body {
   --t-heading-font: 'Plus Jakarta Sans', sans-serif;
 }
 
+[data-storefront-visual] > main,
+[data-storefront-visual] > div > main {
+  width: 100%;
+  min-width: 0;
+}
+
+[data-storefront-visual] .ua-store-page:not([data-visual-page="login"]) > div,
+[data-storefront-visual] .ua-store-page:not([data-visual-page="login"]) > main,
+[data-storefront-visual] .ua-store-page:not([data-visual-page="login"]) > section {
+  max-width: 100% !important;
+  width: 100%;
+}
+
+[data-storefront-visual] .ua-store-page:not([data-visual-page="login"]) [data-page-form] {
+  max-width: 100%;
+}
+
 /* Animation utilities */
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(8px); }

@@ -123,7 +123,7 @@ export default function TransbankReturnResult({
   }[result.status];
 
   return (
-    <div className="max-w-lg mx-auto px-4 py-20 text-center flex flex-col items-center gap-6">
+    <div className="w-full max-w-7xl mx-auto px-4 py-12 text-center flex flex-col items-center gap-6">
       <div
         className={`w-20 h-20 rounded-full flex items-center justify-center text-3xl font-bold ${view.tone}`}
         aria-hidden="true"

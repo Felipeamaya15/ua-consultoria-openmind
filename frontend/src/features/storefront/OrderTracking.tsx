@@ -25,7 +25,7 @@ export const OrderTracking = () => {
   };
 
   return (
-    <div className="max-w-3xl mx-auto p-6">
+    <div className="w-full max-w-7xl mx-auto p-6">
       <h2 className="text-2xl font-bold mb-6">Portal de Seguimiento</h2>
 
       <form onSubmit={handleSearch} className="mb-8 space-y-4 bg-white p-6 rounded-lg shadow-sm border">
