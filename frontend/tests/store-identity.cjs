@@ -75,14 +75,9 @@ const landing=(tienda,extra={})=>({id:1,tienda,titulo:'Título editorial distint
   const failed=harness();failed.seed({name:'Nunca publicar',logo:'/local.png'});failed.render();failed.commit();failed.requests.forEach(r=>r.reject(Error('Sin conexión')));await tick();value=failed.render();assert.equal(value.config.name,'');assert.equal(value.config.logo,'');assert(value.landingError);failed.cleanup();
   const unknown=harness();unknown.switchStore(null);value=unknown.render();unknown.commit();assert.equal(unknown.requests.length,0);assert.equal(value.config.name,'');unknown.cleanup();
   // The existing save contract stays multipart; only successful saves notify mounted views.
-  const serviceModule={exports:{}}, target=new EventTarget();let notifications=0, success=true;
-  const source=ts.transpileModule(fs.readFileSync(path.join(root,'src/features/landing/services/landingService.ts'),'utf8'),{compilerOptions:{module:1,target:ts.ScriptTarget.ES2020}}).outputText;
+  const target=new EventTarget();let notifications=0, success=true;
   target.addEventListener('openmind:landing-config-changed',()=>notifications++);
-  vm.runInNewContext(source,{module:serviceModule,exports:serviceModule.exports,FormData,Event,window:target,
-    localStorage:{getItem:()=> 'test-token'},sessionStorage:{getItem:()=>null},
-    require:()=>({API_BASE_URL:'https://installation.test'}),
-    fetch:async()=>({ok:success,json:async()=>({exito:success,data:landing(1),mensaje:'Error simulado'})}),
-  });
+  const serviceModule={exports:require('./source-loader.cjs').load('src/features/landing/services/landingService.ts', {'../../../api':{API_BASE_URL:'https://installation.test'}}, {FormData,Event,window:target,localStorage:{getItem:()=> 'test-token'},sessionStorage:{getItem:()=>null},fetch:async()=>({ok:success,json:async()=>({exito:success,data:landing(1),mensaje:'Error simulado'})})})};
   await serviceModule.exports.saveLandingConfig({titulo:'Título',descripcion:'',texto_boton:'Ver',imagen_principal:null,logo:null,secciones:{}});
   assert.equal(notifications,1);success=false;
   await assert.rejects(()=>serviceModule.exports.saveLandingConfig({titulo:'Título',descripcion:'',texto_boton:'Ver',imagen_principal:null,secciones:{}}));

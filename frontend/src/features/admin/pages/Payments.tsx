@@ -338,7 +338,7 @@ export default function Payments() {
       });
 
 
-      if (data.exito === true && data.data && typeof data.data === 'object') {
+      if (data.exito === true && data.data && !Array.isArray(data.data) && typeof data.data.activo === 'boolean' && typeof data.data.configurado === 'boolean' && typeof data.data.ambiente === 'string') {
 
         setTbFeedback({ type: 'success', message: 'Configuración de Transbank guardada exitosamente.' });
 
@@ -346,17 +346,13 @@ export default function Payments() {
 
         setTbApiKey('');
 
-        setTbIsConfigured(true);
+        setTbIsConfigured(data.data.configurado);
 
         return true;
 
       } else {
 
-        const errorDetail = data.error?.detalles
-
-          ? Object.values(data.error.detalles).flat().join(' ')
-
-          : data.mensaje || 'Error al guardar Transbank.';
+        const errorDetail = 'No pudimos confirmar la configuración guardada. Actualiza la página antes de volver a intentar.';
 
         setTbFeedback({ type: 'error', message: humanizeAdminError(errorDetail) });
 
@@ -442,7 +438,7 @@ export default function Payments() {
       });
 
 
-      if (data.exito === true && data.data && typeof data.data === 'object') {
+      if (data.exito === true && data.data && !Array.isArray(data.data) && typeof data.data.activo === 'boolean' && typeof data.data.configurado === 'boolean' && typeof data.data.ambiente === 'string') {
 
         setPpFeedback({ type: 'success', message: 'Configuración de PayPal guardada exitosamente.' });
 
@@ -450,17 +446,13 @@ export default function Payments() {
 
         setPpClientSecret('');
 
-        setPpIsConfigured(true);
+        setPpIsConfigured(data.data.configurado);
 
         return true;
 
       } else {
 
-        const errorDetail = data.error?.detalles
-
-          ? Object.values(data.error.detalles).flat().join(' ')
-
-          : data.mensaje || 'Error al guardar PayPal.';
+        const errorDetail = 'No pudimos confirmar la configuración guardada. Actualiza la página antes de volver a intentar.';
 
         setPpFeedback({ type: 'error', message: humanizeAdminError(errorDetail) });
 
@@ -546,7 +538,7 @@ export default function Payments() {
       });
 
 
-      if (data.exito === true && data.data && typeof data.data === 'object') {
+      if (data.exito === true && data.data && !Array.isArray(data.data) && typeof data.data.activo === 'boolean' && typeof data.data.configurado === 'boolean' && typeof data.data.ambiente === 'string') {
 
         setMpFeedback({ type: 'success', message: 'Configuración de Mercado Pago guardada exitosamente.' });
 
@@ -554,7 +546,7 @@ export default function Payments() {
 
         setMpAccessToken('');
 
-        setMpIsConfigured(true);
+        setMpIsConfigured(data.data.configurado);
 
 
 
@@ -588,11 +580,7 @@ export default function Payments() {
 
       } else {
 
-        const errorDetail = data.error?.detalles
-
-          ? Object.values(data.error.detalles).flat().join(' ')
-
-          : data.mensaje || 'Error al guardar Mercado Pago.';
+        const errorDetail = 'No pudimos confirmar la configuración guardada. Actualiza la página antes de volver a intentar.';
 
         setMpFeedback({ type: 'error', message: humanizeAdminError(errorDetail) });
 

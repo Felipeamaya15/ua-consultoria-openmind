@@ -1,0 +1,35 @@
+{
+  "date": "2026-10-24",
+  "inventoriedFiles": 87,
+  "comparisonToInitialKnownHashes": [
+    {
+      "path": "backend/apps/core/presentation/shipping.py",
+      "unchanged": true
+    },
+    {
+      "path": "backend/config/settings.py",
+      "unchanged": true
+    },
+    {
+      "path": "frontend/src/features/admin/config/navigation.BACKUP.ts",
+      "unchanged": true
+    },
+    {
+      "path": "frontend/src/features/admin/pages/Contacts.BACKUP.tsx",
+      "unchanged": true
+    },
+    {
+      "path": "frontend/src/features/admin/pages/Sales.BACKUP.tsx",
+      "unchanged": true
+    },
+    {
+      "path": "frontend/tests/editor-redesign-mock/config.yaml",
+      "unchanged": true
+    },
+    {
+      "path": "frontend/tests/editor-redesign-mock/default.js",
+      "unchanged": true
+    }
+  ],
+  "scope": "Auditoría en worktree limpio separado; ninguna edición dirigida a las rutas protegidas del checkout original."
+}

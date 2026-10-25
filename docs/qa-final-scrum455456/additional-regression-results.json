@@ -1,0 +1,132 @@
+[
+  {
+    "test": "account-navigation",
+    "status": "APROBADO",
+    "exit": 0
+  },
+  {
+    "test": "admin-panel-help",
+    "status": "APROBADO",
+    "exit": 0
+  },
+  {
+    "test": "analytics-checkout",
+    "status": "APROBADO",
+    "exit": 0
+  },
+  {
+    "test": "business-time",
+    "status": "APROBADO",
+    "exit": 0
+  },
+  {
+    "test": "cart-checkout",
+    "status": "APROBADO",
+    "exit": 0
+  },
+  {
+    "test": "checkout-shipping",
+    "status": "APROBADO",
+    "exit": 0
+  },
+  {
+    "test": "customer-orders",
+    "status": "APROBADO",
+    "exit": 0
+  },
+  {
+    "test": "dashboard-navigation",
+    "status": "APROBADO",
+    "exit": 0
+  },
+  {
+    "test": "dashboard",
+    "status": "APROBADO",
+    "exit": 0
+  },
+  {
+    "test": "editor-emprendedor-ux",
+    "status": "APROBADO",
+    "exit": 0
+  },
+  {
+    "test": "empty-state",
+    "status": "APROBADO",
+    "exit": 0
+  },
+  {
+    "test": "google-analytics-field",
+    "status": "APROBADO",
+    "exit": 0
+  },
+  {
+    "test": "google-analytics-public-store",
+    "status": "APROBADO",
+    "exit": 0
+  },
+  {
+    "test": "google-analytics-validation",
+    "status": "APROBADO",
+    "exit": 0
+  },
+  {
+    "test": "guest-cart",
+    "status": "APROBADO",
+    "exit": 0
+  },
+  {
+    "test": "integration-blockers",
+    "status": "APROBADO",
+    "exit": 0
+  },
+  {
+    "test": "loading-state",
+    "status": "APROBADO",
+    "exit": 0
+  },
+  {
+    "test": "meta-pixel-public-store",
+    "status": "APROBADO",
+    "exit": 0
+  },
+  {
+    "test": "order-tracking",
+    "status": "APROBADO",
+    "exit": 0
+  },
+  {
+    "test": "product-visual-consistency",
+    "status": "APROBADO",
+    "exit": 0
+  },
+  {
+    "test": "shipping-pickup",
+    "status": "APROBADO",
+    "exit": 0
+  },
+  {
+    "test": "shipping-tracking-chilexpress",
+    "status": "APROBADO",
+    "exit": 0
+  },
+  {
+    "test": "shipping-tracking",
+    "status": "APROBADO",
+    "exit": 0
+  },
+  {
+    "test": "stock-feedback",
+    "status": "APROBADO",
+    "exit": 0
+  },
+  {
+    "test": "store-seo-metadata",
+    "status": "APROBADO",
+    "exit": 0
+  },
+  {
+    "test": "storefront-variants",
+    "status": "APROBADO",
+    "exit": 0
+  }
+]

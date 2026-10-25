@@ -1,0 +1,35 @@
+OK un contenido vacío o demasiado largo no se puede publicar
+OK la tienda solo ve lo publicado; sin nada publicado usa el texto base
+OK el borrador del emprendedor nunca llega a la tienda
+OK una configuración guardada dañada no rompe la tienda ni cambia el texto base
+OK publicar copia el borrador a lo publicado, anota la fecha y no toca lo demás
+OK publicar un borrador vacío o demasiado largo se rechaza sin cambiar nada
+OK la fecha se muestra en español y una fecha sin hora no se corre de día
+OK solo existen cuatro tipos de página legal
+OK StoreProvider entrega a la tienda las páginas legales publicadas
+OK cada vista pública muestra la versión publicada de su página, en los tres diseños
+OK sin nada publicado la tienda muestra el texto base de cada página
+OK el contenido publicado nunca se interpreta como código
+OK una dirección legal desconocida muestra "no encontrada" con enlaces a las páginas válidas
+
+13 pruebas de contenido/presentación OK; flujo asíncrono en suite de navegador
+Testing Legal Pages Service & Flow...
+✔ legalContent defaults verified (including cookies)
+✔ legalService.fetchPublicLegalPages verified (including cookies)
+✔ legalService.fetchAdminLegalPages sends auth token and includes cookies
+✔ legalService.createLegalContent sends POST to /api/legal/configuracion/
+✔ legalService.updateLegalContent sends PUT to /api/legal/configuracion/
+✔ legalService.publishLegalContent sends POST to /api/legal/configuracion/publicar/ for cookies
+✔ legalService.saveDraft delegates properly
+✔ legalService.publish delegates properly to publishLegalContent
+✔ legalService.restore sends correct restore payload for cookies
+✔ legalService.fetchVersionVigente queries /api/legal/vigente/ for all active versions
+✔ legalService.fetchVersionVigente queries /api/legal/vigente/terms/ for specific policy
+✔ Checkout links to terms, privacy, and refund policies in purchase flow
+✔ Legal page shows Inicio as non-clickable text, supports cookies and displays Versión vigente
+✔ All 4 store template footers include the Cookies link
+✔ Cookie consent pop-up banner is implemented and mounted in StorefrontProviders
+✔ softwareVersionService.getSoftwareVersion queries /api/software/version-vigente/ and returns valid software version data
+✔ InstitutionalBadge includes interactive software version indicator and modal trigger
+
+All Legal Pages, Cookies & Software Version tests passed successfully!

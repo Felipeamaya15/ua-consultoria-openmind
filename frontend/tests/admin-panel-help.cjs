@@ -31,7 +31,7 @@ test('every main panel and nested product/legal route has a friendly description
   for(const item of menuItems) assert(getAdminPageHelp(item.path), item.path);
   for(const [route,help] of Object.entries(ADMIN_PAGE_HELP)){assert.equal(getAdminPageHelp(route).description,help.description);assert(!/backend|frontend|\bAPI\b|endpoint|JSON|token|base de datos/i.test(help.description));}
   assert.equal(getAdminPageHelp('/emprendedor/productos/nuevo').title,'Productos');assert.equal(getAdminPageHelp('/emprendedor/legal/privacidad').title,'Páginas legales');assert.equal(getAdminPageHelp('/emprendedor/diseno/editor'),undefined);
-  assert.equal(ADMIN_PAGE_HELP['/emprendedor/landing'].description,'Administra la información del negocio, la página principal, el logo y los datos de contacto. Guarda los cambios de cada apartado.');
+  assert(ADMIN_PAGE_HELP['/emprendedor/landing'].description.includes('una sola barra de acciones'), 'la ayuda describe el guardado unificado de Página principal');
 });
 test('technical errors become human messages while actionable validation and session errors survive',()=>{
   const {humanizeAdminError}=load('src/features/admin/utils/humanizeError.ts');

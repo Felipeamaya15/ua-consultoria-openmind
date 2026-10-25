@@ -1,0 +1,23 @@
+AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
++ actual - expected
+
++ 'Nombre antiguo'
+- ''
+
+    at C:\Users\maria\Ecommerce\ua-consultoria-openmind\integracion-scrum455456\frontend\tests\store-identity.cjs:51:31
+    at Object.<anonymous> (C:\Users\maria\Ecommerce\ua-consultoria-openmind\integracion-scrum455456\frontend\tests\store-identity.cjs:91:3)
+    at Module._compile (node:internal/modules/cjs/loader:1761:14)
+    at Object.<anonymous> (C:\Users\maria\Ecommerce\ua-consultoria-openmind\integracion-scrum455456\frontend\tests\store-identity-baseline.cjs:6:132)
+    at Module._compile (node:internal/modules/cjs/loader:1761:14)
+    at Object..js (node:internal/modules/cjs/loader:1893:10)
+    at Module.load (node:internal/modules/cjs/loader:1481:32)
+    at Module._load (node:internal/modules/cjs/loader:1300:12)
+    at TracingChannel.traceSync (node:diagnostics_channel:328:14)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:245:24) {
+  generatedMessage: true,
+  code: 'ERR_ASSERTION',
+  actual: 'Nombre antiguo',
+  expected: '',
+  operator: 'strictEqual',
+  diff: 'simple'
+}

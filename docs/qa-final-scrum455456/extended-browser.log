@@ -1,0 +1,18 @@
+APROBADO Producto: crear, validar, recargar y editar precios
+APROBADO Marketing: personalizar, guardar, recargar y recuperar
+APROBADO Pedidos: preparar, entregar, cancelar y recargar
+APROBADO Transferencias: aprobar y rechazar
+APROBADO Entregas: guardar, recargar y recuperar de error
+APROBADO Contactos y exportación CSV
+APROBADO SEO y analítica: persistencia local y fallo de cuota
+APROBADO Acceso de clientes
+APROBADO Diseño: aplicar plantilla
+APROBADO Perfil: guardar correo y recuperar de error
+APROBADO Pagos: respuestas mal formadas y recuperación
+APROBADO Pagos: prevención de escrituras duplicadas
+APROBADO Legal terms: borrador, publicación y tienda
+APROBADO Legal privacy: borrador, publicación y tienda
+APROBADO Legal refund: borrador, publicación y tienda
+APROBADO Legal cookies: borrador, publicación y tienda
+APROBADO Legal: historial, recuperación y restauración
+APROBADO Sin excepciones React

@@ -1,0 +1,60 @@
+{
+  "version": "0.0.0",
+  "name": "frontend",
+  "dependencies": {
+    "@tailwindcss/vite": {
+      "version": "4.3.3",
+      "resolved": "https://registry.npmjs.org/@tailwindcss/vite/-/vite-4.3.3.tgz",
+      "overridden": false,
+      "dependencies": {
+        "@tailwindcss/node": {
+          "version": "4.3.3",
+          "resolved": "https://registry.npmjs.org/@tailwindcss/node/-/node-4.3.3.tgz",
+          "overridden": false,
+          "dependencies": {
+            "source-map-js": {
+              "version": "1.2.1",
+              "resolved": "https://registry.npmjs.org/source-map-js/-/source-map-js-1.2.1.tgz",
+              "overridden": false
+            }
+          }
+        },
+        "vite": {
+          "version": "5.4.21"
+        }
+      }
+    },
+    "@vitejs/plugin-react": {
+      "version": "4.7.0",
+      "resolved": "https://registry.npmjs.org/@vitejs/plugin-react/-/plugin-react-4.7.0.tgz",
+      "overridden": false,
+      "dependencies": {
+        "vite": {
+          "version": "5.4.21"
+        }
+      }
+    },
+    "vite": {
+      "version": "5.4.21",
+      "resolved": "https://registry.npmjs.org/vite/-/vite-5.4.21.tgz",
+      "overridden": false,
+      "dependencies": {
+        "esbuild": {
+          "version": "0.21.5",
+          "resolved": "https://registry.npmjs.org/esbuild/-/esbuild-0.21.5.tgz",
+          "overridden": false
+        },
+        "postcss": {
+          "version": "8.5.28",
+          "resolved": "https://registry.npmjs.org/postcss/-/postcss-8.5.28.tgz",
+          "overridden": false,
+          "dependencies": {
+            "source-map-js": {
+              "version": "1.2.1"
+            }
+          }
+        }
+      }
+    }
+  }
+}

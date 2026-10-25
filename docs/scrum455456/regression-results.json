@@ -56,8 +56,8 @@
   },
   {
     "test": "store-identity",
-    "status": "FALLIDO",
-    "exit": 1
+    "status": "APROBADO",
+    "exit": 0
   },
   {
     "test": "landing-editor",
@@ -166,7 +166,7 @@
   },
   {
     "test": "error-state",
-    "status": "FALLIDO",
-    "exit": 1
+    "status": "APROBADO",
+    "exit": 0
   }
 ]
