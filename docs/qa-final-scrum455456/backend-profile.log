@@ -1,0 +1,12 @@
+time="2026-10-24T12:12:00-03:00" level=warning msg="The \"PAYMENT_CREDENTIALS_KEY\" variable is not set. Defaulting to a blank string."
+ Container ua-consultoria-openmind-backend-run-aa861e48688c Creating
+ Container ua-consultoria-openmind-backend-run-aa861e48688c Created
+Creating test database for alias 'default'...
+Found 20 test(s).
+System check identified no issues (0 silenced).
+....................
+----------------------------------------------------------------------
+Ran 20 tests in 8.681s
+
+OK
+Destroying test database for alias 'default'...

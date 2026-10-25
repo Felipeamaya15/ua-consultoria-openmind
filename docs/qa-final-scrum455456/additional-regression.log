@@ -1,0 +1,272 @@
+
+TEST account-navigation
+OK: propietario/staff, cliente, visitante, guard de perfil y cinco headers.
+
+TEST admin-panel-help
+OK help defaults to visible and preference survives new providers, unavailable storage is safe
+OK headers and contextual explanations follow the same toggle, actions and title remain
+OK every main panel and nested product/legal route has a friendly description; visual editor is excluded
+OK technical errors become human messages while actionable validation and session errors survive
+OK critical alerts and confirmations do not depend on optional help visibility
+OK visible panel copy no longer promises backend operations and landing explains required and optional fields
+OK form hints follow the preference but validation and operational hints remain visible
+7 admin panel help tests passed.
+
+TEST analytics-checkout
+✔ agrupación diaria/semanal/mensual conserva todas las ventas y pedidos e intervalos (2.8158ms)
+✔ picos, empates, ausencia de actividad y porcentajes no inventan resultados (3.9611ms)
+✔ desplegable inicia cerrado, expande/contrae y no propaga selección ni envía formulario (48.0401ms)
+✔ dirección y horario legacy se conservan sin inventar estructura ni horarios (27.9409ms)
+ℹ tests 4
+ℹ suites 0
+ℹ pass 4
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 122.6605
+
+TEST business-time
+OK UTC: 10 casos UTC-3/UTC-4, medianoche, mes/año, gap/fold, filtros y fechas inválidas
+OK America/Santiago: 10 casos UTC-3/UTC-4, medianoche, mes/año, gap/fold, filtros y fechas inválidas
+OK Asia/Tokyo: 10 casos UTC-3/UTC-4, medianoche, mes/año, gap/fold, filtros y fechas inválidas
+OK Pacific/Honolulu: 10 casos UTC-3/UTC-4, medianoche, mes/año, gap/fold, filtros y fechas inválidas
+
+TEST cart-checkout
+OK: contrato real, Token/invitado, errores, doble envío, reintento, Webpay, cuatro plantillas, stock independiente y limpieza del carrito
+
+TEST checkout-shipping
+✔ Catálogo territorial: 16 regiones, alias y comunas consistentes con backend (18.5245ms)
+✔ Servicio: request, referencia, precio y errores de contrato (207.5319ms)
+▶ Plantilla 1: checkout y despacho
+  ✔ solo muestra métodos habilitados desde API (13.2874ms)
+  ✔ sin alternativas y error de carga no hay fallback (9.0774ms)
+  ✔ seleccionar región y comuna carga catálogo correcto (3.3936ms)
+  ✔ Chilexpress muestra tarifa y total exactos sobre 50.000 (1.257ms)
+  ✔ seleccionar Starken invalida Chilexpress y usa su tarifa (2.0603ms)
+  ✔ cambiar comuna invalida inmediatamente e impide confirmar durante carga (1.5157ms)
+  ✔ cambiar región no reutiliza cotización aunque la comuna sea anterior (1.0407ms)
+  ✔ respuesta tardía de destino anterior no restaura tarifa (2.0095ms)
+  ✔ fallo al cotizar bloquea y permite reintento sin 3.490 (2.1171ms)
+  ✔ cotización vencida bloquea confirmación (1.1564ms)
+  ✔ Retiro usa cero, dirección/horario y no cotiza con o sin destino (1.1987ms)
+  ✔ payload conserva dirección, operador y referencia sin precios de cliente (1.2151ms)
+✔ Plantilla 1: checkout y despacho (146.6155ms)
+▶ Plantilla 2: checkout y despacho
+  ✔ solo muestra métodos habilitados desde API (2.5571ms)
+  ✔ sin alternativas y error de carga no hay fallback (0.9217ms)
+  ✔ seleccionar región y comuna carga catálogo correcto (1.6097ms)
+  ✔ Chilexpress muestra tarifa y total exactos sobre 50.000 (1.1986ms)
+  ✔ seleccionar Starken invalida Chilexpress y usa su tarifa (1.5043ms)
+  ✔ cambiar comuna invalida inmediatamente e impide confirmar durante carga (1.2164ms)
+  ✔ cambiar región no reutiliza cotización aunque la comuna sea anterior (0.8899ms)
+  ✔ respuesta tardía de destino anterior no restaura tarifa (1.1959ms)
+  ✔ fallo al cotizar bloquea y permite reintento sin 3.490 (1.2793ms)
+  ✔ cotización vencida bloquea confirmación (1.0149ms)
+  ✔ Retiro usa cero, dirección/horario y no cotiza con o sin destino (1.1731ms)
+  ✔ payload conserva dirección, operador y referencia sin precios de cliente (1.663ms)
+✔ Plantilla 2: checkout y despacho (136.0795ms)
+▶ Plantilla 3: checkout y despacho
+  ✔ solo muestra métodos habilitados desde API (1.8416ms)
+  ✔ sin alternativas y error de carga no hay fallback (0.6033ms)
+  ✔ seleccionar región y comuna carga catálogo correcto (1.3896ms)
+  ✔ Chilexpress muestra tarifa y total exactos sobre 50.000 (0.688ms)
+  ✔ seleccionar Starken invalida Chilexpress y usa su tarifa (0.8291ms)
+  ✔ cambiar comuna invalida inmediatamente e impide confirmar durante carga (1.0955ms)
+  ✔ cambiar región no reutiliza cotización aunque la comuna sea anterior (0.8147ms)
+  ✔ respuesta tardía de destino anterior no restaura tarifa (1.2253ms)
+  ✔ fallo al cotizar bloquea y permite reintento sin 3.490 (1.1794ms)
+  ✔ cotización vencida bloquea confirmación (0.8226ms)
+  ✔ Retiro usa cero, dirección/horario y no cotiza con o sin destino (0.6844ms)
+  ✔ payload conserva dirección, operador y referencia sin precios de cliente (0.8306ms)
+✔ Plantilla 3: checkout y despacho (117.35ms)
+▶ Plantilla 4: checkout y despacho
+  ✔ solo muestra métodos habilitados desde API (1.7696ms)
+  ✔ sin alternativas y error de carga no hay fallback (0.7476ms)
+  ✔ seleccionar región y comuna carga catálogo correcto (1.1544ms)
+  ✔ Chilexpress muestra tarifa y total exactos sobre 50.000 (0.6804ms)
+  ✔ seleccionar Starken invalida Chilexpress y usa su tarifa (0.87ms)
+  ✔ cambiar comuna invalida inmediatamente e impide confirmar durante carga (1.0452ms)
+  ✔ cambiar región no reutiliza cotización aunque la comuna sea anterior (0.6334ms)
+  ✔ respuesta tardía de destino anterior no restaura tarifa (1.3209ms)
+  ✔ fallo al cotizar bloquea y permite reintento sin 3.490 (1.1462ms)
+  ✔ cotización vencida bloquea confirmación (0.6028ms)
+  ✔ Retiro usa cero, dirección/horario y no cotiza con o sin destino (0.646ms)
+  ✔ payload conserva dirección, operador y referencia sin precios de cliente (0.8878ms)
+✔ Plantilla 4: checkout y despacho (107.6865ms)
+✔ Servicio: los errores de cotización se clasifican por código y no filtran textos técnicos (84.9302ms)
+✔ Entrega: sin tarifa para el destino ofrece otras alternativas en vez de reintentar (86.704ms)
+✔ Entrega: sin otras alternativas se sugiere cambiar la comuna o contactar a la tienda (80.21ms)
+✔ Entrega: destino inválido pide revisar la dirección y no ofrece otras alternativas (74.0594ms)
+✔ Entrega: un fallo técnico o una cotización vencida sí permiten volver a cotizar (83.988ms)
+✔ Confirmar: si la tarifa venció o cambió vuelve a Entrega y vuelve a cotizar (74.7507ms)
+✔ Pedido: los errores conservan su código y no muestran textos técnicos (13.7436ms)
+ℹ tests 61
+ℹ suites 0
+ℹ pass 61
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1240.5033
+
+TEST customer-orders
+OK: pedidos cliente y propietario, contratos, Token, errores y navegación en cuatro plantillas protegidas.
+
+TEST dashboard-navigation
+✔ cada tarjeta transmite fechas exactas y período; ventas solo estados confirmados (3.4657ms)
+✔ órdenes cuenta todos y por despachar coincide con los cuatro estados del backend (3.2114ms)
+✔ fechas inclusivas interpretadas en Chile, sin depender de zona del navegador (1.8041ms)
+✔ histórico de un día y detalle emplean la página existente (0.4382ms)
+✔ rangos inválidos no amplían la consulta; fechas, estado e identificador se validan (0.3141ms)
+ℹ tests 5
+ℹ suites 0
+ℹ pass 5
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 16.311
+
+TEST dashboard
+OK metadatos analíticos válidos conservan porcentajes, estados y ticket; rechaza campos inválidos
+OK contrato, token, período y cancelación viajan al endpoint real
+OK sesión ausente no consulta y 401/403/500 se explican
+OK red, JSON inválido, respuesta malformada y abort son tratados
+OK carga, error, reintento y vacío no inventan ventas
+OK la tabla diaria mantiene el resumen dentro de un detalle inicialmente plegado
+OK tabla diaria: fechas, CLP, pedidos, estructura accesible y estados
+OK servicio diario: une ventas y pedidos  y completa los días en cero
+OK cambia período sin recarga y descarta respuesta anterior
+OK error permite reintento y conserva últimas órdenes independientes
+10 pruebas OK
+
+TEST editor-emprendedor-ux
+OK all pages are available in the compact selector without dirtying the design
+OK preview widths remain 1440, 768 and 375 with a visible device status
+OK contextual selection reopens the inspector and shows only the selected product group
+OK saving shows progress, errors keep the draft, retry clears dirty, and undo/redo preserve edits
+OK template choice can be saved alone and a discarded choice returns to the saved template
+OK four visual templates expose their personality and a real selection action
+OK returning from templates to a page or content reopens its editing options
+OK image size offers sensible presets and a direct custom value
+OK palette previews show three coordinated colors and apply all related surfaces
+OK simple inspector prioritizes fonts and palettes; advanced fields remain editable
+OK image fit is normalized, persisted and invalid values cannot reach the preview
+OK preview keyboard selection, product button context and university image protection survive disconnect
+OK responsive workspace keeps a wide canvas and stacks contextual tools on mobile
+OK identity errors distinguish authentication, server failure and store configuration
+OK identity retry recovers without a full page reload
+15 entrepreneur UX tests passed.
+
+TEST empty-state
+OK se anuncia como estado y muestra el mensaje
+OK título, ícono y acción son opcionales y solo aparecen si se entregan
+OK alineación: centrada por defecto o al inicio
+OK espacio vertical: normal, compacto o ninguno
+OK el texto se escapa, la clase extra se agrega y no quedan rastros de valores vacíos
+OK no hay estado vacío mientras carga, si falló la carga o si hay filas
+OK sin filas: "todavía no hay nada" si no se busca y "sin resultados" si se busca
+OK qué parámetros de Pedidos cuentan como filtros
+OK los filtros que reconoce son los mismos que borra el botón "Limpiar filtros" de Pedidos
+OK sin pedidos, Mis pedidos explica y ofrece ir al catálogo
+OK con pedidos, o mientras carga, no se muestra el estado vacío
+OK el detalle de un pedido no muestra "Aún no tienes pedidos"
+OK cada lista vacía usa <EmptyListState> y ya no un párrafo suelto
+OK quien usa <EmptyListState> lo importa del módulo compartido
+OK el listado de productos distingue "no hay productos" de "la búsqueda no encuentra" y no parpadea al cargar
+OK Pedidos elige el mensaje según haya filtros o no
+
+16 pruebas OK
+
+TEST google-analytics-field
+OK: el panel incorpora el campo específico de Google Analytics
+
+TEST google-analytics-public-store
+OK: Google Analytics se incorpora una sola vez y respeta el consentimiento
+
+TEST google-analytics-validation
+OK: validación y normalización de identificadores de analítica
+
+TEST guest-cart
+OK: carrito invitado real, recarga, variantes, cantidades, limpieza, corrupción, tenant y preview
+
+TEST integration-blockers
+✔ consentimientos independientes por instalación, tienda, usuario/visitante y versión (3.0911ms)
+✔ reset quita solamente el ámbito actual (1.2594ms)
+✔ JSON corrupto, sobre ajeno, fecha y elección inválidas no cuentan como consentimiento (0.3178ms)
+✔ storage denegado no inventa consentimiento ni borra otras claves (0.4406ms)
+✔ PATCH de nombre/estado no reenvía ni trunca fechas; instantes explícitos conservan microsegundos (61.2614ms)
+✔ errores 400/403/409/500 rechazan la operación sin fabricar una respuesta exitosa (105.6569ms)
+✔ editar el nombre en el componente conserva campos históricos y permite varias ofertas sin código (166.0661ms)
+ℹ tests 7
+ℹ suites 0
+ℹ pass 7
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 342.5983
+
+TEST loading-state
+OK se anuncia como estado, ocupado y con aviso cortés a los lectores de pantalla
+OK muestra el texto recibido y, sin texto, dice "Cargando…"
+OK el texto puede incluir formato y siempre se escapa
+OK la ruedita es decorativa: no se anuncia ni crea un segundo estado
+OK los tamaños de la ruedita
+OK alineación: centrada por defecto o al inicio
+OK espacio vertical: normal, compacto o ninguno
+OK la clase del contenedor se agrega al final y no deja rastros de valores vacíos
+OK el módulo es independiente: solo importa tipos de React
+OK ninguna pantalla vuelve a dibujar la carga a mano
+OK quien usa <LoadingState> lo importa del módulo compartido
+OK todos los textos de carga empiezan con "Cargando" y dicen qué se carga
+OK los textos de carga terminan igual que el resto del panel: con puntos suspensivos
+
+13 pruebas OK
+
+TEST meta-pixel-public-store
+OK: Meta Pixel público respeta consentimiento y navegación SPA
+
+TEST order-tracking
+OK: confirmación y seguimiento real, seis casos requeridos en cuatro plantillas, contrato, errores y cancelación de consultas.
+
+TEST product-visual-consistency
+OK: cantidad compartida, límites, accesibilidad, preview sin cargas/compras y consumidores visuales responsive.
+
+TEST shipping-pickup
+✔ agrupa días no consecutivos, varios horarios y cerrados; valida intervalos (4.0657ms)
+✔ dirección incompleta/no verificada y días vacíos impiden activación; desactivado permite borradores (0.5179ms)
+✔ formulario usa selectores dependientes, siete checkboxes y horas; muestra errores por campo (182.5644ms)
+✔ busca sugerencias, selecciona ubicación y la edición invalida la constancia (119.2208ms)
+✔ guardar y recargar horarios y dirección conserva transportistas (180.366ms)
+✔ sin proveedor permite entrada manual y no ofrece una búsqueda ficticia (70.9287ms)
+✔ dirección manual requiere número, campos completos, comuna coherente y horarios válidos (0.5729ms)
+✔ sin proveedor, activar retiro manual, guardar y recargar conserva dirección y horario (149.2797ms)
+✔ con proveedor, una nueva entrada manual no se guarda sin selección (74.8859ms)
+✔ constancia manual persistida se muestra manual aunque el proveedor se habilite luego (69.2728ms)
+✔ desactivar conserva campos y horarios; errores de red no anuncian guardado (63.2493ms)
+✔ fallo de carga bloquea guardado y permite reintentar (65.5748ms)
+ℹ tests 12
+ℹ suites 0
+ℹ pass 12
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 989.608
+
+TEST shipping-tracking-chilexpress
+OK: consulta Chilexpress, ruta dedicada, orden numerica y validacion de respuesta.
+
+TEST shipping-tracking
+OK: consulta de seguimiento Starken, ruta dedicada, cancelación y contrato de respuesta.
+
+TEST stock-feedback
+OK: límite por SKU, umbral <=5, avisos en cuatro plantillas, reducción/eliminación y totales
+
+TEST store-seo-metadata
+OK: consulta y aplicación de metadatos SEO en la tienda pública
+
+TEST storefront-variants
+OK: M/L, etiquetas dinámicas, SKU/precios/stock, carrito, filtros y resumen sin selector vacío

@@ -1,0 +1,146 @@
+[
+  {
+    "action": "Producto: crear, validar, recargar y editar precios",
+    "type": "AUTOMATIZADA_NAVEGADOR",
+    "expected": "Sin solicitud inválida; creación persistida y precios administrados en variantes",
+    "obtained": "Sin solicitud inválida; creación persistida y precios administrados en variantes",
+    "status": "APROBADO",
+    "evidence": "frontend/tests/qa-final-browser.cjs"
+  },
+  {
+    "action": "Marketing: personalizar, guardar, recargar y recuperar",
+    "type": "AUTOMATIZADA_NAVEGADOR",
+    "expected": "Borrador y personalización conservados después de recargar",
+    "obtained": "Borrador y personalización conservados después de recargar",
+    "status": "APROBADO",
+    "evidence": "frontend/tests/qa-final-browser.cjs"
+  },
+  {
+    "action": "Pedidos: preparar, entregar, cancelar y recargar",
+    "type": "AUTOMATIZADA_NAVEGADOR",
+    "expected": "Los mensajes y el selector coinciden con el estado persistido",
+    "obtained": "Los mensajes y el selector coinciden con el estado persistido",
+    "status": "APROBADO",
+    "evidence": "frontend/tests/qa-final-browser.cjs"
+  },
+  {
+    "action": "Transferencias: aprobar y rechazar",
+    "type": "AUTOMATIZADA_NAVEGADOR",
+    "expected": "Cada respuesta confirma el pedido correspondiente y actualiza la lista",
+    "obtained": "Cada respuesta confirma el pedido correspondiente y actualiza la lista",
+    "status": "APROBADO",
+    "evidence": "frontend/tests/qa-final-browser.cjs"
+  },
+  {
+    "action": "Entregas: guardar, recargar y recuperar de error",
+    "type": "AUTOMATIZADA_NAVEGADOR",
+    "expected": "Éxito solo al persistir; fallo sin éxito anterior y reintento correcto",
+    "obtained": "Éxito solo al persistir; fallo sin éxito anterior y reintento correcto",
+    "status": "APROBADO",
+    "evidence": "frontend/tests/qa-final-browser.cjs"
+  },
+  {
+    "action": "Contactos y exportación CSV",
+    "type": "AUTOMATIZADA_NAVEGADOR",
+    "expected": "Descarga de prueba válida; un error no anuncia generación exitosa",
+    "obtained": "Descarga de prueba válida; un error no anuncia generación exitosa",
+    "status": "APROBADO",
+    "evidence": "frontend/tests/qa-final-browser.cjs"
+  },
+  {
+    "action": "SEO y analítica: persistencia local y fallo de cuota",
+    "type": "AUTOMATIZADA_NAVEGADOR",
+    "expected": "Mensaje local veraz; datos conservados después de recargar; error sin éxito falso",
+    "obtained": "Mensaje local veraz; datos conservados después de recargar; error sin éxito falso",
+    "status": "APROBADO",
+    "evidence": "frontend/tests/qa-final-browser.cjs"
+  },
+  {
+    "action": "Acceso de clientes",
+    "type": "AUTOMATIZADA_NAVEGADOR",
+    "expected": "La confirmación explicita el almacenamiento local",
+    "obtained": "La confirmación explicita el almacenamiento local",
+    "status": "APROBADO",
+    "evidence": "frontend/tests/qa-final-browser.cjs"
+  },
+  {
+    "action": "Diseño: aplicar plantilla",
+    "type": "AUTOMATIZADA_NAVEGADOR",
+    "expected": "Selección persistida en navegador sin cambiar contenido ni catálogo",
+    "obtained": "Selección persistida en navegador sin cambiar contenido ni catálogo",
+    "status": "APROBADO",
+    "evidence": "frontend/tests/qa-final-browser.cjs"
+  },
+  {
+    "action": "Perfil: guardar correo y recuperar de error",
+    "type": "AUTOMATIZADA_NAVEGADOR",
+    "expected": "Éxito después de confirmación; recarga persistente; error mantiene edición",
+    "obtained": "Éxito después de confirmación; recarga persistente; error mantiene edición",
+    "status": "APROBADO",
+    "evidence": "frontend/tests/qa-final-browser.cjs"
+  },
+  {
+    "action": "Pagos: respuestas mal formadas y recuperación",
+    "type": "AUTOMATIZADA_NAVEGADOR",
+    "expected": "Tres pasarelas rechazan configuración vacía o tipos inválidos sin anunciar éxito",
+    "obtained": "Tres pasarelas rechazan configuración vacía o tipos inválidos sin anunciar éxito",
+    "status": "APROBADO",
+    "evidence": "frontend/tests/qa-final-browser.cjs"
+  },
+  {
+    "action": "Pagos: prevención de escrituras duplicadas",
+    "type": "AUTOMATIZADA_NAVEGADOR",
+    "expected": "Dos activaciones inmediatas producen una sola solicitud de guardado",
+    "obtained": "Dos activaciones inmediatas producen una sola solicitud de guardado",
+    "status": "APROBADO",
+    "evidence": "frontend/tests/qa-final-browser.cjs"
+  },
+  {
+    "action": "Legal terms: borrador, publicación y tienda",
+    "type": "AUTOMATIZADA_NAVEGADOR",
+    "expected": "El borrador no se publica; versión confirmada tras publicar; Strict Mode sin error falso",
+    "obtained": "El borrador no se publica; versión confirmada tras publicar; Strict Mode sin error falso",
+    "status": "APROBADO",
+    "evidence": "frontend/tests/qa-final-browser.cjs"
+  },
+  {
+    "action": "Legal privacy: borrador, publicación y tienda",
+    "type": "AUTOMATIZADA_NAVEGADOR",
+    "expected": "El borrador no se publica; versión confirmada tras publicar; Strict Mode sin error falso",
+    "obtained": "El borrador no se publica; versión confirmada tras publicar; Strict Mode sin error falso",
+    "status": "APROBADO",
+    "evidence": "frontend/tests/qa-final-browser.cjs"
+  },
+  {
+    "action": "Legal refund: borrador, publicación y tienda",
+    "type": "AUTOMATIZADA_NAVEGADOR",
+    "expected": "El borrador no se publica; versión confirmada tras publicar; Strict Mode sin error falso",
+    "obtained": "El borrador no se publica; versión confirmada tras publicar; Strict Mode sin error falso",
+    "status": "APROBADO",
+    "evidence": "frontend/tests/qa-final-browser.cjs"
+  },
+  {
+    "action": "Legal cookies: borrador, publicación y tienda",
+    "type": "AUTOMATIZADA_NAVEGADOR",
+    "expected": "El borrador no se publica; versión confirmada tras publicar; Strict Mode sin error falso",
+    "obtained": "El borrador no se publica; versión confirmada tras publicar; Strict Mode sin error falso",
+    "status": "APROBADO",
+    "evidence": "frontend/tests/qa-final-browser.cjs"
+  },
+  {
+    "action": "Legal: historial, recuperación y restauración",
+    "type": "AUTOMATIZADA_NAVEGADOR",
+    "expected": "Recuperar cambia solo el borrador; publicación y versión vigente se conservan",
+    "obtained": "Recuperar cambia solo el borrador; publicación y versión vigente se conservan",
+    "status": "APROBADO",
+    "evidence": "frontend/tests/qa-final-browser.cjs"
+  },
+  {
+    "action": "Sin excepciones React",
+    "type": "AUTOMATIZADA_NAVEGADOR",
+    "expected": "Ninguna excepción no capturada durante los flujos",
+    "obtained": "Ninguna excepción no capturada durante los flujos",
+    "status": "APROBADO",
+    "evidence": "frontend/tests/qa-final-browser.cjs"
+  }
+]
