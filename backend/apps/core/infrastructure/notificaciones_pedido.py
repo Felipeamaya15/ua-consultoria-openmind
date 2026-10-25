@@ -9,6 +9,7 @@ Para no enviar dos veces el mismo aviso, en el pedido queda una marca en `entreg
 
     {'enviado': True | False, 'codigo': 'enviado' | 'error_de_envio' | ..., 'fecha': ISO, 'intentos': N}
 
+- La marca guarda también el destinatario enmascarado (`m***@gmail.com`): el correo completo nunca se copia al registro.
 - Si el aviso ya salió (`enviado`), no se repite aunque el pedido vuelva a ese estado.
 - Si falló, se reintenta la próxima vez que el pedido entre en ese estado.
 - Mientras un envío está en curso (`codigo` "enviando", hace menos de 5 minutos) no se inicia otro.
@@ -20,14 +21,14 @@ from django.db import transaction
 from django.utils import timezone
 
 from apps.core.domain.plantillas_correo import PlantillaCorreoInvalida, construir_correo
-from apps.core.domain.plantillas_correo.base import contexto_pedido
-from apps.core.infrastructure.email_service import ResultadoEnvio, enviar_correo
+from apps.core.domain.plantillas_correo.base import contexto_pedido, correo_comprador
+from apps.core.infrastructure.email_service import ResultadoEnvio, correo_enmascarado, enviar_correo
 from apps.core.models import Pedido
 
 logger = logging.getLogger(__name__)
 
 # Qué correo corresponde cuando un pedido llega a cada estado.
-CORREO_POR_ESTADO = {'enviado': 'order_shipped'}
+CORREO_POR_ESTADO = {'pagado': 'payment_success', 'enviado': 'order_shipped'}
 ESPERA_ENVIO_EN_CURSO = timedelta(minutes=5)
 
 # Códigos del resultado además de los del servicio de correo (enviado, destinatario_invalido, ...).
@@ -101,15 +102,12 @@ def _reservar(pedido, tipo):
     return None, anterior
 
 
-def notificar_cambio_de_estado(pedido, estado_anterior):
-    """Envía el aviso que corresponde cuando un pedido cambió de estado. Nunca lanza.
+def notificar_evento(tipo, pedido):
+    """Envía el aviso `tipo` del pedido una sola vez (ver la marca en el encabezado). Nunca lanza.
 
-    Devuelve un `ResultadoEnvio`, o None si ese cambio de estado no genera ningún correo.
+    Devuelve un `ResultadoEnvio`, o None si falló algo inesperado antes de poder enviar.
     """
     try:
-        tipo = CORREO_POR_ESTADO.get(pedido.estado)
-        if tipo is None or pedido.estado == estado_anterior:
-            return None
         motivo, anterior = _reservar(pedido, tipo)
         if motivo:
             return ResultadoEnvio(False, motivo)
@@ -124,8 +122,28 @@ def notificar_cambio_de_estado(pedido, estado_anterior):
             _guardar_marca(pedido, tipo, {
                 'enviado': resultado.enviado, 'codigo': resultado.codigo, 'fecha': timezone.now().isoformat(),
                 'intentos': anterior.get('intentos', 0) + 1,
+                'destinatario': correo_enmascarado(correo_comprador(pedido)),  # a quién se avisó, sin el correo completo
             })
         return resultado
     except Exception:
-        logger.exception('Falló el aviso por correo del pedido %s', getattr(pedido, 'pk', '?'))
+        logger.exception('Falló el aviso por correo %s del pedido %s', tipo, getattr(pedido, 'pk', '?'))
         return None
+
+
+def notificar_cambio_de_estado(pedido, estado_anterior):
+    """Envía el aviso que corresponde cuando un pedido cambió de estado. Nunca lanza.
+
+    Devuelve un `ResultadoEnvio`, o None si ese cambio de estado no genera ningún correo.
+    """
+    tipo = CORREO_POR_ESTADO.get(getattr(pedido, 'estado', None))
+    if tipo is None or pedido.estado == estado_anterior:
+        return None
+    return notificar_evento(tipo, pedido)
+
+def notificar_pago_rechazado(pedido):
+    """Correo de pago rechazado (SCRUM-430): se envía cuando el propietario rechaza el pago del pedido."""
+    return notificar_evento('payment_rejected', pedido)
+
+def notificar_recepcion(pedido):
+    """Correo de confirmación de recepción del pedido (SCRUM-428): se envía al crear el pedido."""
+    return notificar_evento('order_received', pedido)

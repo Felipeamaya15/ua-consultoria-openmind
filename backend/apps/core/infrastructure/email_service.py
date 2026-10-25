@@ -62,6 +62,9 @@ def _destinatario_valido(destinatario):
         return None
     return limpio
 
+def correo_valido(correo):
+    """El correo limpio si es una dirección válida; None si no lo es."""
+    return _destinatario_valido(correo)
 
 def _una_linea(texto, maximo):
     """Deja el texto en una sola línea (sin saltos que permitan inyectar cabeceras) y con largo acotado."""

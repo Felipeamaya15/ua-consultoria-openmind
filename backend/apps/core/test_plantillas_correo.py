@@ -65,8 +65,12 @@ class PlantillaPagoRechazadoTests(PlantillasCorreoBase):
         for esperado in ('Hola Ana', 'No se realizó ningún cobro', 'Tienda Demo'):
             self.assertIn(esperado, correo.cuerpo)
 
-    def test_rechaza_pedido_que_no_esta_pendiente(self):
-        for estado in ('pagado', 'cancelado', 'entregado'):
+    def test_se_genera_en_pedido_pendiente_o_cancelado_por_rechazo(self):
+        for estado in ('pendiente', 'cancelado'):
+            self.assertIn('No se realizó ningún cobro', construir_correo('payment_rejected', self.pedido(estado=estado)).cuerpo)
+
+    def test_rechaza_pedido_que_ya_esta_pagado(self):
+        for estado in ('pagado', 'entregado'):
             with self.assertRaises(PlantillaCorreoInvalida):
                 construir_correo('payment_rejected', self.pedido(estado=estado))
 

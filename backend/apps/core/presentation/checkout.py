@@ -17,6 +17,7 @@ from apps.authentication.infrastructure.models import ConfiguracionAutenticacion
 from apps.authentication.presentation.profile import IsCustomer, StrictSerializer
 from apps.catalog.domain.stock import validate_stock, is_variant_active
 from apps.catalog.infrastructure.repositories import ProductRepository
+from apps.core.infrastructure.notificaciones_pedido import notificar_recepcion
 from apps.core.infrastructure.tenant import resolver_tienda
 from apps.core.models import Pedido, ItemPedido, Tienda, Producto, ConfiguracionPago, Promocion
 from apps.core.promotions import calculate_promotion, PromotionError
@@ -221,6 +222,7 @@ class CheckoutOrderAPIView(ErroresDeCotizacionMixin, APIView):
                     except Exception:
                         logger.exception('No se pudo restituir stock del pedido %s, SKU %s', order.pk, line['sku'])
                 raise
+            transaction.on_commit(lambda: notificar_recepcion(order))
             return success_response(data=result, mensaje='Pedido creado correctamente.', status=201)
 
     @staticmethod

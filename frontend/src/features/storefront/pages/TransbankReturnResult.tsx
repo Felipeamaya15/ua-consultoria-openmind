@@ -40,11 +40,20 @@ export default function TransbankReturnResult({
 
     // Sin token_ws pero con TBK_TOKEN: el cliente abandonó o expiró el pago.
     if (!tokenWs) {
-      setResult(
-        tbkToken
-          ? { status: 'cancelled' }
-          : { status: 'error', message: 'No recibimos la información del pago.' },
-      );
+      if (tbkToken) {
+        const abortKey = `tbk-abort:${tbkToken}`;
+        try {
+          if (!sessionStorage.getItem(abortKey)) {
+            sessionStorage.setItem(abortKey, '1');
+            transbankPaymentService.pagoAbortado(tiendaId, tbkToken).catch(() => undefined);
+          }
+        } catch {
+          transbankPaymentService.pagoAbortado(tiendaId, tbkToken).catch(() => undefined);
+        }
+        setResult({ status: 'cancelled' });
+      } else {
+        setResult({ status: 'error', message: 'No recibimos la información del pago.' });
+      }
       return;
     }
 

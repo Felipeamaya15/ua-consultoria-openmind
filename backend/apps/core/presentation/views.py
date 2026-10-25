@@ -5,6 +5,7 @@ from rest_framework.exceptions import APIException
 from django.db import transaction
 
 from apps.core.delivery import delivery_data, delivery_for_store
+from apps.core.infrastructure.notificaciones_pedido import notificar_cambio_de_estado, notificar_pago_rechazado
 from apps.core.infrastructure.tenant import resolver_tienda, resolver_tienda_id
 from apps.core.models import (
     ConfiguracionMercadoPago,
@@ -219,11 +220,14 @@ class VerificarTransferenciaLinkifyAPIView(APIView):
             if resultado.get("verificado"):
                 with transaction.atomic():
                     pedido = Pedido.objects.select_for_update().get(pk=pedido.pk, tienda=tienda)
-                    if pedido.estado == 'pendiente':
+                    pasa_a_pagado = pedido.estado == 'pendiente'
+                    if pasa_a_pagado:
                         pedido.estado = 'pagado'
                         pedido.save(update_fields=['estado'])
                     elif pedido.estado != 'pagado':
                         return error_response('El pedido requiere revisión manual.', 'ESTADO_PEDIDO_INVALIDO', status=409)
+                if pasa_a_pagado:
+                    notificar_cambio_de_estado(pedido, 'pendiente')
                 return success_response(mensaje="¡Match exitoso! Transferencia encontrada y pedido actualizado.")
             else:
                 return error_response(
@@ -296,6 +300,7 @@ class AprobarTransferenciaManualAPIView(APIView):
             pedido.estado = 'pagado'
             pedido.save(update_fields=['estado'])
 
+        notificar_cambio_de_estado(pedido, 'pendiente')
         return success_response(
             data={'id_pedido': pedido.pk, 'estado': pedido.estado},
             mensaje='Transferencia aprobada y pedido marcado como pagado.',
@@ -346,6 +351,7 @@ class RechazarTransferenciaManualAPIView(APIView):
             pedido.estado = 'cancelado'
             pedido.save(update_fields=['estado'])
 
+        notificar_pago_rechazado(pedido)
         return success_response(
             data={'id_pedido': pedido.pk, 'estado': pedido.estado},
             mensaje='Transferencia rechazada y pedido cancelado.',

@@ -586,9 +586,29 @@ class ConfirmarPagoTransbankUseCase:
             ambiente=config.ambiente,
         )
 
-        resultado = adaptador.confirmar_transaccion(token_ws=token_ws)
+        try:
+            resultado = adaptador.confirmar_transaccion(token_ws=token_ws)
+        except TransbankRechazoException:
+            self._avisar_pago_rechazado(tienda_pk, token_ws)
+            raise
         self._registrar_pago_aprobado(tienda_pk, resultado)
         return resultado
+
+    @staticmethod
+    def _avisar_pago_rechazado(tienda_pk: Any, token_ws: str) -> None:
+        """Correo de pago rechazado al comprador (SCRUM-430); el pedido sigue pendiente. Nunca lanza."""
+        import logging
+        from apps.core.infrastructure.notificaciones_pedido import notificar_pago_rechazado
+        from apps.core.models import Pedido
+
+        try:
+            pedido = Pedido.objects.filter(
+                tienda_id=tienda_pk, medio_pago="Transbank", estado="pendiente", webpay_token=token_ws
+            ).first()
+            if pedido:
+                notificar_pago_rechazado(pedido)
+        except Exception:
+            logging.getLogger(__name__).exception("No se pudo avisar el pago rechazado de Webpay.")
 
     @staticmethod
     def _registrar_pago_aprobado(tienda_pk: Any, resultado: Dict[str, Any]) -> None:
@@ -601,6 +621,7 @@ class ConfirmarPagoTransbankUseCase:
             raise TransbankTransaccionException("Webpay devolvió un monto inválido.") from None
         if not monto.is_finite() or monto <= 0:
             raise TransbankTransaccionException("Webpay devolvió un monto inválido.")
+        pasa_a_pagado = False
         with transaction.atomic():
             pedido = Pedido.objects.select_for_update().filter(
                 identificador=str(resultado.get("orden_compra") or ""), tienda_id=tienda_pk
@@ -611,12 +632,28 @@ class ConfirmarPagoTransbankUseCase:
                 raise TransbankTransaccionException("El pedido no admite este pago.")
             if pedido.monto_total != monto:
                 raise TransbankTransaccionException("El monto autorizado no coincide con el total del pedido. Contacta a la tienda.")
-            if pedido.estado == "pendiente":
+            pasa_a_pagado = pedido.estado == "pendiente"
+            if pasa_a_pagado:
                 pedido.estado = "pagado"
                 pedido.save(update_fields=["estado"])
+        if pasa_a_pagado:
+            # Correo de pago exitoso al comprador (SCRUM-429); no interrumpe la confirmación si falla.
+            from apps.core.infrastructure.notificaciones_pedido import notificar_cambio_de_estado
+            notificar_cambio_de_estado(pedido, "pendiente")
 
     def ejecutar(self, *args, **kwargs) -> Dict[str, Any]:
         return self.execute(*args, **kwargs)
+
+
+class RegistrarPagoAbortadoTransbankUseCase:
+    """El comprador anuló el pago en el formulario de Webpay (retorna TBK_TOKEN, sin token_ws).
+
+    Según Transbank no se debe confirmar la transacción: solo se le avisa al comprador que el pago no se completó.
+    """
+
+    def execute(self, id_tienda: Any, tbk_token: str) -> None:
+        tienda_pk = getattr(id_tienda, "id_tienda", None) or getattr(id_tienda, "pk", None) or id_tienda
+        ConfirmarPagoTransbankUseCase._avisar_pago_rechazado(tienda_pk, tbk_token)
 
 
 # ==========================================================

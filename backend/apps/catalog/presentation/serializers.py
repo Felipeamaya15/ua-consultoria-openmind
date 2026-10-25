@@ -493,6 +493,11 @@ class ConfirmarPagoTransbankSerializer(serializers.Serializer):
     id_tienda = serializers.IntegerField(required=True)
     token_ws = serializers.CharField(max_length=255, required=True)
 
+class PagoAbortadoTransbankSerializer(serializers.Serializer):
+    id_tienda = serializers.IntegerField(required=True)
+    tbk_token = serializers.CharField(max_length=512, required=True)
+
+
 class ConfiguracionPayPalInputSerializer(serializers.Serializer):
     client_id = serializers.CharField(max_length=255, required=False, allow_blank=True)
     client_secret = serializers.CharField(max_length=255, required=False, allow_blank=True)

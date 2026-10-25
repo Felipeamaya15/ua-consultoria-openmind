@@ -116,7 +116,7 @@ class EnvioAlDespacharTests(CorreoDeDespachoBase):
 
 class CuandoNoSeEnviaTests(CorreoDeDespachoBase):
     def test_los_otros_cambios_de_estado_no_envian_correo(self):
-        for origen, destino in (('pendiente', 'pagado'), ('pagado', 'preparando'), ('preparando', 'en_origen'), ('enviado', 'en_reparto'),
+        for origen, destino in (('pagado', 'preparando'), ('preparando', 'en_origen'), ('enviado', 'en_reparto'),
                                 ('en_reparto', 'entregado'), ('pagado', 'cancelado'), ('entregado', 'pendiente')):
             respuesta = self.cambiar(self.pedido(estado=origen), destino)
             self.assertEqual(respuesta.status_code, 200, (origen, destino))
@@ -193,9 +193,9 @@ class CuandoNoSeEnviaTests(CorreoDeDespachoBase):
         self.assertEqual(len(mail.outbox), 1)
 
     def test_la_funcion_ignora_cambios_que_no_generan_aviso(self):
-        pedido = self.pedido(estado='pagado')
+        pedido = self.pedido(estado='preparando')
+        self.assertIsNone(notificar_cambio_de_estado(pedido, 'preparando'))
         self.assertIsNone(notificar_cambio_de_estado(pedido, 'pagado'))
-        self.assertIsNone(notificar_cambio_de_estado(pedido, 'pendiente'))
         self.assertEqual(mail.outbox, [])
 
 
