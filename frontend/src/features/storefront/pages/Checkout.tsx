@@ -1,3 +1,5 @@
+import { CommercialOptIn } from '../components/store/CommercialOptIn';
+import { requestConsent } from '../services/commercialConsent';
 import { checkoutPreviewStep } from '../visual/pages';
 import { ErrorState, LoadingState } from '../../../shared/components/states';
 import { useEffect, useMemo, useState, useRef } from 'react';
@@ -292,8 +294,13 @@ export default function Checkout() {
 
   const submitting = useRef(false);
   const checkoutAttempt = useRef({signature: '', key: ''});
+  const [commercial, setCommercial] = useState(false);
+  const [consentMessage, setConsentMessage] = useState('');
+  const consentRequested = useRef('');
+  const consentSending = useRef(false);
 
-  const { route, isMinimal, isVisual, isCatalog } =
+
+  const { route, templateNumber, isMinimal, isVisual, isCatalog } =
     useStorefrontTemplate();
 
   const { identity } = useStoreIdentity();
@@ -709,8 +716,18 @@ export default function Checkout() {
     return Object.keys(newErrors).length === 0;
   };
 
-  const next = () => {
-    if (!validate(step)) return;
+  const next = async () => {
+    if (consentSending.current || !validate(step)) return;
+    if (step === 'contact' && commercial && consentRequested.current !== contact.email.trim().toLowerCase()) {
+      consentSending.current = true;
+      setConsentMessage('Solicitando confirmación de correo…');
+      try {
+        const result = await requestConsent(contact.email, templateNumber);
+        consentRequested.current = contact.email.trim().toLowerCase();
+        setConsentMessage(result.mensaje);
+      } catch (e) { setConsentMessage(e instanceof Error ? e.message : 'La compra puede continuar. Reintenta desde Preferencias comerciales.'); }
+      finally { consentSending.current = false; }
+    }
 
     const index = STEPS.findIndex(
       (item) => item.id === step,
@@ -992,6 +1009,11 @@ export default function Checkout() {
           {/* ===============================================
               CONTACTO
           ================================================ */}
+          {consentMessage && <p role="status" className="my-3 text-sm border rounded p-3">{consentMessage}</p>}
+          {step === 'contact' && <div className="mb-4 border rounded p-4">
+            <CommercialOptIn checked={commercial} onChange={setCommercial} />
+            <Link className="text-sm underline" to={route('preferencias-comerciales')}>Consultar o retirar mi autorización comercial</Link>
+          </div>}
           {step === 'contact' && (
             <div data-visual-section="pagePanel" data-page-panel className={panelClass}>
               <div>

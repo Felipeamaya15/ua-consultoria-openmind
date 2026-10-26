@@ -2,6 +2,7 @@ import { lazyPage } from '../LazyPage';
 const CustomerOrders = lazyPage(() => import('../../features/storefront/pages/CustomerOrders'));
 import { RequireCustomer } from '../../features/storefront/components/store/AccountNavigation';
 const Profile = lazyPage(() => import('../../features/storefront/pages/Profile'));
+const CommercialPreferences = lazyPage(() => import('../../features/storefront/pages/CommercialPreferences'));
 
 import { adminRoute } from '../../features/admin/routes';
 import {
@@ -59,6 +60,7 @@ const sharedChildren = [
   { path: 'mis-pedidos', element: <RequireCustomer><CustomerOrders /></RequireCustomer> },
   { path: 'mis-pedidos/:id', element: <RequireCustomer><CustomerOrders /></RequireCustomer> },
   { path: 'perfil', element: <RequireCustomer><Profile /></RequireCustomer> },
+  { path: 'preferencias-comerciales', element: <CommercialPreferences /> },
   {
     path: 'catalogo',
     element: <Catalog />,

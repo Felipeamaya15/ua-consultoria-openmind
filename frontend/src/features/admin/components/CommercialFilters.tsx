@@ -67,7 +67,7 @@ export default function CommercialFilters({ params, onApply, contacts = false }:
           {contacts ? (
             <label className="block text-xs font-medium text-[#52617a]">Consentimiento comercial
               <select className={`mt-1 ${field}`} value={consent} onChange={e => setConsent(e.target.value)}>
-                <option value="todos">Todos los contactos</option><option value="autorizado">Autorizado expresamente</option><option value="retirado">Autorización retirada</option><option value="sin_registro">Sin autorización registrada</option>
+                <option value="todos">Todos los contactos</option><option value="autorizado">Autorizado expresamente</option><option value="pendiente">Pendiente de verificación</option><option value="retirado">Autorización retirada</option><option value="sin_registro">Sin autorización registrada</option>
               </select>
             </label>
           ) : (

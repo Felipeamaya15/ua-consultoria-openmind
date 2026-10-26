@@ -12,7 +12,7 @@ export interface HistoryOrder {
   items: HistoryLine[]; entrega?: { metodo?: string; direccion?: Record<string, unknown>; retiro?: { address?: string; seleccion?: { fecha: string; hora: string } } };
 }
 export interface Pagination { pagina: number; tamano: number; total: number; total_paginas: number }
-export interface Contact { email: string; cantidad_pedidos: number; ultimo_pedido: string; consentimiento: 'autorizado' | 'retirado' | 'sin_registro'; fecha_consentimiento: string | null }
+export interface Contact { email: string; cantidad_pedidos: number; ultimo_pedido: string | null; consentimiento: 'pendiente' | 'autorizado' | 'retirado' | 'sin_registro'; fecha_consentimiento: string | null }
 export interface SalesHistory {
   resumen: { cantidad_ventas: number; total_vendido: string; ticket_promedio: string };
   importes: { bruto_productos: string; descuentos: string; neto_productos: string; envio: string; importe_confirmado: string; nota_fechas: string; nota_descuentos: string; pedidos_sin_lineas: number };

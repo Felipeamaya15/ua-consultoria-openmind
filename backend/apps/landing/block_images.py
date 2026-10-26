@@ -10,6 +10,7 @@ from urllib.parse import urlparse
 from django.conf import settings
 from django.core.files.base import ContentFile
 from django.core.files.storage import FileSystemStorage
+from django.core.exceptions import ImproperlyConfigured
 from pathlib import Path
 from PIL import Image, UnidentifiedImageError
 from rest_framework import serializers
@@ -60,6 +61,11 @@ def store_block_images(content, store_id):
 
 
 def block_storage():
-    # Dedicated media subtree also works for installations with no MEDIA_ROOT.
-    root = Path(settings.MEDIA_ROOT or settings.BASE_DIR) / 'landing' / 'blocks'
+    if not settings.MEDIA_ROOT:
+        raise ImproperlyConfigured('MEDIA_ROOT must be a dedicated media directory.')
+    media = Path(settings.MEDIA_ROOT).resolve()
+    base = Path(settings.BASE_DIR).resolve()
+    if base.is_relative_to(media):
+        raise ImproperlyConfigured('MEDIA_ROOT must not contain backend source files.')
+    root = media / 'landing' / 'blocks'
     return FileSystemStorage(location=root, base_url='/media/landing/blocks/')

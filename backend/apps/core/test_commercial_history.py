@@ -168,7 +168,9 @@ class CommercialHistoryTests(TestCase):
 
     def consent(self, email, state='autorizado'):
         return ConsentimientoComercial.objects.create(tienda=self.store, email=email, estado=state,
-                    version_texto='qa-v1', referencia_evidencia='fixture-explicit-opt-in')
+                    version_texto='qa-v1', referencia_evidencia='fixture-explicit-opt-in',
+                    verificado=state == 'autorizado', fecha_verificacion=timezone.now() if state == 'autorizado' else None,
+                    fecha_autorizacion=timezone.now() if state == 'autorizado' else None)
 
     def test_14_marketing_explicit_opt_in_only_and_withdrawal(self):
         record = self.consent(' BUYER@example.COM ')
