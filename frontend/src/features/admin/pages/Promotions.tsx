@@ -391,30 +391,32 @@ export default function Promotions() {
         open={showModal}
         onClose={() => setShowModal(false)}
         title={editPromo?.id ? "Editar promoción" : "Nueva promoción"}
-        size="lg"
+        size="xl"
       >
         <form
-          className="flex flex-col gap-4"
+          className="flex flex-col gap-5"
           onSubmit={(event) => {
             event.preventDefault()
             void save()
           }}
         >
           {error && <Alert variant="error">{error}</Alert>}
-          <Input
-            label="Nombre interno"
-            value={editPromo?.name ?? ""}
-            onChange={(e) => patch({ name: e.target.value })}
-            placeholder="Ej: Descuento Verano 2026"
-          />
-          <Input
-            label={editPromo?.type === "precio_oferta" ? "Código de referencia (opcional)" : "Código de descuento (obligatorio)"}
-            required={editPromo?.type !== "precio_oferta"} maxLength={40} persistentHint
-            value={editPromo?.code ?? ""}
-            onChange={(e) => patch({ code: e.target.value.toUpperCase() })}
-            placeholder="VERANO20"
-            hint="Usa letras, números y guiones (ej: BIENVENIDA-10)"
-          />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Input
+              label="Nombre interno"
+              value={editPromo?.name ?? ""}
+              onChange={(e) => patch({ name: e.target.value })}
+              placeholder="Ej: Descuento Verano 2026"
+            />
+            <Input
+              label={editPromo?.type === "precio_oferta" ? "Código de referencia (opcional)" : "Código de descuento (obligatorio)"}
+              required={editPromo?.type !== "precio_oferta"} maxLength={40} persistentHint
+              value={editPromo?.code ?? ""}
+              onChange={(e) => patch({ code: e.target.value.toUpperCase() })}
+              placeholder="VERANO20"
+              hint="Usa letras, números y guiones (ej: BIENVENIDA-10)"
+            />
+          </div>
           <Select
             label="Tipo de descuento"
             value={editPromo?.type ?? "percentage"}
@@ -432,7 +434,7 @@ export default function Promotions() {
               ...(editPromo?.type === "precio_oferta" ? [{ value: "precio_oferta", label: "Oferta de producto (sin cupón)" }] : []),
             ]}
           />
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Input
               label={
                 editPromo?.type === "percentage"
@@ -478,7 +480,7 @@ export default function Promotions() {
               hint="Opcional"
             />
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Input
               label="Inicio de vigencia"
               type="text"
