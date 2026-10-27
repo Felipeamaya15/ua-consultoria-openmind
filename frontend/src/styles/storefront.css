@@ -133,21 +133,54 @@ body {
   --t-heading-font: 'Plus Jakarta Sans', sans-serif;
 }
 
+[data-storefront-visual] {
+  --storefront-wide-width: min(92vw, 1560px);
+  --storefront-focused-width: min(92vw, 1080px);
+  --visual-content-width: var(--storefront-wide-width) !important;
+  --visual-catalog-width: var(--storefront-wide-width) !important;
+  --visual-catalog-grid-max-width: var(--storefront-wide-width) !important;
+  --visual-grid-max-width: var(--storefront-wide-width) !important;
+  --visual-hero-width: var(--storefront-wide-width) !important;
+  --visual-section-content-width: var(--storefront-wide-width) !important;
+  --visual-section-featured-width: var(--storefront-wide-width) !important;
+  --visual-section-benefits-width: var(--storefront-wide-width) !important;
+  --visual-footer-width: var(--storefront-wide-width) !important;
+  --visual-page-width: var(--storefront-wide-width) !important;
+}
+
+[data-storefront-visual] [data-visual-page]:not([data-visual-page="login"]) {
+  --visual-page-width: var(--storefront-wide-width) !important;
+  --visual-page-form-width: 100% !important;
+}
+
 [data-storefront-visual] > main,
 [data-storefront-visual] > div > main {
   width: 100%;
   min-width: 0;
 }
 
-[data-storefront-visual] .ua-store-page:not([data-visual-page="login"]) > div,
-[data-storefront-visual] .ua-store-page:not([data-visual-page="login"]) > main,
-[data-storefront-visual] .ua-store-page:not([data-visual-page="login"]) > section {
-  max-width: 100% !important;
+[data-storefront-visual] .ua-store-page:not([data-visual-page="login"]),
+[data-storefront-visual] [data-visual-catalog],
+[data-storefront-visual] [data-visual-catalog] > section,
+[data-storefront-visual] [data-visual-grid],
+[data-storefront-visual] [data-visual-grid="catalog"],
+[data-storefront-visual] [data-visual-part="headerLayout"],
+[data-storefront-visual] [data-visual-part="heroLayout"],
+[data-storefront-visual] [data-visual-section="sections"],
+[data-storefront-visual] [data-visual-section="footer"] > div,
+[data-storefront-visual] .landing-details__inner,
+[data-storefront-visual] :is(.max-w-5xl, .max-w-6xl, .max-w-7xl, .max-w-\[1160px\], .max-w-\[1180px\], .max-w-\[1320px\]) {
+  max-width: var(--storefront-wide-width) !important;
   width: 100%;
+  margin-inline: auto;
 }
 
+[data-storefront-visual] .ua-store-page:not([data-visual-page="login"]) > div,
+[data-storefront-visual] .ua-store-page:not([data-visual-page="login"]) > main,
+[data-storefront-visual] .ua-store-page:not([data-visual-page="login"]) > section,
 [data-storefront-visual] .ua-store-page:not([data-visual-page="login"]) [data-page-form] {
-  max-width: 100%;
+  max-width: 100% !important;
+  width: 100%;
 }
 
 /* Animation utilities */
