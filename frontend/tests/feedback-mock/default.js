@@ -9,9 +9,11 @@ const initial = () => ({
   product: { id, revision: 1, nombre: 'Producto QA', descripcion: 'Descripción de prueba', categoria: 'Pruebas', activo: true, imagenes: [pixel], variantes: [{ sku: 'QA-UNO', precio: 10000, precio_oferta: null, stock: 4, atributos_variante: [] }], seo: {} },
   promotions: [], orderStatus: 'pagado', emailFailed: false, counts: {}, failBusiness: false, failLanding: false, failLegal: false, failPayment: false, failEmails: false, delay: 0,
   emailTemplates: Object.fromEntries(['order_received', 'payment_success', 'payment_rejected', 'order_shipped'].map(type => [type, { enabled: true, subject: 'Asunto QA', preheader: 'Vista previa QA', body: 'Hola {{customerName}}' }])),
+  ownerEmail: 'owner@example.test', transfers: [], legalPages: legalPages(),
+  shipping: { chilexpress: { enabled: false, accountId: '', apiKey: '', status: 'not_configured', tarifas: [] }, starken: { enabled: false, accountId: '', apiKey: '', status: 'not_configured', tarifas: [] }, pickup: { enabled: false, address: '', schedule: '' } },
 });
 const legalPages = () => Object.fromEntries(['terms', 'privacy', 'refund', 'cookies'].map(type => [type, { title: type, published: 'Contenido legal QA', draft: 'Contenido legal QA', version: 1, lastPublished: null, historial: [] }]));
-const labels = { pagado: 'Pagado', preparando: 'En preparación', enviado: 'Despachado', entregado: 'Entregado', cancelado: 'Cancelado' };
+const labels = { pendiente: 'Pendiente', en_origen: 'En origen', en_reparto: 'En reparto', pagado: 'Pagado', preparando: 'En preparación', enviado: 'Despachado', entregado: 'Entregado', cancelado: 'Cancelado' };
 const counts = {};
 const order = state => ({ id_pedido: 7, identificador: 'QA-7', nombre_contacto: 'Cliente QA', correo_contacto: 'qa@example.test', monto_total: '10000.00', costo_envio: '0.00', descuento: '0.00', estado: state.orderStatus, estado_etiqueta: labels[state.orderStatus], fecha_creacion: '2026-10-20T12:00:00Z', metodo_pago: 'Transferencia', pago_estado: 'confirmado', moneda: 'CLP', items: [] });
 http.createServer(async (req, res) => {
@@ -39,9 +41,28 @@ http.createServer(async (req, res) => {
     const key = req.method + ' ' + path;
     counts[key] = (counts[key] || 0) + 1;
     if (req.method !== 'GET' && state.delay) await new Promise(resolve => setTimeout(resolve, state.delay));
+    if (req.method !== 'GET' && state.writeStatus) return fail(state.writeStatus);
     if (path === '/api/auth/me/') return ok({ id: 7, username: 'qa', is_staff: false, is_store_owner: true });
     if (path === '/api/pagos/mi-tienda/') return ok({ id_tienda: 1 });
-    if (path === '/api/pagos/transferencias/pendientes/') return ok([]);
+    if (path === '/api/pagos/transferencias/pendientes/') return ok(state.transfers);
+    if (/^\/api\/pagos\/transferencias\/\d+\/(aprobar|rechazar)\/$/.test(path)) {
+      const pedidoId = Number(path.split('/')[4]), row = state.transfers.find(row => row.id_pedido === pedidoId);
+      if (!row) return fail(404);
+      state.transfers = state.transfers.filter(row => row.id_pedido !== pedidoId);
+      const estado = path.includes('/aprobar/') ? 'pagado' : 'cancelado'; await pm.state.set('feedback.state', state);
+      return ok({ id_pedido: pedidoId, estado }, estado === 'pagado' ? 'Transferencia aprobada correctamente.' : 'Transferencia rechazada correctamente.');
+    }
+    if (path === '/api/entregas/retiro/direcciones/') return ok({ configured: false });
+    if (path === '/api/entregas/configuracion/') {
+      if (req.method === 'PUT') { state.shipping = req.body; await pm.state.set('feedback.state', state); }
+      return ok(state.shipping);
+    }
+    if (path === '/api/tienda/contactos/exportar/') {
+      if (state.failExport) return fail(503);
+      res.writeHead(200, { 'Content-Type': 'text/csv;charset=utf-8', 'Content-Disposition': 'attachment; filename="contactos-qa.csv"' });
+      return res.end('email,cantidad_pedidos\r\ncliente@example.test,1\r\n');
+    }
+    if (path === '/api/tienda/contactos/') return ok([{ email: 'cliente@example.test', cantidad_pedidos: 1, ultimo_pedido: '2026-10-20T12:00:00Z', consentimiento: 'autorizado', fecha_consentimiento: '2026-10-20T12:00:00Z' }], '', { paginacion: { pagina: 1, tamano: 20, total: 1, total_paginas: 1 } });
     if (path === '/api/pagos/configuracion/') return ok({ transfer: { enabled: false, fields: {} }, linkify: { enabled: false, fields: {} } });
     if (/\/api\/catalog\/tiendas\/1\/configuracion\/(transbank|paypal|mercadopago)\//.test(path)) {
       if (req.method !== 'GET' && state.failPayment) return fail(503);
@@ -51,7 +72,10 @@ http.createServer(async (req, res) => {
       if (req.method === 'PUT') { if (state.failEmails) return fail(503); state.emailTemplates = req.body.plantillas; await pm.state.set('feedback.state', state); }
       return ok({ plantillas: state.emailTemplates, por_defecto: state.emailTemplates });
     }
-    if (path === '/api/auth/emprendedor/perfil/') return ok({ email: 'owner@example.test', first_name: 'QA', last_name: 'Pruebas', phone: '' });
+    if (path === '/api/auth/emprendedor/perfil/') {
+      if (req.method === 'PATCH') { state.ownerEmail = req.body.email; await pm.state.set('feedback.state', state); }
+      return ok({ email: state.ownerEmail, first_name: 'QA', last_name: 'Pruebas', phone: '' });
+    }
     if (path === '/api/visual-config/plantilla-seleccionada/') return ok({ tienda_id: 1, plantilla_seleccionada: 'minimal' });
     if (path === '/api/tienda/configuracion/') {
       if (req.method === 'PUT') { if (state.failBusiness) return fail(422); state.business = req.body; await pm.state.set('feedback.state', state); }
@@ -102,7 +126,21 @@ http.createServer(async (req, res) => {
     }
     if (path.startsWith('/api/legal/')) {
       if (state.failLegal) return fail(503);
-      return ok(legalPages());
+      if (req.method !== 'GET') {
+        const type = req.body.tipo, item = state.legalPages[type];
+        if (!item) return fail(400);
+        if (path.endsWith('/publicar/')) {
+          if (typeof req.body.content !== 'string' || !req.body.content.trim()) return fail(400);
+          item.published = req.body.content; item.draft = req.body.content; item.version += 1;
+          item.lastPublished = new Date().toISOString();
+          item.historial.push({ version: item.version, content: item.published, fecha_vigencia: item.lastPublished });
+        } else item.draft = req.body.accion === 'restore' ? 'Contenido legal QA' : req.body.draft;
+        await pm.state.set('feedback.state', state); return ok(state.legalPages);
+      }
+      if (path.includes('/configuracion/')) return ok(state.legalPages);
+      const published = Object.fromEntries(Object.entries(state.legalPages).map(([type, { draft, historial, ...page }]) => [type, page]));
+      const type = path.split('/').filter(Boolean).at(-1);
+      return ok(published[type] || published);
     }
     if (path === '/api/categorias/' || path === '/api/catalog/categorias/') return ok([]);
     return json(501, { exito: false, mensaje: 'Ruta fuera del contrato de esta prueba.' });

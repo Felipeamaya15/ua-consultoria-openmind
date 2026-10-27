@@ -62,7 +62,11 @@ context().addItem(item('QA-PANT-L', 7, 8, 120));
 function component(file, template, initial = []) {
   const h = hooks(initial);
   const exports = load(file, name => {
-    if (name === 'react/jsx-runtime') return { jsx, jsxs: jsx };
+    if (name.includes('StoreContext')) return { useStore: () => ({config:{}}) };
+        if (name.includes('seoService')) return { updateProductSeo: () => {} };
+        if (name.includes('metaPixelService')) return { trackMetaPixelEvent: () => {} };
+        if (name.includes('shared/components/states')) return { LoadingState: 'LoadingState', ErrorState: 'ErrorState', EmptyListState: 'EmptyListState' };
+        if (name === 'react/jsx-runtime') return { jsx, jsxs: jsx };
     if (name === 'react') return h.react;
     if (name === 'react-router-dom') return { Link: 'Link', useNavigate: () => () => {}, useParams: () => ({ id: 'polera' }) };
     if (name.includes('StockFeedback')) return feedback;

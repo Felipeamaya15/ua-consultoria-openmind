@@ -27,7 +27,7 @@ export default function CustomerOrders() {
   const mainOrderNumber = id && data?.[0] ? (data[0].identificador || `Pedido #${id}`) : (id ? `Pedido #${id}` : 'Mis pedidos');
 
   return (
-    <main className="max-w-3xl mx-auto w-full p-6 space-y-5">
+    <main className="w-full p-6 space-y-5">
       <CustomerAccountNavigation />
       
       <h1 className="text-2xl font-semibold">{mainOrderNumber}</h1>

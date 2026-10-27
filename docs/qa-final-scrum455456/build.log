@@ -1,0 +1,53 @@
+
+> frontend@0.0.0 build
+> npm run typecheck && vite build
+
+
+> frontend@0.0.0 typecheck
+> tsc --project tsconfig.app.json --noEmit --incremental false --pretty false && tsc --project tsconfig.node.json --noEmit --incremental false --pretty false
+
+vite v5.4.21 building for production...
+transforming...
+✓ 265 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                                      0.40 kB │ gzip:   0.28 kB
+dist/assets/LandingBlocks-QqNOVJmr.css               4.31 kB │ gzip:   1.21 kB
+dist/assets/LandingStatus-D5G1r16e.css               8.50 kB │ gzip:   1.86 kB
+dist/assets/Marketing-BypHUv38.css                  20.97 kB │ gzip:   4.04 kB
+dist/assets/ThemeEditor-DnHVqRTa.css                27.35 kB │ gzip:   5.77 kB
+dist/assets/index-BZBZUuzQ.css                     317.71 kB │ gzip:  40.33 kB
+dist/assets/StockFeedback-B9OD6oWS.js                0.41 kB │ gzip:   0.30 kB
+dist/assets/CustomerAccountNavigation-BQbfCFgM.js    0.45 kB │ gzip:   0.27 kB
+dist/assets/transbankPaymentService-C_dlZPj1.js      0.80 kB │ gzip:   0.44 kB
+dist/assets/VisualStory-D7cB_w1L.js                  1.14 kB │ gzip:   0.66 kB
+dist/assets/LandingBlocks-DuAk6rqP.js                1.51 kB │ gzip:   0.69 kB
+dist/assets/Profile-DOCH9kHG.js                      3.13 kB │ gzip:   1.27 kB
+dist/assets/CustomerOrders-QlyAQVks.js               3.39 kB │ gzip:   1.43 kB
+dist/assets/CommercialFilters-BFeMlCjB.js            3.83 kB │ gzip:   1.41 kB
+dist/assets/EditorialHome-D6bWSGIl.js                4.38 kB │ gzip:   1.60 kB
+dist/assets/orderService-1CqAcMSW.js                 5.13 kB │ gzip:   2.17 kB
+dist/assets/LandingStatus-DyWvpHBx.js                5.59 kB │ gzip:   2.03 kB
+dist/assets/CatalogHome-BKjK6EhO.js                  6.59 kB │ gzip:   2.08 kB
+dist/assets/Contacts-CmSym8pA.js                     6.95 kB │ gzip:   2.39 kB
+dist/assets/Legal-CrJO1F85.js                        8.08 kB │ gzip:   2.06 kB
+dist/assets/MinimalHome-B_Oe4Bxy.js                 10.10 kB │ gzip:   2.84 kB
+dist/assets/VisualHome-m6vHyPzo.js                  10.15 kB │ gzip:   2.70 kB
+dist/assets/Sales-BhPTdbcd.js                       10.63 kB │ gzip:   3.29 kB
+dist/assets/ProductCard-B9FiUfN3.js                 14.93 kB │ gzip:   3.42 kB
+dist/assets/Tracking-QfS2qOUT.js                    17.04 kB │ gzip:   4.98 kB
+dist/assets/Login-Cdk9whmd.js                       18.01 kB │ gzip:   3.71 kB
+dist/assets/OrderConfirmation-wWca9C6e.js           18.68 kB │ gzip:   3.82 kB
+dist/assets/Catalog-DyYnCxSX.js                     22.56 kB │ gzip:   5.43 kB
+dist/assets/Cart-UqS1C328.js                        24.12 kB │ gzip:   4.04 kB
+dist/assets/ProductDetail-BP9x2zXI.js               28.61 kB │ gzip:   5.75 kB
+dist/assets/Checkout-Dm17LEYa.js                    41.91 kB │ gzip:  11.73 kB
+dist/assets/ThemeEditor-CtNO28Mo.js                 61.75 kB │ gzip:  19.67 kB
+dist/assets/Marketing-vBjbqUG6.js                   65.16 kB │ gzip:  21.28 kB
+dist/assets/index-CGtj-lli.js                      657.61 kB │ gzip: 201.43 kB
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 4.79s

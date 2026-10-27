@@ -1,0 +1,16 @@
+✔ devuelve únicamente datos confirmados; rechaza sobres y JSON inválidos (265.0783ms)
+✔ 400 y 422 conservan validaciones seguras de Django y detail de DRF (81.1779ms)
+✔ 401/403/404/409/429 y 5xx tienen mensajes en español, incluso con HTML (146.2688ms)
+✔ no filtra secretos, rutas, trazas ni cuerpos externos a mensajes o consola (211.1701ms)
+✔ errores de conexión se explican y ninguna escritura se reintenta (12.669ms)
+✔ timeout de conexión y lectura conserva la incertidumbre de una escritura (77.2075ms)
+✔ cancelaciones antes, durante y al leer son AbortError; no son errores de red (44.2127ms)
+✔ 401 en una operación administrativa no elimina credenciales ni redirige (19.5361ms)
+ℹ tests 8
+ℹ suites 0
+ℹ pass 8
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 865.9466

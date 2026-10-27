@@ -2,6 +2,7 @@ const fs = require('node:fs'), path = require('node:path'), vm = require('node:v
 const assert = require('node:assert/strict'), ts = require('typescript');
 const root = path.resolve(__dirname, '..');
 function load(file, globals) {
+  if (file.endsWith('/authService.ts')) return require('./source-loader.cjs').load(file, {}, { sessionStorage: { getItem: () => null }, ...globals });
   const module = {exports: {}};
   const source = fs.readFileSync(path.join(root, file), 'utf8').replace('import.meta.env.VITE_API_URL', 'undefined');
   vm.runInNewContext(ts.transpileModule(source, {compilerOptions: {target: ts.ScriptTarget.ES2020, module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX}}).outputText, {module, exports: module.exports, Error, AbortController, URLSearchParams, sessionStorage: {getItem: () => null}, ...globals});
@@ -14,11 +15,11 @@ function load(file, globals) {
   const {authService} = load('src/features/auth/services/authService.ts', {localStorage: {getItem: () => token, removeItem: () => {token = null;}}, fetch: async (url, options) => {calls.push({url, options}); return reply;}});
   reply = {ok: true, json: async () => ({exito: true, data: [real]})};
   assert.equal((await authService.getCustomerOrders())[0].id_pedido, 42);
-  assert.equal(calls[0].url, 'http://localhost:8000/api/mi-cuenta/pedidos/');
+  assert.equal(calls[0].url, 'http://test/api/mi-cuenta/pedidos/');
   assert.equal(calls[0].options.headers.Authorization, 'Token buyer-token');
   reply = {ok: true, json: async () => ({exito: true, data: real})};
   assert.equal((await authService.getCustomerOrder('42')).items[0].nombre, 'Producto real');
-  assert.equal(calls[1].url, 'http://localhost:8000/api/mi-cuenta/pedidos/42/');
+  assert.equal(calls[1].url, 'http://test/api/mi-cuenta/pedidos/42/');
   await assert.rejects(authService.getCustomerOrder('../43'), /Pedido no encontrado/);
   reply = {ok: false, json: async () => ({mensaje: 'No encontrado'})};
   await assert.rejects(authService.getCustomerOrder('43'), /No encontrado/);

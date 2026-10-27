@@ -10,10 +10,10 @@ export interface EmailTemplate {
 export type EmailTemplates = Record<EmailTemplateType, EmailTemplate>
 
 export const emailTemplateDefinitions: Record<EmailTemplateType, { label: string; description: string }> = {
-  order_received: { label: "Confirmación de recepción", description: "Se prepara al recibir una nueva solicitud de pedido." },
-  payment_success: { label: "Pago exitoso", description: "Se prepara cuando el medio de pago confirma la transacción." },
-  payment_rejected: { label: "Pago rechazado", description: "Se prepara cuando el medio de pago informa que no pudo procesar el cobro." },
-  order_shipped: { label: "Pedido despachado", description: "Se prepara cuando el emprendedor marca el pedido como enviado." },
+  order_received: { label: "Confirmación de recepción", description: "Se envía al recibir una nueva solicitud de pedido." },
+  payment_success: { label: "Pago exitoso", description: "Se envía cuando se confirma el pago del pedido." },
+  payment_rejected: { label: "Pago rechazado", description: "Se envía cuando se rechaza el pago del pedido." },
+  order_shipped: { label: "Pedido despachado", description: "Se envía cuando el emprendedor marca el pedido como enviado." },
 }
 
 export const createDefaultEmailTemplates = (): EmailTemplates => ({

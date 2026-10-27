@@ -1,0 +1,356 @@
+{
+  "date": "2026-10-24",
+  "scope": "Before publication compared with the 87 hashes captured when resuming the authorized integration",
+  "count": 87,
+  "changed": 0,
+  "files": [
+    {
+      "path": "backend\\apps\\core\\presentation\\shipping.py",
+      "sha256": "BD838126341370E4E58153E73CD961D094AD2D5D93E0B15E169DE3C53CAD2C02"
+    },
+    {
+      "path": "backend\\config\\settings.py",
+      "sha256": "D963E3652775ACFF6A2EEAE32B300493BC1C78E7BC1732A4B8A4870173C7D9A2"
+    },
+    {
+      "path": "frontend\\src\\features\\admin\\config\\navigation.BACKUP.ts",
+      "sha256": "FE5B38A0C05016D8A52FF8BA0E490B170EA4C1B92B153B830A584B48B955E201"
+    },
+    {
+      "path": "frontend\\src\\features\\admin\\pages\\Contacts.BACKUP.tsx",
+      "sha256": "65293A55E1990D085A59CDB89C3262C68C33AAA009B914B97CEF8159F8F38C7C"
+    },
+    {
+      "path": "frontend\\src\\features\\admin\\pages\\Sales.BACKUP.tsx",
+      "sha256": "F981CF0D10B62860B64846728B09BE0985E0482978F5EDA7B52755EE3E93EEA1"
+    },
+    {
+      "path": "docs\\sprint6-qa\\auditoria-inicial.md",
+      "sha256": "DC2ADD6588D72A137433D936FDF652172C1F8D8C8F0BD77B627E36CD013E7DD7"
+    },
+    {
+      "path": "docs\\sprint6-qa\\backend-suites.json",
+      "sha256": "893BEF77BB6200938FEAE615FFD6B01418E33B80697686DBE4D3272E23ECFAD9"
+    },
+    {
+      "path": "docs\\sprint6-qa\\backend-test-names.txt",
+      "sha256": "F3DE63B45384480FD840BFB6C9A6D4391A1AF076270AF0100D1DA55A588D047C"
+    },
+    {
+      "path": "docs\\sprint6-qa\\backend-tests.log",
+      "sha256": "EC062AE10AA50742C2865CCF082456FEA3C66846DA663A44A549EA88F751E0A9"
+    },
+    {
+      "path": "docs\\sprint6-qa\\backlog-fuente.json",
+      "sha256": "69A16FC45C984C79EBFD6F420DDB1FA3248EC364D2EF17D7389048702320A387"
+    },
+    {
+      "path": "docs\\sprint6-qa\\browser.log",
+      "sha256": "0356EB959736DA1C33BBAA3ABD31C87501252CC0520DC2D08C2A3B58351C7C72"
+    },
+    {
+      "path": "docs\\sprint6-qa\\cambios-qa.json",
+      "sha256": "2F2DBB6172B14208D9815CE24312A9B1AC4D2C9902C77FB251A74B90BFDA0D2E"
+    },
+    {
+      "path": "docs\\sprint6-qa\\contratos-y-reproduccion.md",
+      "sha256": "2C0D97FD3CD7FC370F0188F44A31A07FC640B92B8CAF3B9375AA299CAA5E0618"
+    },
+    {
+      "path": "docs\\sprint6-qa\\credenciales-escaneo.json",
+      "sha256": "0DE2D88A88BC2E0F2F9AB1FDA65F586E1E6EF16BF36BD70A04AFEEAC83EFC3A3"
+    },
+    {
+      "path": "docs\\sprint6-qa\\estado-inicial.json",
+      "sha256": "810F927378BF6BB75A6759160DD7FB4AFD8382B5C6C273CDE75254F8D5F9708B"
+    },
+    {
+      "path": "docs\\sprint6-qa\\frontend-build.log",
+      "sha256": "136B324308A2D6978B669108856AEB80E4DA4BB179D4AAEBA716C942DB8235CF"
+    },
+    {
+      "path": "docs\\sprint6-qa\\frontend-results.json",
+      "sha256": "1D2F531F8D9E5033FC1B1B958269F2790CFCE5C62EDE44561A48E74B0708F225"
+    },
+    {
+      "path": "docs\\sprint6-qa\\frontend-tests.log",
+      "sha256": "E87396E9B829AAD4F22B214BCFCD98DC593A87419D77AF6A392D2E6721308C52"
+    },
+    {
+      "path": "docs\\sprint6-qa\\historias-fuente.txt",
+      "sha256": "09CC2D2E62EF7B9626E368C15D8DB454BA1D53A1AE887E7050F60DF40B00E3DA"
+    },
+    {
+      "path": "docs\\sprint6-qa\\informe-final.md",
+      "sha256": "4A4C68387DC9861667805C3B14C0C287D9608F328FBE67FB52ACFA7B021AC23E"
+    },
+    {
+      "path": "docs\\sprint6-qa\\postman-public-check.js",
+      "sha256": "DABEB4896F4DCA6ABF607BB13978452E67E72F957191D7FE70FEFE12EF6D94C7"
+    },
+    {
+      "path": "docs\\sprint6-qa\\postman-public.log",
+      "sha256": "C9276128EDC9BA3660A0FB5B1AAE53599AFFB174D0695ADE9D4ABCCDF6C819DE"
+    },
+    {
+      "path": "docs\\sprint6-qa\\seguridad-credenciales.md",
+      "sha256": "0210484E41891BCBB788D60A6AB98BD65260508C826A2E9EA999DB2D8BB6C2FE"
+    },
+    {
+      "path": "docs\\sprint6-qa\\browser\\configuracion-retiro-375.png",
+      "sha256": "CBEE26CE3661D296E6CCA22FC6FEC8904BED0ABC075A55F01B3A60B6165156F7"
+    },
+    {
+      "path": "docs\\sprint6-qa\\browser\\dashboard-375.png",
+      "sha256": "A38296629D1115F7199ECE38B006CEB0EECF6C8D6121162CD0B41EE0EDD18E06"
+    },
+    {
+      "path": "docs\\sprint6-qa\\browser\\error-formulario-375.png",
+      "sha256": "4DEED72F9089B5682F2689726E9C3DC8B0522E05655E029428824F2FE65ABBEC"
+    },
+    {
+      "path": "docs\\sprint6-qa\\browser\\exito-promocion-375.png",
+      "sha256": "E55298CF755C604D927C29CCA41D1DD3E06F22CF7F1B5302CF4C9BDED10179B6"
+    },
+    {
+      "path": "docs\\sprint6-qa\\browser\\informe-qa-p1.png",
+      "sha256": "1B74DF4863B83211A7F00B070526AC6AAFE3EE1416AA85B82D1FD706EDFBF8F9"
+    },
+    {
+      "path": "docs\\sprint6-qa\\browser\\informe-qa-page-1.png",
+      "sha256": "4177E55ABEEA2877364088466BB5A3FF555A0EA32BC525AFC2D37B69717DF1A1"
+    },
+    {
+      "path": "docs\\sprint6-qa\\browser\\informe-qa-page-2.png",
+      "sha256": "3A435FC25B2861759E4E3B525156EAD66B0828502E1C85F2AEBBC4204EFFA481"
+    },
+    {
+      "path": "docs\\sprint6-qa\\browser\\informe-qa-page-3.png",
+      "sha256": "592CA889592AC9C5073778F26875E4E9FFF9C55A1865F4010C1790849ACA9F39"
+    },
+    {
+      "path": "docs\\sprint6-qa\\browser\\informe-qa.pdf",
+      "sha256": "6DAB75B14EAB4D0733A61C7690ACA2905FEBCEC7539DA857BFE282FCDD0741F3"
+    },
+    {
+      "path": "docs\\sprint6-qa\\browser\\pedidos-375.png",
+      "sha256": "2396082CFEE2445D6FB23284292941A7F2FF10C57DD4BEFD0D3EB82A28A8FD6C"
+    },
+    {
+      "path": "docs\\sprint6-qa\\browser\\resultados.json",
+      "sha256": "E6E8306DBEDBD1501C7047A7954F91D57A95E726BA33F03A51EBD9B39FDAE51B"
+    },
+    {
+      "path": "docs\\sprint6-qa\\browser\\retiro-1-375.png",
+      "sha256": "0FBA13CD2D7188047574F31EB4C21D162E9D563E1081D7272557488988D6140C"
+    },
+    {
+      "path": "docs\\sprint6-qa\\browser\\retiro-2-768.png",
+      "sha256": "ECBAE135B5753EA9E98CA6D58358093B3AEBDD0EFB238FFE61F1D9503ABD4BAB"
+    },
+    {
+      "path": "docs\\sprint6-qa\\browser\\retiro-3-1280.png",
+      "sha256": "F3CE3DB36C511C109C558AD380EE98F2813D534704F34A7B13E189B79266F934"
+    },
+    {
+      "path": "docs\\sprint6-qa\\browser\\retiro-4-375.png",
+      "sha256": "264FF32522F0B9BD1E4632817887679F67F6D9D53C4BD9292BEF4DFCFE1DA743"
+    },
+    {
+      "path": "docs\\sprint6-reportes-clientes\\archivos-validados.json",
+      "sha256": "CE47BC46ACCDF7EC905E01FD11FC1E9A87E16AD0FFD6B73A9F706780714DB291"
+    },
+    {
+      "path": "docs\\sprint6-reportes-clientes\\backend-exportacion-final.log",
+      "sha256": "E1E4DB813D7275EBB3B9610CC4688FE516AB712F6FA7E8D87BE603A83B2BAA37"
+    },
+    {
+      "path": "docs\\sprint6-reportes-clientes\\backend-image-build.log",
+      "sha256": "DD7526451CEE9011A5526A8C9637DF437F073C8BEBE8FD36A06C00EBB071A5D9"
+    },
+    {
+      "path": "docs\\sprint6-reportes-clientes\\backend-nuevos.log",
+      "sha256": "684445BB121B586262863BEF3D4B00E24A957816E49F4DA2E650232F5B7C6D9C"
+    },
+    {
+      "path": "docs\\sprint6-reportes-clientes\\backend-regresion.log",
+      "sha256": "50BB15AC75CF5CBC59DBF4AAC8FA308906AACEA25045E4A3BB3346A86986AFCC"
+    },
+    {
+      "path": "docs\\sprint6-reportes-clientes\\browser.log",
+      "sha256": "5817D6F106153D92C325CA6AEE881346E566331121D8B33DBDC23936E92B67A8"
+    },
+    {
+      "path": "docs\\sprint6-reportes-clientes\\contrato.md",
+      "sha256": "303FDE3C31B1C849A31B8250C8652BF0D442E30965664D6713A3FDD6DDBB7571"
+    },
+    {
+      "path": "docs\\sprint6-reportes-clientes\\estado-inicial.json",
+      "sha256": "71777B1BC811E66F6C879C5E0F475E0E9A96272DB89A13DA037D8D03A6BCE854"
+    },
+    {
+      "path": "docs\\sprint6-reportes-clientes\\frontend-build.log",
+      "sha256": "28B047F9C3E4276AE0FACA6B944567E0261681DAD5E3A5453E414844A8A296E7"
+    },
+    {
+      "path": "docs\\sprint6-reportes-clientes\\frontend-results.json",
+      "sha256": "E17FE96362B993A9E0799F9701A95C5AEE1F350F98B356BBB0C2088BD2A2FA29"
+    },
+    {
+      "path": "docs\\sprint6-reportes-clientes\\frontend-tests.log",
+      "sha256": "C63164EFC47F3B0189A821D0BA2EE7845C503447A79A8FB8A1227F2F2F1DD903"
+    },
+    {
+      "path": "docs\\sprint6-reportes-clientes\\migracion-desarrollo.log",
+      "sha256": "DCC00B2E5528CE0088A9CE9AB70814FB0AEEC739C1F448A7A4DF5DE8BC325B2A"
+    },
+    {
+      "path": "docs\\sprint6-reportes-clientes\\migracion.log",
+      "sha256": "AC7182F5328C3B3AB1EB8E0F529E5FCE1B82ECB55A940646A688CFCF857E4B23"
+    },
+    {
+      "path": "docs\\sprint6-reportes-clientes\\plan-desarrollo-sin-aplicar.log",
+      "sha256": "78B523F9063BA19DAE910C798CAD13716AB38A9813BC96D96A68BB4E44D35B4F"
+    },
+    {
+      "path": "docs\\sprint6-reportes-clientes\\postman-security-check.js",
+      "sha256": "FC3AE9FCD00E9A2E28531AD5FB4D229159D340FE307720B7CC53AF78C4C91723"
+    },
+    {
+      "path": "docs\\sprint6-reportes-clientes\\postman-security.log",
+      "sha256": "F999718DFD1AFAD918D8008B2A41ACD8020D2C6760B082F512A16B359CCC4F19"
+    },
+    {
+      "path": "docs\\sprint6-reportes-clientes\\regresion-browser.log",
+      "sha256": "3E78C4D378A97CE4957B010F31962F8BBE532A2ECA0413F515855D91C83EA449"
+    },
+    {
+      "path": "docs\\sprint6-reportes-clientes\\browser\\contactos-375.png",
+      "sha256": "008DCE19CC155A46173D43799257208AA5EBAE873E57454429EEE4CD5CBB4EBB"
+    },
+    {
+      "path": "docs\\sprint6-reportes-clientes\\browser\\contactos-error-375.png",
+      "sha256": "9594789709E107712B2AE43B660EE9BE121863AFD3557E6693AE11715884A885"
+    },
+    {
+      "path": "docs\\sprint6-reportes-clientes\\browser\\contactos-marketing-autorizados.xlsx",
+      "sha256": "E44C6A8ECC6E88CD821BF98C26A26BF1885AE1AF86674F667868518646CBC3D4"
+    },
+    {
+      "path": "docs\\sprint6-reportes-clientes\\browser\\contactos-operativos.csv",
+      "sha256": "CC41FC7C7BD66FBBE294A4E88672749F8963BD7703E598EF2E2DDEA57384EC83"
+    },
+    {
+      "path": "docs\\sprint6-reportes-clientes\\browser\\contactos-operativos.xlsx",
+      "sha256": "6DE30F2B4B8B197C71400FC69775330911336392D9BDD43D74599BD6422B8AFF"
+    },
+    {
+      "path": "docs\\sprint6-reportes-clientes\\browser\\contactos-vacio-375.png",
+      "sha256": "332F4AA77189A130C300A0922FEE4C55B0B326C29B30572D0D1FF574955A82AE"
+    },
+    {
+      "path": "docs\\sprint6-reportes-clientes\\browser\\dashboard-2025-10.pdf",
+      "sha256": "48A2E0C6275C9A55EDB9A1243F3D58EB90DB9B3A43390A18C4F0C02951FE3CD6"
+    },
+    {
+      "path": "docs\\sprint6-reportes-clientes\\browser\\dashboard-2025-10.xlsx",
+      "sha256": "8B0D78FE3ACFF8D94DF69FE390A97AE8F0893B9A981AA2362036981B02FB50ED"
+    },
+    {
+      "path": "docs\\sprint6-reportes-clientes\\browser\\dashboard-exportaciones-375.png",
+      "sha256": "B95F963C2D745BE879AB7344EB4833D88BF178375D2E8224DD9494869357EA9A"
+    },
+    {
+      "path": "docs\\sprint6-reportes-clientes\\browser\\marketing-sin-autorizados.xlsx",
+      "sha256": "31AE30D891CE5D990FBF3397C61EF7BA49E3DF2EB0559233CE9CA7DA259040F0"
+    },
+    {
+      "path": "docs\\sprint6-reportes-clientes\\browser\\menu-ventas-375.png",
+      "sha256": "94DC57E7A54C77A1649E41824AEB9F29DABB59EDB21C77C6F6C8B5AF918D01F6"
+    },
+    {
+      "path": "docs\\sprint6-reportes-clientes\\browser\\pedidos-antiguos-todas-las-paginas.xlsx",
+      "sha256": "BB333A6A4CDAF3EACE83DE56077492B06A363F9CFCB5FDE5DB5E64D7D3780493"
+    },
+    {
+      "path": "docs\\sprint6-reportes-clientes\\browser\\pedidos-confirmados.xlsx",
+      "sha256": "14CD5AD9B3D14B0707A784CBE5E16FBBA7DE8DA57C7F5A636742C6A15EFE815C"
+    },
+    {
+      "path": "docs\\sprint6-reportes-clientes\\browser\\pedidos-detalle-375.png",
+      "sha256": "FFCA25EA6E0D4E36F6562084469C5DC4BF60854C27398F2DB76507E941C57123"
+    },
+    {
+      "path": "docs\\sprint6-reportes-clientes\\browser\\pedidos-pagina2-375.png",
+      "sha256": "F78364314C2F5A1FCAC860016A4DFBB5FECEBC5C4B013B0C4FCA09042B2C479B"
+    },
+    {
+      "path": "docs\\sprint6-reportes-clientes\\browser\\resultados.json",
+      "sha256": "298EDF8CF13E77F541DDEFA5E06E403C29792CF5169057F7D34C47205E371399"
+    },
+    {
+      "path": "docs\\sprint6-reportes-clientes\\browser\\ventas-2025-10.xlsx",
+      "sha256": "B99F43FF5D98E0B0E963339EC372D8BABE32F24338A11B144E5B6165F8131BFB"
+    },
+    {
+      "path": "docs\\sprint6-reportes-clientes\\browser\\ventas-historial-375.png",
+      "sha256": "E7FCA0D36AE1589A15EBE392DD03CFF817F3D6247F9D0E355495AE46280B9D46"
+    },
+    {
+      "path": "docs\\sprint6-reportes-clientes\\browser\\ventas-resumen-1280.png",
+      "sha256": "4C1DFEF152269AD3B0EB82F299B54AF07F97C0CC2CDB4A60B5C926CEF50FCA89"
+    },
+    {
+      "path": "docs\\sprint6-reportes-clientes\\regresion-browser\\configuracion-retiro-375.png",
+      "sha256": "E1A69C1034F029A179F736CA0B5F22C6E878D79C5A713CCAA423069090F747DF"
+    },
+    {
+      "path": "docs\\sprint6-reportes-clientes\\regresion-browser\\dashboard-375.png",
+      "sha256": "58C241EC512C2883B5B3BF0D95216CAEEC4F159CCD23D5766B283E45E64A0C5F"
+    },
+    {
+      "path": "docs\\sprint6-reportes-clientes\\regresion-browser\\error-formulario-375.png",
+      "sha256": "F5F3AB2153009925282FCD175CEB1413E23CDD92F62209360E5CD03D1BED684B"
+    },
+    {
+      "path": "docs\\sprint6-reportes-clientes\\regresion-browser\\exito-promocion-375.png",
+      "sha256": "37B9F8AB835C04ECA854FF1616BBCD2163338CABEDB400E04EB3D094BC11E561"
+    },
+    {
+      "path": "docs\\sprint6-reportes-clientes\\regresion-browser\\informe-qa.pdf",
+      "sha256": "F33557C9D5E628786A0395D0A8788F8FE90A52964281C959792FC7BFA4E8E966"
+    },
+    {
+      "path": "docs\\sprint6-reportes-clientes\\regresion-browser\\pedidos-375.png",
+      "sha256": "D6228D12AB58F71156529B6B671B080AE17B4646D3562AEED0E5625071384AD5"
+    },
+    {
+      "path": "docs\\sprint6-reportes-clientes\\regresion-browser\\resultados.json",
+      "sha256": "5FF3FB32ABE586105CBCFC4C92D51BC50BF6B77862A86FDB70D952748E96494C"
+    },
+    {
+      "path": "docs\\sprint6-reportes-clientes\\regresion-browser\\retiro-1-375.png",
+      "sha256": "0AC23982B3E89A6D66A65FB8E3EB03EB9F54CB127943CBCEA73F348DA999DBBC"
+    },
+    {
+      "path": "docs\\sprint6-reportes-clientes\\regresion-browser\\retiro-2-768.png",
+      "sha256": "91BF48E8D7B156E1519883922F1832D588B7420F3E2F63C6DCFB674467D11674"
+    },
+    {
+      "path": "docs\\sprint6-reportes-clientes\\regresion-browser\\retiro-3-1280.png",
+      "sha256": "56BB719F59D95AC1B93847AFDD67CFF7C8FCCA1B879254D4CFE686D7DDF25E1C"
+    },
+    {
+      "path": "docs\\sprint6-reportes-clientes\\regresion-browser\\retiro-4-375.png",
+      "sha256": "C78034749A8477A10C45F3BEF6024B43A4DEEADE5968C094430A8276A44E5961"
+    },
+    {
+      "path": "frontend\\tests\\editor-redesign-mock\\config.yaml",
+      "sha256": "500C04BE3A37ADE82AAE146CA52C95B09E53F5411A52E39004FF050A4B3CDFAA"
+    },
+    {
+      "path": "frontend\\tests\\editor-redesign-mock\\default.js",
+      "sha256": "7D1829294C7C0AFEEC31953C6C3849184E758AF85E1BE1D41DE95DDAF335AF71"
+    }
+  ]
+}

@@ -87,8 +87,8 @@ export default function EmailTemplates() {
 
   return (
     <div className="w-full space-y-6 animate-fade-in">
-      <Alert variant="info" title="Envío automático aún no disponible">
-        Puedes preparar y guardar estos mensajes. El de «Pedido despachado» se envía automáticamente al comprador cuando marcas el pedido como enviado; los demás quedarán listos cuando se conecte su envío.
+      <Alert variant="info" title="Envío automático">
+        Estos mensajes se envían solos al comprador: «Confirmación de recepción» al crear el pedido, «Pago exitoso» al confirmarse el pago, «Pago rechazado» cuando se rechaza o se anula el pago (transferencia o Webpay) y «Pedido despachado» al marcar el pedido como enviado. Puedes desactivar el que no quieras enviar.
       </Alert>
 
       <div className="grid grid-cols-1 lg:grid-cols-[240px_minmax(0,1fr)] gap-5">
@@ -186,7 +186,7 @@ export default function EmailTemplates() {
             <Button variant="primary" disabled={saving || !loaded} onClick={save}>{saving ? 'Guardando…' : 'Guardar correos automáticos'}</Button>
           </div>
           {error && <Alert variant="error">{error}</Alert>}
-          {saved && <Alert variant="success">Plantillas guardadas. El correo de pedido despachado se envía solo; los demás quedarán listos cuando se conecte su envío.</Alert>}
+          {saved && <Alert variant="success">Plantillas guardadas. Los correos se envían solos al comprador cuando ocurre cada evento.</Alert>}
         </div>
       </div>
     </div>

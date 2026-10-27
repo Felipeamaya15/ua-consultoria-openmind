@@ -6,6 +6,8 @@ import re
 from dataclasses import dataclass
 from urllib.parse import quote
 
+from apps.core.infrastructure.email_service import correo_valido
+
 _MARCADOR = re.compile(r'\{\{\s*(\w+)\s*\}\}')
 VARIABLES_PERMITIDAS = (
     'customerName', 'customerEmail', 'orderNumber', 'orderTotal',
@@ -55,6 +57,17 @@ def enlace_seguimiento(pedido):
         return ''
     return f'{base}/seguimiento?orden={quote(orden, safe="")}'
 
+def correo_comprador(pedido):
+    """Correo al que se avisa al comprador de este pedido (SCRUM-435); '' si ninguno es válido.
+    Primero el correo de contacto que dio al comprar y, si no sirve, el de su cuenta (si compró con sesión iniciada).
+    """
+    contacto = pedido.contacto or {}
+    comprador = pedido.comprador
+    candidatos = (
+        pedido.correo_contacto, contacto.get('correo'), contacto.get('email'),
+        getattr(comprador, 'email', '') if comprador else '',
+    )
+    return next((valido for valido in map(correo_valido, candidatos) if valido), '')
 
 def contexto_pedido(pedido):
     entrega = pedido.entrega or {}
@@ -67,16 +80,10 @@ def contexto_pedido(pedido):
         or 'cliente'
     )
     metodo = entrega.get('metodo', '')
-    correo = (
-        pedido.correo_contacto
-        or contacto.get('correo', '')
-        or contacto.get('email', '')
-        or (getattr(comprador, 'email', '') if comprador else '')
-    )
     return {
         'orderNumber': pedido.identificador or str(pedido.pk),
         'customerName': nombre,
-        'customerEmail': correo,
+        'customerEmail': correo_comprador(pedido),
         'orderTotal': f'${int(pedido.monto_total):,}'.replace(',', '.'),
         'shippingMethod': metodo,
         'carrier': metodo if metodo != 'Retiro' else '',

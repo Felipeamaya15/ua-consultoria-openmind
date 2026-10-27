@@ -11,7 +11,7 @@ const messages = (value: unknown, depth = 0): string[] => depth > 5 ? [] : typeo
     .flatMap(([key, item]) => {
       const nested = messages(item, depth + 1);
       if (/password/i.test(key)) return nested.filter(message => /^(?:Este campo es obligatorio\.|Este campo no puede estar en blanco\.|La contraseña actual es incorrecta\.|Las contraseñas no coinciden\.|La contraseña debe (?:tener|contener) [^.:=]{1,120}\.)$/.test(message));
-      return /secret|token|credential|api[_-]?key|authorization|trace|provider|proveedor|response|respuesta/i.test(key) ? [] : nested;
+      return /secret|token|credential|credencial|clave[_\s-]*(?:privada|secreta)|private[_\s-]?key|api[_-]?key|authorization|trace|provider|proveedor|response|respuesta/i.test(key) ? [] : nested;
     }) : [];
 const statusMessages: Record<number, string> = {
   400: 'Revisa los datos ingresados e intenta nuevamente.',

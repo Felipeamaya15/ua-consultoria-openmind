@@ -28,6 +28,14 @@ export const transbankPaymentService = {
     });
     return res.json();
   },
+  async pagoAbortado(idTienda: number, tbkToken: string) {
+    const res = await fetch(`${API_BASE}/api/catalog/pagos/transbank/abortado/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id_tienda: idTienda, tbk_token: tbkToken }),
+    });
+    return res.json();
+  },
 
   // Redirige al cliente a la pantalla oficial de Webpay Plus
   redirigirAWebpay(url: string, token: string) {

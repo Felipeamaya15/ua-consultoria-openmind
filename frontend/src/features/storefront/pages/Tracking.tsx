@@ -221,12 +221,12 @@ export default function Tracking() {
     <div
       className={
         isCatalog
-          ? 'max-w-[760px] mx-auto px-5 py-12 md:py-16 text-[var(--visual-page-color)]'
+          ? 'w-full max-w-[1160px] mx-auto px-5 py-12 md:py-16 text-[var(--visual-page-color)]'
           : isVisual
-            ? 'max-w-[900px] mx-auto px-5 md:px-8 py-12 md:py-16 text-[var(--visual-page-color)]'
+            ? 'w-full max-w-[1180px] mx-auto px-5 md:px-8 py-12 md:py-16 text-[var(--visual-page-color)]'
             : isMinimal
-              ? 'max-w-3xl mx-auto px-4 md:px-8 py-12'
-              : 'max-w-2xl mx-auto px-4 py-12'
+              ? 'w-full max-w-6xl mx-auto px-4 md:px-8 py-12'
+              : 'w-full max-w-7xl mx-auto px-4 py-12'
       }
     >
       {/* =====================================================

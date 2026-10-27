@@ -186,3 +186,10 @@ class ConfiguracionDeCorreoTests(SimpleTestCase):
         self.assertGreater(settings.EMAIL_TIMEOUT, 0)
         self.assertFalse(settings.EMAIL_USE_TLS and settings.EMAIL_USE_SSL, 'Django no admite TLS y SSL a la vez')
         self.assertIn('@', settings.DEFAULT_FROM_EMAIL)
+
+class CorreoValidoTests(SimpleTestCase):
+    def test_devuelve_el_correo_limpio_o_none(self):
+        from apps.core.infrastructure.email_service import correo_valido
+        self.assertEqual(correo_valido('  ana@example.com '), 'ana@example.com')
+        for invalido in ('', None, 'sin-arroba', 'a@b', 'a b@example.com', 'a@example.com, b@example.com'):
+            self.assertIsNone(correo_valido(invalido), invalido)

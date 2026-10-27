@@ -163,3 +163,19 @@ La variable `{{trackingLink}}` es el enlace al portal de seguimiento de la tiend
   por ejemplo `https://mitienda.cl/plantilla/1`. Si no es una dirección `http` o `https` válida, el enlace no se agrega.
 - La variable está disponible en todas las plantillas de correo y aparece en la lista de variables del panel.
 - Está en el texto por defecto del correo de despacho; el propietario puede quitarla o moverla al editar su plantilla.
+## Correos de recepción, pago exitoso y pago rechazado 
+
+Además del de despacho, el backend envía solo al comprador tres correos más, con la plantilla de la tienda
+(o la de por defecto).
+
+| Correo (`tipo`) | Cuándo se envía |
+|---|---|
+| Confirmación de recepción (`order_received`) | Al crear el pedido en el checkout, una vez confirmado en la base de datos. |
+| Pago exitoso (`payment_success`) | Cuando el pedido pasa a «pagado»: aviso de Linkify, verificación de Linkify, pago aprobado en Webpay, transferencia aprobada por el propietario o cambio manual de estado. |
+| Pago rechazado (`payment_rejected`) | Cuando el propietario rechaza la transferencia del pedido o cuando el pago con Webpay no se completa: lo rechaza el banco o el comprador lo anula en el formulario de Webpay (`POST /api/catalog/pagos/transbank/abortado/`, con el `TBK_TOKEN` que Webpay devuelve). En ambos casos el pedido sigue pendiente. |
+
+- **A quién:** al correo de contacto del pedido; si no es válido, al correo de la cuenta del comprador (si compró con sesión). Es el
+  mismo que muestra la variable `{{customerEmail}}`. Si ninguno es válido, no se envía y queda registrado.
+- **Una sola vez:** cada aviso deja una marca en `entrega['notificaciones'][tipo]` (con el destinatario enmascarado), así que un aviso
+  repetido o un reintento del webhook no duplica el correo. Si el envío falló no hay reintento automático: solo se vuelve a intentar si el evento se repite (por ejemplo, un pago anulado en Linkify y vuelto a pagar); el fallo queda en el log y en la marca del pedido.
+- **No bloquea nada:** si el correo falla o la tienda desactivó ese tipo en el panel, el pedido, el pago o el rechazo se completan igual.

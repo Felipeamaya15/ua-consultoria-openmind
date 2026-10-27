@@ -73,7 +73,7 @@ test('la clase del contenedor se agrega al final y no deja rastros de valores va
 });
 
 test('el módulo es independiente: solo importa tipos de React', () => {
-  const origen = fs.readFileSync(path.join(root, 'src/shared/components/states.tsx'), 'utf8');
+  const origen = fs.readFileSync(path.join(root, 'src/shared/components/states.tsx'), 'utf8').replace(/\r/g, '');
   const importaciones = origen.split('\n').filter(l => /^import /.test(l));
   assert.deepEqual(importaciones, ["import type { ReactNode } from 'react';"]);
 });

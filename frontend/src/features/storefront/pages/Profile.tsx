@@ -38,7 +38,7 @@ export default function Profile() {
     finally { setBusy(false); }
   }
   const inputClass = 'block w-full border rounded p-2 mt-1';
-  return <main className="max-w-xl mx-auto w-full p-6 space-y-6">
+  return <main className="w-full p-6 space-y-6">
     <CustomerAccountNavigation />
     <h1 className="text-2xl font-semibold">Mi cuenta · Perfil</h1>
     <Link className="underline block" to={route('preferencias-comerciales')}>Consultar o retirar mi autorización comercial</Link>

@@ -40,11 +40,20 @@ export default function TransbankReturnResult({
 
     // Sin token_ws pero con TBK_TOKEN: el cliente abandonó o expiró el pago.
     if (!tokenWs) {
-      setResult(
-        tbkToken
-          ? { status: 'cancelled' }
-          : { status: 'error', message: 'No recibimos la información del pago.' },
-      );
+      if (tbkToken) {
+        const abortKey = `tbk-abort:${tbkToken}`;
+        try {
+          if (!sessionStorage.getItem(abortKey)) {
+            sessionStorage.setItem(abortKey, '1');
+            transbankPaymentService.pagoAbortado(tiendaId, tbkToken).catch(() => undefined);
+          }
+        } catch {
+          transbankPaymentService.pagoAbortado(tiendaId, tbkToken).catch(() => undefined);
+        }
+        setResult({ status: 'cancelled' });
+      } else {
+        setResult({ status: 'error', message: 'No recibimos la información del pago.' });
+      }
       return;
     }
 
@@ -114,7 +123,7 @@ export default function TransbankReturnResult({
   }[result.status];
 
   return (
-    <div className="max-w-lg mx-auto px-4 py-20 text-center flex flex-col items-center gap-6">
+    <div className="w-full max-w-7xl mx-auto px-4 py-12 text-center flex flex-col items-center gap-6">
       <div
         className={`w-20 h-20 rounded-full flex items-center justify-center text-3xl font-bold ${view.tone}`}
         aria-hidden="true"

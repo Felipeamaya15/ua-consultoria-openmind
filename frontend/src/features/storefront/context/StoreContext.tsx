@@ -216,9 +216,9 @@ export function StoreProvider({
         config: {
           ...defaultStoreConfig,
           ...savedConfig,
-          name: business?.nombre ?? ((typeof savedConfig.name === 'string' ? savedConfig.name : '') || defaultStoreConfig.name),
-          description: business?.descripcion ?? ((typeof savedConfig.description === 'string' ? savedConfig.description : '') || defaultStoreConfig.description),
-          logo: landing?.logo || (typeof savedConfig.logo === 'string' ? savedConfig.logo : '') || '',
+          name: business?.nombre ?? '',
+          description: business?.descripcion ?? '',
+          logo: landing?.logo || '',
           primaryColor: visualConfig.global.colors.primary,
           secondaryColor: visualConfig.global.colors.secondary,
           accentColor: visualConfig.global.colors.accent,

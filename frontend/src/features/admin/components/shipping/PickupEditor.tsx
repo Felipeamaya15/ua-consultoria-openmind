@@ -141,7 +141,7 @@ export default function PickupEditor({ value, onChange, errors, onProviderStatus
                     Cerrar
                   </button>
                 </div>
-                <p className="mt-2 text-xs text-[var(-muted-foreground)]">Los cambios se aplicarán cuando guardes la configuración de entregas.</p>
+                <p className="mt-2 text-xs text-[var(--muted-foreground)]">Los cambios se aplicarán cuando guardes la configuración de entregas.</p>
               </div>
             </div>;
           })}
