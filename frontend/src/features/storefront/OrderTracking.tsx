@@ -30,8 +30,9 @@ export const OrderTracking = () => {
 
       <form onSubmit={handleSearch} className="mb-8 space-y-4 bg-white p-6 rounded-lg shadow-sm border">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Número de Orden</label>
+          <label htmlFor="tracking-order-number" className="block text-sm font-medium text-gray-700 mb-1">Número de Orden</label>
           <input
+            id="tracking-order-number"
             type="text"
             placeholder="Ej: ORD-20240101-ABCD"
             className="w-full border border-gray-300 p-2 rounded"
@@ -41,8 +42,9 @@ export const OrderTracking = () => {
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Correo Electrónico</label>
+          <label htmlFor="tracking-email" className="block text-sm font-medium text-gray-700 mb-1">Correo Electrónico</label>
           <input
+            id="tracking-email"
             type="email"
             placeholder="correo@ejemplo.com"
             className="w-full border border-gray-300 p-2 rounded"

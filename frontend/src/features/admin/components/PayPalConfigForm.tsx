@@ -134,10 +134,11 @@ export const PayPalConfigForm: React.FC<Props> = ({ tiendaId = 1 }) => {
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-xs font-semibold text-[#344054] mb-1.5">
+            <label htmlFor="paypal-ambiente" className="block text-xs font-semibold text-[#344054] mb-1.5">
               Entorno de Operación
             </label>
             <select
+              id="paypal-ambiente"
               value={ambiente}
               onChange={(e) => setAmbiente(e.target.value as 'SANDBOX' | 'LIVE')}
               className="w-full h-11 px-3 border border-gray-300 rounded-xl bg-white text-sm text-[#151515] focus:ring-2 focus:ring-[#003087] focus:outline-none"
@@ -148,10 +149,11 @@ export const PayPalConfigForm: React.FC<Props> = ({ tiendaId = 1 }) => {
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-[#344054] mb-1.5">
+            <label htmlFor="paypal-client-id" className="block text-xs font-semibold text-[#344054] mb-1.5">
               Client ID
             </label>
             <input
+              id="paypal-client-id"
               type="text"
               value={clientId}
               onChange={(e) => setClientId(e.target.value)}
@@ -162,10 +164,11 @@ export const PayPalConfigForm: React.FC<Props> = ({ tiendaId = 1 }) => {
         </div>
 
         <div>
-          <label className="block text-xs font-semibold text-[#344054] mb-1.5">
+          <label htmlFor="paypal-client-secret" className="block text-xs font-semibold text-[#344054] mb-1.5">
             Client Secret
           </label>
           <input
+            id="paypal-client-secret"
             type="password"
             value={clientSecret}
             onChange={(e) => setClientSecret(e.target.value)}

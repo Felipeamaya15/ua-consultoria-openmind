@@ -809,6 +809,7 @@ export default function Payments() {
           <div className="flex items-center gap-2">
             <input
               readOnly
+              aria-label="Dirección para recibir avisos de pago"
               value={`${API_BASE}/api/pagos/linkify/notificacion/`}
               className="flex-1 rounded-lg border border-[var(--border)] bg-[var(--muted)] px-3 py-2 text-xs"
               onFocus={(event) => event.target.select()}

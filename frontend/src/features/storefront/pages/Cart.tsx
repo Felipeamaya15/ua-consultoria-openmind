@@ -791,6 +791,7 @@ export default function Cart() {
                       handleApplyPromo();
                     }
                   }}
+                  aria-label="Código promocional"
                   placeholder="Ej: VERANO20"
                   className="h-10 flex-1 min-w-0 rounded-lg border border-[var(--border)] px-3 text-sm outline-none"
                 />
