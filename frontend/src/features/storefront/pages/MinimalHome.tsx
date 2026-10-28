@@ -91,7 +91,7 @@ export default function MinimalHome() {
                   </div>
 
                   <div className="px-1 pt-2 pb-1">
-                    <p className="text-[10px] text-gray-400">
+                    <p className="text-[10px] text-gray-500">
                       {product.category}
                     </p>
 
@@ -104,7 +104,7 @@ export default function MinimalHome() {
                         ★★★★★
                       </span>
 
-                      <span className="text-[9px] text-gray-400">
+                      <span className="text-[9px] text-gray-500">
                         5.0
                       </span>
                     </div>
@@ -133,7 +133,7 @@ export default function MinimalHome() {
             <div className="bg-white rounded-full border border-black/5 shadow-sm p-2 pl-6 flex items-center gap-3">
 
               <svg
-                className="w-5 h-5 text-gray-400 flex-shrink-0"
+                className="w-5 h-5 text-gray-500 flex-shrink-0"
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
@@ -153,7 +153,7 @@ export default function MinimalHome() {
                 onChange={(event) => setSearch(event.target.value)}
                 placeholder="What are you shopping for today?"
                 aria-label="Buscar productos"
-                className="flex-1 min-w-0 bg-transparent outline-none text-sm md:text-base text-[#171717] placeholder:text-gray-400"
+                className="flex-1 min-w-0 bg-transparent outline-none text-sm md:text-base text-[#171717] placeholder:text-gray-500"
               />
 
               <button data-visual-section={VISUAL_SECTION.heroCta}
@@ -209,7 +209,7 @@ export default function MinimalHome() {
           <div className="flex items-end justify-between gap-6 mb-7">
 
             <div>
-              <p className="text-xs text-gray-400 mb-2">
+              <p className="text-xs text-gray-500 mb-2">
                 Para descubrir sin prisa
               </p>
 
@@ -243,7 +243,7 @@ export default function MinimalHome() {
 
                 <div data-visual-part="body" className="absolute inset-x-3 bottom-3 bg-white/95 backdrop-blur-sm rounded-2xl p-4">
 
-                  <p className="text-[10px] uppercase tracking-wide text-gray-400">
+                  <p className="text-[10px] uppercase tracking-wide text-gray-500">
                     {product.category}
                   </p>
 
@@ -371,7 +371,7 @@ export default function MinimalHome() {
 
                   <div data-visual-part="body" className="pt-3">
 
-                    <p className="text-[10px] uppercase tracking-wide text-gray-400">
+                    <p className="text-[10px] uppercase tracking-wide text-gray-500">
                       {product.category}
                     </p>
 

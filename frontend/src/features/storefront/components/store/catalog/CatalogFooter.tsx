@@ -20,13 +20,13 @@ export function CatalogFooter() {
             {config.name}
           </p>
 
-          <p className="mt-2 max-w-xs text-[12px] leading-5 text-white/45">
+          <p className="mt-2 max-w-xs text-[12px] leading-5 text-white/60">
             Compra simple, productos seleccionados e información clara.
           </p>
         </div>
 
         {isSectionVisible('Beneficios') && content.beneficios.length > 0 && (<div className="md:text-center">
-          {content.beneficios.map((b, i) => <div key={i} className="mb-4"><Icon name={b.icono} className="w-5 h-5 inline-block" /><p className="text-[10px] uppercase tracking-[0.18em] text-[var(--primary)] mt-2">{b.titulo}</p>{b.descripcion && <p className="mt-2 text-[12px] text-white/45">{b.descripcion}</p>}</div>)}
+          {content.beneficios.map((b, i) => <div key={i} className="mb-4"><Icon name={b.icono} className="w-5 h-5 inline-block" /><p className="text-[10px] uppercase tracking-[0.18em] text-[var(--primary)] mt-2">{b.titulo}</p>{b.descripcion && <p className="mt-2 text-[12px] text-white/60">{b.descripcion}</p>}</div>)}
         </div>)}
 
         <div className="flex flex-wrap md:justify-end gap-x-5 gap-y-2 text-[11px] text-white/50">

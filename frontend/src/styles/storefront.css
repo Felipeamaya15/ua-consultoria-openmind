@@ -43,21 +43,21 @@
   --secondary: #eef1f8;
   --secondary-foreground: #1a3a6b;
   --muted: #f1f3f9;
-  --muted-foreground: #6b7a99;
-  --accent: #e04b1a;
+  --muted-foreground: #5a6786;
+  --accent: #c2410c;
   --accent-foreground: #ffffff;
   --border: #dde3f0;
   --ring: #1a3a6b;
   --radius: 8px;
 
   /* Status colors */
-  --success: #16a34a;
+  --success: #15803d;
   --success-bg: #f0fdf4;
-  --warning: #d97706;
+  --warning: #b45309;
   --warning-bg: #fffbeb;
-  --error: #dc2626;
+  --error: #b91c1c;
   --error-bg: #fef2f2;
-  --info: #2563eb;
+  --info: #1d4ed8;
   --info-bg: #eff6ff;
 
   /* Shadows */

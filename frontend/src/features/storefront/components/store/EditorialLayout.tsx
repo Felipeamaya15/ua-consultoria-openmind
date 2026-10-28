@@ -316,7 +316,7 @@ export function EditorialLayout() {
           {/* Tienda */}
           <div>
 
-            <p data-visual-part="footerTitle" className="text-xs font-semibold uppercase tracking-wider text-white/40 mb-3">
+            <p data-visual-part="footerTitle" className="text-xs font-semibold uppercase tracking-wider text-white/60 mb-3">
               Tienda
             </p>
 
@@ -343,7 +343,7 @@ export function EditorialLayout() {
           {/* Legal */}
           <div>
 
-            <p data-visual-part="footerTitle" className="text-xs font-semibold uppercase tracking-wider text-white/40 mb-3">
+            <p data-visual-part="footerTitle" className="text-xs font-semibold uppercase tracking-wider text-white/60 mb-3">
               Legal
             </p>
 
@@ -383,7 +383,7 @@ export function EditorialLayout() {
         </div>
 
         {/* Copyright */}
-        <div data-visual-part="branding" className="border-t border-white/10 py-4 text-xs text-white/40 px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+        <div data-visual-part="branding" className="border-t border-white/10 py-4 text-xs text-white/60 px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
           <InstitutionalBadge compact showVersion={true} />
           <p className="text-center sm:text-right">© 2025 {config.name} · Plataforma e-commerce Universidad Autónoma de Chile</p>
         </div>

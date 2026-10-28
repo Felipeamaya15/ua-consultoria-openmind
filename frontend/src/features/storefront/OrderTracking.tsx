@@ -84,7 +84,7 @@ export const OrderTracking = () => {
                 className={`p-3 text-center text-xs md:text-sm rounded-lg border ${
                   paso.actual ? 'bg-blue-600 border-blue-600 text-white font-bold shadow' :
                   paso.completado ? 'bg-green-50 border-green-200 text-green-700' :
-                  'bg-gray-50 border-gray-200 text-gray-400'
+                  'bg-gray-50 border-gray-200 text-gray-500'
                 }`}
               >
                 {paso.etiqueta}

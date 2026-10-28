@@ -272,7 +272,7 @@ export default function Catalog() {
                 Catálogo.
               </h1>
 
-              <p className="mt-4 text-[13px] text-white/45">
+              <p className="mt-4 text-[13px] text-white/60">
                 {filtered.length}{' '}
                 {filtered.length === 1 ? 'producto disponible' : 'productos disponibles'}
               </p>
@@ -282,7 +282,7 @@ export default function Catalog() {
               <div className="relative flex-1 sm:flex-none">
                 <Icon
                   name="search"
-                  className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-black/35 pointer-events-none"
+                  className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-black/60 pointer-events-none"
                 />
 
                 <input
@@ -293,7 +293,7 @@ export default function Catalog() {
                   }}
                   aria-label="Buscar productos"
                   placeholder="Buscar productos..."
-                  className="h-11 w-full sm:w-[230px] rounded-[10px] bg-white pl-11 pr-4 text-[12px] text-[#151515] placeholder:text-black/35 outline-none ring-1 ring-transparent focus:ring-[#1683ff]"
+                  className="h-11 w-full sm:w-[230px] rounded-[10px] bg-white pl-11 pr-4 text-[12px] text-[#151515] placeholder:text-black/60 outline-none ring-1 ring-transparent focus:ring-[#1683ff]"
                 />
               </div>
 
@@ -320,7 +320,7 @@ export default function Catalog() {
                     className={`w-11 flex items-center justify-center transition-colors ${
                       viewMode === view
                         ? 'bg-[#1683ff] text-white'
-                        : 'text-white/45 hover:text-white'
+                        : 'text-white/60 hover:text-white'
                     }`}
                   >
                     <Icon
@@ -351,7 +351,7 @@ export default function Catalog() {
             >
               <div className="sticky top-28 max-h-[calc(100vh-8rem)] flex flex-col rounded-[16px] bg-[#f5f5f3] text-[#151515]">
                 <div className="flex items-center justify-between gap-3 px-5 pt-5 pb-4 border-b border-black/10">
-                  <p className="text-[10px] font-black uppercase tracking-[0.16em] text-black/45">
+                  <p className="text-[10px] font-black uppercase tracking-[0.16em] text-black/60">
                     Filtros
                   </p>
 
@@ -367,7 +367,7 @@ export default function Catalog() {
                 </div>
 
                 <div className="flex-1 overflow-y-auto p-5">
-                  <p className="mb-4 text-[10px] font-black uppercase tracking-[0.16em] text-black/45">
+                  <p className="mb-4 text-[10px] font-black uppercase tracking-[0.16em] text-black/60">
                     Categorías
                   </p>
 
@@ -392,7 +392,7 @@ export default function Catalog() {
                   </div>
 
                   <div className="border-t border-black/10 mt-5 pt-5">
-                    <p className="mb-3 text-[10px] font-black uppercase tracking-[0.16em] text-black/45">
+                    <p className="mb-3 text-[10px] font-black uppercase tracking-[0.16em] text-black/60">
                       Disponibilidad
                     </p>
 
@@ -420,7 +420,7 @@ export default function Catalog() {
                   </div>
 
                   <div className="border-t border-black/10 mt-5 pt-5">
-                    <p className="mb-3 text-[10px] font-black uppercase tracking-[0.16em] text-black/45">
+                    <p className="mb-3 text-[10px] font-black uppercase tracking-[0.16em] text-black/60">
                       Precio
                     </p>
 
@@ -471,9 +471,9 @@ export default function Catalog() {
 
               {paginated.length === 0 ? (
                 <div className="rounded-[18px] border border-white/10 bg-[#111113] px-6 py-20 text-center">
-                  <Icon name="search" className="w-10 h-10 mx-auto text-white/25" />
+                  <Icon name="search" className="w-10 h-10 mx-auto text-white/60" />
                   <h2 className="mt-5 text-xl font-bold">Sin resultados</h2>
-                  <p className="mt-2 text-sm text-white/45">
+                  <p className="mt-2 text-sm text-white/60">
                     No encontramos productos para tu búsqueda.
                   </p>
                 </div>
@@ -651,7 +651,7 @@ export default function Catalog() {
       >
         <div>
           {isMinimal && (
-            <p className="text-xs text-gray-400 mb-2">
+            <p className="text-xs text-gray-500 mb-2">
               Explora nuestra selección
             </p>
           )}
@@ -698,7 +698,7 @@ export default function Catalog() {
                 -translate-y-1/2
                 w-4
                 h-4
-                text-gray-400
+                text-gray-500
                 pointer-events-none
               "
             />
@@ -1070,7 +1070,7 @@ export default function Catalog() {
 
           {paginated.length === 0 ? (
             <EmptyState
-              icon={<Icon name="search" className="w-12 h-12 text-gray-400" />}
+              icon={<Icon name="search" className="w-12 h-12 text-gray-500" />}
               title="Sin resultados"
               description="No encontramos productos para tu búsqueda."
             />

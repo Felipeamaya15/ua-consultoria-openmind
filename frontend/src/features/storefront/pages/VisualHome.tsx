@@ -142,7 +142,7 @@ export default function VisualHome() {
               className="
                 text-[10px]
                 uppercase tracking-[0.24em]
-                text-gray-400
+                text-gray-500
                 mb-4
               "
             >
@@ -295,7 +295,7 @@ export default function VisualHome() {
               className="
                 text-[10px]
                 uppercase tracking-[0.24em]
-                text-gray-400
+                text-gray-500
                 mb-5
               "
             >

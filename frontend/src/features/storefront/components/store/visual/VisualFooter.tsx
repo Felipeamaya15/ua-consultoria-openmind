@@ -57,7 +57,7 @@ export function VisualFooter() {
 
         </div>
 
-        <div className="border-t border-white/15 mt-12 pt-6 flex flex-col md:flex-row justify-between gap-4 text-xs text-white/40">
+        <div className="border-t border-white/15 mt-12 pt-6 flex flex-col md:flex-row justify-between gap-4 text-xs text-white/60">
 
           <p>
             © 2026 {config.name}. Todos los derechos reservados.

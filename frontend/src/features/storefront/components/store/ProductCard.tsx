@@ -177,7 +177,7 @@ export function ProductCard({
         </Link>
 
         <div data-visual-part="body" className="flex flex-1 flex-col p-4">
-          <p className="text-[9px] font-black uppercase tracking-[0.14em] text-[#e04b1a]">
+          <p className="text-[9px] font-black uppercase tracking-[0.14em] text-[#c2410c]">
             {product.category}
           </p>
 
@@ -187,7 +187,7 @@ export function ProductCard({
             </Link>
           </h3>
 
-          <p data-visual-part="description" className="mt-2 line-clamp-2 min-h-[36px] text-[11px] leading-[1.55] text-black/50">
+          <p data-visual-part="description" className="mt-2 line-clamp-2 min-h-[36px] text-[11px] leading-[1.55] text-black/60">
             {product.description}
           </p>
 
@@ -198,14 +198,14 @@ export function ProductCard({
               </p>
 
               {hasDiscount && (
-                <p className="mt-0.5 text-[10px] text-black/35 line-through">
+                <p className="mt-0.5 text-[10px] text-black/60 line-through">
                   {formatPrice(comparePrice!)}
                 </p>
               )}
             </div>
 
             {!inStock && (
-              <span className="text-[9px] font-bold uppercase tracking-[0.1em] text-black/35">
+              <span className="text-[9px] font-bold uppercase tracking-[0.1em] text-black/60">
                 Agotado
               </span>
             )}
@@ -255,7 +255,7 @@ export function ProductCard({
         </Link>
 
         <div data-visual-part="body" className="flex min-w-0 flex-1 flex-col p-4 sm:p-5">
-          <p className="text-[9px] font-black uppercase tracking-[0.14em] text-[#e04b1a]">
+          <p className="text-[9px] font-black uppercase tracking-[0.14em] text-[#c2410c]">
             {product.category}
           </p>
 
@@ -266,7 +266,7 @@ export function ProductCard({
             {product.name}
           </Link>
 
-          <p data-visual-part="description" className="mt-2 hidden sm:block text-[11px] leading-5 text-black/50">
+          <p data-visual-part="description" className="mt-2 hidden sm:block text-[11px] leading-5 text-black/60">
             {product.description}
           </p>
 
@@ -277,7 +277,7 @@ export function ProductCard({
               </p>
 
               {hasDiscount && (
-                <p className="mt-0.5 text-[10px] text-black/35 line-through">
+                <p className="mt-0.5 text-[10px] text-black/60 line-through">
                   {formatPrice(comparePrice!)}
                 </p>
               )}
@@ -294,7 +294,7 @@ export function ProductCard({
                 {atLimit ? 'Maximo' : added ? 'Agregado' : 'Agregar'}
               </button>
             ) : (
-              <span className="text-[9px] font-bold uppercase tracking-[0.1em] text-black/35">
+              <span className="text-[9px] font-bold uppercase tracking-[0.1em] text-black/60">
                 Agotado
               </span>
             )}

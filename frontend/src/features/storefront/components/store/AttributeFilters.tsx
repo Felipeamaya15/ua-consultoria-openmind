@@ -14,7 +14,7 @@ const STYLES = {
   // Plantilla 4
   catalog: {
     wrapper: 'border-t border-black/10 mt-5 pt-5',
-    title: 'mb-3 text-[10px] font-black uppercase tracking-[0.16em] text-black/45',
+    title: 'mb-3 text-[10px] font-black uppercase tracking-[0.16em] text-black/60',
     label: 'flex items-center gap-2.5 py-1.5 text-[12px] cursor-pointer',
     input: 'accent-[#1683ff]',
   },

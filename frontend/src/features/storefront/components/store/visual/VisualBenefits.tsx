@@ -18,7 +18,7 @@ export function VisualBenefits() {
               {benefit.titulo}
             </p>
 
-            <p className="text-xs text-black/50 mt-2">
+            <p className="text-xs text-black/60 mt-2">
               {benefit.descripcion}
             </p>
           </div>
