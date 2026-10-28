@@ -51,7 +51,7 @@ export default function MinimalHome() {
           {/* Tarjetas flotantes */}
           <div data-visual-part="heroDecorations" data-landing-content className="flex justify-center items-end -space-x-5 sm:-space-x-4 md:-space-x-3 mb-4 min-h-[150px] sm:min-h-[170px] md:min-h-[180px] px-6">
 
-            {!floatingProducts.length && landing?.imagen_principal && <img data-visual-part="heroImageFallback" data-landing-image src={landing.imagen_principal} alt={landing.titulo} className="max-h-[180px] max-w-full rounded-2xl object-contain" />}
+            {!floatingProducts.length && landing?.imagen_principal && <img data-visual-part="heroImageFallback" data-landing-image src={landing.imagen_principal} alt={landing.titulo || 'Imagen principal de la tienda'} className="max-h-[180px] max-w-full rounded-2xl object-contain" />}
             {floatingProducts.map((product, index) => {
               const rotations = [
                 '-rotate-6 translate-y-4',
@@ -292,7 +292,7 @@ export default function MinimalHome() {
 
               <img
                 src={activeProducts[0].images[0]}
-                alt=""
+                alt={activeProducts[0].name}
                 className="absolute inset-0 w-full h-full object-cover"
               />
 

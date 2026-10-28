@@ -30,7 +30,7 @@ export default function VisualHome() {
           <img data-visual-part="heroImage"
             data-landing-image={landing?.imagen_principal ? true : undefined}
             src={landing?.imagen_principal || undefined} hidden={!landing?.imagen_principal}
-            alt={landing?.titulo || ''}
+            alt={landing?.titulo || 'Imagen principal de la tienda'}
             className="absolute inset-0 w-full h-full object-cover"
           />
 

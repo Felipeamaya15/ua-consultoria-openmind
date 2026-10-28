@@ -27,7 +27,7 @@ export default function CatalogHome() {
           <img data-visual-part="heroImage"
             data-landing-image={landing?.imagen_principal ? true : undefined}
             src={landing?.imagen_principal || undefined} hidden={!landing?.imagen_principal}
-            alt={landing?.titulo || ''}
+            alt={landing?.titulo || 'Imagen principal de la tienda'}
             className="absolute inset-0 w-full h-full object-cover object-center"
           />
           <div data-visual-part="heroOverlay" className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/55 to-black/15" />
