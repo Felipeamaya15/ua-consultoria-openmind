@@ -4,7 +4,25 @@ from apps.landing.models import ConfiguracionLanding
 from apps.landing.content_serializers import ContenidoLandingSerializer
 
 
+class WebImageField(serializers.ImageField):
+    def __init__(self, *, max_mb, **kwargs):
+        self.max_mb = max_mb
+        super().__init__(**kwargs)
+
+    def to_internal_value(self, data):
+        from apps.core.image_processing import process_upload
+        from django.core.exceptions import ValidationError
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        try:
+            image = process_upload(data, self.max_mb)
+        except (AttributeError, ValidationError) as error:
+            raise serializers.ValidationError(getattr(error, 'messages', ['Selecciona una imagen válida.'])) from error
+        return super().to_internal_value(SimpleUploadedFile(f'imagen.{image.extension}', image.data, content_type=image.mime))
+
+
 class ConfiguracionLandingSerializer(serializers.ModelSerializer):
+    imagen_principal = WebImageField(max_mb=2, required=False, allow_null=True)
+    logo = WebImageField(max_mb=1, required=False, allow_null=True)
     titulo = serializers.CharField(
         max_length=255,
         trim_whitespace=True,

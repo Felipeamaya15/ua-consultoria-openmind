@@ -14,7 +14,8 @@ function test(name, fn) { fn(); console.log('OK ' + name); passed++; }
 function archivos(carpeta) {
   return fs.readdirSync(carpeta, { withFileTypes: true }).flatMap(entrada => {
     const ruta = path.join(carpeta, entrada.name);
-    return entrada.isDirectory() ? archivos(ruta) : /\.tsx$/.test(entrada.name) ? [ruta] : [];
+    // Match the app's tsconfig: historical backup copies are not active screens.
+    return entrada.isDirectory() ? archivos(ruta) : /\.tsx$/.test(entrada.name) && !/\.BACKUP\.tsx$/.test(entrada.name) ? [ruta] : [];
   });
 }
 const fuentes = archivos(path.join(root, 'src')).map(ruta => ({ ruta: path.relative(root, ruta).replaceAll('\\', '/'), texto: fs.readFileSync(ruta, 'utf8').replace(/\r/g, '') }));

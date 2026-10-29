@@ -161,9 +161,14 @@ def export_contacts(store, rows, *, csv_format=False, marketing=False):
     purpose = 'marketing-autorizado' if marketing else 'operacional'
     filename = f'contactos-{purpose}-{timezone.now():%Y%m%d}'
     headers = ['Email', 'Cantidad de pedidos', 'Último pedido en Chile', 'Consentimiento comercial', 'Fecha de consentimiento en Chile']
+    if marketing:
+        headers = ['Email']
     def values():
         for row in rows:
-            yield (row['email'], row['cantidad_pedidos'], local_date(datetime.fromisoformat(row['ultimo_pedido'])),
+            if marketing:
+                yield (row['email'],)
+                continue
+            yield (row['email'], row['cantidad_pedidos'], local_date(datetime.fromisoformat(row['ultimo_pedido'])) if row['ultimo_pedido'] else None,
                    row['consentimiento'], local_date(datetime.fromisoformat(row['fecha_consentimiento'])) if row['fecha_consentimiento'] else None)
     if csv_format:
         import io

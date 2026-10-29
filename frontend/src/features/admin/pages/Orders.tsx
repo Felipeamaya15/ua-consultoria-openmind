@@ -2,10 +2,11 @@ import { useState, useEffect, useRef } from "react"
 import { EmptyListState, ErrorState, LoadingState } from "../../../shared/components/states"
 import { humanizeAdminError } from "../utils/humanizeError"
 import { formatReportMoney as formatPrice } from "../services/reportFormatting"
-import { formatBusinessDate, chileanDateInput } from '../services/businessTime'
+import { formatBusinessDate } from '../services/businessTime'
 import { PickupSelectionSummary } from '../../storefront/components/checkout/PickupSchedule'
-import { Badge, Icon, Input, Button, Select } from "../components/ui"
+import { Badge, Icon } from "../components/ui"
 import { HistoryPagination } from '../components/HistoryControls'
+import { OrderFilters } from '../components/OrderFilters'
 import { useCommercialExport } from '../hooks/useCommercialHistory'
 import { getOrderHistory, getOrderDetail, historyParams, emptyPagination, type HistoryOrder as StoreOrder } from '../services/commercialService'
 import { approveManualTransfer, verifyTransfer } from "../services/pendingTransfersService"
@@ -146,57 +147,31 @@ export default function Orders() {
 
   return (
     <div className="commercial-section space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3"><p className="text-sm">Histórico de pedidos de tu tienda, incluidos pendientes y cancelados. Solo los pagos confirmados suman ingresos en los informes.</p>
-        <Button variant="outline" disabled={cargando || !!error || !!filters.error || file.busy} onClick={() => void file.download('pedidos/exportar/', historyParams(params), 'historico-pedidos.xlsx')}>{file.busy ? 'Preparando Excel...' : 'Exportar pedidos Excel'}</Button></div>
-      {file.message && <p role="status">{file.message}</p>}{file.error && <p role="alert" className="text-red-700">{file.error}</p>}
       {['7', '30', 'year'].includes(params.get('periodo') || '') && <Link
         to={`/emprendedor?periodo=${params.get('periodo')}`} className="text-sm text-[var(--primary)] hover:underline focus-visible:outline focus-visible:outline-2 rounded">← Volver al dashboard</Link>}
-      <div className="flex flex-wrap items-end gap-3">
-        <Input id="orders-from" type="text" inputMode="numeric" placeholder="DD/MM/AAAA" label="Desde (DD/MM/AAAA)" value={/^\d{4}-\d{2}-\d{2}$/.test(filters.from) ? formatBusinessDate(filters.from) || filters.from : filters.from}
-          onChange={event => updateParams({ fecha_desde: chileanDateInput(event.target.value), periodo: null })} />
-        <Input id="orders-to" type="text" inputMode="numeric" placeholder="DD/MM/AAAA" label="Hasta (DD/MM/AAAA)" value={/^\d{4}-\d{2}-\d{2}$/.test(filters.to) ? formatBusinessDate(filters.to) || filters.to : filters.to}
-          onChange={event => updateParams({ fecha_hasta: chileanDateInput(event.target.value), periodo: null })} />
-        <Input id="orders-search" label="Buscar pedido, producto o SKU" maxLength={100} value={params.get('q') || ''} onChange={event => updateParams({ q: event.target.value || null })} />
-        <Input id="orders-method" label="Método de pago" placeholder="Ej.: Transferencia" maxLength={50} value={params.get('metodo_pago') || ''} onChange={event => updateParams({ metodo_pago: event.target.value || null })} />
-        <Select label="Estado de pago" value={params.get('pago') || ''} onChange={event => updateParams({ pago: event.target.value || null })} options={[{ value: '', label: 'Todos' }, { value: 'confirmado', label: 'Confirmado' }, { value: 'pendiente', label: 'Pendiente' }, { value: 'cancelado', label: 'Cancelado' }]} />
-        <Select label="Método de entrega" value={params.get('entrega') || ''} onChange={event => updateParams({ entrega: event.target.value || null })} options={[{ value: '', label: 'Todos' }, { value: 'retiro', label: 'Retiro en tienda' }, { value: 'envio', label: 'Envío' }]} />
-        <Button variant="outline" onClick={() => updateParams({ estado: null, fecha_desde: null, fecha_hasta: null, periodo: null, q: null, metodo_pago: null, pago: null, entrega: null })}>Limpiar filtros</Button>
-      </div>
+      <OrderFilters key={queryKey} params={params} onChange={updateParams}
+        onClear={() => updateParams({ estado: null, fecha_desde: null, fecha_hasta: null, periodo: null, q: null, metodo_pago: null, pago: null, entrega: null })}
+        exportBusy={file.busy} exportDisabled={cargando || !!error || !!filters.error}
+        onExport={() => void file.download('pedidos/exportar/', historyParams(params), 'historico-pedidos.xlsx')} />
+      {file.message && <p role="status" className="text-sm text-[var(--primary)]">{file.message}</p>}{file.error && <p role="alert" className="text-sm text-red-700">{file.error}</p>}
       {(filters.from || filters.to) && <p className="text-sm">Período: {formatBusinessDate(filters.from) || 'Sin inicio'} al {formatBusinessDate(filters.to) || 'Sin término'}</p>}
       <p className="text-xs text-[var(--muted-foreground)]">Fechas de registro del pedido en hora de Chile. {pagination.total} pedidos coinciden con los filtros. La exportación incluye todas las páginas filtradas.</p>
       {filters.error && <p role="alert" className="text-sm text-[var(--error)]">{filters.error}</p>}
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-5">
-      <div className="lg:col-span-3">
-        {/* Filters */}
-        <div className="flex gap-2 mb-4 overflow-x-auto pb-1">
-          {[
-            ["all", "Todos"],
-            ["confirmed", "Pagos confirmados"],
-            ["dispatch", "Por despachar"],
-            ["pendiente", "Pendientes"],
-            ["pagado", "Pagados"],
-            ["preparando", "Preparando"],
-            ["en_origen", "En origen"],
-            ["enviado", "En tránsito"],
-            ["en_reparto", "En reparto"],
-            ["entregado", "Entregados"],
-            ["cancelado", "Cancelados"]
-          ].map(([val, label]) => (
-            <button
-              key={val}
-              aria-pressed={filter === val}
-              onClick={() => setFilter(val)}
-              className={`px-3 py-1.5 text-xs rounded-lg font-medium whitespace-nowrap transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--primary)] ${
-                filter === val
-                  ? "bg-[var(--primary)] text-white"
-                  : "bg-white border border-[var(--border)] text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
-              }`}
-            >
-              {label}
-            </button>
-          ))}
+      <section aria-label="Estado de los pedidos" className="orders-status-bar">
+        <div className="orders-status-list" role="group" aria-label="Filtrar por estado">
+          {[["all", "Todos"], ["confirmed", "Pagos confirmados"], ["dispatch", "Por despachar"], ["pendiente", "Pendientes"]].map(([value, label]) =>
+            <button type="button" key={value} aria-pressed={filter === value} onClick={() => setFilter(value)}>{label}</button>)}
         </div>
-
+        <label className="orders-other-status">Otros estados
+          <select aria-label="Otros estados del pedido" value={Object.prototype.hasOwnProperty.call(STATUS_BADGE, filter) && filter !== 'pendiente' ? filter : ''} onChange={event => setFilter(event.target.value || 'all')}>
+            <option value="">Seleccionar estado</option>
+            {Object.entries(STATUS_BADGE).filter(([value]) => value !== 'pendiente').map(([value, status]) => <option key={value} value={value}>{status.label}</option>)}
+          </select>
+        </label>
+      </section>
+      <div className={`grid min-w-0 gap-5 ${selectedId ? 'xl:grid-cols-5' : ''}`}>
+      <div className={`min-w-0 ${selectedId ? 'xl:col-span-3' : ''}`}>
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2"><h3 className="font-semibold">Listado de pedidos <span className="ml-1 text-sm font-normal text-[var(--muted-foreground)]">({pagination.total})</span></h3><p className="text-xs text-[var(--muted-foreground)]">Selecciona un pedido para ver su detalle</p></div>
         <div className="bg-white border border-[var(--border)] rounded-xl overflow-hidden">
           {cargando ? <LoadingState spacing="none" className="p-5">Cargando pedidos...</LoadingState> : error ? <ErrorState className="m-5" onRetry={() => setRefreshKey(n => n + 1)} retryLabel="Reintentar pedidos">{humanizeAdminError(error)}</ErrorState> : filtered.length === 0 ? (
             <EmptyListState spacing="none" className="p-10">{hasOrderFilters(params) ? 'No hay pedidos que coincidan con los filtros.' : 'Aún no hay pedidos en tu tienda.'}</EmptyListState>
@@ -227,7 +202,7 @@ export default function Orders() {
                         <p className="font-semibold text-sm mt-0.5">
                           {order.nombre_contacto || "Sin nombre"}
                         </p>
-                        <p className="text-xs text-[var(--muted-foreground)]">
+                        <p className="break-all text-xs text-[var(--muted-foreground)]">
                           {order.correo_contacto || "Sin correo"}
                         </p>
                       </div>
@@ -238,7 +213,7 @@ export default function Orders() {
                         </Badge>
                       </div>
                     </div>
-                    <div className="flex items-center gap-3 mt-2 text-xs text-[var(--muted-foreground)]">
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-3 text-xs text-[var(--muted-foreground)]">
                       <span>{order.metodo_pago || "No especificado"}</span>
                       <span>· Pago {order.pago_estado}</span>
                       <span>· {order.entrega?.metodo || 'Entrega sin registro'} · {order.items.reduce((sum, item) => sum + item.cantidad, 0)} unidades</span>
@@ -257,7 +232,7 @@ export default function Orders() {
       </div>
 
       {/* Order detail panel */}
-      <div className="lg:col-span-2">
+      {selectedId && <div className="min-w-0 xl:col-span-2">
         {selectedOrder ? (
           <div ref={detailRef} tabIndex={-1} role="region" aria-label={`Detalle del pedido ${selectedOrder.identificador || `#${selectedOrder.id_pedido}`}`} className="bg-white border border-[var(--border)] rounded-xl p-5 sticky top-20 flex flex-col gap-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--primary)]">
             <div className="flex items-start justify-between">
@@ -370,7 +345,7 @@ export default function Orders() {
             </p>
           </div>
         )}
-      </div>
+      </div>}
       </div>
     </div>
   )

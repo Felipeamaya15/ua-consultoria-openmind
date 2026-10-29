@@ -1,3 +1,4 @@
+from apps.visual_config.palettes import PalettesAPIView, AppearanceAPIView
 from django.urls import path
 
 from apps.visual_config.views import (
@@ -8,6 +9,9 @@ from apps.visual_config.views import (
 
 
 urlpatterns = [
+    path("paletas/", PalettesAPIView.as_view()),
+    path("paletas/<uuid:palette_id>/", PalettesAPIView.as_view()),
+    path("apariencia/", AppearanceAPIView.as_view()),
     path(
         "plantillas/",
         PlantillasDisponiblesAPIView.as_view(),

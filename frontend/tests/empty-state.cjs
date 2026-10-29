@@ -90,8 +90,10 @@ test('qué parámetros de Pedidos cuentan como filtros', () => {
 
 test('los filtros que reconoce son los mismos que borra el botón "Limpiar filtros" de Pedidos', () => {
   const pedidos = leer('src/features/admin/pages/Orders.tsx');
-  const boton = pedidos.match(/updateParams\(\{([^}]*)\}\)\}>Limpiar filtros/);
-  assert.ok(boton, 'no se encontró el botón Limpiar filtros');
+  const boton = pedidos.match(/onClear=\{\(\) => updateParams\(\{([^}]*)\}\)\}/);
+  assert.ok(boton, 'no se encontró la acción de limpiar del panel de filtros');
+  const panel = leer('src/features/admin/components/OrderFilters.tsx');
+  assert.ok(panel.includes('onClick={clear}>Limpiar filtros') && panel.includes('setQuery(\'\')') && panel.includes('onClear()'), 'limpiar borra también los campos antes de aplicar');
   const borradas = [...boton[1].matchAll(/(\w+): null/g)].map(m => m[1]).sort();
   assert.deepEqual([...ORDER_FILTER_KEYS].sort(), borradas);
 });
@@ -202,10 +204,10 @@ test('quien usa <EmptyListState> lo importa del módulo compartido', () => {
 test('el listado de productos distingue "no hay productos" de "la búsqueda no encuentra" y no parpadea al cargar', () => {
   const productos = leer('src/features/admin/pages/Products.tsx');
   assert.ok(/const vacio = emptyKind\(\{ loading, error, shown: filtered\.length, searching: search\.trim\(\) !== "" \}\)/.test(productos));
-  assert.ok(productos.includes('{vacio === "empty" && <EmptyListState'));
-  assert.ok(productos.includes('{vacio === "no-results" && <EmptyListState'));
+  assert.ok(/\{vacio === ['"]empty['"] && <EmptyListState/.test(productos));
+  assert.ok(/\{vacio === ['"]no-results['"] && <EmptyListState/.test(productos));
   assert.ok(productos.includes('to="/emprendedor/productos/nuevo"') && productos.includes('Crear tu primer producto'));
-  assert.ok(productos.includes('onClick={() => setSearch("")}>Limpiar búsqueda'));
+  assert.ok(/onClick=\{\(\) => setSearch\(['"]['"]\)\}>Limpiar búsqueda/.test(productos));
   assert.ok(!/\{filtered\.length === 0 && </.test(productos), 'el mensaje no debe depender solo de que la lista esté vacía (aparecería mientras carga)');
 });
 

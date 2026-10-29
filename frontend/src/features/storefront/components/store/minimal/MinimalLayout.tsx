@@ -1,6 +1,4 @@
 import { StorePageContent } from '../StorePageContent';
-import { InstitutionalBadge } from '../../ui';
-import { VISUAL_SECTION } from '../../../visual/sectionIds';
 import { useEffect } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 
@@ -22,8 +20,6 @@ export function MinimalLayout() {
       <MinimalSidebar />
 
       <div className="md:pl-16 min-h-screen flex flex-col">
-
-        <div data-visual-section={VISUAL_SECTION.topBar} data-institutional-bar className="bg-[var(--institutional)] text-white py-2 px-4 text-xs flex items-center justify-center gap-2.5 font-medium"><InstitutionalBadge /></div>
 
         <MinimalHeader />
 

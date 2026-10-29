@@ -1,10 +1,11 @@
+import type { PaletteColors } from '../../../shared/palettes';
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { formatMarketingMoney } from '../domain/content';
 import { defaultDesign, designPalette, editorialProblem, FONT_FAMILIES, normalizeDesign, safeTextColor, type EditorialBlock, type TextBlock } from '../domain/editor';
 import { PUBLICATION_FORMATS, type PublicationContent, type PublicationDesign, type StoreBrand } from '../domain/types';
 
 /** Render compartido por la vista previa y su captura de exportación; no consulta ni guarda. */
-export function PublicationPreview({ content, brand, design, images = [] }: { content: PublicationContent; brand: StoreBrand; design: PublicationDesign; images?: readonly string[] }) {
+export function PublicationPreview({ content, brand, design, paletteColors, images = [] }: { paletteColors?:PaletteColors; content: PublicationContent; brand: StoreBrand; design: PublicationDesign; images?: readonly string[] }) {
   const [failedImage, setFailedImage] = useState<string | null>(null);
   const [failedLogo, setFailedLogo] = useState<string | null>(null);
   const [fit, setFit] = useState({ scale: 1, blocked: false });
@@ -13,9 +14,9 @@ export function PublicationPreview({ content, brand, design, images = [] }: { co
   const image = images[editor.imageIndex] || images[0] || content.image;
   const hasImage = !!image && failedImage !== image;
   const hasLogo = editor.showLogo && !!brand.logo && failedLogo !== brand.logo;
-  const palette = designPalette(brand.palette, editor);
+  const palette = designPalette(brand.palette, editor, paletteColors);
   const format = PUBLICATION_FORMATS.find(f => f.id === design.format)!;
-  const signature = JSON.stringify([content, brand, design, images, hasImage, hasLogo]);
+  const signature = JSON.stringify([content, brand, design, images, hasImage, hasLogo, paletteColors]);
   useEffect(() => {
     const art = artRef.current;
     if (!art) return;

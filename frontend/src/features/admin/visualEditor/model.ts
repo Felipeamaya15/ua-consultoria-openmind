@@ -8,8 +8,9 @@ import type { VisualSectionId } from './sections';
 import type { LandingConfig } from '../../landing/types/landing.types';
 
 export interface EditorDocument {
+  paletteId?: string | null;
   blockStyles?: BlockStyles;
-  /** Read-only content snapshot used for contextual preview. */
+  /** Shared landing draft, persisted through the existing landing endpoint. */
   landing?: LandingConfig;
   storeOverrides: VisualConfigOverrides;
   overrides: VisualConfigOverrides;

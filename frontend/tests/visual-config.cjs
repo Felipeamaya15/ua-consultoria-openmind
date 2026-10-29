@@ -17,6 +17,8 @@ function load(file) {
   cache.set(file, module.exports);
   const code = ts.transpileModule(fs.readFileSync(file, 'utf8'), { compilerOptions: { target: ts.ScriptTarget.ES2020, module: ts.ModuleKind.CommonJS } }).outputText;
   const req = id => {
+    if(id.endsWith('/fontLibrary')){const library=load(path.resolve(path.dirname(file),id)+'.ts');return {...library,loadVisualFonts(){}};}
+
     if (!id.startsWith('.')) throw Error(`Unexpected dependency: ${id}`);
     const target = path.resolve(path.dirname(file), id);
     return load(fs.existsSync(`${target}.ts`) ? `${target}.ts` : path.join(target, 'index.ts'));
@@ -185,6 +187,7 @@ test('StoreContext resolves routes, legacy data and live storage updates', () =>
     useCallback: fn => fn,
   };
   const req = id => {
+    if (id.endsWith('/palettes')) return {usePaletteLibrary:()=>({}),paletteOverrides:()=>undefined};
     if (id === 'react/jsx-runtime') return { jsx, jsxs: jsx };
     if (id === 'react') return fakeReact;
     if (id === 'react-router-dom') return { useLocation: () => ({ pathname }) };
@@ -397,7 +400,8 @@ test('StoreProvider and StoreVisualRoot render in SSR without browser globals', 
     const module = { exports: {} };
     const req = id => {
       if (id === 'react') return React;
-      if (id === 'react/jsx-runtime') return require(id);
+      if (id.endsWith('/palettes')) return {usePaletteLibrary:()=>({}),paletteOverrides:()=>undefined};
+    if (id === 'react/jsx-runtime') return require(id);
       if (id === 'react-router-dom') return { useLocation: () => ({ pathname: '/plantilla/2' }) };
       if (id.includes('StoreIdentityContext')) return { useStoreIdentity: () => ({ identity: null }) };
       if (id.includes('catalogService')) return { fetchPublicProducts: () => { throw Error('SSR must not fetch catalog'); } };

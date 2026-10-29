@@ -1,15 +1,18 @@
+import { PaletteLibrary } from '../../../shared/PaletteLibrary';
+import { resolveVisualConfig } from '../../storefront/visual/resolveVisualConfig';
+import type { PaletteColors } from '../../../shared/palettes';
 import { useEffect, useId, useState } from 'react';
 import { Button, Input, Select } from '../../admin/components/ui';
-import { FONT_FAMILIES, PALETTES, TEMPLATES, TEXT_LIMITS, defaultDesign, designPalette, editorialProblem, safeTextColor, type DesignState, type TextBlock, type EditorialBlock } from '../domain/editor';
+import { FONT_FAMILIES, TEMPLATES, TEXT_LIMITS, defaultDesign, designPalette, editorialProblem, safeTextColor, type DesignState, type TextBlock, type EditorialBlock } from '../domain/editor';
 import { AppearanceControls } from './AppearanceControls';
 import type { StoreBrand } from '../domain/types';
 
-interface Props { value: DesignState; brand: StoreBrand; images: readonly string[]; hasDescription: boolean; onChange: (value: DesignState) => void; onReset: () => void; onUndo: () => void; onRedo: () => void; canUndo: boolean; canRedo: boolean }
+interface Props { paletteColors?:PaletteColors; value: DesignState; brand: StoreBrand; images: readonly string[]; hasDescription: boolean; onChange: (value: DesignState) => void; onReset: () => void; onUndo: () => void; onRedo: () => void; canUndo: boolean; canRedo: boolean }
 const sections = ['Plantilla', 'Textos', 'Colores', 'Imagen y logo', 'Composición'] as const;
 function Toggle({ label, checked, onChange }: { label: string; checked: boolean; onChange: (value: boolean) => void }) {
   return <label className="marketing-editor-toggle"><input type="checkbox" checked={checked} onChange={e => onChange(e.target.checked)} /><span>{label}</span></label>;
 }
-export function DesignControls({ value: d, brand, images, hasDescription, onChange, onReset, onUndo, onRedo, canUndo, canRedo }: Props) {
+export function DesignControls({ value: d, brand, paletteColors, images, hasDescription, onChange, onReset, onUndo, onRedo, canUndo, canRedo }: Props) {
   const [section, setSection] = useState<typeof sections[number]>('Plantilla');
   const [block, setBlock] = useState<TextBlock>('heading');
   const [confirmReset, setConfirmReset] = useState(false);
@@ -18,7 +21,7 @@ export function DesignControls({ value: d, brand, images, hasDescription, onChan
   const change = (patch: Partial<DesignState>) => onChange({ ...d, ...patch });
   const textStyle = d.textStyles[block];
   const styleChange = (patch: Partial<typeof textStyle>) => change({ textStyles: { ...d.textStyles, [block]: { ...textStyle, ...patch } } });
-  const palette = designPalette(brand.palette, d);
+  const palette = designPalette(brand.palette, d, paletteColors);
   const blockBackground = block === 'brand' ? palette.background : block === 'cta' && d.appearance.buttonStyle === 'solid' ? palette.buttonBackground : palette.copyBackground;
   const blockColor = safeTextColor(textStyle.color || (block === 'cta' && d.appearance.buttonStyle === 'solid' ? null : block === 'brand' ? palette.text : palette.copyText), blockBackground);
   const editorial = block === 'heading' || block === 'subtitle' || block === 'cta' ? block as EditorialBlock : null;
@@ -56,12 +59,13 @@ export function DesignControls({ value: d, brand, images, hasDescription, onChan
         <button type="button" className="marketing-text-link" onClick={() => change({ textStyles: { ...d.textStyles, [block]: defaultDesign(d.template).textStyles[block] } })}>Restaurar estilo de este bloque</button>
       </>}
       {section === 'Colores' && <>
-        <div className="marketing-editor-actions"><Button type="button" size="sm" variant="outline" onClick={() => change({ colors: defaultDesign().colors,
+        <div className="marketing-editor-actions"><Button type="button" size="sm" variant="outline" onClick={() => change({ paletteId:null, colors: defaultDesign().colors,
           appearance: { ...d.appearance, borderColor: null, copyBackground: null, copyBorderColor: null, buttonBackground: null, buttonBorderColor: null },
           textStyles: Object.fromEntries(Object.entries(d.textStyles).map(([key, v]) => [key, { ...v, color: null }])) as DesignState['textStyles'] })}>Colores de mi tienda</Button>
-          {PALETTES.map(item => <Button type="button" key={item.name} size="sm" variant="outline" onClick={() => change({ colors: { background: item.palette.primary, accent: item.palette.secondary, text: null, label: null } })}>{item.name}</Button>)}
+          <PaletteLibrary manage={false} selectedId={d.paletteId} colors={paletteColors??resolveVisualConfig().global.colors} onApply={item=>change({paletteId:item.id,colors:defaultDesign().colors})} onOriginal={()=>change({paletteId:null,colors:defaultDesign().colors})}/>
+
         </div>
-        {(['background', 'text', 'accent', 'label'] as const).map((key, i) => <div key={key}>{color(['Fondo de la pieza', 'Texto principal', 'Acento e imagen', 'Etiqueta y botón'][i], d.colors[key] || ({ background: palette.background, text: palette.text, accent: palette.accent, label: palette.label })[key], v => change({ colors: { ...d.colors, [key]: v } }))}</div>)}
+        {(['background', 'text', 'accent', 'label'] as const).map((key, i) => <div key={key}>{color(['Fondo de la pieza', 'Texto principal', 'Acento e imagen', 'Etiqueta y botón'][i], d.colors[key] || ({ background: palette.background, text: palette.text, accent: palette.accent, label: palette.label })[key], v => change({ paletteId:null, colors: { ...d.colors, [key]: v } }))}</div>)}
         <p className="marketing-hint">El precio, la etiqueta y el botón mantienen contraste AA. Los cambios solo afectan esta publicación.</p>
         {d.colors.text && safeTextColor(d.colors.text, palette.background) !== d.colors.text && <p role="status" className="marketing-editor-warning">El color solicitado no tiene contraste suficiente: se aplica texto legible.</p>}
       </>}

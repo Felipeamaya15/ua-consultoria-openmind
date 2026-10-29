@@ -84,6 +84,8 @@ const result = {id_pedido: 42, identificador: 'PEDIDO-BACKEND-42', tienda_id: 9,
     useMemo: callback => callback(), useEffect(callback) {if (recordEffects) effects.push(callback);},
   };
   const requireMock = name => {
+    if (name.includes('CommercialOptIn')) return {CommercialOptIn: 'CommercialOptIn'};
+    if (name.includes('commercialConsent')) return {requestConsent: async () => ({exito: true, mensaje: 'Pendiente de confirmar'})};
     if (name.includes('PickupDetails')) return {default: 'PickupDetails'};
     if (name.endsWith('visual/pages')) return load('src/features/storefront/visual/pages.ts', {URLSearchParams});
     if (name === 'react/jsx-runtime') return {jsx, jsxs: jsx};

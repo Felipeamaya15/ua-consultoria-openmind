@@ -4,6 +4,7 @@ import {
 } from 'react';
 import {
   Outlet,
+  Link,
   useLocation,
 } from 'react-router-dom';
 
@@ -71,7 +72,8 @@ function Layout() {
         />
 
         <main className="p-5 md:p-8 w-full">
-          {pageHelp && pathname !== '/emprendedor/landing' && <AdminPageHeader {...pageHelp} />}
+          {pageHelp && pathname !== '/emprendedor/landing' && <AdminPageHeader {...pageHelp} action={pathname === '/emprendedor/productos'
+            ? <Link to="/emprendedor/productos/nuevo" className="admin-create-product">+ Nuevo producto</Link> : undefined} />}
           {storageError && (
             <div className="mb-5">
               <Alert variant="error">

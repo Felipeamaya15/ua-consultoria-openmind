@@ -1,12 +1,13 @@
-import { useState } from "react"
-import { VISUAL_PRESETS } from '../../storefront/visual/presets'
-import { VISUAL_DEFAULTS } from '../../storefront/visual/defaults'
-import { Link } from "react-router-dom"
+import { PaletteLibrary } from '../../../shared/PaletteLibrary';
+import { usePaletteLibrary, saveAppearance, paletteOverrides, type Appearance, type StorePalette } from '../../../shared/palettes';
+import { resolveStoreVisualConfig } from '../../storefront/visual/resolveVisualConfig';
+import { useEffect, useState } from "react"
+import { Link, useBlocker } from "react-router-dom"
 import { useAdmin } from "../context/AdminContext"
 import { TemplateId } from "../data/mockAdminData"
 import { templatePaths } from "../config/navigation"
 import { openAdminWindow } from "../auth/demoSession"
-import { Button, Alert, Badge } from "../components/ui"
+import { Button, Alert, Badge, Modal } from "../components/ui"
 import { AdminHelp } from '../components/AdminPageHeader';
 import { clearEditorColorOverrides, loadThemeCustomization, patchThemeCustomization } from '../data/themeCustomization';
 
@@ -64,51 +65,45 @@ export default function Design() {
   const {
     config,
     setConfig,
-    updateTemplate,
     previewTemplate,
     setPreviewTemplate,
   } = useAdmin()
 
-  const [saved, setSaved] = useState(false)
-  const [colorsSaved, setColorsSaved] = useState(false)
-  const activeTemplate = previewTemplate ?? config.template
-  const activeTheme = loadThemeCustomization(activeTemplate, config.themeEditor?.[activeTemplate], config, config.visualConfig)
-
-  const originalColors = { ...VISUAL_DEFAULTS.global.colors, ...(VISUAL_PRESETS[activeTemplate]?.config.global?.colors ?? {}) }
-
-  const palettes = [
-    { name: "Original", primaryColor: originalColors.primary, secondaryColor: originalColors.secondary, accentColor: originalColors.accent },
-    { name: "Oceano", primaryColor: "#2563eb", secondaryColor: "#eff6ff", accentColor: "#0369a1" },
-    { name: "Bosque", primaryColor: "#15803d", secondaryColor: "#f0fdf4", accentColor: "#4d7c0f" },
-    { name: "Grafito", primaryColor: "#475569", secondaryColor: "#f1f5f9", accentColor: "#0f766e" },
-  ]
-
-  const updateColors = (
-    patch: Partial<typeof activeTheme>,
-    resetEditorColors = false,
-  ) => {
-    const baseTheme = resetEditorColors ? { ...activeTheme, visualConfig: clearEditorColorOverrides(activeTheme.visualConfig) } : activeTheme
-    const nextTheme = patchThemeCustomization(baseTheme, patch)
-
-    const ok = setConfig({
-      ...config,
-      themeEditor: {
-        ...config.themeEditor,
-        [activeTemplate]: nextTheme,
-      },
-    })
-
-    if (ok) {
-      setColorsSaved(true)
-      setTimeout(() => setColorsSaved(false), 1800)
-    }
+const [saved,setSaved]=useState(false);
+  const activeTemplate=previewTemplate??config.template;
+  const paletteSource=usePaletteLibrary();
+  const [paletteNotice,setPaletteNotice]=useState('');
+  const [paletteDrafts,setPaletteDrafts]=useState<Partial<Record<TemplateId,StorePalette>>>({});
+  const [paletteBusy,setPaletteBusy]=useState(false);
+  const paletteSelection=paletteDrafts[activeTemplate];
+  const colors=paletteSelection?.colores??resolveStoreVisualConfig(config,activeTemplate,paletteSource.appearance?.[activeTemplate]?{visualConfig:paletteOverrides(paletteSource.appearance[activeTemplate],paletteSource.library)}:undefined).global.colors;
+  const dirty=Object.keys(paletteDrafts).length>0||!!(previewTemplate&&previewTemplate!==config.template);
+  const blocker=useBlocker(dirty);
+  useEffect(()=>{
+    if(!dirty)return;
+    const leave=(event:BeforeUnloadEvent)=>{event.preventDefault();event.returnValue='';};
+    window.addEventListener('beforeunload',leave);return()=>window.removeEventListener('beforeunload',leave);
+  },[dirty]);
+  function discard(){setPaletteDrafts({});setPreviewTemplate(null);setPaletteNotice('');setSaved(false);}
+  async function handleSave():Promise<boolean>{
+    if(paletteBusy)return false;
+    setPaletteBusy(true);setSaved(false);setPaletteNotice('');
+    try{
+      const appearances:Appearance={};let nextConfig={...config,themeEditor:{...config.themeEditor}};
+      for(const [key,palette] of Object.entries(paletteDrafts)){
+        const id=key as TemplateId;if(!palette)continue;
+        const theme=loadThemeCustomization(id,config.themeEditor?.[id],config,config.visualConfig);
+        const base=paletteSource.appearance?.[id]?.visualConfig??theme.visualConfig;
+        const visualConfig={...base,global:{...base?.global,colors:palette.colores}};
+        appearances[id]={visualConfig,paleta_id:palette.id.startsWith('system-')?null:palette.id};
+        nextConfig.themeEditor[id]=patchThemeCustomization(theme,{visualConfig,paletteName:palette.nombre});
+      }
+      if(Object.keys(appearances).length)await saveAppearance(appearances);
+      if(!setConfig({...nextConfig,template:previewTemplate??config.template}))throw new Error('No pudimos guardar la copia local. Los cambios de paleta enviados al servidor se conservan; vuelve a intentar.');
+      setPaletteDrafts({});setPreviewTemplate(null);setSaved(true);return true;
+    }catch(error){setPaletteNotice(error instanceof Error?error.message:'No se pudieron guardar los cambios.');return false;}
+    finally{setPaletteBusy(false);}
   }
-
-  const handleSave = () => {
-    setSaved(false)
-    if (!previewTemplate || !updateTemplate(previewTemplate)) return
-    setSaved(true)
-    setTimeout(() => setSaved(false), 2000)
   }
 
   const handleOpenEditor = () => {
@@ -128,14 +123,14 @@ export default function Design() {
 
       {saved && (
         <Alert variant="success">
-          Plantilla seleccionada y guardada en este navegador. El botón Ver tienda abrirá su ruta.
+          Cambios guardados. Las paletas están disponibles para tu tienda.
         </Alert>
       )}
-      {colorsSaved && (
-        <Alert variant="success">
-          Colores guardados en este navegador para la plantilla seleccionada.
-        </Alert>
-      )}
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        {dirty&&<Button type="button" variant="outline" disabled={paletteBusy} onClick={discard}>Descartar cambios</Button>}
+        <Button type="button" disabled={!dirty||paletteBusy} onClick={()=>void handleSave()}>{paletteBusy?'Guardando…':'Guardar cambios'}</Button>
+      </div>{paletteNotice&&<p role="alert">{paletteNotice}</p>}
+
 
       <div className="bg-white border border-[var(--border)] rounded-2xl p-5">
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-5">
@@ -144,69 +139,30 @@ export default function Design() {
               Colores de la tienda
             </h2>
             <p className="text-xs text-[var(--muted-foreground)] mt-1">
-              Ajusta la paleta usada por botones, acentos y fondos de apoyo.
+              Elige la identidad de colores de tu tienda. Esta paleta se aplicará automáticamente a las 4 plantillas.
             </p>
           </div>
 
           <div className="flex items-center gap-2">
-            <span className="w-7 h-7 rounded-full border border-[var(--border)]" style={{ background: activeTheme.primaryColor }} />
-            <span className="w-7 h-7 rounded-full border border-[var(--border)]" style={{ background: activeTheme.secondaryColor }} />
-            <span className="w-7 h-7 rounded-full border border-[var(--border)]" style={{ background: activeTheme.accentColor }} />
+            <span className="w-7 h-7 rounded-full border border-[var(--border)]" style={{ background: colors.primary }} />
+            <span className="w-7 h-7 rounded-full border border-[var(--border)]" style={{ background: colors.secondary }} />
+            <span className="w-7 h-7 rounded-full border border-[var(--border)]" style={{ background: colors.accent }} />
           </div>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-5">
-          {palettes.map((palette) => (
-            <button
-              key={palette.name}
-              type="button"
-              onClick={() => updateColors({
-                ...palette,
-                paletteName: palette.name,
-              }, true)}
-              className={`rounded-xl border p-2 text-left transition-colors ${
-                activeTheme.paletteName === palette.name
-                  ? "border-[var(--primary)] ring-2 ring-[var(--primary)]/15"
-                  : "border-[var(--border)] hover:border-[var(--muted-foreground)]"
-              }`}
-            >
-              <div className="flex gap-1 mb-2">
-                <span className="h-7 flex-1 rounded" style={{ background: palette.primaryColor }} />
-                <span className="h-7 flex-1 rounded" style={{ background: palette.secondaryColor }} />
-                <span className="h-7 flex-1 rounded" style={{ background: palette.accentColor }} />
-              </div>
-              <span className="text-xs font-semibold">
-                {palette.name}
-              </span>
-            </button>
-          ))}
-        </div>
-
-        <div className="grid sm:grid-cols-3 gap-3">
-          {[
-            ["Principal", "primaryColor"],
-            ["Secundario", "secondaryColor"],
-            ["Acento", "accentColor"],
-          ].map(([label, key]) => (
-            <label
-              key={key}
-              className="flex items-center justify-between gap-3 rounded-xl border border-[var(--border)] px-3 py-2"
-            >
-              <span className="text-sm">{label}</span>
-              <input
-                type="color"
-                value={activeTheme[key as "primaryColor" | "secondaryColor" | "accentColor"]}
-                onChange={(event) =>
-                  updateColors({
-                    paletteName: "Personalizada",
-                    [key]: event.target.value,
-                  })
-                }
-                className="h-9 w-14 cursor-pointer rounded border border-[var(--border)] bg-white"
-              />
-            </label>
-          ))}
-        </div>
+<PaletteLibrary
+          colors={colors}
+          selectedId={paletteSelection?.id ?? paletteSource.appearance?.[activeTemplate]?.paleta_id}
+          onApply={palette => {
+            setPaletteDrafts({
+              editorial: palette,
+              minimal: palette,
+              visual: palette,
+              catalog: palette,
+            });
+            setSaved(false);
+          }}
+        />
       </div>
 
       <div>
@@ -384,14 +340,6 @@ export default function Design() {
             </Button>
 
             <Button
-              variant="primary"
-              size="sm"
-              onClick={handleSave}
-            >
-              {saved ? "✓ Aplicada" : "Aplicar plantilla"}
-            </Button>
-
-            <Button
               variant="ghost"
               size="sm"
               onClick={() =>
@@ -403,6 +351,7 @@ export default function Design() {
           </div>
         </div>
       )}
+      <Modal open={blocker.state==='blocked'} onClose={()=>{if(!paletteBusy)blocker.reset?.();}} title="Tienes cambios sin guardar" size="sm"><p>Guarda la elección de plantilla y paleta antes de continuar.</p><div className="flex flex-wrap justify-end gap-2 mt-4"><Button type="button" variant="outline" disabled={paletteBusy} onClick={()=>blocker.reset?.()}>Cancelar</Button><Button type="button" variant="outline" disabled={paletteBusy} onClick={()=>blocker.proceed?.()}>Continuar sin guardar</Button><Button type="button" disabled={paletteBusy} onClick={()=>void handleSave().then(ok=>{if(ok)blocker.proceed?.();})}>Guardar y continuar</Button></div></Modal>
     </div>
   )
 }

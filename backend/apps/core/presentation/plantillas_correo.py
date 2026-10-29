@@ -3,19 +3,18 @@ from rest_framework import serializers
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
 
-from apps.core.domain.plantillas_correo import TIPOS, VARIABLES_PERMITIDAS, plantilla_de_tienda
-from apps.core.domain.plantillas_correo.base import _MARCADOR
+from apps.core.domain.plantillas_correo import TIPOS, plantilla_de_tienda
+from apps.core.domain.plantillas_correo.fields import FIELDS, REQUIRED, validate_markers, validate_template
 from apps.core.infrastructure.tenant import resolver_tienda
 from apps.core.models import ConfiguracionCorreo
 from apps.core.presentation.responses import success_response
 
 
 def _variables_validas(texto):
-    desconocidas = {v for v in _MARCADOR.findall(texto) if v not in VARIABLES_PERMITIDAS}
-    if desconocidas:
-        raise serializers.ValidationError(
-            f'Variables no permitidas: {", ".join(sorted(desconocidas))}. Permitidas: {", ".join(VARIABLES_PERMITIDAS)}.'
-        )
+    try:
+        validate_markers(texto)
+    except ValueError as error:
+        raise serializers.ValidationError(str(error)) from error
     return texto
 
 
@@ -33,6 +32,11 @@ class PlantillasCorreoSerializer(serializers.Serializer):
         desconocidos = set(valor) - set(TIPOS)
         if desconocidos:
             raise serializers.ValidationError(f'Tipos de correo desconocidos: {", ".join(sorted(desconocidos))}.')
+        for tipo, plantilla in valor.items():
+            try:
+                validate_template(plantilla)
+            except ValueError as error:
+                raise serializers.ValidationError({tipo: str(error)}) from error
         return valor
 
 
@@ -57,7 +61,8 @@ def _por_defecto():
 
 
 def _datos(tienda):
-    return {'plantillas': _plantillas_de(tienda), 'por_defecto': _por_defecto()}
+    return {'plantillas': _plantillas_de(tienda), 'por_defecto': _por_defecto(),
+            'variables': FIELDS, 'obligatorias': {tipo: list(REQUIRED) for tipo in TIPOS}}
 
 
 class PlantillasCorreoAPIView(APIView):

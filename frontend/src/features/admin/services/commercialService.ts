@@ -12,7 +12,7 @@ export interface HistoryOrder {
   items: HistoryLine[]; entrega?: { metodo?: string; direccion?: Record<string, unknown>; retiro?: { address?: string; seleccion?: { fecha: string; hora: string } } };
 }
 export interface Pagination { pagina: number; tamano: number; total: number; total_paginas: number }
-export interface Contact { email: string; cantidad_pedidos: number; ultimo_pedido: string; consentimiento: 'autorizado' | 'retirado' | 'sin_registro'; fecha_consentimiento: string | null }
+export interface Contact { email: string; cantidad_pedidos: number; ultimo_pedido: string | null; consentimiento: 'pendiente' | 'autorizado' | 'retirado' | 'sin_registro'; fecha_consentimiento: string | null }
 export interface SalesHistory {
   resumen: { cantidad_ventas: number; total_vendido: string; ticket_promedio: string };
   importes: { bruto_productos: string; descuentos: string; neto_productos: string; envio: string; importe_confirmado: string; nota_fechas: string; nota_descuentos: string; pedidos_sin_lineas: number };
@@ -42,13 +42,26 @@ function validPage(v: unknown): v is Pagination {
 async function response(path: string, params: URLSearchParams, signal?: AbortSignal) {
   const token = authService.getToken();
   if (!token) throw new Error('Inicia sesión como propietario para consultar esta información.');
-  const result = await fetch(`${API_BASE_URL}/api/tienda/${path}?${params}`, { headers: { Authorization: `Token ${token}` }, cache: 'no-store', signal });
+  let result: Response;
+  try {
+    result = await fetch(`${API_BASE_URL}/api/tienda/${path}?${params}`, { headers: { Authorization: `Token ${token}` }, cache: 'no-store', signal });
+  } catch (cause) {
+    if (signal?.aborted) throw cause;
+    throw new Error('No pudimos conectar con el servidor. Revisa tu conexión e intenta nuevamente.');
+  }
   if (!result.ok) {
     if (result.status === 401) throw new Error('Tu sesión venció. Vuelve a iniciar sesión.');
     if (result.status === 403) throw new Error('Solo el propietario activo puede consultar esta información.');
     if (result.status === 404) throw new Error('El pedido no está disponible en esta tienda.');
     if (result.status === 400) throw new Error('Revisa los filtros. Para archivos grandes, reduce el período de exportación.');
-    throw new Error('No se pudo completar la consulta. Revisa tu conexión e intenta nuevamente.');
+    if (result.status === 503 && path.startsWith('contactos/')) {
+      let body: unknown;
+      try { body = await result.json(); } catch { /* A proxy may return a non-JSON outage page. */ }
+      if (record(body) && record(body.error) && body.error.codigo === 'CONTACTOS_ACTUALIZACION_PENDIENTE')
+        throw new Error('Contactos necesita una actualización de la aplicación. Pide al administrador que la complete y vuelve a intentar.');
+      throw new Error('La consulta de contactos no está disponible temporalmente. Intenta nuevamente más tarde.');
+    }
+    throw new Error('No se pudo completar la consulta. El servicio no está disponible en este momento. Intenta nuevamente más tarde.');
   }
   return result;
 }
@@ -79,7 +92,8 @@ export async function getSalesHistory(params: URLSearchParams, signal?: AbortSig
 export async function getContacts(params: URLSearchParams, signal?: AbortSignal) {
   const result = await page('contactos/', params, signal);
   if (!Array.isArray(result.data) || !result.data.every(v => record(v) && typeof v.email === 'string' && Number.isSafeInteger(v.cantidad_pedidos)
-    && typeof v.ultimo_pedido === 'string' && Number.isFinite(Date.parse(v.ultimo_pedido)) && ['autorizado', 'retirado', 'sin_registro'].includes(String(v.consentimiento))))
+    && (v.ultimo_pedido === null || (typeof v.ultimo_pedido === 'string' && Number.isFinite(Date.parse(v.ultimo_pedido))))
+    && ['pendiente', 'autorizado', 'retirado', 'sin_registro'].includes(String(v.consentimiento))))
     throw new Error('La lista de contactos recibida no es válida.');
   return { data: result.data as Contact[], paginacion: result.paginacion };
 }

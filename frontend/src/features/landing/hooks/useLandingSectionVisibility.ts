@@ -5,10 +5,11 @@ export type LandingSection =
   | 'Categorías'
   | 'Beneficios'
   | 'Información de contacto'
-  | 'Mapa / ubicación';
+  | 'Mapa / ubicación'
+  | 'Horarios de atención';
 
 export function useLandingSectionVisibility() {
   const { landing } = useStore();
   // Las configuraciones anteriores sin esta bandera conservan su visibilidad.
-  return (section: LandingSection) => landing?.secciones?.[section] !== false;
+  return (section: LandingSection) => section === 'Horarios de atención' && landing?.secciones?.[section] === undefined ? landing?.secciones?.['Información de contacto'] !== false : landing?.secciones?.[section] !== false;
 }

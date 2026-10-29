@@ -1,3 +1,5 @@
+import { CommercialPreferencesLink } from '../CommercialPreferencesLink';
+import { StoreBusinessDescription } from '../StoreBusinessDescription';
 import { InstitutionalBadge } from '../../ui';
 import { VISUAL_SECTION } from '../../../visual/sectionIds';
 import { Link } from 'react-router-dom';
@@ -5,7 +7,7 @@ import { Link } from 'react-router-dom';
 import { useStore } from '../../../context/StoreContext';
 
 export function VisualFooter() {
-  const { config } = useStore();
+  const { config, landing } = useStore();
 
   return (
     <footer data-visual-section={VISUAL_SECTION.footer} className="bg-[var(--primary)] text-[var(--on-primary)] border-t border-[color-mix(in_srgb,currentColor_20%,transparent)]">
@@ -14,14 +16,12 @@ export function VisualFooter() {
         <div data-visual-part="footerLayout" className="grid grid-cols-1 md:grid-cols-3 gap-12">
 
           <div>
-            <p data-visual-part="footerTitle" className="font-serif text-2xl mb-4">
+            {config.logo && <img data-landing-image className="store-footer-logo" src={config.logo} alt={`Logo de ${config.name}`} />}
+          <p data-visual-part="footerTitle" className="font-serif text-2xl mb-4">
               {config.name}
             </p>
 
-            <p className="text-sm text-[color-mix(in_srgb,currentColor_65%,transparent)] leading-relaxed max-w-sm">
-              Tu tienda online de confianza. Productos
-              seleccionados y envío rápido a todo Chile.
-            </p>
+          <StoreBusinessDescription className="text-sm leading-relaxed max-w-sm" />
           </div>
 
           <div>
@@ -37,12 +37,12 @@ export function VisualFooter() {
                 Catálogo
               </Link>
 
-              <Link
+              {landing?.contenido?.bloques?.some(block=>block.visible&&block.tipo==='historia') && <Link
                 to="nuestra-historia"
                 className="hover:text-inherit"
               >
                 Nuestra historia
-              </Link>
+              </Link>}
 
               <Link
                 to="seguimiento"
@@ -96,6 +96,7 @@ export function VisualFooter() {
         </div>
 
       </div>
+    <CommercialPreferencesLink />
     </footer>
   );
 }

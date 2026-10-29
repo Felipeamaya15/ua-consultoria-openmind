@@ -3,12 +3,12 @@ import { LoadingState } from '../../../shared/components/states';
 import { AdminCard, Alert, Input, Textarea, Button } from './ui';
 import { fetchStoreInformation, saveStoreInformation } from '../../storefront/services/storeInformationService';
 
-export function BusinessInformationFields({value,onChange}:{value:{nombre:string;descripcion:string};onChange:(value:{nombre:string;descripcion:string})=>void}) {
-  return <div className="lp-business-fields"><Input label="Nombre de la tienda (obligatorio)" required maxLength={150} value={value.nombre} onChange={e => onChange({...value,nombre:e.target.value})} /><Textarea label="Descripción del negocio" value={value.descripcion} rows={4} onChange={e => onChange({...value,descripcion:e.target.value})} /></div>;
+export function BusinessInformationFields({value,onChange}:{value:{nombre:string;descripcion:string;correo_negocio:string};onChange:(value:{nombre:string;descripcion:string;correo_negocio:string})=>void}) {
+  return <div className="lp-business-fields"><Input label="Nombre de la tienda (obligatorio)" required maxLength={150} value={value.nombre} onChange={e => onChange({...value,nombre:e.target.value})} /><Textarea label="Descripción del negocio" value={value.descripcion} rows={4} onChange={e => onChange({...value,descripcion:e.target.value})} /><Input label="Correo del negocio" type="email" maxLength={254} value={value.correo_negocio} onChange={event=>onChange({...value,correo_negocio:event.target.value})}/><p className="text-xs">Correo administrativo para comunicaciones, notificaciones y futuras funciones de marketing. Puede ser distinto del correo público de contacto. Guardarlo no autoriza envíos ni configura un remitente.</p></div>;
 }
 
 export function BusinessInformation() {
-  const [form, setForm] = useState({ nombre: '', descripcion: '' });
+  const [form, setForm] = useState({ nombre: '', descripcion: '', correo_negocio:'' });
   const [loading, setLoading] = useState(true);
   const [loadFailed, setLoadFailed] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -17,7 +17,7 @@ export function BusinessInformation() {
   const [attempt, setAttempt] = useState(0);
   useEffect(() => {
     const controller = new AbortController(); setLoading(true); setLoadFailed(false); setError('');
-    fetchStoreInformation(controller.signal).then(data => { if (!controller.signal.aborted) setForm({ nombre: data.nombre, descripcion: data.descripcion || '' }); })
+    fetchStoreInformation(controller.signal,true).then(data => { if (!controller.signal.aborted) setForm({ nombre: data.nombre, descripcion: data.descripcion || '',correo_negocio:data.correo_negocio||'' }); })
       .catch(() => { if (!controller.signal.aborted) { setLoadFailed(true); setError('No se pudo cargar la información del negocio. Reintenta antes de editar.'); } })
       .finally(() => { if (!controller.signal.aborted) setLoading(false); });
     return () => controller.abort();
@@ -25,7 +25,7 @@ export function BusinessInformation() {
   async function save() {
     if (!form.nombre.trim()) { setSaved(false); setError('Escribe un nombre para tu tienda.'); return; }
     setSaving(true); setSaved(false); setError('');
-    try { const result = await saveStoreInformation(form); setForm({ nombre: result.nombre, descripcion: result.descripcion || '' }); setSaved(true); }
+    try { const result = await saveStoreInformation(form); setForm({ nombre: result.nombre, descripcion: result.descripcion || '',correo_negocio:result.correo_negocio||'' }); setSaved(true); }
     catch { setError('No se pudo guardar la información del negocio. Revisa los campos y tu sesión e intenta nuevamente.'); }
     finally { setSaving(false); }
   }

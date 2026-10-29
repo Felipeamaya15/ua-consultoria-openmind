@@ -389,7 +389,6 @@ export function InstitutionalBadge({ compact = false, showVersion = false }: { c
           alt="Logo Universidad Autónoma de Chile"
           className={compact ? 'w-6 h-6 object-contain bg-white rounded-md p-0.5 shadow-sm' : 'w-8 h-8 object-contain bg-white rounded-md p-1 shadow-sm'}
         />
-        <span>Universidad Autónoma de Chile</span>
         {showVersion && (
           <button
             type="button"

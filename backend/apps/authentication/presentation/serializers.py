@@ -72,3 +72,20 @@ class ConfiguracionPagosResponseSerializer(serializers.Serializer):
     id = serializers.IntegerField()
     tienda_id = serializers.IntegerField()
     metodos = serializers.DictField()
+
+    def to_representation(self, instance):
+        """Nunca exponer secretos almacenados, tampoco en la respuesta al guardar."""
+        data = super().to_representation(instance)
+        data["metodos"] = {
+            metodo: {
+                "enabled": bool(config.get("enabled", False)),
+                # Solo nombres de campos, jamás sus valores.
+                "configured_fields": sorted(
+                    str(nombre) for nombre, valor in config.get("fields", {}).items()
+                    if valor is not None and str(valor).strip()
+                ),
+            }
+            for metodo, config in data["metodos"].items()
+            if isinstance(config, dict) and isinstance(config.get("fields", {}), dict)
+        }
+        return data

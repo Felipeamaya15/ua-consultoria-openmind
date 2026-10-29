@@ -10,7 +10,7 @@ from apps.core.infrastructure.email_service import correo_valido
 
 _MARCADOR = re.compile(r'\{\{\s*(\w+)\s*\}\}')
 VARIABLES_PERMITIDAS = (
-    'customerName', 'customerEmail', 'orderNumber', 'orderTotal',
+    'customerName', 'customerEmail', 'orderNumber', 'orderTotal', 'orderSummary',
     'shippingMethod', 'carrier', 'trackingCode', 'trackingLink', 'storeName',
 )
 
@@ -57,6 +57,7 @@ def enlace_seguimiento(pedido):
         return ''
     return f'{base}/seguimiento?orden={quote(orden, safe="")}'
 
+
 def correo_comprador(pedido):
     """Correo al que se avisa al comprador de este pedido (SCRUM-435); '' si ninguno es válido.
     Primero el correo de contacto que dio al comprar y, si no sirve, el de su cuenta (si compró con sesión iniciada).
@@ -68,6 +69,62 @@ def correo_comprador(pedido):
         getattr(comprador, 'email', '') if comprador else '',
     )
     return next((valido for valido in map(correo_valido, candidatos) if valido), '')
+
+
+def formato_monto(monto):
+    entero = int(monto)
+    if monto == entero:
+        return f'${entero:,}'.replace(',', '.')
+    return f'${monto:,.2f}'.replace(',', 'X').replace('.', ',').replace('X', '.')
+
+
+def resumen_compra(pedido):
+    """Resumen de la compra: lista de productos, cantidades y precios (SCRUM-433).
+
+    Detalla cada ítem con su nombre, variante (si aplica), cantidad, monto de la línea
+    y precio unitario si la cantidad es mayor a 1. También incluye costo de envío y descuento.
+    """
+    if not getattr(pedido, 'pk', None) or not hasattr(pedido, 'itempedido_set'):
+        return ''
+    try:
+        items = list(pedido.itempedido_set.all())
+    except Exception:
+        return ''
+    if not items:
+        return ''
+
+    lineas = []
+    for item in items:
+        nombre = item.nombre_producto or (item.id_producto.nombre if item.id_producto else '') or item.sku or 'Producto'
+        variante = ''
+        if getattr(item, 'atributos', None) and isinstance(item.atributos, dict):
+            partes = [f'{k}: {v}' for k, v in item.atributos.items() if v]
+            if partes:
+                variante = f" ({', '.join(partes)})"
+        elif getattr(item, 'atributos_variante', None) and isinstance(item.atributos_variante, list):
+            partes = [f"{a.get('etiqueta') or a.get('clave')}: {a.get('valor')}" for a in item.atributos_variante if a.get('valor')]
+            if partes:
+                variante = f" ({', '.join(partes)})"
+
+        cant = item.cantidad
+        precio_u = item.precio_unitario
+        subtotal = precio_u * cant
+        precio_u_fmt = formato_monto(precio_u)
+        subtotal_fmt = formato_monto(subtotal)
+
+        if cant > 1:
+            lineas.append(f'- {nombre}{variante} x {cant}: {subtotal_fmt} ({precio_u_fmt} c/u)')
+        else:
+            lineas.append(f'- {nombre}{variante} x 1: {subtotal_fmt}')
+
+    if getattr(pedido, 'costo_envio', None) and pedido.costo_envio > 0:
+        lineas.append(f'- Envío: {formato_monto(pedido.costo_envio)}')
+
+    if getattr(pedido, 'descuento', None) and pedido.descuento > 0:
+        lineas.append(f'- Descuento: -{formato_monto(pedido.descuento)}')
+
+    return '\n'.join(lineas)
+
 
 def contexto_pedido(pedido):
     entrega = pedido.entrega or {}
@@ -85,6 +142,7 @@ def contexto_pedido(pedido):
         'customerName': nombre,
         'customerEmail': correo_comprador(pedido),
         'orderTotal': f'${int(pedido.monto_total):,}'.replace(',', '.'),
+        'orderSummary': resumen_compra(pedido),
         'shippingMethod': metodo,
         'carrier': metodo if metodo != 'Retiro' else '',
         'trackingCode': entrega.get('codigo_seguimiento', ''),

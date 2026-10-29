@@ -1,3 +1,4 @@
+import { WEB_FONTS } from './fontLibrary';
 import type { TemplateId } from '../data/mockData';
 
 export const ALIGNMENTS = ['left', 'center', 'right'] as const;
@@ -5,7 +6,7 @@ export const DENSITIES = ['compact', 'normal', 'spacious'] as const;
 export const SHAPES = ['square', 'rounded', 'pill'] as const;
 export const SHADOWS = ['none', 'soft', 'medium', 'strong'] as const;
 export const VIEWPORTS = ['desktop', 'tablet', 'mobile'] as const;
-export const FONT_FAMILIES = ['sans', 'serif', 'system', 'arial', 'calibri', 'cambria', 'georgia', 'times', 'verdana', 'tahoma', 'trebuchet', 'courier', 'garamond', 'palatino', 'comic'] as const;
+export const FONT_FAMILIES = ['sans', 'serif', 'system', 'arial', 'calibri', 'cambria', 'georgia', 'times', 'verdana', 'tahoma', 'trebuchet', 'courier', 'garamond', 'palatino', 'comic', ...Object.keys(WEB_FONTS) as (keyof typeof WEB_FONTS)[]] as const;
 export type Alignment = typeof ALIGNMENTS[number];
 export type Density = typeof DENSITIES[number];
 export type Shape = typeof SHAPES[number];
@@ -69,7 +70,8 @@ export interface PageAppearance {
 export interface VisualSections {
   pages: Record<import('./pages').StorePageId, PageAppearance>;
   global: {
-    colors: { primary: string; secondary: string; accent: string; background: string; text: string; surface: string; border: string };
+    colors: { primary: string; secondary: string; accent: string; background: string; text: string; surface: string; border: string; alternate: string; muted: string; structural: string; button: string; buttonText: string };
+    unlinkStructural: boolean;
     typography: { body: FontFamily; heading: FontFamily; baseSize: number; lineHeight: number };
     radius: number;
     baseSpacing: number;

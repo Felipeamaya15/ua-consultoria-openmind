@@ -1,10 +1,11 @@
+import { IMAGE_ACCEPT, prepareImage } from '../../../shared/services/imageUpload';
 import { useEffect, useMemo, useRef, useState } from "react"
 import { EmptyListState, LoadingState } from "../../../shared/components/states"
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom"
 import { emptyKind } from "../services/emptyStates"
 import { formatPrice, Product, ProductVariant } from "../data/mockAdminData"
 import { createPublicProduct, deleteCatalogProduct, fetchAdminProducts, fetchAdminProduct, updateCatalogProduct, type AdminProduct } from "../services/productService"
-import { Alert, Badge, Button, Input, Tabs, Textarea, Toggle } from "../components/ui"
+import { Alert, Badge, Button, Icon, Input, Tabs, Textarea, Toggle } from "../components/ui"
 
 function OfertaInfo({ precio, anterior }: { precio: number; anterior?: number }) {
   if (anterior === undefined || anterior === null || !precio) return null
@@ -72,102 +73,70 @@ export function ProductList() {
       setDeactivating(false);
     }
   };
-  return <div>
-    {loading && <LoadingState align="start" spacing="compact">Cargando productos reales…</LoadingState>}
+  const totalActive = products.filter(product => product.status === 'active').length
+  const lowStock = products.filter(product => product.status === 'active' && product.variants.reduce((sum, variant) => sum + variant.stock, 0) <= 5).length
+  const renderActions = (product: AdminProduct) => <div className="catalog-product-actions">
+    <Link to={`/emprendedor/productos/${product.id}`} className="catalog-edit-link">Editar</Link>
+    <Link to={`/emprendedor/marketing?producto=${encodeURIComponent(product.id)}`}>Crear publicación</Link>
+    <button type="button" onClick={() => handleDeleteProduct(product.id)} disabled={deactivating || product.status === 'archived'} className="text-[var(--error)] disabled:opacity-50 disabled:cursor-not-allowed">{product.status === 'archived' ? 'Desactivado' : 'Desactivar'}</button>
+  </div>
+  const renderVariants = (product: AdminProduct) => <details className="catalog-variants">
+    <summary>{product.variants.length} {product.variants.length === 1 ? 'variante' : 'variantes'} · Ver SKU y stock</summary>
+    <div className="mt-3 grid gap-2">{product.variants.map(variant => <div key={variant.id} className="rounded-lg bg-[var(--muted)] p-3">
+      <div className="flex flex-wrap items-center justify-between gap-2"><span className="break-all font-mono text-xs font-semibold">{variant.sku}</span><Badge variant={stockState(variant.stock).badge}>{variant.stock} uds</Badge></div>
+      <p className="mt-1 text-xs text-[var(--muted-foreground)]">{variantAttributes(variant)}</p>
+      <p className="mt-1 text-xs font-semibold">{formatPrice(variant.price)} {variant.comparePrice !== undefined && variant.comparePrice > variant.price && <span className="ml-1 font-normal line-through text-[var(--muted-foreground)]">{formatPrice(variant.comparePrice)}</span>}</p>
+    </div>)}</div>
+  </details>
+  const renderImage = (product: AdminProduct) => product.images[0]
+    ? <img src={product.images[0]} alt="" className="h-14 w-14 shrink-0 rounded-xl object-cover bg-[var(--muted)]" />
+    : <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-[var(--muted)] text-[var(--muted-foreground)]"><Icon name="box" className="h-6 w-6" /></span>
+
+  return <div className="commercial-section space-y-5">
     {error && <Alert variant="error">{error}</Alert>}
-    {successMessage && (
-      <div role="status" className="mb-4">
-        <Alert variant="success">{successMessage}</Alert>
+    {successMessage && <div role="status"><Alert variant="success">{successMessage}</Alert></div>}
+    <section aria-label="Resumen del catálogo" className="catalog-overview">
+      <div><span>Productos en tu catálogo</span><strong>{loading ? '—' : products.length}</strong></div>
+      <div><span>Activos en la tienda</span><strong>{loading ? '—' : totalActive}</strong></div>
+      <div><span>Activos con stock bajo o agotado</span><strong>{loading ? '—' : lowStock}</strong></div>
+    </section>
+    <section className="admin-list-panel" aria-label="Buscar productos">
+      <div className="admin-list-panel-heading"><div><h3>Tu catálogo, en orden</h3><p>Encuentra un producto y administra sus precios y disponibilidad.</p></div><Icon name="box" className="h-5 w-5 text-[var(--muted-foreground)]" /></div>
+      <div className="catalog-search-row">
+        <Input id="catalog-search" label="Buscar productos" icon={<Icon name="search" />} value={search} onChange={event => setSearch(event.target.value)} placeholder="Nombre, categoría o etiqueta" />
+        {search && <Button type="button" variant="ghost" className="min-h-11" onClick={() => setSearch('')}>Limpiar búsqueda</Button>}
       </div>
-    )}
-    <div className="flex items-center justify-between flex-wrap gap-3 mb-5">
-      <div>
-        <h2 className="font-semibold">Productos</h2>
-        <p className="text-xs text-[var(--muted-foreground)] mt-1">Gestiona catalogo, atributos, variantes, SKU e inventario.</p>
-      </div>
-      <Link to="/emprendedor/productos/nuevo"><Button variant="primary" size="sm">+ Nuevo producto</Button></Link>
-    </div>
-    <Input aria-label="Buscar productos" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Buscar por nombre, categoria o etiqueta..." className="max-w-md mb-4" />
-    <div className="bg-white border border-[var(--border)] rounded-xl overflow-x-auto">
-      <table className="w-full min-w-[860px] text-sm">
-        <thead>
-          <tr className="border-b border-[var(--border)] bg-[var(--muted)]">
-            {["Producto", "Variantes", "Categoria", "Precio", "Stock", "Estado", "Acciones"].map((label) => <th key={label} className="px-4 py-3 text-left text-xs font-semibold text-[var(--muted-foreground)] uppercase tracking-wider">{label}</th>)}
-          </tr>
-        </thead>
-        <tbody>
-          {filtered.map((product) => {
+    </section>
+    {loading && <LoadingState align="start" spacing="compact">Cargando productos reales…</LoadingState>}
+    <section aria-label="Listado de productos" className="catalog-list">
+      <div className="catalog-list-heading"><h3>Listado de productos</h3><span>{filtered.length} {filtered.length === 1 ? 'producto' : 'productos'}{search ? ` de ${products.length}` : ''}</span></div>
+      <div className="hidden overflow-x-auto lg:block">
+        <table className="w-full min-w-[740px] text-sm text-left">
+          <thead className="bg-[var(--muted)]"><tr>{['Producto', 'Precio', 'Inventario', 'Estado', 'Acciones'].map(label => <th scope="col" key={label} className="px-5 py-3 text-xs font-semibold text-[var(--muted-foreground)]">{label}</th>)}</tr></thead>
+          <tbody>{filtered.map(product => {
             const stock = product.variants.reduce((sum, variant) => sum + variant.stock, 0)
             const state = stockState(stock)
-            const hasProductOffer = product.comparePrice !== undefined && product.comparePrice > product.basePrice
-
-            return <tr key={product.id} className="border-b border-[var(--border)] last:border-0 hover:bg-[var(--muted)]/30 align-top">
-              <td className="px-4 py-3">
-                <div className="flex items-center gap-3">
-                  <img src={product.images[0]} alt="" className="w-10 h-10 rounded-lg object-cover bg-[var(--muted)]" />
-                  <div>
-                    <p className="font-medium">{product.name}</p>
-                    <p className="text-xs text-[var(--muted-foreground)]">{product.variants.length} variantes</p>
-                  </div>
-                </div>
-              </td>
-              <td className="px-4 py-3">
-                <div className="grid gap-2 max-w-sm">
-                  {product.variants.map((variant) => {
-                    const variantState = stockState(variant.stock)
-                    const hasVariantOffer = variant.comparePrice !== undefined && variant.comparePrice > variant.price
-
-                    return <div key={variant.id} className="rounded-lg border border-[var(--border)] bg-[var(--muted)]/30 px-3 py-2">
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="font-mono text-xs font-semibold">{variant.sku}</span>
-                        <Badge variant={variantState.badge}>{variant.stock} uds</Badge>
-                      </div>
-                      <p className="mt-1 text-xs text-[var(--muted-foreground)]">{variantAttributes(variant)}</p>
-                      <div className="mt-1 flex items-center gap-2 text-xs">
-                        <span className="font-semibold text-[var(--foreground)]">{formatPrice(variant.price)}</span>
-                        {hasVariantOffer && (
-                          <span className="line-through text-[var(--muted-foreground)]">{formatPrice(variant.comparePrice!)}</span>
-                        )}
-                      </div>
-                    </div>
-                  })}
-                </div>
-              </td>
-              <td className="px-4 py-3 text-xs text-[var(--muted-foreground)]">{product.category}</td>
-              <td className="px-4 py-3">
-                <div className="flex flex-col gap-1">
-                  <span className="font-semibold">{formatPrice(product.basePrice)}</span>
-                  {hasProductOffer && (
-                    <>
-                      <span className="text-xs text-[var(--muted-foreground)] line-through">{formatPrice(product.comparePrice!)}</span>
-                      <div><OfertaInfo precio={product.basePrice} anterior={product.comparePrice} /></div>
-                    </>
-                  )}
-                </div>
-              </td>
-              <td className="px-4 py-3"><div className="min-w-28"><div className="flex justify-between text-xs mb-1"><span>{stock} uds</span><Badge variant={state.badge}>{state.label}</Badge></div><div className="h-1.5 bg-[var(--muted)] rounded-full overflow-hidden"><div className={`${state.color} h-full rounded-full`} style={{ width: `${Math.min(100, stock * 2)}%` }} /></div></div></td>
-              <td className="px-4 py-3">{productStatus(product.status)}</td>
-              <td className="px-4 py-3">
-                <div className="flex items-center gap-3">
-                  <Link to={`/emprendedor/productos/${product.id}`} className="text-xs font-semibold text-[var(--primary)] hover:underline">Editar</Link>
-                  <Link to={`/emprendedor/marketing?producto=${encodeURIComponent(product.id)}`} className="text-xs font-semibold text-[var(--primary)] hover:underline">Crear publicación</Link>
-                  <button
-                    type="button"
-                    onClick={() => handleDeleteProduct(product.id)}
-                    disabled={deactivating || product.status === "archived"}
-                    className="text-xs font-semibold text-[var(--error)] hover:underline disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {product.status === "archived" ? "Desactivado" : "Desactivar"}
-                  </button>
-                </div>
-              </td>
+            return <tr key={product.id} className="border-t border-[var(--border)] align-top hover:bg-[#fafbfe]">
+              <td className="px-5 py-5"><div className="flex items-start gap-3">{renderImage(product)}<div className="min-w-0 max-w-xs"><p className="break-words font-semibold">{product.name}</p><p className="mt-1 text-xs text-[var(--muted-foreground)]">{product.category}</p>{renderVariants(product)}</div></div></td>
+              <td className="whitespace-nowrap px-5 py-5"><p className="font-semibold">{formatPrice(product.basePrice)}</p>{product.comparePrice !== undefined && product.comparePrice > product.basePrice && <><p className="mt-1 text-xs line-through text-[var(--muted-foreground)]">{formatPrice(product.comparePrice)}</p><div className="mt-2"><OfertaInfo precio={product.basePrice} anterior={product.comparePrice} /></div></>}</td>
+              <td className="px-5 py-5"><p className="mb-2 font-medium">{stock} unidades</p><Badge variant={state.badge}>{state.label}</Badge></td>
+              <td className="px-5 py-5">{productStatus(product.status)}</td>
+              <td className="px-5 py-4">{renderActions(product)}</td>
             </tr>
-          })}
-        </tbody>
-      </table>
-      {vacio === "empty" && <EmptyListState spacing="none" className="py-12" title="Aún no tienes productos" action={<Link to="/emprendedor/productos/nuevo"><Button variant="primary" size="sm">Crear tu primer producto</Button></Link>}>Agrega tu primer producto para empezar a vender.</EmptyListState>}
-      {vacio === "no-results" && <EmptyListState spacing="none" className="py-12" action={<Button variant="outline" size="sm" onClick={() => setSearch("")}>Limpiar búsqueda</Button>}>No encontramos productos con esa búsqueda.</EmptyListState>}
-    </div>
+          })}</tbody>
+        </table>
+      </div>
+      <div className="divide-y divide-[var(--border)] lg:hidden">{filtered.map(product => {
+        const stock = product.variants.reduce((sum, variant) => sum + variant.stock, 0)
+        return <article key={product.id} className="p-4 sm:p-5">
+          <div className="flex items-start gap-3">{renderImage(product)}<div className="min-w-0 flex-1"><h4 className="break-words font-semibold">{product.name}</h4><p className="mt-1 text-xs text-[var(--muted-foreground)]">{product.category}</p><div className="mt-2">{productStatus(product.status)}</div></div></div>
+          <div className="my-4 flex flex-wrap justify-between gap-3"><div><p className="text-xs text-[var(--muted-foreground)]">Precio</p><p className="mt-1 font-semibold">{formatPrice(product.basePrice)}</p>{product.comparePrice !== undefined && product.comparePrice > product.basePrice && <p className="text-xs line-through text-[var(--muted-foreground)]">{formatPrice(product.comparePrice)}</p>}</div><div className="text-right"><p className="mb-1 text-xs text-[var(--muted-foreground)]">{stock} unidades</p><Badge variant={stockState(stock).badge}>{stockState(stock).label}</Badge></div></div>
+          {renderVariants(product)}<div className="mt-4 border-t border-[var(--border)] pt-2">{renderActions(product)}</div>
+        </article>
+      })}</div>
+      {vacio === 'empty' && <EmptyListState spacing="none" className="py-12" title="Aún no tienes productos" action={<Link to="/emprendedor/productos/nuevo"><Button variant="primary">Crear tu primer producto</Button></Link>}>Agrega tu primer producto para empezar a vender.</EmptyListState>}
+      {vacio === 'no-results' && <EmptyListState spacing="none" className="py-12" action={<Button variant="outline" onClick={() => setSearch('')}>Limpiar búsqueda</Button>}>No encontramos productos con esa búsqueda.</EmptyListState>}
+    </section>
   </div>
 }
 
@@ -232,9 +201,20 @@ export function ProductEditor({ initial, editing }: { initial: AdminProduct; edi
   }
   const renameAttribute = (oldName: string, newName: string) => { if (!newName.trim() || newName === oldName) return; if (product.attributes[newName]) { setError("Ya existe un atributo con ese nombre."); return; } setProduct((current) => { const attributes = { ...current.attributes }; const values = attributes[oldName]; delete attributes[oldName]; attributes[newName] = values; return { ...current, attributes, variants: current.variants.map((variant) => { const next = { ...variant.attributes, [newName]: variant.attributes[oldName] ?? values[0] ?? "" }; delete next[oldName]; return { ...variant, attributes: next } }) } }) }
   const addVariant = () => setProduct((current) => ({ ...current, variants: [...current.variants, { id: `v-${Date.now()}`, sku: generateSku(current.variants), attributes: Object.fromEntries(Object.entries(current.attributes).map(([name, values]) => [name, values[0] ?? ""])), price: current.basePrice, comparePrice: current.comparePrice, stock: 0, available: true }] }))
-  const addImages = (files?: FileList | null) => { if (!files) return; if(Array.from(files).some(file => file.size > 1024 * 1024 || !["image/png","image/jpeg","image/webp"].includes(file.type))) {setError("Usa imágenes JPG, PNG o WebP de hasta 1 MB.");return;} Array.from(files).filter((file) => file.type.startsWith("image/")).forEach((file) => { const reader = new FileReader(); reader.onload = () => setProduct((current) => ({ ...current, images: [...current.images, String(reader.result)] })); reader.readAsDataURL(file) }) }
+  const [processingImages,setProcessingImages] = useState(false)
+  const processingRef = useRef(false)
+  const addImages = async (files?: FileList | null) => {
+    if (!files || processingRef.current) return
+    processingRef.current=true; setProcessingImages(true); setError('')
+    try {
+      const images:string[]=[]
+      for (const file of Array.from(files)) images.push(await prepareImage(file,1))
+      setProduct(current=>({...current,images:[...current.images,...images]}))
+    } catch(reason) { setError(reason instanceof Error?reason.message:'No pudimos procesar esta imagen.') }
+    finally { processingRef.current=false;setProcessingImages(false);if(imageInput.current)imageInput.current.value='' }
+  }
   const save = async () => {
-    if (savingRequest.current) return;
+    if (savingRequest.current || processingRef.current) return;
     if (!product.name.trim()) { setError("Ingresa el nombre del producto."); setActiveTab("info"); return; }
     if (product.variants.length === 0) { setError("Agrega al menos una variante con precio y stock."); setActiveTab("variants"); return; }
     if (!editing && product.comparePrice !== undefined && product.comparePrice <= product.basePrice) {
@@ -297,7 +277,7 @@ export function ProductEditor({ initial, editing }: { initial: AdminProduct; edi
   const removeImage = (index: number) => setProduct((current) => ({ ...current, images: current.images.filter((_, imageIndex) => imageIndex !== index) }))
   return <div>
     {error && <div className="mb-4"><Alert variant="error">{error}</Alert></div>}
-    <div className="flex items-center justify-between mb-5 flex-wrap gap-3"><div className="flex items-center gap-3"><button onClick={() => navigate("/emprendedor/productos")} className="text-[var(--muted-foreground)] hover:text-[var(--foreground)]">← Volver</button><h2 className="font-semibold">{editing ? "Editar producto" : "Nuevo producto"}</h2></div><div className="flex gap-2">{saved && <span className="text-sm text-[var(--success)]">✓ Guardado</span>}<Button variant="primary" size="sm" onClick={save} disabled={saving || saved}>{saving ? "Guardando..." : "Guardar producto"}</Button></div></div>
+    <div className="flex items-center justify-between mb-5 flex-wrap gap-3"><div className="flex items-center gap-3"><button onClick={() => navigate("/emprendedor/productos")} className="text-[var(--muted-foreground)] hover:text-[var(--foreground)]">← Volver</button><h2 className="font-semibold">{editing ? "Editar producto" : "Nuevo producto"}</h2></div><div className="flex gap-2">{saved && <span className="text-sm text-[var(--success)]">✓ Guardado</span>}<Button variant="primary" size="sm" onClick={save} disabled={saving || saved || processingImages}>{saving ? "Guardando..." : "Guardar producto"}</Button></div></div>
     <Tabs tabs={[{ id: "info", label: "Información" }, { id: "variants", label: `Variantes (${variants.length})` }, { id: "images", label: `Imágenes (${product.images.length})` }, { id: "seo", label: "SEO" }]} active={activeTab} onChange={setActiveTab} />
     {activeTab === "info" && <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 mt-5"><div className="lg:col-span-2 flex flex-col gap-5"><div className="bg-white border border-[var(--border)] rounded-xl p-5 flex flex-col gap-4"><Input label="Nombre del producto" value={product.name} onChange={(event) => setField("name", event.target.value)} placeholder="Ej: Polera Esencial" required /><Textarea label="Descripción" value={product.description} onChange={(event) => setField("description", event.target.value)} placeholder="Describe el producto…" />{editing ? (
                   <div className="rounded-xl border border-[var(--border)] bg-[var(--muted)]/30 p-4 flex flex-col gap-3">
@@ -342,7 +322,7 @@ export function ProductEditor({ initial, editing }: { initial: AdminProduct; edi
       <Button onClick={() => setField("generalAttributes", [...(product.generalAttributes ?? []), { clave: "", etiqueta: "", valor: "" }])}>+ Característica</Button>
     </div>}
     {activeTab === "variants" && <div className="mt-5 bg-white border border-[var(--border)] rounded-xl p-5"><div className="flex items-start justify-between gap-3 mb-5"><div><p className="font-semibold text-sm">Variantes, SKU e inventario</p><p className="text-xs text-[var(--muted-foreground)] mt-1">Stock total: <strong>{totalStock} unidades</strong>. Cada variante mantiene precio, precio de oferta, SKU y disponibilidad propios.</p></div><Button variant="primary" size="sm" onClick={addVariant}>+ Agregar variante</Button></div>{variants.length ? <div className="overflow-x-auto"><table className="w-full min-w-[780px] text-sm"><thead><tr className="border-b border-[var(--border)]">{["SKU", "Atributos", "Precio y oferta", "Stock", "Estado", ""].map((title) => <th key={title} className="text-left py-2 px-2 text-xs text-[var(--muted-foreground)] uppercase">{title}</th>)}</tr></thead><tbody>{variants.map((variant) => <tr key={variant.id} className="border-b border-[var(--border)] last:border-0 align-top"><td className="p-2"><input aria-label="SKU de variante" className="w-28 border border-[var(--border)] rounded px-2 py-1.5 text-xs font-mono" value={variant.sku} onChange={(event) => updateVariant(variant.id, { sku: event.target.value })} /></td><td className="p-2"><div className="grid gap-1">{attributeNames.map((name) => <label key={name} className="flex items-center gap-1 text-xs"><span className="w-14 text-[var(--muted-foreground)]">{name}</span><select className="border border-[var(--border)] rounded px-1 py-1" value={variant.attributes[name] ?? ""} onChange={(event) => updateVariant(variant.id, { attributes: { ...variant.attributes, [name]: event.target.value } })}>{(product.attributes[name] ?? []).map((value) => <option key={value}>{value}</option>)}</select></label>)}</div></td><td className="p-2"><div className="flex flex-col gap-1"><label className="text-[11px] text-[var(--muted-foreground)]">Precio venta / oferta<input aria-label="Precio de venta de variante" type="number" min="0" className="block w-28 border border-[var(--border)] rounded px-2 py-1.5 text-sm text-[var(--foreground)] mt-0.5" value={variant.price} onChange={(event) => updateVariant(variant.id, { price: Number(event.target.value) })} /></label><label className="text-[11px] text-[var(--muted-foreground)]">Precio anterior (normal)<input aria-label="Precio anterior de variante" placeholder="Precio anterior" type="number" min="0" className="block w-28 border border-[var(--border)] rounded px-2 py-1.5 text-sm text-[var(--foreground)] mt-0.5" value={variant.comparePrice ?? ""} onChange={event => updateVariant(variant.id, { comparePrice: event.target.value ? Number(event.target.value) : undefined })} /></label></div><div className="mt-1.5"><OfertaInfo precio={variant.price} anterior={variant.comparePrice} /></div></td><td className="p-2"><input aria-label="Stock de variante" type="number" min="0" className="w-20 border border-[var(--border)] rounded px-2 py-1.5" value={variant.stock} onChange={(event) => updateVariant(variant.id, { stock: Number(event.target.value) })} /><div className="mt-1"><Badge variant={stockState(variant.stock).badge}>{stockState(variant.stock).label}</Badge></div></td><td className="p-2"><Badge variant={variant.stock > 0 ? "success" : "warning"}>{variant.stock > 0 ? "Con stock" : "Sin stock"}</Badge></td><td className="p-2"><button onClick={() => setProduct((current) => ({ ...current, variants: current.variants.filter((item) => item.id !== variant.id) }))} className="text-xs text-[var(--error)] hover:underline">Eliminar</button></td></tr>)}</tbody></table></div> : <Alert variant="info">Agrega atributos y crea la primera variante. Así cada combinación tendrá SKU y stock independientes.</Alert>}</div>}
-    {activeTab === "images" && <div className="mt-5 bg-white border border-[var(--border)] rounded-xl p-5"><p className="font-semibold text-sm">Galería del producto</p><p className="text-xs text-[var(--muted-foreground)] mt-1 mb-4">La primera imagen es la principal. Puedes cargar JPG, PNG o WebP de hasta 1 MB por imagen.</p><input ref={imageInput} aria-label="Agregar imágenes del producto" type="file" accept="image/png,image/jpeg,image/webp" multiple className="hidden" onChange={(event) => addImages(event.target.files)} /><div className="grid grid-cols-2 sm:grid-cols-4 gap-3">{product.images.map((image, index) => <div key={`${image}-${index}`} className="relative aspect-square rounded-xl overflow-hidden border border-[var(--border)]"><img src={image} alt={`Producto ${index + 1}`} className="w-full h-full object-cover" />{index === 0 && <span className="absolute top-2 left-2"><Badge variant="info">Principal</Badge></span>}<button onClick={() => removeImage(index)} className="absolute bottom-2 right-2 bg-white rounded-md px-2 py-1 text-xs text-[var(--error)] shadow">Eliminar</button></div>)}<button onClick={() => imageInput.current?.click()} className="aspect-square rounded-xl border-2 border-dashed border-[var(--border)] hover:border-[var(--primary)] hover:bg-[var(--muted)] transition-colors flex flex-col items-center justify-center gap-2"><span className="text-2xl">＋</span><span className="text-xs">Subir imágenes</span></button></div></div>}
+    {activeTab === "images" && <div className="mt-5 bg-white border border-[var(--border)] rounded-xl p-5"><p className="font-semibold text-sm">Galería del producto</p><p className="text-xs text-[var(--muted-foreground)] mt-1 mb-4">La primera imagen es la principal. Puedes cargar JPG, PNG, WebP, HEIC o HEIF de hasta 1 MB por imagen.</p><input ref={imageInput} aria-label="Agregar imágenes del producto" type="file" accept={IMAGE_ACCEPT} disabled={processingImages} multiple className="hidden" onChange={(event) => addImages(event.target.files)} /><div className="grid grid-cols-2 sm:grid-cols-4 gap-3">{product.images.map((image, index) => <div key={`${image}-${index}`} className="relative aspect-square rounded-xl overflow-hidden border border-[var(--border)]"><img src={image} alt={`Producto ${index + 1}`} className="w-full h-full object-cover" />{index === 0 && <span className="absolute top-2 left-2"><Badge variant="info">Principal</Badge></span>}<button onClick={() => removeImage(index)} className="absolute bottom-2 right-2 bg-white rounded-md px-2 py-1 text-xs text-[var(--error)] shadow">Eliminar</button></div>)}<button disabled={processingImages} onClick={() => imageInput.current?.click()} className="aspect-square rounded-xl border-2 border-dashed border-[var(--border)] hover:border-[var(--primary)] hover:bg-[var(--muted)] transition-colors flex flex-col items-center justify-center gap-2"><span className="text-2xl">＋</span><span className="text-xs">{processingImages?'Procesando…':'Subir imágenes'}</span></button></div></div>}
     {activeTab === "seo" && (
       <div className="mt-5 bg-white border border-[var(--border)] rounded-xl p-5 max-w-2xl grid gap-4">
         <div>

@@ -1,3 +1,5 @@
+import { CommercialOptIn } from '../components/store/CommercialOptIn';
+import { requestConsent } from '../services/commercialConsent';
 import { useState, type FormEvent } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useGoogleLogin } from '@react-oauth/google';
@@ -10,13 +12,14 @@ export default function Login() {
   const { config } = useStore();
   const navigate = useNavigate();
   const [params] = useSearchParams();
-  const { route, isMinimal, isVisual, isCatalog } =
+  const { route, templateNumber, isMinimal, isVisual, isCatalog } =
     useStorefrontTemplate();
 
   const [mode, setMode] =
     useState<'login' | 'register'>(() => params.get('modo') === 'registro' ? 'register' : 'login');
 
   const [email, setEmail] = useState('');
+  const [commercial, setCommercial] = useState(false);
   const [password, setPassword] =
     useState('');
   const [name, setName] = useState('');
@@ -112,6 +115,14 @@ export default function Login() {
       }
       
       localStorage.setItem('token', data.data.token);
+      if (mode === 'register' && commercial) {
+        let notice: string;
+        try { notice = (await requestConsent(email, templateNumber)).mensaje; }
+        catch (e) { notice = 'Tu cuenta fue creada. ' + (e instanceof Error ? e.message : 'Reintenta la preferencia comercial.'); }
+        navigate(route('preferencias-comerciales'), {state: {notice}});
+        return;
+      }
+
       
       // Redirección condicional según el correo o rol
       if (data.data.user.email === 'emprendedor@gmail.com' || data.data.user.is_store_owner === true) {
@@ -155,6 +166,7 @@ export default function Login() {
     );
 
     setMessage('');
+    setCommercial(false);
     setPassword('');
     setPasswordErrors([]);
   };
@@ -236,6 +248,7 @@ export default function Login() {
               onSubmit={handleSubmit}
               className="flex flex-col gap-4 [&_label]:text-[#151515] [&_input]:text-[#151515]"
             >
+{mode === 'register' && <CommercialOptIn checked={commercial} onChange={setCommercial} disabled={loading} />}
               {mode === 'register' && (
                 <Input
                   label="Nombre completo"
@@ -416,6 +429,7 @@ export default function Login() {
               onSubmit={handleSubmit}
               className="flex flex-col gap-4"
             >
+{mode === 'register' && <CommercialOptIn checked={commercial} onChange={setCommercial} disabled={loading} />}
               {mode === 'register' && (
                 <Input
                   label="Nombre completo"
@@ -633,6 +647,7 @@ export default function Login() {
             onSubmit={handleSubmit}
             className="flex flex-col gap-4"
           >
+{mode === 'register' && <CommercialOptIn checked={commercial} onChange={setCommercial} disabled={loading} />}
             {mode === 'register' && (
               <Input
                 label="Nombre completo"

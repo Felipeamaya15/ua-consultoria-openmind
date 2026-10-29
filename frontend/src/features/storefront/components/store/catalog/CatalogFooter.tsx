@@ -1,35 +1,37 @@
+import { CommercialPreferencesLink } from '../CommercialPreferencesLink';
+import { StoreBusinessDescription } from '../StoreBusinessDescription';
 import { useStore } from '../../../context/StoreContext';
 import { VISUAL_SECTION } from '../../../visual/sectionIds';
-import { useLandingContent } from '../../../../landing/hooks/useLandingContent';
-import { Icon, InstitutionalBadge } from '../../ui';
-import { useLandingSectionVisibility } from '../../../../landing/hooks/useLandingSectionVisibility';
+import { InstitutionalBadge } from '../../ui';
 import { Link } from 'react-router-dom';
 import { useStorefrontTemplate } from '../../../hooks/useStorefrontTemplate';
 
 export function CatalogFooter() {
   const { config } = useStore();
-  const { content } = useLandingContent();
-  const isSectionVisible = useLandingSectionVisibility();
   const { route } = useStorefrontTemplate();
 
   return (
-    <footer data-visual-section={VISUAL_SECTION.footer} className="bg-[var(--primary)] border-t border-[color-mix(in_srgb,currentColor_10%,transparent)] text-[var(--on-primary)]">
-      <div data-visual-part="footerLayout" className="max-w-[1160px] mx-auto px-5 py-10 md:py-12 grid grid-cols-1 md:grid-cols-3 gap-7 items-start">
+ <footer
+      data-visual-section={VISUAL_SECTION.footer}
+      className="bg-[#050505] border-t border-white/10 text-white"
+    >
+      <div
+        data-visual-part="footerLayout"
+        className="max-w-[1160px] mx-auto px-5 py-10 md:py-12 grid grid-cols-1 md:grid-cols-2 gap-8 items-start"
+      >
         <div>
-          <p data-visual-part="footerTitle" className="text-lg font-extrabold tracking-tight">
+          {config.logo && <img data-landing-image className="store-footer-logo" src={config.logo} alt={`Logo de ${config.name}`} />}
+          <p
+            data-visual-part="footerTitle"
+            className="text-lg font-extrabold tracking-tight text-white"
+          >
             {config.name}
           </p>
 
-          <p className="mt-2 max-w-xs text-[12px] leading-5 text-[color-mix(in_srgb,currentColor_60%,transparent)]">
-            Compra simple, productos seleccionados e información clara.
-          </p>
+        <StoreBusinessDescription className="mt-2 max-w-sm text-xs leading-relaxed text-white/70" />
         </div>
 
-        {isSectionVisible('Beneficios') && content.beneficios.length > 0 && (<div className="md:text-center">
-          {content.beneficios.map((b, i) => <div key={i} className="mb-4"><Icon name={b.icono} className="w-5 h-5 inline-block" /><p className="text-[10px] uppercase tracking-[0.18em] text-[var(--primary)] mt-2">{b.titulo}</p>{b.descripcion && <p className="mt-2 text-[12px] text-[color-mix(in_srgb,currentColor_60%,transparent)]">{b.descripcion}</p>}</div>)}
-        </div>)}
-
-        <div className="flex flex-wrap md:justify-end gap-x-5 gap-y-2 text-[11px] text-[color-mix(in_srgb,currentColor_50%,transparent)]">
+        <div className="flex flex-wrap md:justify-end gap-x-5 gap-y-2 text-[11px] text-white/50">
           <Link
             to={route('legal/privacy')}
             className="hover:text-inherit transition-colors"
@@ -66,7 +68,15 @@ export function CatalogFooter() {
           </Link>
         </div>
       </div>
-      <div data-visual-part="branding" className="mt-6"><InstitutionalBadge showVersion={true} /></div>
+
+      <div
+        data-visual-part="branding"
+        className="max-w-[1160px] mx-auto px-5 pb-8"
+      >
+        <InstitutionalBadge showVersion={true} />
+      </div>
+
+      <CommercialPreferencesLink />
     </footer>
   );
 }

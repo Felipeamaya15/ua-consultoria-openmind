@@ -12,6 +12,11 @@ from rest_framework.exceptions import ValidationError
 
 
 class ConfiguracionLandingAPIView(APIView):
+    def finalize_response(self, request, response, *args, **kwargs):
+        response = super().finalize_response(request, response, *args, **kwargs)
+        response['Cache-Control'] = 'no-store'
+        return response
+
     def get_permissions(self):
         if self.request.method == "GET":
             return [AllowAny()]

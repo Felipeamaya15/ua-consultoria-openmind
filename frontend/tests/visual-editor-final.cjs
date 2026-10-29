@@ -5,7 +5,10 @@ const localStorage={getItem:key=>storage.get(key)||null,setItem:(key,value)=>sto
 function load(relative,mocks={}) {
   const file=path.resolve(root,relative);if(!Object.keys(mocks).length&&cache.has(file))return cache.get(file);
   const module={exports:{}};const code=ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2020,jsx:ts.JsxEmit.ReactJSX}}).outputText;
-  const req=id=>{if(id in mocks)return mocks[id];
+  const req=id=>{
+    if(id.endsWith('/ui/ImageUpload'))return {ImageUpload:function ImageUpload(){return null;}};
+    if(id.endsWith('/fontLibrary')){const library=load(path.resolve(path.dirname(file),id)+'.ts');return {...library,loadVisualFonts(){}};}
+if(id.endsWith('/PaletteLibrary'))return {PaletteLibrary:function PaletteLibrary(){return null;}};if(id.endsWith('/palettes')&&!id.includes('visualEditor'))return {fetchPalettes:async()=>({propias:[]}),fetchAppearance:async()=>({}),saveAppearance:async()=>{},usePaletteLibrary:()=>({}),paletteOverrides:()=>undefined};if(id in mocks)return mocks[id];
     if(id==='../visualEditor/content')return {ContentInspector:()=>null};
     if(id==='../../landing/services/landingService')return {fetchLandingConfig:async()=>null,saveLandingConfig:async value=>value};
     if(id==='../../storefront/services/catalogService')return {fetchPublicProducts:async()=>[]};if(id.endsWith('.css'))return {};if(!id.startsWith('.'))return require(id);const p=path.resolve(path.dirname(file),id);return load(['.ts','.tsx'].map(ext=>p+ext).find(fs.existsSync)||path.join(p,'index.ts'),mocks);};
@@ -14,9 +17,9 @@ function load(relative,mocks={}) {
 }
 const model=load('src/features/admin/visualEditor/model.ts'),resolver=load('src/features/storefront/visual/resolveVisualConfig.ts'),css=load('src/features/storefront/visual/cssVariables.ts').visualConfigToCssVariables;
 const base={storeOverrides:{},overrides:{},storeColors:{},templateColors:{},images:{}};
-let count=0;function test(name,fn){fn();count++;console.log('OK '+name);}
+let count=0;let queue=Promise.resolve();function test(name,fn){queue=queue.then(fn).then(()=>{console.log('OK '+name);count++;});}
 const plain=v=>JSON.parse(JSON.stringify(v));
-test('history undoes resets, redoes, clears a branch and bounds memory',()=>{
+test('history undoes resets, redoes, clears a branch and bounds memory',async () =>{
   const h=load('src/features/admin/visualEditor/history.ts');let history=h.createHistory(base);
   history=h.recordHistory(history,model.editProperty(base,'pages.product.content.imageSize',370));history=h.undoHistory(history);assert.deepEqual(plain(history.present),base);
   history=h.redoHistory(history);assert.equal(history.present.overrides.pages.product.content.imageSize,370);
@@ -24,7 +27,7 @@ test('history undoes resets, redoes, clears a branch and bounds memory',()=>{
   history=h.recordHistory(history,model.editProperty(history.present,'pages.product.content.imageSize',420));assert.equal(history.future.length,0);
   for(let i=0;i<70;i++)history=h.recordHistory(history,model.editProperty(history.present,'pages.product.content.imageSize',200+i));assert.equal(history.past.length,40);assert.equal(h.recordHistory(history,history.present),history);
 });
-test('selector actually changes the iframe, page inspector, history and sparse publication',()=>{
+test('selector actually changes the iframe, page inspector, history and sparse publication',async () =>{
   const {adminRepository}=load('src/features/admin/data/adminRepository.ts'),storeApi=load('src/features/storefront/visual/storage.ts'),identity={apiBaseUrl:'https://final-editor.test',storeId:'123'};
   let config=adminRepository.load(identity),index=0,refIndex=0;const slots=[],refs=[];
   const react={useState(initial){const i=index++;if(!(i in slots))slots[i]=typeof initial==='function'?initial():initial;return[slots[i],value=>slots[i]=typeof value==='function'?value(slots[i]):value];},useRef(initial){const i=refIndex++;if(!(i in refs))refs[i]={current:initial};return refs[i];},useMemo:fn=>fn(),useEffect(){}};
@@ -39,7 +42,7 @@ test('selector actually changes the iframe, page inspector, history and sparse p
     if(page==='product')assert(tree.find(n=>n.type==='iframe').props.src.includes('/producto/ejemplo-editor'));
     const inspector=tree.find(n=>n.type?.name==='VisualInspector');assert.equal(inspector.props.page,page);inspector.props.onEdit('pages.'+page+'.layout.titleSize',49);tree=render();
     button(tree,'Deshacer').props.onClick();tree=render();assert.notEqual(tree.find(n=>n.type?.name==='VisualInspector').props.effective.pages[page].layout.titleSize,49);
-    button(tree,'Rehacer').props.onClick();tree=render();button(tree,'Guardar cambios').props.onClick();tree=render();assert.equal(resolver.resolveStoreVisualConfig(storeApi.readStoredStoreConfig(identity),'editorial').pages[page].layout.titleSize,49);
+    button(tree,'Rehacer').props.onClick();tree=render();await button(tree,'Guardar cambios').props.onClick();tree=render();assert.equal(resolver.resolveStoreVisualConfig(storeApi.readStoredStoreConfig(identity),'editorial').pages[page].layout.titleSize,49);
     assert(!tree.some(n=>n.props?.children==='Cambios sin guardar'));
     if(page==='checkout'){const select=tree.find(n=>n.type==='select'&&n.props['aria-label']==='Etapa de compra');for(const step of ['contact','delivery','payment','confirm']){select.props.onChange({target:{value:step}});tree=render();assert(tree.find(n=>n.type==='iframe').props.src.includes('visualStep='+step));assert.equal(tree.find(n=>n.type?.name==='VisualInspector').props.page,step==='confirm'?'confirmation':'checkout');}}
   }
@@ -48,7 +51,7 @@ test('selector actually changes the iframe, page inspector, history and sparse p
   slots.length=refs.length=0;tree=render();for(const page of ['product','cart','login','checkout','tracking','profile','orders'])assert.equal(tree.find(n=>n.type?.name==='VisualInspector').props.effective.pages[page].layout.titleSize,49);assert.equal(button(tree,'Deshacer').props.disabled,true);
   assert.equal(storeApi.readStoredStoreConfig(identity).history,undefined);
 });
-test('safe examples render complete pages without mounting public business children',()=>{
+test('safe examples render complete pages without mounting public business children',async () =>{
   const React=require('react'),{renderToStaticMarkup}=require('react-dom/server'),pages=load('src/features/storefront/visual/pages.ts');let embedded=true,location={pathname:'',search:'?visualExample=1'},mounted=0;
   const Component=load('src/features/storefront/components/store/StorePageContent.tsx',{react:{...React,lazy:()=>({previewProduct})=>React.createElement('p',null,previewProduct.name)},'react-router-dom':{useLocation:()=>location},'../../visual/pages':{...pages,isActiveEditorPreview:()=>embedded}}).StorePageContent;
   function Business(){mounted++;return React.createElement('p',null,'REAL');}
@@ -63,19 +66,19 @@ test('safe examples render complete pages without mounting public business child
   embedded=false;assert(renderToStaticMarkup(React.createElement(Component,null,React.createElement(Business))).includes('REAL'));assert.equal(mounted,1);
   embedded=true;location.search='';renderToStaticMarkup(React.createElement(Component,null,React.createElement(Business)));assert.equal(mounted,2);
 });
-test('product geometry and cart/form properties reach responsive public variables',()=>{
+test('product geometry and cart/form properties reach responsive public variables',async () =>{
   let document=base;for(const [path,value]of Object.entries({'pages.product.content.imageRatio':1.5,'pages.product.content.imageSize':380,'pages.product.content.imageWidth':60,'pages.cart.content.imageSize':80,'pages.login.content.formWidth':440,'responsive.mobile.pages.product.content.imageSize':240}))document=model.editProperty(document,path,value);
   const config=model.resolveEditorDocument(document,'editorial'),vars=css(config);assert.equal(vars['--visual-page-product-image-size-desktop'],'380px');assert.equal(vars['--visual-page-product-image-size-mobile'],'240px');assert.equal(vars['--visual-page-product-content-columns-desktop'],'minmax(0,60fr) minmax(0,40fr)');assert.equal(vars['--visual-page-cart-image-size-desktop'],'80px');assert.equal(config.pages.profile.content.formWidth,560);
   const productSource=fs.readFileSync(path.join(root,'src/features/storefront/pages/ProductDetail.tsx'),'utf8');assert.equal((productSource.match(/data-page-main-image/g)||[]).length,3);assert.equal((productSource.match(/<QuantityControl /g)||[]).length,3);assert(fs.readFileSync(path.join(root,'src/features/storefront/components/store/QuantityControl.tsx'),'utf8').includes('data-page-quantity'));
   const {getInspectorGroups}=load('src/features/admin/visualEditor/inspector.tsx');for(const page of ['product','cart','login','checkout','tracking','profile','orders'])for(const section of ['pageLayout','pagePanel','pageField','pageButton'])for(const group of getInspectorGroups(section,false,page))for(const field of group.fields)assert.notEqual(model.readPath(config,field.path),undefined,field.path);
 });
-test('stable image keys survive reordered DOM and replacements while reading old keys',()=>{
+test('stable image keys survive reordered DOM and replacements while reading old keys',async () =>{
   const api=load('src/features/storefront/visual/imageSettings.ts'),img={src:'asset.png',dataset:{},style:{},getAttribute(key){return key==='src'?this.src:null;},closest(){return null;}};
   const key=api.stableImageKey(img),setting={src:'new.png',scale:100,x:50,y:50,radius:3};img.src='new.png';assert.equal(api.stableImageKey(img),key);
   const normalized=api.readThemeImages({[key]:setting,'image-7':setting});assert.equal(api.findImageSetting(normalized,img,99).radius,3);assert.equal(api.findImageSetting({'image-7':setting},img,7).radius,3);
 });
-test('contrast warnings distinguish insufficient contrast from dynamic colors',()=>{const {contrastRatio}=load('src/features/admin/visualEditor/contrast.ts');assert.equal(contrastRatio('#000','#fff'),21);assert.equal(contrastRatio('#fff','#fff'),1);assert(contrastRatio('#777777','#ffffff')<4.5);assert.equal(contrastRatio('currentColor','#fff'),null);});
-test('general edits override responsive preset defaults without duplicating persisted data',()=>{
+test('contrast warnings distinguish insufficient contrast from dynamic colors',async () =>{const {contrastRatio}=load('src/features/admin/visualEditor/contrast.ts');assert.equal(contrastRatio('#000','#fff'),21);assert.equal(contrastRatio('#fff','#fff'),1);assert(contrastRatio('#777777','#ffffff')<4.5);assert.equal(contrastRatio('currentColor','#fff'),null);});
+test('general edits override responsive preset defaults without duplicating persisted data',async () =>{
   let document=model.editScopedProperty(base,'editorial','hero.titleSize',83);
   let result=model.resolveEditorDocument(document,'editorial');
   for(const device of ['desktop','tablet','mobile'])assert.equal(resolver.resolveVisualViewport(result,device).hero.titleSize,83);
@@ -86,7 +89,7 @@ test('general edits override responsive preset defaults without duplicating pers
   assert.equal(document.overrides.responsive,undefined);
   assert.equal(resolver.resolveVisualViewport(model.resolveEditorDocument(document,'editorial'),'mobile').hero.titleSize,71);
 });
-test('tablet and desktop exclusive edits preserve the other two devices',()=>{
+test('tablet and desktop exclusive edits preserve the other two devices',async () =>{
   for(const template of ['editorial','minimal','visual','catalog']){
     const before=model.resolveEditorDocument(base,template);
     const tablet=model.editScopedProperty(base,template,'responsive.tablet.hero.titleSize',91,'device','tablet');
@@ -98,7 +101,7 @@ test('tablet and desktop exclusive edits preserve the other two devices',()=>{
     assert.equal(resolver.resolveVisualViewport(result,'mobile').hero.titleSize,resolver.resolveVisualViewport(before,'mobile').hero.titleSize);
   }
 });
-test('content participates in undo and discard but is never written to the appearance envelope',()=>{
+test('content participates in undo and discard but is never written to the appearance envelope',async () =>{
   const history=load('src/features/admin/visualEditor/history.ts');
   const original={...base,landing:{tienda:1,titulo:'Original',texto_boton:'Ver',secciones:{}}};
   let state=history.createHistory(original);state=history.recordHistory(state,{...original,landing:{...original.landing,titulo:'Nuevo'}});
@@ -108,11 +111,13 @@ test('content participates in undo and discard but is never written to the appea
   const published=model.publishEditorDocument(config,'editorial',state.present);
   assert.equal(published.landing,undefined);assert.equal(published.themeEditor.editorial.landing,undefined);
 });
-test('institutional contrast follows light, dark, transparent and alpha surfaces',()=>{
+test('institutional contrast follows light, dark, transparent and alpha surfaces',async () =>{
   const {institutionalTextColor,contrastRatio}=load('src/features/storefront/visual/contrast.ts');
   for(const color of ['#ffffff','#000000','#fafafa','#123456','#ff0000','#7f7f7f'])assert(contrastRatio(institutionalTextColor(color),color)>=4.5);
   assert.equal(institutionalTextColor('transparent','#111111'),'#ffffff');
   assert.equal(institutionalTextColor('#ffffff00','#111111'),'#ffffff');
   assert.equal(institutionalTextColor('#ffffffee','#111111'),'#000000');
 });
-console.log(`${count} final editor tests passed.`);
+
+
+queue.then(()=>console.log(`Passed ${count} editor checks`)).catch(error=>{console.error(error);process.exitCode=1;});

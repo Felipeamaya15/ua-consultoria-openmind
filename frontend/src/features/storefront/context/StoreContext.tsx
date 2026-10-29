@@ -1,3 +1,4 @@
+import { usePaletteLibrary, paletteOverrides } from '../../../shared/palettes';
 import { readBlockStyles } from '../visual/blockAppearance';
 import { isActiveEditorPreview } from '../visual/pages';
 import {
@@ -99,9 +100,12 @@ export function StoreProvider({
   }, [storageKey]);
   const savedConfig = useMemo(() => readStoredStoreConfig(identity), [identity, storageRevision]);
   const activeTemplate: TemplateId = templateFromPath(pathname) ?? (['editorial','minimal','visual','catalog'].includes(String(savedConfig.template)) ? savedConfig.template as TemplateId : 'editorial');
+  const paletteSource=usePaletteLibrary();
   const visualConfig = useMemo(() => {
-    return resolveStoreVisualConfig(savedConfig, activeTemplate);
-  }, [activeTemplate, savedConfig]);
+    const remote=paletteOverrides(paletteSource.appearance?.[activeTemplate],paletteSource.library);
+    const local=readTheme(savedConfig,activeTemplate);
+    return resolveStoreVisualConfig(savedConfig, activeTemplate, remote ? {...local,visualConfig:remote} : undefined);
+  }, [activeTemplate, savedConfig, paletteSource.appearance, paletteSource.library]);
   // Async results are usable only for their confirmed installation and store.
   const [businessResult, setBusiness] = useState<{ key: string; value: StoreInformation } | null>(null);
   const business = businessResult?.key === storageKey ? businessResult.value : null;

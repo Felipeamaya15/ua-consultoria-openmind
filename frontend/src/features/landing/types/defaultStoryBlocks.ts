@@ -17,8 +17,8 @@ export const DEFAULT_STORY_BLOCKS: BloqueLanding[] = [
   },
 ];
 export const defaultStoryBlocks = () => DEFAULT_STORY_BLOCKS.map(block => ({...block,imagenes:block.imagenes.map(image => ({...image}))}));
-/** First management must materialize existing stories, never silently replace them. */
-export const editableLandingBlocks = (blocks?: BloqueLanding[]) => blocks ?? defaultStoryBlocks();
+/** Demo content is opt-in; public storefronts only render saved sections. */
+export const editableLandingBlocks = (blocks?: BloqueLanding[]) => blocks ?? [];
 export function restoreStoryBlocks(blocks?: BloqueLanding[]): BloqueLanding[] {
   const current = editableLandingBlocks(blocks);
   const ids = new Set(current.map(block => block.id));

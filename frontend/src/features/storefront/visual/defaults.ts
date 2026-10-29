@@ -1,7 +1,7 @@
 import type { BorderConfig, InfoConfig, PageAppearance, ProductCardConfig, SectionConfig, VisualConfig } from './types';
 import { STORE_PAGES } from './pages';
 
-const border: BorderConfig = { width: 1, color: '#dde3f0', style: 'solid' };
+const border: BorderConfig = { width: 1, color: 'currentColor', style: 'solid' };
 const section: SectionConfig = { paddingY: 64, paddingTop: 64, paddingBottom: 64, contentWidth: 1280, background: 'transparent', titleAlign: 'left', titleSize: 32, subtitleSize: 16 };
 const info: InfoConfig = { cardRadius: 12, border, shadow: 'none', layout: 'grid', columns: 3, padding: 24, background: 'transparent', titleSize: 32 };
 const grid = { columns: { desktop: 4, tablet: 2, mobile: 1 }, gapX: 20, gapY: 20, maxWidth: 1280 };
@@ -20,7 +20,8 @@ export const VISUAL_DEFAULTS: VisualConfig = {
   version: 1,
   pages: Object.fromEntries(STORE_PAGES.map(({ id }) => [id, { ...structuredClone(page), content: { ...page.content, imageSize: id === 'cart' ? 96 : page.content.imageSize, priceSize: id === 'cart' ? 16 : page.content.priceSize } }])) as VisualConfig['pages'],
   global: {
-    colors: { primary: '#1a3a6b', secondary: '#eef1f8', accent: '#c2410c', background: '#fafaf8', text: '#0f1623', surface: '#ffffff', border: '#dde3f0' },
+    colors: { primary: '#1a3a6b', secondary: '#eef1f8', accent: '#e04b1a', background: '#fafaf8', text: '#0f1623', surface: '#ffffff', border: '#dde3f0', alternate: '#eef1f8', muted: '#626c7c', structural: '#1a3a6b', button: 'currentColor', buttonText: '#ffffff' },
+    unlinkStructural: false,
     typography: { body: 'sans', heading: 'serif', baseSize: 16, lineHeight: 1.5 },
     radius: 8, baseSpacing: 8, contentMaxWidth: 1280, density: 'normal',
   },

@@ -44,7 +44,7 @@ tree = nodes(Address({ value: legacy, onChange: () => {} }));
 assert(tree.find(n => n.props?.label === 'Región').props.options.some(o => o.value === legacy.region));
 
 async function verifyPageLoading() {
-  let slots = [], index = 0, effect, requested = [], resolveConfig, resolveCatalog;
+  let slots = [], index = 0, effects = [], requested = [], resolveConfig, resolveCatalog;
   const configLoad = new Promise(resolve => { resolveConfig = resolve; });
   const catalogLoad = new Promise(resolve => { resolveCatalog = resolve; });
   const normalize = require('typescript').transpileModule(fs.readFileSync(path.join(root, 'src/features/landing/types/landingContent.ts'), 'utf8'), { compilerOptions: { module: 1 } }).outputText;
@@ -53,7 +53,7 @@ async function verifyPageLoading() {
   const Page = load('src/features/admin/components/LandingPageContent.tsx', { AbortController, require: id => {
     if (id === 'react/jsx-runtime') return { jsx, jsxs: jsx };
     if (id === 'react-router-dom') return {useBlocker:()=>({state:'unblocked'}),useLocation:()=>({hash:''})};
-    if (id === 'react') return { useState: initial => { const i = index++; if (!(i in slots)) slots[i] = typeof initial==='function'?initial():initial; return [slots[i], next => { slots[i] = typeof next==='function'?next(slots[i]):next; }]; }, useRef: value => ({current:value}), useEffect: fn => { effect = fn; } };
+    if (id === 'react') return { useState: initial => { const i = index++; if (!(i in slots)) slots[i] = typeof initial==='function'?initial():initial; return [slots[i], next => { slots[i] = typeof next==='function'?next(slots[i]):next; }]; }, useRef: value => ({current:value}), useEffect: fn => { effects.push(fn); } };
     if (id.includes('storeInformationService')) return {fetchStoreInformation:async()=>({nombre:'Tienda existente',descripcion:'Negocio existente'})};
     if (id.includes('landingContent')) return normalizedModule.exports;
     if (id.includes('landingService')) return { fetchLandingConfig: options => { requested.push(options); return configLoad; } };
@@ -67,7 +67,9 @@ async function verifyPageLoading() {
   } }).default;
   const render = () => { index = 0; return nodes(Page()); };
   assert(render().includes('Cargando configuración...'));
-  const cleanup = effect();
+  // React runs every mounted effect; retaining only the last one skipped initial loading.
+  const cleanups = effects.map(effect => effect());
+  const cleanup = () => cleanups.forEach(fn => { if (typeof fn === 'function') fn(); });
   assert.equal(requested.length, 2); assert(requested.every(o => o.retry && o.signal));
   assert(!render().some(n => n.props?.role === 'alert'));
   resolveConfig({ titulo: 'Título almacenado', descripcion: 'Persistida', texto_boton: 'Ver', imagen_principal: null, secciones: {}, contenido: {} });

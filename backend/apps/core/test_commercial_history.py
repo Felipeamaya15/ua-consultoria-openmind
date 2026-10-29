@@ -9,6 +9,7 @@ from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.db import connection
 from django.test import TestCase
+from django.utils import timezone
 from django.test.utils import CaptureQueriesContext
 from openpyxl import load_workbook
 from rest_framework.test import APIClient
@@ -168,7 +169,9 @@ class CommercialHistoryTests(TestCase):
 
     def consent(self, email, state='autorizado'):
         return ConsentimientoComercial.objects.create(tienda=self.store, email=email, estado=state,
-                    version_texto='qa-v1', referencia_evidencia='fixture-explicit-opt-in')
+                    version_texto='qa-v1', referencia_evidencia='fixture-explicit-opt-in',
+                    verificado=state == 'autorizado', fecha_verificacion=timezone.now() if state == 'autorizado' else None,
+                    fecha_autorizacion=timezone.now() if state == 'autorizado' else None)
 
     def test_14_marketing_explicit_opt_in_only_and_withdrawal(self):
         record = self.consent(' BUYER@example.COM ')
@@ -232,7 +235,8 @@ class CommercialHistoryTests(TestCase):
         self.assertEqual(response.status_code, 200); self.assertLessEqual(len(queries), 6)
         with CaptureQueriesContext(connection) as queries:
             response = self.api.get(CONTACTS)
-        self.assertEqual(response.status_code, 200); self.assertLessEqual(len(queries), 4)
+        # One bounded query also includes opt-ins without an order (no N+1).
+        self.assertEqual(response.status_code, 200); self.assertLessEqual(len(queries), 5)
 
     def test_22_multiple_product_matches_do_not_duplicate_order_totals(self):
         ItemPedido.objects.create(id_pedido=self.paid, nombre_producto='Producto histórico QA extra', sku='SKU-QA2', cantidad=1, precio_unitario=0)

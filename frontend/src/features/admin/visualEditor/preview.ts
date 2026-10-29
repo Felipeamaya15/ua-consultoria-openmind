@@ -1,3 +1,4 @@
+import { loadVisualFonts } from '../../storefront/visual/fontLibrary';
 import { blockStyleSheet, type BlockStyles } from '../../storefront/visual/blockAppearance';
 import type { VisualConfig } from '../../storefront/visual/types';
 import { visualConfigToCssVariables } from '../../storefront/visual/cssVariables';
@@ -85,7 +86,7 @@ export function connectVisualPreview(doc: Document, onSelect: (section: VisualSe
   const observer = Observer ? new Observer(apply) : null;
   observer?.observe(doc.body, { childList: true, subtree: true });
   return {
-    update(config: VisualConfig, nextImages: Record<string, ThemeImageSetting>) { effective = config; variableCss = `[data-storefront-visual]{${Object.entries(visualConfigToCssVariables(effective)).map(([key,value]) => `${key}:${value}!important;`).join('')}}`; images = nextImages; apply(); },
+    update(config: VisualConfig, nextImages: Record<string, ThemeImageSetting>) { effective = config; loadVisualFonts(config, doc); variableCss = `[data-storefront-visual]{${Object.entries(visualConfigToCssVariables(effective)).map(([key,value]) => `${key}:${value}!important;`).join('')}}`; images = nextImages; apply(); },
     content(value: import('../../landing/types/landing.types').LandingConfig | undefined) {
       if (!value) return;
       const event = doc.createEvent('CustomEvent');

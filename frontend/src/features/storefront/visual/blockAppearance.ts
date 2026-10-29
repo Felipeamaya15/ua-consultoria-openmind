@@ -69,9 +69,12 @@ export function editBlockAppearance(styles: BlockStyles, id: string, key: string
   } else variants[device] = {...variants[device],...clean};
   return readBlockStyles({...styles,[id]:variants});
 }
-function declarations(fields: BlockAppearance): string {
+function declarations(fields: BlockAppearance, device?: BlockDevice): string {
   return Object.entries(fields).map(([key,value]) => {
-    if (key === 'layout') return `--lb-columns:${value === 'stack' ? 'minmax(0,1fr)' : 'repeat(2,minmax(0,1fr))'};--lb-image-order:${value === 'right' ? 2 : 0};`;
+    if (key === 'layout') {
+      const prefix = device === 'mobile' ? '--lb-mobile-' : '--lb-';
+      return `${prefix}columns:${value === 'stack' ? 'minmax(0,1fr)' : 'repeat(2,minmax(0,1fr))'};${prefix}image-order:${value === 'right' ? 2 : 0};`;
+    }
     if (key === 'imageRatio') return `--lb-image-ratio:${value};--lb-ratio-height:${value === 'auto' ? 'var(--lb-image-height,360px)' : 'auto'};`;
     const field = BLOCK_FIELDS[key];
     return field?.variable ? `--lb-${field.variable}:${value}${field.unit ?? ''};` : '';
@@ -81,6 +84,6 @@ export function blockStyleSheet(raw: unknown): string {
   return Object.entries(readBlockStyles(raw)).map(([id,variants]) => {
     const selector = `[data-content-block-id="${id}"]`;
     return `${selector}{${declarations(variants.base ?? {})}}` +
-      (['desktop','tablet','mobile'] as const).map(device => `${{desktop:'@media(min-width:1024px)',tablet:'@media(min-width:640px) and (max-width:1023px)',mobile:'@media(max-width:639px)'}[device]}{${selector}{${declarations(variants[device] ?? {})}}}`).join('');
+      (['desktop','tablet','mobile'] as const).map(device => `${{desktop:'@media(min-width:1024px)',tablet:'@media(min-width:640px) and (max-width:1023px)',mobile:'@media(max-width:639px)'}[device]}{${selector}{${declarations(variants[device] ?? {}, device)}}}`).join('');
   }).join('');
 }

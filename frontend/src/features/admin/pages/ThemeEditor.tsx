@@ -1,3 +1,5 @@
+import { mergeVisualOverrides } from '../../storefront/visual/resolveVisualConfig';
+import { fetchAppearance, fetchPalettes, saveAppearance, paletteOverrides, type Appearance, type PaletteLibrary } from '../../../shared/palettes';
 import { BlockAppearanceInspector } from '../visualEditor/blocks';
 import { editBlockAppearance } from '../../storefront/visual/blockAppearance';
 import type { SetStateAction } from 'react';
@@ -20,7 +22,7 @@ import { STORE_PAGES, previewPath, CHECKOUT_PREVIEW_STEPS, type PreviewPageId } 
 import { connectVisualPreview } from '../visualEditor/preview';
 import { TemplateGallery } from '../visualEditor/templates';
 import { ContentInspector } from '../visualEditor/content';
-import { fetchLandingConfig, saveBlockStyles } from '../../landing/services/landingService';
+import { fetchLandingConfig, saveLandingConfig, saveBlockStyles } from '../../landing/services/landingService';
 import '../admin.css';
 import '../visualEditor/editor.css';
 import '../visualEditor/workspace.css';
@@ -32,12 +34,15 @@ export default function ThemeEditor() {
   const [params, setParams] = useSearchParams();
   const requested = params.get('plantilla');
   const template: TemplateId = requested && Object.prototype.hasOwnProperty.call(templatePaths, requested) ? requested as TemplateId : config.template;
-  const load = () => createEditorDocument(config, template, readStoredStoreConfig(identity));
+  const remote = useRef<{appearance:Appearance;library:PaletteLibrary}|null>(null);
+  const [loadingContent,setLoadingContent]=useState(false);
+  const load = () => { const document=createEditorDocument(config,template,readStoredStoreConfig(identity));const entry=remote.current?.appearance[template];return entry?{...document,overrides:paletteOverrides(entry,remote.current?.library)??{},paletteId:entry.paleta_id}:document; };
   const [baseline, setBaseline] = useState(load);
   const [history, setHistory] = useState(() => createHistory(load()));
   const draft = history.present;
   const setDraft = (next: SetStateAction<EditorDocument>) => { if (saving) return; setSaved(false); setHistory(current => recordHistory(current, typeof next === 'function' ? next(current.present) : next)); };
   const [contentError, setContentError] = useState('');
+  const [contentLoadFailed,setContentLoadFailed]=useState(false);
   const [tool, setTool] = useState<'templates' | 'style' | 'content' | 'images'>('style');
   const [editScope, setEditScope] = useState<'all' | 'device'>('all');
   const [zoom, setZoom] = useState('fit');
@@ -88,13 +93,18 @@ export default function ThemeEditor() {
   });
   useEffect(() => {
     const controller = new AbortController();
-    void fetchLandingConfig({signal:controller.signal}).then(landing => {
+    setLoadingContent(true);
+    void Promise.all([fetchLandingConfig({signal:controller.signal}),fetchAppearance(controller.signal),fetchPalettes(controller.signal)]).then(([landing,appearance,library]) => {
+      remote.current={appearance,library};
+      const entry=appearance[template];
+      const remoteDesign=entry?{overrides:paletteOverrides(entry,library)??{},paletteId:entry.paleta_id}:{};
       if (controller.signal.aborted) return;
-      if (!landing || String(landing.tienda) !== identity?.storeId) { setContentError('No hay una portada disponible para esta tienda. Configúrala desde Mi tienda.'); return; }
+      if (!landing) {setContentError('No hay una portada disponible. Puedes guardar el diseño y configurar contenido desde Página principal.');setBaseline(current=>({...current,...remoteDesign}));setHistory(current=>({...current,present:{...current.present,...remoteDesign}}));return;}
+      if(String(landing.tienda)!==identity?.storeId){setContentLoadFailed(true);setContentError('El contenido no corresponde a esta tienda. Recarga para verificar la identidad.');return;}
       const blockStyles = landing.contenido?.apariencia_bloques?.[template] ?? config.themeEditor[template]?.blockStyles;
-      setBaseline(current => ({...current,landing,...(blockStyles ? {blockStyles} : {})}));
-      setHistory(current => ({...current, present:{...current.present,landing,...(blockStyles ? {blockStyles} : {})}, past:current.past.map(item => ({...item,landing,...(blockStyles ? {blockStyles} : {})})), future:current.future.map(item => ({...item,landing,...(blockStyles ? {blockStyles} : {})}))}));
-    }).catch(() => { if (!controller.signal.aborted) setContentError('No pudimos cargar el contenido. Tus ajustes visuales siguen disponibles. Recarga para volver a intentar.'); });
+      setBaseline(current => ({...current,...remoteDesign,landing,...(blockStyles ? {blockStyles} : {})}));
+      setHistory(current => ({...current, present:{...current.present,...remoteDesign,landing,...(blockStyles ? {blockStyles} : {})}, past:current.past.map(item => ({...item,...remoteDesign,landing,...(blockStyles ? {blockStyles} : {})})), future:current.future.map(item => ({...item,...remoteDesign,landing,...(blockStyles ? {blockStyles} : {})}))}));
+    }).catch(() => { if (!controller.signal.aborted) {setContentLoadFailed(true);setContentError('No pudimos cargar el contenido o la apariencia del servidor. Recarga antes de guardar para evitar sobrescribir ajustes.');} }).finally(()=>{if(!controller.signal.aborted)setLoadingContent(false);});
     return () => controller.abort();
   }, [identity?.storeId]);
   useEffect(() => { discarding.current = false; }, [template]);
@@ -152,8 +162,8 @@ export default function ThemeEditor() {
   }
   function onLoad() {
     connection.current?.disconnect();
-    const doc = iframeRef.current?.contentDocument; if (!doc) return;
-    connection.current = connectVisualPreview(doc, (section, href, group) => { setSelectedBlockId(undefined); setInspectorOpen(true); setTool('style'); setContentImage(false); setImageMode(false); setSelectedSection(section); setInspectorGroup(group); setSelectedImage(null); setNavigationHref(href); setNotice(''); }, (key, src, legacyKey) => { setSelectedBlockId(undefined); setInspectorOpen(true); setTool('images'); setContentImage(false); setEditScope('all'); setImageMode(true); setSelectedImage({ key, src, legacyKey }); }, (institutional, section) => { setSelectedBlockId(undefined); setSelectedImage(null); setInspectorOpen(true); setTool(institutional ? 'style' : 'content'); setContentImage(!institutional); setEditScope('all'); setImageMode(false); setSelectedSection(section ?? (institutional ? 'topBar' : 'hero')); setInspectorGroup(undefined); setNotice(institutional ? 'La identidad institucional es obligatoria y su logo no se puede reemplazar.' : 'Administra esta imagen desde Página principal. Las fotos de productos se administran en Productos.'); }, setSectionPresent, id => {setSelectedBlockId(id);setSelectedImage(null);setImageMode(false);setTool('style');setInspectorOpen(true);setNotice('');});
+    const doc = iframeRef.current?.contentDocument; if (!doc || doc.URL === 'about:blank') return;
+    connection.current = connectVisualPreview(doc, (section, href, group) => { setSelectedBlockId(undefined); setInspectorOpen(true); setTool('style'); setContentImage(false); setImageMode(false); setSelectedSection(section); setInspectorGroup(group); setSelectedImage(null); setNavigationHref(href); setNotice(''); }, (key, src, legacyKey) => { setSelectedBlockId(undefined); setInspectorOpen(true); setTool('images'); setContentImage(false); setEditScope('all'); setImageMode(true); setSelectedImage({ key, src, legacyKey }); }, (institutional, section) => { setSelectedBlockId(undefined); setSelectedImage(null); setInspectorOpen(true); setTool(institutional ? 'style' : 'content'); setContentImage(!institutional); setEditScope('all'); setImageMode(false); setSelectedSection(section ?? (institutional ? 'topBar' : 'hero')); setInspectorGroup(undefined); setNotice(institutional ? 'La identidad institucional es obligatoria y su logo no se puede reemplazar.' : 'Edita la portada o el logo aquí. Las fotos de productos se administran en Productos.'); }, setSectionPresent, id => {setSelectedBlockId(id);setSelectedImage(null);setImageMode(false);setTool('style');setInspectorOpen(true);setNotice('');});
     connection.current.imageMode(latest.current.imageMode);
     connection.current.update(latest.current.effective, latest.current.draft.images);
     connection.current.content(latest.current.draft.landing);
@@ -161,27 +171,41 @@ export default function ThemeEditor() {
     if (selectedBlockId) connection.current.focusBlock(selectedBlockId);
     else connection.current.focus(latest.current.selectedSection);
   }
-  function save() {
-    if (saving) return;
-    const submitted = draft;
-    setSaving(true); setSaveError(false);
-    requestAnimationFrame(() => { void (async () => {
-      const savedContent = baseline.landing;
-      try {
-        const pending = [...Object.entries(templateDrafts.current).filter(([id]) => id !== template).map(([id,item]) => ({id,document:item!.history.present,baseline:item!.baseline})), {id:template,document:submitted,baseline}];
-        for (const item of pending) if (JSON.stringify(item.document.blockStyles ?? {}) !== JSON.stringify(item.baseline.blockStyles ?? {})) await saveBlockStyles(item.id, item.document.blockStyles ?? {});
-        let nextConfig = config;
-        for (const [id, item] of Object.entries(templateDrafts.current)) if (id !== template && item) nextConfig = publishEditorDocument(nextConfig, id as TemplateId, item.history.present);
-        if (!setConfig(publishEditorDocument(nextConfig, template, submitted))) {
-          setSaveError(true); setNotice(savedContent !== baseline.landing ? 'El contenido se guardó. No se pudo guardar la apariencia local; conserva el borrador y vuelve a intentar.' : 'No se pudo guardar la apariencia. Conservamos tu borrador.'); return;
-        }
-        for (const item of Object.values(templateDrafts.current)) if (item) { item.baseline = {...item.history.present, landing:savedContent}; item.history.present = {...item.history.present,landing:savedContent}; }
-        const published = {...submitted, ...(savedContent ? {landing:savedContent} : {})};
-        setHistory(current => ({...current,present:published})); setBaseline(published); setSaved(true);
-        setNotice('Diseño guardado. La apariencia de tus secciones está publicada. Los demás ajustes visuales se conservan en este navegador.');
-      } catch { setSaveError(true); setNotice('No se pudieron guardar los cambios. Conservamos tu borrador para volver a intentar.'); }
-      finally { setSaving(false); }
-    })(); });
+  async function save():Promise<boolean> {
+    if(saving||loadingContent||contentLoadFailed)return false;
+    const submitted=draft;setSaving(true);setSaveError(false);
+    let savedContent=baseline.landing;
+    try {
+      if(submitted.landing&&JSON.stringify(submitted.landing)!==JSON.stringify(baseline.landing)) {
+        if(!submitted.landing.titulo.trim()||!submitted.landing.texto_boton.trim())throw new Error('Completa el título y el botón de la portada.');
+        savedContent=await saveLandingConfig(submitted.landing);
+        setBaseline(current=>({...current,landing:savedContent}));
+        setHistory(current=>({...current,present:{...current.present,landing:savedContent}}));
+      }
+      const pending=[...Object.entries(templateDrafts.current).filter(([id])=>id!==template).map(([id,item])=>({id:id as TemplateId,document:item!.history.present,baseline:item!.baseline})),{id:template,document:submitted,baseline}];
+      for(const item of pending)if(JSON.stringify(item.document.blockStyles??{})!==JSON.stringify(item.baseline.blockStyles??{}))await saveBlockStyles(item.id,item.document.blockStyles??{});
+      const appearances:Appearance={};
+      const paletteLibrary=await fetchPalettes();
+      if(remote.current)remote.current.library=paletteLibrary;
+      for(const item of pending){
+        const effective=resolveEditorDocument(item.document,item.id);
+        const palette=paletteLibrary.propias.find(value=>value.id===item.document.paletteId);
+        const paletteMatches=palette&&Object.entries(palette.colores).every(([key,value])=>effective.global.colors[key as keyof typeof effective.global.colors]===value);
+        const legacy=Object.fromEntries(Object.entries({...item.document.storeColors,...item.document.templateColors}).map(([key,value])=>[key.replace('Color',''),value]));
+        const visualConfig=mergeVisualOverrides(mergeVisualOverrides(item.document.storeOverrides,{global:{colors:legacy}}),item.document.overrides);
+        appearances[item.id]={visualConfig,paleta_id:paletteMatches?palette.id:null};
+      }
+      await saveAppearance(appearances);
+      let nextConfig=config;
+      for(const item of pending)nextConfig=publishEditorDocument(nextConfig,item.id,item.document);
+      if(!setConfig({...nextConfig,template}))throw new Error('La apariencia se guardó en el servidor, pero no pudimos guardar la copia local. Conservamos el borrador para reintentar.');
+      for(const item of Object.values(templateDrafts.current))if(item){item.baseline={...item.history.present,landing:savedContent};item.history.present={...item.history.present,landing:savedContent};}
+      const published={...submitted,landing:savedContent,paletteId:appearances[template]?.paleta_id};
+      setHistory(current=>({...current,present:published}));setBaseline(published);setSaved(true);
+      setNotice('Cambios guardados. El contenido, las fuentes, la paleta y la apariencia están disponibles en tu tienda.');
+      return true;
+    }catch(error){setSaveError(true);setNotice((savedContent!==baseline.landing?'El contenido ya se guardó. La apariencia sigue pendiente. ':'')+(error instanceof Error?error.message:'No se pudieron guardar los cambios. Conservamos tu borrador.'));return false;}
+    finally{setSaving(false);}
   }
   function changePage(page: PreviewPageId) {
     setInspectorOpen(true);
@@ -210,10 +234,10 @@ export default function ThemeEditor() {
       <button type="button" disabled={!history.past.length || saving} onClick={() => setHistory(undoHistory)}>Deshacer</button><button type="button" disabled={!history.future.length || saving} onClick={() => setHistory(redoHistory)}>Rehacer</button>
       <button type="button" aria-pressed={expanded} onClick={() => setExpanded(!expanded)}>{expanded ? 'Volver al editor' : 'Ampliar vista'}</button><button type="button" aria-expanded={inspectorOpen} aria-controls="ve-properties" onClick={() => setInspectorOpen(!inspectorOpen)}>Opciones</button>
       <span role="status" aria-live="polite" className={saveError ? 've-save-error' : dirty ? 've-dirty' : 've-saved'}>{saving ? 'Guardando…' : saveError ? 'No se pudo guardar' : dirty ? 'Cambios sin guardar' : saved ? '✓ Guardado' : '✓ Sin cambios pendientes'}</span>
-      <button type="button" disabled={!dirty || saving} onClick={() => { templateDrafts.current = {}; setHistory(createHistory(baseline)); setSaved(false); setSaveError(false); setNotice('Borrador descartado.'); if (template !== config.template) { discarding.current = true; setParams({plantilla:config.template}); } }}>Descartar cambios</button>
-      <button type="button" className="ve-primary" disabled={!dirty || saving} onClick={save}>{saving ? 'Guardando…' : 'Guardar cambios'}</button>
+      <button type="button" disabled={!dirty || saving || loadingContent || contentLoadFailed} onClick={() => { templateDrafts.current = {}; setHistory(createHistory(baseline)); setSaved(false); setSaveError(false); setNotice('Borrador descartado.'); if (template !== config.template) { discarding.current = true; setParams({plantilla:config.template}); } }}>Descartar cambios</button>
+      <button type="button" className="ve-primary" disabled={!dirty || saving || loadingContent || contentLoadFailed} onClick={save}>{saving ? 'Guardando…' : 'Guardar cambios'}</button>
     </header>
-    <fieldset className="ve-editor-controls" disabled={saving}>
+    <fieldset className="ve-editor-controls" disabled={saving || loadingContent}>
     <nav className="ve-tools" aria-label="Herramientas del editor">{([['style','Diseño y apariencia'],['templates','Plantillas'],['content','Contenido y secciones'],['images','Imágenes']] as const).map(([id,label]) => <button key={id} type="button" aria-pressed={tool === id} onClick={() => chooseTool(id)}>{label}</button>)}<FieldHelp label="Cómo empezar">1) Elige la página que quieres cambiar. 2) Haz clic en la parte de tu tienda que quieras editar, o elígela en «Sección». 3) Ajusta las opciones del panel derecho y pulsa «Guardar cambios».</FieldHelp><span>Selecciona un elemento de tu tienda para editarlo</span></nav>
     <div className={`ve-workspace ${inspectorOpen ? '' : 've-hide-inspector'}`}>
       <main className="ve-preview">
@@ -230,13 +254,13 @@ export default function ThemeEditor() {
         </div>
         <div className="ve-preview-heading"><span>{previewPage === 'home' ? 'Inicio' : STORE_PAGES.find(p => p.id === previewPage)?.label} <span aria-hidden="true">/</span> {optionLabel(viewport)} · {frameWidth} px</span><div className="ve-zoom"><label>Zoom<select aria-label="Zoom de vista previa" value={zoom} onChange={e => setZoom(e.target.value)}><option value="fit">Ajustar</option>{[50,75,100,125,150].map(value => <option key={value} value={value}>{value}%</option>)}</select></label><span>{Math.round(previewScale * 100)}%</span></div></div>
         {(storageError || (notice && (notice !== ABSENT_SECTION_NOTICE || !sectionPresent))) && <p className="ve-notice" role={storageError ? 'alert' : 'status'}>{storageError || notice}</p>}
-        <div className="ve-frame-wrap" ref={frameWrap}><div className="ve-frame-stage" style={{width:frameWidth * previewScale,height:Math.max(300 * previewScale,previewBounds.height - 24)}}><iframe ref={iframeRef} title="Vista real del cliente" src={previewUrl} onLoad={onLoad} style={{ width: frameWidth, height: Math.max(300, (previewBounds.height - 24) / previewScale), transform: `scale(${previewScale})` }} /></div></div>
+        <div className="ve-frame-wrap" ref={frameWrap}><div className="ve-frame-stage" style={{width:frameWidth * previewScale,height:Math.max(300 * previewScale,previewBounds.height - 24)}}><iframe key={previewUrl} loading="eager" ref={iframeRef} title="Vista real del cliente" src={previewUrl} onLoad={onLoad} style={{ width: frameWidth, height: Math.max(300, (previewBounds.height - 24) / previewScale), transform: `scale(${previewScale})` }} /></div></div>
         <div className="ve-canvas-status"><span>Vista previa segura · Sin compras ni pagos reales</span><span>Secciones publicadas · Solo esta tienda</span></div>
       </main>
       <aside className="ve-properties" id="ve-properties" aria-label="Opciones del elemento seleccionado" hidden={!inspectorOpen}>
         <div className="ve-property-tabs" role="group" aria-label="Edición contextual"><button type="button" aria-pressed={tool === 'style'} onClick={() => chooseTool('style')}>Apariencia</button><button type="button" aria-pressed={tool === 'content'} onClick={() => chooseTool('content')}>Contenido</button><button type="button" aria-label="Ocultar propiedades" onClick={() => setInspectorOpen(false)}>×</button></div>
         <div className="ve-inspector-heading"><div><small>{tool === 'templates' ? 'ELIGE TU ESTILO' : imageMode ? 'IMAGEN SELECCIONADA' : 'EDICIÓN CONTEXTUAL'}</small><h1 aria-live="polite">{tool === 'templates' ? 'Plantillas de tienda' : imageMode ? 'Imágenes' : currentLabel}</h1></div>{!imageMode && !selectedBlock && SECTION_HELP[selectedSection] && <FieldHelp label={currentLabel || ''}>{SECTION_HELP[selectedSection]!}</FieldHelp>}</div>
-        {tool === 'templates' ? <TemplateGallery selected={template} onSelect={id => { if (id !== template) setParams({plantilla:id}); }} /> : tool === 'content' ? <ContentInspector section={selectedSection} home={previewPage === 'home'} error={contentError} /> : selectedBlock && tool === 'style' ? <><p className="ve-hint ve-scope-hint">{editScope === 'all' ? 'Diseño general · Se adapta a todas las pantallas.' : `Solo ${optionLabel(viewport).toLowerCase()}.`}</p><BlockAppearanceInspector key={selectedBlock.id} block={selectedBlock} styles={draft.blockStyles ?? {}} device={viewport} onEdit={(key,value) => setDraft(current => ({...current,blockStyles:editBlockAppearance(current.blockStyles ?? {},selectedBlock.id,key,value,editScope,viewport)}))} onReset={() => setDraft(current => { const next={...current.blockStyles};delete next[selectedBlock.id];return {...current,blockStyles:next};})} /></> : imageMode && !selectedImage ? <div className="ve-empty-inspector"><span aria-hidden="true">▧</span><h2>Selecciona una imagen</h2><p>Haz clic en la imagen que quieres editar. Aquí podrás reemplazarla, ajustar su tamaño y encuadre o recuperar la original.</p><Link to="/emprendedor/landing#pagina-principal">Imágenes de la portada →</Link></div> : imageMode && selectedImage ? <><p className="ve-hint">Reemplazar la imagen se aplica a todos los dispositivos.</p><LegacyImageInspector key={selectedImage.key} selected={selectedImage} document={draft} onChange={setDraft} /></> : <><p className="ve-hint ve-scope-hint">{editScope === 'all' ? 'Diseño general · Cada ajuste se aplica a todas las pantallas. Reemplaza la variante de esa propiedad.' : `Apariencia exclusiva de ${optionLabel(viewport).toLowerCase()}.`}</p><VisualInspector key={`${selectedSection}:${activePage}:${inspectorGroup ?? ''}`} section={selectedSection} effective={effective} document={draft} viewport={viewport} editScope={editScope} catalogPage={previewPage === 'catalog'} page={activePage} groupLabel={inspectorGroup} onEditMany={edits => setDraft(current => Object.entries(edits).reduce((document, [path,value]) => editScopedProperty(document,template,path,value,editScope,viewport), current))} onEdit={(path, value) => setDraft(current => editScopedProperty(current, template, path, value, editScope, viewport))} onReset={path => setDraft(current => resetProperty(current, path))} /><button className="ve-reset-section ve-danger" type="button" onClick={resetVisibleSection}>Restablecer sección ↺</button></>}
+        {tool === 'templates' ? <TemplateGallery selected={template} onSelect={id => { if (id !== template) setParams({plantilla:id}); }} /> : tool === 'content' ? <ContentInspector section={selectedSection} home={previewPage === 'home'} error={contentError} landing={draft.landing} onChange={landing=>setDraft(current=>({...current,landing}))} /> : selectedBlock && tool === 'style' ? <><p className="ve-hint ve-scope-hint">{editScope === 'all' ? 'Diseño general · Se adapta a todas las pantallas.' : `Solo ${optionLabel(viewport).toLowerCase()}.`}</p><BlockAppearanceInspector key={selectedBlock.id} block={selectedBlock} styles={draft.blockStyles ?? {}} device={viewport} onEdit={(key,value) => setDraft(current => ({...current,blockStyles:editBlockAppearance(current.blockStyles ?? {},selectedBlock.id,key,value,editScope,viewport)}))} onReset={() => setDraft(current => { const next={...current.blockStyles};delete next[selectedBlock.id];return {...current,blockStyles:next};})} /></> : imageMode && !selectedImage ? <ContentInspector section={selectedSection} home={previewPage==='home'} error={contentError} landing={draft.landing} imagesOnly onChange={landing=>setDraft(current=>({...current,landing}))} /> : imageMode && selectedImage ? <><p className="ve-hint">Reemplazar la imagen se aplica a todos los dispositivos.</p><LegacyImageInspector key={selectedImage.key} selected={selectedImage} document={draft} onChange={setDraft} /></> : <><p className="ve-hint ve-scope-hint">{editScope === 'all' ? 'Diseño general · Cada ajuste se aplica a todas las pantallas. Reemplaza la variante de esa propiedad.' : `Apariencia exclusiva de ${optionLabel(viewport).toLowerCase()}.`}</p><VisualInspector key={`${selectedSection}:${activePage}:${inspectorGroup ?? ''}`} section={selectedSection} effective={effective} document={draft} viewport={viewport} editScope={editScope} catalogPage={previewPage === 'catalog'} page={activePage} groupLabel={inspectorGroup} onPaletteSelect={paletteId=>setDraft(current=>({...current,paletteId}))} onEditMany={edits => setDraft(current => Object.entries(edits).reduce((document, [path,value]) => editScopedProperty(document,template,path,value,editScope,viewport), current))} onEdit={(path, value) => setDraft(current => editScopedProperty(current, template, path, value, editScope, viewport))} onReset={path => setDraft(current => resetProperty(current, path))} /><button className="ve-reset-section ve-danger" type="button" onClick={resetVisibleSection}>Restablecer sección ↺</button></>}
         <details className="ve-restore"><summary>Opciones del diseño</summary><button type="button" className="ve-danger" onClick={() => setRestoreRequested(true)}>Volver al diseño original</button><Link to="/emprendedor/diseno">Volver a Mi tienda</Link></details>
       </aside>
     </div>
@@ -249,6 +273,6 @@ export default function ThemeEditor() {
         if (event.shiftKey && document.activeElement === buttons[0]) { event.preventDefault(); buttons[buttons.length - 1]?.focus(); }
         else if (!event.shiftKey && document.activeElement === buttons[buttons.length - 1]) { event.preventDefault(); buttons[0]?.focus(); }
       }
-    }}><h2 id="ve-leave-title">{restoreRequested ? 'Volver al diseño original' : 'Tienes cambios sin guardar'}</h2><p>{restoreRequested ? 'Se retirarán los ajustes generales y los de esta plantilla. Las imágenes, el contenido y la identidad institucional se conservan. Guarda después para aplicar el cambio.' : 'Guarda el diseño o descarta el borrador antes de salir.'}</p><button type="button" onClick={() => { if (restoreRequested) setRestoreRequested(false); else blocker.reset?.(); }}>Seguir editando</button><button type="button" onClick={() => { if (restoreRequested) { setDraft(restorePreset(draft)); setRestoreRequested(false); setNotice('Diseño original recuperado en el borrador.'); } else blocker.proceed?.(); }}>{restoreRequested ? 'Restablecer diseño' : 'Descartar y salir'}</button></div></div>}
+    }}><h2 id="ve-leave-title">{restoreRequested ? 'Volver al diseño original' : 'Tienes cambios sin guardar'}</h2><p>{restoreRequested ? 'Se retirarán los ajustes generales y los de esta plantilla. Las imágenes, el contenido y la identidad institucional se conservan. Guarda después para aplicar el cambio.' : 'Guarda el diseño o descarta el borrador antes de salir.'}</p><button type="button" disabled={saving} onClick={() => { if (restoreRequested) setRestoreRequested(false); else blocker.reset?.(); }}>{restoreRequested?'Seguir editando':'Cancelar'}</button>{!restoreRequested&&<button type="button" disabled={saving} onClick={()=>void save().then(ok=>{if(ok)blocker.proceed?.();})}>{saving?'Guardando…':'Guardar y continuar'}</button>}<button type="button" onClick={() => { if (restoreRequested) { setDraft(restorePreset(draft)); setRestoreRequested(false); setNotice('Diseño original recuperado en el borrador.'); } else blocker.proceed?.(); }}>{restoreRequested ? 'Restablecer diseño' : 'Continuar sin guardar'}</button></div></div>}
   </div>;
 }

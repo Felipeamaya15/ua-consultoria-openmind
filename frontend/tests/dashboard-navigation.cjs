@@ -14,6 +14,20 @@ const orders = states.map((estado, i) => ({ id: i + 1, estado, fecha_creacion: '
 const filter = query => api.readOrderFilters(new URLSearchParams(query));
 const ids = rows => Array.from(rows, row => row.id);
 
+test('accesos de fecha incluyen hoy en Chile y cruzan mes/año sin depender de UTC', () => {
+  const now = new Date('2026-10-27T02:59:59Z'); // 26 October in Chile.
+  for (const [preset, from] of [['today', '2026-10-26'], ['7', '2026-10-20'], ['30', '2026-09-27'], ['60', '2026-08-28'], ['90', '2026-07-29'], ['month', '2026-10-01']]) {
+    const range = api.orderDateRange(preset, now);
+    assert.equal(range.from, from, preset); assert.equal(range.to, '2026-10-26');
+    assert.equal(api.selectedOrderDatePreset(range.from, range.to, now), preset);
+  }
+  assert.equal(api.orderDateRange('month', new Date('2024-03-01T02:00:00Z')).from, '2024-02-01');
+  assert.equal(api.orderDateRange('7', new Date('2026-01-01T15:00:00Z')).from, '2025-12-26');
+  assert.equal(api.orderDateRange('7', new Date('2026-09-07T03:30:00Z')).from, '2026-09-01');
+  assert.equal(api.selectedOrderDatePreset('', '', now), 'all');
+  assert.equal(api.selectedOrderDatePreset('2025-01-01', '2025-02-01', now), 'custom');
+});
+
 test('cada tarjeta transmite fechas exactas y período; ventas solo estados confirmados', () => {
   for (const period of ['7', '30', 'year']) {
     const url = new URL(api.ordersDestination('2026-10-08', '2026-10-14', 'confirmed', period), 'http://test');

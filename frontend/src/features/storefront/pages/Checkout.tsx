@@ -1,3 +1,5 @@
+import { CommercialOptIn } from '../components/store/CommercialOptIn';
+import { requestConsent } from '../services/commercialConsent';
 import { checkoutPreviewStep } from '../visual/pages';
 import { ErrorState, LoadingState } from '../../../shared/components/states';
 import { useEffect, useMemo, useState, useRef } from 'react';
@@ -292,8 +294,11 @@ export default function Checkout() {
 
   const submitting = useRef(false);
   const checkoutAttempt = useRef({signature: '', key: ''});
+  const consentRequested = useRef('');
+  const consentSending = useRef(false);
 
-  const { route, isMinimal, isVisual, isCatalog } =
+
+  const { route, templateNumber, isMinimal, isVisual, isCatalog } =
     useStorefrontTemplate();
 
   const { identity } = useStoreIdentity();
@@ -503,6 +508,8 @@ export default function Checkout() {
   const [promoError, setPromoError] = useState('');
   const [promoMessage, setPromoMessage] = useState('');
   const [promotionBasis, setPromotionBasis] = useState('');
+  const [commercial, setCommercial] = useState(false);
+  const [consentMessage, setConsentMessage] = useState('');
   const promotionRequest = useRef(0);
   const applyingPromotion = useRef(false);
   
@@ -709,8 +716,18 @@ export default function Checkout() {
     return Object.keys(newErrors).length === 0;
   };
 
-  const next = () => {
-    if (!validate(step)) return;
+  const next = async () => {
+    if (consentSending.current || !validate(step)) return;
+    if (step === 'contact' && commercial && consentRequested.current !== contact.email.trim().toLowerCase()) {
+      consentSending.current = true;
+      setConsentMessage('Solicitando confirmación de correo…');
+      try {
+        const result = await requestConsent(contact.email, templateNumber);
+        consentRequested.current = contact.email.trim().toLowerCase();
+        setConsentMessage(result.mensaje);
+      } catch (e) { setConsentMessage(e instanceof Error ? e.message : 'La compra puede continuar. Reintenta desde Preferencias comerciales.'); }
+      finally { consentSending.current = false; }
+    }
 
     const index = STEPS.findIndex(
       (item) => item.id === step,
@@ -899,16 +916,17 @@ export default function Checkout() {
    * Estilos compartidos para los paneles.
    */
   const panelClass = isVisual
-    ? 'bg-[#f1f1f0] rounded-[10px] p-5 sm:p-6 flex flex-col gap-5'
+    ? 'bg-[#f1f1f0] rounded-[10px] min-w-0 p-4 sm:p-6 flex flex-col gap-5'
     : isMinimal
-      ? 'bg-white border border-black/5 rounded-[24px] p-5 sm:p-6 flex flex-col gap-5'
-      : 'bg-white border border-[var(--border)] rounded-2xl p-6 flex flex-col gap-5';
+      ? 'bg-white border border-black/5 rounded-[24px] min-w-0 p-4 sm:p-6 flex flex-col gap-5'
+      : 'bg-white border border-[var(--border)] rounded-2xl min-w-0 p-4 sm:p-6 flex flex-col gap-5';
 
 
   const isPaymentDisabled = loading || promoLoading || (!!checkoutPromoCode && !currentPromotion) || !deliveryReady || (shipping === null && shippingMethod !== 'Retiro');
 
   return (
     <div
+      data-checkout-page
       className={
         isVisual
           ? 'max-w-[1180px] mx-auto px-5 md:px-8 pt-10 pb-14 text-[var(--visual-page-color)]'
@@ -957,7 +975,7 @@ export default function Checkout() {
       {/* =====================================================
           STEPPER
       ====================================================== */}
-      <div data-page-panel
+      <div data-page-panel data-checkout-stepper
         className={
           isVisual
             ? 'mb-8 overflow-x-auto rounded-[10px] bg-[var(--visual-page-panel-background)] px-4 py-4'
@@ -974,7 +992,7 @@ export default function Checkout() {
 
       <div
         className={`
-          grid grid-cols-1 lg:grid-cols-5
+          grid min-w-0 grid-cols-1 lg:grid-cols-5
           ${
             isVisual
               ? 'gap-8 lg:gap-12'
@@ -987,11 +1005,16 @@ export default function Checkout() {
         {/* =================================================
             FORMULARIO
         ================================================== */}
-        <div className="lg:col-span-3">
+        <div className="lg:col-span-3 min-w-0">
 
           {/* ===============================================
               CONTACTO
           ================================================ */}
+          {consentMessage && <p role="status" className="my-3 text-sm border rounded p-3">{consentMessage}</p>}
+          {step === 'contact' && <div className="mb-4 border rounded p-4">
+            <CommercialOptIn checked={commercial} onChange={setCommercial} />
+            <Link className="text-sm underline" to={route('preferencias-comerciales')}>Consultar o retirar mi autorización comercial</Link>
+          </div>}
           {step === 'contact' && (
             <div data-visual-section="pagePanel" data-page-panel className={panelClass}>
               <div>
@@ -1012,7 +1035,7 @@ export default function Checkout() {
                 </h2>
               </div>
 
-              <div data-page-panel
+              <div data-page-panel data-checkout-auth-options
                 className={
                   isMinimal
                     ? 'flex gap-1 p-1 bg-[var(--visual-page-panel-background)] rounded-full'
@@ -1259,7 +1282,7 @@ export default function Checkout() {
                       }
                     `}
                   >
-                    <label className="flex items-center gap-4 p-4 cursor-pointer">
+                    <label data-checkout-shipping-option className="flex items-center gap-4 p-4 cursor-pointer">
                     <input
                       type="radio"
                       name="shipping"
@@ -1291,7 +1314,7 @@ export default function Checkout() {
                       </p>
                     </div>
 
-                    <span className="text-sm font-semibold">
+                    <span data-checkout-shipping-price className="text-sm font-semibold">
                       {method.id !== 'Retiro' && method.id === shippingMethod && selectedQuote
                         ? formatPrice(selectedQuote.monto)
                         : method.id !== 'Retiro' && method.id === shippingMethod && quoteUnavailable
@@ -1872,7 +1895,7 @@ export default function Checkout() {
           {/* ===============================================
               NAVEGACIÓN
           ================================================ */}
-          <div className="flex justify-between items-center gap-3 mt-5">
+          <div data-checkout-navigation className="flex justify-between items-center gap-3 mt-5">
             {step !== 'contact' ? (
               isVisual ? (
                 <button data-page-action="primary"
@@ -1964,14 +1987,14 @@ export default function Checkout() {
         {/* =================================================
             RESUMEN DEL PEDIDO
         ================================================== */}
-        <aside data-visual-section="pagePanel" className="lg:col-span-2">
+        <aside data-visual-section="pagePanel" className="lg:col-span-2 min-w-0 order-first lg:order-last">
           <div data-page-panel
             className={
               isVisual
-                ? 'bg-[var(--visual-page-panel-background)] rounded-[10px] p-5 md:p-6 sticky top-24'
+                ? 'bg-[var(--visual-page-panel-background)] rounded-[10px] p-4 sm:p-6 lg:sticky lg:top-24'
                 : isMinimal
-                  ? 'bg-[var(--visual-page-panel-background)] border border-[var(--visual-global-border)]/5 rounded-[24px] p-5 sticky top-24'
-                  : 'bg-[var(--visual-page-panel-background)] border border-[var(--border)] rounded-2xl p-5 sticky top-24'
+                  ? 'bg-[var(--visual-page-panel-background)] border border-[var(--visual-global-border)]/5 rounded-[24px] p-4 sm:p-5 lg:sticky lg:top-24'
+                  : 'bg-[var(--visual-page-panel-background)] border border-[var(--border)] rounded-2xl p-4 sm:p-5 lg:sticky lg:top-24'
             }
           >
             <h3
@@ -1984,7 +2007,7 @@ export default function Checkout() {
               Tu pedido
             </h3>
 
-            <div className="flex flex-col gap-4 mb-5">
+            <div data-checkout-items className="flex flex-col gap-4 mb-5">
               {items.map((item) => (
                 <div
                   key={`${item.productId}-${item.variantId}`}
@@ -2026,7 +2049,7 @@ export default function Checkout() {
                     </p>
                   </div>
 
-                  <div className="text-right">
+                  <div className="min-w-0 text-right">
                     {item.comparePrice !== undefined && item.comparePrice > item.price && (
                       <p
                         data-page-price
@@ -2050,7 +2073,7 @@ export default function Checkout() {
                 <label htmlFor="checkout-promo-code" className="block text-xs font-semibold uppercase tracking-wider text-[var(--visual-page-color)] mb-2">
                   Código promocional
                 </label>
-                <div className="flex gap-2">
+                <div data-checkout-promo-actions className="flex gap-2">
                   <input
                     id="checkout-promo-code"
                     value={promoInput}

@@ -1,3 +1,5 @@
+import { InstitutionalBadge } from '../../ui';
+import { CompactMobileNavigation } from '../CompactMobileNavigation';
 import { VISUAL_SECTION } from '../../../visual/sectionIds';
 import { AccountNavigation } from '../AccountNavigation';
 import { useStore } from '../../../context/StoreContext';
@@ -6,7 +8,7 @@ import { useCart } from '../../../context/CartContext';
 import { useStorefrontTemplate } from '../../../hooks/useStorefrontTemplate';
 
 export function VisualHeader() {
-  const { config } = useStore();
+  const { config, landing } = useStore();
   const { count } = useCart();
   const { route } = useStorefrontTemplate();
 
@@ -14,7 +16,7 @@ export function VisualHeader() {
        <header data-visual-section={VISUAL_SECTION.header} className="bg-white border-t-4 border-[var(--primary)] border-b border-black/10">
       <div data-visual-part="headerLayout" className="max-w-6xl mx-auto px-5 min-h-16 flex items-center justify-between gap-5">
 
-        <Link data-visual-part="logo"
+        <InstitutionalBadge compact /><Link data-visual-part="logo"
           to={route()}
           aria-label={`Ir al inicio de ${config.name || 'la tienda'}`}
           className="flex min-w-0 max-w-full items-center gap-3"
@@ -39,12 +41,12 @@ export function VisualHeader() {
             Catálogo
           </Link>
 
-          <Link
+          {landing?.contenido?.bloques?.some(block=>block.visible&&block.tipo==='historia') && <Link
             to={route('nuestra-historia')}
             className="hidden sm:block hover:opacity-50 transition-opacity"
           >
             Nuestra historia
-          </Link>
+          </Link>}
 
           <Link
             to={route('seguimiento')}
@@ -80,6 +82,7 @@ export function VisualHeader() {
         </nav>
 
       </div>
-    </header>
+    <CompactMobileNavigation />
+      </header>
   );
 }

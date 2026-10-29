@@ -14,7 +14,7 @@ export const VISUAL_PRESETS: Record<TemplateId, VisualPreset> = {
     footer: { layout: 'columns', background: 'currentColor', columns: 4, padding: 48 },
   } },
   minimal: { id: 'minimal', name: 'Soft Discovery', config: {
-    global: { colors: { primary: '#5433eb', secondary: '#f0edff', accent: '#5433eb', background: '#f5f5f3', text: '#151515' }, typography: { heading: 'sans' }, radius: 28, density: 'spacious', contentMaxWidth: 1200 },
+    global: { colors: { primary: '#5433eb', secondary: '#f0edff', accent: '#5433eb', background: '#f5f5f3', text: '#151515', alternate: '#f0edff', structural: '#f5f5f3' }, typography: { heading: 'sans' }, radius: 28, density: 'spacious', contentMaxWidth: 1200 },
     header: { layout: 'centered', height: 80, gap: 32, linkStyle: 'pill', border: { width: 0 }, sticky: false },
     hero: { height: 680, titleSize: 118, horizontalAlign: 'center', overlay: false, textMaxWidth: 820, gap: 32 },
     heroCta: { shape: 'pill', radius: 28, align: 'center', paddingX: 40 },
@@ -28,7 +28,7 @@ export const VISUAL_PRESETS: Record<TemplateId, VisualPreset> = {
     responsive: { tablet: { hero: { titleSize: 92 } }, mobile: { hero: { titleSize: 72, height: 560 } } },
   } },
   visual: { id: 'visual', name: 'Velta Editorial', config: {
-    global: { colors: { primary: '#111111', secondary: '#f2f1ef', accent: '#111111', background: '#ffffff', text: '#111111' }, radius: 0, baseSpacing: 8, contentMaxWidth: 1440, density: 'spacious' },
+    global: { colors: { primary: '#111111', secondary: '#f2f1ef', accent: '#111111', background: '#ffffff', text: '#111111', alternate: '#f2f1ef', structural: '#111111', border:'#111111' }, radius: 0, baseSpacing: 8, contentMaxWidth: 1440, density: 'spacious' },
     header: { layout: 'split', height: 72, gap: 24, border: { width: 4, color: 'currentColor' }, sticky: false },
     hero: { height: 760, contentWidth: 1440, titleSize: 96, overlayOpacity: 0.45, textMaxWidth: 720, verticalAlign: 'bottom' },
     heroCta: { shape: 'square', radius: 0, variant: 'outline', paddingX: 36 },
@@ -41,7 +41,7 @@ export const VISUAL_PRESETS: Record<TemplateId, VisualPreset> = {
     footer: { background: 'currentColor', layout: 'columns', columns: 3, padding: 80, maxWidth: 1440 },
   } },
   catalog: { id: 'catalog', name: 'Obsidian Showcase', config: {
-    global: { colors: { primary: '#ff5a1f', secondary: '#202022', accent: '#ff5a1f', background: '#050505', text: '#ffffff', surface: '#121214', border: '#303033' }, typography: { heading: 'sans' }, radius: 14, contentMaxWidth: 1160, density: 'compact' },
+    global: { colors: { primary: '#ff5a1f', secondary: '#202022', accent: '#ff5a1f', background: '#050505', text: '#ffffff', surface: '#121214', border: '#303033', alternate: '#202022', muted: '#b7b7bc', structural: '#050505' }, typography: { heading: 'sans' }, radius: 14, contentMaxWidth: 1160, density: 'compact' },
     header: { layout: 'centered', height: 80, background: '#050505', shadow: 'strong', linkStyle: 'pill', border: { width: 0 } },
     hero: { height: 720, contentWidth: 1320, titleSize: 82, overlayOpacity: 0.55, gap: 32 },
     heroCta: { shape: 'pill', radius: 28, fontWeight: 800 },
@@ -49,9 +49,9 @@ export const VISUAL_PRESETS: Record<TemplateId, VisualPreset> = {
     productGrid: { columns: { desktop: 3 }, gapX: 16, gapY: 16, maxWidth: 1160 },
     productCard: { radius: 14, border: { width: 0 }, imageRatio: 1.08, padding: 20, titleSize: 17, showDescription: true, buttonShape: 'pill', density: 'compact' },
     catalog: { titleAlign: 'left', filtersPosition: 'top', spacing: 28, grid: { maxWidth: 1160, gapX: 16, gapY: 16 }, card: { radius: 14, border: { width: 0 }, imageRatio: 1.08, padding: 20, titleSize: 17, showDescription: true, buttonShape: 'pill', density: 'compact' } },
-    sections: { content: { paddingY: 96, contentWidth: 1160, background: 'currentColor' }, featured: { paddingY: 96, contentWidth: 1160 } },
-    contact: { cardRadius: 16, border: { color: '#303033' } }, location: { cardRadius: 16, border: { color: '#303033' } },
-    footer: { background: 'currentColor', columns: 4, layout: 'columns', padding: 64, maxWidth: 1160 },
+    sections: { content: { paddingY: 96, contentWidth: 1160 }, featured: { paddingY: 96, contentWidth: 1160 } },
+    contact: { cardRadius: 16 }, location: { cardRadius: 16 },
+    footer: { background: '#050505', columns: 4, layout: 'columns', padding: 64, maxWidth: 1160 },
   } },
 };
 

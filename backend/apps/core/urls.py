@@ -24,6 +24,8 @@ from apps.core.presentation.plantillas_correo import PlantillasCorreoAPIView
 from apps.core.presentation.pickup_address import PickupAddressAPIView
 from apps.core.presentation.promotions import PromocionesAPIView, PromocionDetalleAPIView, ValidarPromocionAPIView
 from django.urls import path
+from apps.core.presentation.images import ProcessImageAPIView
+from apps.core.presentation.consent import ConsentRequestView, ConsentActionView
 from . import views
 from apps.core.presentation.views import (
     ConfiguracionPagoAPIView,
@@ -43,6 +45,9 @@ from apps.core.presentation.views import (
 )
 
 urlpatterns = [
+    path('tienda/imagenes/procesar/', ProcessImageAPIView.as_view(), name='store-process-image'),
+    path('consentimiento/solicitar/', ConsentRequestView.as_view(), name='consent-request'),
+    path('consentimiento/enlace/', ConsentActionView.as_view(), name='consent-link'),
     path('tienda/informes/', InformeAPIView.as_view(), name='tienda-informes'),
     path('tienda/informes/pdf/', InformePDFAPIView.as_view(), name='tienda-informes-pdf'),
     path('tienda/informes/xlsx/', InformeXLSXAPIView.as_view(), name='tienda-informes-xlsx'),
