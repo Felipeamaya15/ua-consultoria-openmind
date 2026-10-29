@@ -82,7 +82,7 @@ export default function CatalogHome() {
                 <Link
                   data-visual-section={VISUAL_SECTION.heroCta}
                   to={route('catalogo')}
-                  className="rounded-full bg-[var(--accent)] px-7 py-3 text-sm font-semibold text-white hover:opacity-90 transition-opacity"
+                  className="rounded-full bg-[var(--accent)] px-7 py-3 text-sm font-semibold text-[var(--on-accent)] hover:opacity-90 transition-opacity"
                 >
                   {landing?.texto_boton}
                 </Link>
@@ -181,16 +181,16 @@ export default function CatalogHome() {
       <section
         data-visual-section={VISUAL_SECTION.sections}
         data-visual-kind="content"
-        className="bg-[#f6f6f4] text-[#151515]"
+        className="bg-[var(--visual-alternate,var(--secondary))] text-[var(--on-secondary)]"
       >
         <div className="grid grid-cols-1 lg:grid-cols-2 min-h-[560px]">
-          <div className="flex items-center bg-[#f6f6f4] text-[#151515]">
+          <div className="flex items-center">
             <div className="w-full max-w-[580px] min-w-0 px-8 sm:px-14 lg:pl-[max(4rem,calc((100vw-1160px)/2))] lg:pr-16 py-20">
               <p className="text-[var(--primary)] text-xs font-bold">
                 Selección cuidada
               </p>
 
-              <h2 className="mt-7 text-[clamp(2.5rem,5vw,4.125rem)] leading-[1.02] tracking-[-0.05em] font-black break-words text-[#151515]">
+              <h2 className="mt-7 text-[clamp(2.5rem,5vw,4.125rem)] leading-[1.02] tracking-[-0.05em] font-black break-words">
                 Una mejor
                 <br />
                 forma de
@@ -198,7 +198,7 @@ export default function CatalogHome() {
                 elegir.
               </h2>
 
-             <p className="mt-7 max-w-md text-base leading-7 text-[#151515]/70">
+             <p className="mt-7 max-w-md text-base leading-7 text-[color-mix(in_srgb,var(--on-secondary)_70%,transparent)]">
                 Encuentra productos de calidad, con información clara,
                 precios transparentes y entrega a todo Chile.
               </p>
@@ -290,7 +290,7 @@ export default function CatalogHome() {
                   <Link
                   data-visual-part="buyButton"
                   to={route(`producto/${product.id}`)}
-                  className="mt-5 h-11 rounded-full bg-[var(--accent)] text-white text-sm font-semibold flex items-center justify-center hover:opacity-90 transition-opacity"
+                  className="mt-5 h-11 rounded-full bg-[var(--accent)] text-[var(--on-accent)] text-sm font-semibold flex items-center justify-center hover:opacity-90 transition-opacity"
                 >
                   Comprar
                 </Link>

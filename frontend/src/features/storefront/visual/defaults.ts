@@ -20,7 +20,7 @@ export const VISUAL_DEFAULTS: VisualConfig = {
   version: 1,
   pages: Object.fromEntries(STORE_PAGES.map(({ id }) => [id, { ...structuredClone(page), content: { ...page.content, imageSize: id === 'cart' ? 96 : page.content.imageSize, priceSize: id === 'cart' ? 16 : page.content.priceSize } }])) as VisualConfig['pages'],
   global: {
-    colors: { primary: '#1a3a6b', secondary: '#eef1f8', accent: '#e04b1a', background: '#fafaf8', text: '#0f1623', surface: '#ffffff', border: '#dde3f0', alternate: '#eef1f8', muted: '#626c7c', structural: '#1a3a6b', button: 'currentColor', buttonText: '#ffffff' },
+    colors: { primary: '#1a3a6b', secondary: '#eef1f8', accent: '#c2410c', background: '#fafaf8', text: '#0f1623', surface: '#ffffff', border: '#dde3f0', alternate: '#eef1f8', muted: '#626c7c', structural: '#1a3a6b', button: 'currentColor', buttonText: '#ffffff' },
     unlinkStructural: false,
     typography: { body: 'sans', heading: 'serif', baseSize: 16, lineHeight: 1.5 },
     radius: 8, baseSpacing: 8, contentMaxWidth: 1280, density: 'normal',

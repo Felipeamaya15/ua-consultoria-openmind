@@ -8,7 +8,6 @@ export const PALETTE_PATHS = ['global.colors.primary','global.colors.secondary',
 export function paletteEdits(palette: typeof EDITOR_PALETTES[number]): Record<string, string> {
   return { 'global.colors.primary': palette.primary, 'global.colors.secondary': palette.secondary, 'global.colors.accent': palette.accent, 'global.colors.background': '#fafafa', 'global.colors.text': '#18202e', 'global.colors.surface': '#ffffff', 'global.colors.border': '#cdd4de', 'global.colors.alternate': palette.secondary, 'global.colors.muted': '#596579', 'global.colors.structural': palette.primary, 'global.colors.button': palette.primary, 'global.colors.buttonText': '#ffffff' };
 }
-}
 export function PaletteControl({ onPalette, onReset }: { onPalette: (palette: typeof EDITOR_PALETTES[number]) => void; onReset: () => void }) {
   return <div className="ve-control"><strong>Encuentra tus colores</strong><p className="ve-hint">Paletas coordinadas para toda tu tienda. Después puedes personalizar cada color.</p><div className="ve-palettes">{EDITOR_PALETTES.map(palette => <button type="button" key={palette.name} aria-label={`Usar esta paleta: ${palette.name}`} onClick={() => onPalette(palette)}><div className="ve-palette-swatches" aria-hidden="true">{[palette.primary,palette.secondary,palette.accent].map((color,index) => <span key={index} style={{ background: color }} />)}</div><strong>{palette.name}</strong><small>Usar esta paleta</small></button>)}<button type="button" onClick={onReset}>Colores del diseño original ↺</button></div></div>;
 }

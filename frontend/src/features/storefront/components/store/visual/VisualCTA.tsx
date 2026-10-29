@@ -6,12 +6,12 @@ export function VisualCTA() {
   const { route } = useStorefrontTemplate();
 
   return (
-<section className="bg-[var(--primary)] text-[var(--visual-button-text)]">
+<section className="bg-[color-mix(in_srgb,var(--primary)_82%,black)] text-[var(--on-primary)]">
       <div className="max-w-[1180px] mx-auto px-5 md:px-8 py-24 md:py-28">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-12 md:gap-20 items-center">
 
           <div>
-           <p className="text-[10px] uppercase tracking-[0.25em] text-[var(--visual-button-text)] opacity-60 mb-6">
+           <p className="text-[10px] uppercase tracking-[0.25em] text-[color-mix(in_srgb,var(--on-primary)_70%,transparent)] mb-6">
               Empieza hoy
             </p>
 
@@ -25,7 +25,7 @@ export function VisualCTA() {
           </div>
 
           <div>
-            <p className="text-base md:text-lg leading-relaxed text-[var(--visual-button-text)] opacity-80 max-w-md">
+            <p className="text-base md:text-lg leading-relaxed text-[color-mix(in_srgb,var(--on-primary)_85%,transparent)] max-w-md">
               Miles de productos disponibles con envío rápido,
               pago seguro y una compra sin complicaciones.
             </p>

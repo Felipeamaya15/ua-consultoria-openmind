@@ -13,7 +13,7 @@ export function CatalogFooter() {
   return (
  <footer
       data-visual-section={VISUAL_SECTION.footer}
-      className="bg-[#050505] border-t border-white/10 text-white"
+      className="bg-[var(--visual-footer-background,#050505)] border-t border-[color-mix(in_srgb,currentColor_10%,transparent)] text-[var(--visual-footer-color,#ffffff)]"
     >
       <div
         data-visual-part="footerLayout"
@@ -23,15 +23,15 @@ export function CatalogFooter() {
           {config.logo && <img data-landing-image className="store-footer-logo" src={config.logo} alt={`Logo de ${config.name}`} />}
           <p
             data-visual-part="footerTitle"
-            className="text-lg font-extrabold tracking-tight text-white"
+            className="text-lg font-extrabold tracking-tight"
           >
             {config.name}
           </p>
 
-        <StoreBusinessDescription className="mt-2 max-w-sm text-xs leading-relaxed text-white/70" />
+        <StoreBusinessDescription className="mt-2 max-w-sm text-xs leading-relaxed text-[color-mix(in_srgb,currentColor_85%,transparent)]" />
         </div>
 
-        <div className="flex flex-wrap md:justify-end gap-x-5 gap-y-2 text-[11px] text-white/50">
+        <div className="flex flex-wrap md:justify-end gap-x-5 gap-y-2 text-[11px] text-[color-mix(in_srgb,currentColor_75%,transparent)]">
           <Link
             to={route('legal/privacy')}
             className="hover:text-inherit transition-colors"

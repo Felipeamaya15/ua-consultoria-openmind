@@ -1,4 +1,6 @@
 import { PaletteLibrary } from '../../../shared/PaletteLibrary';
+import { VISUAL_PRESETS } from '../../storefront/visual/presets';
+import { VISUAL_DEFAULTS } from '../../storefront/visual/defaults';
 import { usePaletteLibrary, saveAppearance, paletteOverrides, type Appearance, type StorePalette } from '../../../shared/palettes';
 import { resolveStoreVisualConfig } from '../../storefront/visual/resolveVisualConfig';
 import { useEffect, useState } from "react"
@@ -56,6 +58,10 @@ const TEMPLATES: {
   },
 ]
 
+const originalColors = (id: TemplateId) => ({ ...VISUAL_DEFAULTS.global.colors, ...(VISUAL_PRESETS[id]?.config.global?.colors ?? {}) })
+const originalPalette = (id: TemplateId): StorePalette => ({ id: 'system-original', nombre: 'Original', colores: originalColors(id) })
+const SWATCH_KEYS = ['primary', 'alternate', 'accent', 'structural', 'surface'] as const
+
 const templateOptions = TEMPLATES.map((template) => ({
   value: template.id,
   label: template.name,
@@ -93,7 +99,7 @@ const [saved,setSaved]=useState(false);
       for(const [key,palette] of Object.entries(paletteDrafts)){
         const id=key as TemplateId;if(!palette)continue;
         const theme=loadThemeCustomization(id,config.themeEditor?.[id],config,config.visualConfig);
-        const base=paletteSource.appearance?.[id]?.visualConfig??theme.visualConfig;
+        const base=clearEditorColorOverrides(paletteSource.appearance?.[id]?.visualConfig??theme.visualConfig);
         const visualConfig={...base,global:{...base?.global,colors:palette.colores}};
         appearances[id]={visualConfig,paleta_id:palette.id.startsWith('system-')?null:palette.id};
         nextConfig.themeEditor[id]=patchThemeCustomization(theme,{visualConfig,paletteName:palette.nombre});
@@ -103,7 +109,6 @@ const [saved,setSaved]=useState(false);
       setPaletteDrafts({});setPreviewTemplate(null);setSaved(true);return true;
     }catch(error){setPaletteNotice(error instanceof Error?error.message:'No se pudieron guardar los cambios.');return false;}
     finally{setPaletteBusy(false);}
-  }
   }
 
   const handleOpenEditor = () => {
@@ -160,6 +165,10 @@ const [saved,setSaved]=useState(false);
               visual: palette,
               catalog: palette,
             });
+            setSaved(false);
+          }}
+          onOriginal={() => {
+            setPaletteDrafts(Object.fromEntries(TEMPLATES.map(({ id }) => [id, originalPalette(id)])) as Partial<Record<TemplateId, StorePalette>>);
             setSaved(false);
           }}
         />
@@ -263,6 +272,27 @@ const [saved,setSaved]=useState(false);
                         ))}
                       </div>
                     </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 mt-4">
+                    <span className="flex items-center gap-1" role="img" aria-label={`Colores originales de ${tpl.name}`} title={`Colores originales de ${tpl.name}`}>
+                      {SWATCH_KEYS.map((key) => {
+                        const original = originalColors(tpl.id)
+                        const value = original[key] === 'currentColor' ? original.primary : original[key]
+                        return <i key={key} className="block w-4 h-4 rounded-full border border-black/10" style={{ background: value }} />
+                      })}
+                    </span>
+                    <span className="text-[11px] text-[var(--muted-foreground)]">Colores originales</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPaletteDrafts((drafts) => ({ ...drafts, [tpl.id]: originalPalette(tpl.id) }))
+                        setSaved(false)
+                      }}
+                      className="ml-auto text-[11px] font-medium text-[var(--primary)] hover:underline"
+                    >
+                      Restablecer
+                    </button>
                   </div>
 
                   <div className="flex gap-2 mt-4">
