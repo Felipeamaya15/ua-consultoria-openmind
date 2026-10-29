@@ -214,3 +214,73 @@ body {
 button:not(:disabled), a { cursor: pointer; }
 button:disabled { cursor: not-allowed; opacity: .65; }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; } }
+
+/* SCRUM-465: Checkout móvil. Solo aplica al flujo real /plantilla/:id/compra. */
+[data-checkout-page] {
+  width: 100%;
+  min-width: 0;
+}
+
+[data-checkout-page] [data-checkout-items] {
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 639px) {
+  [data-checkout-page] {
+    padding-inline: 1rem;
+  }
+
+  [data-checkout-page] [data-checkout-stepper] {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  [data-checkout-page] [data-checkout-auth-options] {
+    flex-wrap: wrap;
+  }
+
+  [data-checkout-page] [data-checkout-auth-options] > button {
+    min-width: 5.5rem;
+    min-height: 2.75rem;
+  }
+
+  [data-checkout-page] [data-checkout-shipping-option] {
+    flex-wrap: wrap;
+    gap: .75rem;
+    padding: .75rem;
+  }
+
+  [data-checkout-page] [data-checkout-shipping-price] {
+    margin-left: auto;
+    text-align: right;
+    overflow-wrap: anywhere;
+  }
+
+  [data-checkout-page] [data-checkout-promo-actions] {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  [data-checkout-page] [data-checkout-promo-actions] > input {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+
+  [data-checkout-page] [data-checkout-promo-actions] > button {
+    min-width: 0;
+    min-height: 2.75rem;
+  }
+
+  [data-checkout-page] [data-checkout-navigation] {
+    flex-direction: column-reverse;
+    align-items: stretch;
+  }
+
+  [data-checkout-page] [data-checkout-navigation] > * {
+    width: 100%;
+    min-width: 0;
+    min-height: 2.75rem;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+}
