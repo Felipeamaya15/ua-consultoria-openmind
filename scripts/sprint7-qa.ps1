@@ -1,5 +1,4 @@
-# SCRUM-491/497: ejecutar en la raiz del repositorio con Docker Desktop activo.
-# No hace push, commits, cambios en Jira ni borra volúmenes.
+
 $ErrorActionPreference = 'Stop'
 Write-Host '== Sprint 7 | Verificacion local =='
 docker compose ps
@@ -14,6 +13,6 @@ if ($LASTEXITCODE -ne 0) { throw 'Pruebas de seguridad Django fallaron.' }
 docker compose exec backend python manage.py test apps.core.test_checkout apps.core.test_order_filter apps.core.test_customer_orders apps.core.test_promotions apps.core.test_delivery apps.core.test_legal
 if ($LASTEXITCODE -ne 0) { throw 'Pruebas funcionales Django fallaron.' }
 
-docker compose exec frontend node --test tests/checkout-shipping.cjs tests/sprint7-responsive.cjs tests/sprint7-payment-security.cjs tests/cart-checkout.cjs tests/guest-cart.cjs tests/transfer-validation.cjs tests/customer-orders.cjs tests/promotions.cjs
+docker compose run --rm --no-deps -v "./backend/apps/core/data:/backend/apps/core/data:ro" frontend node --test tests/checkout-shipping.cjs tests/sprint7-responsive.cjs tests/sprint7-payment-security.cjs tests/cart-checkout.cjs tests/guest-cart.cjs tests/transfer-validation.cjs tests/customer-orders.cjs tests/promotions.cjs
 if ($LASTEXITCODE -ne 0) { throw 'Pruebas frontend fallaron.' }
-Write-Host 'Automatizaciones terminadas. Falta validacion visual manual segun docs/sprint7.'
+Write-Host 'Automatizaciones terminadas. Falta validacion visual manual del checkout en dispositivos moviles.'
