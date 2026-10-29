@@ -96,7 +96,7 @@ export default function CatalogHome() {
       </section>)}
 
       {/* BLOQUE BLANCO */}
-      <section data-visual-section={VISUAL_SECTION.sections} data-visual-kind="content" className="bg-[#f6f6f4] text-[#151515]">
+      <section data-visual-section={VISUAL_SECTION.sections} data-visual-kind="content" className="bg-[var(--secondary)] text-[var(--on-secondary)]">
         <div className="grid grid-cols-1 lg:grid-cols-2 min-h-[560px]">
           <div className="flex items-center">
             <div className="max-w-[580px] px-8 sm:px-14 lg:pl-[max(4rem,calc((100vw-1160px)/2))] lg:pr-16 py-20">
@@ -112,7 +112,7 @@ export default function CatalogHome() {
                 elegir.
               </h2>
 
-              <p className="mt-7 max-w-md text-base leading-7 text-black/55">
+              <p className="mt-7 max-w-md text-base leading-7 text-[color-mix(in_srgb,var(--on-secondary)_70%,transparent)]">
                 Encuentra productos de calidad, con información clara,
                 precios transparentes y entrega a todo Chile.
               </p>
@@ -184,7 +184,7 @@ export default function CatalogHome() {
 
               <Link data-visual-part="buyButton"
                 to={route(`producto/${product.id}`)}
-                className="mt-5 h-11 rounded-full bg-[var(--accent)] text-white text-sm font-semibold flex items-center justify-center hover:bg-[var(--accent)] transition-colors"
+                className="mt-5 h-11 rounded-full bg-[var(--accent)] text-[var(--on-accent)] text-sm font-semibold flex items-center justify-center hover:bg-[var(--accent)] transition-colors"
               >
                 Comprar
               </Link>

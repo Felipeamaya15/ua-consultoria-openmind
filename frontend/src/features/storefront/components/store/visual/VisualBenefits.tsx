@@ -6,7 +6,7 @@ export function VisualBenefits() {
   if (!benefits.length) return null;
 
   return (
-    <section className="border-t border-black/10 bg-white">
+    <section className="border-t border-black/10 bg-[var(--secondary)]">
       <div className="max-w-6xl mx-auto px-5 py-10 md:py-12 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
         {benefits.map((benefit) => (
           <div key={benefit.titulo}>

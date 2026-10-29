@@ -159,7 +159,7 @@ export default function MinimalHome() {
               <button data-visual-section={VISUAL_SECTION.heroCta}
                 type="submit"
                 aria-label={landing?.texto_boton || 'Buscar'}
-                className="px-5 min-w-11 h-11 gap-2 flex-shrink-0 rounded-full bg-[var(--primary)] text-white flex items-center justify-center hover:scale-105 transition-transform"
+                className="px-5 min-w-11 h-11 gap-2 flex-shrink-0 rounded-full bg-[var(--primary)] text-[var(--on-primary)] flex items-center justify-center hover:scale-105 transition-transform"
               >
                 {landing?.texto_boton}
                 <svg
@@ -192,7 +192,7 @@ export default function MinimalHome() {
                 key={category}
                 type="button"
                 onClick={() => goToCategory(category)}
-                className="px-4 py-2 rounded-full bg-white border border-black/5 text-xs text-gray-600 hover:bg-[var(--primary)] hover:text-white transition-colors"
+                className="px-4 py-2 rounded-full bg-white border border-black/5 text-xs text-gray-600 hover:bg-[var(--primary)] hover:text-[var(--on-primary)] transition-colors"
               >
                 {category}
               </button>
@@ -260,7 +260,7 @@ export default function MinimalHome() {
                       </p>
                     </div>
 
-                    <span data-visual-part="buyButton" className="w-8 h-8 flex-shrink-0 rounded-full border border-gray-200 flex items-center justify-center text-[var(--primary)] group-hover:bg-[var(--primary)] group-hover:text-white transition-colors">
+                    <span data-visual-part="buyButton" className="w-8 h-8 flex-shrink-0 rounded-full border border-gray-200 flex items-center justify-center text-[var(--primary)] group-hover:bg-[var(--primary)] group-hover:text-[var(--on-primary)] transition-colors">
                       →
                     </span>
 

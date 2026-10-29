@@ -264,7 +264,7 @@ export default function Catalog() {
           {/* CABECERA */}
           <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-7 mb-9">
             <div>
-              <p className="text-[#ff5a1f] text-[10px] font-extrabold uppercase tracking-[0.16em] mb-3">
+              <p className="text-[color-mix(in_srgb,var(--accent)_65%,white)] text-[10px] font-extrabold uppercase tracking-[0.16em] mb-3">
                 Explora la colección
               </p>
 
@@ -293,7 +293,7 @@ export default function Catalog() {
                   }}
                   aria-label="Buscar productos"
                   placeholder="Buscar productos..."
-                  className="h-11 w-full sm:w-[230px] rounded-[10px] bg-white pl-11 pr-4 text-[12px] text-[#151515] placeholder:text-black/60 outline-none ring-1 ring-transparent focus:ring-[#1683ff]"
+                  className="h-11 w-full sm:w-[230px] rounded-[10px] bg-white pl-11 pr-4 text-[12px] text-[#151515] placeholder:text-black/60 outline-none ring-1 ring-transparent focus:ring-[var(--primary)]"
                 />
               </div>
 
@@ -319,7 +319,7 @@ export default function Catalog() {
                     aria-label={view === 'grid' ? 'Vista en grilla' : 'Vista en lista'}
                     className={`w-11 flex items-center justify-center transition-colors ${
                       viewMode === view
-                        ? 'bg-[#1683ff] text-white'
+                        ? 'bg-[var(--primary)] text-[var(--on-primary)]'
                         : 'text-white/60 hover:text-white'
                     }`}
                   >
@@ -359,7 +359,7 @@ export default function Catalog() {
                     <button
                       type="button"
                       onClick={clearFilters}
-                      className="text-[11px] font-semibold text-[#1683ff] hover:opacity-70"
+                      className="text-[11px] font-semibold text-[var(--primary)] hover:opacity-70"
                     >
                       Limpiar ({activeFiltersCount})
                     </button>
@@ -382,7 +382,7 @@ export default function Catalog() {
                         }}
                         className={`rounded-[9px] px-3 py-2.5 text-left text-[12px] font-medium transition-colors ${
                           category === cat
-                            ? 'bg-[#1683ff] text-white'
+                            ? 'bg-[var(--primary)] text-[var(--on-primary)]'
                             : 'text-[#202020] hover:bg-black/[0.05]'
                         }`}
                       >
@@ -412,7 +412,7 @@ export default function Catalog() {
                             );
                             setPage(1);
                           }}
-                          className="accent-[#1683ff]"
+                          className="accent-[var(--primary)]"
                         />
                         <span>{option}</span>
                       </label>
@@ -435,7 +435,7 @@ export default function Catalog() {
                           setPage(1);
                         }}
                         placeholder="Mín."
-                        className="h-10 min-w-0 rounded-[8px] border border-black/10 bg-white px-3 text-[11px] outline-none focus:border-[#1683ff]"
+                        className="h-10 min-w-0 rounded-[8px] border border-black/10 bg-white px-3 text-[11px] outline-none focus:border-[var(--primary)]"
                       />
 
                       <input
@@ -448,7 +448,7 @@ export default function Catalog() {
                           setPage(1);
                         }}
                         placeholder="Máx."
-                        className="h-10 min-w-0 rounded-[8px] border border-black/10 bg-white px-3 text-[11px] outline-none focus:border-[#1683ff]"
+                        className="h-10 min-w-0 rounded-[8px] border border-black/10 bg-white px-3 text-[11px] outline-none focus:border-[var(--primary)]"
                       />
                     </div>
                   </div>
@@ -799,7 +799,7 @@ export default function Catalog() {
                     }
                     ${
                       viewMode === view
-                        ? 'bg-[var(--primary)] text-white'
+                        ? 'bg-[var(--primary)] text-[var(--on-primary)]'
                         : 'bg-white text-[var(--muted-foreground)] hover:bg-[var(--muted)]'
                     }
                   `}
@@ -938,7 +938,7 @@ export default function Catalog() {
                       }
                       ${
                         category === cat
-                          ? 'bg-[var(--primary)] text-white'
+                          ? 'bg-[var(--primary)] text-[var(--on-primary)]'
                           : 'text-[var(--foreground)] hover:bg-[var(--muted)]'
                       }
                     `}

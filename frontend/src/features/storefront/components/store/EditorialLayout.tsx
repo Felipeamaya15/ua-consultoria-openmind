@@ -32,7 +32,7 @@ function CartIcon({ count }: { count: number }) {
       </svg>
 
       {count > 0 && (
-        <span className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-[var(--accent)] text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+        <span className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-[var(--accent)] text-[var(--on-accent)] text-[10px] font-bold rounded-full flex items-center justify-center">
           {count}
         </span>
       )}
@@ -128,7 +128,7 @@ export function EditorialLayout() {
                 className="block w-auto h-auto max-w-[80px] sm:max-w-[120px] xl:max-w-[160px] max-h-10 sm:max-h-11 shrink-0 object-contain object-center"
               />
             ) : (
-              <div className="w-8 h-8 rounded-full bg-[var(--primary)] flex items-center justify-center text-white text-xs font-bold">
+              <div className="w-8 h-8 rounded-full bg-[var(--primary)] flex items-center justify-center text-[var(--on-primary)] text-xs font-bold">
                 {config.name?.slice(0, 2).toUpperCase() || 'MT'}
               </div>
             )}
@@ -296,7 +296,7 @@ export function EditorialLayout() {
       {/* =====================================================
           FOOTER
       ====================================================== */}
-      <footer data-visual-section={VISUAL_SECTION.footer} className="bg-[var(--foreground)] text-white mt-16">
+      <footer data-visual-section={VISUAL_SECTION.footer} className="bg-[var(--primary)] text-[var(--on-primary)] mt-16">
 
         <div data-visual-part="footerLayout" className="max-w-7xl mx-auto px-4 py-10 grid grid-cols-1 md:grid-cols-4 gap-8">
 
@@ -307,7 +307,7 @@ export function EditorialLayout() {
               {config.name}
             </p>
 
-            <p className="text-sm text-white/60">
+            <p className="text-sm text-[color-mix(in_srgb,currentColor_60%,transparent)]">
               {config.description}
             </p>
 
@@ -316,22 +316,22 @@ export function EditorialLayout() {
           {/* Tienda */}
           <div>
 
-            <p data-visual-part="footerTitle" className="text-xs font-semibold uppercase tracking-wider text-white/60 mb-3">
+            <p data-visual-part="footerTitle" className="text-xs font-semibold uppercase tracking-wider text-[color-mix(in_srgb,currentColor_60%,transparent)] mb-3">
               Tienda
             </p>
 
-            <div className="flex flex-col gap-2 text-sm text-white/70">
+            <div className="flex flex-col gap-2 text-sm text-[color-mix(in_srgb,currentColor_70%,transparent)]">
 
               <Link
                 to="catalogo"
-                className="hover:text-white transition-colors"
+                className="hover:text-inherit transition-colors"
               >
                 Catálogo
               </Link>
 
               <Link
                 to="seguimiento"
-                className="hover:text-white transition-colors"
+                className="hover:text-inherit transition-colors"
               >
                 Seguimiento
               </Link>
@@ -343,36 +343,36 @@ export function EditorialLayout() {
           {/* Legal */}
           <div>
 
-            <p data-visual-part="footerTitle" className="text-xs font-semibold uppercase tracking-wider text-white/60 mb-3">
+            <p data-visual-part="footerTitle" className="text-xs font-semibold uppercase tracking-wider text-[color-mix(in_srgb,currentColor_60%,transparent)] mb-3">
               Legal
             </p>
 
-            <div className="flex flex-col gap-2 text-sm text-white/70">
+            <div className="flex flex-col gap-2 text-sm text-[color-mix(in_srgb,currentColor_70%,transparent)]">
 
               <Link
                 to="legal/terms"
-                className="hover:text-white transition-colors"
+                className="hover:text-inherit transition-colors"
               >
                 Términos
               </Link>
 
               <Link
                 to="legal/privacy"
-                className="hover:text-white transition-colors"
+                className="hover:text-inherit transition-colors"
               >
                 Privacidad
               </Link>
 
               <Link
                 to="legal/refund"
-                className="hover:text-white transition-colors"
+                className="hover:text-inherit transition-colors"
               >
                 Reembolsos
               </Link>
 
               <Link
                 to="legal/cookies"
-                className="hover:text-white transition-colors"
+                className="hover:text-inherit transition-colors"
               >
                 Cookies
               </Link>
@@ -383,7 +383,7 @@ export function EditorialLayout() {
         </div>
 
         {/* Copyright */}
-        <div data-visual-part="branding" className="border-t border-white/10 py-4 text-xs text-white/60 px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+        <div data-visual-part="branding" className="border-t border-[color-mix(in_srgb,currentColor_10%,transparent)] py-4 text-xs text-[color-mix(in_srgb,currentColor_60%,transparent)] px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
           <InstitutionalBadge compact showVersion={true} />
           <p className="text-center sm:text-right">© 2025 {config.name} · Plataforma e-commerce Universidad Autónoma de Chile</p>
         </div>

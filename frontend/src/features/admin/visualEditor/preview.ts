@@ -47,6 +47,7 @@ export function connectVisualPreview(doc: Document, onSelect: (section: VisualSe
       if (!setting) { restore(img); return; }
       if (!originals.has(img)) originals.set(img, captureOriginalImage(img));
       if (setting.src) img.src = setting.src;
+      if (setting.alt) img.alt = setting.alt; else if (originals.get(img)?.alt != null) img.alt = originals.get(img)!.alt!;
       img.style.objectFit = setting.fit ?? originals.get(img)?.fit ?? '';
       img.style.objectPosition = `${setting.x}% ${setting.y}%`; img.style.transform = `scale(${setting.scale / 100})`; img.style.transformOrigin = 'center'; img.style.borderRadius = `${setting.radius}px`;
     });

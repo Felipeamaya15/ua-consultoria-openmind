@@ -17,12 +17,12 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 
 const btnBase = 'inline-flex items-center justify-center gap-2 font-semibold rounded-lg transition-all duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 disabled:opacity-50 disabled:cursor-not-allowed select-none';
 const btnVariants: Record<ButtonVariant, string> = {
-  primary: 'bg-[var(--primary)] text-white hover:bg-[#0f2a56] focus-visible:outline-[var(--primary)]',
+  primary: 'bg-[var(--primary)] text-[var(--on-primary)] hover:brightness-90 focus-visible:outline-[var(--primary)]',
   secondary: 'bg-[var(--secondary)] text-[var(--primary)] hover:bg-[#dce4f4] focus-visible:outline-[var(--primary)]',
   outline: 'border border-[var(--border)] bg-white text-[var(--foreground)] hover:bg-[var(--muted)] focus-visible:outline-[var(--ring)]',
   ghost: 'bg-transparent text-[var(--foreground)] hover:bg-[var(--muted)] focus-visible:outline-[var(--ring)]',
   danger: 'bg-[var(--error)] text-white hover:bg-red-700 focus-visible:outline-red-600',
-  accent: 'bg-[var(--accent)] text-white hover:bg-[#c43a10] focus-visible:outline-[var(--accent)]',
+  accent: 'bg-[var(--accent)] text-[var(--on-accent)] hover:brightness-90 focus-visible:outline-[var(--accent)]',
 };
 const btnSizes: Record<ButtonSize, string> = {
   sm: 'text-xs px-3 py-1.5 h-7',
@@ -153,7 +153,7 @@ const badgeStyles: Record<BadgeVariant, string> = {
   warning: 'bg-[var(--warning-bg)] text-[var(--warning)]',
   error: 'bg-[var(--error-bg)] text-[var(--error)]',
   info: 'bg-[var(--info-bg)] text-[var(--info)]',
-  accent: 'bg-[var(--accent)] text-white',
+  accent: 'bg-[var(--accent)] text-[var(--on-accent)]',
 };
 
 export function Badge({ variant = 'default', children, className = '' }: { variant?: BadgeVariant; children: ReactNode; className?: string }) {
@@ -266,7 +266,7 @@ export function Pagination({ page, total, pageSize = 12, onChange }: { page: num
       </button>
       {Array.from({ length: Math.min(pages, 7) }, (_, i) => i + 1).map(p => (
         <button key={p} onClick={() => onChange(p)} aria-current={page === p ? 'page' : undefined}
-          className={`w-8 h-8 text-sm rounded-lg transition-colors ${page === p ? 'bg-[var(--primary)] text-white' : 'hover:bg-[var(--muted)]'}`}>
+          className={`w-8 h-8 text-sm rounded-lg transition-colors ${page === p ? 'bg-[var(--primary)] text-[var(--on-primary)]' : 'hover:bg-[var(--muted)]'}`}>
           {p}
         </button>
       ))}
@@ -310,7 +310,7 @@ export function Stepper({ steps, current }: { steps: Step[]; current: string }) 
             <React.Fragment key={step.id}>
               <li className="flex flex-col items-center gap-1">
                 <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold border-2 transition-colors
-                  ${done ? 'bg-[var(--primary)] border-[var(--primary)] text-white' : active ? 'border-[var(--primary)] text-[var(--primary)] bg-white' : 'border-[var(--border)] text-[var(--muted-foreground)] bg-white'}`}>
+                  ${done ? 'bg-[var(--primary)] border-[var(--primary)] text-[var(--on-primary)]' : active ? 'border-[var(--primary)] text-[var(--primary)] bg-white' : 'border-[var(--border)] text-[var(--muted-foreground)] bg-white'}`}>
                   {done ? '✓' : i + 1}
                 </div>
                 <span className={`text-xs whitespace-nowrap ${active ? 'font-semibold text-[var(--primary)]' : done ? 'text-[var(--muted-foreground)]' : 'text-[var(--muted-foreground)]'}`}>{step.label}</span>

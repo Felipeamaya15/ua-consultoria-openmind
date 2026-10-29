@@ -31,11 +31,13 @@ const { VISUAL_PRESETS } = load('src/features/storefront/visual/presets.ts');
 const sections = load('src/features/admin/visualEditor/sections.ts');
 const identityA = { apiBaseUrl: 'http://qa.example.test', storeId: '1' }, identityB = { ...identityA, storeId: '2' };
 const seed = (data, identity = identityA) => storageApi.saveStoredStoreConfig(data, identity);
-test('stage 3 palette coordinates surfaces while manual bar and footer edits remain independent', () => {
+test('stage 3 palette changes only principal, secondary and accent while manual bar and footer edits remain independent', () => {
   const {EDITOR_PALETTES,paletteEdits}=load('src/features/admin/visualEditor/palettes.tsx');
   const edits=paletteEdits(EDITOR_PALETTES[2]);
-  const resolved=resolver.resolveVisualConfig({customization:{global:{colors:{background:edits['global.colors.background'],surface:edits['global.colors.surface'],text:edits['global.colors.text']}},header:{background:edits['header.background'],textColor:edits['header.textColor']},topBar:{background:'#123456'},footer:{background:'#abcdef'}}});
-  const vars=css(resolved); assert.equal(vars['--visual-background-desktop'],'#faf5ff'); assert.equal(vars['--visual-page-product-panel-background-desktop'],'#ffffff');
+  assert.deepEqual(Object.keys(edits).sort(),['global.colors.accent','global.colors.primary','global.colors.secondary']);
+  const before=css(resolver.resolveVisualConfig({customization:{}}));
+  const resolved=resolver.resolveVisualConfig({customization:{global:{colors:{primary:edits['global.colors.primary'],secondary:edits['global.colors.secondary'],accent:edits['global.colors.accent']}},topBar:{background:'#123456'},footer:{background:'#abcdef'}}});
+  const vars=css(resolved); assert.equal(vars['--visual-background-desktop'],before['--visual-background-desktop']); assert.equal(vars['--visual-text-desktop'],before['--visual-text-desktop']);
   assert.equal(vars['--visual-topbar-bg-desktop'],'#123456'); assert.equal(vars['--visual-footer-background-desktop'],'#abcdef');
 });
 test('stage 3 page geometry follows presets and explicit responsive page values win', () => {
@@ -219,11 +221,11 @@ test('help opens on hover, focus and click and closes with Escape and blur',()=>
   tree.props.children[0].props.onBlur(); tree=render(); assert.equal(tree.props.children[0].props['aria-expanded'],false);
   for(const id of ['hero','heroCta','categories','productGrid','productCard','footer']) assert(SECTION_HELP[id]);
 });
-test('palettes coordinate bars and footer while allowing subsequent individual edits',()=>{
+test('palettes change only the three brand colors and still allow individual edits',()=>{
   const {EDITOR_PALETTES,paletteEdits,PALETTE_PATHS}=load('src/features/admin/visualEditor/palettes.tsx');
   for(const palette of EDITOR_PALETTES) { let draft=initial; for(const [path,value] of Object.entries(paletteEdits(palette))) draft=model.editProperty(draft,path,value);
-    assert.equal(effective(draft).topBar.background,palette.primary); assert.equal(effective(draft).footer.background,palette.primary);
-    draft=model.editProperty(draft,'footer.background','#234567'); assert.equal(effective(draft).topBar.background,palette.primary); assert.equal(effective(draft).footer.background,'#234567');
+    assert.equal(effective(draft).global.colors.primary,palette.primary); assert.equal(effective(draft).global.colors.background,effective(initial).global.colors.background); assert.equal(effective(draft).global.colors.text,effective(initial).global.colors.text);
+    draft=model.editProperty(draft,'footer.background','#234567'); assert.equal(effective(draft).footer.background,'#234567');
     for(const path of PALETTE_PATHS) draft=model.resetProperty(draft,path); assert.equal(draft.overrides.topBar,undefined); assert.equal(draft.overrides.footer?.background,undefined);
   }
 });

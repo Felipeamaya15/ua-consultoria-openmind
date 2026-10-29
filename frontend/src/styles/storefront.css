@@ -45,6 +45,9 @@
   --muted: #f1f3f9;
   --muted-foreground: #5a6786;
   --accent: #c2410c;
+  --on-primary: #ffffff;
+  --on-accent: #ffffff;
+  --on-secondary: #0f1623;
   --accent-foreground: #ffffff;
   --border: #dde3f0;
   --ring: #1a3a6b;

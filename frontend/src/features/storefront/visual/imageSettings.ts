@@ -4,21 +4,22 @@ import { isRecord } from './resolveVisualConfig';
 export function isLegacyEditableImage(image: Pick<HTMLElement, 'hasAttribute' | 'closest'>): boolean {
   return !image.hasAttribute('data-landing-image') && !image.closest('[data-landing-content], [data-institutional-branding]');
 }
-export interface ThemeImageSetting { src: string; scale: number; x: number; y: number; radius: number; fit?: 'cover' | 'contain' }
+export interface ThemeImageSetting { src: string; scale: number; x: number; y: number; radius: number; fit?: 'cover' | 'contain'; alt?: string }
 
-export interface OriginalImageStyle { src: string | null; position: string; transform: string; origin: string; radius: string; fit?: string }
+export interface OriginalImageStyle { src: string | null; position: string; transform: string; origin: string; radius: string; fit?: string; alt: string | null }
 // The editor and its same-origin iframe must share the baseline captured before publication.
 // A module-local WeakMap would be different in each window. This state lives only on the DOM node.
 const ORIGINAL_IMAGE = Symbol.for('ua.visual.original-image.v1');
 export function captureOriginalImage(img: HTMLImageElement): OriginalImageStyle {
   const node = img as HTMLImageElement & { [ORIGINAL_IMAGE]?: OriginalImageStyle };
-  return node[ORIGINAL_IMAGE] ??= { src: img.getAttribute('src'), position: img.style.objectPosition, transform: img.style.transform, origin: img.style.transformOrigin, radius: img.style.borderRadius, fit: img.style.objectFit };
+  return node[ORIGINAL_IMAGE] ??= { src: img.getAttribute('src'), position: img.style.objectPosition, transform: img.style.transform, origin: img.style.transformOrigin, radius: img.style.borderRadius, fit: img.style.objectFit, alt: img.getAttribute('alt') };
 }
 export function restoreOriginalImage(img: HTMLImageElement, original: OriginalImageStyle) {
   if (original.src === null) img.removeAttribute('src'); else img.setAttribute('src', original.src);
   img.style.objectPosition = original.position; img.style.transform = original.transform;
   img.style.transformOrigin = original.origin; img.style.borderRadius = original.radius;
   img.style.objectFit = original.fit ?? '';
+  if (original.alt === null) img.removeAttribute('alt'); else img.setAttribute('alt', original.alt);
 }
 
 /** Explicit IDs win; legacy decorative assets otherwise use original source + semantic role. */
@@ -50,6 +51,7 @@ export function readThemeImages(value: unknown): Record<string, ThemeImageSettin
       x: number(setting.x, DEFAULT_IMAGE_SETTING.x, 100), y: number(setting.y, DEFAULT_IMAGE_SETTING.y, 100),
       radius: number(setting.radius, DEFAULT_IMAGE_SETTING.radius, 10000),
       ...(setting.fit === 'cover' || setting.fit === 'contain' ? { fit: setting.fit } : {}),
+      ...(typeof setting.alt === 'string' && setting.alt.trim() ? { alt: setting.alt.trim().slice(0, 250) } : {}),
     };
   }
   return images;

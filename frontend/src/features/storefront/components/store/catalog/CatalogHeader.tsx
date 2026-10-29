@@ -58,7 +58,7 @@ export function CatalogHeader() {
                 <path d="M9 9V6a3 3 0 0 1 6 0v3" />
               </svg>
               {count > 0 && (
-                <span className="absolute -top-2.5 -right-2.5 min-w-4 h-4 px-1 rounded-full bg-[var(--primary)] text-white text-[9px] flex items-center justify-center">
+                <span className="absolute -top-2.5 -right-2.5 min-w-4 h-4 px-1 rounded-full bg-[var(--primary)] text-[var(--on-primary)] text-[9px] flex items-center justify-center">
                   {count}
                 </span>
               )}

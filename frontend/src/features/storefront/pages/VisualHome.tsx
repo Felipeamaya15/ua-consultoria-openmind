@@ -91,7 +91,7 @@ export default function VisualHome() {
               <Link data-visual-section={VISUAL_SECTION.heroCta}
                 to="catalogo"
                 className="
-                  bg-[var(--primary)] text-white
+                  bg-[var(--primary)] text-[var(--on-primary)]
                   px-7 py-4
                   text-[11px] font-semibold
                   uppercase tracking-[0.12em]
@@ -185,7 +185,7 @@ export default function VisualHome() {
                 px-7 py-4
                 text-[11px] font-semibold
                 uppercase tracking-[0.12em]
-                hover:bg-[var(--primary)] hover:text-white
+                hover:bg-[var(--primary)] hover:text-[var(--on-primary)]
                 transition-colors
               "
             >

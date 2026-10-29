@@ -248,7 +248,7 @@ export const defaultStoreConfig: StoreConfig = {
   ],
   primaryColor: '#1a3a6b',
   secondaryColor: '#eef1f8',
-  accentColor: '#e04b1a',
+  accentColor: '#c2410c',
   template: 'editorial',
   requiresAuth: 'optional',
   paymentMethods: ['Transbank', 'MercadoPago', 'Transferencia bancaria'],

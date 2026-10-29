@@ -1,4 +1,6 @@
 import { useState } from "react"
+import { VISUAL_PRESETS } from '../../storefront/visual/presets'
+import { VISUAL_DEFAULTS } from '../../storefront/visual/defaults'
 import { Link } from "react-router-dom"
 import { useAdmin } from "../context/AdminContext"
 import { TemplateId } from "../data/mockAdminData"
@@ -6,7 +8,7 @@ import { templatePaths } from "../config/navigation"
 import { openAdminWindow } from "../auth/demoSession"
 import { Button, Alert, Badge } from "../components/ui"
 import { AdminHelp } from '../components/AdminPageHeader';
-import { loadThemeCustomization, patchThemeCustomization } from '../data/themeCustomization';
+import { clearEditorColorOverrides, loadThemeCustomization, patchThemeCustomization } from '../data/themeCustomization';
 
 const TEMPLATES: {
   id: TemplateId
@@ -72,17 +74,21 @@ export default function Design() {
   const activeTemplate = previewTemplate ?? config.template
   const activeTheme = loadThemeCustomization(activeTemplate, config.themeEditor?.[activeTemplate], config, config.visualConfig)
 
+  const originalColors = { ...VISUAL_DEFAULTS.global.colors, ...(VISUAL_PRESETS[activeTemplate]?.config.global?.colors ?? {}) }
+
   const palettes = [
-    { name: "Original", primaryColor: "#1a3a6b", secondaryColor: "#eef1f8", accentColor: "#e04b1a" },
-    { name: "Oceano", primaryColor: "#2563eb", secondaryColor: "#eff6ff", accentColor: "#0ea5e9" },
-    { name: "Bosque", primaryColor: "#15803d", secondaryColor: "#f0fdf4", accentColor: "#84cc16" },
-    { name: "Grafito", primaryColor: "#1f2937", secondaryColor: "#f3f4f6", accentColor: "#f97316" },
+    { name: "Original", primaryColor: originalColors.primary, secondaryColor: originalColors.secondary, accentColor: originalColors.accent },
+    { name: "Oceano", primaryColor: "#2563eb", secondaryColor: "#eff6ff", accentColor: "#0369a1" },
+    { name: "Bosque", primaryColor: "#15803d", secondaryColor: "#f0fdf4", accentColor: "#4d7c0f" },
+    { name: "Grafito", primaryColor: "#475569", secondaryColor: "#f1f5f9", accentColor: "#0f766e" },
   ]
 
   const updateColors = (
     patch: Partial<typeof activeTheme>,
+    resetEditorColors = false,
   ) => {
-    const nextTheme = patchThemeCustomization(activeTheme, patch)
+    const baseTheme = resetEditorColors ? { ...activeTheme, visualConfig: clearEditorColorOverrides(activeTheme.visualConfig) } : activeTheme
+    const nextTheme = patchThemeCustomization(baseTheme, patch)
 
     const ok = setConfig({
       ...config,
@@ -157,7 +163,7 @@ export default function Design() {
               onClick={() => updateColors({
                 ...palette,
                 paletteName: palette.name,
-              })}
+              }, true)}
               className={`rounded-xl border p-2 text-left transition-colors ${
                 activeTheme.paletteName === palette.name
                   ? "border-[var(--primary)] ring-2 ring-[var(--primary)]/15"

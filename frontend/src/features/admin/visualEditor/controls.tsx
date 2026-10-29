@@ -15,7 +15,7 @@ function Field({ label, onReset, overridden, disabled, children }: ControlProps 
 export function ColorPickerControl(props: ControlProps) {
   const value = String(props.value); const [text, setText] = useState(value);
   useEffect(() => setText(value), [value]);
-  return <Field {...props}><div className="ve-color"><input aria-label={props.label} disabled={props.disabled} type="color" value={/^#[\da-f]{6}$/i.test(value) ? value : '#000000'} onChange={e => props.onChange(e.target.value)} /><input aria-label={`${props.label} hexadecimal`} disabled={props.disabled} type="text" value={text} onChange={e => { setText(e.target.value); if (/^(#[\da-f]{3}|#[\da-f]{4}|#[\da-f]{6}|#[\da-f]{8}|transparent|currentColor)$/i.test(e.target.value)) props.onChange(e.target.value); }} onBlur={() => setText(value)} /></div></Field>;
+  return <Field {...props}><div className="ve-color" data-follows={value === 'currentColor' ? 'true' : undefined}><input aria-label={props.label} disabled={props.disabled} type="color" value={/^#[\da-f]{6}$/i.test(value) ? value : '#000000'} onChange={e => props.onChange(e.target.value)} /><input aria-label={`${props.label} hexadecimal`} disabled={props.disabled} type="text" value={text} onChange={e => { setText(e.target.value); if (/^(#[\da-f]{3}|#[\da-f]{4}|#[\da-f]{6}|#[\da-f]{8}|transparent|currentColor)$/i.test(e.target.value)) props.onChange(e.target.value); }} onBlur={() => setText(value)} /></div>{value === 'currentColor' && <small className="ve-follows">Sigue la paleta de colores</small>}</Field>;
 }
 export function SelectControl(props: ControlProps) {
   const font = props.options?.includes('calibri');
