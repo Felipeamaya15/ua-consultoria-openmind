@@ -14,7 +14,7 @@ let passed = 0;
 function test(name, fn) { fn(); console.log('OK ' + name); passed++; }
 
 // Si cambia VARIABLES_PERMITIDAS o TIPOS en backend/apps/core/domain/plantillas_correo, hay que cambiar esto y la pantalla.
-const VARIABLES_DEL_BACKEND = ['customerName', 'customerEmail', 'orderNumber', 'orderTotal', 'shippingMethod', 'carrier', 'trackingCode', 'trackingLink', 'storeName'];
+const VARIABLES_DEL_BACKEND = ['customerName', 'customerEmail', 'orderNumber', 'orderTotal', 'orderSummary', 'shippingMethod', 'carrier', 'trackingCode', 'trackingLink', 'storeName'];
 const TIPOS_DEL_BACKEND = ['order_received', 'order_shipped', 'payment_rejected', 'payment_success'];
 
 const pantalla = fs.readFileSync(path.join(root, 'src/features/admin/pages/Emails.tsx'), 'utf8').replace(/\r/g, '');
@@ -64,6 +64,21 @@ test('los textos por defecto no tienen saltos de línea de más ni espacios al f
     assert.equal(plantilla.body, plantilla.body.trim(), tipo);
     assert.equal(plantilla.subject, plantilla.subject.trim(), tipo);
   }
+});
+
+
+test('el correo de recepción de pedido incluye por defecto el resumen de compra (SCRUM-432)', () => {
+  const recepcion = porDefecto.order_received;
+  assert.equal(recepcion.enabled, true);
+  assert.ok(recepcion.body.includes('{{orderSummary}}'), 'debe incluir {{orderSummary}}');
+  assert.ok(recepcion.body.includes('Resumen de compra:'), 'debe incluir la sección Resumen de compra:');
+});
+
+test('el correo de pago exitoso incluye por defecto el resumen de compra (SCRUM-433)', () => {
+  const pagoExitoso = porDefecto.payment_success;
+  assert.equal(pagoExitoso.enabled, true);
+  assert.ok(pagoExitoso.body.includes('{{orderSummary}}'), 'debe incluir {{orderSummary}}');
+  assert.ok(pagoExitoso.body.includes('Resumen de compra:'), 'debe incluir la sección Resumen de compra:');
 });
 
 console.log(`\n${passed} pruebas OK`);

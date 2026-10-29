@@ -52,6 +52,19 @@ class CorreoPagoExitosoWebpayTests(CorreosWebpayBase):
         self.assertEqual(mail.outbox[0].subject, f'Tu pago fue confirmado · {self.pedido.identificador}')
         self.assertEqual(self.marca('payment_success')['codigo'], 'enviado')
 
+    def test_al_aprobarse_webpay_correo_contiene_resumen_de_compra(self):
+        from apps.core.models import ItemPedido
+        ItemPedido.objects.create(
+            id_pedido=self.pedido, nombre_producto='Mochila Outdoor', cantidad=1,
+            precio_unitario=Decimal('18990'), sku='MOC-OUT'
+        )
+        self.confirmar(self.aprobado())
+        self.assertEqual(len(mail.outbox), 1)
+        correo = mail.outbox[0]
+        self.assertIn('Resumen de compra:', correo.body)
+        self.assertIn('- Mochila Outdoor x 1: $18.990', correo.body)
+        self.assertIn('$18.990', correo.body)
+
     def test_confirmar_otra_vez_el_mismo_pago_no_repite_el_correo(self):
         self.confirmar(self.aprobado())
         self.confirmar(self.aprobado())

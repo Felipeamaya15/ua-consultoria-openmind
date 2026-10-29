@@ -21,13 +21,13 @@ export const createDefaultEmailTemplates = (): EmailTemplates => ({
     enabled: true,
     subject: "Recibimos tu pedido {{orderNumber}}",
     preheader: "Estamos preparando tu solicitud.",
-    body: "Hola {{customerName}},\n\nRecibimos tu pedido {{orderNumber}}. Te avisaremos cuando se confirme el pago y avance la preparación.\n\nTotal del pedido: {{orderTotal}}\nMétodo de entrega: {{shippingMethod}}\n\nGracias por comprar en {{storeName}}.",
+    body: "Hola {{customerName}},\n\nRecibimos tu pedido {{orderNumber}}. Te avisaremos cuando se confirme el pago y avance la preparación.\n\nResumen de compra:\n{{orderSummary}}\n\nTotal del pedido: {{orderTotal}}\nMétodo de entrega: {{shippingMethod}}\n\nGracias por comprar en {{storeName}}.",
   },
   payment_success: {
     enabled: true,
     subject: "Tu pago fue confirmado · {{orderNumber}}",
     preheader: "Tu compra ya está en preparación.",
-    body: "Hola {{customerName}},\n\nConfirmamos el pago de tu pedido {{orderNumber}} por {{orderTotal}}. Comenzaremos a preparar tu compra.\n\nTe enviaremos otra actualización cuando tu pedido sea despachado.\n\n{{storeName}}",
+    body: "Hola {{customerName}},\n\nConfirmamos el pago de tu pedido {{orderNumber}} por {{orderTotal}}. Comenzaremos a preparar tu compra.\n\nResumen de compra:\n{{orderSummary}}\n\nTe enviaremos otra actualización cuando tu pedido sea despachado.\n\n{{storeName}}",
   },
   payment_rejected: {
     enabled: true,
@@ -42,4 +42,3 @@ export const createDefaultEmailTemplates = (): EmailTemplates => ({
     body: "Hola {{customerName}},\n\nTu pedido {{orderNumber}} ya fue despachado y va en camino.\n\nTransportista: {{carrier}}\nCódigo de seguimiento: {{trackingCode}}\n\nRevisa el estado de tu pedido aquí (te pediremos el correo con el que compraste): {{trackingLink}}\n\nGracias por comprar en {{storeName}}.",
   },
 })
-
