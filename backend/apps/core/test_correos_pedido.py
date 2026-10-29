@@ -103,6 +103,8 @@ class CorreoRecepcionTests(CorreosPedidoBase):
         self.assertEqual(correo.to, ['comprador@example.com'])
         self.assertEqual(correo.subject, f'Recibimos tu pedido {pedido.identificador}')
         self.assertIn('Hola Comprador', correo.body)
+        self.assertIn('Resumen de compra:', correo.body)
+        self.assertIn('Polera x 2: $20.000 ($10.000 c/u)', correo.body)
         self.assertEqual(self.marca(pedido, 'order_received')['codigo'], 'enviado')
 
     def test_repetir_la_solicitud_no_envia_otro_correo(self):

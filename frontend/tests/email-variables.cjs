@@ -67,6 +67,13 @@ test('los textos por defecto no tienen saltos de línea de más ni espacios al f
 });
 
 
+test('el correo de recepción de pedido incluye por defecto el resumen de compra (SCRUM-432)', () => {
+  const recepcion = porDefecto.order_received;
+  assert.equal(recepcion.enabled, true);
+  assert.ok(recepcion.body.includes('{{orderSummary}}'), 'debe incluir {{orderSummary}}');
+  assert.ok(recepcion.body.includes('Resumen de compra:'), 'debe incluir la sección Resumen de compra:');
+});
+
 test('el correo de pago exitoso incluye por defecto el resumen de compra (SCRUM-433)', () => {
   const pagoExitoso = porDefecto.payment_success;
   assert.equal(pagoExitoso.enabled, true);

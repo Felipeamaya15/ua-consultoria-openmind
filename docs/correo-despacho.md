@@ -163,7 +163,7 @@ La variable `{{trackingLink}}` es el enlace al portal de seguimiento de la tiend
   por ejemplo `https://mitienda.cl/plantilla/1`. Si no es una dirección `http` o `https` válida, el enlace no se agrega.
 - La variable está disponible en todas las plantillas de correo y aparece en la lista de variables del panel.
 - Está en el texto por defecto del correo de despacho; el propietario puede quitarla o moverla al editar su plantilla.
-## Resumen de compra en el correo de pago confirmado (SCRUM-433)
+## Resumen de compra en los correos de recepción y pago confirmado (SCRUM-432, SCRUM-433)
 
 La variable `{{orderSummary}}` incluye el resumen detallado de la compra:
 - Lista de productos con su nombre, variantes (si aplica), cantidad, subtotal por ítem y precio unitario cuando la cantidad es mayor a 1.

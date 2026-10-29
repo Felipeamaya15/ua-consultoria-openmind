@@ -43,6 +43,34 @@ class PlantillaRecepcionTests(PlantillasCorreoBase):
         with self.assertRaises(PlantillaCorreoInvalida):
             construir_correo('inexistente', self.pedido())
 
+    def test_incluye_resumen_de_compra_con_productos_cantidades_y_precios(self):
+        from apps.core.models import ItemPedido
+        pedido = self.pedido(monto_total=Decimal('25000'))
+        ItemPedido.objects.create(
+            id_pedido=pedido, nombre_producto='Polera estampada', cantidad=2,
+            precio_unitario=Decimal('10000'), sku='POL-M'
+        )
+        ItemPedido.objects.create(
+            id_pedido=pedido, nombre_producto='Taza cerámica', cantidad=1,
+            precio_unitario=Decimal('5000'), sku='TAZ-01'
+        )
+        correo = construir_correo('order_received', pedido)
+        self.assertEqual(correo.asunto, f'Recibimos tu pedido {pedido.identificador}')
+        self.assertIn('Resumen de compra:', correo.cuerpo)
+        self.assertIn('- Polera estampada x 2: $20.000 ($10.000 c/u)', correo.cuerpo)
+        self.assertIn('- Taza cerámica x 1: $5.000', correo.cuerpo)
+        self.assertIn('Total del pedido: $25.000', correo.cuerpo)
+        self.assertIn('Método de entrega: Starken', correo.cuerpo)
+        self.assertNotIn('{{', correo.cuerpo)
+
+    def test_pedido_sin_items_omite_cabecera_del_resumen(self):
+        pedido = self.pedido()
+        correo = construir_correo('order_received', pedido)
+        self.assertNotIn('Resumen de compra:', correo.cuerpo)
+        self.assertNotIn('{{', correo.cuerpo)
+        self.assertIn('Hola Ana', correo.cuerpo)
+        self.assertIn('$15.990', correo.cuerpo)
+
 
 class PlantillaPagoExitosoTests(PlantillasCorreoBase):
     def test_renderiza_los_datos_del_pedido(self):

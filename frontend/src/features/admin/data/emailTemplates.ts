@@ -21,7 +21,7 @@ export const createDefaultEmailTemplates = (): EmailTemplates => ({
     enabled: true,
     subject: "Recibimos tu pedido {{orderNumber}}",
     preheader: "Estamos preparando tu solicitud.",
-    body: "Hola {{customerName}},\n\nRecibimos tu pedido {{orderNumber}}. Te avisaremos cuando se confirme el pago y avance la preparación.\n\nTotal del pedido: {{orderTotal}}\nMétodo de entrega: {{shippingMethod}}\n\nGracias por comprar en {{storeName}}.",
+    body: "Hola {{customerName}},\n\nRecibimos tu pedido {{orderNumber}}. Te avisaremos cuando se confirme el pago y avance la preparación.\n\nResumen de compra:\n{{orderSummary}}\n\nTotal del pedido: {{orderTotal}}\nMétodo de entrega: {{shippingMethod}}\n\nGracias por comprar en {{storeName}}.",
   },
   payment_success: {
     enabled: true,
