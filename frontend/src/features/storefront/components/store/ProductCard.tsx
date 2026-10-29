@@ -156,7 +156,7 @@ export function ProductCard({
           />
 
           {hasDiscount && (
-            <span className="absolute left-3 top-3 rounded-full bg-[#ff5a1f] px-3 py-1.5 text-[9px] font-black text-white">
+            <span className="absolute left-3 top-3 rounded-full bg-[var(--accent)] px-3 py-1.5 text-[9px] font-black text-[var(--on-accent)]">
               -{discountPct}%
             </span>
           )}
@@ -177,7 +177,7 @@ export function ProductCard({
         </Link>
 
         <div data-visual-part="body" className="flex flex-1 flex-col p-4">
-          <p className="text-[9px] font-black uppercase tracking-[0.14em] text-[#e04b1a]">
+          <p className="text-[9px] font-black uppercase tracking-[0.14em] text-[var(--accent)]">
             {product.category}
           </p>
 
@@ -187,7 +187,7 @@ export function ProductCard({
             </Link>
           </h3>
 
-          <p data-visual-part="description" className="mt-2 line-clamp-2 min-h-[36px] text-[11px] leading-[1.55] text-black/50">
+          <p data-visual-part="description" className="mt-2 line-clamp-2 min-h-[36px] text-[11px] leading-[1.55] text-black/60">
             {product.description}
           </p>
 
@@ -198,14 +198,14 @@ export function ProductCard({
               </p>
 
               {hasDiscount && (
-                <p className="mt-0.5 text-[10px] text-black/35 line-through">
+                <p className="mt-0.5 text-[10px] text-black/60 line-through">
                   {formatPrice(comparePrice!)}
                 </p>
               )}
             </div>
 
             {!inStock && (
-              <span className="text-[9px] font-bold uppercase tracking-[0.1em] text-black/35">
+              <span className="text-[9px] font-bold uppercase tracking-[0.1em] text-black/60">
                 Agotado
               </span>
             )}
@@ -220,7 +220,7 @@ export function ProductCard({
               onClick={handleAddToCart}
               disabled={!canBuySelectedVariant || atLimit}
               aria-label={`Agregar ${product.name} al carrito`}
-              className="mt-4 h-10 w-full rounded-[9px] bg-[#1683ff] text-[11px] font-bold text-white transition-colors hover:bg-[#3194f5] disabled:cursor-not-allowed disabled:opacity-40"
+              className="mt-4 h-10 w-full rounded-[9px] bg-[var(--primary)] text-[11px] font-bold text-[var(--on-primary)] transition-colors hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40"
             >
               {atLimit ? 'Maximo disponible' : added ? 'Agregado' : 'Comprar'}
             </button>
@@ -248,14 +248,14 @@ export function ProductCard({
           />
 
           {hasDiscount && (
-            <span className="absolute left-2 top-2 rounded-full bg-[#ff5a1f] px-2.5 py-1 text-[8px] font-black text-white">
+            <span className="absolute left-2 top-2 rounded-full bg-[var(--accent)] px-2.5 py-1 text-[8px] font-black text-[var(--on-accent)]">
               -{discountPct}%
             </span>
           )}
         </Link>
 
         <div data-visual-part="body" className="flex min-w-0 flex-1 flex-col p-4 sm:p-5">
-          <p className="text-[9px] font-black uppercase tracking-[0.14em] text-[#e04b1a]">
+          <p className="text-[9px] font-black uppercase tracking-[0.14em] text-[var(--accent)]">
             {product.category}
           </p>
 
@@ -266,7 +266,7 @@ export function ProductCard({
             {product.name}
           </Link>
 
-          <p data-visual-part="description" className="mt-2 hidden sm:block text-[11px] leading-5 text-black/50">
+          <p data-visual-part="description" className="mt-2 hidden sm:block text-[11px] leading-5 text-black/60">
             {product.description}
           </p>
 
@@ -277,7 +277,7 @@ export function ProductCard({
               </p>
 
               {hasDiscount && (
-                <p className="mt-0.5 text-[10px] text-black/35 line-through">
+                <p className="mt-0.5 text-[10px] text-black/60 line-through">
                   {formatPrice(comparePrice!)}
                 </p>
               )}
@@ -289,12 +289,12 @@ export function ProductCard({
                 onClick={handleAddToCart}
                 disabled={!canBuySelectedVariant || atLimit}
                 aria-label={`Agregar ${product.name} al carrito`}
-                className="rounded-[8px] bg-[#1683ff] px-4 py-2.5 text-[10px] font-bold text-white hover:bg-[#3194f5] disabled:cursor-not-allowed disabled:opacity-40"
+                className="rounded-[8px] bg-[var(--primary)] px-4 py-2.5 text-[10px] font-bold text-[var(--on-primary)] hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40"
               >
                 {atLimit ? 'Maximo' : added ? 'Agregado' : 'Agregar'}
               </button>
             ) : (
-              <span className="text-[9px] font-bold uppercase tracking-[0.1em] text-black/35">
+              <span className="text-[9px] font-bold uppercase tracking-[0.1em] text-black/60">
                 Agotado
               </span>
             )}
@@ -478,7 +478,7 @@ export function ProductCard({
               onClick={handleAddToCart}
               disabled={!canBuySelectedVariant || atLimit}
               aria-label={`Agregar ${product.name} al carrito`}
-              className="mt-3 h-8 rounded-lg bg-[var(--primary)] px-4 text-xs font-semibold text-white transition-colors hover:bg-[#0f2a56] disabled:cursor-not-allowed disabled:opacity-50"
+              className="mt-3 h-8 rounded-lg bg-[var(--primary)] px-4 text-xs font-semibold text-[var(--on-primary)] transition-colors hover:brightness-90 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {atLimit ? 'Maximo disponible' : added ? 'Agregado' : 'Agregar al carrito'}
             </button>
@@ -703,8 +703,8 @@ export function ProductCard({
               w-full
               font-semibold
               bg-[var(--primary)]
-              text-white
-              hover:bg-[#0f2a56]
+              text-[var(--on-primary)]
+              hover:brightness-90
               transition-colors
               mt-1
               disabled:opacity-50

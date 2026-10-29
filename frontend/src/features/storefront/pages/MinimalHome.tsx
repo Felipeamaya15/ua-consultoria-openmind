@@ -52,7 +52,7 @@ export default function MinimalHome() {
           {/* Tarjetas flotantes */}
           <div data-visual-part="heroDecorations" data-landing-content className="flex justify-center items-end -space-x-5 sm:-space-x-4 md:-space-x-3 mb-4 min-h-[150px] sm:min-h-[170px] md:min-h-[180px] px-6">
 
-            {!floatingProducts.length && landing?.imagen_principal && <img data-visual-part="heroImageFallback" data-landing-image src={landing.imagen_principal} alt={landing.titulo} className="max-h-[180px] max-w-full rounded-2xl object-contain" />}
+            {!floatingProducts.length && landing?.imagen_principal && <img data-visual-part="heroImageFallback" data-landing-image src={landing.imagen_principal} alt={landing.titulo || 'Imagen principal de la tienda'} className="max-h-[180px] max-w-full rounded-2xl object-contain" />}
             {floatingProducts.map((product, index) => {
               const rotations = [
                 '-rotate-6 translate-y-4',
@@ -92,7 +92,7 @@ export default function MinimalHome() {
                   </div>
 
                   <div className="px-1 pt-2 pb-1">
-                    <p className="text-[10px] text-gray-400">
+                    <p className="text-[10px] text-gray-500">
                       {product.category}
                     </p>
 
@@ -105,7 +105,7 @@ export default function MinimalHome() {
                         ★★★★★
                       </span>
 
-                      <span className="text-[9px] text-gray-400">
+                      <span className="text-[9px] text-gray-500">
                         5.0
                       </span>
                     </div>
@@ -134,7 +134,7 @@ export default function MinimalHome() {
             <div className="bg-white rounded-full border border-black/5 shadow-sm p-2 pl-6 flex items-center gap-3">
 
               <svg
-                className="w-5 h-5 text-gray-400 flex-shrink-0"
+                className="w-5 h-5 text-gray-500 flex-shrink-0"
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
@@ -154,13 +154,13 @@ export default function MinimalHome() {
                 onChange={(event) => setSearch(event.target.value)}
                 placeholder="What are you shopping for today?"
                 aria-label="Buscar productos"
-                className="flex-1 min-w-0 bg-transparent outline-none text-sm md:text-base text-[#171717] placeholder:text-gray-400"
+                className="flex-1 min-w-0 bg-transparent outline-none text-sm md:text-base text-[#171717] placeholder:text-gray-500"
               />
 
               <button data-visual-section={VISUAL_SECTION.heroCta}
                 type="submit"
                 aria-label={landing?.texto_boton || 'Buscar'}
-                className="px-5 min-w-11 h-11 gap-2 flex-shrink-0 rounded-full bg-[var(--primary)] text-white flex items-center justify-center hover:scale-105 transition-transform"
+                className="px-5 min-w-11 h-11 gap-2 flex-shrink-0 rounded-full bg-[var(--primary)] text-[var(--on-primary)] flex items-center justify-center hover:scale-105 transition-transform"
               >
                 {landing?.texto_boton}
                 <svg
@@ -220,7 +220,7 @@ export default function MinimalHome() {
                 key={category}
                 type="button"
                 onClick={() => goToCategory(category)}
-                className="px-4 py-2 rounded-full bg-white border border-black/5 text-xs text-gray-600 hover:bg-[var(--primary)] hover:text-white transition-colors"
+                className="px-4 py-2 rounded-full bg-white border border-black/5 text-xs text-gray-600 hover:bg-[var(--primary)] hover:text-[var(--on-primary)] transition-colors"
               >
                 {category}
               </button>
@@ -237,7 +237,7 @@ export default function MinimalHome() {
           <div className="flex items-end justify-between gap-6 mb-7">
 
             <div>
-              <p className="text-xs text-gray-400 mb-2">
+              <p className="text-xs text-gray-500 mb-2">
                 Para descubrir sin prisa
               </p>
 
@@ -271,7 +271,7 @@ export default function MinimalHome() {
 
                 <div data-visual-part="body" className="absolute inset-x-3 bottom-3 bg-white/95 backdrop-blur-sm rounded-2xl p-4">
 
-                  <p className="text-[10px] uppercase tracking-wide text-gray-400">
+                  <p className="text-[10px] uppercase tracking-wide text-gray-500">
                     {product.category}
                   </p>
 
@@ -288,7 +288,7 @@ export default function MinimalHome() {
                       </p>
                     </div>
 
-                    <span data-visual-part="buyButton" className="w-8 h-8 flex-shrink-0 rounded-full border border-gray-200 flex items-center justify-center text-[var(--primary)] group-hover:bg-[var(--primary)] group-hover:text-white transition-colors">
+                    <span data-visual-part="buyButton" className="w-8 h-8 flex-shrink-0 rounded-full border border-gray-200 flex items-center justify-center text-[var(--primary)] group-hover:bg-[var(--primary)] group-hover:text-[var(--on-primary)] transition-colors">
                       →
                     </span>
 
@@ -320,7 +320,7 @@ export default function MinimalHome() {
 
               <img
                 src={activeProducts[0].images[0]}
-                alt=""
+                alt={activeProducts[0].name}
                 className="absolute inset-0 w-full h-full object-cover"
               />
 
@@ -399,7 +399,7 @@ export default function MinimalHome() {
 
                   <div data-visual-part="body" className="pt-3">
 
-                    <p className="text-[10px] uppercase tracking-wide text-gray-400">
+                    <p className="text-[10px] uppercase tracking-wide text-gray-500">
                       {product.category}
                     </p>
 

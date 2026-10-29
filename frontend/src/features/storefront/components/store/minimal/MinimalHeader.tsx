@@ -92,7 +92,7 @@ export function MinimalHeader() {
           <Link
             to="carrito"
             aria-label={`Ver carrito (${count} productos)`}
-            className="w-10 h-10 rounded-full bg-[var(--primary)] text-white flex items-center justify-center hover:opacity-90 transition-opacity"
+            className="w-10 h-10 rounded-full bg-[var(--primary)] text-[var(--on-primary)] flex items-center justify-center hover:opacity-90 transition-opacity"
           >
             <MinimalCartIcon count={count} />
           </Link>

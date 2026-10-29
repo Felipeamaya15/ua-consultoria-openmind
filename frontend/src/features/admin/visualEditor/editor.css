@@ -69,3 +69,6 @@
   .ve-workspace.ve-hide-sidebar .ve-preview{grid-column:1}
 }
 @media(max-width:760px){.ve-preview{height:80vh;min-height:600px}}
+
+
+.ve-color[data-follows] input[type=color]{opacity:.35}.ve-follows{display:block;margin-top:4px;font-size:11px;color:#4f46e5}

@@ -446,7 +446,7 @@ export default function ProductDetail({ previewProduct }: { previewProduct?: Pro
               ))}
 
               {/* STOCK */}
-              {selectedVariant && completeSelection && <StockFeedback sku={selectedVariant.sku} maxStock={selectedVariant.stock} quantity={inCart} className="mt-5 rounded-[10px] border border-[#ff5a1f]/25 bg-[#ff5a1f]/10 px-4 py-3 text-[11px] text-[#ffb291]" />}
+              {selectedVariant && completeSelection && <StockFeedback sku={selectedVariant.sku} maxStock={selectedVariant.stock} quantity={inCart} className="mt-5 rounded-[10px] border border-[#ff5a1f]/25 bg-[var(--accent)]/10 px-4 py-3 text-[11px] text-[#ffb291]" />}
 
               {!inStock && (
                 <div data-page-panel className="mt-5 rounded-[10px] border border-[var(--visual-global-border)]/10 bg-[var(--visual-page-panel-background)]/[0.06] px-4 py-3 text-[11px] text-[var(--visual-page-color)]/55">
@@ -508,17 +508,17 @@ export default function ProductDetail({ previewProduct }: { previewProduct?: Pro
 
                 <div className="flex flex-col gap-3 text-[12px] text-[var(--visual-page-color)]/60">
                   <div className="flex items-center gap-3">
-                    <Icon name="truck" className="w-4 h-4 text-[#1683ff]" />
+                    <Icon name="truck" className="w-4 h-4 text-[var(--primary)]" />
                     <span>Chilexpress · Starken</span>
                   </div>
 
                   <div className="flex items-center gap-3">
-                    <Icon name="store" className="w-4 h-4 text-[#1683ff]" />
+                    <Icon name="store" className="w-4 h-4 text-[var(--primary)]" />
                     <span>Retiro en tienda disponible</span>
                   </div>
 
                   <div className="flex items-center gap-3">
-                    <Icon name="box" className="w-4 h-4 text-[#1683ff]" />
+                    <Icon name="box" className="w-4 h-4 text-[var(--primary)]" />
                     <span>Envío gratis sobre $50.000</span>
                   </div>
                 </div>

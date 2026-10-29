@@ -381,7 +381,7 @@ export default function Tracking() {
         <p
           className={
             isCatalog
-              ? 'text-center text-[10px] text-black/40'
+              ? 'text-center text-[10px] text-black/60'
               : isVisual
                 ? 'text-center text-[10px] text-[#8c8683]'
                 : 'text-center text-xs text-[var(--muted-foreground)]'
@@ -411,7 +411,7 @@ export default function Tracking() {
       ====================================================== */}
       {liveTracking && (
         <div className={isCatalog
-          ? 'flex flex-col gap-5 animate-fade-in text-[#151515] [&_.text-[var\(--muted-foreground\)]]:text-black/45 [&_.text-[var\(--foreground\)]]:text-[#151515]'
+          ? 'flex flex-col gap-5 animate-fade-in text-[#151515] [&_.text-[var\(--muted-foreground\)]]:text-black/60 [&_.text-[var\(--foreground\)]]:text-[#151515]'
           : 'flex flex-col gap-5 animate-fade-in'
         }>
           <div

@@ -65,6 +65,8 @@ function applyImageCustomizations(theme: Record<string, unknown> | null, origina
     if (setting.src && img.src !== setting.src) {
       img.src = setting.src;
     }
+    if (setting.alt) img.alt = setting.alt;
+    else if (originals.get(img)?.alt != null) img.alt = originals.get(img)!.alt!;
     img.style.objectPosition =
       `${setting.x ?? 50}% ${setting.y ?? 50}%`;
     img.style.transform =

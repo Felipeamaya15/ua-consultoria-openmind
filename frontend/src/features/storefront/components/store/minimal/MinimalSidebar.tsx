@@ -9,7 +9,7 @@ export function MinimalSidebar() {
       <Link
         to="."
         aria-label="Inicio"
-        className="mt-5 w-9 h-9 rounded-full bg-[var(--primary)] text-white flex items-center justify-center font-semibold text-sm"
+        className="mt-5 w-9 h-9 rounded-full bg-[var(--primary)] text-[var(--on-primary)] flex items-center justify-center font-semibold text-sm"
       >
         S
       </Link>

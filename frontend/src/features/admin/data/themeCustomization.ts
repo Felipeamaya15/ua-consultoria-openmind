@@ -36,3 +36,23 @@ export function patchThemeCustomization(theme: ThemeTemplateCustomization, patch
   }
   return next;
 }
+
+const EDITOR_COLOR_PATHS = ['global.colors.background', 'global.colors.text', 'global.colors.surface', 'global.colors.border', 'header.background', 'header.textColor', 'topBar.background', 'topBar.textColor', 'footer.background', 'footer.textColor'];
+
+export function clearEditorColorOverrides(overrides: ThemeTemplateCustomization['visualConfig']): ThemeTemplateCustomization['visualConfig'] {
+  if (!isRecord(overrides)) return overrides;
+  const omit = (node: unknown): Record<string, unknown> => {
+    const copy = JSON.parse(JSON.stringify(node)) as Record<string, unknown>;
+    for (const path of EDITOR_COLOR_PATHS) {
+      const keys = path.split('.');
+      let current: unknown = copy;
+      for (const key of keys.slice(0, -1)) current = isRecord(current) ? current[key] : undefined;
+      if (isRecord(current)) delete current[keys[keys.length - 1]];
+    }
+    return copy;
+  };
+  const base = omit(overrides);
+  const responsive = isRecord(base.responsive) ? base.responsive : undefined;
+  if (responsive) for (const viewport of ['tablet', 'mobile']) if (isRecord(responsive[viewport])) responsive[viewport] = omit(responsive[viewport]);
+  return base as ThemeTemplateCustomization['visualConfig'];
+}

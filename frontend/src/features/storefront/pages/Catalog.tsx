@@ -259,12 +259,12 @@ export default function Catalog() {
 
   if (isCatalog) {
     return (
-      <div data-visual-section={VISUAL_SECTION.catalog} data-visual-catalog className="bg-[#050505] text-white">
+      <div data-visual-section={VISUAL_SECTION.catalog} data-visual-catalog className="bg-[var(--visual-background)] text-[var(--visual-text)]">
         <section className="max-w-[1160px] mx-auto px-5 pt-10 md:pt-14 pb-20 md:pb-28">
           {/* CABECERA */}
           <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-7 mb-9">
             <div>
-              <p className="text-[#ff5a1f] text-[10px] font-extrabold uppercase tracking-[0.16em] mb-3">
+              <p className="text-[var(--accent)] text-[10px] font-extrabold uppercase tracking-[0.16em] mb-3">
                 Explora la colección
               </p>
 
@@ -272,7 +272,7 @@ export default function Catalog() {
                 Catálogo.
               </h1>
 
-              <p className="mt-4 text-[13px] text-white/45">
+              <p className="mt-4 text-[13px] text-[var(--visual-muted)]">
                 {filtered.length}{' '}
                 {filtered.length === 1 ? 'producto disponible' : 'productos disponibles'}
               </p>
@@ -282,7 +282,7 @@ export default function Catalog() {
               <div className="relative flex-1 sm:flex-none">
                 <Icon
                   name="search"
-                  className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-black/35 pointer-events-none"
+                  className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-black/60 pointer-events-none"
                 />
 
                 <input
@@ -293,7 +293,7 @@ export default function Catalog() {
                   }}
                   aria-label="Buscar productos"
                   placeholder="Buscar productos..."
-                  className="h-11 w-full sm:w-[230px] rounded-[10px] bg-white pl-11 pr-4 text-[12px] text-[#151515] placeholder:text-black/35 outline-none ring-1 ring-transparent focus:ring-[#1683ff]"
+                  className="h-11 w-full sm:w-[230px] rounded-[10px] bg-white pl-11 pr-4 text-[12px] text-[#151515] placeholder:text-black/60 outline-none ring-1 ring-transparent focus:ring-[var(--primary)]"
                 />
               </div>
 
@@ -310,7 +310,7 @@ export default function Catalog() {
                 ))}
               </select>
 
-              <div className="flex h-11 overflow-hidden rounded-[10px] bg-[#202022] ring-1 ring-white/10">
+              <div className="flex h-11 overflow-hidden rounded-[10px] bg-[var(--visual-surface)] ring-1 ring-[var(--visual-border)]">
                 {(['grid', 'list'] as const).map((view) => (
                   <button
                     type="button"
@@ -319,8 +319,8 @@ export default function Catalog() {
                     aria-label={view === 'grid' ? 'Vista en grilla' : 'Vista en lista'}
                     className={`w-11 flex items-center justify-center transition-colors ${
                       viewMode === view
-                        ? 'bg-[#1683ff] text-white'
-                        : 'text-white/45 hover:text-white'
+                        ? 'bg-[var(--primary)] text-[var(--on-primary)]'
+                        : 'text-[var(--visual-muted)] hover:text-[var(--visual-text)]'
                     }`}
                   >
                     <Icon
@@ -335,7 +335,7 @@ export default function Catalog() {
 
           <button
             type="button"
-            className="md:hidden mb-5 h-10 rounded-full border border-white/15 px-5 text-[11px] font-semibold text-white"
+            className="md:hidden mb-5 h-10 rounded-full border border-[var(--visual-border)] px-5 text-[11px] font-semibold text-[var(--visual-text)]"
             data-visual-part="catalogFiltersToggle" aria-expanded={filtersOpen}
             onClick={() => setFiltersOpen(!filtersOpen)}
           >
@@ -351,7 +351,7 @@ export default function Catalog() {
             >
               <div className="sticky top-28 max-h-[calc(100vh-8rem)] flex flex-col rounded-[16px] bg-[#f5f5f3] text-[#151515]">
                 <div className="flex items-center justify-between gap-3 px-5 pt-5 pb-4 border-b border-black/10">
-                  <p className="text-[10px] font-black uppercase tracking-[0.16em] text-black/45">
+                  <p className="text-[10px] font-black uppercase tracking-[0.16em] text-black/60">
                     Filtros
                   </p>
 
@@ -359,7 +359,7 @@ export default function Catalog() {
                     <button
                       type="button"
                       onClick={clearFilters}
-                      className="text-[11px] font-semibold text-[#1683ff] hover:opacity-70"
+                      className="text-[11px] font-semibold text-[var(--primary)] hover:opacity-70"
                     >
                       Limpiar ({activeFiltersCount})
                     </button>
@@ -367,7 +367,7 @@ export default function Catalog() {
                 </div>
 
                 <div className="flex-1 overflow-y-auto p-5">
-                  <p className="mb-4 text-[10px] font-black uppercase tracking-[0.16em] text-black/45">
+                  <p className="mb-4 text-[10px] font-black uppercase tracking-[0.16em] text-black/60">
                     Categorías
                   </p>
 
@@ -382,7 +382,7 @@ export default function Catalog() {
                         }}
                         className={`rounded-[9px] px-3 py-2.5 text-left text-[12px] font-medium transition-colors ${
                           category === cat
-                            ? 'bg-[#1683ff] text-white'
+                            ? 'bg-[var(--primary)] text-[var(--on-primary)]'
                             : 'text-[#202020] hover:bg-black/[0.05]'
                         }`}
                       >
@@ -392,7 +392,7 @@ export default function Catalog() {
                   </div>
 
                   <div className="border-t border-black/10 mt-5 pt-5">
-                    <p className="mb-3 text-[10px] font-black uppercase tracking-[0.16em] text-black/45">
+                    <p className="mb-3 text-[10px] font-black uppercase tracking-[0.16em] text-black/60">
                       Disponibilidad
                     </p>
 
@@ -412,7 +412,7 @@ export default function Catalog() {
                             );
                             setPage(1);
                           }}
-                          className="accent-[#1683ff]"
+                          className="accent-[var(--primary)]"
                         />
                         <span>{option}</span>
                       </label>
@@ -420,7 +420,7 @@ export default function Catalog() {
                   </div>
 
                   <div className="border-t border-black/10 mt-5 pt-5">
-                    <p className="mb-3 text-[10px] font-black uppercase tracking-[0.16em] text-black/45">
+                    <p className="mb-3 text-[10px] font-black uppercase tracking-[0.16em] text-black/60">
                       Precio
                     </p>
 
@@ -435,7 +435,7 @@ export default function Catalog() {
                           setPage(1);
                         }}
                         placeholder="Mín."
-                        className="h-10 min-w-0 rounded-[8px] border border-black/10 bg-white px-3 text-[11px] outline-none focus:border-[#1683ff]"
+                        className="h-10 min-w-0 rounded-[8px] border border-black/10 bg-white px-3 text-[11px] outline-none focus:border-[var(--primary)]"
                       />
 
                       <input
@@ -448,7 +448,7 @@ export default function Catalog() {
                           setPage(1);
                         }}
                         placeholder="Máx."
-                        className="h-10 min-w-0 rounded-[8px] border border-black/10 bg-white px-3 text-[11px] outline-none focus:border-[#1683ff]"
+                        className="h-10 min-w-0 rounded-[8px] border border-black/10 bg-white px-3 text-[11px] outline-none focus:border-[var(--primary)]"
                       />
                     </div>
                   </div>
@@ -470,10 +470,10 @@ export default function Catalog() {
               {appliedFilters}
 
               {paginated.length === 0 ? (
-                <div className="rounded-[18px] border border-white/10 bg-[#111113] px-6 py-20 text-center">
-                  <Icon name="search" className="w-10 h-10 mx-auto text-white/25" />
+                <div className="rounded-[18px] border border-[var(--visual-border)] bg-[var(--visual-surface)] px-6 py-20 text-center">
+                  <Icon name="search" className="w-10 h-10 mx-auto text-[var(--visual-muted)]" />
                   <h2 className="mt-5 text-xl font-bold">Sin resultados</h2>
-                  <p className="mt-2 text-sm text-white/45">
+                  <p className="mt-2 text-sm text-[var(--visual-muted)]">
                     No encontramos productos para tu búsqueda.
                   </p>
                 </div>
@@ -651,7 +651,7 @@ export default function Catalog() {
       >
         <div>
           {isMinimal && (
-            <p className="text-xs text-gray-400 mb-2">
+            <p className="text-xs text-gray-500 mb-2">
               Explora nuestra selección
             </p>
           )}
@@ -698,7 +698,7 @@ export default function Catalog() {
                 -translate-y-1/2
                 w-4
                 h-4
-                text-gray-400
+                text-gray-500
                 pointer-events-none
               "
             />
@@ -799,7 +799,7 @@ export default function Catalog() {
                     }
                     ${
                       viewMode === view
-                        ? 'bg-[var(--primary)] text-white'
+                        ? 'bg-[var(--primary)] text-[var(--on-primary)]'
                         : 'bg-white text-[var(--muted-foreground)] hover:bg-[var(--muted)]'
                     }
                   `}
@@ -938,7 +938,7 @@ export default function Catalog() {
                       }
                       ${
                         category === cat
-                          ? 'bg-[var(--primary)] text-white'
+                          ? 'bg-[var(--primary)] text-[var(--on-primary)]'
                           : 'text-[var(--foreground)] hover:bg-[var(--muted)]'
                       }
                     `}
@@ -1070,7 +1070,7 @@ export default function Catalog() {
 
           {paginated.length === 0 ? (
             <EmptyState
-              icon={<Icon name="search" className="w-12 h-12 text-gray-400" />}
+              icon={<Icon name="search" className="w-12 h-12 text-gray-500" />}
               title="Sin resultados"
               description="No encontramos productos para tu búsqueda."
             />

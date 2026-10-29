@@ -1,4 +1,6 @@
 import { PaletteLibrary } from '../../../shared/PaletteLibrary';
+import { VISUAL_PRESETS } from '../../storefront/visual/presets';
+import { VISUAL_DEFAULTS } from '../../storefront/visual/defaults';
 import { usePaletteLibrary, saveAppearance, paletteOverrides, type Appearance, type StorePalette } from '../../../shared/palettes';
 import { resolveStoreVisualConfig } from '../../storefront/visual/resolveVisualConfig';
 import { useEffect, useState } from "react"
@@ -9,7 +11,7 @@ import { templatePaths } from "../config/navigation"
 import { openAdminWindow } from "../auth/demoSession"
 import { Button, Alert, Badge, Modal } from "../components/ui"
 import { AdminHelp } from '../components/AdminPageHeader';
-import { loadThemeCustomization, patchThemeCustomization } from '../data/themeCustomization';
+import { clearEditorColorOverrides, loadThemeCustomization, patchThemeCustomization } from '../data/themeCustomization';
 
 const TEMPLATES: {
   id: TemplateId
@@ -56,6 +58,10 @@ const TEMPLATES: {
   },
 ]
 
+const originalColors = (id: TemplateId) => ({ ...VISUAL_DEFAULTS.global.colors, ...(VISUAL_PRESETS[id]?.config.global?.colors ?? {}) })
+const originalPalette = (id: TemplateId): StorePalette => ({ id: 'system-original', nombre: 'Original', colores: originalColors(id) })
+const SWATCH_KEYS = ['primary', 'alternate', 'accent', 'structural', 'surface'] as const
+
 const templateOptions = TEMPLATES.map((template) => ({
   value: template.id,
   label: template.name,
@@ -69,7 +75,7 @@ export default function Design() {
     setPreviewTemplate,
   } = useAdmin()
 
-  const [saved,setSaved]=useState(false);
+const [saved,setSaved]=useState(false);
   const activeTemplate=previewTemplate??config.template;
   const paletteSource=usePaletteLibrary();
   const [paletteNotice,setPaletteNotice]=useState('');
@@ -93,7 +99,7 @@ export default function Design() {
       for(const [key,palette] of Object.entries(paletteDrafts)){
         const id=key as TemplateId;if(!palette)continue;
         const theme=loadThemeCustomization(id,config.themeEditor?.[id],config,config.visualConfig);
-        const base=paletteSource.appearance?.[id]?.visualConfig??theme.visualConfig;
+        const base=clearEditorColorOverrides(paletteSource.appearance?.[id]?.visualConfig??theme.visualConfig);
         const visualConfig={...base,global:{...base?.global,colors:palette.colores}};
         appearances[id]={visualConfig,paleta_id:palette.id.startsWith('system-')?null:palette.id};
         nextConfig.themeEditor[id]=patchThemeCustomization(theme,{visualConfig,paletteName:palette.nombre});
@@ -149,7 +155,7 @@ export default function Design() {
           </div>
         </div>
 
-        <PaletteLibrary
+<PaletteLibrary
           colors={colors}
           selectedId={paletteSelection?.id ?? paletteSource.appearance?.[activeTemplate]?.paleta_id}
           onApply={palette => {
@@ -161,9 +167,11 @@ export default function Design() {
             });
             setSaved(false);
           }}
+          onOriginal={() => {
+            setPaletteDrafts(Object.fromEntries(TEMPLATES.map(({ id }) => [id, originalPalette(id)])) as Partial<Record<TemplateId, StorePalette>>);
+            setSaved(false);
+          }}
         />
-
-
       </div>
 
       <div>
@@ -264,6 +272,27 @@ export default function Design() {
                         ))}
                       </div>
                     </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 mt-4">
+                    <span className="flex items-center gap-1" role="img" aria-label={`Colores originales de ${tpl.name}`} title={`Colores originales de ${tpl.name}`}>
+                      {SWATCH_KEYS.map((key) => {
+                        const original = originalColors(tpl.id)
+                        const value = original[key] === 'currentColor' ? original.primary : original[key]
+                        return <i key={key} className="block w-4 h-4 rounded-full border border-black/10" style={{ background: value }} />
+                      })}
+                    </span>
+                    <span className="text-[11px] text-[var(--muted-foreground)]">Colores originales</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPaletteDrafts((drafts) => ({ ...drafts, [tpl.id]: originalPalette(tpl.id) }))
+                        setSaved(false)
+                      }}
+                      className="ml-auto text-[11px] font-medium text-[var(--primary)] hover:underline"
+                    >
+                      Restablecer
+                    </button>
                   </div>
 
                   <div className="flex gap-2 mt-4">

@@ -238,7 +238,7 @@ export default function ThemeEditor() {
       <button type="button" className="ve-primary" disabled={!dirty || saving || loadingContent || contentLoadFailed} onClick={save}>{saving ? 'Guardando…' : 'Guardar cambios'}</button>
     </header>
     <fieldset className="ve-editor-controls" disabled={saving || loadingContent}>
-    <nav className="ve-tools" aria-label="Herramientas del editor">{([['style','Diseño y apariencia'],['templates','Plantillas'],['content','Contenido y secciones'],['images','Imágenes']] as const).map(([id,label]) => <button key={id} type="button" aria-pressed={tool === id} onClick={() => chooseTool(id)}>{label}</button>)}<span>Selecciona un elemento de tu tienda para editarlo</span></nav>
+    <nav className="ve-tools" aria-label="Herramientas del editor">{([['style','Diseño y apariencia'],['templates','Plantillas'],['content','Contenido y secciones'],['images','Imágenes']] as const).map(([id,label]) => <button key={id} type="button" aria-pressed={tool === id} onClick={() => chooseTool(id)}>{label}</button>)}<FieldHelp label="Cómo empezar">1) Elige la página que quieres cambiar. 2) Haz clic en la parte de tu tienda que quieras editar, o elígela en «Sección». 3) Ajusta las opciones del panel derecho y pulsa «Guardar cambios».</FieldHelp><span>Selecciona un elemento de tu tienda para editarlo</span></nav>
     <div className={`ve-workspace ${inspectorOpen ? '' : 've-hide-inspector'}`}>
       <main className="ve-preview">
         <div className="ve-preview-toolbar">

@@ -31,7 +31,7 @@ export default function VisualHome() {
           <img data-visual-part="heroImage"
             data-landing-image={landing?.imagen_principal ? true : undefined}
             src={landing?.imagen_principal || undefined} hidden={!landing?.imagen_principal}
-            alt={landing?.titulo || ''}
+            alt={landing?.titulo || 'Imagen principal de la tienda'}
             className="absolute inset-0 w-full h-full object-cover"
           />
 
@@ -92,7 +92,7 @@ export default function VisualHome() {
               <Link data-visual-section={VISUAL_SECTION.heroCta}
                 to="catalogo"
                 className="
-                  bg-[var(--primary)] text-white
+                  bg-[var(--primary)] text-[var(--on-primary)]
                   px-7 py-4
                   text-[11px] font-semibold
                   uppercase tracking-[0.12em]
@@ -169,7 +169,7 @@ export default function VisualHome() {
               className="
                 text-[10px]
                 uppercase tracking-[0.24em]
-                text-gray-400
+                text-gray-500
                 mb-4
               "
             >
@@ -212,7 +212,7 @@ export default function VisualHome() {
                 px-7 py-4
                 text-[11px] font-semibold
                 uppercase tracking-[0.12em]
-                hover:bg-[var(--primary)] hover:text-white
+                hover:bg-[var(--primary)] hover:text-[var(--on-primary)]
                 transition-colors
               "
             >
