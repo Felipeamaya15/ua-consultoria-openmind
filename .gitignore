@@ -45,3 +45,6 @@ htmlcov/
 *.sql
 *.tar
 *.dump
+
+# Respaldos locales de despliegue / actualización (SCRUM-489)
+backups/

@@ -8,7 +8,7 @@ type PaymentConfiguration = AdminConfig['paymentConfiguration'];
 
 async function readResponse(
   response: Response,
-): Promise<PaymentConfiguration> {
+): Promise<void> {
   const body = await response.json();
 
   if (!response.ok || body.exito !== true) {
@@ -20,7 +20,8 @@ async function readResponse(
     );
   }
 
-  return body.data.metodos;
+  // La API confirma el guardado sin reenviar credenciales sensibles.
+  // No se debe leer un secreto de vuelta desde la respuesta.
 }
 
 export async function savePaymentConfiguration(
@@ -34,7 +35,7 @@ export async function savePaymentConfiguration(
     );
   }
 
-  return readResponse(
+  await readResponse(
     await fetch(endpoint, {
       method: 'PUT',
       headers: {
@@ -47,4 +48,6 @@ export async function savePaymentConfiguration(
       }),
     }),
   );
+  // La configuración proporcionada sigue disponible solo en la sesión de edición.
+  return paymentConfiguration;
 }
