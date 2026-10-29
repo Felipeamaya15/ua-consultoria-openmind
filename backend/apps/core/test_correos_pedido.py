@@ -147,6 +147,20 @@ class CorreoPagoExitosoTests(CorreosPedidoBase):
         self.assertIn('$15.990', correo.body)
         self.assertEqual(self.marca(pedido, 'payment_success')['codigo'], 'enviado')
 
+    def test_al_aprobar_transferencia_correo_contiene_resumen_de_compra(self):
+        from apps.core.models import ItemPedido
+        pedido = self.pedido(monto_total=Decimal('20000'))
+        ItemPedido.objects.create(
+            id_pedido=pedido, nombre_producto='Zapatos de cuero', cantidad=1,
+            precio_unitario=Decimal('20000'), sku='ZAP-42'
+        )
+        self.assertEqual(self.aprobar(pedido).status_code, 200)
+        self.assertEqual(len(mail.outbox), 1)
+        correo = mail.outbox[0]
+        self.assertIn('Resumen de compra:', correo.body)
+        self.assertIn('- Zapatos de cuero x 1: $20.000', correo.body)
+        self.assertIn('$20.000', correo.body)
+
     def test_aprobar_dos_veces_envia_un_solo_correo(self):
         pedido = self.pedido()
         self.aprobar(pedido)

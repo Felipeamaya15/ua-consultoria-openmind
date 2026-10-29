@@ -27,7 +27,7 @@ export const createDefaultEmailTemplates = (): EmailTemplates => ({
     enabled: true,
     subject: "Tu pago fue confirmado · {{orderNumber}}",
     preheader: "Tu compra ya está en preparación.",
-    body: "Hola {{customerName}},\n\nConfirmamos el pago de tu pedido {{orderNumber}} por {{orderTotal}}. Comenzaremos a preparar tu compra.\n\nTe enviaremos otra actualización cuando tu pedido sea despachado.\n\n{{storeName}}",
+    body: "Hola {{customerName}},\n\nConfirmamos el pago de tu pedido {{orderNumber}} por {{orderTotal}}. Comenzaremos a preparar tu compra.\n\nResumen de compra:\n{{orderSummary}}\n\nTe enviaremos otra actualización cuando tu pedido sea despachado.\n\n{{storeName}}",
   },
   payment_rejected: {
     enabled: true,
@@ -42,4 +42,3 @@ export const createDefaultEmailTemplates = (): EmailTemplates => ({
     body: "Hola {{customerName}},\n\nTu pedido {{orderNumber}} ya fue despachado y va en camino.\n\nTransportista: {{carrier}}\nCódigo de seguimiento: {{trackingCode}}\n\nRevisa el estado de tu pedido aquí (te pediremos el correo con el que compraste): {{trackingLink}}\n\nGracias por comprar en {{storeName}}.",
   },
 })
-
