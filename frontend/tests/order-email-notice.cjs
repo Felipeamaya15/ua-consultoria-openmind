@@ -111,7 +111,8 @@ const motivo = async promesa => { try { await promesa; } catch (error) { return 
     const codigo = fs.readFileSync(path.join(root, 'src/features/admin/pages/Emails.tsx'), 'utf8').replace(/\r/g, '');
     assert.ok(!codigo.includes('Por ahora no se envían correos automáticos'));
     assert.ok(!codigo.includes('cuando se conecte el servicio de correo'));
-    assert.ok(codigo.includes('«Pedido despachado» se envía automáticamente'));
+    assert.ok(codigo.includes('Estos mensajes se envían solos al comprador:'));
+    for (const tipo of ['Confirmación de recepción', 'Pago exitoso', 'Pago rechazado', 'Pedido despachado']) assert.ok(codigo.includes(`«${tipo}»`));
   });
 
   console.log(`\n${passed} pruebas OK`);

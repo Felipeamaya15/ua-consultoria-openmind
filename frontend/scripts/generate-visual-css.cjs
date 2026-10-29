@@ -13,7 +13,7 @@ const {resolveVisualConfig}=load('src/features/storefront/visual/resolveVisualCo
 const {visualConfigToCssVariables}=load('src/features/storefront/visual/cssVariables.ts');
 const variables=Object.keys(visualConfigToCssVariables(resolveVisualConfig()));
 const target=path.join(root,'src/styles/visual-config.css');
-const source=fs.readFileSync(target,'utf8');
+const source=fs.readFileSync(target,'utf8').replace(/\r\n/g,'\n');
 const boundary=source.indexOf('[data-storefront-visual] {\n  background:');
 if(boundary<0)throw Error('Consumer boundary not found');
 const alias=view=>'[data-storefront-visual] {\n'+variables.filter(key=>key.endsWith('-'+view)).map(key=>'  '+key.replace(/-(desktop|tablet|mobile)$/,'')+': var('+key+');').join('\n')+'\n}\n';

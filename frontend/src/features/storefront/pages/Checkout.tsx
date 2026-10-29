@@ -294,8 +294,6 @@ export default function Checkout() {
 
   const submitting = useRef(false);
   const checkoutAttempt = useRef({signature: '', key: ''});
-  const [commercial, setCommercial] = useState(false);
-  const [consentMessage, setConsentMessage] = useState('');
   const consentRequested = useRef('');
   const consentSending = useRef(false);
 
@@ -510,6 +508,8 @@ export default function Checkout() {
   const [promoError, setPromoError] = useState('');
   const [promoMessage, setPromoMessage] = useState('');
   const [promotionBasis, setPromotionBasis] = useState('');
+  const [commercial, setCommercial] = useState(false);
+  const [consentMessage, setConsentMessage] = useState('');
   const promotionRequest = useRef(0);
   const applyingPromotion = useRef(false);
   

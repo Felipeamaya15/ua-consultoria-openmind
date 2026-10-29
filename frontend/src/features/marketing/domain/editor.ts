@@ -1,3 +1,4 @@
+import type { PaletteColors } from '../../../shared/palettes';
 import { foregroundFor, marketingPalette } from './brand';
 import type { MarketingPalette } from './types';
 import { fonts } from '../../storefront/visual/cssVariables';
@@ -35,6 +36,7 @@ export const defaultAppearance = (): Appearance => ({ radius: null, borderStyle:
 export interface TextStyle { size: number; bold: boolean; italic: boolean; align: 'inherit' | 'left' | 'center' | 'right'; color: string | null }
 export interface DesignState {
   template: Template;
+  paletteId?:string|null;
   heading: string; subtitle: string; cta: string; showSubtitle: boolean;
   showDescription: boolean;
   font: keyof typeof FONT_FAMILIES;
@@ -48,7 +50,7 @@ export interface DesignState {
 export const TEXT_LIMITS = { heading: 48, subtitle: 72, cta: 48 } as const;
 const style = (bold = false): TextStyle => ({ size: 100, bold, italic: false, align: 'left', color: null });
 export function defaultDesign(template: Template = 'photo'): DesignState {
-  return { template, heading: '', subtitle: '', cta: 'Disponible en nuestra tienda', showSubtitle: false, showDescription: false, font: 'sans', headingFont: null, appearance: defaultAppearance(),
+  return { template, paletteId:null, heading: '', subtitle: '', cta: 'Disponible en nuestra tienda', showSubtitle: false, showDescription: false, font: 'sans', headingFont: null, appearance: defaultAppearance(),
     textStyles: { heading: style(true), subtitle: style(), cta: style(), title: { ...style(true), align: 'inherit' }, price: { ...style(true), align: 'inherit' }, variant: { ...style(), align: 'inherit' }, brand: { ...style(true), align: 'inherit' }, description: { ...style(), align: 'inherit' } },
     colors: { background: null, text: null, accent: null, label: null }, showLogo: true, imageIndex: 0,
     fit: 'contain', position: 'center', zoom: 100, spacing: 'comfortable', alignment: 'left', mediaSide: template === 'minimal' ? 'end' : 'start' };
@@ -83,7 +85,7 @@ export function normalizeDesign(value: DesignState): DesignState {
     buttonShape: choice(raw.buttonShape, ['original', 'square', 'rounded', 'pill'], 'original'), buttonWidth: optional('buttonWidth', 100, 20),
     buttonBorderStyle: choice(raw.buttonBorderStyle, ['solid', 'dashed'], 'solid'), buttonBorderWidth: bound(raw.buttonBorderWidth, 0, 8, 1), buttonBorderColor: hex(raw.buttonBorderColor),
   };
-  return { template: choice(value.template, ['photo', 'feature', 'minimal'], 'photo'), heading: text('heading'), subtitle: text('subtitle'), cta: text('cta'),
+  return { paletteId:typeof value.paletteId==='string'&&/^[a-z0-9-]{1,80}$/i.test(value.paletteId)?value.paletteId:null, template: choice(value.template, ['photo', 'feature', 'minimal'], 'photo'), heading: text('heading'), subtitle: text('subtitle'), cta: text('cta'),
     showSubtitle: value.showSubtitle === true, showDescription: value.showDescription === true, font: choice(value.font, Object.keys(FONT_FAMILIES) as (keyof typeof FONT_FAMILIES)[], 'sans'),
     headingFont: value.headingFont && Object.prototype.hasOwnProperty.call(FONT_FAMILIES, value.headingFont) ? value.headingFont : null, appearance, textStyles,
     colors: { background: hex(value.colors?.background), text: hex(value.colors?.text), accent: hex(value.colors?.accent), label: hex(value.colors?.label) },
@@ -105,7 +107,8 @@ export function contrast(a: string, b: string): number { const x = luminance(a),
 export function safeTextColor(candidate: string | null, background: string): string {
   return candidate && hex(candidate) && contrast(candidate, background) >= 4.5 ? candidate : foregroundFor(background);
 }
-export function designPalette(brand: MarketingPalette, design: DesignState) {
+export function designPalette(brand: MarketingPalette, design: DesignState, shared?:PaletteColors) {
+  if(shared)design={...design,colors:{...design.colors,background:shared.background,text:shared.text,accent:shared.accent,label:shared.button},appearance:{...design.appearance,copyBackground:shared.surface,buttonBackground:shared.button}};
   const background = design.colors.background || brand.primary, accent = design.colors.accent || brand.secondary;
   const copyBackground = design.appearance.copyBackground || background;
   return { background, accent, text: safeTextColor(design.colors.text, background), label: design.colors.label || accent,

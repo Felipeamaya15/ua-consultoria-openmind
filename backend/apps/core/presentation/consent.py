@@ -1,7 +1,7 @@
 from django.db import OperationalError, ProgrammingError
 from django.utils.crypto import salted_hmac
 from rest_framework import serializers
-from rest_framework.exceptions import PermissionDenied
+from rest_framework.exceptions import PermissionDenied, Throttled
 from rest_framework.permissions import AllowAny
 from rest_framework.throttling import SimpleRateThrottle
 from rest_framework.views import APIView
@@ -37,7 +37,7 @@ class ConsentRecipientThrottle(ConsentIPThrottle):
     rate = '3/hour'
 
     def get_cache_key(self, request, view):
-        if not request.path.endswith('/solicitar/'):
+        if request.method != 'POST' or not request.path.endswith('/solicitar/'):
             return None
         value = str(request.data.get('email', '')).strip().lower()
         return 'consent:recipient:' + salted_hmac(self.scope, value).hexdigest()
@@ -46,6 +46,9 @@ class ConsentRecipientThrottle(ConsentIPThrottle):
 class ConsentView(APIView):
     permission_classes = [AllowAny]
     throttle_classes = [ConsentIPThrottle, ConsentRecipientThrottle]
+
+    def throttled(self, request, wait):
+        raise Throttled(detail='Has solicitado varios enlaces. Espera antes de reintentar.')
 
     def finalize_response(self, request, response, *args, **kwargs):
         response = super().finalize_response(request, response, *args, **kwargs)
@@ -63,7 +66,7 @@ class ConsentRequestView(ConsentView):
         store = resolver_tienda(request)
         data = RequestSerializer(data=request.data)
         data.is_valid(raise_exception=True)
-        if request.user.is_authenticated and Tienda.objects.del_propietario(request.user).exists():
+        if data.validated_data['proposito'] == 'confirmar' and request.user.is_authenticated and Tienda.objects.del_propietario(request.user).exists():
             raise PermissionDenied('El propietario no puede autorizar contactos por otras personas.')
         # Account email/password registration is not proof of mailbox control.
         # Authenticated users also complete double opt-in, including changed email.

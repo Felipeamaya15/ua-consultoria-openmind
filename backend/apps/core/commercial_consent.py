@@ -29,14 +29,17 @@ class DeliveryUnavailable(Exception):
 
 def event(record, kind, challenge):
     EventoConsentimiento.objects.create(consentimiento=record, tipo=kind, revision=record.revision,
-        version_texto=challenge.version_texto, texto=TEXT, solicitud_id=challenge.pk)
+        version_texto=record.version_texto if kind == 'retirado' else challenge.version_texto,
+        texto='Retirar autorización comercial' if kind == 'retirado' else TEXT, solicitud_id=challenge.pk)
 
 
 @transaction.atomic
 def request_link(store, email, purpose, template):
     origin = settings.COMMERCIAL_CONSENT_FRONTEND_ORIGIN.rstrip('/')
     parsed = urlsplit(origin)
-    if parsed.scheme not in ('http', 'https') or not parsed.netloc or parsed.path or parsed.query or parsed.fragment:
+    if (parsed.scheme not in ('http', 'https') or not parsed.netloc or parsed.path or parsed.query or parsed.fragment
+            or parsed.username or parsed.password
+            or (parsed.scheme == 'http' and parsed.hostname not in ('localhost', '127.0.0.1', '::1'))):
         raise DeliveryUnavailable()
     # Console/file transports would leak bearer links into application logs/files.
     if settings.EMAIL_BACKEND in ('django.core.mail.backends.console.EmailBackend',
@@ -55,6 +58,10 @@ def request_link(store, email, purpose, template):
     if active.filter(fecha_creacion__gt=now - timedelta(minutes=5)).exists():
         return
     active.update(fecha_vencimiento=now)
+    if purpose == 'confirmar' and record.estado != 'pendiente':
+        record.estado = 'pendiente'
+        record.verificado = False
+        record.save(update_fields=['estado', 'verificado'])
     challenge = SolicitudConsentimiento(consentimiento=record, proposito=purpose, revision=record.revision,
         version_texto=VERSION, fecha_vencimiento=now + timedelta(seconds=MAX_AGE[purpose]))
     token = signing.dumps({'id': str(challenge.pk), 'nonce': secrets.token_urlsafe(32)},
@@ -70,6 +77,7 @@ def request_link(store, email, purpose, template):
         # link, usable immediately after confirmation without another purchase.
         manage = SolicitudConsentimiento(consentimiento=record, proposito='gestionar',
             revision=record.revision + 1, version_texto=VERSION,
+            confirmacion=challenge,
             fecha_vencimiento=now + timedelta(seconds=MAX_AGE['gestionar']))
         manage_token = signing.dumps({'id': str(manage.pk), 'nonce': secrets.token_urlsafe(32)},
                                     salt='commercial-consent:gestionar')
@@ -119,8 +127,11 @@ def use_link(store, token, purpose, action):
         raise InvalidLink()
     if record.revision != challenge.revision:
         raise InvalidLink()
+    if challenge.confirmacion_id and (not challenge.confirmacion.fecha_consumida
+            or record.referencia_evidencia != 'email-link:' + str(challenge.confirmacion_id)):
+        raise InvalidLink()
     if action == 'consultar' and purpose == 'gestionar':
-        return {'estado': record.estado, 'verificado': record.verificado,
+        return {'estado': 'pendiente' if record.estado == 'autorizado' and not record.verificado else record.estado, 'verificado': record.verificado,
                 'fecha_autorizacion': record.fecha_autorizacion, 'fecha_retirada': record.fecha_retirada,
                 'fecha_actualizacion': record.fecha_actualizacion, 'version_texto': record.version_texto}
     now = timezone.now()

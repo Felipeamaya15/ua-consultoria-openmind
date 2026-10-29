@@ -1,6 +1,8 @@
 from datetime import date
 
 from django.utils import timezone
+from django.db import DatabaseError
+from psycopg2 import DatabaseError as PostgresError
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
 
@@ -13,6 +15,17 @@ from apps.core.infrastructure.reports import consultar_informe
 from apps.core.infrastructure.tenant import resolver_tienda
 from apps.core.presentation.reports import leer_filtros
 from apps.core.presentation.responses import error_response, success_response
+
+
+def _pending_contact_schema(error):
+    # A failed server-side cursor can wrap the original missing column/table error.
+    seen = set()
+    while error is not None and id(error) not in seen:
+        seen.add(id(error))
+        if getattr(error, 'pgcode', None) in ('42703', '42P01'):
+            return True
+        error = error.__cause__ or error.__context__
+    return False
 
 
 class PrivateReadView(APIView):
@@ -88,6 +101,12 @@ class ContactosAPIView(PrivateReadView):
                                     mensaje='Contactos operacionales. La compra no acredita consentimiento comercial.')
         except reglas.ParametroInvalido as error:
             return error_response(error.mensaje, error.codigo)
+        except (DatabaseError, PostgresError) as error:
+            if _pending_contact_schema(error):
+                return error_response('Contactos necesita una actualización de la aplicación. Pide al administrador que la complete y vuelve a intentar.',
+                                      'CONTACTOS_ACTUALIZACION_PENDIENTE', status=503)
+            return error_response('La consulta de contactos no está disponible temporalmente. Intenta nuevamente más tarde.',
+                                  'CONTACTOS_NO_DISPONIBLES', status=503)
 
 
 class ContactosExportAPIView(ContactosAPIView):

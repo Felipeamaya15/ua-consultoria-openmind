@@ -2,6 +2,7 @@ import { LandingBlocks } from '../../landing/components/LandingBlocks';
 import { VISUAL_SECTION } from '../visual/sectionIds';
 import { useLandingContent } from '../../landing/hooks/useLandingContent';
 import { LandingDetails } from '../../landing/components/LandingDetails';
+import { Icon } from '../components/ui';
 import { useLandingSectionVisibility } from '../../landing/hooks/useLandingSectionVisibility';
 import { useStore } from '../context/StoreContext';
 import { LandingStatus } from '../../landing/components/LandingStatus';
@@ -11,7 +12,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { formatPrice } from '../data/mockData';
 
 export default function MinimalHome() {
-  const { featured, categories } = useLandingContent();
+  const { featured, categories, content } = useLandingContent();
   const isSectionVisible = useLandingSectionVisibility();
   const { landing } = useStore();
   const navigate = useNavigate();
@@ -183,6 +184,33 @@ export default function MinimalHome() {
 
         </div>
       </section>
+
+      {/* Beneficios compactos debajo de la portada. */}
+      {isSectionVisible('Beneficios') && content.beneficios.length > 0 && (
+        <section
+          aria-label="Beneficios de la tienda"
+          data-visual-section={VISUAL_SECTION.sections}
+          data-visual-kind="benefits"
+          data-landing-content
+          className="w-full px-4 md:px-8 py-5"
+        >
+          <div className="max-w-6xl mx-auto flex flex-wrap items-start gap-x-12 gap-y-5">
+            {content.beneficios.map((benefit, index) => (
+              <div key={index} className="min-w-0 max-w-[260px] flex items-start gap-3">
+                <Icon name={benefit.icono} className="w-5 h-5 shrink-0 mt-0.5" />
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold leading-5">{benefit.titulo}</p>
+                  {benefit.descripcion && (
+                    <p className="mt-1 text-xs leading-5 opacity-70">{benefit.descripcion}</p>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      <LandingBlocks />
 
           {/* Categorías */}
           {isSectionVisible('Categorías') && categories.length > 0 && (<div data-visual-section={VISUAL_SECTION.categories} data-visual-part="categoryList" className="mt-5 flex flex-wrap justify-center gap-2">
@@ -394,8 +422,7 @@ export default function MinimalHome() {
         </div>
       </section>)}
 
-      <LandingBlocks />
-      <LandingDetails includeBenefits />
+      <LandingDetails />
     </div>
   );
 }

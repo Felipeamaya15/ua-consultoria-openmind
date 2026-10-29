@@ -6,11 +6,12 @@ import { useLandingSectionVisibility } from '../../landing/hooks/useLandingSecti
 import { useStore } from '../context/StoreContext';
 import { LandingStatus } from '../../landing/components/LandingStatus';
 import { Link } from 'react-router-dom';
+import { Icon } from '../components/ui';
 
 import { formatPrice } from '../data/mockData';
 
 export default function VisualHome() {
-  const { featured } = useLandingContent();
+  const { featured, content } = useLandingContent();
   const isSectionVisible = useLandingSectionVisibility();
   const { landing, config } = useStore();
   const visualProducts = featured.map(p => ({ id: p.id, name: p.name, category: p.category, description: p.description, price: p.basePrice, image: p.images[0] }));
@@ -102,7 +103,7 @@ export default function VisualHome() {
                 {landing?.texto_boton}
               </Link>
 
-              <Link
+              {landing?.contenido?.bloques?.some(block=>block.visible&&block.tipo==='historia') && <Link
                 to="nuestra-historia"
                 className="
                   border border-white/70
@@ -115,7 +116,7 @@ export default function VisualHome() {
                 "
               >
                 Nuestra historia
-              </Link>
+              </Link>}
             </div>
 
             <p
@@ -131,6 +132,32 @@ export default function VisualHome() {
           </div>
         </div>
       </section>
+
+      {/* Beneficios compactos: inmediatamente debajo de la portada. */}
+      {isSectionVisible('Beneficios') && content.beneficios.length > 0 && (
+        <section
+          aria-label="Beneficios de la tienda"
+          data-landing-content
+          className="w-full px-5 md:px-8 py-5"
+        >
+          <div className="max-w-6xl mx-auto flex flex-wrap items-start gap-x-12 gap-y-5">
+            {content.beneficios.map((benefit, index) => (
+              <div key={index} className="flex items-start gap-3 min-w-0 max-w-[260px]">
+                <Icon name={benefit.icono} className="w-5 h-5 shrink-0 mt-0.5" />
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold leading-5">{benefit.titulo}</p>
+                  {benefit.descripcion && (
+                    <p className="text-xs opacity-70 mt-1 leading-5">{benefit.descripcion}</p>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      <LandingBlocks />
+
 
       {/* ======================================================
           PRODUCTOS DESTACADOS
@@ -195,151 +222,6 @@ export default function VisualHome() {
         </div>
       </section>)}
 
-      {!Array.isArray(landing?.contenido?.bloques) && <>
-      {/* ======================================================
-          HISTORIA
-      ====================================================== */}
-      <section data-visual-section={VISUAL_SECTION.sections} data-visual-kind="content" className="bg-[#f2f1ef]">
-        <div
-          className="
-            max-w-6xl mx-auto
-            grid grid-cols-1 md:grid-cols-2
-          "
-        >
-          <div className="min-h-[620px]">
-            <img
-              src="https://images.unsplash.com/photo-1643168343279-3f93c2e592ef?w=800&h=1000&fit=crop&auto=format"
-              alt="Selección de productos"
-              className="w-full h-full object-cover"
-            />
-          </div>
-
-          <div
-            className="
-              flex flex-col justify-center
-              px-8 md:px-14
-              py-16
-            "
-          >
-            <p
-              className="
-                text-[10px]
-                uppercase tracking-[0.24em]
-                text-gray-500
-                mb-7
-              "
-            >
-              Una selección en constante evolución
-            </p>
-
-            <p
-              className="
-                text-[10px]
-                uppercase tracking-[0.24em]
-                text-gray-500
-                mb-4
-              "
-            >
-              Nuestra historia
-            </p>
-
-            <h2
-              className="
-                font-serif
-                text-4xl md:text-5xl
-                leading-[1.05]
-              "
-            >
-              Nacido de una idea,
-              <br />
-              <em className="font-normal">
-                construido con criterio
-              </em>
-            </h2>
-
-            <p className="mt-7 text-sm leading-7 text-gray-600">
-              Encontrar productos de calidad no debería ser
-              complicado. Por eso reunimos una selección de
-              productos para que puedas explorar el catálogo
-              y elegir con información clara.
-            </p>
-
-            <p className="mt-5 text-sm leading-7 text-gray-600">
-              Cada producto pasa por una selección estricta.
-              Si no cumple con los estándares de calidad,
-              diseño y durabilidad que exigimos, no entra al
-              catálogo. Así de simple.
-            </p>
-
-            <p className="mt-8 font-serif italic text-lg">
-              Nuestra forma de elegir
-            </p>
-          </div>
-        </div>
-      </section>
-
-      {/* ======================================================
-          SEGUNDA SECCIÓN DE HISTORIA
-      ====================================================== */}
-      <section data-visual-section={VISUAL_SECTION.sections} data-visual-kind="content" className="py-20 md:py-28 px-5 md:px-8">
-        <div
-          className="
-            max-w-6xl mx-auto
-            grid grid-cols-1 md:grid-cols-2
-            gap-12 md:gap-20
-            items-center
-          "
-        >
-          <div>
-            <p
-              className="
-                text-[10px]
-                uppercase tracking-[0.24em]
-                text-gray-400
-                mb-5
-              "
-            >
-              Nuestro espacio
-            </p>
-
-            <h2
-              className="
-                font-serif
-                text-4xl md:text-5xl
-                leading-[1.05]
-              "
-            >
-              Un catálogo que crece
-              <br />
-              <em className="font-normal">
-                con intención
-              </em>
-            </h2>
-
-            <p className="mt-7 text-sm leading-7 text-gray-600">
-              Trabajamos con proveedores y marcas que comparten
-              la misma idea: que un producto bien elegido vale
-              más que diez comprados sin criterio. Cada categoría
-              se revisa y actualiza de forma constante.
-            </p>
-
-            <p className="mt-5 text-sm leading-7 text-gray-600">
-              Tenés dudas o querés conocernos mejor — escribinos.
-              Respondemos todas las consultas.
-            </p>
-          </div>
-
-          <div className="min-h-[520px]">
-            <img
-              src="https://images.unsplash.com/photo-1441984904996-e0b6ba687e04?w=900&h=700&fit=crop&auto=format"
-              alt="Espacio comercial"
-              className="w-full h-full object-cover"
-            />
-          </div>
-        </div>
-      </section>
-      </>}
-      <LandingBlocks />
       <LandingDetails />
     </>
   );

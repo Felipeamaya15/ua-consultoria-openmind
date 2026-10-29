@@ -49,7 +49,7 @@ function normalizeConfig(data: LandingConfig | null): LandingConfig | null {
 }
 
 export async function fetchLandingConfig(options?: InitialLoadOptions): Promise<LandingConfig | null> {
-  return readResponse(await fetchInitialLoad(endpoint, options));
+  return readResponse(await fetchInitialLoad(endpoint, { ...options, cache: 'no-store' }));
 }
 
 export async function saveLandingConfig(config: LandingInput): Promise<LandingConfig> {

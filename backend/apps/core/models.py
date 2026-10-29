@@ -43,6 +43,7 @@ class Tienda(models.Model):
     )
     nombre = models.CharField(max_length=150)
     descripcion = models.TextField(blank=True, null=True)
+    correo_negocio = models.EmailField(blank=True, default='')
     fecha_creacion = models.DateTimeField(auto_now_add=True)
 
     objects = TiendaQuerySet.as_manager()
@@ -309,6 +310,7 @@ class SolicitudConsentimiento(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     consentimiento = models.ForeignKey(ConsentimientoComercial, on_delete=models.CASCADE)
     proposito = models.CharField(max_length=12, choices=[('confirmar', 'Confirmar'), ('gestionar', 'Gestionar')])
+    confirmacion = models.ForeignKey('self', null=True, blank=True, on_delete=models.PROTECT)
     token_hash = models.CharField(max_length=64)
     revision = models.PositiveIntegerField()
     version_texto = models.CharField(max_length=100)

@@ -11,7 +11,7 @@ from apps.core.presentation.responses import success_response
 class InformacionTiendaSerializer(serializers.ModelSerializer):
     class Meta:
         model = Tienda
-        fields = ['nombre', 'descripcion']
+        fields = ['nombre', 'descripcion', 'correo_negocio']
 
 
 class InformacionTiendaAPIView(APIView):
@@ -20,7 +20,10 @@ class InformacionTiendaAPIView(APIView):
 
     def get(self, request):
         tienda = resolver_tienda(request)
-        response = success_response(data=InformacionTiendaSerializer(tienda).data)
+        data = dict(InformacionTiendaSerializer(tienda).data)
+        if not (request.user.is_authenticated and request.user.is_active and tienda.id_usuario_propietario_id == request.user.pk):
+            data.pop('correo_negocio', None)
+        response = success_response(data=data)
         response['Cache-Control'] = 'no-store'
         return response
 

@@ -3,9 +3,14 @@ aditiva. No hay cambios de modelo ni migraciones.
 
 - `contenido.bloques` es opcional: su ausencia conserva los ejemplos anteriores;
   `[]` representa una lista administrada vacía. Hasta 20 bloques ordenados.
+- GET responde `Cache-Control: no-store`; el editor vuelve a consultar al abrir
+  Secciones y nunca reemplaza un borrador pendiente con una respuesta tardía.
+  El contenido guardado alimenta el mismo renderizador en las cuatro plantillas.
 - Cada bloque: `id` UUID estable, `tipo` (`historia`, `imagen_texto`, `texto`,
   `galeria`, `cita`), `visible`, `titulo` (255), `subtitulo` (500), `texto` (10000),
   `imagenes`: lista de `{id: UUID, src, alt: texto hasta 250}`.
+- Estos cinco tipos no admiten un campo de botón/enlace propio. El CTA o buscador
+  de portada conserva el comportamiento de cada plantilla.
 - Historia e imagen/texto admiten una imagen; galería hasta ocho; texto/cita cero.
   JPG/PNG/WebP válidos, máximo 2 MB por archivo, 10 MB de imágenes por guardado.
   Un `src` nuevo puede ser un data URI. El servidor verifica los bytes y guarda

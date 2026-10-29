@@ -18,14 +18,14 @@ const VARIABLES_DEL_BACKEND = ['customerName', 'customerEmail', 'orderNumber', '
 const TIPOS_DEL_BACKEND = ['order_received', 'order_shipped', 'payment_rejected', 'payment_success'];
 
 const pantalla = fs.readFileSync(path.join(root, 'src/features/admin/pages/Emails.tsx'), 'utf8').replace(/\r/g, '');
-const listaDeLaPantalla = (pantalla.match(/const variables = \[([\s\S]*?)\]/) || [])[1];
-const variablesDeLaPantalla = [...(listaDeLaPantalla || '').matchAll(/"(\{\{\w+\}\})"/g)].map(m => m[1]);
+const backendFields=fs.readFileSync(path.join(root,'../backend/apps/core/domain/plantillas_correo/base.py'),'utf8');
+const variablesDeLaPantalla=[...(backendFields.match(/VARIABLES_PERMITIDAS = \(([\s\S]*?)\)/)||[])[1].matchAll(/'([A-Za-z]+)'/g)].map(match=>`{{${match[1]}}}`);
 const { createDefaultEmailTemplates, emailTemplateDefinitions } = load('src/features/admin/data/emailTemplates.ts');
 const porDefecto = createDefaultEmailTemplates();
 const usadas = texto => [...texto.matchAll(/\{\{\s*(\w+)\s*\}\}/g)].map(m => m[1]);
 
 test('la pantalla ofrece exactamente las mismas variables que el backend', () => {
-  assert.ok(listaDeLaPantalla, 'no se encontró la lista de variables de la pantalla');
+  assert.ok(pantalla.includes('setFields(remote.variables??[])'), 'el catálogo debe provenir del backend real');
   same([...variablesDeLaPantalla].sort(), VARIABLES_DEL_BACKEND.map(nombre => `{{${nombre}}}`).sort());
 });
 

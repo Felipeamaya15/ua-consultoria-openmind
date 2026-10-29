@@ -1,3 +1,4 @@
+import { FontControl } from './fonts';
 import { fonts } from '../../storefront/visual/cssVariables';
 import type { FontFamily } from '../../storefront/visual/types';
 import { useEffect, useState, type ReactNode } from 'react';
@@ -19,6 +20,7 @@ export function ColorPickerControl(props: ControlProps) {
 }
 export function SelectControl(props: ControlProps) {
   const font = props.options?.includes('calibri');
+  if (font) return <FontControl {...props} />;
   return <Field {...props}><select style={font ? { fontFamily: fonts[props.value as FontFamily] } : undefined} disabled={props.disabled} aria-label={props.label} value={String(props.value)} onChange={e => props.onChange(e.target.value)}>{props.options?.map(value => <option key={value} value={value} style={font ? { fontFamily: fonts[value as FontFamily] } : undefined}>{optionLabel(value, props.label)}</option>)}</select>{font && <p style={{fontFamily: fonts[props.value as FontFamily], fontSize: 20}}>Aa · Tu tienda, tu estilo 123</p>}</Field>;
 }
 export function NumberControl(props: ControlProps) {
@@ -40,7 +42,9 @@ export function SliderControl(props: ControlProps) {
 }
 export function FriendlyRadiusControl(props: ControlProps) {
   const [custom, setCustom] = useState(false);
-  return <Field {...props}><div className="ve-segmented" role="group" aria-label={props.label}>{[0,8,24].map((value,index) => <button key={value} type="button" disabled={props.disabled} aria-pressed={props.value === value} onClick={() => props.onChange(value)}>{['Recto','Suave','Redondeado'][index]}</button>)}</div><button type="button" className="ve-custom-choice" aria-expanded={custom} onClick={() => setCustom(!custom)}>Personalizado</button>{custom && <input aria-label={`${props.label} personalizado`} disabled={props.disabled} type="number" value={Number(props.value)} min={props.min ?? 0} max={props.max ?? 2000} onChange={event => { const value=event.target.valueAsNumber; if(Number.isFinite(value) && value >= (props.min ?? 0) && value <= (props.max ?? 2000)) props.onChange(value); }} />}</Field>;
+  const path=props.path??'';
+  const affects=/imageRadius|image.radius/.test(path)?'la imagen seleccionada':/buttonRadius|heroCta|pages.*button/.test(path)?'el botón de este grupo':/cardRadius/.test(path)?'las tarjetas de esta sección':/productCard|catalog.card/.test(path)?'la tarjeta de producto':/categories/.test(path)?'las categorías':/pages.*field/.test(path)?'los campos de esta página':/pages.*panel/.test(path)?'las cajas de esta página':'los botones y cajas que heredan el estilo general';
+  return <Field {...props}><p className="ve-hint">Afecta {affects}.</p><div className="ve-segmented" role="group" aria-label={props.label}>{[0,8,24].map((value,index) => <button key={value} type="button" disabled={props.disabled} aria-pressed={props.value === value} onClick={() => props.onChange(value)}>{['Recto','Suave','Redondeado'][index]}</button>)}</div><button type="button" className="ve-custom-choice" aria-expanded={custom} onClick={() => setCustom(!custom)}>Personalizado</button>{custom && <input aria-label={`${props.label} personalizado`} disabled={props.disabled} type="number" value={Number(props.value)} min={props.min ?? 0} max={props.max ?? 2000} onChange={event => { const value=event.target.valueAsNumber; if(Number.isFinite(value) && value >= (props.min ?? 0) && value <= (props.max ?? 2000)) props.onChange(value); }} />}</Field>;
 }
 export function ToggleControl(props: ControlProps) {
   return <Field {...props}><input disabled={props.disabled} aria-label={props.label} type="checkbox" checked={Boolean(props.value)} onChange={e => props.onChange(e.target.checked)} /></Field>;

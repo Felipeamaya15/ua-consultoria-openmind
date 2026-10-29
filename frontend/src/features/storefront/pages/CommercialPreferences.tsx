@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { useLocation } from 'react-router-dom';
 import { consentRequest, requestConsent, CONSENT_TEXT } from '../services/commercialConsent';
 import { useStorefrontTemplate } from '../hooks/useStorefrontTemplate';
@@ -6,11 +6,10 @@ import { useStorefrontTemplate } from '../hooks/useStorefrontTemplate';
 export default function CommercialPreferences() {
   const {templateNumber} = useStorefrontTemplate();
   const location = useLocation();
-  const [link] = useState(() => {
+  const [link, setLink] = useState(() => {
     const values = new URLSearchParams(window.location.hash.slice(1));
     // Bearer tokens never reach the server's URL/access log, referrer or storage.
     const value = {token: values.get('token') || '', action: values.get('accion') || ''};
-    window.history.replaceState(window.history.state, '', window.location.pathname);
     return value;
   });
   const [email, setEmail] = useState('');
@@ -19,6 +18,14 @@ export default function CommercialPreferences() {
   const [error, setError] = useState('');
   const [state, setState] = useState('');
   const [purpose, setPurpose] = useState('gestionar');
+  useEffect(() => {
+    const values = new URLSearchParams(location.hash.slice(1));
+    if (values.has('token')) {
+      setLink({token: values.get('token') || '', action: values.get('accion') || ''});
+      setState(''); setError(''); setMessage('');
+    }
+    window.history.replaceState(window.history.state, '', window.location.pathname);
+  }, [location.hash]);
   async function run(action: string) {
     if (busy) return;
     setBusy(true); setError(''); setMessage('');
