@@ -69,7 +69,7 @@ interface AppliedAttributeFiltersProps {
 
 const APPLIED_STYLES = {
   catalog: {
-    chip: 'inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-[11px] font-medium text-white transition-colors hover:bg-white/20',
+    chip: 'inline-flex items-center gap-2 rounded-full border border-[var(--visual-border)] bg-[var(--visual-surface)] px-3 py-1.5 text-[11px] font-medium text-[var(--visual-text)] transition-colors hover:opacity-80',
     clear: 'text-[11px] font-semibold text-[var(--primary)] hover:opacity-70',
   },
   visual: {

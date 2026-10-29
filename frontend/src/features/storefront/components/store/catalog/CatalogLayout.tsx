@@ -6,7 +6,7 @@ import { StoreVisualRoot } from '../StoreVisualRoot';
 
 export function CatalogLayout() {
   return (
-       <StoreVisualRoot className="template-catalog min-h-screen bg-[#050505] text-white flex flex-col">
+       <StoreVisualRoot className="template-catalog min-h-screen bg-[var(--visual-background)] text-[var(--visual-text)] flex flex-col">
       <CatalogHeader />
       <main className="flex-1">
         <StorePageContent><Outlet /></StorePageContent>

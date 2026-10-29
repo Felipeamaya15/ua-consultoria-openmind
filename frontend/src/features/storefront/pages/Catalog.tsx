@@ -259,12 +259,12 @@ export default function Catalog() {
 
   if (isCatalog) {
     return (
-      <div data-visual-section={VISUAL_SECTION.catalog} data-visual-catalog className="bg-[#050505] text-white">
+      <div data-visual-section={VISUAL_SECTION.catalog} data-visual-catalog className="bg-[var(--visual-background)] text-[var(--visual-text)]">
         <section className="max-w-[1160px] mx-auto px-5 pt-10 md:pt-14 pb-20 md:pb-28">
           {/* CABECERA */}
           <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-7 mb-9">
             <div>
-              <p className="text-[color-mix(in_srgb,var(--accent)_65%,white)] text-[10px] font-extrabold uppercase tracking-[0.16em] mb-3">
+              <p className="text-[var(--accent)] text-[10px] font-extrabold uppercase tracking-[0.16em] mb-3">
                 Explora la colección
               </p>
 
@@ -272,7 +272,7 @@ export default function Catalog() {
                 Catálogo.
               </h1>
 
-              <p className="mt-4 text-[13px] text-white/60">
+              <p className="mt-4 text-[13px] text-[var(--visual-muted)]">
                 {filtered.length}{' '}
                 {filtered.length === 1 ? 'producto disponible' : 'productos disponibles'}
               </p>
@@ -310,7 +310,7 @@ export default function Catalog() {
                 ))}
               </select>
 
-              <div className="flex h-11 overflow-hidden rounded-[10px] bg-[#202022] ring-1 ring-white/10">
+              <div className="flex h-11 overflow-hidden rounded-[10px] bg-[var(--visual-surface)] ring-1 ring-[var(--visual-border)]">
                 {(['grid', 'list'] as const).map((view) => (
                   <button
                     type="button"
@@ -320,7 +320,7 @@ export default function Catalog() {
                     className={`w-11 flex items-center justify-center transition-colors ${
                       viewMode === view
                         ? 'bg-[var(--primary)] text-[var(--on-primary)]'
-                        : 'text-white/60 hover:text-white'
+                        : 'text-[var(--visual-muted)] hover:text-[var(--visual-text)]'
                     }`}
                   >
                     <Icon
@@ -335,7 +335,7 @@ export default function Catalog() {
 
           <button
             type="button"
-            className="md:hidden mb-5 h-10 rounded-full border border-white/15 px-5 text-[11px] font-semibold text-white"
+            className="md:hidden mb-5 h-10 rounded-full border border-[var(--visual-border)] px-5 text-[11px] font-semibold text-[var(--visual-text)]"
             data-visual-part="catalogFiltersToggle" aria-expanded={filtersOpen}
             onClick={() => setFiltersOpen(!filtersOpen)}
           >
@@ -470,10 +470,10 @@ export default function Catalog() {
               {appliedFilters}
 
               {paginated.length === 0 ? (
-                <div className="rounded-[18px] border border-white/10 bg-[#111113] px-6 py-20 text-center">
-                  <Icon name="search" className="w-10 h-10 mx-auto text-white/60" />
+                <div className="rounded-[18px] border border-[var(--visual-border)] bg-[var(--visual-surface)] px-6 py-20 text-center">
+                  <Icon name="search" className="w-10 h-10 mx-auto text-[var(--visual-muted)]" />
                   <h2 className="mt-5 text-xl font-bold">Sin resultados</h2>
-                  <p className="mt-2 text-sm text-white/60">
+                  <p className="mt-2 text-sm text-[var(--visual-muted)]">
                     No encontramos productos para tu búsqueda.
                   </p>
                 </div>

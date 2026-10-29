@@ -24,7 +24,7 @@ function sectionVariables(config: VisualSections, viewport: Viewport): Record<st
   const variables: Record<string, string> = {
     '--primary': colors.primary, '--secondary': colors.secondary, '--accent': colors.accent, '--ring': colors.primary,
     '--on-primary': institutionalTextColor(colors.primary, colors.background), '--on-accent': institutionalTextColor(colors.accent, colors.background), '--on-secondary': institutionalTextColor(colors.secondary, colors.background),
-    '--visual-alternate': colors.alternate, '--visual-muted': colors.muted, '--visual-button': button, '--visual-button-text': colors.buttonText,
+    '--visual-alternate': colors.alternate, '--on-alternate': institutionalTextColor(colors.alternate, colors.background), '--visual-muted': colors.muted, '--visual-button': button, '--visual-button-text': colors.buttonText,
     '--visual-background': colors.background, '--visual-text': colors.text, '--visual-surface': colors.surface, '--visual-border': colors.border, '--radius': px(config.global.radius),
     '--visual-body-font': fonts[config.global.typography.body], '--visual-heading-font': fonts[config.global.typography.heading], '--visual-font-size': px(config.global.typography.baseSize), '--visual-line-height': String(config.global.typography.lineHeight),
     '--visual-content-width': px(config.global.contentMaxWidth),

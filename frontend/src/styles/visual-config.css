@@ -7,6 +7,7 @@
   --on-primary: var(--on-primary-desktop);
   --on-accent: var(--on-accent-desktop);
   --on-secondary: var(--on-secondary-desktop);
+  --on-alternate: var(--on-alternate-desktop);
   --visual-alternate: var(--visual-alternate-desktop);
   --visual-muted: var(--visual-muted-desktop);
   --visual-button: var(--visual-button-desktop);
@@ -637,6 +638,7 @@
   --on-primary: var(--on-primary-tablet);
   --on-accent: var(--on-accent-tablet);
   --on-secondary: var(--on-secondary-tablet);
+  --on-alternate: var(--on-alternate-tablet);
   --visual-alternate: var(--visual-alternate-tablet);
   --visual-muted: var(--visual-muted-tablet);
   --visual-button: var(--visual-button-tablet);
@@ -1268,6 +1270,7 @@
   --on-primary: var(--on-primary-mobile);
   --on-accent: var(--on-accent-mobile);
   --on-secondary: var(--on-secondary-mobile);
+  --on-alternate: var(--on-alternate-mobile);
   --visual-alternate: var(--visual-alternate-mobile);
   --visual-muted: var(--visual-muted-mobile);
   --visual-button: var(--visual-button-mobile);
@@ -2245,6 +2248,9 @@
 [data-storefront-visual] [data-visual-part="footerTitle"]{color:inherit}
 [data-storefront-visual] .store-footer-logo{width:auto;max-width:140px;max-height:52px;object-fit:contain;margin-bottom:12px}
 [data-storefront-visual] [data-visual-section="categories"]{background:var(--visual-background);color:var(--visual-text)}
+[data-storefront-visual] [data-visual-part="catalogFilters"] [data-visual-section="categories"],
+[data-storefront-visual] [data-visual-part="catalogFilters"] [data-visual-part="categoryList"]{background:transparent;color:inherit}
+[data-storefront-visual] [data-visual-part="catalogFilters"] [data-visual-part="categoryItem"]:not([aria-pressed="true"]){background:transparent;color:#202020}
 [data-storefront-visual] [data-visual-section="productCard"]{background:var(--visual-surface);color:var(--visual-text)}
 [data-storefront-visual] [data-visual-part="productButton"], [data-storefront-visual] [data-visual-section="productCard"] button{background:var(--visual-button);color:var(--visual-button-text)}
 .store-mobile-navigation{display:none}

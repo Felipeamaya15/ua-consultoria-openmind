@@ -12,7 +12,7 @@ export function LandingDetails({includeBenefits = false,onlyBenefits = false,}: 
   const { content } = useLandingContent();
   const visible = useLandingSectionVisibility();
   const { template = 'editorial', isCatalog } = useStorefrontTemplate();
-  const tone = isCatalog ? 'border-white/15 text-white' : 'border-black/10 text-[#151515]';
+  const tone = isCatalog ? 'border-[var(--visual-border)] text-[var(--visual-text)]' : 'border-black/10 text-[#151515]';
   const c = content.contacto, u = content.ubicacion;
   const locality = [...new Set([u.comuna, u.ciudad].filter(Boolean))].join(' / ');
   const hasAddress = !!(u.direccion || locality || u.region);
