@@ -1,8 +1,16 @@
 from rest_framework import serializers
 # CAMBIO: Importamos el validador de Base64 que creamos para MongoDB
 from apps.core.domain.validators import validate_base64_image
+from django.core.exceptions import ValidationError as ImageValidationError
 from apps.core.models import Producto
 from apps.catalog.domain.stock import validate_stock, is_variant_active
+
+
+def normalized_images(images):
+    try:
+        return [validate_base64_image(image, max_size_mb=2) for image in images]
+    except ImageValidationError as error:
+        raise serializers.ValidationError(error.messages) from error
 
 
 class StockValidationMixin:
@@ -99,13 +107,7 @@ class ProductPublicDetailSerializer(serializers.Serializer):
 
 
     def validate_imagenes(self, value):
-        for img_b64 in value:
-
-            if img_b64.startswith('http') or img_b64.startswith('/'):
-                continue
-
-            validate_base64_image(img_b64, max_size_mb=2)
-        return value
+        return normalized_images(value)
 
 
 class ProductAdminDetailSerializer(ProductPublicDetailSerializer):
@@ -137,13 +139,13 @@ class ProductImageSerializer(serializers.Serializer):
 
 
     def validate_imagen(self, value):
-        if value.startswith('http') or value.startswith('/'):
-            return value
+        return normalized_images([value])[0]
 
-        validate_base64_image(value, max_size_mb=2)
-        return value
 
 class ProductoCreateSerializer(serializers.ModelSerializer):
+    def validate_imagenes(self, value):
+        return normalized_images(value)
+
     categoria = serializers.CharField(required=False, allow_blank=True, default='')
     descripcion = serializers.CharField(required=False, allow_blank=True, default='')
     imagenes = serializers.ListField(
@@ -319,13 +321,7 @@ class ProductCreateSerializer(serializers.Serializer):
     seo = SeoInputSerializer(required=False)
 
     def validate_imagenes(self, value):
-        from django.core.exceptions import ValidationError
-        for image in value:
-            try:
-                validate_base64_image(image, max_size_mb=2)
-            except ValidationError as error:
-                raise serializers.ValidationError(error.messages) from error
-        return value
+        return normalized_images(value)
 
     def validate_variantes(self, value):
         if not value:

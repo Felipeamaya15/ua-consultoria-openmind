@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
-from django.conf.urls.static import static
+from config.media import media_urlpatterns
 
 from apps.catalog.presentation.views import (
     ProductVariantsView,
@@ -41,12 +41,6 @@ urlpatterns = [
     path("api/logistica/", include("apps.shipping.presentation.urls")),
 ]
 
-# Dedicated subtree: never expose the backend folder when MEDIA_ROOT is empty.
-from apps.landing.block_images import block_storage
-urlpatterns += static('/media/landing/blocks/', document_root=block_storage().location)
-
-# Servir las imágenes de landing durante desarrollo local.
-urlpatterns += static(
-    settings.MEDIA_URL,
-    document_root=settings.MEDIA_ROOT
-)
+# Development only; production must serve these same bounded trees separately.
+if settings.DEBUG:
+    urlpatterns += media_urlpatterns()

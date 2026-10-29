@@ -10,14 +10,29 @@ from urllib.parse import quote_plus
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+# Uploaded files never share the backend source directory as their storage root.
+MEDIA_ROOT = BASE_DIR / 'media'
+MEDIA_URL = '/media/'
+COMMERCIAL_CONSENT_FRONTEND_ORIGIN = os.getenv('COMMERCIAL_CONSENT_FRONTEND_ORIGIN', 'http://localhost:5173')
+STORAGES = {
+    'default': {'BACKEND': 'config.media.CompatibleImageStorage'},
+    'staticfiles': {'BACKEND': 'django.contrib.staticfiles.storage.StaticFilesStorage'},
+}
+
 # Quick-start development settings - unsuitable for production
 SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-*sv5zxk$5@w@5=*jf-a46^pk&1$g)lp(9f97&5th^8+1(a(ftf')
 
-DEBUG = os.getenv('DEBUG', '1') == '1'
-if not DEBUG and (not os.getenv('SECRET_KEY') or SECRET_KEY.startswith('django-insecure-') or SECRET_KEY.startswith('REEMPLAZAR_')):
-    from django.core.exceptions import ImproperlyConfigured
-    raise ImproperlyConfigured('Configura SECRET_KEY con un secreto único antes de desplegar.')
+DEBUG = os.getenv('DEBUG', '0') == '1'
 
+if not DEBUG and (
+    not os.getenv('SECRET_KEY')
+    or SECRET_KEY.startswith('django-insecure-')
+    or SECRET_KEY.startswith('REEMPLAZAR_')
+):
+    from django.core.exceptions import ImproperlyConfigured
+    raise ImproperlyConfigured(
+        'Configura SECRET_KEY con un secreto único antes de desplegar.'
+    )
 # Hostnames válidos: en producción definir DJANGO_ALLOWED_HOSTS explícitamente.
 _hosts_default = 'localhost,127.0.0.1,backend,testserver' if DEBUG else ''
 ALLOWED_HOSTS = [host.strip() for host in os.getenv('DJANGO_ALLOWED_HOSTS', _hosts_default).split(',') if host.strip()]

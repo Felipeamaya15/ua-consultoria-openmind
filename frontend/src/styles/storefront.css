@@ -166,7 +166,7 @@ body {
 [data-storefront-visual] [data-visual-grid="catalog"],
 [data-storefront-visual] [data-visual-part="headerLayout"],
 [data-storefront-visual] [data-visual-part="heroLayout"],
-[data-storefront-visual] [data-visual-section="sections"],
+[data-storefront-visual] [data-visual-section="sections"]:not([data-content-block-id]),
 [data-storefront-visual] [data-visual-section="footer"] > div,
 [data-storefront-visual] .landing-details__inner,
 [data-storefront-visual] :is(.max-w-5xl, .max-w-6xl, .max-w-7xl, .max-w-\[1160px\], .max-w-\[1180px\], .max-w-\[1320px\]) {

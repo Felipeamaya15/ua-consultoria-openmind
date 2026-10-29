@@ -8,3 +8,6 @@
 @media(max-width:639px){[data-storefront-visual] [data-content-block-id] h2.store-block-title{font-size:min(var(--lb-title-size,32px),12vw)}}
 
 @media(min-width:640px){:where([data-block-template]) [data-content-block-id="706d696e-6400-4000-8000-000000000002"]{--lb-image-order:2}}
+
+/* General desktop layouts stack on narrow screens; explicit mobile layouts remain editable. */
+@media(max-width:639px){.store-content-block{grid-template-columns:var(--lb-mobile-columns,minmax(0,1fr))}.store-block-media{order:var(--lb-mobile-image-order,0)}}

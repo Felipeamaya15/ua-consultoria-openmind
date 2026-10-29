@@ -42,6 +42,22 @@ class CatalogAPITestCase(TemporaryCatalog, TestCase):
 
 
 class ProductCreationTests(CatalogAPITestCase):
+    def test_heic_is_converted_before_mongo_and_public_reload(self):
+        import base64
+        from apps.core.test_image_processing import fixture
+        from apps.core.image_processing import process_data_url
+        payload = deepcopy(self.payload)
+        payload['imagenes'] = ['data:image/heic;base64,' + base64.b64encode(fixture()).decode()]
+        pk = self.create(payload)
+        stored = self.read(pk)
+        self.assertTrue(stored['imagenes'][0].startswith('data:image/webp;'))
+        self.api.credentials()
+        detail = self.api.get(f'/api/catalog/productos/{stored["slug"]}/')
+        self.assertEqual(detail.status_code, 200)
+        self.assertEqual(detail.data['data']['imagenes'], stored['imagenes'])
+        image = process_data_url(detail.data['data']['imagenes'][0])
+        self.assertEqual((image.width, image.height), (90, 160))
+
     def test_token_creation_persists_document_and_public_detail_and_filters(self):
         pk = self.create()
         document = self.read(pk)

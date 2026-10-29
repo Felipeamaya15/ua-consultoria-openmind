@@ -41,6 +41,7 @@ export default function Profile() {
   return <main className="w-full p-6 space-y-6">
     <CustomerAccountNavigation />
     <h1 className="text-2xl font-semibold">Mi cuenta · Perfil</h1>
+    <Link className="underline block" to={route('preferencias-comerciales')}>Consultar o retirar mi autorización comercial</Link>
     {loading && <LoadingState align="start" spacing="compact">Cargando perfil…</LoadingState>}
     {error && <p role="alert" className="text-red-700">{error}</p>}
     {success && <p role="status" className="text-green-700">{success}</p>}

@@ -76,6 +76,7 @@ function load(file, globals) {
       if (name === 'react') return requireMock(name);
       if (name === 'react-router-dom') return {Link: 'Link', useSearchParams: () => [new URLSearchParams(), () => {}]};
       if (name.includes('HistoryControls')) return {HistoryPagination: 'HistoryPagination'};
+      if (name.includes('components/OrderFilters')) return {OrderFilters: 'OrderFilters'};
       if (name.includes('useCommercialHistory')) return {useCommercialExport: () => ({busy: false, error: '', message: '', download() {}})};
       if (name.includes('commercialService')) return require('./source-loader.cjs').load('src/features/admin/services/commercialService.ts', {
         '../../../api': {API_BASE_URL: 'https://configured.example.test'},
@@ -107,7 +108,7 @@ function load(file, globals) {
     assert.ok((await renderStore()).some(node => node.type === 'ErrorState'));
   }
   storeReply = {ok: false};
-  assert.ok((await renderStore()).includes('No se pudo completar la consulta. Revisa tu conexión e intenta nuevamente.'));
+  assert.ok((await renderStore()).includes('No se pudo completar la consulta. El servicio no está disponible en este momento. Intenta nuevamente más tarde.'));
   storeToken = null;
   const beforeStore = storeCalls.length;
   assert.ok((await renderStore()).includes('Inicia sesión como propietario para consultar esta información.'));

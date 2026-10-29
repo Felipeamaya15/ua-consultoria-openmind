@@ -10,7 +10,8 @@ import { getContacts, type Contact } from '../services/commercialService';
 import { formatBusinessDate } from '../services/businessTime';
 
 const consentLabels: Record<Contact['consentimiento'], string> = {
-  autorizado: 'Autorizado expresamente',
+  autorizado: 'Autorizado y verificado',
+  pendiente: 'Pendiente de verificación',
   retirado: 'Autorización retirada',
   sin_registro: 'Sin autorización registrada',
 };
@@ -50,7 +51,7 @@ export default function Contacts() {
     <section aria-label="Contactos de clientes" className="commercial-section space-y-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div><h2 className="text-lg font-bold text-[#0f1623]">Contactos de clientes</h2>
-          <p className="mt-1 text-sm text-[#52617a]">Consulta los compradores de tu tienda y exporta sus contactos.</p></div>
+          <p className="mt-1 text-sm text-[#52617a]">Consulta compradores y solicitudes de publicidad de tu tienda. Marketing incluye solo correos con autorización vigente y verificada.</p></div>
         <div className="relative" ref={exportRef}>
           <Button disabled={disabled} onClick={() => setMenuOpen(open => !open)} aria-expanded={menuOpen} aria-haspopup="true">
             Exportar contactos {menuOpen ? '▴' : '▾'}
@@ -61,8 +62,8 @@ export default function Contacts() {
               <div className="flex flex-col gap-1">
                 <button type="button" onClick={() => download(false, 'xlsx')} className="min-h-10 rounded-lg px-3 text-left text-sm hover:bg-[#f1f4f9] focus-visible:outline-2 focus-visible:outline-[#1a3a6b]">Excel de contactos</button>
                 <button type="button" onClick={() => download(false, 'csv')} className="min-h-10 rounded-lg px-3 text-left text-sm hover:bg-[#f1f4f9] focus-visible:outline-2 focus-visible:outline-[#1a3a6b]">CSV de contactos</button>
-                <div className="my-1 border-t border-[#e7eaf1]" />
-                <button type="button" onClick={() => download(true, 'xlsx')} className="min-h-10 rounded-lg px-3 text-left text-sm hover:bg-[#f1f4f9] focus-visible:outline-2 focus-visible:outline-[#1a3a6b]">Excel de marketing autorizado</button>
+                <div className="my-1 border-t border-[#e7eaf1]" /><p className="px-2 text-xs">Marketing: solo correos autorizados y verificados, sin datos de pedidos.</p>
+                <button type="button" onClick={() => download(true, 'xlsx')} className="min-h-10 rounded-lg px-3 text-left text-sm hover:bg-[#f1f4f9] focus-visible:outline-2 focus-visible:outline-[#1a3a6b]">Excel de marketing autorizado</button><button type="button" onClick={() => download(true, 'csv')} className="min-h-10 rounded-lg px-3 text-left text-sm hover:bg-[#f1f4f9]">CSV de marketing autorizado</button>
               </div>
             </div>
           )}
@@ -85,9 +86,9 @@ export default function Contacts() {
                 {result.data.map(contact => (
                   <div key={contact.email} className="rounded-lg border border-[#e2e8f0] p-3">
                     <p className="break-all text-sm font-semibold text-[#1a3a6b]">{contact.email}</p>
-                    <p className="mt-2 text-xs text-[#52617a]">{contact.cantidad_pedidos} pedidos · Último: {formatBusinessDate(contact.ultimo_pedido, true)}</p>
+                    <p className="mt-2 text-xs text-[#52617a]">{contact.cantidad_pedidos} pedidos · Último: {(contact.ultimo_pedido ? formatBusinessDate(contact.ultimo_pedido, true) : 'Sin pedidos')}</p>
                     <p className="mt-2 text-xs font-semibold">{consentLabels[contact.consentimiento]}</p>
-                    <p className="mt-1 text-xs text-[#52617a]">Consentimiento: {contact.fecha_consentimiento ? formatBusinessDate(contact.fecha_consentimiento, true) : 'Sin fecha registrada'}</p>
+                    <p className="mt-1 text-xs text-[#52617a]">Último cambio: {contact.fecha_consentimiento ? formatBusinessDate(contact.fecha_consentimiento, true) : 'Sin fecha registrada'}</p>
                   </div>
                 ))}
               </div>
@@ -100,13 +101,13 @@ export default function Contacts() {
                     <th scope="col" className="px-3 py-3 text-xs font-semibold text-[#52617a]">Pedidos</th>
                     <th scope="col" className="px-3 py-3 text-xs font-semibold text-[#52617a]">Último pedido</th>
                     <th scope="col" className="px-3 py-3 text-xs font-semibold text-[#52617a]">Autorización comercial</th>
-                    <th scope="col" className="px-3 py-3 text-xs font-semibold text-[#52617a]">Fecha de consentimiento</th>
+                    <th scope="col" className="px-3 py-3 text-xs font-semibold text-[#52617a]">Último cambio de autorización</th>
                   </tr></thead>
                   <tbody>{result.data.map(contact => (
                     <tr key={contact.email} className="border-t border-[#e7eaf1]">
                       <th scope="row" className="max-w-[220px] break-all px-3 py-3 font-medium text-[#1a3a6b]">{contact.email}</th>
                       <td className="px-3 py-3">{contact.cantidad_pedidos}</td>
-                      <td className="whitespace-nowrap px-3 py-3">{formatBusinessDate(contact.ultimo_pedido, true)}</td>
+                      <td className="whitespace-nowrap px-3 py-3">{(contact.ultimo_pedido ? formatBusinessDate(contact.ultimo_pedido, true) : 'Sin pedidos')}</td>
                       <td className="px-3 py-3"><span className={`text-xs font-semibold ${contact.consentimiento === 'autorizado' ? 'text-emerald-800' : contact.consentimiento === 'retirado' ? 'text-red-700' : 'text-[#52617a]'}`}>{consentLabels[contact.consentimiento]}</span></td>
                       <td className="whitespace-nowrap px-3 py-3">{contact.fecha_consentimiento ? formatBusinessDate(contact.fecha_consentimiento, true) : 'Sin registro'}</td>
                     </tr>
@@ -123,7 +124,7 @@ export default function Contacts() {
         <div className="mt-3 space-y-2 text-sm text-[#52617a]">
           <p>Cada correo válido aparece una sola vez. La cantidad incluye pedidos pendientes y cancelados; las fechas filtradas corresponden al último pedido.</p>
           <p>Las exportaciones operativas permiten gestionar pedidos. La exportación para marketing incluye exclusivamente autorizaciones expresas vigentes; excluye las retiradas o no registradas.</p>
-          <p>La captura de nuevas autorizaciones comerciales aún está pendiente de habilitación. Aceptar cookies no equivale a autorizar publicidad.</p>
+          <p>Las nuevas solicitudes requieren confirmación del correo. Los contactos pendientes, retirados y registros antiguos sin verificación quedan fuera de marketing. Aceptar cookies no equivale a autorizar publicidad.</p>
         </div>
       </details>
     </section>

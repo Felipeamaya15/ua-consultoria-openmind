@@ -1,3 +1,5 @@
+import { CommercialPreferencesLink } from './CommercialPreferencesLink';
+import { StoreBusinessDescription } from './StoreBusinessDescription';
 import { isActiveEditorPreview } from '../../visual/pages';
 import { StorePageContent } from './StorePageContent';
 import { VISUAL_SECTION } from '../../visual/sectionIds';
@@ -105,7 +107,6 @@ export function EditorialLayout() {
       {/* =====================================================
           BARRA INSTITUCIONAL
       ====================================================== */}
-      <div data-visual-section={VISUAL_SECTION.topBar} data-institutional-bar className="bg-[var(--institutional)] text-white py-2 px-4 text-xs flex items-center justify-center gap-2.5 font-medium"><InstitutionalBadge /></div>
 
       {/* =====================================================
           HEADER
@@ -115,7 +116,7 @@ export function EditorialLayout() {
         <div data-visual-part="headerLayout" className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between gap-6">
 
           {/* Logo / nombre de tienda */}
-          <Link data-visual-part="logo"
+          <InstitutionalBadge compact /><Link data-visual-part="logo"
             to="."
             className="flex min-w-0 max-w-full items-center gap-3"
             aria-label={`Ir al inicio de ${config.name || 'la tienda'}`}
@@ -303,13 +304,12 @@ export function EditorialLayout() {
           {/* Información de tienda */}
           <div className="md:col-span-2">
 
-            <p data-visual-part="footerTitle" className="font-display text-2xl mb-2">
+            {config.logo && <img data-landing-image className="store-footer-logo" src={config.logo} alt={`Logo de ${config.name}`} />}
+          <p data-visual-part="footerTitle" className="font-display text-2xl mb-2">
               {config.name}
             </p>
 
-            <p className="text-sm text-white/60">
-              {config.description}
-            </p>
+            <StoreBusinessDescription className="text-sm leading-relaxed" />
 
           </div>
 
@@ -385,10 +385,11 @@ export function EditorialLayout() {
         {/* Copyright */}
         <div data-visual-part="branding" className="border-t border-white/10 py-4 text-xs text-white/40 px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
           <InstitutionalBadge compact showVersion={true} />
-          <p className="text-center sm:text-right">© 2025 {config.name} · Plataforma e-commerce Universidad Autónoma de Chile</p>
+          <p className="text-center sm:text-right">© {new Date().getFullYear()} {config.name} · OpenMind</p>
         </div>
 
-      </footer>
+      <CommercialPreferencesLink />
+    </footer>
 
     </StoreVisualRoot>
   );

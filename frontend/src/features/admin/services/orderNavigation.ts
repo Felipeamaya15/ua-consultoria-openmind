@@ -39,6 +39,35 @@ export function orderDateInChile(value: string): string {
   return parts ? `${parts.year}-${parts.month}-${parts.day}` : '';
 }
 
+export const ORDER_DATE_PRESETS = [
+  { id: 'all', label: 'Todo el historial' },
+  { id: 'today', label: 'Hoy' },
+  { id: '7', label: 'Últimos 7 días' },
+  { id: '30', label: 'Últimos 30 días' },
+  { id: '60', label: 'Últimos 60 días' },
+  { id: '90', label: 'Últimos 90 días' },
+  { id: 'month', label: 'Este mes' },
+] as const;
+export type OrderDatePreset = typeof ORDER_DATE_PRESETS[number]['id'];
+
+/** Inclusive calendar days in Chile, including today; independent of browser timezone and DST. */
+export function orderDateRange(preset: OrderDatePreset, now = new Date()): { from: string; to: string } {
+  if (preset === 'all') return { from: '', to: '' };
+  const to = orderDateInChile(now.toISOString());
+  if (preset === 'today') return { from: to, to };
+  if (preset === 'month') return { from: to.slice(0, 7) + '-01', to };
+  const start = new Date(to + 'T12:00:00Z');
+  start.setUTCDate(start.getUTCDate() - (Number(preset) - 1));
+  return { from: start.toISOString().slice(0, 10), to };
+}
+
+export function selectedOrderDatePreset(from: string, to: string, now = new Date()): OrderDatePreset | 'custom' {
+  return ORDER_DATE_PRESETS.find(preset => {
+    const range = orderDateRange(preset.id, now);
+    return range.from === from && range.to === to;
+  })?.id || 'custom';
+}
+
 /** Filtra el listado autorizado que ya entrega la API; no utiliza pedidos simulados. */
 export function filterStoreOrders<T extends { estado: string; fecha_creacion: string }>(orders: T[], filters: OrderFilters): T[] {
   if (filters.error) return [];

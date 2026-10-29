@@ -5,6 +5,8 @@ import { requestJson } from '../../../shared/services/apiRequest';
 export type RemoteEmailTemplates = {
   plantillas: Record<string, EmailTemplate>;
   por_defecto: Record<string, EmailTemplate>;
+  variables?: import('../components/AutomaticFieldEditor').AutomaticField[];
+  obligatorias?: Record<string,string[]>;
 };
 
 function token() {

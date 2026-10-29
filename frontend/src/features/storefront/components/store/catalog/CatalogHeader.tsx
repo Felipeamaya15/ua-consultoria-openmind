@@ -1,3 +1,5 @@
+import { InstitutionalBadge } from '../../ui';
+import { CompactMobileNavigation } from '../CompactMobileNavigation';
 import { VISUAL_SECTION } from '../../../visual/sectionIds';
 import { AccountNavigation } from '../AccountNavigation';
 import { useStore } from '../../../context/StoreContext';
@@ -12,17 +14,10 @@ export function CatalogHeader() {
 
   return (
     <>
-      <div className="bg-[#1d1d1f] text-white text-center text-[11px] py-2 px-4">
-        Compra online con envío a todo Chile.{' '}
-        <Link to={route('seguimiento')} className="text-[var(--primary)] hover:opacity-70">
-          Revisa tu pedido →
-        </Link>
-      </div>
-
       <header data-visual-section={VISUAL_SECTION.header} className="sticky top-0 z-50 bg-[#050505]/90 backdrop-blur-md py-3">
         <div className="max-w-[1160px] mx-auto px-5">
           <nav data-visual-part="headerLayout" className="h-14 rounded-full bg-[#202022] border border-white/[0.06] px-5 md:px-7 flex items-center justify-between shadow-2xl shadow-black/30">
-            <Link data-visual-part="logo"
+            <InstitutionalBadge compact /><Link data-visual-part="logo"
               to={route()}
               aria-label={`Ir al inicio de ${config.name || 'la tienda'}`}
               className="flex min-w-0 max-w-full items-center gap-2 text-white hover:text-[var(--primary)] transition-colors"
@@ -32,13 +27,10 @@ export function CatalogHeader() {
                 <path d="M5.5 10v10h13V10" />
                 <path d="M9.5 20v-6h5v6" />
               </svg>}
-              <span className="truncate text-xs sm:hidden">{config.name}</span>
+              <span className="truncate text-sm font-semibold">{config.name}</span>
             </Link>
 
             <div data-visual-part="navigation" className="flex min-w-0 max-w-full items-center gap-5 md:gap-8 text-[12px] font-semibold text-white">
-              <Link to={route()} className="hidden sm:block truncate hover:text-[var(--primary)] transition-colors">
-                {config.name}
-              </Link>
               <Link to={route('catalogo')} className="hover:text-[var(--primary)] transition-colors">
                 Catálogo
               </Link>
@@ -65,6 +57,7 @@ export function CatalogHeader() {
             </Link>
           </nav>
         </div>
+      <CompactMobileNavigation />
       </header>
     </>
   );

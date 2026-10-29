@@ -45,6 +45,8 @@ export default function EditorialHome() {
         </div>
       </section>)}
 
+      <LandingBlocks />
+
       {/* Featured products */}
       {isSectionVisible('Productos destacados') && featured.length > 0 && (<section data-visual-section={VISUAL_SECTION.sections} data-visual-kind="featured" data-landing-content className="max-w-7xl mx-auto px-4 py-16">
         <div className="flex items-end justify-between mb-8">
@@ -78,7 +80,6 @@ export default function EditorialHome() {
           </div>
         </div>
       </section>)}
-      <LandingBlocks />
       <LandingDetails />
     </div>
   );

@@ -1,3 +1,5 @@
+import { InstitutionalBadge } from '../../ui';
+import { CompactMobileNavigation } from '../CompactMobileNavigation';
 import { VISUAL_SECTION } from '../../../visual/sectionIds';
 import { AccountNavigation } from '../AccountNavigation';
 import { useStore } from '../../../context/StoreContext';
@@ -40,7 +42,7 @@ export function MinimalHeader() {
       <header data-visual-section={VISUAL_SECTION.header} data-visual-part="headerLayout" className="max-w-6xl mx-auto bg-white rounded-2xl border border-black/5 shadow-sm px-4 md:px-6 h-16 md:max-lg:h-auto md:max-lg:min-h-16 md:max-lg:py-3 md:max-lg:flex-wrap flex items-center justify-between gap-4">
 
         {/* Nombre */}
-        <Link data-visual-part="logo"
+        <InstitutionalBadge compact /><Link data-visual-part="logo"
           to="."
           aria-label={`Ir al inicio de ${config.name || 'la tienda'}`}
           className="flex min-w-0 max-w-full items-center gap-2 font-semibold text-[var(--primary)]"
@@ -95,6 +97,7 @@ export function MinimalHeader() {
             <MinimalCartIcon count={count} />
           </Link>
         </div>
+      <CompactMobileNavigation />
       </header>
     </div>
   );

@@ -40,7 +40,9 @@ class BloquesLandingTests(TestCase):
         response = self.put()
         self.assertEqual(response.status_code,201,response.data)
         self.client.force_authenticate(None)
-        self.assertEqual(self.client.get(self.url).data['data']['contenido']['bloques'],[self.block])
+        public = self.client.get(self.url)
+        self.assertEqual(public['Cache-Control'], 'no-store')
+        self.assertEqual(public.data['data']['contenido']['bloques'],[self.block])
 
     def test_all_block_types_and_unicode(self):
         self.payload['contenido']['bloques'] = [{**self.block,'id':str(uuid.uuid4()),'tipo':kind,'texto':'Autónoma · Diseño <script>alert(1)</script>'} for kind in ['historia','imagen_texto','texto','galeria','cita']]

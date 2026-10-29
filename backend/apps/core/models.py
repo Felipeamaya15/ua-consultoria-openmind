@@ -43,6 +43,7 @@ class Tienda(models.Model):
     )
     nombre = models.CharField(max_length=150)
     descripcion = models.TextField(blank=True, null=True)
+    correo_negocio = models.EmailField(blank=True, default='')
     fecha_creacion = models.DateTimeField(auto_now_add=True)
 
     objects = TiendaQuerySet.as_manager()
@@ -266,10 +267,16 @@ class ConsentimientoComercial(models.Model):
     """
     tienda = models.ForeignKey(Tienda, on_delete=models.CASCADE)
     email = models.EmailField(max_length=320)
-    estado = models.CharField(max_length=15, choices=[('autorizado', 'Autorizado'), ('retirado', 'Retirado')])
+    estado = models.CharField(max_length=15, choices=[('pendiente', 'Pendiente de verificación'), ('autorizado', 'Autorizado'), ('retirado', 'Retirado')])
     version_texto = models.CharField(max_length=100, blank=True, default='')
     referencia_evidencia = models.CharField(max_length=250, blank=True, default='')
     fecha_actualizacion = models.DateTimeField(default=timezone.now)
+
+    verificado = models.BooleanField(default=False)
+    fecha_autorizacion = models.DateTimeField(null=True, blank=True)
+    fecha_verificacion = models.DateTimeField(null=True, blank=True)
+    fecha_retirada = models.DateTimeField(null=True, blank=True)
+    revision = models.PositiveIntegerField(default=0)
 
     def save(self, *args, **kwargs):
         from django.core.exceptions import ValidationError
@@ -278,14 +285,67 @@ class ConsentimientoComercial(models.Model):
         validate_email(self.email)
         if self.estado == 'autorizado' and (not self.version_texto.strip() or not self.referencia_evidencia.strip()):
             raise ValidationError('La autorización requiere versión del texto y referencia de evidencia.')
+        previous = type(self).objects.filter(pk=self.pk).values('estado').first() if self.pk else None
+        if previous and previous['estado'] != self.estado:
+            self.fecha_actualizacion = timezone.now()
+            fields = {'fecha_actualizacion'}
+            if self.estado == 'retirado':
+                self.fecha_retirada = self.fecha_actualizacion
+                self.verificado = False
+                self.revision += 1
+                fields.update({'fecha_retirada', 'verificado', 'revision'})
+            if kwargs.get('update_fields') is not None:
+                kwargs['update_fields'] = set(kwargs['update_fields']) | fields
         return super().save(*args, **kwargs)
 
     class Meta:
         constraints = [
             models.UniqueConstraint(fields=['tienda', 'email'], name='uq_consentimiento_tienda_email'),
-            models.CheckConstraint(condition=Q(estado='retirado') | (Q(estado='autorizado') & ~Q(version_texto='') & ~Q(referencia_evidencia='')), name='chk_consentimiento_evidencia'),
+            models.CheckConstraint(condition=Q(estado__in=['pendiente', 'retirado']) | (Q(estado='autorizado') & ~Q(version_texto='') & ~Q(referencia_evidencia='')), name='chk_consentimiento_evidencia'),
             models.CheckConstraint(condition=Q(email=models.functions.Lower(models.functions.Trim('email'))), name='chk_consentimiento_normalizado'),
         ]
+
+class SolicitudConsentimiento(models.Model):
+    import uuid
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    consentimiento = models.ForeignKey(ConsentimientoComercial, on_delete=models.CASCADE)
+    proposito = models.CharField(max_length=12, choices=[('confirmar', 'Confirmar'), ('gestionar', 'Gestionar')])
+    confirmacion = models.ForeignKey('self', null=True, blank=True, on_delete=models.PROTECT)
+    token_hash = models.CharField(max_length=64)
+    revision = models.PositiveIntegerField()
+    version_texto = models.CharField(max_length=100)
+    fecha_creacion = models.DateTimeField(default=timezone.now)
+    fecha_vencimiento = models.DateTimeField()
+    fecha_consumida = models.DateTimeField(null=True, blank=True)
+
+
+class HistorialConsentimientoQuerySet(models.QuerySet):
+    def update(self, **kwargs):
+        raise ValueError('El historial de consentimiento es de solo adición.')
+
+    def delete(self):
+        raise ValueError('El historial de consentimiento no se elimina desde la aplicación.')
+
+
+class EventoConsentimiento(models.Model):
+    consentimiento = models.ForeignKey(ConsentimientoComercial, on_delete=models.PROTECT, related_name='eventos')
+    tipo = models.CharField(max_length=12, choices=[('solicitado', 'Solicitado'), ('autorizado', 'Autorizado'), ('retirado', 'Retirado')])
+    fecha = models.DateTimeField(default=timezone.now)
+    revision = models.PositiveIntegerField()
+    version_texto = models.CharField(max_length=100)
+    texto = models.TextField()
+    metodo = models.CharField(max_length=40, default='enlace_email')
+    solicitud_id = models.UUIDField()
+    objects = HistorialConsentimientoQuerySet.as_manager()
+
+    def save(self, *args, **kwargs):
+        if not self._state.adding:
+            raise ValueError('El historial de consentimiento es de solo adición.')
+        return super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValueError('El historial de consentimiento no se elimina desde la aplicación.')
+
 
 class ConfiguracionTransbank(models.Model):
     AMBIENTE_CHOICES = [

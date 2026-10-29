@@ -2,7 +2,7 @@ import { API_BASE_URL } from '../../../api';
 import { authService } from '../../auth/services/authService';
 import { requestJson } from '../../../shared/services/apiRequest';
 
-export interface StoreInformation { nombre: string; descripcion: string | null }
+export interface StoreInformation { nombre: string; descripcion: string | null; correo_negocio?:string }
 export const STORE_INFORMATION_CHANGED = 'openmind:store-information-changed';
 function read(data: unknown): StoreInformation {
   const value = data as StoreInformation | null;
@@ -11,8 +11,8 @@ function read(data: unknown): StoreInformation {
   }
   return value;
 }
-export async function fetchStoreInformation(signal?: AbortSignal) {
-  return read(await requestJson(`${API_BASE_URL}/api/tienda/configuracion/`, { signal, cache: 'no-store' }));
+export async function fetchStoreInformation(signal?: AbortSignal, administrative=false) {
+  return read(await requestJson(`${API_BASE_URL}/api/tienda/configuracion/`, { signal, cache: 'no-store', ...(administrative && authService.getToken()?{headers:{Authorization:`Token ${authService.getToken()}`}}:{}) }));
 }
 export async function saveStoreInformation(data: StoreInformation) {
   const token = authService.getToken();

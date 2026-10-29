@@ -4,8 +4,14 @@
   --secondary: var(--secondary-desktop);
   --accent: var(--accent-desktop);
   --ring: var(--ring-desktop);
+  --visual-alternate: var(--visual-alternate-desktop);
+  --visual-muted: var(--visual-muted-desktop);
+  --visual-button: var(--visual-button-desktop);
+  --visual-button-text: var(--visual-button-text-desktop);
   --visual-background: var(--visual-background-desktop);
   --visual-text: var(--visual-text-desktop);
+  --visual-surface: var(--visual-surface-desktop);
+  --visual-border: var(--visual-border-desktop);
   --radius: var(--radius-desktop);
   --visual-body-font: var(--visual-body-font-desktop);
   --visual-heading-font: var(--visual-heading-font-desktop);
@@ -513,6 +519,8 @@
   --visual-page-story-button-padding-x: var(--visual-page-story-button-padding-x-desktop);
   --visual-page-story-button-padding-y: var(--visual-page-story-button-padding-y-desktop);
   --visual-page-story-button-font-size: var(--visual-page-story-button-font-size-desktop);
+  --visual-topbar-brand-color: var(--visual-topbar-brand-color-desktop);
+  --visual-footer-brand-color: var(--visual-footer-brand-color-desktop);
   --visual-header-bg: var(--visual-header-bg-desktop);
   --visual-header-color: var(--visual-header-color-desktop);
   --visual-header-height: var(--visual-header-height-desktop);
@@ -623,8 +631,14 @@
   --secondary: var(--secondary-tablet);
   --accent: var(--accent-tablet);
   --ring: var(--ring-tablet);
+  --visual-alternate: var(--visual-alternate-tablet);
+  --visual-muted: var(--visual-muted-tablet);
+  --visual-button: var(--visual-button-tablet);
+  --visual-button-text: var(--visual-button-text-tablet);
   --visual-background: var(--visual-background-tablet);
   --visual-text: var(--visual-text-tablet);
+  --visual-surface: var(--visual-surface-tablet);
+  --visual-border: var(--visual-border-tablet);
   --radius: var(--radius-tablet);
   --visual-body-font: var(--visual-body-font-tablet);
   --visual-heading-font: var(--visual-heading-font-tablet);
@@ -1132,6 +1146,8 @@
   --visual-page-story-button-padding-x: var(--visual-page-story-button-padding-x-tablet);
   --visual-page-story-button-padding-y: var(--visual-page-story-button-padding-y-tablet);
   --visual-page-story-button-font-size: var(--visual-page-story-button-font-size-tablet);
+  --visual-topbar-brand-color: var(--visual-topbar-brand-color-tablet);
+  --visual-footer-brand-color: var(--visual-footer-brand-color-tablet);
   --visual-header-bg: var(--visual-header-bg-tablet);
   --visual-header-color: var(--visual-header-color-tablet);
   --visual-header-height: var(--visual-header-height-tablet);
@@ -1243,8 +1259,14 @@
   --secondary: var(--secondary-mobile);
   --accent: var(--accent-mobile);
   --ring: var(--ring-mobile);
+  --visual-alternate: var(--visual-alternate-mobile);
+  --visual-muted: var(--visual-muted-mobile);
+  --visual-button: var(--visual-button-mobile);
+  --visual-button-text: var(--visual-button-text-mobile);
   --visual-background: var(--visual-background-mobile);
   --visual-text: var(--visual-text-mobile);
+  --visual-surface: var(--visual-surface-mobile);
+  --visual-border: var(--visual-border-mobile);
   --radius: var(--radius-mobile);
   --visual-body-font: var(--visual-body-font-mobile);
   --visual-heading-font: var(--visual-heading-font-mobile);
@@ -1752,6 +1774,8 @@
   --visual-page-story-button-padding-x: var(--visual-page-story-button-padding-x-mobile);
   --visual-page-story-button-padding-y: var(--visual-page-story-button-padding-y-mobile);
   --visual-page-story-button-font-size: var(--visual-page-story-button-font-size-mobile);
+  --visual-topbar-brand-color: var(--visual-topbar-brand-color-mobile);
+  --visual-footer-brand-color: var(--visual-footer-brand-color-mobile);
   --visual-header-bg: var(--visual-header-bg-mobile);
   --visual-header-color: var(--visual-header-color-mobile);
   --visual-header-height: var(--visual-header-height-mobile);
@@ -2007,14 +2031,14 @@
 [data-storefront-visual] [data-visual-card="list"] > a:first-child { aspect-ratio: var(--visual-card-image-ratio); border-radius: var(--visual-card-image-radius); max-width: 40%; }
 [data-storefront-visual] [data-visual-part="cardImage"] { aspect-ratio: var(--visual-card-image-ratio); border-radius: var(--visual-card-image-radius); overflow: hidden; }
 [data-storefront-visual] h1, [data-storefront-visual] h2, [data-storefront-visual] h3 { font-family: var(--visual-heading-font); }
-[data-storefront-visual] [data-visual-section="sections"] {
+[data-storefront-visual] [data-visual-section="sections"]:not([data-content-block-id]) {
   padding-top: var(--visual-section-content-padding-top); padding-bottom: var(--visual-section-content-padding-bottom);
   max-width: var(--visual-section-content-width); margin-inline: auto; background: var(--visual-section-content-background);
 }
 [data-storefront-visual] [data-visual-kind="featured"] { --visual-section-content-padding-top: var(--visual-section-featured-padding-top); --visual-section-content-padding-bottom: var(--visual-section-featured-padding-bottom); --visual-section-content-width: var(--visual-section-featured-width); --visual-section-content-background: var(--visual-section-featured-background); --visual-section-content-title-align: var(--visual-section-featured-title-align); --visual-section-content-title-size: var(--visual-section-featured-title-size); --visual-section-content-subtitle-size: var(--visual-section-featured-subtitle-size); }
 [data-storefront-visual] [data-visual-kind="benefits"] { --visual-section-content-padding-top: var(--visual-section-benefits-padding-top); --visual-section-content-padding-bottom: var(--visual-section-benefits-padding-bottom); --visual-section-content-width: var(--visual-section-benefits-width); --visual-section-content-background: var(--visual-section-benefits-background); --visual-section-content-title-align: var(--visual-section-benefits-title-align); --visual-section-content-title-size: var(--visual-section-benefits-title-size); --visual-section-content-subtitle-size: var(--visual-section-benefits-subtitle-size); }
-[data-storefront-visual] [data-visual-section="sections"] h2 { text-align: var(--visual-section-content-title-align); font-size: var(--visual-section-content-title-size); }
-[data-storefront-visual] [data-visual-section="sections"] > p, [data-storefront-visual] [data-visual-section="sections"] [data-visual-part="sectionSubtitle"] { font-size: var(--visual-section-content-subtitle-size); }
+[data-storefront-visual] [data-visual-section="sections"]:not([data-content-block-id]) h2 { text-align: var(--visual-section-content-title-align); font-size: var(--visual-section-content-title-size); }
+[data-storefront-visual] [data-visual-section="sections"]:not([data-content-block-id]) > p, [data-storefront-visual] [data-visual-section="sections"]:not([data-content-block-id]) [data-visual-part="sectionSubtitle"] { font-size: var(--visual-section-content-subtitle-size); }
 [data-storefront-visual] [data-visual-section="contact"] { padding: var(--visual-contact-padding); background: var(--visual-contact-background); }
 [data-storefront-visual] [data-visual-section="contact"] .landing-details__contacts { grid-template-columns: repeat(var(--visual-contact-columns),minmax(0,1fr)); }
 [data-storefront-visual] [data-visual-section="contact"] .landing-details__contact-card, [data-storefront-visual] [data-visual-section="contact"] .landing-details__hours { border: var(--visual-contact-border); border-radius: var(--visual-contact-radius); box-shadow: var(--visual-contact-shadow); }
@@ -2189,6 +2213,45 @@
 }
 @media(max-width:639px) {
   [data-storefront-visual] [data-visual-page="product"] :has(> .product-quantity) > :not(.product-quantity) { flex-basis:100%; }
+}
+
+
+
+/* Mandatory institutional identity follows its bar, including responsive colors. */
+[data-storefront-visual] [data-institutional-bar] { color: var(--visual-topbar-brand-color); }
+[data-storefront-visual] [data-visual-section="footer"] .ua-institutional-badge { color: var(--visual-footer-brand-color); }
+[data-storefront-visual] .ua-institutional-badge button { color: inherit; background: transparent; border-color: currentColor; box-shadow: none; }
+
+[data-storefront-visual] { --visual-topbar-brand-color: var(--visual-topbar-brand-color-desktop); --visual-footer-brand-color: var(--visual-footer-brand-color-desktop); }
+@media(max-width:1023px) { [data-storefront-visual] { --visual-topbar-brand-color: var(--visual-topbar-brand-color-tablet); --visual-footer-brand-color: var(--visual-footer-brand-color-tablet); } }
+@media(max-width:639px) { [data-storefront-visual] { --visual-topbar-brand-color: var(--visual-topbar-brand-color-mobile); --visual-footer-brand-color: var(--visual-footer-brand-color-mobile); } }
+/* Shared palette roles and integrated institutional identity. */
+[data-storefront-visual]{--foreground:var(--visual-text);--muted-foreground:var(--visual-muted);--muted:var(--visual-alternate);--border:var(--visual-border)}
+[data-storefront-visual] [data-visual-section="header"] .ua-institutional-badge{flex:0 0 auto;order:-1;margin-right:4px;padding:0;border:0;min-width:0}
+[data-storefront-visual] .ua-institutional-badge img{width:32px;height:32px;min-width:32px;max-width:32px;padding:3px}
+[data-storefront-visual] .ua-institutional-badge{min-width:0;font-size:11px}
+[data-storefront-visual] [data-visual-part="logo"]{flex:0 1 auto;min-width:0;max-width:42%}
+[data-storefront-visual] [data-visual-part="logo"] span{color:inherit}
+[data-storefront-visual] [data-visual-section="header"] [data-visual-part="navigation"]{color:inherit;min-width:0}
+[data-storefront-visual] [data-visual-part="footerTitle"]{color:inherit}
+[data-storefront-visual] .store-footer-logo{width:auto;max-width:140px;max-height:52px;object-fit:contain;margin-bottom:12px}
+[data-storefront-visual] [data-visual-section="categories"]{background:var(--visual-background);color:var(--visual-text)}
+[data-storefront-visual] [data-visual-section="productCard"]{background:var(--visual-surface);color:var(--visual-text)}
+[data-storefront-visual] [data-visual-part="productButton"], [data-storefront-visual] [data-visual-section="productCard"] button{background:var(--visual-button);color:var(--visual-button-text)}
+.store-mobile-navigation{display:none}
+@media(max-width:767px){
+ [data-storefront-visual] [data-visual-part="headerLayout"]{flex-direction:row;flex-wrap:nowrap;gap:10px;padding-inline:14px;min-height:68px}
+ [data-storefront-visual] [data-visual-part="logo"]{max-width:none;flex:1;gap:6px}
+ [data-storefront-visual] [data-visual-part="logo"] img{max-width:72px;max-height:40px}
+ [data-storefront-visual] [data-visual-part="logo"] span{font-size:15px}
+ [data-storefront-visual] .ua-institutional-badge img{width:26px;height:28px;min-width:26px;max-width:26px}
+ [data-storefront-visual] :is(.template-minimal,.template-visual,.template-catalog) [data-visual-part="navigation"]{display:none}
+ [data-storefront-visual].template-visual [data-visual-part="navigation"], [data-storefront-visual].template-catalog [data-visual-part="navigation"]{display:none}
+ [data-storefront-visual].template-visual [data-visual-part="navigation"]{display:flex;flex:0;gap:10px}
+ [data-storefront-visual].template-visual [data-visual-part="navigation"]>a:not([aria-label]){display:none}
+ .store-mobile-navigation{display:block;position:relative;padding:8px 16px;color:inherit}
+ .store-mobile-navigation summary{cursor:pointer;font-size:12px;font-weight:600;list-style:none;text-align:right}
+ .store-mobile-navigation[open] nav{display:grid;gap:14px;padding:16px;border:1px solid currentColor;border-radius:10px;background:var(--visual-header-bg);position:absolute;right:14px;top:34px;z-index:50;min-width:200px;box-shadow:0 4px 20px #0002}
 }
 
 /* Generated page aliases start */
@@ -2675,11 +2738,11 @@
 }
 /* Generated page aliases end */
 
-/* Mandatory institutional identity follows its bar, including responsive colors. */
-[data-storefront-visual] [data-institutional-bar] { color: var(--visual-topbar-brand-color); }
-[data-storefront-visual] [data-visual-section="footer"] .ua-institutional-badge { color: var(--visual-footer-brand-color); }
-[data-storefront-visual] .ua-institutional-badge button { color: inherit; background: transparent; border-color: currentColor; box-shadow: none; }
+/* Compact layout takes precedence over the earlier generic information grid. */
+[data-storefront-visual] [data-visual-section="contact"] .landing-details__contacts{grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr))}
+[data-storefront-visual] [data-visual-section="location"] .landing-details__location-card{display:flex;flex-wrap:wrap;gap:18px}
+@media(min-width:1024px){[data-storefront-visual] [data-visual-section="location"] .landing-details__location-card--map{display:grid;grid-template-columns:auto minmax(0,1fr) minmax(280px,1fr)}}
+@media(max-width:639px){[data-storefront-visual] [data-visual-section="contact"] .landing-details__contacts{grid-template-columns:1fr}}
 
-[data-storefront-visual] { --visual-topbar-brand-color: var(--visual-topbar-brand-color-desktop); --visual-footer-brand-color: var(--visual-footer-brand-color-desktop); }
-@media(max-width:1023px) { [data-storefront-visual] { --visual-topbar-brand-color: var(--visual-topbar-brand-color-tablet); --visual-footer-brand-color: var(--visual-footer-brand-color-tablet); } }
-@media(max-width:639px) { [data-storefront-visual] { --visual-topbar-brand-color: var(--visual-topbar-brand-color-mobile); --visual-footer-brand-color: var(--visual-footer-brand-color-mobile); } }
+[data-storefront-visual] [data-visual-section="header"]{--foreground:var(--visual-header-color);--muted-foreground:var(--visual-header-color)}
+[data-storefront-visual] [data-visual-section="header"] button{color:inherit}

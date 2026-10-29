@@ -50,6 +50,8 @@ function harness(template) {
     localStorage: {getItem: () => '{invalid'}, window: {scrollTo() {}, location: {origin: 'http://localhost'}},
     fetch: async () => networkReply,
     require: name => {
+      if (name.includes('CommercialOptIn')) return {CommercialOptIn: 'CommercialOptIn'};
+      if (name.includes('commercialConsent')) return {requestConsent: async () => ({exito: true, mensaje: 'Pendiente de confirmar'})};
       if (name === 'react/jsx-runtime') return {jsx, jsxs: jsx};
       if (name === 'react') return {
         useState(initial) {const i = cursor++; if (!(i in states)) states[i] = typeof initial === 'function' ? initial() : initial;
