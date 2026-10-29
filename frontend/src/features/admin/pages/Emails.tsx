@@ -12,7 +12,6 @@ import { fetchEmailTemplates, saveEmailTemplates, type RemoteEmailTemplates } fr
 const templateTypes = Object.keys(emailTemplateDefinitions) as EmailTemplateType[]
 
 
-
 export default function EmailTemplates() {
   const { config, setConfig } = useAdmin()
   const [templates, setTemplates] = useState(() => config.emailTemplates ?? createDefaultEmailTemplates())
@@ -85,7 +84,7 @@ export default function EmailTemplates() {
   return (
     <div className="w-full space-y-6 animate-fade-in">
       <Alert variant="info" title="Envío automático">
-        Estos mensajes se envían solos al comprador: «Confirmación de recepción» al crear el pedido, «Pago exitoso» al confirmarse el pago, «Pago rechazado» cuando se rechaza o se anula el pago (transferencia o Webpay) y «Pedido despachado» al marcar el pedido como enviado. Puedes desactivar el que no quieras enviar.
+        Estos mensajes se envían solos al comprador: «Confirmación de recepción» al crear el pedido, «Pago exitoso» al confirmarse el pago, «Pago rechazado» cuando se rechaza o se anula el pago (transferencia o Webpay) y «Pedido despachado» se envía automáticamente al marcar el pedido como enviado. Puedes desactivar el que no quieras enviar.
       </Alert>
 
       <div className="grid grid-cols-1 lg:grid-cols-[240px_minmax(0,1fr)] gap-5">

@@ -103,7 +103,7 @@ export default function OrderConfirmation() {
           <div className="mt-7 grid grid-cols-1 md:grid-cols-3 gap-6">
             {[
               ['1', 'Pedido registrado', 'Tu pedido quedó registrado con estado pendiente.'],
-              ['2', 'Pago pendiente', 'El registro del pedido no confirma su pago.'],
+              ['2', 'Pago pendiente', 'Te enviamos un correo con la confirmación de recepción de tu pedido.'],
               ['3', 'Sigue tu pedido', 'Puedes consultar el estado desde Seguimiento.'],
             ].map(([number, title, description]) => (
               <div key={number}>
@@ -193,49 +193,56 @@ export default function OrderConfirmation() {
               </h2>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div>
-                  <span className="w-8 h-8 rounded-full bg-[var(--visual-page-panel-background)] text-[var(--visual-page-color)] flex items-center justify-center text-[11px] font-semibold mb-4">
+                <div className="flex gap-4 md:block">
+                  <span className="w-8 h-8 rounded-full border border-[var(--visual-global-border)] text-[var(--visual-page-color)] flex items-center justify-center flex-shrink-0 font-serif text-[13px] md:mb-4">
                     1
                   </span>
 
-                  <p className="text-[13px] font-semibold">
-                    Pedido registrado
-                  </p>
+                  <div>
+                    <p className="text-[13px] font-semibold">
+                      Pedido registrado
+                    </p>
 
-                  <p className="mt-2 text-[11px] leading-5 text-[var(--visual-page-color)]">
-                    Tu pedido quedó
-                    registrado con estado pendiente.
-                  </p>
+                    <p className="mt-2 text-[11px] leading-5 text-[var(--visual-page-color)]">
+                      Tu pedido quedó
+                      registrado con estado pendiente.
+                    </p>
+                  </div>
                 </div>
 
-                <div>
-                  <span className="w-8 h-8 rounded-full bg-[var(--visual-page-panel-background)] text-[var(--visual-page-color)] flex items-center justify-center text-[11px] font-semibold mb-4">
+                <div className="flex gap-4 md:block">
+                  <span className="w-8 h-8 rounded-full border border-[var(--visual-global-border)] text-[var(--visual-page-color)] flex items-center justify-center flex-shrink-0 font-serif text-[13px] md:mb-4">
                     2
                   </span>
 
-                  <p className="text-[13px] font-semibold">
-                    Pago pendiente
-                  </p>
+                  <div>
+                    <p className="text-[13px] font-semibold">
+                      Pago pendiente
+                    </p>
 
-                  <p className="mt-2 text-[11px] leading-5 text-[var(--visual-page-color)]">
-                    El registro del pedido no realiza
-                    cobros ni envía correos.
-                  </p>
+                    <p className="mt-2 text-[11px] leading-5 text-[var(--visual-page-color)]">
+                      Te enviamos un correo con la
+                      confirmación de recepción de tu
+                      pedido.
+                    </p>
+                  </div>
                 </div>
 
-                <div>
-                  <span className="w-8 h-8 rounded-full bg-[var(--visual-page-panel-background)] text-[var(--visual-page-color)] flex items-center justify-center text-[11px] font-semibold mb-4">
+                <div className="flex gap-4 md:block">
+                  <span className="w-8 h-8 rounded-full border border-[var(--visual-global-border)] text-[var(--visual-page-color)] flex items-center justify-center flex-shrink-0 font-serif text-[13px] md:mb-4">
                     3
                   </span>
 
-                  <p className="text-[13px] font-semibold">
-                    Sigue tu pedido
-                  </p>
+                  <div>
+                    <p className="text-[13px] font-semibold">
+                      Sigue tu pedido
+                    </p>
 
-                  <p className="mt-2 text-[11px] leading-5 text-[var(--visual-page-color)]">
-                    Puedes consultar el estado de tu
-                    pedido desde Seguimiento.
-                  </p>
+                    <p className="mt-2 text-[11px] leading-5 text-[var(--visual-page-color)]">
+                      Puedes consultar el estado de tu
+                      pedido desde Seguimiento.
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>
@@ -347,8 +354,9 @@ export default function OrderConfirmation() {
                   </p>
 
                   <p className="text-xs text-[var(--visual-page-color)] mt-1 leading-relaxed">
-                    El registro del pedido no realiza
-                    cobros ni envía correos.
+                    Te enviamos un correo con la
+                    confirmación de recepción de tu
+                    pedido.
                   </p>
                 </div>
               </div>
@@ -449,8 +457,10 @@ export default function OrderConfirmation() {
             </span>
 
             <span>
-              El registro del pedido no realiza cobros ni
-              envía correos.
+              Aún no se ha confirmado tu pago.
+              Te enviamos un correo con la
+              confirmación de recepción de tu
+              pedido.
             </span>
           </div>
 
