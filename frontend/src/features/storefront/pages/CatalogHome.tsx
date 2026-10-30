@@ -21,7 +21,7 @@ export default function CatalogHome() {
   const discover = featured.slice(1);
 
   return (
-    <div className="bg-[#050505] text-white overflow-hidden">
+    <div className="bg-[var(--visual-background)] text-[var(--visual-text)] overflow-hidden">
       {/* HERO EDITORIAL */}
       <section
         data-visual-section={VISUAL_SECTION.hero}
@@ -109,16 +109,16 @@ export default function CatalogHome() {
               >
                 <Icon
                   name={benefit.icono}
-                  className="w-5 h-5 shrink-0 mt-0.5 text-white"
+                  className="w-5 h-5 shrink-0 mt-0.5 text-[var(--visual-text)]"
                 />
 
                 <div className="min-w-0">
-                  <p className="text-sm font-semibold leading-5 text-white">
+                  <p className="text-sm font-semibold leading-5 text-[var(--visual-text)]">
                     {benefit.titulo}
                   </p>
 
                   {benefit.descripcion && (
-                    <p className="mt-1 text-xs leading-5 text-white/65">
+                    <p className="mt-1 text-xs leading-5 text-[var(--visual-muted)]">
                       {benefit.descripcion}
                     </p>
                   )}
@@ -139,7 +139,7 @@ export default function CatalogHome() {
           data-landing-content
           className="max-w-[1160px] mx-auto px-5 py-24 md:py-32"
         >
-          <h2 className="max-w-[800px] text-[48px] sm:text-[62px] md:text-[76px] leading-[0.96] tracking-[-0.055em] font-black text-white">
+          <h2 className="max-w-[800px] text-[48px] sm:text-[62px] md:text-[76px] leading-[0.96] tracking-[-0.055em] font-black text-[var(--visual-text)]">
             Todo lo que necesitas.
             <br />
             Nada que no.
@@ -181,16 +181,16 @@ export default function CatalogHome() {
       <section
         data-visual-section={VISUAL_SECTION.sections}
         data-visual-kind="content"
-        className="bg-[#f6f6f4] text-[#151515]"
+        className="bg-[var(--visual-background)] text-[var(--visual-text)]"
       >
         <div className="grid grid-cols-1 lg:grid-cols-2 min-h-[560px]">
-          <div className="flex items-center bg-[#f6f6f4] text-[#151515]">
+          <div className="flex items-center bg-[var(--visual-background)] text-[var(--visual-text)]">
             <div className="w-full max-w-[580px] min-w-0 px-8 sm:px-14 lg:pl-[max(4rem,calc((100vw-1160px)/2))] lg:pr-16 py-20">
               <p className="text-[var(--primary)] text-xs font-bold">
                 Selección cuidada
               </p>
 
-              <h2 className="mt-7 text-[clamp(2.5rem,5vw,4.125rem)] leading-[1.02] tracking-[-0.05em] font-black break-words text-[#151515]">
+              <h2 className="mt-7 text-[clamp(2.5rem,5vw,4.125rem)] leading-[1.02] tracking-[-0.05em] font-black break-words text-[var(--visual-text)]">
                 Una mejor
                 <br />
                 forma de
@@ -198,7 +198,7 @@ export default function CatalogHome() {
                 elegir.
               </h2>
 
-              <p className="mt-7 max-w-md text-base leading-7 text-[#151515]/70">
+              <p className="mt-7 max-w-md text-base leading-7 text-[var(--visual-muted)]">
                 Encuentra productos de calidad, con información clara,
                 precios transparentes y entrega a todo Chile.
               </p>
@@ -236,7 +236,7 @@ export default function CatalogHome() {
                 Más para descubrir
               </p>
 
-              <h2 className="mt-3 text-3xl md:text-4xl font-black tracking-[-0.035em] text-white">
+              <h2 className="mt-3 text-3xl md:text-4xl font-black tracking-[-0.035em] text-[var(--visual-text)]">
                 Seleccionados para ti.
               </h2>
             </div>
@@ -263,7 +263,7 @@ export default function CatalogHome() {
               >
                 <Link
                   to={route(`producto/${product.id}`)}
-                  className="block aspect-[1.15/1] rounded-[24px] overflow-hidden bg-[#171719]"
+                  className="block aspect-[1.15/1] rounded-[24px] overflow-hidden bg-[var(--visual-alternate)]"
                 >
                   <img
                     src={product.images[0]}
@@ -276,13 +276,13 @@ export default function CatalogHome() {
                   {product.category}
                 </p>
 
-                <h3 className="mt-3 text-xl md:text-2xl font-semibold tracking-tight text-white">
+                <h3 className="mt-3 text-xl md:text-2xl font-semibold tracking-tight text-[var(--visual-text)]">
                   {product.name}
                 </h3>
 
                 <p
                   data-visual-part="price"
-                  className="mt-3 text-sm font-semibold text-white"
+                  className="mt-3 text-sm font-semibold text-[var(--visual-text)]"
                 >
                   {formatPrice(product.basePrice)}
                 </p>
@@ -290,7 +290,7 @@ export default function CatalogHome() {
                 <Link
                   data-visual-part="buyButton"
                   to={route(`producto/${product.id}`)}
-                  className="mt-5 h-11 rounded-full bg-[var(--accent)] text-white text-sm font-semibold flex items-center justify-center hover:opacity-90 transition-opacity"
+                  className="mt-5 h-11 rounded-full bg-[var(--visual-button)] text-[var(--visual-button-text)] text-sm font-semibold flex items-center justify-center hover:opacity-90 transition-opacity"
                 >
                   Comprar
                 </Link>

@@ -161,7 +161,7 @@ export default function LandingPageContent() {
           {panel.id==='blocks'&&<>
             <div className="lp-sections-refresh"><p>El contenido guardado se comparte entre las cuatro plantillas.</p><button type="button" className="lp-button" disabled={saving||sectionsLoading} onClick={()=>void refreshSections()}>Actualizar secciones</button></div>
             {sectionsLoading&&<LoadingState size="sm" align="start" spacing="compact">Cargando secciones guardadas…</LoadingState>}
-            {sectionsError&&<ErrorState onRetry={()=>void refreshSections()} retryLabel="Reintentar secciones">{sectionsError}</ErrorState>}
+            {sectionsError&&<ErrorState onRetry={()=>void refreshSections()} retryLabel="Reintentar secciones">{humanizeAdminError(sectionsError)}</ErrorState>}
             {sectionsNotice&&<p role="status" className="lp-sections-notice">{sectionsNotice}</p>}
             <fieldset disabled={sectionsLoading||!!sectionsError} aria-busy={sectionsLoading}>
               <LandingBlocksEditor value={form.contenido?.bloques} onChange={bloques=>change({...form,contenido:{...normalizeLandingContent(form.contenido),bloques}})} />

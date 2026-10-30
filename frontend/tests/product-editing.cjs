@@ -78,6 +78,7 @@ async function main() {
     const jsx = (type, props) => ({ type, props });
     const components = load('src/features/admin/pages/Products.tsx', {
       require: name => {
+        if (name.includes('shared/services/imageUpload')) return { IMAGE_ACCEPT: 'image/*', prepareImage: async () => { throw new Error('Este test no selecciona archivos'); } };
         if (name === 'react/jsx-runtime') return { jsx, jsxs: jsx };
         if (name === 'react') return {
           useMemo: f => f(), useRef: () => ({ current: null }),
