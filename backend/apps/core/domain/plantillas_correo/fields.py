@@ -7,6 +7,7 @@ _DETAILS = (
     ('Correo del cliente', 'Correo de contacto del pedido.', 'cliente@example.test'),
     ('Número de pedido', 'Identificador del pedido al que corresponde el mensaje.', 'PED-00125'),
     ('Total del pedido', 'Monto total de esa compra.', '$25.990'),
+    ('Resumen de compra', 'Productos, cantidades y montos registrados en el pedido.', '2 × Producto de ejemplo — $25.990'),
     ('Método de entrega', 'Método de entrega elegido para el pedido.', 'Despacho a domicilio'),
     ('Transportista', 'Transportista o método de despacho del pedido.', 'Transportista de ejemplo'),
     ('Código de seguimiento', 'Código de seguimiento guardado en el despacho.', 'SEG-00125'),

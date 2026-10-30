@@ -141,7 +141,9 @@ test('ninguna pantalla vuelve a armar a mano un error con botón de reintento', 
 });
 
 test('quien usa <ErrorState> lo importa del módulo compartido', () => {
-  const sin = pantallas.filter(f => /<ErrorState\b/.test(f.texto) && !/import \{[^}]*\bErrorState\b[^}]*\} from ['"][./]+shared\/components\/states['"]/.test(f.texto)).map(f => f.ruta);
+  const sin = pantallas.filter(f => /<ErrorState\b/.test(f.texto) && ![...f.texto.matchAll(/import \{[^}]*\bErrorState\b[^}]*\} from ['"]([^'"]+)['"]/g)].some(match =>
+    path.resolve(root, path.dirname(f.ruta), match[1]) === path.resolve(root, 'src/shared/components/states')
+  )).map(f => f.ruta);
   assert.deepEqual(sin, []);
 });
 

@@ -58,10 +58,31 @@ function sectionVariables(config: VisualSections, viewport: Viewport): Record<st
   add('cta', { width: cta.width === 'full' ? '100%' : cta.width === 'custom' ? px(cta.customWidth) : 'auto', align: flexAlign(cta.align), paddingX: px(cta.paddingX), paddingY: px(cta.paddingY), fontSize: px(cta.fontSize), fontWeight: String(cta.fontWeight), radius: radius(cta.shape, cta.radius), background: cta.variant === 'solid' ? ctaColor : 'transparent', color: cta.textColor === '#ffffff' ? colors.buttonText : cta.textColor === 'currentColor' ? institutionalTextColor(ctaColor, colors.background) : cta.textColor, border: cta.variant === 'ghost' ? '0 solid transparent' : border(cta.border, colors.border) });
   const cat = config.categories;
   add('categories', { display: cat.layout === 'grid' ? 'grid' : 'flex', wrap: cat.layout === 'row' ? 'nowrap' : 'wrap', columns: String(cat.columns), gap: px(cat.gap), radius: cat.presentation === 'pills' ? '999px' : cat.presentation === 'links' ? '0px' : px(cat.radius), padding: cat.presentation === 'links' ? '0px' : px(cat.padding), textSize: px(cat.textSize), align: cat.align, justify: flexAlign(cat.align), border: cat.presentation === 'links' ? '0 solid transparent' : border(cat.border, colors.border), shadow: cat.presentation === 'links' ? 'none' : shadows[cat.shadow], background: cat.presentation === 'links' ? 'transparent' : cat.background, ratio: cat.presentation === 'cards' ? '1' : 'auto', imageDisplay: cat.presentation === 'cards' ? 'block' : 'none' });
-  for (const [key, s] of Object.entries(config.sections)) add(`section-${key}`, { paddingTop: px(s.paddingTop), paddingBottom: px(s.paddingBottom), width: px(s.contentWidth), background: s.background === 'currentColor' ? colors.secondary : s.background === 'transparent' ? colors.background : s.background, color: s.background === 'currentColor' ? institutionalTextColor(colors.secondary, colors.background) : 'inherit', titleAlign: s.titleAlign, titleSize: px(s.titleSize), subtitleSize: px(s.subtitleSize) });
+
+  for (const [key, s] of Object.entries(config.sections)) {
+    add(`section-${key}`, {
+      paddingTop: px(s.paddingTop),
+      paddingBottom: px(s.paddingBottom),
+      width: px(s.contentWidth),
+      background:
+        s.background === 'currentColor'
+          ? colors.secondary
+          : s.background === 'transparent'
+            ? (key === 'content' ? colors.background : colors.alternate)
+            : s.background,
+      color:
+        s.background === 'currentColor'
+          ? institutionalTextColor(colors.secondary, colors.background)
+          : 'inherit',
+      titleAlign: s.titleAlign,
+      titleSize: px(s.titleSize),
+      subtitleSize: px(s.subtitleSize),
+    });
+  }
+
   for (const key of ['contact', 'location'] as const) {
     const s = config[key];
-    add(key, { radius: px(s.cardRadius), border: border(s.border, colors.border), shadow: shadows[s.shadow], columns: String(s.layout === 'stack' ? 1 : s.layout === 'split' ? Math.min(2, s.columns) : s.columns), padding: px(s.padding), background: s.background === 'transparent' ? colors.background : s.background, titleSize: px(s.titleSize) });
+    add(key, { radius: px(s.cardRadius), border: border(s.border, colors.border), shadow: shadows[s.shadow], columns: String(s.layout === 'stack' ? 1 : s.layout === 'split' ? Math.min(2, s.columns) : s.columns), padding: px(s.padding), background: s.background === 'transparent' ? colors.alternate : s.background, titleSize: px(s.titleSize) });
   }
   const f = config.footer;
   add('footer', { background: linked ? structural : brandBg(f.background), color: linked ? structureText : brandText(f.textColor, f.background), columns: String(f.layout === 'stack' ? 1 : f.columns), align: f.layout === 'centered' ? 'center' : f.align, paddingTop: px(f.paddingTop), paddingBottom: px(f.paddingBottom), gap: px(f.gap), titleSize: px(f.titleSize), branding: 'block', width: px(Math.max(320, f.maxWidth)), titles: f.showTitles ? 'block' : 'none' });

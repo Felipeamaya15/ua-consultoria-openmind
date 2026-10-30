@@ -1,4 +1,5 @@
 import './palettes.css';
+import { ErrorState, LoadingState } from './components/states';
 import { useEffect, useRef, useState } from 'react';
 import { AdminModal } from '../features/admin/components/ui/AdminModal';
 import { deletePalette, savePalette, usePaletteLibrary, type PaletteColors, type StorePalette } from './palettes';
@@ -45,7 +46,7 @@ export function PaletteLibrary({colors,selectedId,onApply,onOriginal,manage=true
   </div>;
   return <div className="shared-palette-library" ref={menuRoot}>
     <div className="shared-palette-caption"><span>Paleta</span>{onOriginal&&<button type="button" className="shared-palette-reset" onClick={onOriginal}>Restablecer colores</button>}</div>
-    {error&&<p role="alert">{error} <button type="button" onClick={retry}>Reintentar</button></p>}{!library&&!error&&<p>Cargando paletas…</p>}
+    {error&&<ErrorState onRetry={retry}>{error}</ErrorState>}{!library&&!error&&<LoadingState size="sm" align="start">Cargando paletas…</LoadingState>}
     <div className="shared-palette-grid" aria-label="Biblioteca de paletas">{library?.sistema.map(palette=>render(palette,false))}{own.map(palette=>render(palette,true))}{manage&&library&&own.length<2&&<button type="button" className="shared-palette-create" onClick={()=>start()}><span aria-hidden="true">+</span>Crear paleta</button>}</div>
     {notice&&<p role="status" className="shared-palette-notice">{notice}</p>}
     <AdminModal open={!!editing} portal className="palette-dialog" size="xl" title={editing?.id?'Editar paleta':'Crear paleta'} onClose={()=>{if(!busy)setEditing(null);}}>

@@ -59,6 +59,7 @@ async function main() {
     const form = load('src/features/admin/pages/Products.tsx', {
       setTimeout: () => {},
       require: id => {
+        if (id.includes('shared/services/imageUpload')) return { IMAGE_ACCEPT: 'image/*', prepareImage: async () => { throw new Error('Este test no selecciona archivos'); } };
         if (id === 'react/jsx-runtime') return { jsx, jsxs: jsx };
         if (id === 'react') return {
           useEffect: () => {}, useMemo: f => f(), useRef: () => ({ current: null }),

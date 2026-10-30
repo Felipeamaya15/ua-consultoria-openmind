@@ -91,7 +91,9 @@ test('ninguna pantalla vuelve a dibujar la carga a mano', () => {
 });
 
 test('quien usa <LoadingState> lo importa del módulo compartido', () => {
-  const sinImportar = pantallas.filter(f => /<LoadingState\b/.test(f.texto) && !/import \{[^}]*\bLoadingState\b[^}]*\} from ['"][./]+(?:[./]*)shared\/components\/states['"]/.test(f.texto)).map(f => f.ruta);
+  const sinImportar = pantallas.filter(f => /<LoadingState\b/.test(f.texto) && ![...f.texto.matchAll(/import \{[^}]*\bLoadingState\b[^}]*\} from ['"]([^'"]+)['"]/g)].some(match =>
+    path.resolve(root, path.dirname(f.ruta), match[1]) === path.resolve(root, 'src/shared/components/states')
+  )).map(f => f.ruta);
   assert.deepEqual(sinImportar, []);
 });
 

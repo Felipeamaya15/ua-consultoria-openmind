@@ -24,6 +24,7 @@ function harness() {
     const code=ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:1,target:ts.ScriptTarget.ES2020,jsx:ts.JsxEmit.ReactJSX}}).outputText;
     const req=id=>{
       if(id in overrides)return overrides[id];
+      if(id.includes('shared/palettes'))return {usePaletteLibrary:()=>({library:null,appearance:null}),paletteOverrides:()=>undefined};
       if(id.includes('StoreIdentityContext')) return {useStoreIdentity:()=>({identity})};
       if(id.includes('storeInformationService'))return {fetchStoreInformation:signal=>request('business',{signal}),STORE_INFORMATION_CHANGED:'business-saved'};
       if(id.includes('landingService'))return {fetchLandingConfig:options=>request('landing',options),LANDING_CONFIG_CHANGED:'landing-saved'};

@@ -20,3 +20,16 @@ test('fonts load only chosen families, deduplicate per document, and retry after
   assert(Object.keys(fonts.WEB_FONTS).length>=30);fonts.loadFont('inter',doc);fonts.loadFont('inter',doc);assert.equal(links.length,1);assert(links[0].href.includes('family=Inter&display=swap'));fonts.loadFont('unsafe-font',doc);assert.equal(links.length,1);links[0].error();fonts.loadFont('inter',doc);assert.equal(links.length,1);
   const config=resolver.resolveVisualConfig({customization:{global:{typography:{body:'inter',heading:'playfair'}}}});fonts.loadVisualFonts(config,doc);assert.equal(links.length,2);assert(links.some(link=>link.href.includes('Playfair+Display')));assert.equal(css(config)['--visual-body-font-desktop'],'"Inter", sans-serif');
 });
+
+test('alternate sections inherit palette at every breakpoint while explicit colors and content background remain independent',()=>{
+  for(const template of ['editorial','minimal','visual','catalog']){
+    const vars=css(resolver.resolveVisualConfig({template,customization:{global:{colors:{background:'#fefefe',alternate:'#eeffee'}},sections:{benefits:{background:'#123456'}},location:{background:'#654321'}}}));
+    for(const viewport of ['desktop','tablet','mobile']){
+      assert.equal(vars['--visual-section-content-background-'+viewport],'#fefefe');
+      assert.equal(vars['--visual-section-featured-background-'+viewport],'#eeffee');
+      assert.equal(vars['--visual-contact-background-'+viewport],'#eeffee');
+      assert.equal(vars['--visual-section-benefits-background-'+viewport],'#123456');
+      assert.equal(vars['--visual-location-background-'+viewport],'#654321');
+    }
+  }
+});

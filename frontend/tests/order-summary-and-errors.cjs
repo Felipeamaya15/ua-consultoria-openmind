@@ -1,47 +1,33 @@
-const assert = require('assert');
-const fs = require('fs');
-const path = require('path');
+// Regression of the rendered purchase summary and the current error boundary.
+const assert = require('node:assert/strict');
+const { test } = require('node:test');
+const React = require('react');
+const { renderToStaticMarkup } = require('react-dom/server');
+const { load } = require('./source-loader.cjs');
 
-// Test 1: Verify humanizeError logic
-const humanizeErrorPath = path.join(__dirname, '../src/features/admin/utils/humanizeError.ts');
-const humanizeContent = fs.readFileSync(humanizeErrorPath, 'utf8');
+test('customer errors preserve actionable feedback and hide technical/sensitive details', () => {
+  const { humanizeAdminError } = load('src/features/admin/utils/humanizeError.ts');
+  const fallback = 'No pudimos completar esta acción. Intenta nuevamente.';
+  for (const error of ['Traceback /app/settings.py', 'SELECT password FROM usuario', 'token=private', 'mongodb://user:pass@local', null]) {
+    assert.equal(humanizeAdminError(error), fallback);
+  }
+  assert.equal(humanizeAdminError('Selecciona una comuna.'), 'Selecciona una comuna.');
+});
 
-assert(humanizeContent.includes('export function humanizeErrorMessage'), 'humanizeErrorMessage must be exported');
-assert(humanizeContent.includes('export function humanizeAdminError'), 'humanizeAdminError must be exported');
-assert(humanizeContent.includes('isTechnicalError'), 'isTechnicalError must be exported');
+test('summary renders actual SKU attributes, quantities and financial breakdown without mutating input', () => {
+  const Card = load('src/features/storefront/components/OrderSummaryCard.tsx', {
+    '../data/mockData': { formatPrice: amount => `CLP ${amount}` },
+  }).default;
+  const summary = { items: [{ id: 'sku-m', name: 'Polera <M>', quantity: 2, price: 1000, variantAttributes: { talla: 'M' } }], subtotal: 2000, shippingCost: 500, discount: 200, total: 2300 };
+  const before = JSON.stringify(summary);
+  const html = renderToStaticMarkup(React.createElement(Card, { summary }));
+  for (const text of ['Polera &lt;M&gt;', '2 productos', 'M', 'CLP 2000', 'CLP 500', '-CLP 200', 'CLP 2300']) assert.ok(html.includes(text), text);
+  assert.equal(JSON.stringify(summary), before);
+  assert.equal(renderToStaticMarkup(React.createElement(Card, { summary: { ...summary, items: [] } })), '');
+});
 
-// Test 2: Verify shared core export
-const coreHumanizePath = path.join(__dirname, '../src/core/utils/humanizeError.ts');
-const coreHumanizeContent = fs.readFileSync(coreHumanizePath, 'utf8');
-assert(coreHumanizeContent.includes('humanizeErrorMessage'), 'Core must re-export humanizeErrorMessage');
-
-// Test 3: Email templates default definition includes orderSummary
-const emailTemplatesPath = path.join(__dirname, '../src/features/admin/data/emailTemplates.ts');
-const emailTemplatesContent = fs.readFileSync(emailTemplatesPath, 'utf8');
-assert(emailTemplatesContent.includes('{{orderSummary}}'), 'emailTemplates.ts must include {{orderSummary}} in default bodies');
-
-// Test 4: Emails.tsx includes orderSummary variable chip
-const emailsPagePath = path.join(__dirname, '../src/features/admin/pages/Emails.tsx');
-const emailsPageContent = fs.readFileSync(emailsPagePath, 'utf8');
-assert(emailsPageContent.includes('"{{orderSummary}}"'), 'Emails.tsx must include "{{orderSummary}}" in variables array');
-assert(emailsPageContent.includes('humanizeErrorMessage'), 'Emails.tsx must use humanizeErrorMessage');
-
-// Test 5: OrderConfirmation.tsx includes OrderSummaryCard in all visual templates
-const orderConfirmationPath = path.join(__dirname, '../src/features/storefront/pages/OrderConfirmation.tsx');
-const orderConfirmationContent = fs.readFileSync(orderConfirmationPath, 'utf8');
-assert(orderConfirmationContent.includes('OrderSummaryCard'), 'OrderConfirmation.tsx must import and use OrderSummaryCard');
-assert(orderConfirmationContent.includes('sessionStorage.getItem(`order-tracking:${orderNumber}`)'), 'OrderConfirmation must retrieve stored summary if state is lost');
-
-// Test 6: TransbankReturnResult.tsx includes OrderSummaryCard and humanizeErrorMessage
-const transbankPath = path.join(__dirname, '../src/features/storefront/pages/TransbankReturnResult.tsx');
-const transbankContent = fs.readFileSync(transbankPath, 'utf8');
-assert(transbankContent.includes('OrderSummaryCard'), 'TransbankReturnResult must import and use OrderSummaryCard');
-assert(transbankContent.includes('humanizeErrorMessage'), 'TransbankReturnResult must use humanizeErrorMessage');
-
-// Test 7: Checkout.tsx saves summary in order-tracking and navigation state, and humanizes errors
-const checkoutPath = path.join(__dirname, '../src/features/storefront/pages/Checkout.tsx');
-const checkoutContent = fs.readFileSync(checkoutPath, 'utf8');
-assert(checkoutContent.includes('humanizeErrorMessage'), 'Checkout.tsx must use humanizeErrorMessage');
-assert(checkoutContent.includes('summary,'), 'Checkout.tsx must save summary in sessionStorage and navigate state');
-
-console.log('✔ All 7 QA tests for order summary and humanized error messages passed successfully!');
+test('default receipt and payment templates include the purchase summary marker', () => {
+  const templates = load('src/features/admin/data/emailTemplates.ts').createDefaultEmailTemplates();
+  assert.ok(templates.order_received.body.includes('{{orderSummary}}'));
+  assert.ok(templates.payment_success.body.includes('{{orderSummary}}'));
+});

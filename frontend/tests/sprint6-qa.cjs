@@ -69,7 +69,7 @@ test('API: red, JSON inválido, tiempo de espera y cancelación sin reintentar e
   await assert.rejects(slow('http://qa.test', { method: 'POST' }, 'fallback', 5), /tardó demasiado/);
   assert.equal(calls, 1);
   const controller = new AbortController(), promise = slow('http://qa.test', { signal: controller.signal });
-  controller.abort(); await assert.rejects(promise, /aborted/);
+  controller.abort(); await assert.rejects(promise, error => error.name === 'AbortError');
 });
 
 test('servicio promociones rechaza listas y escrituras malformadas antes de confirmar éxito', async () => {
@@ -100,9 +100,9 @@ test('pagos no confirma ni persiste antes de todas las respuestas y conserva for
     const fetch = async (url, options = {}) => {
       calls.push({ url, method: options.method });
       if (url.endsWith('/mi-tienda/')) return ok({ id_tienda: 1 });
-      if (options.method !== 'GET') await gate;
+      if (options.method && options.method !== 'GET') await gate;
       if (fails && options.method === 'POST' && url.includes('/paypal/')) return { ok: false, json: async () => ({ exito: false, mensaje: 'No se pudo guardar.' }) };
-      return ok({ activo: false, configurado: false });
+      return ok({ activo: false, configurado: false, ambiente: 'SANDBOX', fields: {} });
     };
     const page = load('src/features/admin/pages/Payments.tsx', {
       react: { useState(initial) { const i = cursor++; if (!(i in states)) states[i] = typeof initial === 'function' ? initial() : initial; return [states[i], next => { states[i] = typeof next === 'function' ? next(states[i]) : next; }]; },
