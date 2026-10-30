@@ -41,5 +41,35 @@ export function Toggle({checked,onChange,label,id,ariaLabel,disabled=false}:{che
 }
 export function AdminCard({children,className=''}:{children:ReactNode;className?:string}) {return <section className={'bg-white border border-[var(--border)] rounded-xl p-5 '+className}>{children}</section>;}
 export function Tabs({tabs,active,onChange}:{tabs:{id:string;label:string}[];active:string;onChange:(id:string)=>void}) {
-  return <div role="tablist" className="flex overflow-x-auto border-b border-[var(--border)] gap-1">{tabs.map(tab=><button type="button" role="tab" aria-selected={active===tab.id} key={tab.id} onClick={()=>onChange(tab.id)} className={'shrink-0 px-4 py-2.5 text-sm border-b-2 '+(active===tab.id?'border-[var(--primary)] text-[var(--primary)]':'border-transparent text-[var(--muted-foreground)]')}>{tab.label}</button>)}</div>;
+  return (
+    <div role="tablist" className="flex overflow-x-auto border-b border-[var(--border)] gap-1">
+      {tabs.map((tab, index) => (
+        <button
+          type="button"
+          role="tab"
+          aria-selected={active === tab.id}
+          tabIndex={active === tab.id ? 0 : -1}
+          key={tab.id}
+          onClick={() => onChange(tab.id)}
+          onKeyDown={event => {
+            if (!['ArrowRight', 'ArrowLeft', 'Home', 'End'].includes(event.key) || tabs.length === 0) return;
+            event.preventDefault();
+            const nextIndex =
+              event.key === 'Home'
+                ? 0
+                : event.key === 'End'
+                  ? tabs.length - 1
+                  : (index + (event.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length;
+            const nextTab = tabs[nextIndex];
+            onChange(nextTab.id);
+            const buttons = event.currentTarget.parentElement?.querySelectorAll<HTMLButtonElement>('[role="tab"]');
+            buttons?.[nextIndex]?.focus();
+          }}
+          className={'shrink-0 px-4 py-2.5 text-sm border-b-2 ' + (active === tab.id ? 'border-[var(--primary)] text-[var(--primary)]' : 'border-transparent text-[var(--muted-foreground)]')}
+        >
+          {tab.label}
+        </button>
+      ))}
+    </div>
+  );
 }

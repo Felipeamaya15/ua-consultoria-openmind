@@ -6,7 +6,6 @@ import { VISUAL_SECTION } from '../../visual/sectionIds';
 import { AccountNavigation } from './AccountNavigation';
 import { StoreVisualRoot } from './StoreVisualRoot';
 
-
 import { useEffect, useState } from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 
@@ -42,25 +41,7 @@ function CartIcon({ count }: { count: number }) {
   );
 }
 
-/**
- * ============================================================
- * TEMPLATE 1 — EDITORIAL
- * ============================================================
- *
- * Layout principal de la plantilla editorial.
- *
- * Contiene los elementos persistentes de la plantilla:
- * - Barra institucional
- * - Header
- * - Navegación
- * - Categorías
- * - Footer
- *
- * El contenido de cada página se renderiza mediante <StorePageContent><Outlet /></StorePageContent>.
- */
 export function EditorialLayout() {
-
-
   const { config } = useStore();
   const { count } = useCart();
   const navigate = useNavigate();
@@ -70,18 +51,16 @@ export function EditorialLayout() {
 
   const { pathname, search } = useLocation();
 
-  // Buscar si hay un usuario logueado al cargar el layout
-  // Buscar si hay un usuario logueado al cargar o al cambiar de página
   useEffect(() => {
     if (isActiveEditorPreview()) return;
     authService.getMe().then(response => {
       if (response?.data) {
         setUser(response.data);
       } else {
-        setUser(null); // Limpia el estado si el token no existe o expiró
+        setUser(null);
       }
     });
-  }, [pathname]); // <-- Agregamos 'pathname' para que se actualice al navegar
+  }, [pathname]);
 
   const handleLogout = () => {
     authService.logout();
@@ -89,32 +68,27 @@ export function EditorialLayout() {
     navigate('/plantilla/1');
   };
 
-  /**
-   * Al cambiar de página:
-   * - cierra el menú móvil;
-   * - vuelve al inicio de la página.
-   */
   useEffect(() => {
     setMobileOpen(false);
     window.scrollTo(0, 0);
   }, [pathname, search]);
 
-
+  useEffect(() => {
+    if (!mobileOpen) return;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setMobileOpen(false);
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [mobileOpen]);
 
   return (
     <StoreVisualRoot className="template-editorial min-h-screen bg-[#fafaf8] flex flex-col">
-
-      {/* =====================================================
-          BARRA INSTITUCIONAL
-      ====================================================== */}
-
-      {/* =====================================================
-          HEADER
-      ====================================================== */}
+      {/* HEADER */}
       <header data-visual-section={VISUAL_SECTION.header} className="bg-white border-b border-[var(--border)] sticky top-0 z-40">
-
         <div data-visual-part="headerLayout" className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between gap-6">
-
           {/* Logo / nombre de tienda */}
           <InstitutionalBadge compact /><Link data-visual-part="logo"
             to="."
@@ -139,9 +113,7 @@ export function EditorialLayout() {
             </span>
           </Link>
 
-          {/* =================================================
-              NAVEGACIÓN DESKTOP
-          ================================================== */}
+          {/* NAVEGACIÓN DESKTOP */}
           <nav data-visual-part="navigation"
             className="hidden md:flex items-center gap-6"
             aria-label="Navegación principal"
@@ -168,11 +140,8 @@ export function EditorialLayout() {
             </Link>
           </nav>
 
-          {/* =================================================
-              ACCIONES
-          ================================================== */}
+          {/* ACCIONES */}
           <div className="flex items-center gap-3">
-
             {/* Carrito */}
             <Link
               to="carrito"
@@ -224,13 +193,10 @@ export function EditorialLayout() {
                 />
               </svg>
             </button>
-
           </div>
         </div>
 
-        {/* =================================================
-            NAVEGACIÓN MÓVIL
-        ================================================== */}
+        {/* NAVEGACIÓN MÓVIL */}
         {mobileOpen && (
           <nav
             id="mobile-navigation"
@@ -261,7 +227,6 @@ export function EditorialLayout() {
               Seguimiento
             </Link>
 
-            {/* Login / Usuario Móvil */}
             {user ? (
               <>
                 <div className="text-sm py-2 font-semibold text-[var(--foreground)] border-t border-[var(--border)] mt-2 pt-4">
@@ -283,93 +248,70 @@ export function EditorialLayout() {
             )}
           </nav>
         )}
-
-
       </header>
 
-      {/* =====================================================
-          CONTENIDO DE LA PÁGINA
-      ====================================================== */}
-      <main className="flex-1">
+      {/* CONTENIDO DE LA PÁGINA */}
+      <main id="main-content" tabIndex={-1} className="flex-1">
         <StorePageContent><Outlet /></StorePageContent>
       </main>
 
-      {/* =====================================================
-          FOOTER
-      ====================================================== */}
+      {/* FOOTER */}
       <footer data-visual-section={VISUAL_SECTION.footer} className="bg-[var(--primary)] text-[var(--on-primary)] mt-16">
-
         <div data-visual-part="footerLayout" className="max-w-7xl mx-auto px-4 py-10 grid grid-cols-1 md:grid-cols-4 gap-8">
-
           {/* Información de tienda */}
           <div className="md:col-span-2">
-
             {config.logo && <img data-landing-image className="store-footer-logo" src={config.logo} alt={`Logo de ${config.name}`} />}
-          <p data-visual-part="footerTitle" className="font-display text-2xl mb-2">
+            <p data-visual-part="footerTitle" className="font-display text-2xl mb-2">
               {config.name}
             </p>
-
             <StoreBusinessDescription className="text-sm leading-relaxed" />
-
           </div>
 
           {/* Tienda */}
           <div>
-
             <p data-visual-part="footerTitle" className="text-xs font-semibold uppercase tracking-wider text-[color-mix(in_srgb,currentColor_60%,transparent)] mb-3">
               Tienda
             </p>
-
             <div className="flex flex-col gap-2 text-sm text-[color-mix(in_srgb,currentColor_70%,transparent)]">
-
               <Link
                 to="catalogo"
                 className="hover:text-inherit transition-colors"
               >
                 Catálogo
               </Link>
-
               <Link
                 to="seguimiento"
                 className="hover:text-inherit transition-colors"
               >
                 Seguimiento
               </Link>
-
             </div>
-
           </div>
 
           {/* Legal */}
           <div>
-
             <p data-visual-part="footerTitle" className="text-xs font-semibold uppercase tracking-wider text-[color-mix(in_srgb,currentColor_60%,transparent)] mb-3">
               Legal
             </p>
-
             <div className="flex flex-col gap-2 text-sm text-[color-mix(in_srgb,currentColor_70%,transparent)]">
-
               <Link
                 to="legal/terms"
                 className="hover:text-inherit transition-colors"
               >
                 Términos
               </Link>
-
               <Link
                 to="legal/privacy"
                 className="hover:text-inherit transition-colors"
               >
                 Privacidad
               </Link>
-
               <Link
                 to="legal/refund"
                 className="hover:text-inherit transition-colors"
               >
                 Reembolsos
               </Link>
-
               <Link
                 to="legal/cookies"
                 className="hover:text-inherit transition-colors"
@@ -377,9 +319,7 @@ export function EditorialLayout() {
                 Cookies
               </Link>
             </div>
-
           </div>
-
         </div>
 
         {/* Copyright */}
@@ -388,9 +328,8 @@ export function EditorialLayout() {
           <p className="text-center sm:text-right">© {new Date().getFullYear()} {config.name} · OpenMind</p>
         </div>
 
-      <CommercialPreferencesLink />
-    </footer>
-
+        <CommercialPreferencesLink />
+      </footer>
     </StoreVisualRoot>
   );
 }

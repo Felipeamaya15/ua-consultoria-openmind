@@ -99,6 +99,36 @@ body {
   outline-offset: 2px;
 }
 
+/* Indicador de foco por teclado de alto contraste en toda la tienda */
+[data-storefront-visual] :is(a, button, input, select, textarea, summary, [role="button"], [tabindex="0"]):focus-visible {
+  outline: 2px solid var(--ring, #1a3a6b) !important;
+  outline-offset: 2px !important;
+  box-shadow: 0 0 0 2px #ffffff, 0 0 0 4px var(--ring, #1a3a6b) !important;
+}
+
+/* En cabeceras y pies de página (donde el fondo suele ser primario/oscuro), usa el color de texto del bloque para garantizar contraste */
+[data-storefront-visual] [data-visual-section="header"] :is(a, button, input, select, summary, [tabindex="0"]):focus-visible {
+  outline: 2px solid var(--visual-header-color, #ffffff) !important;
+  outline-offset: 3px !important;
+  box-shadow: 0 0 0 2px var(--visual-header-bg, #1a3a6b), 0 0 0 4px var(--visual-header-color, #ffffff) !important;
+  border-radius: 6px;
+}
+
+[data-storefront-visual] [data-visual-section="footer"] :is(a, button, input, select, summary, [tabindex="0"]):focus-visible {
+  outline: 2px solid var(--visual-footer-color, #ffffff) !important;
+  outline-offset: 3px !important;
+  box-shadow: 0 0 0 2px var(--visual-footer-background, #1a3a6b), 0 0 0 4px var(--visual-footer-color, #ffffff) !important;
+  border-radius: 6px;
+}
+
+/* Elementos dentro de contenedores con overflow:hidden usan borde interno para que nunca se recorte */
+[data-storefront-visual] [data-visual-card] > a:first-child:focus-visible,
+[data-storefront-visual] [data-visual-part="categoryItem"]:focus-visible {
+  outline: 3px solid var(--ring, #1a3a6b) !important;
+  outline-offset: -3px !important;
+  box-shadow: inset 0 0 0 3px #ffffff, inset 0 0 0 5px var(--ring, #1a3a6b) !important;
+}
+
 /* Template font utilities */
 .font-display { font-family: 'DM Serif Display', Georgia, serif; }
 .font-sans { font-family: 'Plus Jakarta Sans', system-ui, sans-serif; }

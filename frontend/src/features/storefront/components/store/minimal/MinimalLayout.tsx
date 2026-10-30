@@ -16,19 +16,16 @@ export function MinimalLayout() {
 
   return (
     <StoreVisualRoot className="template-minimal min-h-screen bg-[#f5f5f3]">
-
       <MinimalSidebar />
 
       <div className="md:pl-16 min-h-screen flex flex-col">
-
         <MinimalHeader />
 
-        <main className="flex-1">
+        <main id="main-content" tabIndex={-1} className="flex-1">
           <StorePageContent><Outlet /></StorePageContent>
         </main>
 
         <MinimalFooter />
-
       </div>
     </StoreVisualRoot>
   );
