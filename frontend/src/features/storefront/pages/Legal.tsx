@@ -129,7 +129,7 @@ export default function Legal() {
                 <button
                   type="button"
                   onClick={() => window.dispatchEvent(new Event('openmind_open_cookie_banner'))}
-                  className="px-3.5 py-1.5 text-xs font-semibold rounded-lg bg-[var(--primary)] text-white hover:opacity-90 transition-opacity"
+                  className="px-3.5 py-1.5 text-xs font-semibold rounded-lg bg-[var(--primary)] text-[var(--on-primary)] hover:opacity-90 transition-opacity"
                 >
                   Configurar cookies
                 </button>
@@ -281,7 +281,7 @@ export default function Legal() {
             <button
               type="button"
               onClick={() => window.dispatchEvent(new Event('openmind_open_cookie_banner'))}
-              className="px-4 py-2 text-xs font-semibold rounded-lg bg-[var(--primary)] text-white hover:opacity-90 transition-opacity"
+              className="px-4 py-2 text-xs font-semibold rounded-lg bg-[var(--primary)] text-[var(--on-primary)] hover:opacity-90 transition-opacity"
             >
               Configurar cookies
             </button>

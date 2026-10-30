@@ -29,25 +29,25 @@ export default function CatalogHome() {
       >
         <div
           data-visual-part="heroFrame"
-          className="relative min-h-[620px] md:min-h-[720px] overflow-hidden rounded-[28px]"
+          className={`relative min-h-[620px] md:min-h-[720px] overflow-hidden rounded-[28px] ${landing?.imagen_principal ? 'text-white' : 'bg-[var(--primary)] text-[var(--on-primary)]'}`}
         >
           <img
             data-visual-part="heroImage"
             data-landing-image={landing?.imagen_principal ? true : undefined}
             src={landing?.imagen_principal || undefined}
             hidden={!landing?.imagen_principal}
-            alt={landing?.titulo || ''}
+            alt={landing?.titulo || 'Imagen principal de la tienda'}
             className="absolute inset-0 w-full h-full object-cover object-center"
           />
 
           <div
             data-visual-part="heroOverlay"
-            className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/55 to-black/15"
+            className={`absolute inset-0 bg-gradient-to-r from-black/90 via-black/55 to-black/15 ${landing?.imagen_principal ? '' : 'hidden'}`}
           />
 
           <div
             data-visual-part="heroOverlaySecondary"
-            className="absolute inset-0 bg-gradient-to-t from-black/45 via-transparent to-black/10"
+            className={`absolute inset-0 bg-gradient-to-t from-black/45 via-transparent to-black/10 ${landing?.imagen_principal ? '' : 'hidden'}`}
           />
 
           <div
@@ -64,13 +64,13 @@ export default function CatalogHome() {
 
               <LandingStatus />
 
-              <h1 className="mt-6 text-[clamp(2.5rem,6vw,5.125rem)] leading-[0.98] tracking-[-0.045em] font-black break-words text-white">
+              <h1 className="mt-6 text-[clamp(2.5rem,6vw,5.125rem)] leading-[0.98] tracking-[-0.045em] font-black break-words text-inherit">
                 {landing?.titulo}
               </h1>
 
               <p
                 data-visual-part="heroSubtitle"
-                className="mt-7 max-w-md text-sm md:text-base leading-7 text-white/85"
+                className="mt-7 max-w-md text-sm md:text-base leading-7 text-inherit opacity-85"
               >
                 {landing?.descripcion}
               </p>
@@ -82,7 +82,7 @@ export default function CatalogHome() {
                 <Link
                   data-visual-section={VISUAL_SECTION.heroCta}
                   to={route('catalogo')}
-                  className="rounded-full bg-[var(--accent)] px-7 py-3 text-sm font-semibold text-white hover:opacity-90 transition-opacity"
+                  className="rounded-full bg-[var(--accent)] px-7 py-3 text-sm font-semibold text-[var(--on-accent)] hover:opacity-90 transition-opacity"
                 >
                   {landing?.texto_boton}
                 </Link>
@@ -177,20 +177,20 @@ export default function CatalogHome() {
         </section>
       )}
 
-      {/* BLOQUE DE CONTENIDO CLARO */}
+           {/* BLOQUE DE CONTENIDO CLARO */}
       <section
         data-visual-section={VISUAL_SECTION.sections}
         data-visual-kind="content"
-        className="bg-[var(--visual-background)] text-[var(--visual-text)]"
+        className="bg-[var(--visual-alternate,var(--secondary))] text-[var(--on-alternate,var(--on-secondary))]"
       >
         <div className="grid grid-cols-1 lg:grid-cols-2 min-h-[560px]">
-          <div className="flex items-center bg-[var(--visual-background)] text-[var(--visual-text)]">
+          <div className="flex items-center">
             <div className="w-full max-w-[580px] min-w-0 px-8 sm:px-14 lg:pl-[max(4rem,calc((100vw-1160px)/2))] lg:pr-16 py-20">
               <p className="text-[var(--primary)] text-xs font-bold">
                 Selección cuidada
               </p>
 
-              <h2 className="mt-7 text-[clamp(2.5rem,5vw,4.125rem)] leading-[1.02] tracking-[-0.05em] font-black break-words text-[var(--visual-text)]">
+              <h2 className="mt-7 text-[clamp(2.5rem,5vw,4.125rem)] leading-[1.02] tracking-[-0.05em] font-black break-words text-inherit">
                 Una mejor
                 <br />
                 forma de
@@ -198,7 +198,7 @@ export default function CatalogHome() {
                 elegir.
               </h2>
 
-              <p className="mt-7 max-w-md text-base leading-7 text-[var(--visual-muted)]">
+             <p className="mt-7 max-w-md text-base leading-7 text-[color-mix(in_srgb,var(--on-alternate,var(--on-secondary))_70%,transparent)]">
                 Encuentra productos de calidad, con información clara,
                 precios transparentes y entrega a todo Chile.
               </p>
@@ -263,7 +263,7 @@ export default function CatalogHome() {
               >
                 <Link
                   to={route(`producto/${product.id}`)}
-                  className="block aspect-[1.15/1] rounded-[24px] overflow-hidden bg-[var(--visual-alternate)]"
+                  className="block aspect-[1.15/1] rounded-[24px] overflow-hidden bg-[var(--visual-surface)]"
                 >
                   <img
                     src={product.images[0]}
@@ -287,10 +287,10 @@ export default function CatalogHome() {
                   {formatPrice(product.basePrice)}
                 </p>
 
-                <Link
+                  <Link
                   data-visual-part="buyButton"
                   to={route(`producto/${product.id}`)}
-                  className="mt-5 h-11 rounded-full bg-[var(--visual-button)] text-[var(--visual-button-text)] text-sm font-semibold flex items-center justify-center hover:opacity-90 transition-opacity"
+                  className="mt-5 h-11 rounded-full bg-[var(--accent)] text-[var(--on-accent)] text-sm font-semibold flex items-center justify-center hover:opacity-90 transition-opacity"
                 >
                   Comprar
                 </Link>

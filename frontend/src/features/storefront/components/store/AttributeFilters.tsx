@@ -14,9 +14,9 @@ const STYLES = {
   // Plantilla 4
   catalog: {
     wrapper: 'border-t border-black/10 mt-5 pt-5',
-    title: 'mb-3 text-[10px] font-black uppercase tracking-[0.16em] text-black/45',
+    title: 'mb-3 text-[10px] font-black uppercase tracking-[0.16em] text-black/60',
     label: 'flex items-center gap-2.5 py-1.5 text-[12px] cursor-pointer',
-    input: 'accent-[#1683ff]',
+    input: 'accent-[var(--primary)]',
   },
   // Plantilla 3
   visual: {
@@ -69,8 +69,8 @@ interface AppliedAttributeFiltersProps {
 
 const APPLIED_STYLES = {
   catalog: {
-    chip: 'inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-[11px] font-medium text-white transition-colors hover:bg-white/20',
-    clear: 'text-[11px] font-semibold text-[#1683ff] hover:opacity-70',
+    chip: 'inline-flex items-center gap-2 rounded-full border border-[var(--visual-border)] bg-[var(--visual-surface)] px-3 py-1.5 text-[11px] font-medium text-[var(--visual-text)] transition-colors hover:opacity-80',
+    clear: 'text-[11px] font-semibold text-[var(--primary)] hover:opacity-70',
   },
   visual: {
     chip: 'inline-flex items-center gap-2 rounded-full border border-black/15 bg-white px-3 py-1.5 text-[11px] font-medium text-[#111111] transition-colors hover:border-black',

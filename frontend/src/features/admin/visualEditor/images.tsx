@@ -9,6 +9,7 @@ export function LegacyImageInspector({ selected, document, onChange }: { selecte
   return <div className="ve-inspector">
     <img className="ve-image-thumbnail" src={image.src || selected.src} alt="Imagen seleccionada" />
     <ImageUpload label="Cambiar imagen" value={image.src||selected.src} maxMB={3} allowSVG={false} onChange={src=>edit({src})}/>
+    <label>Texto alternativo<input aria-label="Texto alternativo de la imagen" type="text" maxLength={250} placeholder="Describe la imagen para lectores de pantalla" value={image.alt ?? ''} onChange={e => edit({ alt: e.target.value })} /></label>
     <SegmentedControl label="Ajuste" value={image.fit ?? 'cover'} options={['cover','contain']} onChange={value => edit({fit:value === 'contain' ? 'contain' : 'cover'})} onReset={() => edit({fit:undefined})}/>
     <FriendlySizeControl label="Tamaño de imagen (%)" path="image.scale" value={image.scale} min={1} max={400} onChange={value => edit({scale:Number(value)})} onReset={() => edit({scale:100})}/>
     <SegmentedControl label="Posición" value={image.x === 0 ? 'left' : image.x === 100 ? 'right' : 'center'} options={['left','center','right']} onChange={value => edit({x:value === 'left' ? 0 : value === 'right' ? 100 : 50})} onReset={() => edit({x:50})}/>

@@ -30,8 +30,9 @@ export const OrderTracking = () => {
 
       <form onSubmit={handleSearch} className="mb-8 space-y-4 bg-white p-6 rounded-lg shadow-sm border">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Número de Orden</label>
+          <label htmlFor="tracking-order-number" className="block text-sm font-medium text-gray-700 mb-1">Número de Orden</label>
           <input
+            id="tracking-order-number"
             type="text"
             placeholder="Ej: ORD-20240101-ABCD"
             className="w-full border border-gray-300 p-2 rounded"
@@ -41,8 +42,9 @@ export const OrderTracking = () => {
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Correo Electrónico</label>
+          <label htmlFor="tracking-email" className="block text-sm font-medium text-gray-700 mb-1">Correo Electrónico</label>
           <input
+            id="tracking-email"
             type="email"
             placeholder="correo@ejemplo.com"
             className="w-full border border-gray-300 p-2 rounded"
@@ -82,7 +84,7 @@ export const OrderTracking = () => {
                 className={`p-3 text-center text-xs md:text-sm rounded-lg border ${
                   paso.actual ? 'bg-blue-600 border-blue-600 text-white font-bold shadow' :
                   paso.completado ? 'bg-green-50 border-green-200 text-green-700' :
-                  'bg-gray-50 border-gray-200 text-gray-400'
+                  'bg-gray-50 border-gray-200 text-gray-500'
                 }`}
               >
                 {paso.etiqueta}

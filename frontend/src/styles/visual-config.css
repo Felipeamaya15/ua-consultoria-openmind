@@ -4,6 +4,10 @@
   --secondary: var(--secondary-desktop);
   --accent: var(--accent-desktop);
   --ring: var(--ring-desktop);
+  --on-primary: var(--on-primary-desktop);
+  --on-accent: var(--on-accent-desktop);
+  --on-secondary: var(--on-secondary-desktop);
+  --on-alternate: var(--on-alternate-desktop);
   --visual-alternate: var(--visual-alternate-desktop);
   --visual-muted: var(--visual-muted-desktop);
   --visual-button: var(--visual-button-desktop);
@@ -573,21 +577,21 @@
   --visual-section-content-padding-top: var(--visual-section-content-padding-top-desktop);
   --visual-section-content-padding-bottom: var(--visual-section-content-padding-bottom-desktop);
   --visual-section-content-width: var(--visual-section-content-width-desktop);
-  --visual-section-content-background: var(--visual-section-content-background-desktop);
+  --visual-section-content-background: var(--visual-section-content-background-desktop); --visual-section-content-color: var(--visual-section-content-color-desktop);
   --visual-section-content-title-align: var(--visual-section-content-title-align-desktop);
   --visual-section-content-title-size: var(--visual-section-content-title-size-desktop);
   --visual-section-content-subtitle-size: var(--visual-section-content-subtitle-size-desktop);
   --visual-section-featured-padding-top: var(--visual-section-featured-padding-top-desktop);
   --visual-section-featured-padding-bottom: var(--visual-section-featured-padding-bottom-desktop);
   --visual-section-featured-width: var(--visual-section-featured-width-desktop);
-  --visual-section-featured-background: var(--visual-section-featured-background-desktop);
+  --visual-section-featured-background: var(--visual-section-featured-background-desktop); --visual-section-featured-color: var(--visual-section-featured-color-desktop);
   --visual-section-featured-title-align: var(--visual-section-featured-title-align-desktop);
   --visual-section-featured-title-size: var(--visual-section-featured-title-size-desktop);
   --visual-section-featured-subtitle-size: var(--visual-section-featured-subtitle-size-desktop);
   --visual-section-benefits-padding-top: var(--visual-section-benefits-padding-top-desktop);
   --visual-section-benefits-padding-bottom: var(--visual-section-benefits-padding-bottom-desktop);
   --visual-section-benefits-width: var(--visual-section-benefits-width-desktop);
-  --visual-section-benefits-background: var(--visual-section-benefits-background-desktop);
+  --visual-section-benefits-background: var(--visual-section-benefits-background-desktop); --visual-section-benefits-color: var(--visual-section-benefits-color-desktop);
   --visual-section-benefits-title-align: var(--visual-section-benefits-title-align-desktop);
   --visual-section-benefits-title-size: var(--visual-section-benefits-title-size-desktop);
   --visual-section-benefits-subtitle-size: var(--visual-section-benefits-subtitle-size-desktop);
@@ -631,6 +635,10 @@
   --secondary: var(--secondary-tablet);
   --accent: var(--accent-tablet);
   --ring: var(--ring-tablet);
+  --on-primary: var(--on-primary-tablet);
+  --on-accent: var(--on-accent-tablet);
+  --on-secondary: var(--on-secondary-tablet);
+  --on-alternate: var(--on-alternate-tablet);
   --visual-alternate: var(--visual-alternate-tablet);
   --visual-muted: var(--visual-muted-tablet);
   --visual-button: var(--visual-button-tablet);
@@ -1200,21 +1208,21 @@
   --visual-section-content-padding-top: var(--visual-section-content-padding-top-tablet);
   --visual-section-content-padding-bottom: var(--visual-section-content-padding-bottom-tablet);
   --visual-section-content-width: var(--visual-section-content-width-tablet);
-  --visual-section-content-background: var(--visual-section-content-background-tablet);
+  --visual-section-content-background: var(--visual-section-content-background-tablet); --visual-section-content-color: var(--visual-section-content-color-tablet);
   --visual-section-content-title-align: var(--visual-section-content-title-align-tablet);
   --visual-section-content-title-size: var(--visual-section-content-title-size-tablet);
   --visual-section-content-subtitle-size: var(--visual-section-content-subtitle-size-tablet);
   --visual-section-featured-padding-top: var(--visual-section-featured-padding-top-tablet);
   --visual-section-featured-padding-bottom: var(--visual-section-featured-padding-bottom-tablet);
   --visual-section-featured-width: var(--visual-section-featured-width-tablet);
-  --visual-section-featured-background: var(--visual-section-featured-background-tablet);
+  --visual-section-featured-background: var(--visual-section-featured-background-tablet); --visual-section-featured-color: var(--visual-section-featured-color-tablet);
   --visual-section-featured-title-align: var(--visual-section-featured-title-align-tablet);
   --visual-section-featured-title-size: var(--visual-section-featured-title-size-tablet);
   --visual-section-featured-subtitle-size: var(--visual-section-featured-subtitle-size-tablet);
   --visual-section-benefits-padding-top: var(--visual-section-benefits-padding-top-tablet);
   --visual-section-benefits-padding-bottom: var(--visual-section-benefits-padding-bottom-tablet);
   --visual-section-benefits-width: var(--visual-section-benefits-width-tablet);
-  --visual-section-benefits-background: var(--visual-section-benefits-background-tablet);
+  --visual-section-benefits-background: var(--visual-section-benefits-background-tablet); --visual-section-benefits-color: var(--visual-section-benefits-color-tablet);
   --visual-section-benefits-title-align: var(--visual-section-benefits-title-align-tablet);
   --visual-section-benefits-title-size: var(--visual-section-benefits-title-size-tablet);
   --visual-section-benefits-subtitle-size: var(--visual-section-benefits-subtitle-size-tablet);
@@ -1259,6 +1267,10 @@
   --secondary: var(--secondary-mobile);
   --accent: var(--accent-mobile);
   --ring: var(--ring-mobile);
+  --on-primary: var(--on-primary-mobile);
+  --on-accent: var(--on-accent-mobile);
+  --on-secondary: var(--on-secondary-mobile);
+  --on-alternate: var(--on-alternate-mobile);
   --visual-alternate: var(--visual-alternate-mobile);
   --visual-muted: var(--visual-muted-mobile);
   --visual-button: var(--visual-button-mobile);
@@ -1828,21 +1840,21 @@
   --visual-section-content-padding-top: var(--visual-section-content-padding-top-mobile);
   --visual-section-content-padding-bottom: var(--visual-section-content-padding-bottom-mobile);
   --visual-section-content-width: var(--visual-section-content-width-mobile);
-  --visual-section-content-background: var(--visual-section-content-background-mobile);
+  --visual-section-content-background: var(--visual-section-content-background-mobile); --visual-section-content-color: var(--visual-section-content-color-mobile);
   --visual-section-content-title-align: var(--visual-section-content-title-align-mobile);
   --visual-section-content-title-size: var(--visual-section-content-title-size-mobile);
   --visual-section-content-subtitle-size: var(--visual-section-content-subtitle-size-mobile);
   --visual-section-featured-padding-top: var(--visual-section-featured-padding-top-mobile);
   --visual-section-featured-padding-bottom: var(--visual-section-featured-padding-bottom-mobile);
   --visual-section-featured-width: var(--visual-section-featured-width-mobile);
-  --visual-section-featured-background: var(--visual-section-featured-background-mobile);
+  --visual-section-featured-background: var(--visual-section-featured-background-mobile); --visual-section-featured-color: var(--visual-section-featured-color-mobile);
   --visual-section-featured-title-align: var(--visual-section-featured-title-align-mobile);
   --visual-section-featured-title-size: var(--visual-section-featured-title-size-mobile);
   --visual-section-featured-subtitle-size: var(--visual-section-featured-subtitle-size-mobile);
   --visual-section-benefits-padding-top: var(--visual-section-benefits-padding-top-mobile);
   --visual-section-benefits-padding-bottom: var(--visual-section-benefits-padding-bottom-mobile);
   --visual-section-benefits-width: var(--visual-section-benefits-width-mobile);
-  --visual-section-benefits-background: var(--visual-section-benefits-background-mobile);
+  --visual-section-benefits-background: var(--visual-section-benefits-background-mobile); --visual-section-benefits-color: var(--visual-section-benefits-color-mobile);
   --visual-section-benefits-title-align: var(--visual-section-benefits-title-align-mobile);
   --visual-section-benefits-title-size: var(--visual-section-benefits-title-size-mobile);
   --visual-section-benefits-subtitle-size: var(--visual-section-benefits-subtitle-size-mobile);
@@ -2033,10 +2045,10 @@
 [data-storefront-visual] h1, [data-storefront-visual] h2, [data-storefront-visual] h3 { font-family: var(--visual-heading-font); }
 [data-storefront-visual] [data-visual-section="sections"]:not([data-content-block-id]) {
   padding-top: var(--visual-section-content-padding-top); padding-bottom: var(--visual-section-content-padding-bottom);
-  max-width: var(--visual-section-content-width); margin-inline: auto; background: var(--visual-section-content-background);
+  max-width: var(--visual-section-content-width); margin-inline: auto; background: var(--visual-section-content-background); color: var(--visual-section-content-color);
 }
-[data-storefront-visual] [data-visual-kind="featured"] { --visual-section-content-padding-top: var(--visual-section-featured-padding-top); --visual-section-content-padding-bottom: var(--visual-section-featured-padding-bottom); --visual-section-content-width: var(--visual-section-featured-width); --visual-section-content-background: var(--visual-section-featured-background); --visual-section-content-title-align: var(--visual-section-featured-title-align); --visual-section-content-title-size: var(--visual-section-featured-title-size); --visual-section-content-subtitle-size: var(--visual-section-featured-subtitle-size); }
-[data-storefront-visual] [data-visual-kind="benefits"] { --visual-section-content-padding-top: var(--visual-section-benefits-padding-top); --visual-section-content-padding-bottom: var(--visual-section-benefits-padding-bottom); --visual-section-content-width: var(--visual-section-benefits-width); --visual-section-content-background: var(--visual-section-benefits-background); --visual-section-content-title-align: var(--visual-section-benefits-title-align); --visual-section-content-title-size: var(--visual-section-benefits-title-size); --visual-section-content-subtitle-size: var(--visual-section-benefits-subtitle-size); }
+[data-storefront-visual] [data-visual-kind="featured"] { --visual-section-content-padding-top: var(--visual-section-featured-padding-top); --visual-section-content-padding-bottom: var(--visual-section-featured-padding-bottom); --visual-section-content-width: var(--visual-section-featured-width); --visual-section-content-background: var(--visual-section-featured-background); --visual-section-content-color: var(--visual-section-featured-color); --visual-section-content-title-align: var(--visual-section-featured-title-align); --visual-section-content-title-size: var(--visual-section-featured-title-size); --visual-section-content-subtitle-size: var(--visual-section-featured-subtitle-size); }
+[data-storefront-visual] [data-visual-kind="benefits"] { --visual-section-content-padding-top: var(--visual-section-benefits-padding-top); --visual-section-content-padding-bottom: var(--visual-section-benefits-padding-bottom); --visual-section-content-width: var(--visual-section-benefits-width); --visual-section-content-background: var(--visual-section-benefits-background); --visual-section-content-color: var(--visual-section-benefits-color); --visual-section-content-title-align: var(--visual-section-benefits-title-align); --visual-section-content-title-size: var(--visual-section-benefits-title-size); --visual-section-content-subtitle-size: var(--visual-section-benefits-subtitle-size); }
 [data-storefront-visual] [data-visual-section="sections"]:not([data-content-block-id]) h2 { text-align: var(--visual-section-content-title-align); font-size: var(--visual-section-content-title-size); }
 [data-storefront-visual] [data-visual-section="sections"]:not([data-content-block-id]) > p, [data-storefront-visual] [data-visual-section="sections"]:not([data-content-block-id]) [data-visual-part="sectionSubtitle"] { font-size: var(--visual-section-content-subtitle-size); }
 [data-storefront-visual] [data-visual-section="contact"] { padding: var(--visual-contact-padding); background: var(--visual-contact-background); }
@@ -2236,6 +2248,9 @@
 [data-storefront-visual] [data-visual-part="footerTitle"]{color:inherit}
 [data-storefront-visual] .store-footer-logo{width:auto;max-width:140px;max-height:52px;object-fit:contain;margin-bottom:12px}
 [data-storefront-visual] [data-visual-section="categories"]{background:var(--visual-background);color:var(--visual-text)}
+[data-storefront-visual] [data-visual-part="catalogFilters"] [data-visual-section="categories"],
+[data-storefront-visual] [data-visual-part="catalogFilters"] [data-visual-part="categoryList"]{background:transparent;color:inherit}
+[data-storefront-visual] [data-visual-part="catalogFilters"] [data-visual-part="categoryItem"]:not([aria-pressed="true"]){background:transparent;color:#202020}
 [data-storefront-visual] [data-visual-section="productCard"]{background:var(--visual-surface);color:var(--visual-text)}
 [data-storefront-visual] [data-visual-part="productButton"], [data-storefront-visual] [data-visual-section="productCard"] button{background:var(--visual-button);color:var(--visual-button-text)}
 .store-mobile-navigation{display:none}

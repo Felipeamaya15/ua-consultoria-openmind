@@ -389,7 +389,7 @@ export default function Cart() {
                   <div className="flex items-start gap-3 text-[10px] leading-5 text-[var(--visual-page-color)]/45">
                     <Icon
                       name="box"
-                      className="w-4 h-4 mt-0.5 flex-shrink-0 text-[#1683ff]"
+                      className="w-4 h-4 mt-0.5 flex-shrink-0 text-[var(--primary)]"
                     />
                     <p>Despacho a todo Chile y embalaje seguro para tu pedido.</p>
                   </div>
@@ -791,6 +791,7 @@ export default function Cart() {
                       handleApplyPromo();
                     }
                   }}
+                  aria-label="Código promocional"
                   placeholder="Ej: VERANO20"
                   className="h-10 flex-1 min-w-0 rounded-lg border border-[var(--border)] px-3 text-sm outline-none"
                 />

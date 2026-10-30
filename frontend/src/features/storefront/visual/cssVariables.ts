@@ -19,13 +19,16 @@ function sectionVariables(config: VisualSections, viewport: Viewport): Record<st
   const button = colors.button === 'currentColor' ? colors.primary : colors.button;
   const grid = (g: VisualSections['productGrid']) => ({ columns: String(g.columns[viewport]), gapX: px(g.gapX), gapY: px(g.gapY), maxWidth: px(g.maxWidth) });
   const card = (c: VisualSections['productCard']) => ({ radius: px(c.radius), padding: px(c.padding), shadow: shadows[c.shadow], border: border(c.border, colors.border), imageRatio: String(c.imageRatio), imageRadius: px(c.imageRadius), titleSize: px(c.titleSize), priceSize: px(c.priceSize), descriptionDisplay: c.showDescription ? '-webkit-box' : 'none', buttonDisplay: c.buttonVisible ? 'inline-flex' : 'none', buttonWidth: c.buttonFullWidth ? '100%' : 'auto', buttonRadius: radius(c.buttonShape, c.buttonRadius), align: c.align, density: c.density === 'compact' ? '.85' : c.density === 'spacious' ? '1.15' : '1' });
+  const brandBg = (value: string) => value === 'currentColor' ? colors.primary : value;
+  const brandText = (value: string, background: string) => value === 'currentColor' ? institutionalTextColor(brandBg(background), colors.background) : value;
   const variables: Record<string, string> = {
     '--primary': colors.primary, '--secondary': colors.secondary, '--accent': colors.accent, '--ring': colors.primary,
-    '--visual-alternate': colors.alternate, '--visual-muted': colors.muted, '--visual-button': button, '--visual-button-text': colors.buttonText,
+    '--on-primary': institutionalTextColor(colors.primary, colors.background), '--on-accent': institutionalTextColor(colors.accent, colors.background), '--on-secondary': institutionalTextColor(colors.secondary, colors.background),
+    '--visual-alternate': colors.alternate, '--on-alternate': institutionalTextColor(colors.alternate, colors.background), '--visual-muted': colors.muted, '--visual-button': button, '--visual-button-text': colors.buttonText,
     '--visual-background': colors.background, '--visual-text': colors.text, '--visual-surface': colors.surface, '--visual-border': colors.border, '--radius': px(config.global.radius),
     '--visual-body-font': fonts[config.global.typography.body], '--visual-heading-font': fonts[config.global.typography.heading], '--visual-font-size': px(config.global.typography.baseSize), '--visual-line-height': String(config.global.typography.lineHeight),
     '--visual-content-width': px(config.global.contentMaxWidth),
-    '--visual-topbar-display': config.topBar.visible ? 'flex' : 'none', '--visual-topbar-bg': config.topBar.background, '--visual-topbar-color': config.topBar.textColor, '--visual-topbar-height': px(config.topBar.height), '--visual-topbar-align': config.topBar.align === 'left' ? 'flex-start' : config.topBar.align === 'right' ? 'flex-end' : 'center',
+    '--visual-topbar-display': config.topBar.visible ? 'flex' : 'none', '--visual-topbar-bg': config.topBar.background === 'currentColor' ? colors.primary : config.topBar.background, '--visual-topbar-color': brandText(config.topBar.textColor, config.topBar.background), '--visual-topbar-height': px(config.topBar.height), '--visual-topbar-align': config.topBar.align === 'left' ? 'flex-start' : config.topBar.align === 'right' ? 'flex-end' : 'center',
   };
   const add = (prefix: string, values: Record<string, string>) => {
     for (const [key, value] of Object.entries(values)) variables[`--visual-${prefix}-${key.replace(/[A-Z]/g, letter => `-${letter.toLowerCase()}`)}`] = value;
@@ -44,7 +47,7 @@ function sectionVariables(config: VisualSections, viewport: Viewport): Record<st
       fieldBackground: f.background === 'currentColor' ? colors.surface : f.background, fieldColor: f.textColor === 'currentColor' ? colors.text : f.textColor, fieldRadius: px(f.radius), fieldPadding: px(f.padding), fieldBorder: pageBorder(f.border),
       buttonBackground: b.background === 'currentColor' ? button : b.background, buttonColor: b.textColor === '#ffffff' ? colors.buttonText : b.textColor, buttonRadius: px(b.radius), buttonPaddingX: px(b.paddingX), buttonPaddingY: px(b.paddingY), buttonFontSize: px(b.fontSize) });
   }
-  variables['--visual-topbar-brand-color'] = institutionalTextColor(config.topBar.background, colors.background);
+  variables['--visual-topbar-brand-color'] = institutionalTextColor(config.topBar.background === 'currentColor' ? colors.primary : config.topBar.background, colors.background);
   variables['--visual-footer-brand-color'] = institutionalTextColor(linked ? structural : config.footer.background, colors.background);
   const h = config.header;
   add('header', { bg: linked ? structural : h.background, color: linked ? structureText : h.textColor, height: px(h.height), logoSize: px(h.logoSize), logoOrder: h.logoPosition === 'right' ? '3' : h.logoPosition === 'center' ? '1' : '0', navAlign: flexAlign(h.navAlign), gap: px(h.gap), border: border(h.border, colors.border), shadow: shadows[h.shadow], position: h.sticky ? 'sticky' : 'relative', direction: h.layout === 'centered' ? 'column' : 'row' });
@@ -52,16 +55,37 @@ function sectionVariables(config: VisualSections, viewport: Viewport): Record<st
   add('hero', { height: px(hero.height), imagePosition: hero.imagePosition, width: px(hero.contentWidth), horizontal: flexAlign(hero.horizontalAlign), vertical: flexAlign(hero.verticalAlign), align: hero.horizontalAlign, overlay: hero.overlay ? String(hero.overlayOpacity) : '0', overlayColor: hero.overlayColor, titleSize: px(hero.titleSize), subtitleSize: px(hero.subtitleSize), textWidth: px(hero.textMaxWidth), gap: px(hero.gap), ctaDisplay: hero.ctaPosition === 'inline' ? 'inline-flex' : 'flex', ctaLayoutWidth: hero.ctaPosition === 'inline' ? 'fit-content' : '100%' });
   const cta = config.heroCta;
   const ctaColor = cta.background === 'currentColor' ? button : cta.background;
-  add('cta', { width: cta.width === 'full' ? '100%' : cta.width === 'custom' ? px(cta.customWidth) : 'auto', align: flexAlign(cta.align), paddingX: px(cta.paddingX), paddingY: px(cta.paddingY), fontSize: px(cta.fontSize), fontWeight: String(cta.fontWeight), radius: radius(cta.shape, cta.radius), background: cta.variant === 'solid' ? ctaColor : 'transparent', color: cta.textColor === '#ffffff' ? colors.buttonText : cta.textColor, border: cta.variant === 'ghost' ? '0 solid transparent' : border(cta.border, colors.border) });
+  add('cta', { width: cta.width === 'full' ? '100%' : cta.width === 'custom' ? px(cta.customWidth) : 'auto', align: flexAlign(cta.align), paddingX: px(cta.paddingX), paddingY: px(cta.paddingY), fontSize: px(cta.fontSize), fontWeight: String(cta.fontWeight), radius: radius(cta.shape, cta.radius), background: cta.variant === 'solid' ? ctaColor : 'transparent', color: cta.textColor === '#ffffff' ? colors.buttonText : cta.textColor === 'currentColor' ? institutionalTextColor(ctaColor, colors.background) : cta.textColor, border: cta.variant === 'ghost' ? '0 solid transparent' : border(cta.border, colors.border) });
   const cat = config.categories;
   add('categories', { display: cat.layout === 'grid' ? 'grid' : 'flex', wrap: cat.layout === 'row' ? 'nowrap' : 'wrap', columns: String(cat.columns), gap: px(cat.gap), radius: cat.presentation === 'pills' ? '999px' : cat.presentation === 'links' ? '0px' : px(cat.radius), padding: cat.presentation === 'links' ? '0px' : px(cat.padding), textSize: px(cat.textSize), align: cat.align, justify: flexAlign(cat.align), border: cat.presentation === 'links' ? '0 solid transparent' : border(cat.border, colors.border), shadow: cat.presentation === 'links' ? 'none' : shadows[cat.shadow], background: cat.presentation === 'links' ? 'transparent' : cat.background, ratio: cat.presentation === 'cards' ? '1' : 'auto', imageDisplay: cat.presentation === 'cards' ? 'block' : 'none' });
-  for (const [key, s] of Object.entries(config.sections)) add(`section-${key}`, { paddingTop: px(s.paddingTop), paddingBottom: px(s.paddingBottom), width: px(s.contentWidth), background: s.background === 'transparent' ? (key === 'content' ? colors.background : colors.alternate) : s.background, titleAlign: s.titleAlign, titleSize: px(s.titleSize), subtitleSize: px(s.subtitleSize) });
+
+  for (const [key, s] of Object.entries(config.sections)) {
+    add(`section-${key}`, {
+      paddingTop: px(s.paddingTop),
+      paddingBottom: px(s.paddingBottom),
+      width: px(s.contentWidth),
+      background:
+        s.background === 'currentColor'
+          ? colors.secondary
+          : s.background === 'transparent'
+            ? (key === 'content' ? colors.background : colors.alternate)
+            : s.background,
+      color:
+        s.background === 'currentColor'
+          ? institutionalTextColor(colors.secondary, colors.background)
+          : 'inherit',
+      titleAlign: s.titleAlign,
+      titleSize: px(s.titleSize),
+      subtitleSize: px(s.subtitleSize),
+    });
+  }
+
   for (const key of ['contact', 'location'] as const) {
     const s = config[key];
     add(key, { radius: px(s.cardRadius), border: border(s.border, colors.border), shadow: shadows[s.shadow], columns: String(s.layout === 'stack' ? 1 : s.layout === 'split' ? Math.min(2, s.columns) : s.columns), padding: px(s.padding), background: s.background === 'transparent' ? colors.alternate : s.background, titleSize: px(s.titleSize) });
   }
   const f = config.footer;
-  add('footer', { background: linked ? structural : f.background, color: linked ? structureText : f.textColor, columns: String(f.layout === 'stack' ? 1 : f.columns), align: f.layout === 'centered' ? 'center' : f.align, paddingTop: px(f.paddingTop), paddingBottom: px(f.paddingBottom), gap: px(f.gap), titleSize: px(f.titleSize), branding: 'block', width: px(Math.max(320, f.maxWidth)), titles: f.showTitles ? 'block' : 'none' });
+  add('footer', { background: linked ? structural : brandBg(f.background), color: linked ? structureText : brandText(f.textColor, f.background), columns: String(f.layout === 'stack' ? 1 : f.columns), align: f.layout === 'centered' ? 'center' : f.align, paddingTop: px(f.paddingTop), paddingBottom: px(f.paddingBottom), gap: px(f.gap), titleSize: px(f.titleSize), branding: 'block', width: px(Math.max(320, f.maxWidth)), titles: f.showTitles ? 'block' : 'none' });
   add('catalog', { titleAlign: config.catalog.titleAlign, titleSize: px(config.catalog.titleSize), spacing: px(config.catalog.spacing), width: px(config.catalog.contentWidth), filtersDisplay: config.catalog.filtersPosition === 'drawer' ? 'none' : 'block', layout: config.catalog.filtersPosition === 'left' ? 'row' : 'column', filtersWidth: config.catalog.filtersPosition === 'left' ? '260px' : config.catalog.filtersPosition === 'drawer' ? '320px' : '100%', filtersToggle: config.catalog.filtersPosition === 'drawer' ? 'inline-flex' : 'none' });
   return variables;
 }

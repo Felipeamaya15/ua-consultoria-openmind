@@ -18,7 +18,7 @@ export default function EditorialHome() {
     <div>
       {/* Hero - full-width editorial */}
       <section data-visual-section={VISUAL_SECTION.hero} className="relative h-[72vh] min-h-[480px] overflow-hidden">
-        <img data-visual-part="heroImage" data-landing-image={landing?.imagen_principal ? true : undefined} src={landing?.imagen_principal || undefined} hidden={!landing?.imagen_principal} alt={landing?.titulo || ''} className="w-full h-full object-cover" />
+        <img data-visual-part="heroImage" data-landing-image={landing?.imagen_principal ? true : undefined} src={landing?.imagen_principal || undefined} hidden={!landing?.imagen_principal} alt={landing?.titulo || 'Imagen principal de la tienda'} className="w-full h-full object-cover" />
         <div data-visual-part="heroOverlay" className="absolute inset-0 bg-gradient-to-r from-[#0f1623]/80 via-[#0f1623]/40 to-transparent" />
         <div data-visual-part="heroLayout" className="absolute inset-0 flex items-end pb-16 px-8 max-w-7xl mx-auto">
           <div data-visual-part="heroContent" className="max-w-xl animate-fade-in">

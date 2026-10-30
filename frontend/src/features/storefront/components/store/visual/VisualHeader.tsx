@@ -28,7 +28,7 @@ export function VisualHeader() {
 
           <span className="hidden sm:block h-5 w-px bg-black/15" />
 
-          <span className="hidden sm:block text-[10px] tracking-[0.25em] text-black/50">
+          <span className="hidden sm:block text-[10px] tracking-[0.25em] text-black/60">
             TIENDA
           </span>
         </Link>
