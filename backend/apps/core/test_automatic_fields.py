@@ -18,6 +18,11 @@ class AutomaticFieldsTests(TestCase):
     def test_catalog_is_the_actual_order_context_and_explains_every_key(self):
         data=self.api.get('/api/tienda/correos/').data['data']
         self.assertEqual([field['key'] for field in data['variables']],list(VARIABLES_PERMITIDAS))
+        labels = {field['key']: field['label'] for field in data['variables']}
+        self.assertEqual(labels['orderSummary'], 'Resumen de compra')
+        self.assertEqual(labels['shippingMethod'], 'Método de entrega')
+        self.assertEqual(labels['trackingLink'], 'Enlace de seguimiento')
+        self.assertEqual(labels['storeName'], 'Nombre de la tienda')
         for field in data['variables']:
             self.assertTrue(field['description']);self.assertTrue(field['label']);self.assertTrue(field['example'])
         self.assertEqual(set(data['obligatorias']),set(data['plantillas']))

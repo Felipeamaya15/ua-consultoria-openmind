@@ -211,11 +211,20 @@ class TiendaPropietarioMigrationTests(TransactionTestCase):
                               if node[0] not in ('core', 'authentication', 'landing', 'visual_config')]
         targets = [self.migrate_from, *self.other_targets]
         operation = executor.loader.disk_migrations[('authentication', '0002_ensure_configuracion_autenticacion_table')].operations[0]
+        promotion_reverse = executor.loader.disk_migrations[('core', '0023_reconciliar_promocion_historica')].operations[0].database_operations[0]
+        # This historical owner fixture starts empty and drops the later promotion
+        # table on its way to 0001. Do not attempt a destructive DATE downgrade.
+        self.assertFalse(self.final_model_promotions_exist())
         # No cambia migraciones guardadas ni la BD local: evita el rollback destructivo
         # preexistente de 0002 para aislar la conciliación de propietarios en la BD temporal.
-        with patch.object(operation, 'reverse_code', RunPython.noop):
+        with patch.object(operation, 'reverse_code', RunPython.noop), patch.object(promotion_reverse, 'reverse_code', RunPython.noop):
             executor.migrate(targets)
         self.old_apps = executor.loader.project_state(targets).apps
+
+    @staticmethod
+    def final_model_promotions_exist():
+        from apps.core.models import Promocion
+        return Promocion.objects.exists()
 
     def tearDown(self):
         # Solo datos de la base de pruebas; deja el esquema actual para los siguientes tests.
