@@ -1,0 +1,684 @@
+{
+ "Sistema": [
+  {
+   "nombre": "Océano",
+   "pares": [
+    {
+     "par": "Texto sobre el fondo",
+     "ratio": 15.66,
+     "minimo": 4.5,
+     "cumple": true
+    },
+    {
+     "par": "Texto sobre tarjetas",
+     "ratio": 16.34,
+     "minimo": 4.5,
+     "cumple": true
+    },
+    {
+     "par": "Texto secundario sobre el fondo",
+     "ratio": 5.65,
+     "minimo": 4.5,
+     "cumple": true
+    },
+    {
+     "par": "Texto secundario sobre tarjetas",
+     "ratio": 5.9,
+     "minimo": 4.5,
+     "cumple": true
+    },
+    {
+     "par": "Color primario como texto sobre el fondo",
+     "ratio": 4.95,
+     "minimo": 4.5,
+     "cumple": true
+    },
+    {
+     "par": "Color de acento como texto sobre el fondo",
+     "ratio": 2.66,
+     "minimo": 4.5,
+     "cumple": false
+    },
+    {
+     "par": "Texto del botón sobre el botón",
+     "ratio": 5.17,
+     "minimo": 4.5,
+     "cumple": true
+    },
+    {
+     "par": "Borde de campos sobre el fondo (no texto)",
+     "ratio": 1.43,
+     "minimo": 3.0,
+     "cumple": false
+    }
+   ]
+  },
+  {
+   "nombre": "Bosque",
+   "pares": [
+    {
+     "par": "Texto sobre el fondo",
+     "ratio": 15.66,
+     "minimo": 4.5,
+     "cumple": true
+    },
+    {
+     "par": "Texto sobre tarjetas",
+     "ratio": 16.34,
+     "minimo": 4.5,
+     "cumple": true
+    },
+    {
+     "par": "Texto secundario sobre el fondo",
+     "ratio": 5.65,
+     "minimo": 4.5,
+     "cumple": true
+    },
+    {
+     "par": "Texto secundario sobre tarjetas",
+     "ratio": 5.9,
+     "minimo": 4.5,
+     "cumple": true
+    },
+    {
+     "par": "Color primario como texto sobre el fondo",
+     "ratio": 4.81,
+     "minimo": 4.5,
+     "cumple": true
+    },
+    {
+     "par": "Color de acento como texto sobre el fondo",
+     "ratio": 1.89,
+     "minimo": 4.5,
+     "cumple": false
+    },
+    {
+     "par": "Texto del botón sobre el botón",
+     "ratio": 5.02,
+     "minimo": 4.5,
+     "cumple": true
+    },
+    {
+     "par": "Borde de campos sobre el fondo (no texto)",
+     "ratio": 1.43,
+     "minimo": 3.0,
+     "cumple": false
+    }
+   ]
+  },
+  {
+   "nombre": "Ciruela",
+   "pares": [
+    {
+     "par": "Texto sobre el fondo",
+     "ratio": 15.66,
+     "minimo": 4.5,
+     "cumple": true
+    },
+    {
+     "par": "Texto sobre tarjetas",
+     "ratio": 16.34,
+     "minimo": 4.5,
+     "cumple": true
+    },
+    {
+     "par": "Texto secundario sobre el fondo",
+     "ratio": 5.65,
+     "minimo": 4.5,
+     "cumple": true
+    },
+    {
+     "par": "Texto secundario sobre tarjetas",
+     "ratio": 5.9,
+     "minimo": 4.5,
+     "cumple": true
+    },
+    {
+     "par": "Color primario como texto sobre el fondo",
+     "ratio": 6.69,
+     "minimo": 4.5,
+     "cumple": true
+    },
+    {
+     "par": "Color de acento como texto sobre el fondo",
+     "ratio": 3.31,
+     "minimo": 4.5,
+     "cumple": false
+    },
+    {
+     "par": "Texto del botón sobre el botón",
+     "ratio": 6.98,
+     "minimo": 4.5,
+     "cumple": true
+    },
+    {
+     "par": "Borde de campos sobre el fondo (no texto)",
+     "ratio": 1.43,
+     "minimo": 3.0,
+     "cumple": false
+    }
+   ]
+  },
+  {
+   "nombre": "Grafito",
+   "pares": [
+    {
+     "par": "Texto sobre el fondo",
+     "ratio": 15.66,
+     "minimo": 4.5,
+     "cumple": true
+    },
+    {
+     "par": "Texto sobre tarjetas",
+     "ratio": 16.34,
+     "minimo": 4.5,
+     "cumple": true
+    },
+    {
+     "par": "Texto secundario sobre el fondo",
+     "ratio": 5.65,
+     "minimo": 4.5,
+     "cumple": true
+    },
+    {
+     "par": "Texto secundario sobre tarjetas",
+     "ratio": 5.9,
+     "minimo": 4.5,
+     "cumple": true
+    },
+    {
+     "par": "Color primario como texto sobre el fondo",
+     "ratio": 14.06,
+     "minimo": 4.5,
+     "cumple": true
+    },
+    {
+     "par": "Color de acento como texto sobre el fondo",
+     "ratio": 2.69,
+     "minimo": 4.5,
+     "cumple": false
+    },
+    {
+     "par": "Texto del botón sobre el botón",
+     "ratio": 14.68,
+     "minimo": 4.5,
+     "cumple": true
+    },
+    {
+     "par": "Borde de campos sobre el fondo (no texto)",
+     "ratio": 1.43,
+     "minimo": 3.0,
+     "cumple": false
+    }
+   ]
+  }
+ ],
+ "Compatibles (heredadas)": [
+  {
+   "nombre": "Original",
+   "pares": [
+    {
+     "par": "Texto sobre el fondo",
+     "ratio": 15.66,
+     "minimo": 4.5,
+     "cumple": true
+    },
+    {
+     "par": "Texto sobre tarjetas",
+     "ratio": 16.34,
+     "minimo": 4.5,
+     "cumple": true
+    },
+    {
+     "par": "Texto secundario sobre el fondo",
+     "ratio": 5.65,
+     "minimo": 4.5,
+     "cumple": true
+    },
+    {
+     "par": "Texto secundario sobre tarjetas",
+     "ratio": 5.9,
+     "minimo": 4.5,
+     "cumple": true
+    },
+    {
+     "par": "Color primario como texto sobre el fondo",
+     "ratio": 10.81,
+     "minimo": 4.5,
+     "cumple": true
+    },
+    {
+     "par": "Color de acento como texto sobre el fondo",
+     "ratio": 3.88,
+     "minimo": 4.5,
+     "cumple": false
+    },
+    {
+     "par": "Texto del botón sobre el botón",
+     "ratio": 11.28,
+     "minimo": 4.5,
+     "cumple": true
+    },
+    {
+     "par": "Borde de campos sobre el fondo (no texto)",
+     "ratio": 1.43,
+     "minimo": 3.0,
+     "cumple": false
+    }
+   ]
+  },
+  {
+   "nombre": "Tinta y papel",
+   "pares": [
+    {
+     "par": "Texto sobre el fondo",
+     "ratio": 15.66,
+     "minimo": 4.5,
+     "cumple": true
+    },
+    {
+     "par": "Texto sobre tarjetas",
+     "ratio": 16.34,
+     "minimo": 4.5,
+     "cumple": true
+    },
+    {
+     "par": "Texto secundario sobre el fondo",
+     "ratio": 5.65,
+     "minimo": 4.5,
+     "cumple": true
+    },
+    {
+     "par": "Texto secundario sobre tarjetas",
+     "ratio": 5.9,
+     "minimo": 4.5,
+     "cumple": true
+    },
+    {
+     "par": "Color primario como texto sobre el fondo",
+     "ratio": 13.94,
+     "minimo": 4.5,
+     "cumple": true
+    },
+    {
+     "par": "Color de acento como texto sobre el fondo",
+     "ratio": 2.97,
+     "minimo": 4.5,
+     "cumple": false
+    },
+    {
+     "par": "Texto del botón sobre el botón",
+     "ratio": 14.55,
+     "minimo": 4.5,
+     "cumple": true
+    },
+    {
+     "par": "Borde de campos sobre el fondo (no texto)",
+     "ratio": 1.43,
+     "minimo": 3.0,
+     "cumple": false
+    }
+   ]
+  },
+  {
+   "nombre": "Moderna",
+   "pares": [
+    {
+     "par": "Texto sobre el fondo",
+     "ratio": 15.66,
+     "minimo": 4.5,
+     "cumple": true
+    },
+    {
+     "par": "Texto sobre tarjetas",
+     "ratio": 16.34,
+     "minimo": 4.5,
+     "cumple": true
+    },
+    {
+     "par": "Texto secundario sobre el fondo",
+     "ratio": 5.65,
+     "minimo": 4.5,
+     "cumple": true
+    },
+    {
+     "par": "Texto secundario sobre tarjetas",
+     "ratio": 5.9,
+     "minimo": 4.5,
+     "cumple": true
+    },
+    {
+     "par": "Color primario como texto sobre el fondo",
+     "ratio": 18.09,
+     "minimo": 4.5,
+     "cumple": true
+    },
+    {
+     "par": "Color de acento como texto sobre el fondo",
+     "ratio": 2.99,
+     "minimo": 4.5,
+     "cumple": false
+    },
+    {
+     "par": "Texto del botón sobre el botón",
+     "ratio": 18.88,
+     "minimo": 4.5,
+     "cumple": true
+    },
+    {
+     "par": "Borde de campos sobre el fondo (no texto)",
+     "ratio": 1.43,
+     "minimo": 3.0,
+     "cumple": false
+    }
+   ]
+  },
+  {
+   "nombre": "Minimal",
+   "pares": [
+    {
+     "par": "Texto sobre el fondo",
+     "ratio": 15.66,
+     "minimo": 4.5,
+     "cumple": true
+    },
+    {
+     "par": "Texto sobre tarjetas",
+     "ratio": 16.34,
+     "minimo": 4.5,
+     "cumple": true
+    },
+    {
+     "par": "Texto secundario sobre el fondo",
+     "ratio": 5.65,
+     "minimo": 4.5,
+     "cumple": true
+    },
+    {
+     "par": "Texto secundario sobre tarjetas",
+     "ratio": 5.9,
+     "minimo": 4.5,
+     "cumple": true
+    },
+    {
+     "par": "Color primario como texto sobre el fondo",
+     "ratio": 6.6,
+     "minimo": 4.5,
+     "cumple": true
+    },
+    {
+     "par": "Color de acento como texto sobre el fondo",
+     "ratio": 4.35,
+     "minimo": 4.5,
+     "cumple": false
+    },
+    {
+     "par": "Texto del botón sobre el botón",
+     "ratio": 6.88,
+     "minimo": 4.5,
+     "cumple": true
+    },
+    {
+     "par": "Borde de campos sobre el fondo (no texto)",
+     "ratio": 1.43,
+     "minimo": 3.0,
+     "cumple": false
+    }
+   ]
+  },
+  {
+   "nombre": "Cálida",
+   "pares": [
+    {
+     "par": "Texto sobre el fondo",
+     "ratio": 15.66,
+     "minimo": 4.5,
+     "cumple": true
+    },
+    {
+     "par": "Texto sobre tarjetas",
+     "ratio": 16.34,
+     "minimo": 4.5,
+     "cumple": true
+    },
+    {
+     "par": "Texto secundario sobre el fondo",
+     "ratio": 5.65,
+     "minimo": 4.5,
+     "cumple": true
+    },
+    {
+     "par": "Texto secundario sobre tarjetas",
+     "ratio": 5.9,
+     "minimo": 4.5,
+     "cumple": true
+    },
+    {
+     "par": "Color primario como texto sobre el fondo",
+     "ratio": 8.69,
+     "minimo": 4.5,
+     "cumple": true
+    },
+    {
+     "par": "Color de acento como texto sobre el fondo",
+     "ratio": 3.05,
+     "minimo": 4.5,
+     "cumple": false
+    },
+    {
+     "par": "Texto del botón sobre el botón",
+     "ratio": 9.07,
+     "minimo": 4.5,
+     "cumple": true
+    },
+    {
+     "par": "Borde de campos sobre el fondo (no texto)",
+     "ratio": 1.43,
+     "minimo": 3.0,
+     "cumple": false
+    }
+   ]
+  },
+  {
+   "nombre": "Natural",
+   "pares": [
+    {
+     "par": "Texto sobre el fondo",
+     "ratio": 15.66,
+     "minimo": 4.5,
+     "cumple": true
+    },
+    {
+     "par": "Texto sobre tarjetas",
+     "ratio": 16.34,
+     "minimo": 4.5,
+     "cumple": true
+    },
+    {
+     "par": "Texto secundario sobre el fondo",
+     "ratio": 5.65,
+     "minimo": 4.5,
+     "cumple": true
+    },
+    {
+     "par": "Texto secundario sobre tarjetas",
+     "ratio": 5.9,
+     "minimo": 4.5,
+     "cumple": true
+    },
+    {
+     "par": "Color primario como texto sobre el fondo",
+     "ratio": 7.18,
+     "minimo": 4.5,
+     "cumple": true
+    },
+    {
+     "par": "Color de acento como texto sobre el fondo",
+     "ratio": 3.49,
+     "minimo": 4.5,
+     "cumple": false
+    },
+    {
+     "par": "Texto del botón sobre el botón",
+     "ratio": 7.49,
+     "minimo": 4.5,
+     "cumple": true
+    },
+    {
+     "par": "Borde de campos sobre el fondo (no texto)",
+     "ratio": 1.43,
+     "minimo": 3.0,
+     "cumple": false
+    }
+   ]
+  }
+ ],
+ "Plantillas": [
+  {
+   "nombre": "presets.ts#1",
+   "pares": [
+    {
+     "par": "Texto sobre el fondo",
+     "ratio": 16.73,
+     "minimo": 4.5,
+     "cumple": true
+    },
+    {
+     "par": "Color primario como texto sobre el fondo",
+     "ratio": 6.31,
+     "minimo": 4.5,
+     "cumple": true
+    },
+    {
+     "par": "Color de acento como texto sobre el fondo",
+     "ratio": 6.31,
+     "minimo": 4.5,
+     "cumple": true
+    }
+   ]
+  },
+  {
+   "nombre": "presets.ts#2",
+   "pares": [
+    {
+     "par": "Texto sobre el fondo",
+     "ratio": 18.88,
+     "minimo": 4.5,
+     "cumple": true
+    },
+    {
+     "par": "Color primario como texto sobre el fondo",
+     "ratio": 18.88,
+     "minimo": 4.5,
+     "cumple": true
+    },
+    {
+     "par": "Color de acento como texto sobre el fondo",
+     "ratio": 18.88,
+     "minimo": 4.5,
+     "cumple": true
+    },
+    {
+     "par": "Borde de campos sobre el fondo (no texto)",
+     "ratio": 18.88,
+     "minimo": 3.0,
+     "cumple": true
+    }
+   ]
+  },
+  {
+   "nombre": "presets.ts#3",
+   "pares": [
+    {
+     "par": "Texto sobre el fondo",
+     "ratio": 20.38,
+     "minimo": 4.5,
+     "cumple": true
+    },
+    {
+     "par": "Texto sobre tarjetas",
+     "ratio": 18.71,
+     "minimo": 4.5,
+     "cumple": true
+    },
+    {
+     "par": "Texto secundario sobre el fondo",
+     "ratio": 10.2,
+     "minimo": 4.5,
+     "cumple": true
+    },
+    {
+     "par": "Texto secundario sobre tarjetas",
+     "ratio": 9.37,
+     "minimo": 4.5,
+     "cumple": true
+    },
+    {
+     "par": "Color primario como texto sobre el fondo",
+     "ratio": 6.54,
+     "minimo": 4.5,
+     "cumple": true
+    },
+    {
+     "par": "Color de acento como texto sobre el fondo",
+     "ratio": 6.54,
+     "minimo": 4.5,
+     "cumple": true
+    },
+    {
+     "par": "Borde de campos sobre el fondo (no texto)",
+     "ratio": 1.55,
+     "minimo": 3.0,
+     "cumple": false
+    }
+   ]
+  },
+  {
+   "nombre": "defaults.ts#4",
+   "pares": [
+    {
+     "par": "Texto sobre el fondo",
+     "ratio": 17.33,
+     "minimo": 4.5,
+     "cumple": true
+    },
+    {
+     "par": "Texto sobre tarjetas",
+     "ratio": 18.11,
+     "minimo": 4.5,
+     "cumple": true
+    },
+    {
+     "par": "Texto secundario sobre el fondo",
+     "ratio": 5.08,
+     "minimo": 4.5,
+     "cumple": true
+    },
+    {
+     "par": "Texto secundario sobre tarjetas",
+     "ratio": 5.31,
+     "minimo": 4.5,
+     "cumple": true
+    },
+    {
+     "par": "Color primario como texto sobre el fondo",
+     "ratio": 10.8,
+     "minimo": 4.5,
+     "cumple": true
+    },
+    {
+     "par": "Color de acento como texto sobre el fondo",
+     "ratio": 4.96,
+     "minimo": 4.5,
+     "cumple": true
+    },
+    {
+     "par": "Borde de campos sobre el fondo (no texto)",
+     "ratio": 1.23,
+     "minimo": 3.0,
+     "cumple": false
+    }
+   ]
+  }
+ ]
+}
