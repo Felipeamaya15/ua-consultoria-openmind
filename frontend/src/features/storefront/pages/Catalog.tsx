@@ -259,27 +259,27 @@ export default function Catalog() {
 
   if (isCatalog) {
     return (
-      <div data-catalog-page="catalog" data-visual-section={VISUAL_SECTION.catalog} data-visual-catalog className="bg-[var(--visual-background)] text-[var(--visual-text)] min-w-0">
-        <section className="max-w-[1160px] mx-auto px-4 sm:px-5 pt-8 sm:pt-10 md:pt-14 pb-16 sm:pb-20 md:pb-28">
+      <div data-visual-section={VISUAL_SECTION.catalog} data-visual-catalog className="bg-[var(--visual-background)] text-[var(--visual-text)]">
+        <section className="max-w-[1160px] mx-auto px-5 pt-10 md:pt-14 pb-20 md:pb-28">
           {/* CABECERA */}
-          <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-5 sm:gap-7 mb-7 sm:mb-9">
-            <div className="min-w-0">
+          <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-7 mb-9">
+            <div>
               <p className="text-[var(--accent)] text-[10px] font-extrabold uppercase tracking-[0.16em] mb-3">
                 Explora la colección
               </p>
 
-              <h1 className="text-[36px] sm:text-[56px] md:text-[64px] leading-[0.94] tracking-[-0.05em] font-black break-words">
+              <h1 className="text-[44px] sm:text-[56px] md:text-[64px] leading-[0.94] tracking-[-0.05em] font-black">
                 Catálogo.
               </h1>
 
-              <p className="mt-3 sm:mt-4 text-[13px] text-[var(--visual-muted)]">
+              <p className="mt-4 text-[13px] text-[var(--visual-muted)]">
                 {filtered.length}{' '}
                 {filtered.length === 1 ? 'producto disponible' : 'productos disponibles'}
               </p>
             </div>
 
-            <div data-catalog-toolbar className="flex flex-wrap items-center gap-2 w-full lg:w-auto">
-              <div data-catalog-search className="relative w-full sm:w-auto sm:flex-none">
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="relative flex-1 sm:flex-none">
                 <Icon
                   name="search"
                   className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-black/60 pointer-events-none"
@@ -301,7 +301,7 @@ export default function Catalog() {
                 aria-label="Ordenar productos"
                 value={sort}
                 onChange={(event) => setSort(event.target.value)}
-                className="h-11 flex-1 sm:flex-initial min-w-0 rounded-[10px] bg-white px-4 text-[12px] font-medium text-[#151515] outline-none"
+                className="h-11 rounded-[10px] bg-white px-4 text-[12px] font-medium text-[#151515] outline-none"
               >
                 {SORT_OPTIONS.map((option) => (
                   <option key={option.value} value={option.value}>
@@ -310,7 +310,7 @@ export default function Catalog() {
                 ))}
               </select>
 
-              <div className="flex h-11 shrink-0 overflow-hidden rounded-[10px] bg-[var(--visual-surface)] ring-1 ring-[var(--visual-border)]">
+              <div className="flex h-11 overflow-hidden rounded-[10px] bg-[var(--visual-surface)] ring-1 ring-[var(--visual-border)]">
                 {(['grid', 'list'] as const).map((view) => (
                   <button
                     type="button"
@@ -335,7 +335,7 @@ export default function Catalog() {
 
           <button
             type="button"
-            className="md:hidden mb-5 min-h-11 w-full sm:w-auto justify-center items-center rounded-full border border-[var(--visual-border)] px-5 text-[12px] font-semibold text-[var(--visual-text)]"
+            className="md:hidden mb-5 h-10 rounded-full border border-[var(--visual-border)] px-5 text-[11px] font-semibold text-[var(--visual-text)]"
             data-visual-part="catalogFiltersToggle" aria-expanded={filtersOpen}
             onClick={() => setFiltersOpen(!filtersOpen)}
           >
@@ -345,11 +345,11 @@ export default function Catalog() {
           <div data-visual-part="catalogLayout" className="grid grid-cols-12 gap-5 md:gap-7 items-start">
             {/* FILTROS */}
             <aside data-visual-part="catalogFilters" data-visual-open={filtersOpen}
-              className={`col-span-12 md:col-span-3 min-w-0 ${
+              className={`col-span-12 md:col-span-3 ${
                 filtersOpen ? 'block' : 'hidden'
               } md:block`}
             >
-              <div className="md:sticky md:top-28 md:max-h-[calc(100vh-8rem)] flex flex-col rounded-[16px] bg-[#f5f5f3] text-[#151515]">
+              <div className="sticky top-28 max-h-[calc(100vh-8rem)] flex flex-col rounded-[16px] bg-[#f5f5f3] text-[#151515]">
                 <div className="flex items-center justify-between gap-3 px-5 pt-5 pb-4 border-b border-black/10">
                   <p className="text-[10px] font-black uppercase tracking-[0.16em] text-black/60">
                     Filtros
@@ -466,7 +466,7 @@ export default function Catalog() {
             </aside>
 
             {/* PRODUCTOS */}
-            <main data-visual-part="catalogResults" className="col-span-12 md:col-span-9 min-w-0">
+            <main data-visual-part="catalogResults" className="col-span-12 md:col-span-9">
               {appliedFilters}
 
               {paginated.length === 0 ? (
@@ -523,82 +523,50 @@ export default function Catalog() {
 
   if (isVisual) {
     return (
-      <div data-catalog-page="visual" data-visual-section={VISUAL_SECTION.catalog} data-visual-catalog className="bg-white text-[#111111] min-w-0">
-        <section className="max-w-[1180px] mx-auto px-4 sm:px-5 md:px-8 pt-8 md:pt-10 pb-16 sm:pb-20">
-          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-8 md:mb-10">
-            <h1 className="font-serif text-[34px] sm:text-[48px] md:text-[52px] leading-none tracking-[-0.025em] text-[#111111] break-words">
+      <div data-visual-section={VISUAL_SECTION.catalog} data-visual-catalog className="bg-white text-[#111111]">
+        <section className="max-w-[1180px] mx-auto px-5 md:px-8 pt-8 md:pt-10 pb-20">
+          <div className="mb-8 md:mb-10">
+            <h1 className="font-serif text-[42px] sm:text-[48px] md:text-[52px] leading-none tracking-[-0.025em] text-[#111111]">
               Nuestra colección
             </h1>
-
-            <div data-catalog-toolbar className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
-              <div data-catalog-search className="relative w-full sm:w-auto">
-                <Icon
-                  name="search"
-                  className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none"
-                />
-                <input
-                  value={search}
-                  onChange={(event) => {
-                    setSearch(event.target.value);
-                    setPage(1);
-                  }}
-                  aria-label="Buscar productos"
-                  placeholder="Buscar..."
-                  className="h-11 w-full sm:w-48 border border-black/15 px-3 pl-10 text-xs text-[#111111] bg-white outline-none focus:border-black"
-                />
-              </div>
-
-              <select
-                aria-label="Ordenar productos"
-                value={sort}
-                onChange={(event) => setSort(event.target.value)}
-                className="h-11 flex-1 sm:flex-initial min-w-0 border border-black/15 px-3 text-xs text-[#111111] bg-white outline-none focus:border-black"
-              >
-                {SORT_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </div>
           </div>
 
           {/* FILTROS */}
           <div data-visual-part="catalogLayout">
-            <aside data-visual-part="catalogFilters" data-visual-open={filtersOpen} className={`${filtersOpen ? 'block' : 'hidden'} mb-6 border-b border-[var(--border)] pb-6 min-w-0`}>
-              <div className="flex flex-wrap items-center justify-between gap-3">
+          <aside data-visual-part="catalogFilters" data-visual-open={filtersOpen} className={`${filtersOpen ? 'block' : 'hidden'} mb-6 border-b border-[var(--border)] pb-6`}>
+            <div className="flex items-center justify-between gap-4">
+              <button
+                data-visual-part="catalogFiltersToggle"
+                type="button"
+                aria-expanded={filtersOpen}
+                onClick={() => setFiltersOpen(!filtersOpen)}
+                className="inline-flex items-center gap-2 rounded-full border border-black/15 px-5 py-2.5 text-[11px] font-semibold uppercase tracking-[0.12em] transition-colors hover:border-black"
+              >
+                Filtros{activeFiltersCount > 0 && ` (${activeFiltersCount})`}{' '}
+                <span aria-hidden="true">{filtersOpen ? '−' : '+'}</span>
+              </button>
+
+              {activeFiltersCount > 0 && (
                 <button
-                  data-visual-part="catalogFiltersToggle"
                   type="button"
-                  aria-expanded={filtersOpen}
-                  onClick={() => setFiltersOpen(!filtersOpen)}
-                  className="inline-flex min-h-11 items-center gap-2 rounded-full border border-black/15 px-5 py-2.5 text-[11px] font-semibold uppercase tracking-[0.12em] transition-colors hover:border-black"
+                  onClick={clearFilters}
+                  className="text-[11px] font-semibold underline underline-offset-4 hover:opacity-60"
                 >
-                  Filtros{activeFiltersCount > 0 && ` (${activeFiltersCount})`}{' '}
-                  <span aria-hidden="true">{filtersOpen ? '−' : '+'}</span>
+                  Limpiar filtros ({activeFiltersCount})
                 </button>
+              )}
+            </div>
 
-                {activeFiltersCount > 0 && (
-                  <button
-                    type="button"
-                    onClick={clearFilters}
-                    className="text-[11px] font-semibold underline underline-offset-4 hover:opacity-60"
-                  >
-                    Limpiar filtros ({activeFiltersCount})
-                  </button>
-                )}
-              </div>
-
-              <div data-visual-section={VISUAL_SECTION.categories} data-visual-part="categoryList" className="mt-5 flex flex-wrap gap-2">
-                {categories.map(cat => <button key={cat} type="button" data-visual-part="categoryItem" aria-pressed={category === cat} onClick={() => { setCategory(cat); setPage(1); }}>{cat}</button>)}
-              </div>
+            <div data-visual-section={VISUAL_SECTION.categories} data-visual-part="categoryList" className="mt-5 flex flex-wrap gap-2">
+              {categories.map(cat => <button key={cat} type="button" data-visual-part="categoryItem" aria-pressed={category === cat} onClick={() => { setCategory(cat); setPage(1); }}>{cat}</button>)}
+            </div>
               <div className="mt-6">
                 {attrFilters.groups.length === 0 ? (
                   <p className="text-[13px] text-[var(--muted-foreground)]">
                     No hay filtros disponibles.
                   </p>
                 ) : (
-                  <div className="max-h-[280px] overflow-y-auto pr-2 grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-4 gap-x-8 gap-y-6 content-start">
+                  <div className="max-h-[280px] overflow-y-auto pr-2 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-8 gap-y-6 content-start">
                     <AttributeFilters
                       groups={attrFilters.groups}
                       selected={attrFilters.selected}
@@ -610,46 +578,44 @@ export default function Catalog() {
                   </div>
                 )}
               </div>
-            </aside>
+          </aside>
 
-            <div data-visual-part="catalogResults" className="min-w-0">
-              <button type="button" data-visual-part="catalogFiltersToggle" aria-expanded={filtersOpen} onClick={() => setFiltersOpen(!filtersOpen)} className="mb-5 min-h-11 w-full sm:w-auto justify-center items-center border border-[var(--border)] rounded px-4 py-2 text-xs font-semibold">
-                Filtros{activeFiltersCount > 0 && ` (${activeFiltersCount})`} {filtersOpen ? '−' : '+'}
-              </button>
+          <div data-visual-part="catalogResults">
+          <button type="button" data-visual-part="catalogFiltersToggle" aria-expanded={filtersOpen} onClick={() => setFiltersOpen(!filtersOpen)} className="mb-5 border border-[var(--border)] rounded px-4 py-2">Filtros {filtersOpen ? '−' : '+'}</button>
 
-              {appliedFilters}
+          {appliedFilters}
 
-              {paginated.length === 0 ? (
-                <EmptyState
-                  icon={<Icon name="search" className="w-12 h-12" />}
-                  title="Sin resultados"
-                  description="No se encontraron productos para tu búsqueda."
-                />
-              ) : (
-                <>
-                  <div data-visual-section={VISUAL_SECTION.productGrid} data-visual-grid="catalog" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 md:gap-6">
-                    {paginated.map((product) => (
-                      <ProductCard
-                        key={product.id}
-                        product={product}
-                        layout="grid"
-                      />
-                    ))}
-                  </div>
+          {paginated.length === 0 ? (
+            <EmptyState
+              icon={<Icon name="search" className="w-12 h-12" />}
+              title="Sin resultados"
+              description="No se encontraron productos para tu búsqueda."
+            />
+          ) : (
+            <>
+              <div data-visual-section={VISUAL_SECTION.productGrid} data-visual-grid="catalog" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 md:gap-6">
+                {paginated.map((product) => (
+                  <ProductCard
+                    key={product.id}
+                    product={product}
+                    layout="grid"
+                  />
+                ))}
+              </div>
 
-                  {filtered.length > PAGE_SIZE && (
-                    <div className="flex justify-center mt-12">
-                      <Pagination
-                        page={page}
-                        total={filtered.length}
-                        pageSize={PAGE_SIZE}
-                        onChange={setPage}
-                      />
-                    </div>
-                  )}
-                </>
+              {filtered.length > PAGE_SIZE && (
+                <div className="flex justify-center mt-12">
+                  <Pagination
+                    page={page}
+                    total={filtered.length}
+                    pageSize={PAGE_SIZE}
+                    onChange={setPage}
+                  />
+                </div>
               )}
-            </div>
+            </>
+          )}
+          </div>
           </div>
         </section>
       </div>
@@ -664,12 +630,11 @@ export default function Catalog() {
 
   return (
     <div
-      data-catalog-page={isMinimal ? 'minimal' : 'editorial'}
       data-visual-section={VISUAL_SECTION.catalog} data-visual-catalog
       className={
         isMinimal
-          ? 'max-w-6xl mx-auto px-4 md:px-8 pt-8 sm:pt-12 pb-8 min-w-0'
-          : 'max-w-7xl mx-auto px-4 py-6 sm:py-8 min-w-0'
+          ? 'max-w-6xl mx-auto px-4 md:px-8 pt-12 pb-8'
+          : 'max-w-7xl mx-auto px-4 py-8'
       }
     >
       {/* CABECERA */}
@@ -680,11 +645,11 @@ export default function Catalog() {
           sm:flex-row
           sm:items-end
           justify-between
-          gap-4 sm:gap-5
-          ${isMinimal ? 'mb-6 sm:mb-8' : 'mb-6'}
+          gap-5
+          ${isMinimal ? 'mb-8' : 'mb-6'}
         `}
       >
-        <div className="min-w-0">
+        <div>
           {isMinimal && (
             <p className="text-xs text-gray-500 mb-2">
               Explora nuestra selección
@@ -694,8 +659,8 @@ export default function Catalog() {
           <h1
             className={
               isMinimal
-                ? 'text-3xl md:text-4xl font-semibold tracking-tight text-[#171717] break-words'
-                : 'text-2xl font-semibold font-display text-[var(--foreground)] break-words'
+                ? 'text-3xl md:text-4xl font-semibold tracking-tight text-[#171717]'
+                : 'text-2xl font-semibold font-display text-[var(--foreground)]'
             }
           >
             {category !== 'Todos'
@@ -719,11 +684,11 @@ export default function Catalog() {
 
         {/* Herramientas */}
 
-        <div data-catalog-toolbar className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+        <div className="flex flex-wrap items-center gap-2">
 
           {/* Buscar */}
 
-          <div data-catalog-search className="relative w-full sm:w-auto">
+          <div className="relative">
             <Icon
               name="search"
               className="
@@ -756,8 +721,8 @@ export default function Catalog() {
                 transition-all
                 ${
                   isMinimal
-                    ? 'h-11 sm:h-10 text-sm rounded-xl pl-9 pr-3 w-full sm:w-44 md:w-52'
-                    : 'h-11 sm:h-8 text-sm rounded-lg pl-9 pr-3 w-full sm:w-40 sm:focus:w-52'
+                    ? 'h-10 text-sm rounded-xl pl-9 pr-3 w-44 md:w-52'
+                    : 'h-8 text-sm rounded-lg pl-9 pr-3 w-40 focus:w-52'
                 }
               `}
             />
@@ -772,15 +737,14 @@ export default function Catalog() {
               setSort(event.target.value)
             }
             className={`
-              flex-1 sm:flex-initial min-w-0
               border
               border-[var(--border)]
               bg-white
               focus:outline-none
               ${
                 isMinimal
-                  ? 'h-11 sm:h-10 text-xs rounded-xl px-3'
-                  : 'h-11 sm:h-8 text-xs rounded-lg px-2'
+                  ? 'h-10 text-xs rounded-xl px-3'
+                  : 'h-8 text-xs rounded-lg px-2'
               }
             `}
           >
@@ -798,15 +762,15 @@ export default function Catalog() {
 
           <div
             className={`
-              flex shrink-0
+              flex
               border
               border-[var(--border)]
               overflow-hidden
               bg-white
               ${
                 isMinimal
-                  ? 'rounded-xl h-11 sm:h-10'
-                  : 'rounded-lg h-11 sm:h-auto'
+                  ? 'rounded-xl h-10'
+                  : 'rounded-lg'
               }
             `}
           >
@@ -830,8 +794,8 @@ export default function Catalog() {
                     transition-colors
                     ${
                       isMinimal
-                        ? 'w-11 sm:w-10'
-                        : 'w-11 sm:w-auto sm:px-2 sm:py-1.5'
+                        ? 'w-10'
+                        : 'px-2 py-1.5'
                     }
                     ${
                       viewMode === view
@@ -862,14 +826,11 @@ export default function Catalog() {
         className={`
           md:hidden
           mb-4
-          min-h-11
-          w-full sm:w-auto
-          justify-center items-center
-          text-sm font-medium
+          text-sm
           ${
             isMinimal
               ? 'bg-white border border-[var(--border)] rounded-full px-4 py-2'
-              : 'bg-white border border-[var(--border)] rounded-lg px-4 py-2'
+              : ''
           }
         `}
         data-visual-part="catalogFiltersToggle" aria-expanded={filtersOpen}
@@ -895,7 +856,6 @@ export default function Catalog() {
           className={`
             col-span-12
             md:col-span-3
-            min-w-0
             ${filtersOpen ? 'block' : 'hidden'}
             md:block
           `}
@@ -905,13 +865,13 @@ export default function Catalog() {
               bg-white
               border
               border-[var(--border)]
-              md:sticky
+              sticky
               flex
               flex-col
               ${
                 isMinimal
-                  ? 'rounded-[20px] md:top-24 md:max-h-[calc(100vh-7rem)]'
-                  : 'rounded-xl md:top-20 md:max-h-[calc(100vh-6rem)]'
+                  ? 'rounded-[20px] top-24 max-h-[calc(100vh-7rem)]'
+                  : 'rounded-xl top-20 max-h-[calc(100vh-6rem)]'
               }
             `}
           >
@@ -999,7 +959,7 @@ export default function Catalog() {
                   (option) => (
                     <label
                       key={option}
-                      className="flex items-center gap-2 text-sm py-1.5 cursor-pointer"
+                      className="flex items-center gap-2 text-sm py-1 cursor-pointer"
                     >
                       <input
                         type="checkbox"
@@ -1050,7 +1010,7 @@ export default function Catalog() {
                     }}
                     placeholder="Min"
                     className={`
-                      w-full min-w-0
+                      w-full
                       text-xs
                       border
                       border-[var(--border)]
@@ -1059,7 +1019,7 @@ export default function Catalog() {
                       ${
                         isMinimal
                           ? 'h-9 rounded-lg'
-                          : 'h-9 sm:h-7 rounded'
+                          : 'h-7 rounded'
                       }
                     `}
                   />
@@ -1075,7 +1035,7 @@ export default function Catalog() {
                     }}
                     placeholder="Max"
                     className={`
-                      w-full min-w-0
+                      w-full
                       text-xs
                       border
                       border-[var(--border)]
@@ -1084,7 +1044,7 @@ export default function Catalog() {
                       ${
                         isMinimal
                           ? 'h-9 rounded-lg'
-                          : 'h-9 sm:h-7 rounded'
+                          : 'h-7 rounded'
                       }
                     `}
                   />
@@ -1105,7 +1065,7 @@ export default function Catalog() {
 
         {/* PRODUCTOS */}
 
-        <main data-visual-part="catalogResults" className="col-span-12 md:col-span-9 min-w-0">
+        <main data-visual-part="catalogResults" className="col-span-12 md:col-span-3 lg:col-span-9">
           {appliedFilters}
 
           {paginated.length === 0 ? (

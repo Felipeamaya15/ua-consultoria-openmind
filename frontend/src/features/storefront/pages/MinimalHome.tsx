@@ -41,16 +41,16 @@ export default function MinimalHome() {
   };
 
   return (
-    <div data-landing-page="minimal" className="pb-4 min-w-0 overflow-x-hidden">
+    <div className="pb-4">
 
       {/* =====================================================
           HERO / SHOP SEARCH
       ====================================================== */}
-      <section data-visual-section={VISUAL_SECTION.hero} className="px-4 md:px-8 pt-6 sm:pt-10 md:pt-14">
-        <div data-visual-part="heroOverlay" className="absolute inset-0" /><div data-visual-layout="stack" data-visual-part="heroLayout" className="max-w-6xl mx-auto min-w-0">
+      <section data-visual-section={VISUAL_SECTION.hero} className="px-4 md:px-8 pt-10 md:pt-14">
+        <div data-visual-part="heroOverlay" className="absolute inset-0" /><div data-visual-layout="stack" data-visual-part="heroLayout" className="max-w-6xl mx-auto">
 
           {/* Tarjetas flotantes */}
-          <div data-visual-part="heroDecorations" data-landing-content className="flex justify-center items-end -space-x-6 sm:-space-x-4 md:-space-x-3 mb-4 min-h-[130px] sm:min-h-[170px] md:min-h-[180px] px-2 sm:px-6 max-w-full overflow-x-hidden">
+          <div data-visual-part="heroDecorations" data-landing-content className="flex justify-center items-end -space-x-5 sm:-space-x-4 md:-space-x-3 mb-4 min-h-[150px] sm:min-h-[170px] md:min-h-[180px] px-6">
 
             {!floatingProducts.length && landing?.imagen_principal && <img data-visual-part="heroImageFallback" data-landing-image src={landing.imagen_principal} alt={landing.titulo || 'Imagen principal de la tienda'} className="max-h-[180px] max-w-full rounded-2xl object-contain" />}
             {floatingProducts.map((product, index) => {
@@ -67,11 +67,10 @@ export default function MinimalHome() {
                   to={`producto/${product.id}`}
                   className={`
                     relative
-                    w-[92px] sm:w-[130px] md:w-[150px]
-                    shrink-0
+                    w-[115px] sm:w-[130px] md:w-[150px]
                     bg-white
                     rounded-2xl
-                    p-1.5 sm:p-2
+                    p-2
                     shadow-lg
                     border
                     border-black/5
@@ -93,7 +92,7 @@ export default function MinimalHome() {
                   </div>
 
                   <div className="px-1 pt-2 pb-1">
-                    <p className="text-[10px] text-gray-500 truncate">
+                    <p className="text-[10px] text-gray-500">
                       {product.category}
                     </p>
 
@@ -118,21 +117,21 @@ export default function MinimalHome() {
           </div>
 
           {/* Título */}
-          <div data-visual-part="heroTitleBlock" className="text-center min-w-0">
+          <div data-visual-part="heroTitleBlock" className="text-center">
             <LandingStatus />
-            <h1 className="text-[clamp(2.5rem,11vw,4.5rem)] sm:text-[92px] md:text-[118px] leading-none tracking-[-0.06em] sm:tracking-[-0.08em] font-semibold text-[#151515] break-words">
+            <h1 className="text-[72px] sm:text-[92px] md:text-[118px] leading-none tracking-[-0.08em] font-semibold text-[#151515]">
               {landing?.titulo}
             </h1>
           </div>
 
-          <p data-visual-part="heroSubtitle" className="text-center text-gray-600 mt-4 px-2 break-words">{landing?.descripcion}</p>
+          <p data-visual-part="heroSubtitle" className="text-center text-gray-600 mt-4">{landing?.descripcion}</p>
 
           {/* Buscador */}
           <form data-visual-part="heroCtaLayout"
             onSubmit={handleSearch}
-            className="max-w-3xl mx-auto mt-6 sm:mt-8 w-full"
+            className="max-w-3xl mx-auto mt-8"
           >
-            <div data-landing-search className="bg-white rounded-3xl sm:rounded-full border border-black/5 shadow-sm p-2 pl-4 sm:pl-6 flex flex-wrap sm:flex-nowrap items-center gap-2 sm:gap-3">
+            <div className="bg-white rounded-full border border-black/5 shadow-sm p-2 pl-6 flex items-center gap-3">
 
               <svg
                 className="w-5 h-5 text-gray-500 flex-shrink-0"
@@ -155,13 +154,13 @@ export default function MinimalHome() {
                 onChange={(event) => setSearch(event.target.value)}
                 placeholder="What are you shopping for today?"
                 aria-label="Buscar productos"
-                className="flex-1 min-w-[140px] h-10 bg-transparent outline-none text-sm md:text-base text-[#171717] placeholder:text-gray-500"
+                className="flex-1 min-w-0 bg-transparent outline-none text-sm md:text-base text-[#171717] placeholder:text-gray-500"
               />
 
               <button data-visual-section={VISUAL_SECTION.heroCta}
                 type="submit"
                 aria-label={landing?.texto_boton || 'Buscar'}
-                className="px-5 min-w-11 min-h-11 w-full sm:w-auto gap-2 flex-shrink-0 rounded-full bg-[var(--primary)] text-[var(--on-primary)] flex items-center justify-center hover:scale-105 transition-transform"
+                className="px-5 min-w-11 h-11 gap-2 flex-shrink-0 rounded-full bg-[var(--primary)] text-[var(--on-primary)] flex items-center justify-center hover:scale-105 transition-transform"
               >
                 {landing?.texto_boton}
                 <svg
@@ -195,14 +194,14 @@ export default function MinimalHome() {
           data-landing-content
           className="w-full px-4 md:px-8 py-5"
         >
-          <div className="max-w-6xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:flex lg:flex-wrap items-start gap-x-12 gap-y-4">
+          <div className="max-w-6xl mx-auto flex flex-wrap items-start gap-x-12 gap-y-5">
             {content.beneficios.map((benefit, index) => (
-              <div key={index} className="min-w-0 max-w-full sm:max-w-[260px] flex items-start gap-3">
+              <div key={index} className="min-w-0 max-w-[260px] flex items-start gap-3">
                 <Icon name={benefit.icono} className="w-5 h-5 shrink-0 mt-0.5" />
                 <div className="min-w-0">
-                  <p className="text-sm font-semibold leading-5 break-words">{benefit.titulo}</p>
+                  <p className="text-sm font-semibold leading-5">{benefit.titulo}</p>
                   {benefit.descripcion && (
-                    <p className="mt-1 text-xs leading-5 opacity-70 break-words">{benefit.descripcion}</p>
+                    <p className="mt-1 text-xs leading-5 opacity-70">{benefit.descripcion}</p>
                   )}
                 </div>
               </div>
@@ -213,26 +212,26 @@ export default function MinimalHome() {
 
       <LandingBlocks />
 
-      {/* Categorías */}
-      {isSectionVisible('Categorías') && categories.length > 0 && (<div data-visual-section={VISUAL_SECTION.categories} data-visual-part="categoryList" className="mt-5 px-4 flex flex-wrap justify-center gap-2">
+          {/* Categorías */}
+          {isSectionVisible('Categorías') && categories.length > 0 && (<div data-visual-section={VISUAL_SECTION.categories} data-visual-part="categoryList" className="mt-5 flex flex-wrap justify-center gap-2">
 
-        {categories.map((category) => (
-          <button data-visual-part="categoryItem"
-            key={category}
-            type="button"
-            onClick={() => goToCategory(category)}
-            className="min-h-10 px-4 py-2 rounded-full bg-white border border-black/5 text-xs text-gray-600 hover:bg-[var(--primary)] hover:text-[var(--on-primary)] transition-colors"
-          >
-            {category}
-          </button>
-        ))}
+            {categories.map((category) => (
+              <button data-visual-part="categoryItem"
+                key={category}
+                type="button"
+                onClick={() => goToCategory(category)}
+                className="px-4 py-2 rounded-full bg-white border border-black/5 text-xs text-gray-600 hover:bg-[var(--primary)] hover:text-[var(--on-primary)] transition-colors"
+              >
+                {category}
+              </button>
+            ))}
 
-      </div>)}
+          </div>)}
 
       {/* =====================================================
           DESCUBRIMIENTO
       ====================================================== */}
-      {isSectionVisible('Productos destacados') && discoveryProducts.length > 0 && (<section data-visual-section={VISUAL_SECTION.sections} data-visual-kind="featured" data-landing-content className="px-4 md:px-8 mt-12 sm:mt-16 md:mt-20">
+      {isSectionVisible('Productos destacados') && discoveryProducts.length > 0 && (<section data-visual-section={VISUAL_SECTION.sections} data-visual-kind="featured" data-landing-content className="px-4 md:px-8 mt-16 md:mt-20">
         <div className="max-w-6xl mx-auto">
 
           <div className="flex items-end justify-between gap-6 mb-7">
@@ -242,7 +241,7 @@ export default function MinimalHome() {
                 Para descubrir sin prisa
               </p>
 
-              <h2 className="text-2xl sm:text-3xl md:text-4xl font-semibold tracking-tight text-[#171717]">
+              <h2 className="text-3xl md:text-4xl font-semibold tracking-tight text-[#171717]">
                 Lo que está pasando ahora
               </h2>
             </div>
@@ -302,7 +301,7 @@ export default function MinimalHome() {
 
           <Link
             to="catalogo"
-            className="sm:hidden inline-flex items-center min-h-11 mt-5 text-sm font-medium text-[var(--primary)]"
+            className="sm:hidden inline-flex mt-5 text-sm text-[var(--primary)]"
           >
             Ver todo →
           </Link>
@@ -314,10 +313,10 @@ export default function MinimalHome() {
           BANNER
       ====================================================== */}
       {isSectionVisible('Productos destacados') && activeProducts[0] && (
-        <section data-visual-section={VISUAL_SECTION.sections} data-visual-kind="featured" data-landing-content className="px-4 md:px-8 mt-14 sm:mt-20">
+        <section data-visual-section={VISUAL_SECTION.sections} data-visual-kind="featured" data-landing-content className="px-4 md:px-8 mt-20">
           <div className="max-w-6xl mx-auto">
 
-            <div className="relative min-h-[340px] sm:min-h-[420px] md:min-h-[520px] rounded-[24px] sm:rounded-[32px] overflow-hidden bg-gray-200">
+            <div className="relative min-h-[420px] md:min-h-[520px] rounded-[32px] overflow-hidden bg-gray-200">
 
               <img
                 src={activeProducts[0].images[0]}
@@ -327,15 +326,15 @@ export default function MinimalHome() {
 
               <div className="absolute inset-0 bg-black/30" />
 
-              <div className="relative z-10 min-h-[340px] sm:min-h-[420px] md:min-h-[520px] flex items-end p-5 sm:p-7 md:p-12">
+              <div className="relative z-10 min-h-[420px] md:min-h-[520px] flex items-end p-7 md:p-12">
 
-                <div className="max-w-xl text-white min-w-0">
+                <div className="max-w-xl text-white">
 
-                  <p className="text-xs uppercase tracking-[0.18em] text-white/70 mb-3 sm:mb-4">
+                  <p className="text-xs uppercase tracking-[0.18em] text-white/70 mb-4">
                     Nueva selección
                   </p>
 
-                  <h2 className="text-2xl sm:text-4xl md:text-5xl font-semibold tracking-tight leading-[1.08] break-words">
+                  <h2 className="text-3xl sm:text-4xl md:text-5xl font-semibold tracking-tight leading-[1.05]">
                     Productos que hacen que todos pregunten
                     {' '}
                     “¿dónde lo compraste?”
@@ -343,7 +342,7 @@ export default function MinimalHome() {
 
                   <Link
                     to="catalogo"
-                    className="inline-flex min-h-11 items-center mt-6 sm:mt-7 bg-white text-[#171717] rounded-full px-5 py-3 text-sm font-medium hover:bg-white/90 transition-colors"
+                    className="inline-flex items-center mt-7 bg-white text-[#171717] rounded-full px-5 py-3 text-sm font-medium hover:bg-white/90 transition-colors"
                   >
                     Explorar colección
                     <span className="ml-2">→</span>
@@ -361,12 +360,12 @@ export default function MinimalHome() {
       {/* =====================================================
           MÁS PARA TI
       ====================================================== */}
-      {isSectionVisible('Productos destacados') && moreProducts.length > 0 && (<section data-visual-section={VISUAL_SECTION.sections} data-visual-kind="featured" data-landing-content className="px-4 md:px-8 mt-14 sm:mt-20">
+      {isSectionVisible('Productos destacados') && moreProducts.length > 0 && (<section data-visual-section={VISUAL_SECTION.sections} data-visual-kind="featured" data-landing-content className="px-4 md:px-8 mt-20">
         <div className="max-w-6xl mx-auto">
 
           <div className="flex items-center justify-between gap-4 mb-7">
 
-            <h2 className="text-2xl sm:text-3xl md:text-4xl font-semibold tracking-tight text-[#171717]">
+            <h2 className="text-3xl md:text-4xl font-semibold tracking-tight text-[#171717]">
               Más para ti
             </h2>
 
@@ -380,7 +379,7 @@ export default function MinimalHome() {
           </div>
 
           {moreProducts.length > 0 ? (
-            <div data-visual-section={VISUAL_SECTION.productGrid} data-visual-grid="products" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div data-visual-section={VISUAL_SECTION.productGrid} data-visual-grid="products" className="grid grid-cols-2 lg:grid-cols-4 gap-4">
 
               {moreProducts.map((product) => (
                 <Link data-visual-section={VISUAL_SECTION.productCard} data-visual-card="custom"

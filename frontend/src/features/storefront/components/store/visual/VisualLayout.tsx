@@ -11,7 +11,7 @@ export function VisualLayout() {
     <StoreVisualRoot className="template-visual min-h-screen bg-white text-[#111111] flex flex-col">
       <VisualHeader />
 
-      <main id="main-content" tabIndex={-1} className="flex-1">
+      <main className="flex-1">
         <StorePageContent>
           <Outlet />
         </StorePageContent>

@@ -165,14 +165,8 @@ export function Card({ children, className = '', onClick }: { children: ReactNod
   return (
     <div
       data-visual-section={VISUAL_SECTION.pagePanel} data-page-panel
-      className={`bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 ${onClick ? 'cursor-pointer hover:shadow-md transition-shadow focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)]' : ''} ${className}`}
+      className={`bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 ${onClick ? 'cursor-pointer hover:shadow-md transition-shadow' : ''} ${className}`}
       onClick={onClick}
-      onKeyDown={onClick ? (event) => {
-        if (event.key === 'Enter' || event.key === ' ') {
-          event.preventDefault();
-          onClick();
-        }
-      } : undefined}
       role={onClick ? 'button' : undefined}
       tabIndex={onClick ? 0 : undefined}
     >
@@ -200,13 +194,13 @@ export function Modal({ open, onClose, title, children, size = 'md' }: ModalProp
 
   if (!open) return null;
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-label={title}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal aria-label={title}>
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
-      <div tabIndex={-1} className={`relative bg-white rounded-2xl shadow-2xl w-full ${sizes[size]} animate-fade-in`}>
+      <div className={`relative bg-white rounded-2xl shadow-2xl w-full ${sizes[size]} animate-fade-in`}>
         {title && (
           <div className="flex items-center justify-between p-5 border-b border-[var(--border)]">
             <h2 className="text-lg font-semibold text-[var(--foreground)]">{title}</h2>
-            <button type="button" onClick={onClose} className="text-[var(--muted-foreground)] hover:text-[var(--foreground)] p-1 rounded-lg hover:bg-[var(--muted)] transition-colors" aria-label="Cerrar">
+            <button onClick={onClose} className="text-[var(--muted-foreground)] hover:text-[var(--foreground)] p-1 rounded-lg hover:bg-[var(--muted)] transition-colors" aria-label="Cerrar">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
             </button>
           </div>
@@ -235,7 +229,7 @@ export function Toast({ variant, message, onClose }: { variant: ToastVariant; me
     <div className={`flex items-center gap-3 px-4 py-3 rounded-xl border text-sm font-medium shadow-lg animate-fade-in ${toastColors[variant]}`} role="alert">
       <span className="w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold bg-current/10">{toastIcons[variant]}</span>
       <span className="text-[var(--foreground)]">{message}</span>
-      <button type="button" onClick={onClose} className="ml-auto opacity-60 hover:opacity-100" aria-label="Cerrar">✕</button>
+      <button onClick={onClose} className="ml-auto opacity-60 hover:opacity-100" aria-label="Cerrar">✕</button>
     </div>
   );
 }
@@ -245,28 +239,12 @@ interface Tab { id: string; label: string; icon?: ReactNode }
 export function Tabs({ tabs, active, onChange }: { tabs: Tab[]; active: string; onChange: (id: string) => void }) {
   return (
     <div className="flex border-b border-[var(--border)] gap-1" role="tablist">
-      {tabs.map((t, index) => (
+      {tabs.map(t => (
         <button
-          type="button"
           key={t.id}
           role="tab"
           aria-selected={active === t.id}
-          tabIndex={active === t.id ? 0 : -1}
           onClick={() => onChange(t.id)}
-          onKeyDown={(event) => {
-            if (!['ArrowRight', 'ArrowLeft', 'Home', 'End'].includes(event.key) || tabs.length === 0) return;
-            event.preventDefault();
-            const nextIndex =
-              event.key === 'Home'
-                ? 0
-                : event.key === 'End'
-                  ? tabs.length - 1
-                  : (index + (event.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length;
-            const nextTab = tabs[nextIndex];
-            onChange(nextTab.id);
-            const buttons = event.currentTarget.parentElement?.querySelectorAll<HTMLButtonElement>('[role="tab"]');
-            buttons?.[nextIndex]?.focus();
-          }}
           className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px
             ${active === t.id ? 'border-[var(--primary)] text-[var(--primary)]' : 'border-transparent text-[var(--muted-foreground)] hover:text-[var(--foreground)]'}`}
         >
@@ -283,16 +261,16 @@ export function Pagination({ page, total, pageSize = 12, onChange }: { page: num
   if (pages <= 1) return null;
   return (
     <nav className="flex items-center gap-1" aria-label="Paginación">
-      <button type="button" aria-label="Página anterior" onClick={() => onChange(page - 1)} disabled={page === 1} className="px-3 py-1.5 text-sm rounded-lg border border-[var(--border)] disabled:opacity-40 hover:bg-[var(--muted)] transition-colors">
+      <button onClick={() => onChange(page - 1)} disabled={page === 1} className="px-3 py-1.5 text-sm rounded-lg border border-[var(--border)] disabled:opacity-40 hover:bg-[var(--muted)] transition-colors">
         ←
       </button>
       {Array.from({ length: Math.min(pages, 7) }, (_, i) => i + 1).map(p => (
-        <button type="button" key={p} onClick={() => onChange(p)} aria-current={page === p ? 'page' : undefined}
+        <button key={p} onClick={() => onChange(p)} aria-current={page === p ? 'page' : undefined}
           className={`w-8 h-8 text-sm rounded-lg transition-colors ${page === p ? 'bg-[var(--primary)] text-[var(--on-primary)]' : 'hover:bg-[var(--muted)]'}`}>
           {p}
         </button>
       ))}
-      <button type="button" aria-label="Página siguiente" onClick={() => onChange(page + 1)} disabled={page === pages} className="px-3 py-1.5 text-sm rounded-lg border border-[var(--border)] disabled:opacity-40 hover:bg-[var(--muted)] transition-colors">
+      <button onClick={() => onChange(page + 1)} disabled={page === pages} className="px-3 py-1.5 text-sm rounded-lg border border-[var(--border)] disabled:opacity-40 hover:bg-[var(--muted)] transition-colors">
         →
       </button>
     </nav>
@@ -388,8 +366,8 @@ export function Toggle({ checked, onChange, label, id }: { checked: boolean; onC
   return (
     <label className="flex items-center gap-3 cursor-pointer select-none" htmlFor={elId}>
       <div className="relative">
-        <input id={elId} type="checkbox" className="sr-only peer" checked={checked} onChange={e => onChange(e.target.checked)} />
-        <div className={`w-10 h-5 rounded-full transition-colors peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-[var(--ring)] ${checked ? 'bg-[var(--primary)]' : 'bg-[var(--border)]'}`} />
+        <input id={elId} type="checkbox" className="sr-only" checked={checked} onChange={e => onChange(e.target.checked)} />
+        <div className={`w-10 h-5 rounded-full transition-colors ${checked ? 'bg-[var(--primary)]' : 'bg-[var(--border)]'}`} />
         <div className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${checked ? 'translate-x-5' : ''}`} />
       </div>
       {label && <span className="text-sm text-[var(--foreground)]">{label}</span>}
