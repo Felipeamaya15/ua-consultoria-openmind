@@ -21,15 +21,26 @@ class StockValidationMixin:
             raise serializers.ValidationError(str(error)) from error
         return value
 
+
+class VarianteSerializer(serializers.Serializer):
+    sku = serializers.CharField()
+    precio = serializers.FloatField(allow_null=True)
+    precio_oferta = serializers.FloatField(allow_null=True, required=False)
+    stock = serializers.IntegerField()
+    atributos_variante = serializers.ListField(child=serializers.DictField(), required=False)
+
+
 class ProductPublicListItemSerializer(serializers.Serializer):
     id = serializers.CharField(source="_id")
     nombre = serializers.CharField()
     slug = serializers.CharField()
+    descripcion = serializers.CharField(required=False, allow_blank=True, default="")
     categoria = serializers.CharField()
     imagen = serializers.SerializerMethodField()
     precio = serializers.SerializerMethodField()
     precio_oferta = serializers.SerializerMethodField()
     disponible = serializers.SerializerMethodField()
+    variantes = serializers.SerializerMethodField()
 
     def get_imagen(self, producto):
         imagenes = producto.get("imagenes") or []
@@ -37,6 +48,9 @@ class ProductPublicListItemSerializer(serializers.Serializer):
 
     def _variantes(self, producto):
         return [variant for variant in producto.get("variantes", []) if is_variant_active(variant)]
+
+    def get_variantes(self, producto):
+        return VarianteSerializer(self._variantes(producto), many=True).data
 
     @staticmethod
     def _oferta_valida(variant):
@@ -72,14 +86,6 @@ class ProductPublicListItemSerializer(serializers.Serializer):
         return any((v.get("stock") or 0) > 0 for v in self._variantes(producto))
 
 
-class VarianteSerializer(serializers.Serializer):
-    sku = serializers.CharField()
-    precio = serializers.FloatField(allow_null=True)
-    precio_oferta = serializers.FloatField(allow_null=True, required=False)
-    stock = serializers.IntegerField()
-    atributos_variante = serializers.ListField(child=serializers.DictField(), required=False)
-
-
 class AtributoGeneralSerializer(serializers.Serializer):
     clave = serializers.CharField()
     etiqueta = serializers.CharField()
@@ -104,7 +110,6 @@ class ProductPublicDetailSerializer(serializers.Serializer):
     atributos_generales = AtributoGeneralSerializer(many=True, required=False)
     variantes = VarianteSerializer(many=True, required=False)
     seo = SeoSerializer(required=False)
-
 
     def validate_imagenes(self, value):
         return normalized_images(value)
@@ -134,9 +139,7 @@ class ProductPublicAttributesSerializer(serializers.Serializer):
 
 
 class ProductImageSerializer(serializers.Serializer):
-
     imagen = serializers.CharField()
-
 
     def validate_imagen(self, value):
         return normalized_images([value])[0]
@@ -190,10 +193,12 @@ class ProductoCreateSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("El stock inicial no puede ser negativo.")
         return value
 
+
 class ProductoAdminDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = Producto
         fields = ['id_producto', 'nombre', 'precio', 'stock', 'activo', 'id_tienda']
+
 
 class ProductoUpdateSerializer(StockValidationMixin, serializers.ModelSerializer):
     class Meta:
@@ -213,6 +218,7 @@ class ProductoUpdateSerializer(StockValidationMixin, serializers.ModelSerializer
             raise serializers.ValidationError("El precio no puede ser negativo.")
         return value
 
+
 class ProductoStockUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Producto
@@ -225,14 +231,21 @@ class ProductoStockUpdateSerializer(serializers.ModelSerializer):
 
 
 class VarianteStockUpdateSerializer(StockValidationMixin, serializers.Serializer):
-    stock = serializers.IntegerField(required=True, min_value=0,
-        error_messages={'min_value': 'El stock no puede ser negativo.', 'invalid': 'El stock debe ser un entero mayor o igual a cero.'})
+    stock = serializers.IntegerField(
+        required=True,
+        min_value=0,
+        error_messages={
+            'min_value': 'El stock no puede ser negativo.',
+            'invalid': 'El stock debe ser un entero mayor o igual a cero.',
+        },
+    )
 
     def to_internal_value(self, data):
         # DRF acepta 1.0 y True como enteros. El inventario no se redondea.
         if isinstance(data, dict) and 'stock' in data and (isinstance(data['stock'], bool) or isinstance(data['stock'], float)):
             raise serializers.ValidationError({'stock': 'El stock debe ser un entero mayor o igual a cero.'})
         return super().to_internal_value(data)
+
 
 class VarianteInputSerializer(VarianteStockUpdateSerializer):
     sku = serializers.CharField()
@@ -342,14 +355,12 @@ class ProductCreateSerializer(serializers.Serializer):
         return value
 
 
-    
-
-
 class ModificarCantidadRequestSerializer(serializers.Serializer):
     cantidad = serializers.IntegerField(min_value=1, error_messages={
         'min_value': 'La cantidad mínima permitida es 1.',
         'invalid': 'Debe ingresar un número entero válido.'
     })
+
 
 class ItemCarritoResponseSerializer(serializers.Serializer):
     id_item_carrito = serializers.IntegerField()
@@ -393,6 +404,7 @@ class ItemCarritoResponseSerializer(serializers.Serializer):
         # La consulta del carrito lo resuelve desde el catálogo; puede ser None.
         return getattr(obj, 'slug_calculado', None)
 
+
 class AgregarItemCarritoRequestSerializer(serializers.Serializer):
     id_producto = serializers.IntegerField(
         required=False,
@@ -431,6 +443,7 @@ class AgregarItemCarritoRequestSerializer(serializers.Serializer):
                 {"id_producto": "Debes indicar el 'id_producto' o el 'slug' del producto."}
             )
         return attrs
+
 
 class ConfiguracionTransbankInputSerializer(serializers.Serializer):
     codigo_comercio = serializers.CharField(
@@ -472,7 +485,6 @@ class IniciarPagoTransbankSerializer(serializers.Serializer):
     session_id = serializers.CharField(max_length=64, required=True)
     return_url = serializers.URLField(required=True)
 
-
     def validate_return_url(self, value):
         from urllib.parse import urlsplit
         from django.conf import settings
@@ -488,6 +500,7 @@ class IniciarPagoTransbankSerializer(serializers.Serializer):
 class ConfirmarPagoTransbankSerializer(serializers.Serializer):
     id_tienda = serializers.IntegerField(required=True)
     token_ws = serializers.CharField(max_length=255, required=True)
+
 
 class PagoAbortadoTransbankSerializer(serializers.Serializer):
     id_tienda = serializers.IntegerField(required=True)
@@ -506,13 +519,14 @@ class ConfiguracionPayPalResponseSerializer(serializers.Serializer):
     client_id = serializers.CharField(allow_blank=True)
     ambiente = serializers.CharField()
     activo = serializers.BooleanField()
-    client_secret_enmascarada = serializers.CharField(allow_blank=True, required=False)
+    client_secret_enmascarado = serializers.CharField(allow_blank=True, required=False)
     fecha_actualizacion = serializers.DateTimeField(allow_null=True, required=False)
     configurado = serializers.BooleanField(default=False)
 
     def get_id_tienda(self, obj):
         val = obj.get("id_tienda") if isinstance(obj, dict) else getattr(obj, "id_tienda", None)
         return getattr(val, "id_tienda", val)
+
 
 class ConfiguracionMercadoPagoInputSerializer(serializers.Serializer):
     public_key = serializers.CharField(max_length=255, required=False, allow_blank=True)

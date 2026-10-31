@@ -4,15 +4,32 @@ import type { Product } from '../data/mockData';
 const API_URL =
   (import.meta as any).env.VITE_API_URL || 'http://localhost:8000';
 
+interface BackendAtributo {
+  clave: string;
+  etiqueta: string;
+  valor: string;
+}
+
+interface BackendVariante {
+  sku: string;
+  precio: number | null;
+  precio_oferta: number | null;
+  stock: number;
+  atributos_variante?: BackendAtributo[];
+}
+
 interface BackendProductListItem {
   id: string;
   nombre: string;
   slug: string;
+  descripcion?: string;
   categoria: string;
   imagen: string | null;
+  imagenes?: string[];
   precio: number | null;
   precio_oferta: number | null;
   disponible: boolean;
+  variantes?: BackendVariante[];
 }
 
 interface BackendEnvelope<T> {
@@ -42,9 +59,9 @@ function adaptProduct(item: BackendProductListItem): Product {
     id: item.slug,
     catalogId: item.id,
     name: item.nombre,
-    description: '',
+    description: item.descripcion ?? '',
     category: item.categoria,
-    images: [item.imagen || PLACEHOLDER_IMAGE],
+    images: item.imagenes?.length ? item.imagenes : [item.imagen || PLACEHOLDER_IMAGE],
     basePrice: currentPrice,
     comparePrice: hasOffer ? item.precio! : undefined,
     variants: [
@@ -82,30 +99,39 @@ export async function fetchPublicProducts(options?: InitialLoadOptions & { inclu
   }
 
   if (!options?.includeVariants) return body.data.map(adaptProduct);
-  // El listado no incluye SKUs: cargar detalle con concurrencia acotada.
+
+  // Optimización de carga inicial: si el listado ya incluye las variantes activas,
+  // hidratar directamente en memoria evitando N solicitudes adicionales de detalle.
   const products: Array<Product | null> = new Array(body.data.length);
-  let next = 0;
-  await Promise.all(Array.from({ length: Math.min(4, body.data.length) }, async () => {
-    while (next < body.data.length) {
-      const index = next++;
-      products[index] = await fetchPublicProductDetail(body.data[index].slug, options);
+  const missingIndices: number[] = [];
+
+  body.data.forEach((item, index) => {
+    if (Array.isArray(item.variantes)) {
+      products[index] = adaptProductDetail({
+        id: item.id,
+        nombre: item.nombre,
+        slug: item.slug,
+        descripcion: item.descripcion ?? '',
+        categoria: item.categoria,
+        imagenes: item.imagenes?.length ? item.imagenes : item.imagen ? [item.imagen] : [],
+        variantes: item.variantes,
+      });
+    } else {
+      missingIndices.push(index);
     }
-  }));
+  });
+
+  if (missingIndices.length > 0) {
+    let cursor = 0;
+    await Promise.all(Array.from({ length: Math.min(4, missingIndices.length) }, async () => {
+      while (cursor < missingIndices.length) {
+        const index = missingIndices[cursor++];
+        products[index] = await fetchPublicProductDetail(body.data[index].slug, options);
+      }
+    }));
+  }
+
   return products.filter((product): product is Product => product !== null);
-}
-
-interface BackendAtributo {
-  clave: string;
-  etiqueta: string;
-  valor: string;
-}
-
-interface BackendVariante {
-  sku: string;
-  precio: number | null;
-  precio_oferta: number | null;
-  stock: number;
-  atributos_variante?: BackendAtributo[];
 }
 
 interface BackendProductDetail {
