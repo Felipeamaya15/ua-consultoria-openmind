@@ -1,0 +1,29 @@
+{
+  "task": "Medir tiempo de carga inicial del catálogo",
+  "targetThresholdMs": 2000,
+  "productSampleSize": 12,
+  "maxConcurrentVariantRequests": 4,
+  "summaryLoadMetrics": {
+    "runs": 5,
+    "minMs": 10.19,
+    "avgMs": 14.7,
+    "p95Ms": 15.92,
+    "maxMs": 15.92
+  },
+  "fullCatalogWithVariantsMetrics": {
+    "runs": 5,
+    "minMs": 110.15,
+    "avgMs": 110.83,
+    "p95Ms": 111.57,
+    "maxMs": 111.57
+  },
+  "liveBackendMeasurement": {
+    "endpoint": "http://localhost:8000/api/catalog/productos/",
+    "status": 200,
+    "productCount": 6,
+    "durationMs": 66.96,
+    "withinTarget": true
+  },
+  "status": "APROBADO",
+  "generatedAt": "2026-10-31T01:03:41.865Z"
+}
