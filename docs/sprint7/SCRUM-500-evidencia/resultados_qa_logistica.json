@@ -1,0 +1,848 @@
+[
+ {
+  "id": "A01",
+  "area": "A. Cotización de la tienda",
+  "escenario": "Cotizar Chilexpress a Providencia con tarifa configurada",
+  "esperado": "200; monto 4500 CLP, plazo 2, origen configuracion_tienda y cotización firmada con vencimiento",
+  "obtenido": "200; monto 4500 CLP, plazo 2, origen configuracion_tienda, vence en 900 s",
+  "estado": "CUMPLE",
+  "nota": "El endpoint es público (sin sesión)"
+ },
+ {
+  "id": "A02",
+  "area": "A. Cotización de la tienda",
+  "escenario": "Cotizar Starken a Providencia",
+  "esperado": "200; monto 6900 CLP y plazo 2 días",
+  "obtenido": "200; monto 6900, plazo 2, operador Starken",
+  "estado": "CUMPLE",
+  "nota": ""
+ },
+ {
+  "id": "A03",
+  "area": "A. Cotización de la tienda",
+  "escenario": "Tarifa sin plazo configurado (Viña del Mar)",
+  "esperado": "200; plazo_dias nulo",
+  "obtenido": "200; monto 5500, plazo None",
+  "estado": "CUMPLE",
+  "nota": ""
+ },
+ {
+  "id": "A04",
+  "area": "A. Cotización de la tienda",
+  "escenario": "Operador no permitido (Correos)",
+  "esperado": "400 sin llegar al cálculo",
+  "obtenido": "400; ['operador']",
+  "estado": "CUMPLE",
+  "nota": ""
+ },
+ {
+  "id": "A05",
+  "area": "A. Cotización de la tienda",
+  "escenario": "Operador ausente",
+  "esperado": "400",
+  "obtenido": "400",
+  "estado": "CUMPLE",
+  "nota": ""
+ },
+ {
+  "id": "A06",
+  "area": "A. Cotización de la tienda",
+  "escenario": "Comuna que no pertenece a la región",
+  "esperado": "400 con código DESTINO_INVALIDO",
+  "obtenido": "400; DESTINO_INVALIDO",
+  "estado": "CUMPLE",
+  "nota": ""
+ },
+ {
+  "id": "A07",
+  "area": "A. Cotización de la tienda",
+  "escenario": "Comuna inexistente",
+  "esperado": "400 con código DESTINO_INVALIDO",
+  "obtenido": "400; DESTINO_INVALIDO",
+  "estado": "CUMPLE",
+  "nota": ""
+ },
+ {
+  "id": "A08",
+  "area": "A. Cotización de la tienda",
+  "escenario": "Comuna válida sin tarifa configurada (Santiago)",
+  "esperado": "400 con código TARIFA_NO_DISPONIBLE",
+  "obtenido": "400; TARIFA_NO_DISPONIBLE",
+  "estado": "CUMPLE",
+  "nota": ""
+ },
+ {
+  "id": "A09",
+  "area": "A. Cotización de la tienda",
+  "escenario": "Transportista deshabilitado en la tienda",
+  "esperado": "400 con código TRANSPORTISTA_NO_HABILITADO",
+  "obtenido": "400; TRANSPORTISTA_NO_HABILITADO",
+  "estado": "CUMPLE",
+  "nota": ""
+ },
+ {
+  "id": "A10",
+  "area": "A. Cotización de la tienda",
+  "escenario": "Campo no permitido en el cuerpo (costo)",
+  "esperado": "400: el serializer estricto lo rechaza",
+  "obtenido": "400",
+  "estado": "CUMPLE",
+  "nota": ""
+ },
+ {
+  "id": "A11",
+  "area": "A. Cotización de la tienda",
+  "escenario": "Intento de elegir otra tienda con tienda_id en el cuerpo",
+  "esperado": "400",
+  "obtenido": "400",
+  "estado": "CUMPLE",
+  "nota": ""
+ },
+ {
+  "id": "A12",
+  "area": "A. Cotización de la tienda",
+  "escenario": "Cabecera X-Tienda-ID de otra tienda",
+  "esperado": "400: la tienda se contrasta, no se selecciona",
+  "obtenido": "400",
+  "estado": "CUMPLE",
+  "nota": ""
+ },
+ {
+  "id": "A13",
+  "area": "A. Cotización de la tienda",
+  "escenario": "Tarifas corruptas en la base (monto texto, negativo, decimal, enorme, booleano; plazo 0, 366, texto)",
+  "esperado": "Siempre 400 TARIFA_NO_DISPONIBLE, nunca 500",
+  "obtenido": "monto='4500'→400 TARIFA_NO_DISPONIBLE; monto=-1→400 TARIFA_NO_DISPONIBLE; monto=1.5→400 TARIFA_NO_DISPONIBLE; monto=100000000000→400 TARIFA_NO_DISPONIBLE; monto=True→400 TARIFA_NO_DISPONIBLE; plazo_dias=0→400 TARIFA_NO_DISPONIBLE; plazo_dias=366→400 TARIFA_NO_DISPONIBLE; plazo_dias='2'→400 TARIFA_NO_DISPONIBLE",
+  "estado": "CUMPLE",
+  "nota": ""
+ },
+ {
+  "id": "A14",
+  "area": "A. Cotización de la tienda",
+  "escenario": "Dos tarifas duplicadas para el mismo destino",
+  "esperado": "400 TARIFA_NO_DISPONIBLE (ambigüedad)",
+  "obtenido": "400; TARIFA_NO_DISPONIBLE",
+  "estado": "CUMPLE",
+  "nota": ""
+ },
+ {
+  "id": "A15",
+  "area": "A. Cotización de la tienda",
+  "escenario": "Método GET en la cotización",
+  "esperado": "405",
+  "obtenido": "405",
+  "estado": "CUMPLE",
+  "nota": ""
+ },
+ {
+  "id": "A16",
+  "area": "A. Cotización de la tienda",
+  "escenario": "JSON mal formado",
+  "esperado": "400",
+  "obtenido": "400",
+  "estado": "CUMPLE",
+  "nota": ""
+ },
+ {
+  "id": "A17",
+  "area": "A. Cotización de la tienda",
+  "escenario": "Tipos inválidos (región numérica, comuna lista)",
+  "esperado": "400",
+  "obtenido": "400",
+  "estado": "CUMPLE",
+  "nota": ""
+ },
+ {
+  "id": "A18",
+  "area": "A. Cotización de la tienda",
+  "escenario": "Texto demasiado largo (200 caracteres)",
+  "esperado": "400",
+  "obtenido": "400",
+  "estado": "CUMPLE",
+  "nota": ""
+ },
+ {
+  "id": "A19",
+  "area": "A. Cotización de la tienda",
+  "escenario": "Instalación con dos tiendas",
+  "esperado": "503: nunca elige una al azar",
+  "obtenido": "503; La instalación contiene varias tiendas; revise su ",
+  "estado": "CUMPLE",
+  "nota": ""
+ },
+ {
+  "id": "A20",
+  "area": "A. Cotización de la tienda",
+  "escenario": "Instalación sin tienda configurada",
+  "esperado": "503",
+  "obtenido": "503",
+  "estado": "CUMPLE",
+  "nota": ""
+ },
+ {
+  "id": "B01",
+  "area": "B. Cotización firmada (validación en el pedido)",
+  "escenario": "Cotización vigente y sin cambios",
+  "esperado": "Aceptada",
+  "obtenido": "aceptada",
+  "estado": "CUMPLE",
+  "nota": ""
+ },
+ {
+  "id": "B02",
+  "area": "B. Cotización firmada (validación en el pedido)",
+  "escenario": "Cotización vencida (más de 15 minutos)",
+  "esperado": "COTIZACION_VENCIDA",
+  "obtenido": "COTIZACION_VENCIDA",
+  "estado": "CUMPLE",
+  "nota": ""
+ },
+ {
+  "id": "B03",
+  "area": "B. Cotización firmada (validación en el pedido)",
+  "escenario": "Cotización manipulada (se altera la firma)",
+  "esperado": "COTIZACION_INVALIDA",
+  "obtenido": "COTIZACION_INVALIDA",
+  "estado": "CUMPLE",
+  "nota": ""
+ },
+ {
+  "id": "B04",
+  "area": "B. Cotización firmada (validación en el pedido)",
+  "escenario": "Cotización vacía o ausente",
+  "esperado": "COTIZACION_INVALIDA",
+  "obtenido": "vacía→COTIZACION_INVALIDA; None→COTIZACION_INVALIDA",
+  "estado": "CUMPLE",
+  "nota": ""
+ },
+ {
+  "id": "B05",
+  "area": "B. Cotización firmada (validación en el pedido)",
+  "escenario": "Cotización firmada para otra tienda",
+  "esperado": "COTIZACION_CAMBIO",
+  "obtenido": "COTIZACION_CAMBIO",
+  "estado": "CUMPLE",
+  "nota": ""
+ },
+ {
+  "id": "B06",
+  "area": "B. Cotización firmada (validación en el pedido)",
+  "escenario": "La tienda cambia el monto de la tarifa después de cotizar",
+  "esperado": "COTIZACION_CAMBIO",
+  "obtenido": "COTIZACION_CAMBIO",
+  "estado": "CUMPLE",
+  "nota": ""
+ },
+ {
+  "id": "B07",
+  "area": "B. Cotización firmada (validación en el pedido)",
+  "escenario": "La tienda elimina la tarifa después de cotizar",
+  "esperado": "TARIFA_NO_DISPONIBLE",
+  "obtenido": "TARIFA_NO_DISPONIBLE",
+  "estado": "CUMPLE",
+  "nota": ""
+ },
+ {
+  "id": "B08",
+  "area": "B. Cotización firmada (validación en el pedido)",
+  "escenario": "La tienda deshabilita el transportista después de cotizar",
+  "esperado": "TRANSPORTISTA_NO_HABILITADO",
+  "obtenido": "TRANSPORTISTA_NO_HABILITADO",
+  "estado": "CUMPLE",
+  "nota": ""
+ },
+ {
+  "id": "B09",
+  "area": "B. Cotización firmada (validación en el pedido)",
+  "escenario": "Cotización de Chilexpress usada para pedir con Starken",
+  "esperado": "COTIZACION_CAMBIO",
+  "obtenido": "COTIZACION_CAMBIO",
+  "estado": "CUMPLE",
+  "nota": ""
+ },
+ {
+  "id": "B10",
+  "area": "B. Cotización firmada (validación en el pedido)",
+  "escenario": "Contenido firmado que no es un objeto",
+  "esperado": "COTIZACION_INVALIDA",
+  "obtenido": "COTIZACION_INVALIDA",
+  "estado": "CUMPLE",
+  "nota": ""
+ },
+ {
+  "id": "B11",
+  "area": "B. Cotización firmada (validación en el pedido)",
+  "escenario": "Firma hecha con otra sal (otro uso de la clave)",
+  "esperado": "COTIZACION_INVALIDA",
+  "obtenido": "COTIZACION_INVALIDA",
+  "estado": "CUMPLE",
+  "nota": ""
+ },
+ {
+  "id": "C01",
+  "area": "C. Módulo logístico: cotización",
+  "escenario": "Cotizar con todos los transportistas (RM, compra de $ 20.000)",
+  "esperado": "200; 3 transportistas, opciones ordenadas por costo y recomendada = la más barata",
+  "obtenido": "200; 7 opciones de CHILEXPRESS, LOGISTICA_CENTRAL, STARKEN; costos [3200, 3290, 3500, 3700, 3990, 4500, 5500]",
+  "estado": "CUMPLE",
+  "nota": ""
+ },
+ {
+  "id": "C02",
+  "area": "C. Módulo logístico: cotización",
+  "escenario": "Envío gratis en RM al llegar al umbral ($ 30.000) y no antes ($ 29.999)",
+  "esperado": "Con 30.000 hay opciones gratis; con 29.999 no",
+  "obtenido": "$30.000: 3 gratis (CHILEXPRESS_EXTENDIDO (ENVÍO GRATIS), STARKEN_ESTANDAR_DOMICILIO (ENVÍO GRATIS), ESTANDAR_DOMICILIO (ENVÍO GRATIS)); $29.999: 0 gratis",
+  "estado": "CUMPLE",
+  "nota": ""
+ },
+ {
+  "id": "C03",
+  "area": "C. Módulo logístico: cotización",
+  "escenario": "Envío gratis no aplica fuera de la RM",
+  "esperado": "Sin opciones gratis en Valparaíso con $ 50.000",
+  "obtenido": "0 gratis de 7",
+  "estado": "CUMPLE",
+  "nota": ""
+ },
+ {
+  "id": "C04",
+  "area": "C. Módulo logístico: cotización",
+  "escenario": "Cotización con transportista fijo (Chilexpress y Starken)",
+  "esperado": "200; todas las opciones del transportista pedido",
+  "obtenido": "Chilexpress→['CHILEXPRESS']; Starken→['STARKEN']",
+  "estado": "CUMPLE",
+  "nota": ""
+ },
+ {
+  "id": "C05",
+  "area": "C. Módulo logístico: cotización",
+  "escenario": "Recargo por peso: 3,5 kg frente a 1,5 kg en Chilexpress",
+  "esperado": "Diferencia de $ 1.900 por servicio ($ 950 por kg extra)",
+  "obtenido": "diferencias {'CHILEXPRESS_EXTENDIDO': 1900, 'CHILEXPRESS_EXPRESS': 1900}",
+  "estado": "CUMPLE",
+  "nota": ""
+ },
+ {
+  "id": "C06",
+  "area": "C. Módulo logístico: cotización",
+  "escenario": "Región inexistente (Atlantis)",
+  "esperado": "400 con el error en el campo region",
+  "obtenido": "400; ['region']",
+  "estado": "CUMPLE",
+  "nota": ""
+ },
+ {
+  "id": "C07",
+  "area": "C. Módulo logístico: cotización",
+  "escenario": "Comuna ausente o vacía",
+  "esperado": "400",
+  "obtenido": "ausente→400; vacía→400",
+  "estado": "CUMPLE",
+  "nota": ""
+ },
+ {
+  "id": "C08",
+  "area": "C. Módulo logístico: cotización",
+  "escenario": "Valores fuera de rango (items 0, total 0, peso 0,05, total negativo)",
+  "esperado": "400 en todos",
+  "obtenido": "[400, 400, 400, 400]",
+  "estado": "CUMPLE",
+  "nota": ""
+ },
+ {
+  "id": "C09",
+  "area": "C. Módulo logístico: cotización",
+  "escenario": "Tipos inválidos (total texto, items decimal)",
+  "esperado": "400",
+  "obtenido": "[400, 400]",
+  "estado": "CUMPLE",
+  "nota": ""
+ },
+ {
+  "id": "C10",
+  "area": "C. Módulo logístico: cotización",
+  "escenario": "Alias de región (RM, Región Metropolitana, Araucanía, OHiggins)",
+  "esperado": "200 en todos",
+  "obtenido": "{'RM': 200, 'Región Metropolitana': 200, 'Araucanía': 200, 'OHiggins': 200}",
+  "estado": "CUMPLE",
+  "nota": ""
+ },
+ {
+  "id": "C11",
+  "area": "C. Módulo logístico: cotización",
+  "escenario": "Transportista desconocido en el cuerpo (fedex)",
+  "esperado": "Se comporta como \"todos\" (comportamiento registrado)",
+  "obtenido": "200; 7 opciones",
+  "estado": "CUMPLE",
+  "nota": "No avisa que el transportista pedido no existe"
+ },
+ {
+  "id": "C12",
+  "area": "C. Módulo logístico: cotización",
+  "escenario": "Método GET en la cotización",
+  "esperado": "405",
+  "obtenido": "405",
+  "estado": "CUMPLE",
+  "nota": ""
+ },
+ {
+  "id": "C13",
+  "area": "C. Módulo logístico: cotización",
+  "escenario": "Tiempo de espera agotado con Chilexpress fijo",
+  "esperado": "504 TIEMPO_ESPERA_AGOTADO con cabecera Retry-After: 30",
+  "obtenido": "504; TIEMPO_ESPERA_AGOTADO; Retry-After=30",
+  "estado": "CUMPLE",
+  "nota": ""
+ },
+ {
+  "id": "C14",
+  "area": "C. Módulo logístico: cotización",
+  "escenario": "Tiempo de espera agotado en los tres transportistas",
+  "esperado": "504 TIEMPO_ESPERA_AGOTADO",
+  "obtenido": "504; TIEMPO_ESPERA_AGOTADO",
+  "estado": "CUMPLE",
+  "nota": ""
+ },
+ {
+  "id": "C15",
+  "area": "C. Módulo logístico: cotización",
+  "escenario": "Un transportista falla y los otros responden",
+  "esperado": "200 con las opciones de los transportistas restantes (degradación parcial)",
+  "obtenido": "200; proveedores ['LOGISTICA_CENTRAL', 'STARKEN']",
+  "estado": "CUMPLE",
+  "nota": ""
+ },
+ {
+  "id": "C16",
+  "area": "C. Módulo logístico: cotización",
+  "escenario": "Todos los transportistas fallan (no por tiempo)",
+  "esperado": "502 PROVEEDOR_NO_DISPONIBLE",
+  "obtenido": "502; PROVEEDOR_NO_DISPONIBLE",
+  "estado": "CUMPLE",
+  "nota": ""
+ },
+ {
+  "id": "C17",
+  "area": "C. Módulo logístico: cotización",
+  "escenario": "Un transportista no cubre el destino y otros sí",
+  "esperado": "200 con los que cubren",
+  "obtenido": "200; 5 opciones",
+  "estado": "CUMPLE",
+  "nota": ""
+ },
+ {
+  "id": "C18",
+  "area": "C. Módulo logístico: cotización",
+  "escenario": "Ningún transportista cubre el destino",
+  "esperado": "400 SIN_COBERTURA",
+  "obtenido": "400; SIN_COBERTURA",
+  "estado": "CUMPLE",
+  "nota": ""
+ },
+ {
+  "id": "C19",
+  "area": "C. Módulo logístico: cotización",
+  "escenario": "Respuesta inválida de un transportista fijo (ValueError)",
+  "esperado": "502 RESPUESTA_OPERADOR_INVALIDA",
+  "obtenido": "502; RESPUESTA_OPERADOR_INVALIDA",
+  "estado": "CUMPLE",
+  "nota": ""
+ },
+ {
+  "id": "C20",
+  "area": "C. Módulo logístico: cotización",
+  "escenario": "Error inesperado interno",
+  "esperado": "500 ERROR_INTERNO sin filtrar detalles técnicos",
+  "obtenido": "500; ERROR_INTERNO; filtra el detalle: False",
+  "estado": "CUMPLE",
+  "nota": ""
+ },
+ {
+  "id": "D01",
+  "area": "D. Seguimiento de envíos",
+  "escenario": "Seguimiento Chilexpress con código válido (CHILEX-ABC12345)",
+  "esperado": "200; proveedor CHILEXPRESS con historial de eventos y estado estándar",
+  "obtenido": "200; CHILEXPRESS; 4 eventos; estado EN_DISTRIBUCION → En reparto",
+  "estado": "CUMPLE",
+  "nota": ""
+ },
+ {
+  "id": "D02",
+  "area": "D. Seguimiento de envíos",
+  "escenario": "Seguimiento Starken con código STK-",
+  "esperado": "200 con proveedor STARKEN (se registra el formato aceptado)",
+  "obtenido": "200; STARKEN; 4 eventos",
+  "estado": "CUMPLE",
+  "nota": ""
+ },
+ {
+  "id": "D03",
+  "area": "D. Seguimiento de envíos",
+  "escenario": "Seguimiento del operador estándar (TRK-ABCD1234) por la ruta genérica",
+  "esperado": "200; LOGISTICA_CENTRAL con 3 eventos",
+  "obtenido": "200; LOGISTICA_CENTRAL; 3 eventos; EN_REPARTO",
+  "estado": "CUMPLE",
+  "nota": ""
+ },
+ {
+  "id": "D04",
+  "area": "D. Seguimiento de envíos",
+  "escenario": "Chilexpress: código con formato inválido (ABC)",
+  "esperado": "400 FORMATO_TRACKING_INVALIDO",
+  "obtenido": "400; FORMATO_TRACKING_INVALIDO",
+  "estado": "CUMPLE",
+  "nota": ""
+ },
+ {
+  "id": "D05",
+  "area": "D. Seguimiento de envíos",
+  "escenario": "Chilexpress: orden de transporte numérica de 8 dígitos",
+  "esperado": "200",
+  "obtenido": "200",
+  "estado": "CUMPLE",
+  "nota": ""
+ },
+ {
+  "id": "D06",
+  "area": "D. Seguimiento de envíos",
+  "escenario": "Códigos que no existen (terminan en 0000 o contienen NOTFOUND)",
+  "esperado": "404 TRACKING_NO_ENCONTRADO en Chilexpress, Starken y estándar",
+  "obtenido": "404 TRACKING_NO_ENCONTRADO; 404 TRACKING_NO_ENCONTRADO; 404 TRACKING_NO_ENCONTRADO",
+  "estado": "CUMPLE",
+  "nota": ""
+ },
+ {
+  "id": "D07",
+  "area": "D. Seguimiento de envíos",
+  "escenario": "Tiempo de espera simulado con la palabra TIMEOUT en el código",
+  "esperado": "504 TIEMPO_ESPERA_AGOTADO con Retry-After",
+  "obtenido": "504; TIEMPO_ESPERA_AGOTADO; Retry-After=30",
+  "estado": "CUMPLE",
+  "nota": "Comportamiento de prueba presente en código de producción"
+ },
+ {
+  "id": "D08",
+  "area": "D. Seguimiento de envíos",
+  "escenario": "Ruta genérica con un código que no corresponde a ningún transportista (ABC12345)",
+  "esperado": "400 FORMATO_TRACKING_INVALIDO (error de entrada del usuario)",
+  "obtenido": "400; FORMATO_TRACKING_INVALIDO",
+  "estado": "CUMPLE",
+  "nota": ""
+ },
+ {
+  "id": "D09",
+  "area": "D. Seguimiento de envíos",
+  "escenario": "Ruta genérica con código numérico de 8 dígitos (válido en Chilexpress por la ruta fija)",
+  "esperado": "200 o 400, no 500",
+  "obtenido": "200; None",
+  "estado": "CUMPLE",
+  "nota": "En la ruta genérica, un código sin prefijo reconocido se atiende con Chilexpress (adaptador por defecto)"
+ },
+ {
+  "id": "D10",
+  "area": "D. Seguimiento de envíos",
+  "escenario": "Respuesta del operador inválida o incompleta (objeto vacío, sin eventos, nula, texto, lista)",
+  "esperado": "502 RESPUESTA_OPERADOR_INVALIDA en todos los casos",
+  "obtenido": "{}→502; sin_data→502; sin_eventos→502; None→502; texto→502; lista→502",
+  "estado": "CUMPLE",
+  "nota": ""
+ },
+ {
+  "id": "D11",
+  "area": "D. Seguimiento de envíos",
+  "escenario": "Eventos con datos corruptos (fecha inválida, estado nulo, descripción nula)",
+  "esperado": "502, o 200 sin datos corruptos hacia el comprador",
+  "obtenido": "502; []",
+  "estado": "CUMPLE",
+  "nota": "Se registra el comportamiento"
+ },
+ {
+  "id": "D12",
+  "area": "D. Seguimiento de envíos",
+  "escenario": "Tiempo de espera real del operador (requests.Timeout)",
+  "esperado": "504 TIEMPO_ESPERA_AGOTADO",
+  "obtenido": "504; TIEMPO_ESPERA_AGOTADO",
+  "estado": "CUMPLE",
+  "nota": ""
+ },
+ {
+  "id": "D13",
+  "area": "D. Seguimiento de envíos",
+  "escenario": "Operador caído: conexión rechazada (requests.ConnectionError)",
+  "esperado": "502 PROVEEDOR_NO_DISPONIBLE",
+  "obtenido": "500; ERROR_INTERNO",
+  "estado": "NO CUMPLE",
+  "nota": "El adaptador solo traduce los tiempos de espera; una conexión rechazada termina como error interno"
+ },
+ {
+  "id": "D14",
+  "area": "D. Seguimiento de envíos",
+  "escenario": "Operador caído en Starken (conexión rechazada)",
+  "esperado": "502 PROVEEDOR_NO_DISPONIBLE",
+  "obtenido": "500; ERROR_INTERNO",
+  "estado": "NO CUMPLE",
+  "nota": ""
+ },
+ {
+  "id": "D15",
+  "area": "D. Seguimiento de envíos",
+  "escenario": "Código con caracteres especiales y HTML (<img src=x>)",
+  "esperado": "Respuesta JSON controlada, sin 500",
+  "obtenido": "200; tipo application/json; None",
+  "estado": "CUMPLE",
+  "nota": ""
+ },
+ {
+  "id": "D16",
+  "area": "D. Seguimiento de envíos",
+  "escenario": "Código extremadamente largo (5.000 caracteres)",
+  "esperado": "Rechazado o controlado, sin 500",
+  "obtenido": "200; None",
+  "estado": "CUMPLE",
+  "nota": "No hay límite de longitud del código"
+ },
+ {
+  "id": "D17",
+  "area": "D. Seguimiento de envíos",
+  "escenario": "Consulta de seguimiento sin sesión",
+  "esperado": "Se registra si el endpoint es público",
+  "obtenido": "200",
+  "estado": "CUMPLE",
+  "nota": "Endpoint público: cualquier persona con un código puede consultarlo"
+ },
+ {
+  "id": "D18",
+  "area": "D. Seguimiento de envíos",
+  "escenario": "Seguimiento: los datos del envío coinciden entre generar despacho y consultar",
+  "esperado": "El código emitido por cada adaptador es aceptado al consultar",
+  "obtenido": "Chilexpress: CHILEX-83E935479 EMITIDO ok; Starken: STK-FA29AE3C9A EMITIDO ok; Estándar: TRK-B950D840 CREADO ok",
+  "estado": "CUMPLE",
+  "nota": ""
+ },
+ {
+  "id": "D19",
+  "area": "D. Seguimiento de envíos",
+  "escenario": "Estado del operador traducido al estado estándar de la tienda",
+  "esperado": "Todos los estados de los eventos tienen traducción",
+  "obtenido": "RECEPCION_EN_SUCURSAL→En origen; CLASIFICACION_HUB_CENTRAL→En tránsito; EN_TRANSITO_REGIONAL→En tránsito; EN_DISTRIBUCION→En reparto",
+  "estado": "CUMPLE",
+  "nota": ""
+ },
+ {
+  "id": "D20",
+  "area": "D. Seguimiento de envíos",
+  "escenario": "Código con una barra codificada (%2F) que parte la ruta",
+  "esperado": "404 controlado sin 500",
+  "obtenido": "404; tipo text/html",
+  "estado": "CUMPLE",
+  "nota": "La respuesta 404 es la página HTML de Django, no el formato JSON de la API"
+ },
+ {
+  "id": "E01",
+  "area": "E. Contratos y validaciones internas",
+  "escenario": "Tiempo de espera configurable: valores válidos (0,1; 10; 60)",
+  "esperado": "Aceptados",
+  "obtenido": "[0.1, 10.0, 60.0]",
+  "estado": "CUMPLE",
+  "nota": ""
+ },
+ {
+  "id": "E02",
+  "area": "E. Contratos y validaciones internas",
+  "escenario": "Tiempo de espera inválido (0, -1, 61, NaN, infinito, True, None, texto)",
+  "esperado": "ValueError en todos",
+  "obtenido": "aceptados indebidamente: ninguno",
+  "estado": "CUMPLE",
+  "nota": ""
+ },
+ {
+  "id": "E03",
+  "area": "E. Contratos y validaciones internas",
+  "escenario": "Los adaptadores validan el tiempo de espera al crearse",
+  "esperado": "ValueError con 0 y con 61",
+  "obtenido": "['rechaza', 'rechaza', 'rechaza', 'rechaza', 'rechaza', 'rechaza']",
+  "estado": "CUMPLE",
+  "nota": ""
+ },
+ {
+  "id": "E04",
+  "area": "E. Contratos y validaciones internas",
+  "escenario": "Normalizador de Chilexpress ante respuestas inválidas (10 variantes)",
+  "esperado": "ValueError en todas",
+  "obtenido": "aceptadas indebidamente: ninguna",
+  "estado": "CUMPLE",
+  "nota": ""
+ },
+ {
+  "id": "E05",
+  "area": "E. Contratos y validaciones internas",
+  "escenario": "Normalizador de Chilexpress con varios servicios",
+  "esperado": "Elige el de menor valor",
+  "obtenido": "{'operador': 'Chilexpress', 'monto': 3990, 'moneda': 'CLP', 'plazo_dias': None}",
+  "estado": "CUMPLE",
+  "nota": ""
+ },
+ {
+  "id": "E06",
+  "area": "E. Contratos y validaciones internas",
+  "escenario": "Normalizador de Starken ante respuestas inválidas (7 variantes)",
+  "esperado": "ValueError en todas",
+  "obtenido": "aceptadas indebidamente: ninguna",
+  "estado": "CUMPLE",
+  "nota": ""
+ },
+ {
+  "id": "E07",
+  "area": "E. Contratos y validaciones internas",
+  "escenario": "Normalizador de Starken: plazo válido y plazo inválido",
+  "esperado": "Plazo 2 y plazo nulo",
+  "obtenido": "2 y None",
+  "estado": "CUMPLE",
+  "nota": ""
+ },
+ {
+  "id": "E08",
+  "area": "E. Contratos y validaciones internas",
+  "escenario": "Normalizador de seguimiento ante respuestas inválidas",
+  "esperado": "Rechaza (ValueError, TypeError o KeyError) o devuelve vacío",
+  "obtenido": "['rechaza', 'rechaza', 'rechaza', 'rechaza', 'rechaza', 'rechaza', 'rechaza', 'rechaza']",
+  "estado": "CUMPLE",
+  "nota": ""
+ },
+ {
+  "id": "E09",
+  "area": "E. Contratos y validaciones internas",
+  "escenario": "Regla de envío gratis: límites exactos y valores inválidos",
+  "esperado": "30.000 cumple, 29.999,99 no; negativo, NaN y booleano lanzan ValueError",
+  "obtenido": "30.000→True; 29.999,99→False; aceptados indebidamente: ninguno",
+  "estado": "CUMPLE",
+  "nota": ""
+ },
+ {
+  "id": "E10",
+  "area": "E. Contratos y validaciones internas",
+  "escenario": "Tarifas por región de Chilexpress (RM, Valparaíso, Magallanes, región desconocida)",
+  "esperado": "Tarifa base de cada región y tarifa por defecto en la desconocida",
+  "obtenido": "{'METROPOLITANA': 3290, 'VALPARAISO': 3990, 'MAGALLANES': 9490, 'MARTE': 5990}",
+  "estado": "CUMPLE",
+  "nota": "Una región desconocida recibe una tarifa por defecto en lugar de rechazarse (el serializer la rechaza antes)"
+ },
+ {
+  "id": "E11",
+  "area": "E. Contratos y validaciones internas",
+  "escenario": "Selección de adaptador según el código o el proveedor",
+  "esperado": "CHILEX→Chilexpress, STK→Starken, TRK→Estándar, sin código→Chilexpress; un código desconocido no devuelve None",
+  "obtenido": "{'CHILEX-1': 'ChilexpressAdapter', 'STK-1': 'StarkenAdapter', 'TRK-12345678': 'StandardLogisticsAdapter', None: 'ChilexpressAdapter', 'ABC12345': 'ChilexpressAdapter', '12345678': 'ChilexpressAdapter'}",
+  "estado": "CUMPLE",
+  "nota": "Un código sin prefijo reconocido se asigna a Chilexpress (adaptador por defecto)"
+ },
+ {
+  "id": "F01",
+  "area": "F. Datos de envío en el pedido",
+  "escenario": "Pedido con despacho Chilexpress y cotización vigente",
+  "esperado": "201; costo de envío 4.500 y total 64.500; se guardan método, dirección y cotización",
+  "obtenido": "201; envío 4500.00, total 64500.00, método Chilexpress, cotización guardada 4500",
+  "estado": "CUMPLE",
+  "nota": ""
+ },
+ {
+  "id": "F02",
+  "area": "F. Datos de envío en el pedido",
+  "escenario": "Pedido con Starken usa la tarifa de Starken",
+  "esperado": "201; costo de envío 6.900",
+  "obtenido": "201; envío 6900.00",
+  "estado": "CUMPLE",
+  "nota": ""
+ },
+ {
+  "id": "F03",
+  "area": "F. Datos de envío en el pedido",
+  "escenario": "Pedido con despacho sin cotización",
+  "esperado": "400 y sin reservar stock ni crear pedido",
+  "obtenido": "400; COTIZACION_INVALIDA; pedidos creados 0; reservas 0",
+  "estado": "CUMPLE",
+  "nota": ""
+ },
+ {
+  "id": "F04",
+  "area": "F. Datos de envío en el pedido",
+  "escenario": "Cotización vencida al pagar",
+  "esperado": "400 COTIZACION_VENCIDA o COTIZACION_INVALIDA, sin reservar stock",
+  "obtenido": "400; COTIZACION_VENCIDA; reservas 0",
+  "estado": "CUMPLE",
+  "nota": ""
+ },
+ {
+  "id": "F05",
+  "area": "F. Datos de envío en el pedido",
+  "escenario": "Cotización manipulada",
+  "esperado": "400 COTIZACION_INVALIDA, sin reservar stock",
+  "obtenido": "400; COTIZACION_INVALIDA",
+  "estado": "CUMPLE",
+  "nota": ""
+ },
+ {
+  "id": "F06",
+  "area": "F. Datos de envío en el pedido",
+  "escenario": "El comprador intenta fijar el costo de envío (costo_envio=1)",
+  "esperado": "400 sin pedido ni reserva",
+  "obtenido": "400; pedidos 0; reservas 0",
+  "estado": "CUMPLE",
+  "nota": ""
+ },
+ {
+  "id": "F07",
+  "area": "F. Datos de envío en el pedido",
+  "escenario": "La tienda cambia la tarifa entre cotizar y pagar",
+  "esperado": "400 COTIZACION_CAMBIO, sin reservar stock",
+  "obtenido": "400; COTIZACION_CAMBIO",
+  "estado": "CUMPLE",
+  "nota": ""
+ },
+ {
+  "id": "F08",
+  "area": "F. Datos de envío en el pedido",
+  "escenario": "Cotización de Chilexpress usada con método Starken",
+  "esperado": "400 COTIZACION_CAMBIO",
+  "obtenido": "400; COTIZACION_CAMBIO",
+  "estado": "CUMPLE",
+  "nota": ""
+ },
+ {
+  "id": "F09",
+  "area": "F. Datos de envío en el pedido",
+  "escenario": "Retiro en tienda sin dirección ni cotización",
+  "esperado": "201; envío 0 y datos del local guardados",
+  "obtenido": "201; envío 0.00; retiro {'address': 'Local 123', 'schedule': '9 a 18'}",
+  "estado": "CUMPLE",
+  "nota": ""
+ },
+ {
+  "id": "F10",
+  "area": "F. Datos de envío en el pedido",
+  "escenario": "Reintento con la misma clave: no duplica el pedido ni reserva dos veces",
+  "esperado": "200 con el mismo pedido y una sola reserva",
+  "obtenido": "201→200; pedidos 1; reservas 1",
+  "estado": "CUMPLE",
+  "nota": ""
+ },
+ {
+  "id": "F11",
+  "area": "F. Datos de envío en el pedido",
+  "escenario": "Dirección de despacho sin comuna",
+  "esperado": "400 sin pedido",
+  "obtenido": "400; pedidos 0",
+  "estado": "CUMPLE",
+  "nota": ""
+ },
+ {
+  "id": "F12",
+  "area": "F. Datos de envío en el pedido",
+  "escenario": "Comuna que no pertenece a la región indicada en la dirección",
+  "esperado": "400 sin pedido",
+  "obtenido": "400; DESTINO_INVALIDO",
+  "estado": "CUMPLE",
+  "nota": ""
+ }
+]
