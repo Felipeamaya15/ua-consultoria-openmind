@@ -103,15 +103,15 @@ export function ProductCard({
           : 'text-[var(--muted-foreground)]';
 
     return (
-      <div className="mt-3 grid gap-2">
-<div className="grid gap-2">
-          <label className={`grid gap-1 text-[10px] font-semibold uppercase tracking-[0.08em] ${mutedClass}`}>
+      <div className="mt-3 grid gap-2 min-w-0">
+        <div className="grid gap-2 min-w-0">
+          <label className={`grid gap-1 text-[10px] font-semibold uppercase tracking-[0.08em] min-w-0 ${mutedClass}`}>
             <span>{attributeNames.length === 1 ? product.attributeLabels?.[attributeNames[0]] || attributeNames[0] : 'Variante'}</span>
             <select
               aria-label={attributeNames.length === 1 ? product.attributeLabels?.[attributeNames[0]] || attributeNames[0] : 'Variante'}
               value={selectedVariantId}
               onChange={event => { setSelectedVariantId(event.target.value); setAdded(false); }}
-              className={`h-9 rounded-lg border px-2 text-xs normal-case tracking-normal outline-none ${selectClass}`}
+              className={`h-10 sm:h-9 w-full min-w-0 rounded-lg border px-2 text-xs normal-case tracking-normal outline-none ${selectClass}`}
             >
               {product.variants.map(variant => {
                 const label = attributeNames.map(name => {
@@ -127,7 +127,7 @@ export function ProductCard({
             </select>
           </label>
         </div>
-        <p className={`text-[10px] ${mutedClass}`}>
+        <p className={`text-[10px] break-words ${mutedClass}`}>
           SKU: {selectedVariant?.sku ?? 'No disponible'} · Stock:{' '}
           {selectedStock} uds
         </p>
@@ -143,7 +143,7 @@ export function ProductCard({
 
   if (isCatalog && layout === 'grid') {
     return (
-      <article data-visual-section={VISUAL_SECTION.productCard} data-visual-card="grid" className="group flex h-full flex-col overflow-hidden rounded-[14px] bg-white text-[#151515]">
+      <article data-visual-section={VISUAL_SECTION.productCard} data-visual-card="grid" className="group flex h-full min-w-0 flex-col overflow-hidden rounded-[14px] bg-white text-[#151515]">
         <Link
           to={productPath}
           aria-label={`Ver ${product.name}`}
@@ -152,6 +152,8 @@ export function ProductCard({
           <img
             src={product.images[0]}
             alt={product.name}
+            loading="lazy"
+            decoding="async"
             className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.035]"
           />
 
@@ -176,18 +178,18 @@ export function ProductCard({
           )}
         </Link>
 
-        <div data-visual-part="body" className="flex flex-1 flex-col p-4">
+        <div data-visual-part="body" className="flex flex-1 min-w-0 flex-col p-4">
           <p className="text-[9px] font-black uppercase tracking-[0.14em] text-[var(--accent)]">
             {product.category}
           </p>
 
-          <h3 className="mt-2 text-[17px] font-extrabold leading-tight tracking-[-0.02em]">
+          <h3 className="mt-2 text-[17px] font-extrabold leading-tight tracking-[-0.02em] break-words">
             <Link to={productPath} className="transition-opacity hover:opacity-60">
               {product.name}
             </Link>
           </h3>
 
-          <p data-visual-part="description" className="mt-2 line-clamp-2 min-h-[36px] text-[11px] leading-[1.55] text-black/60">
+          <p data-visual-part="description" className="mt-2 line-clamp-2 min-h-[36px] text-[11px] leading-[1.55] text-black/60 break-words">
             {product.description}
           </p>
 
@@ -220,7 +222,7 @@ export function ProductCard({
               onClick={handleAddToCart}
               disabled={!canBuySelectedVariant || atLimit}
               aria-label={`Agregar ${product.name} al carrito`}
-              className="mt-4 h-10 w-full rounded-[9px] bg-[var(--primary)] text-[11px] font-bold text-[var(--on-primary)] transition-colors hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40"
+              className="mt-4 min-h-11 sm:min-h-10 h-11 sm:h-10 w-full rounded-[9px] bg-[var(--primary)] text-[11px] font-bold text-[var(--on-primary)] transition-colors hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40"
             >
               {atLimit ? 'Maximo disponible' : added ? 'Agregado' : 'Comprar'}
             </button>
@@ -236,14 +238,16 @@ export function ProductCard({
 
   if (isCatalog && layout === 'list') {
     return (
-      <article data-visual-section={VISUAL_SECTION.productCard} data-visual-card="list" className="group flex overflow-hidden rounded-[14px] bg-white text-[#151515]">
+      <article data-visual-section={VISUAL_SECTION.productCard} data-visual-card="list" className="group flex flex-col sm:flex-row overflow-hidden rounded-[14px] bg-white text-[#151515] min-w-0">
         <Link
           to={productPath}
-          className="relative w-28 sm:w-40 flex-shrink-0 overflow-hidden bg-[#ececea]"
+          className="relative w-full sm:w-40 h-44 sm:h-auto flex-shrink-0 overflow-hidden bg-[#ececea]"
         >
           <img
             src={product.images[0]}
             alt={product.name}
+            loading="lazy"
+            decoding="async"
             className="h-full min-h-[150px] w-full object-cover transition-transform duration-500 group-hover:scale-[1.035]"
           />
 
@@ -261,7 +265,7 @@ export function ProductCard({
 
           <Link
             to={productPath}
-            className="mt-2 text-[18px] font-extrabold leading-tight tracking-[-0.02em] hover:opacity-60"
+            className="mt-2 text-[18px] font-extrabold leading-tight tracking-[-0.02em] hover:opacity-60 break-words"
           >
             {product.name}
           </Link>
@@ -289,7 +293,7 @@ export function ProductCard({
                 onClick={handleAddToCart}
                 disabled={!canBuySelectedVariant || atLimit}
                 aria-label={`Agregar ${product.name} al carrito`}
-                className="rounded-[8px] bg-[var(--primary)] px-4 py-2.5 text-[10px] font-bold text-[var(--on-primary)] hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40"
+                className="min-h-10 rounded-[8px] bg-[var(--primary)] px-4 py-2.5 text-[10px] font-bold text-[var(--on-primary)] hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40"
               >
                 {atLimit ? 'Maximo' : added ? 'Agregado' : 'Agregar'}
               </button>
@@ -315,7 +319,7 @@ export function ProductCard({
 
   if (isVisual && layout === 'grid') {
     return (
-      <article data-visual-section={VISUAL_SECTION.productCard} data-visual-card="grid" className="group flex h-full flex-col overflow-hidden rounded-[10px] bg-[#f1f1f0]">
+      <article data-visual-section={VISUAL_SECTION.productCard} data-visual-card="grid" className="group flex h-full min-w-0 flex-col overflow-hidden rounded-[10px] bg-[#f1f1f0]">
         <Link
           to={productPath}
           aria-label={`Ver ${product.name}`}
@@ -324,6 +328,8 @@ export function ProductCard({
           <img
             src={product.images[0]}
             alt={product.name}
+            loading="lazy"
+            decoding="async"
             className="h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.025]"
           />
 
@@ -336,22 +342,22 @@ export function ProductCard({
           )}
         </Link>
 
-        <div data-visual-part="body" className="flex flex-1 flex-col px-4 pb-4 pt-4">
+        <div data-visual-part="body" className="flex flex-1 min-w-0 flex-col px-4 pb-4 pt-4">
           <p className="mb-2 text-[9px] font-medium uppercase tracking-[0.16em] text-[#303030]">
             {product.category}
           </p>
 
-          <h3 className="font-serif text-[20px] leading-[1.15] tracking-[-0.01em] text-[#111111]">
+          <h3 className="font-serif text-[20px] leading-[1.15] tracking-[-0.01em] text-[#111111] break-words">
             <Link to={productPath} className="transition-opacity hover:opacity-60">
               {product.name}
             </Link>
           </h3>
 
-          <p data-visual-part="description" className="mt-2 line-clamp-2 min-h-[38px] text-[12px] leading-[1.45] text-[#77716f]">
+          <p data-visual-part="description" className="mt-2 line-clamp-2 min-h-[38px] text-[12px] leading-[1.45] text-[#77716f] break-words">
             {product.description}
           </p>
 
-          <div className="mt-auto flex items-center justify-between gap-3 pt-4">
+          <div className="mt-auto flex flex-wrap items-center justify-between gap-3 pt-4">
             <div className="min-w-0">
               <p data-visual-part="price" className="whitespace-nowrap text-[13px] font-semibold text-[#111111]">
                 {formatPrice(price)}
@@ -370,7 +376,7 @@ export function ProductCard({
                 onClick={handleAddToCart}
                 disabled={!canBuySelectedVariant || atLimit}
                 aria-label={`Agregar ${product.name} al carrito`}
-                className="inline-flex h-9 flex-shrink-0 items-center justify-center rounded-[7px] bg-[#111111] px-4 text-[11px] font-semibold text-white transition-opacity hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-35"
+                className="inline-flex min-h-10 sm:min-h-9 h-10 sm:h-9 flex-shrink-0 items-center justify-center rounded-[7px] bg-[#111111] px-4 text-[11px] font-semibold text-white transition-opacity hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-35"
               >
                 {atLimit ? 'Maximo' : added ? 'Agregado' : 'Comprar'}
               </button>
@@ -403,12 +409,13 @@ export function ProductCard({
       <article
         data-visual-section={VISUAL_SECTION.productCard} data-visual-card="list"
         className={`
-          flex gap-4
+          flex flex-col sm:flex-row gap-4
           bg-white
           border border-[var(--border)]
           p-3
           transition-all
           group
+          min-w-0
           ${
             isMinimal
               ? 'rounded-[20px]'
@@ -419,7 +426,7 @@ export function ProductCard({
         <Link
           to={productPath}
           className={`
-            w-20 h-20
+            w-full sm:w-20 h-40 sm:h-20
             overflow-hidden
             bg-[var(--muted)]
             flex-shrink-0
@@ -433,6 +440,8 @@ export function ProductCard({
           <img
             src={product.images[0]}
             alt={product.name}
+            loading="lazy"
+            decoding="async"
             className="
               w-full h-full
               object-cover
@@ -447,7 +456,7 @@ export function ProductCard({
             {product.category}
           </p>
 
-          <h3 className="font-semibold text-sm text-[var(--foreground)] truncate">
+          <h3 className="font-semibold text-sm text-[var(--foreground)] break-words sm:truncate">
             <Link to={productPath}>
               {product.name}
             </Link>
@@ -457,7 +466,7 @@ export function ProductCard({
             {product.description}
           </p>
 
-          <div className="flex items-center gap-2 mt-1.5">
+          <div className="flex flex-wrap items-center gap-2 mt-1.5">
             <span data-visual-part="price" className="font-bold text-sm text-[var(--foreground)]">
               {formatPrice(price)}
             </span>
@@ -478,7 +487,7 @@ export function ProductCard({
               onClick={handleAddToCart}
               disabled={!canBuySelectedVariant || atLimit}
               aria-label={`Agregar ${product.name} al carrito`}
-              className="mt-3 h-8 rounded-lg bg-[var(--primary)] px-4 text-xs font-semibold text-[var(--on-primary)] transition-colors hover:brightness-90 disabled:cursor-not-allowed disabled:opacity-50"
+              className="mt-3 min-h-10 sm:min-h-8 h-10 sm:h-8 w-full sm:w-auto rounded-lg bg-[var(--primary)] px-4 text-xs font-semibold text-[var(--on-primary)] transition-colors hover:brightness-90 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {atLimit ? 'Maximo disponible' : added ? 'Agregado' : 'Agregar al carrito'}
             </button>
@@ -522,6 +531,8 @@ export function ProductCard({
           <img
             src={product.images[0]}
             alt={product.name}
+            loading="lazy"
+            decoding="async"
             className="
               w-full h-full
               object-cover
@@ -554,7 +565,7 @@ export function ProductCard({
     <article
       data-visual-section={VISUAL_SECTION.productCard} data-visual-card="grid"
       className={`
-        flex flex-col
+        flex flex-col min-w-0
         bg-white
         border border-[var(--border)]
         overflow-hidden
@@ -582,6 +593,8 @@ export function ProductCard({
         <img
           src={product.images[0]}
           alt={product.name}
+          loading="lazy"
+          decoding="async"
           className="
             w-full h-full
             object-cover
@@ -634,7 +647,7 @@ export function ProductCard({
       <div
         data-visual-part="body"
         className={`
-          flex flex-col flex-1
+          flex flex-col flex-1 min-w-0
           ${
             isMinimal
               ? 'p-4 gap-2.5'
@@ -652,6 +665,7 @@ export function ProductCard({
               font-semibold
               text-[var(--foreground)]
               line-clamp-2
+              break-words
               mt-0.5
               ${
                 isMinimal
@@ -666,9 +680,9 @@ export function ProductCard({
           </h3>
         </div>
 
-        <p data-visual-part="description" className="text-xs text-[var(--muted-foreground)] line-clamp-2">{product.description}</p>
+        <p data-visual-part="description" className="text-xs text-[var(--muted-foreground)] line-clamp-2 break-words">{product.description}</p>
 
-        <div className="flex items-center gap-2 mt-auto">
+        <div className="flex flex-wrap items-center gap-2 mt-auto">
           <span data-visual-part="price"
             className={`
               font-bold
@@ -691,7 +705,7 @@ export function ProductCard({
         </div>
 
         {renderVariantSelector()}
-          {selectedVariant && <StockFeedback sku={selectedVariant.sku} maxStock={selectedVariant.stock} quantity={quantity} />}
+        {selectedVariant && <StockFeedback sku={selectedVariant.sku} maxStock={selectedVariant.stock} quantity={quantity} />}
 
         {inStock && (
           <button data-visual-part="buyButton"
@@ -711,8 +725,8 @@ export function ProductCard({
               disabled:cursor-not-allowed
               ${
                 isMinimal
-                  ? 'h-10 text-xs rounded-xl'
-                  : 'h-8 text-xs rounded-lg'
+                  ? 'min-h-11 sm:min-h-10 h-11 sm:h-10 text-xs rounded-xl'
+                  : 'min-h-10 sm:min-h-8 h-10 sm:h-8 text-xs rounded-lg'
               }
             `}
           >
