@@ -315,6 +315,11 @@ button:disabled { cursor: not-allowed; opacity: .65; }
   min-width: 0;
 }
 
+/* Fix 1: Evitar botón de filtros duplicado dentro del aside en Plantilla 3 (Visual) */
+[data-catalog-page="visual"] [data-visual-part="catalogFilters"] [data-visual-part="catalogFiltersToggle"] {
+  display: none !important;
+}
+
 @media (max-width: 639px) {
   [data-storefront-visual] {
     --storefront-wide-width: 100%;
@@ -354,6 +359,11 @@ button:disabled { cursor: not-allowed; opacity: .65; }
     max-width: 100%;
     width: 100%;
   }
+
+  /* Fix 3: Grilla de productos relacionados en Detalle de Producto a 1 columna en móvil */
+  [data-visual-page="product"] section .grid.grid-cols-2 {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 /* SCRUM-465: Checkout móvil. Solo aplica al flujo real /plantilla/:id/compra. */
@@ -364,6 +374,17 @@ button:disabled { cursor: not-allowed; opacity: .65; }
 
 [data-checkout-page] [data-checkout-items] {
   overflow-wrap: anywhere;
+}
+
+/* Fix 5: Celdas de datos de Transferencia Bancaria sin desbordamiento horizontal en pantallas angostas */
+[data-checkout-page] [data-page-panel] .grid.grid-cols-2 {
+  min-width: 0;
+}
+
+[data-checkout-page] [data-page-panel] .grid.grid-cols-2 > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 @media (max-width: 639px) {

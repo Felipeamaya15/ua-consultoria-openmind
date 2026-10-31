@@ -1,4 +1,4 @@
-/** Contrato responsive de cierre: Landing page móvil, Catálogo móvil y Checkout móvil. */
+/** Contrato responsive de cierre: Landing page móvil, Catálogo, Detalle, Carrito, Checkout, Login y Panel Admin. */
 const fs = require('node:fs');
 const path = require('node:path');
 const assert = require('node:assert/strict');
@@ -67,4 +67,25 @@ test('las acciones importantes siguen visibles en pantallas angostas', () => {
   assert.match(css, /@media \(max-width: 639px\)/);
   assert.match(css, /min-height: 2\.75rem/);
   assert.match(checkout, /disabled=\{isPaymentDisabled\}/);
+});
+
+test('las seis vistas prioritarias (catálogo, detalle, carrito, checkout, login y admin) cumplen los fixes responsive', () => {
+  const productDetail = fs.readFileSync(path.join(root, 'src/features/storefront/pages/ProductDetail.tsx'), 'utf8');
+  const cart = fs.readFileSync(path.join(root, 'src/features/storefront/pages/Cart.tsx'), 'utf8');
+  const login = fs.readFileSync(path.join(root, 'src/features/storefront/pages/Login.tsx'), 'utf8');
+  const adminCss = fs.readFileSync(path.join(root, 'src/features/admin/admin.css'), 'utf8');
+
+  assert.match(css, /\[data-catalog-page="visual"\] \[data-visual-part="catalogFilters"\] \[data-visual-part="catalogFiltersToggle"\]/);
+
+  assert.match(productDetail, /data-page-columns/);
+  assert.match(css, /\[data-visual-page="product"\] section \.grid\.grid-cols-2/);
+
+  assert.match(cart, /lg:grid-cols-\[1fr_360px\]/);
+  assert.match(cart, /flex-col sm:flex-row/);
+
+  assert.match(css, /\[data-checkout-page\] \[data-page-panel\] \.grid\.grid-cols-2 > span/);
+
+  assert.doesNotMatch(login, /onClick=\{\(\) => loginConGoogle\(\)\}[\s\S]{0,250}¿Olvidaste tu contraseña\?/);
+
+  assert.match(adminCss, /@media\(max-width:639px\)\{[\s\S]*?\.catalog-overview\{grid-template-columns:minmax\(0,1fr\)\}/);
 });

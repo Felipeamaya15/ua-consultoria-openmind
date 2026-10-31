@@ -74,7 +74,6 @@ export default function Login() {
   });
 
   // 2. Formulario tradicional conectado a la API
-  // 2. Formulario tradicional conectado a la API
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
     setLoading(true);
@@ -123,7 +122,6 @@ export default function Login() {
         return;
       }
 
-      
       // Redirección condicional según el correo o rol
       if (data.data.user.email === 'emprendedor@gmail.com' || data.data.user.is_store_owner === true) {
         navigate('/emprendedor');
@@ -311,17 +309,16 @@ export default function Login() {
 
               {mode === 'login' && (
                 <div className="text-right -mt-2">
-                  <button data-page-action="outline"
-              type="button"
-              onClick={() => loginConGoogle()}
-              className="h-12 flex items-center justify-center gap-3 border border-[var(--visual-global-border)]/10 bg-[var(--visual-page-panel-background)] rounded-[9px] text-[12px] font-semibold hover:border-[var(--visual-global-border)]/30 transition-colors"
-            >
-              <svg
-                className="w-5 h-5"
-                viewBox="0 0 24 24"
-                aria-hidden="true"
-              >
-              </svg>
+                  <button
+                    data-page-action="ghost"
+                    type="button"
+                    onClick={() =>
+                      setMessage(
+                        'Recuperación de contraseña de demostración. No se envían correos.',
+                      )
+                    }
+                    className="text-xs text-[var(--primary)] hover:underline transition-colors"
+                  >
                     ¿Olvidaste tu contraseña?
                   </button>
                 </div>
