@@ -71,7 +71,7 @@ function Layout() {
           onMenu={() => setOpen(!open)}
         />
 
-        <main className="p-5 md:p-8 w-full">
+        <main id="admin-main-content" tabIndex={-1} className="p-5 md:p-8 w-full">
           {pageHelp && pathname !== '/emprendedor/landing' && <AdminPageHeader {...pageHelp} action={pathname === '/emprendedor/productos'
             ? <Link to="/emprendedor/productos/nuevo" className="admin-create-product">+ Nuevo producto</Link> : undefined} />}
           {storageError && (

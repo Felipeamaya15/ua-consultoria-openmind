@@ -379,6 +379,9 @@ export default function Checkout() {
 
   useEffect(() => {
     window.scrollTo(0, 0);
+    if (typeof document !== 'undefined') {
+      document.querySelector<HTMLElement>('[data-checkout-step-panel]')?.focus?.({ preventScroll: true });
+    }
   }, [step]);
 
   useEffect(() => {
@@ -859,25 +862,30 @@ export default function Checkout() {
               : 'max-w-7xl mx-auto px-4 py-16 text-center'
         }
       >
-        <p>
-          Tu carrito está vacío.{' '}
-
-          <Link data-page-action="ghost"
-            to={route('catalogo')}
-            className="text-[var(--primary)] hover:underline"
-          >
-            Ir al catálogo
-          </Link>
+        <p className="text-[var(--visual-page-color)] mb-4 text-base font-sans">
+          Tu carrito está vacío
         </p>
+
+        <Link data-page-action="ghost"
+          to={route('catalogo')}
+          className="text-sm font-sans text-[var(--primary)] underline"
+        >
+          Ir al catálogo
+        </Link>
       </div>
     );
   }
 
+  /*
+   * ==========================================================
+   * LABELS DE PAGO
+   * ==========================================================
+   */
   const PAYMENT_LABELS: Record<
     string,
     string
   > = {
-    Transbank: 'Webpay / Transbank',
+    Transbank: 'Webpay Plus (Transbank)',
     MercadoPago: 'Mercado Pago',
     PayPal: 'PayPal',
     Linkify: 'Linkify',
@@ -890,11 +898,11 @@ export default function Checkout() {
 
   const paymentDetail =
     paymentMethod === 'Transbank'
-      ? `Tarjeta •••• ${last4(
-          transbank.number,
-        )}`
+      ? `Webpay · Tarjeta ${
+          transbank.cardType
+        } ·••• ${last4(transbank.number)}`
       : paymentMethod === 'MercadoPago'
-        ? `Tarjeta •••• ${last4(
+        ? `Mercado Pago ·••• ${last4(
             mercadopago.number,
           )} · ${
             mercadopago.installments
@@ -1016,7 +1024,7 @@ export default function Checkout() {
             <Link className="text-sm underline" to={route('preferencias-comerciales')}>Consultar o retirar mi autorización comercial</Link>
           </div>}
           {step === 'contact' && (
-            <div data-visual-section="pagePanel" data-page-panel className={panelClass}>
+            <div data-checkout-step-panel tabIndex={-1} data-visual-section="pagePanel" data-page-panel className={panelClass}>
               <div>
                 {isMinimal && (
                   <p className="text-xs text-[var(--visual-page-color)] mb-1">
@@ -1204,7 +1212,7 @@ export default function Checkout() {
               ENTREGA
           ================================================ */}
           {step === 'delivery' && (
-            <div data-visual-section="pagePanel" data-page-panel className={panelClass}>
+            <div data-checkout-step-panel tabIndex={-1} data-visual-section="pagePanel" data-page-panel className={panelClass}>
               <div>
                 {isMinimal && (
                   <p className="text-xs text-[var(--visual-page-color)] mb-1">
@@ -1263,10 +1271,30 @@ export default function Checkout() {
                 </div>
               )}
 
-              <div className="flex flex-col gap-3" role="radiogroup" aria-label="Alternativas de entrega">
-                {shippingOptions.map((method) => (
+              <div
+                className="flex flex-col gap-3"
+                role="radiogroup"
+                aria-label="Alternativas de entrega"
+                onKeyDown={(event) => {
+                  if (event.key !== 'Tab') return;
+                  const focusables = Array.from(
+                    event.currentTarget.querySelectorAll<HTMLElement>(
+                      'input[type="radio"]:not(:disabled), button:not(:disabled), a[href]',
+                    ),
+                  );
+                  const currentIndex = focusables.indexOf(event.target as HTMLElement);
+                  if (currentIndex === -1) return;
+                  const nextIndex = event.shiftKey ? currentIndex - 1 : currentIndex + 1;
+                  if (nextIndex >= 0 && nextIndex < focusables.length) {
+                    event.preventDefault();
+                    focusables[nextIndex].focus();
+                  }
+                }}
+              >
+                {shippingOptions.map((method, index) => (
                   <div
                     key={method.id}
+                    data-checkout-option
                     className={`
                       border min-w-0 focus-within:ring-2 focus-within:ring-[var(--primary)]
                       transition-all
@@ -1290,6 +1318,24 @@ export default function Checkout() {
                       value={method.id}
                       checked={shippingMethod === method.id}
                       onChange={() => setShippingMethod(method.id)}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter' || event.key === ' ') {
+                          event.preventDefault();
+                          setShippingMethod(method.id);
+                          return;
+                        }
+                        if (['ArrowDown', 'ArrowRight', 'ArrowUp', 'ArrowLeft'].includes(event.key) && shippingOptions.length > 0) {
+                          event.preventDefault();
+                          const delta = event.key === 'ArrowDown' || event.key === 'ArrowRight' ? 1 : -1;
+                          const targetIndex = (index + delta + shippingOptions.length) % shippingOptions.length;
+                          const nextOption = shippingOptions[targetIndex];
+                          setShippingMethod(nextOption.id);
+                          const radios = event.currentTarget
+                            .closest('[role="radiogroup"]')
+                            ?.querySelectorAll<HTMLInputElement>('input[type="radio"][name="shipping"]');
+                          radios?.[targetIndex]?.focus();
+                        }
+                      }}
                       className="sr-only"
                     />
 
@@ -1441,7 +1487,7 @@ export default function Checkout() {
               PAGO
           ================================================ */}
           {step === 'payment' && (
-            <div data-visual-section="pagePanel" data-page-panel className={panelClass}>
+            <div data-checkout-step-panel tabIndex={-1} data-visual-section="pagePanel" data-page-panel className={panelClass}>
               <div>
                 {isMinimal && (
                   <p className="text-xs text-[var(--visual-page-color)] mb-1">
@@ -1477,11 +1523,31 @@ export default function Checkout() {
                   La tienda no tiene medios de pago habilitados en este momento. Por favor, comunícate con el administrador.
                 </Alert>
               ) : (
-                <div className="grid gap-4">
-                  {paymentOptions.map((payment) => (
+                <div
+                  className="grid gap-4"
+                  role="radiogroup"
+                  aria-label="Alternativas de pago"
+                  onKeyDown={(event) => {
+                    if (event.key !== 'Tab') return;
+                    const focusables = Array.from(
+                      event.currentTarget.querySelectorAll<HTMLElement>(
+                        'input[type="radio"]:not(:disabled), button:not(:disabled), a[href]',
+                      ),
+                    );
+                    const currentIndex = focusables.indexOf(event.target as HTMLElement);
+                    if (currentIndex === -1) return;
+                    const nextIndex = event.shiftKey ? currentIndex - 1 : currentIndex + 1;
+                    if (nextIndex >= 0 && nextIndex < focusables.length) {
+                      event.preventDefault();
+                      focusables[nextIndex].focus();
+                    }
+                  }}
+                >
+                  {paymentOptions.map((payment, index) => (
                     <label
                       key={payment.id}
-                      className={`flex items-center gap-4 p-4 border cursor-pointer transition-all ${
+                      data-checkout-option
+                      className={`flex items-center gap-4 p-4 border cursor-pointer transition-all focus-within:ring-2 focus-within:ring-[var(--primary)] ${
                         isMinimal ? 'rounded-[18px]' : 'rounded-xl'
                       } ${
                         paymentMethod === payment.id
@@ -1492,9 +1558,28 @@ export default function Checkout() {
                       <input
                         type="radio"
                         name="payment"
+                        aria-label={payment.label}
                         value={payment.id}
                         checked={paymentMethod === payment.id}
                         onChange={() => setPaymentMethod(payment.id)}
+                        onKeyDown={(event) => {
+                          if (event.key === 'Enter' || event.key === ' ') {
+                            event.preventDefault();
+                            setPaymentMethod(payment.id);
+                            return;
+                          }
+                          if (['ArrowDown', 'ArrowRight', 'ArrowUp', 'ArrowLeft'].includes(event.key) && paymentOptions.length > 0) {
+                            event.preventDefault();
+                            const delta = event.key === 'ArrowDown' || event.key === 'ArrowRight' ? 1 : -1;
+                            const targetIndex = (index + delta + paymentOptions.length) % paymentOptions.length;
+                            const nextOption = paymentOptions[targetIndex];
+                            setPaymentMethod(nextOption.id);
+                            const radios = event.currentTarget
+                              .closest('[role="radiogroup"]')
+                              ?.querySelectorAll<HTMLInputElement>('input[type="radio"][name="payment"]');
+                            radios?.[targetIndex]?.focus();
+                          }
+                        }}
                         className="sr-only"
                       />
                       <span className="w-10 h-10 rounded-full bg-[var(--muted)] flex items-center justify-center text-[var(--visual-page-color)]">
@@ -1759,7 +1844,7 @@ export default function Checkout() {
               CONFIRMAR
           ================================================ */}
           {step === 'confirm' && (
-            <div data-visual-section="pagePanel" data-page-panel className={panelClass}>
+            <div data-checkout-step-panel tabIndex={-1} data-visual-section="pagePanel" data-page-panel className={panelClass}>
               <div>
                 {isMinimal && (
                   <p className="text-xs text-[var(--visual-page-color)] mb-1">
