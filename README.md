@@ -53,6 +53,8 @@ Este proyecto consiste en el diseno, desarrollo e implementacion de una platafor
 - **Validacion de APIs:** Postman
 - **Entorno de Desarrollo:** Visual Studio Code
 
+> **Instalación:** requisitos en [`docs/requisitos-instalacion.md`](docs/requisitos-instalacion.md) y procedimiento en [`EJECUCION_LOCAL.md`](EJECUCION_LOCAL.md).
+
 ---
 
 ## Arquitectura del Directorio

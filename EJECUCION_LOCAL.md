@@ -6,6 +6,8 @@ Este documento describe cómo configurar, levantar, verificar y actualizar la pl
 
 ## 1. Requisitos previos
 
+> El detalle completo (hardware, versiones, imágenes Docker, dependencias, puertos y servicios externos) está en [`docs/requisitos-instalacion.md`](docs/requisitos-instalacion.md).
+
 - Docker Desktop iniciado y Docker Compose disponible.
 - Git y una terminal PowerShell (Windows).
 - Puertos **5173** (frontend), **8000** (backend), **5432** (PostgreSQL) y **27017** (MongoDB) disponibles, salvo que se cambien los puertos publicados admitidos por Compose.
