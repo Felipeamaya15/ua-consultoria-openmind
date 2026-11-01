@@ -1,0 +1,219 @@
+[
+ {
+  "area": "Comprador y comunes",
+  "regla": "jsx-a11y/click-events-have-key-events",
+  "archivo": "features/storefront/components/ui/SoftwareVersionModal.tsx",
+  "linea": 42,
+  "mensaje": "Visible, non-interactive elements with click handlers must have at least one keyboard listener."
+ },
+ {
+  "area": "Comprador y comunes",
+  "regla": "jsx-a11y/click-events-have-key-events",
+  "archivo": "features/storefront/components/ui/SoftwareVersionModal.tsx",
+  "linea": 49,
+  "mensaje": "Visible, non-interactive elements with click handlers must have at least one keyboard listener."
+ },
+ {
+  "area": "Comprador y comunes",
+  "regla": "jsx-a11y/click-events-have-key-events",
+  "archivo": "features/storefront/components/ui/index.tsx",
+  "linea": 204,
+  "mensaje": "Visible, non-interactive elements with click handlers must have at least one keyboard listener."
+ },
+ {
+  "area": "Comprador y comunes",
+  "regla": "jsx-a11y/interactive-supports-focus",
+  "archivo": "features/storefront/pages/Checkout.tsx",
+  "linea": 1274,
+  "mensaje": "Elements with the 'radiogroup' interactive role must be focusable."
+ },
+ {
+  "area": "Comprador y comunes",
+  "regla": "jsx-a11y/interactive-supports-focus",
+  "archivo": "features/storefront/pages/Checkout.tsx",
+  "linea": 1526,
+  "mensaje": "Elements with the 'radiogroup' interactive role must be focusable."
+ },
+ {
+  "area": "Comprador y comunes",
+  "regla": "jsx-a11y/label-has-associated-control",
+  "archivo": "features/integrations/pages/LinkifyConfigPage.tsx",
+  "linea": 63,
+  "mensaje": "A form label must have accessible text."
+ },
+ {
+  "area": "Comprador y comunes",
+  "regla": "jsx-a11y/no-autofocus",
+  "archivo": "shared/PaletteLibrary.tsx",
+  "linea": 53,
+  "mensaje": "The autoFocus prop should not be used, as it can reduce usability and accessibility for users."
+ },
+ {
+  "area": "Comprador y comunes",
+  "regla": "jsx-a11y/no-noninteractive-element-interactions",
+  "archivo": "features/storefront/components/store/CompactMobileNavigation.tsx",
+  "linea": 14,
+  "mensaje": "Non-interactive elements should not be assigned mouse or keyboard event listeners."
+ },
+ {
+  "area": "Comprador y comunes",
+  "regla": "jsx-a11y/no-noninteractive-element-interactions",
+  "archivo": "features/storefront/components/store/QuantityControl.tsx",
+  "linea": 5,
+  "mensaje": "Non-interactive elements should not be assigned mouse or keyboard event listeners."
+ },
+ {
+  "area": "Comprador y comunes",
+  "regla": "jsx-a11y/no-noninteractive-element-interactions",
+  "archivo": "features/storefront/components/ui/SoftwareVersionModal.tsx",
+  "linea": 42,
+  "mensaje": "Non-interactive elements should not be assigned mouse or keyboard event listeners."
+ },
+ {
+  "area": "Comprador y comunes",
+  "regla": "jsx-a11y/no-static-element-interactions",
+  "archivo": "features/storefront/components/ui/SoftwareVersionModal.tsx",
+  "linea": 49,
+  "mensaje": "Avoid non-native interactive elements. If using native HTML is not possible, add an appropriate role and "
+ },
+ {
+  "area": "Comprador y comunes",
+  "regla": "jsx-a11y/no-static-element-interactions",
+  "archivo": "features/storefront/components/ui/index.tsx",
+  "linea": 204,
+  "mensaje": "Avoid non-native interactive elements. If using native HTML is not possible, add an appropriate role and "
+ },
+ {
+  "area": "Comprador y comunes",
+  "regla": "jsx-a11y/role-supports-aria-props",
+  "archivo": "shared/components/TimePicker.tsx",
+  "linea": 50,
+  "mensaje": "The attribute aria-invalid is not supported by the role button. This role is implicit on the element butt"
+ },
+ {
+  "area": "Emprendedor (panel)",
+  "regla": "jsx-a11y/click-events-have-key-events",
+  "archivo": "features/admin/components/ui/AdminModal.tsx",
+  "linea": 6,
+  "mensaje": "Visible, non-interactive elements with click handlers must have at least one keyboard listener."
+ },
+ {
+  "area": "Emprendedor (panel)",
+  "regla": "jsx-a11y/interactive-supports-focus",
+  "archivo": "features/admin/components/AutomaticFieldEditor.tsx",
+  "linea": 61,
+  "mensaje": "Elements with the 'textbox' interactive role must be tabbable."
+ },
+ {
+  "area": "Emprendedor (panel)",
+  "regla": "jsx-a11y/label-has-associated-control",
+  "archivo": "features/admin/components/PayPalConfigForm.tsx",
+  "linea": 110,
+  "mensaje": "A form label must have accessible text."
+ },
+ {
+  "area": "Emprendedor (panel)",
+  "regla": "jsx-a11y/label-has-associated-control",
+  "archivo": "features/marketing/components/ContentPicker.tsx",
+  "linea": 21,
+  "mensaje": "A form label must have accessible text."
+ },
+ {
+  "area": "Emprendedor (panel)",
+  "regla": "jsx-a11y/label-has-associated-control",
+  "archivo": "features/marketing/components/DesignControls.tsx",
+  "linea": 39,
+  "mensaje": "A form label must have accessible text."
+ },
+ {
+  "area": "Emprendedor (panel)",
+  "regla": "jsx-a11y/label-has-associated-control",
+  "archivo": "features/marketing/components/FormatPicker.tsx",
+  "linea": 7,
+  "mensaje": "A form label must have accessible text."
+ },
+ {
+  "area": "Emprendedor (panel)",
+  "regla": "jsx-a11y/no-autofocus",
+  "archivo": "features/admin/visualEditor/fonts.tsx",
+  "linea": 34,
+  "mensaje": "The autoFocus prop should not be used, as it can reduce usability and accessibility for users."
+ },
+ {
+  "area": "Emprendedor (panel)",
+  "regla": "jsx-a11y/no-autofocus",
+  "archivo": "features/marketing/components/DraftPanel.tsx",
+  "linea": 24,
+  "mensaje": "The autoFocus prop should not be used, as it can reduce usability and accessibility for users."
+ },
+ {
+  "area": "Emprendedor (panel)",
+  "regla": "jsx-a11y/no-noninteractive-element-interactions",
+  "archivo": "features/admin/components/ui/AdminModal.tsx",
+  "linea": 6,
+  "mensaje": "Non-interactive elements should not be assigned mouse or keyboard event listeners."
+ },
+ {
+  "area": "Emprendedor (panel)",
+  "regla": "jsx-a11y/no-noninteractive-element-interactions",
+  "archivo": "features/admin/pages/ThemeEditor.tsx",
+  "linea": 268,
+  "mensaje": "Non-interactive elements should not be assigned mouse or keyboard event listeners."
+ },
+ {
+  "area": "Emprendedor (panel)",
+  "regla": "jsx-a11y/no-noninteractive-element-to-interactive-role",
+  "archivo": "features/admin/components/LandingPageContent.tsx",
+  "linea": 153,
+  "mensaje": "Non-interactive elements should not be assigned interactive roles."
+ },
+ {
+  "area": "Emprendedor (panel)",
+  "regla": "jsx-a11y/no-noninteractive-tabindex",
+  "archivo": "features/admin/components/dashboard/DailyHistoryTable.tsx",
+  "linea": 23,
+  "mensaje": "`tabIndex` should only be declared on interactive elements."
+ },
+ {
+  "area": "Emprendedor (panel)",
+  "regla": "jsx-a11y/no-noninteractive-tabindex",
+  "archivo": "features/admin/components/dashboard/DashboardAnalytics.tsx",
+  "linea": 100,
+  "mensaje": "`tabIndex` should only be declared on interactive elements."
+ },
+ {
+  "area": "Emprendedor (panel)",
+  "regla": "jsx-a11y/no-noninteractive-tabindex",
+  "archivo": "features/admin/components/dashboard/Reports.tsx",
+  "linea": 31,
+  "mensaje": "`tabIndex` should only be declared on interactive elements."
+ },
+ {
+  "area": "Emprendedor (panel)",
+  "regla": "jsx-a11y/no-noninteractive-tabindex",
+  "archivo": "features/admin/pages/Contacts.tsx",
+  "linea": 96,
+  "mensaje": "`tabIndex` should only be declared on interactive elements."
+ },
+ {
+  "area": "Emprendedor (panel)",
+  "regla": "jsx-a11y/no-noninteractive-tabindex",
+  "archivo": "features/admin/pages/Sales.tsx",
+  "linea": 113,
+  "mensaje": "`tabIndex` should only be declared on interactive elements."
+ },
+ {
+  "area": "Emprendedor (panel)",
+  "regla": "jsx-a11y/no-noninteractive-tabindex",
+  "archivo": "features/admin/pages/Sales.tsx",
+  "linea": 139,
+  "mensaje": "`tabIndex` should only be declared on interactive elements."
+ },
+ {
+  "area": "Emprendedor (panel)",
+  "regla": "jsx-a11y/no-noninteractive-tabindex",
+  "archivo": "features/admin/pages/Sales.tsx",
+  "linea": 158,
+  "mensaje": "`tabIndex` should only be declared on interactive elements."
+ }
+]
