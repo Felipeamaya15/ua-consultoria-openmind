@@ -1,14 +1,14 @@
-# 🤝 Proyecto Consultoría: Fundación Gestionar
+# 🤝 Proyecto E-commerce
 
 **Repositorio oficial del equipo OpenMind - ua-consultoria-openmind**
 
-Este proyecto se desarrolla en el marco de la asignatura de consultoria de la Universidad Autónoma de Chile. El objetivo es proveer servicios de consultoría y desarrollo tecnológico para la **[Fundación Gestionar](https://fundaciongestionar.org/)**, trabajando bajo SCRUM.
+Este proyecto se desarrolla en el marco de la asignatura de consultoria de la Universidad Autónoma de Chile. El objetivo es proveer servicios de consultoría y desarrollo tecnológico de un **e-commerce**, trabajando bajo SCRUM.
 
-# Proyecto Consultoria: Fundacion Gestionar
+# Proyecto E-commerce
 
 > Repositorio oficial del equipo OpenMind | Asignatura de Consultoria de Software - Universidad Autonoma de Chile
 
-Este proyecto consiste en el diseno, desarrollo e implementacion de una plataforma tecnologica orientada a optimizar la gestion y servicios de la **[Fundacion Gestionar](https://fundaciongestionar.org/)**, trabajando bajo el marco agil de trabajo **SCRUM**.
+Este proyecto consiste en el diseno, desarrollo e implementacion de una plataforma tecnologica orientada a optimizar la gestion y servicios del comercio electronico para emprendedores, trabajando bajo el marco agil de trabajo **SCRUM**.
 
 ---
 
@@ -16,7 +16,7 @@ Este proyecto consiste en el diseno, desarrollo e implementacion de una platafor
 
 | Rol | Responsable | Funciones Principales |
 | :--- | :--- | :--- |
-| **Product Owner (PO)** | Marianela | Definicion y priorizacion del product backlog, gestion de requerimientos y comunicacion directa con los representantes de la fundacion. |
+| **Product Owner (PO)** | Marianela | Definicion y priorizacion del product backlog, gestion de requerimientos y comunicacion directa con el cliente. |
 | **Scrum Master (SM)** | Lorenzo Cotta | Facilitacion de ceremonias agiles (Sprint Planning, Daily, Review, Retro), gestion de impedimentos y cumplimiento de SCRUM. |
 | **Lider de QA** | Patricio Jaramillo | Diseno de la matriz de pruebas, ejecucion de pruebas de integracion con Postman, aseguramiento de calidad y control de tickets. |
 | **Responsable de Git** | Felipe Amaya | Administracion de repositorios, definicion de flujos de trabajo (*GitFlow*), politicas de ramas y revision tecnica de Pull Requests. |
@@ -28,7 +28,7 @@ Este proyecto consiste en el diseno, desarrollo e implementacion de una platafor
 ## Stack Tecnologico
 
 ### Frontend
-- **Framework Principal:** React / Next.js
+- **Framework Principal:** React / Vite
 - **Lenguaje:** TypeScript
 - **Estilos:** Tailwind CSS
 
@@ -38,7 +38,7 @@ Este proyecto consiste en el diseno, desarrollo e implementacion de una platafor
 - **Autenticacion:** Django Rest Auth / Tokens de sesion
 
 ### Base de Datos & Persistencia
-- **Motor:** PostgreSQL
+- **Motor:** PostgreSQL (datos transaccionales) y MongoDB (catalogo)
 - **ORM:** Django ORM (con soporte de migraciones versionadas)
 
 ### Infraestructura & Despliegue Local
@@ -46,7 +46,8 @@ Este proyecto consiste en el diseno, desarrollo e implementacion de una platafor
 - **Control de Versiones:** Git / GitHub
 
 ### Integraciones Externas
-- **Pasarela de Pagos:** Transbank Webpay Plus (API REST)
+- **Pasarela de Pagos:** Transbank Webpay Plus (API REST), transferencia bancaria y Linkify
+- **Envios:** Chilexpress, Starken y retiro en tienda
 
 ### Herramientas de Gestion & QA
 - **Gestion Agil:** Atlassian Jira & Confluence
@@ -54,6 +55,7 @@ Este proyecto consiste en el diseno, desarrollo e implementacion de una platafor
 - **Entorno de Desarrollo:** Visual Studio Code
 
 > **Instalación:** requisitos en [`docs/requisitos-instalacion.md`](docs/requisitos-instalacion.md) y procedimiento en [`EJECUCION_LOCAL.md`](EJECUCION_LOCAL.md).
+> **Documentacion tecnica:** punto de entrada en [`docs/DOCUMENTACION_TECNICA.md`](docs/DOCUMENTACION_TECNICA.md).
 
 ---
 
@@ -61,20 +63,22 @@ Este proyecto consiste en el diseno, desarrollo e implementacion de una platafor
 
 ```text
 ua-consultoria-openmind/
-├── apps/                         # Modulos independientes de Django (Backend)
+├── backend/apps/                 # Modulos independientes de Django (Backend)
 │   ├── authentication/           # Gestion de usuarios y configuracion de login
 │   ├── catalog/                  # Catalogo, productos y gestion de stock
-│   ├── cart/                     # Logica de carritos de compra e items
-│   └── orders/                   # Procesamiento de pedidos y checkout
-├── frontend/                     # Aplicacion cliente en Next.js / React
+│   ├── core/                     # Tienda, pedidos, checkout, promociones y pagos
+│   ├── shipping/                 # Cotizacion y seguimiento de envios
+│   ├── landing/                  # Pagina de inicio de la tienda
+│   └── visual_config/            # Configuracion visual y plantillas
+├── frontend/                     # Aplicacion cliente en Vite / React
 │   ├── public/                   # Recursos estaticos (imagenes, iconos)
 │   └── src/
 │       ├── components/           # Componentes UI reutilizables
 │       ├── features/             # Modulos de negocio (storefront, admin)
 │       └── services/             # Clientes HTTP y llamadas a la API REST
 ├── docker-compose.yml            # Orquestacion de contenedores (backend, db, frontend)
-├── Dockerfile                    # Receta de construccion para el servicio backend
-├── requirements.txt              # Dependencias de Python / Django
+├── docs/                         # Documentacion tecnica y evidencias de QA
+├── EJECUCION_LOCAL.md            # Instalacion, ejecucion y actualizacion
 └── README.md                     # Documentacion general del repositorio
 
 **Clonar el repositorio:**
