@@ -515,4 +515,22 @@ button:disabled { cursor: not-allowed; opacity: .65; }
     white-space: normal;
     overflow-wrap: anywhere;
   }
+
+  [data-storefront-visual] [data-visual-page="login"] [data-login-header],
+  [data-storefront-visual] [data-visual-page="login"] [data-login-header] :is(h1, h2, p) {
+    text-align: center !important;
+    margin-inline: auto;
+  }
+
+  [data-storefront-visual] [data-visual-page="login"] [data-login-header] .ua-institutional-badge {
+    margin-inline: auto;
+    justify-content: center;
+  }
+
+  [data-storefront-visual] [data-visual-page="login"] [data-page-panel] > form[data-page-form] {
+    border: 0 !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+    background: transparent !important;
+  }
 }
