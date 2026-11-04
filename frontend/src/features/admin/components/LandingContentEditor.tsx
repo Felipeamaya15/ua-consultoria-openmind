@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { Link } from 'react-router-dom';
 import type { Product } from '../../storefront/data/mockData';
 import type { ContenidoLanding, ContactoLanding } from '../../landing/types/landing.types';
 import { ChileAddressEditor } from './ChileAddressEditor';
@@ -52,8 +53,9 @@ export function LandingContentEditor({ value, flags, products, onChange, onToggl
     </>)}
     {card('Información de contacto', <>
       <div className="lp-contact-grid">
-      {([['telefono', 'Teléfono (con código de país)', 'tel'], ['whatsapp', 'WhatsApp (número con código de país)', 'tel'], ['correo', 'Correo público de contacto', 'email'], ['instagram', 'Instagram (URL completa)', 'url'], ['facebook', 'Facebook (URL completa)', 'url'], ['sitio_web', 'Sitio web', 'url']] as const).map(([key, label, type]) => <Input key={key} label={label} type={type} maxLength={type === 'tel' ? 40 : undefined} pattern={type === 'tel' ? '\+?[0-9 ()-]{5,40}' : undefined} hint={type === 'tel' ? 'Ejemplo: +56 9 1234 5678' : undefined} value={value.contacto[key]} onChange={e => onChange({ ...value, contacto: { ...value.contacto, [key as keyof ContactoLanding]: e.target.value } })} />)}
+      {([['telefono', 'Teléfono (con código de país)', 'tel'], ['correo', 'Correo público de contacto', 'email'], ['sitio_web', 'Sitio web', 'url']] as const).map(([key, label, type]) => <Input key={key} label={label} type={type} maxLength={type === 'tel' ? 40 : undefined} pattern={type === 'tel' ? '\+?[0-9 ()-]{5,40}' : undefined} hint={type === 'tel' ? 'Ejemplo: +56 9 1234 5678' : undefined} value={value.contacto[key]} onChange={e => onChange({ ...value, contacto: { ...value.contacto, [key as keyof ContactoLanding]: e.target.value } })} />)}
       </div>
+      <p className="text-sm">Instagram, Facebook, YouTube y WhatsApp se administran en <Link className="underline" to="/emprendedor/marketing#redes-sociales">Marketing → Redes sociales</Link>. Se conservan los perfiles ya guardados.</p>
     </>)}
     {card('Horarios de atención', <WeeklyHoursEditor onPendingChange={onHoursPending} value={value.contacto.horario} onChange={horario => onChange({ ...value, contacto: { ...value.contacto, horario } })} />)}
     {card('Mapa / ubicación', <>

@@ -46,17 +46,19 @@ function MarketingWorkspace({ scope, isCurrent }: { scope: DraftScope; isCurrent
   const revision = useRef(serialized); revision.current = serialized;
   const [baseline, setBaseline] = useState(() => JSON.stringify({ publication: current, name: '' }));
   const dirty = !!productId && JSON.stringify({ publication: current, name: name.trim() }) !== baseline;
-  const blocker = useBlocker(({ currentLocation, nextLocation }) => dirty && (currentLocation.pathname !== nextLocation.pathname || currentLocation.search !== nextLocation.search));
+  const [socialDirty, setSocialDirty] = useState(false);
+  const hasUnsavedChanges = dirty || socialDirty;
+  const blocker = useBlocker(({ currentLocation, nextLocation }) => hasUnsavedChanges && (currentLocation.pathname !== nextLocation.pathname || currentLocation.search !== nextLocation.search));
   useEffect(() => {
     if (blocker.state === 'blocked') {
       if (window.confirm('Tienes cambios sin guardar en Marketing. ¿Salir y descartarlos?')) blocker.proceed(); else blocker.reset();
     }
   }, [blocker]);
   useEffect(() => {
-    if (!dirty) return;
+    if (!hasUnsavedChanges) return;
     const leave = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = ''; };
     window.addEventListener('beforeunload', leave); return () => window.removeEventListener('beforeunload', leave);
-  }, [dirty]);
+  }, [hasUnsavedChanges]);
   const loadList = () => { try { setDrafts(repository.list()); setError(''); } catch (error) { setError(message(error)); } };
   useEffect(() => {
     loadList();
@@ -122,7 +124,7 @@ function MarketingWorkspace({ scope, isCurrent }: { scope: DraftScope; isCurrent
     } catch (error) { if (mounted.current) setError(message(error)); }
     finally { savingRef.current = false; if (mounted.current) setBusy(false); }
   };
-  return <MarketingSections busy={busy}><section className="marketing-module" aria-label="Generador de publicaciones">
+  return <MarketingSections busy={busy} isCurrent={isCurrent} onSocialDirty={setSocialDirty}><section className="marketing-module" aria-label="Generador de publicaciones">
     {showDrafts && <DraftPanel drafts={drafts} onOpen={openDraft} onRename={(draft, nextName) => run(() => {
       const next = repository.rename(draft.id, nextName, draft.updatedAt);
       if (opened?.id === draft.id) {

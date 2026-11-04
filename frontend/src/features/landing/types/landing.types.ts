@@ -6,6 +6,8 @@ export interface BeneficioLanding {
 export interface ContactoLanding {
   telefono: string; whatsapp: string; correo: string; instagram: string;
   facebook: string; sitio_web: string; horario: string;
+  youtube?: string;
+  redes_sociales?: import('./socialProfiles').SocialMetadata;
 }
 export interface UbicacionLanding {
   direccion: string; comuna: string; ciudad: string; region: string; enlace_maps: string;

@@ -99,6 +99,14 @@ class ConfiguracionLandingSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError({'categorias': 'Selecciona categorías disponibles de esta tienda.'})
         if self.instance:
             # An older client may not know optional keys; preserve them on update.
+            if 'contacto' in data:
+                previous = self.instance.contenido.get('contacto', {})
+                contact = {**previous, **data['contacto']}
+                # Marketing is the writer for profiles once managed there. Stale
+                # landing forms cannot reactivate, restore or overwrite them.
+                for network in previous.get('redes_sociales', {}):
+                    contact[network] = previous.get(network, '')
+                data['contacto'] = contact
             data = {**self.instance.contenido, **data}
         return data
 

@@ -2,6 +2,7 @@ import { useId, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { AdminCard, Button, Tabs } from '../../admin/components/ui';
 import { AdminHelp } from '../../admin/components/AdminPageHeader';
+import { SocialProfiles } from './SocialProfiles';
 
 const sections = [
   { id: 'publications', label: 'Publicaciones' },
@@ -11,8 +12,8 @@ const sections = [
 ];
 
 /** Keep the workspace mounted: changing sections never discards its draft/history. */
-export function MarketingSections({ children, busy = false }: { children: ReactNode; busy?: boolean }) {
-  const [active, setActive] = useState('publications');
+export function MarketingSections({ children, busy = false, isCurrent, onSocialDirty }: { children: ReactNode; busy?: boolean; isCurrent: () => boolean; onSocialDirty: (dirty: boolean) => void }) {
+  const [active, setActive] = useState(() => window.location.hash === '#redes-sociales' ? 'social' : 'publications');
   const id = useId();
   const openPublications = () => {
     setActive('publications');
@@ -24,13 +25,8 @@ export function MarketingSections({ children, busy = false }: { children: ReactN
     </nav>
     <AdminHelp>Cambia de apartado sin perder la publicación que estás editando. Los borradores siguen guardándose en este navegador.</AdminHelp>
     {sections.map(section => <section key={section.id} role="tabpanel" id={`${id}-panel-${section.id}`} aria-labelledby={`${id}-tab-${section.id}`} hidden={active !== section.id} className="marketing-section-panel" tabIndex={0}>
-      {section.id === 'publications' ? children : <AdminCard className="marketing-section-information">
+      {section.id === 'publications' ? children : section.id === 'social' ? <SocialProfiles active={active === 'social'} isCurrent={isCurrent} onDirty={onSocialDirty} /> : <AdminCard className="marketing-section-information">
         <h3>{section.label}</h3>
-        {section.id === 'social' && <>
-          <p>La gestión de perfiles desde Marketing estará disponible próximamente.</p>
-          <p>Actualmente puedes editar los enlaces de contacto de tu tienda desde Página principal. Registrar un enlace no autoriza una cuenta para publicar.</p>
-          <Link to="/emprendedor/landing#contacto-horarios" className="marketing-text-link">Editar enlaces de contacto →</Link>
-        </>}
         {section.id === 'media' && <>
           <p>La biblioteca de contenido reutilizable estará disponible próximamente.</p>
           <p>Puedes seguir utilizando las imágenes de tus productos en Publicaciones y administrar las imágenes de tu tienda desde Secciones.</p>

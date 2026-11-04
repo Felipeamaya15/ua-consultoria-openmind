@@ -14,11 +14,12 @@ const children = node => Array.isArray(node) ? node.flatMap(children) : node && 
 function workspace() {
   let active, focused;
   const api = load('src/features/marketing/components/MarketingSections.tsx', {
-    react: { useId: () => 'marketing-test', useState: initial => [active ??= initial, next => { active = next; }] },
+    react: { useId: () => 'marketing-test', useState: initial => [active ??= typeof initial === 'function' ? initial() : initial, next => { active = next; }] },
     'react-router-dom': { Link: 'a' },
     '../../admin/components/ui': { Tabs: ui.Tabs, AdminCard: 'section', Button: 'button' },
     '../../admin/components/AdminPageHeader': { AdminHelp: 'p' },
-  }, { document: { getElementById: id => ({ focus: () => { focused = id; } }) } });
+    './SocialProfiles': { SocialProfiles: 'SocialProfiles' },
+  }, { window: { location: { hash: '' } }, document: { getElementById: id => ({ focus: () => { focused = id; } }) } });
   const editor = React.createElement('input', { defaultValue: 'Edición sin guardar', 'data-editor': true });
   const render = busy => {
     const tree = api.MarketingSections({ children: editor, busy });
