@@ -21,6 +21,8 @@ export interface BloqueLanding {
   componentes?: import('./sectionElements').SectionElement[];
 }
 export interface ContenidoLanding {
+  /** Stable references to existing sections and unique commerce slots; no copied content. */
+  orden_apartados?: string[];
   /** Absent keeps legacy template content; an explicit empty list hides it. */
   bloques?: BloqueLanding[];
   apariencia_bloques?: Partial<Record<'editorial' | 'minimal' | 'visual' | 'catalog', import('../../storefront/visual/blockAppearance').BlockStyles>>;

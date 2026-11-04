@@ -1,4 +1,5 @@
-import { LandingBlocks } from '../../landing/components/LandingBlocks';
+import { HomeSections } from '../../landing/components/HomeSections';
+import { HomeCategories } from '../../landing/components/HomeCategories';
 import { VISUAL_SECTION } from '../visual/sectionIds';
 import { useLandingContent } from '../../landing/hooks/useLandingContent';
 import { LandingDetails } from '../../landing/components/LandingDetails';
@@ -129,10 +130,8 @@ export default function CatalogHome() {
         </section>
       )}
 
-      <LandingBlocks />
-
-      {/* MANIFIESTO + SEGUNDO PRODUCTO */}
-      {isSectionVisible('Productos destacados') && mochila && (
+      <HomeSections commerce={{
+        "sistema:destacados": isSectionVisible('Productos destacados') && mochila && (
         <section
           data-visual-section={VISUAL_SECTION.sections}
           data-visual-kind="featured"
@@ -175,10 +174,8 @@ export default function CatalogHome() {
             </div>
           </Link>
         </section>
-      )}
-
-      {/* BLOQUE DE CONTENIDO CLARO */}
-      <section
+      ),
+        "sistema:contenido": (<section
         data-visual-section={VISUAL_SECTION.sections}
         data-visual-kind="content"
         className="bg-[var(--visual-alternate,var(--secondary))] text-[var(--on-alternate,var(--on-secondary))]"
@@ -220,10 +217,8 @@ export default function CatalogHome() {
             />
           </div>
         </div>
-      </section>
-
-      {/* DESCUBRIR */}
-      {isSectionVisible('Productos destacados') && discover.length > 0 && (
+      </section>),
+        "sistema:descubrir": discover.length > 0 && (
         <section
           data-visual-section={VISUAL_SECTION.sections}
           data-visual-kind="featured"
@@ -305,8 +300,9 @@ export default function CatalogHome() {
             Ver todos los productos →
           </Link>
         </section>
-      )}
-
+      ),
+        'sistema:categorias': <HomeCategories />
+      }} />
       <LandingDetails />
     </div>
   );

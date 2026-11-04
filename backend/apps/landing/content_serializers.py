@@ -88,6 +88,7 @@ class BloqueLandingSerializer(serializers.Serializer):
 
 class ContenidoLandingSerializer(serializers.Serializer):
     bloques = BloqueLandingSerializer(many=True, required=False)
+    orden_apartados = serializers.ListField(child=serializers.CharField(max_length=50), max_length=26, required=False)
 
     def validate_bloques(self, value):
         if len(value) > 20:
@@ -114,6 +115,9 @@ class ContenidoLandingSerializer(serializers.Serializer):
         return value
 
     def validate(self, value):
+        if 'orden_apartados' in value:
+            from apps.landing.home_sections import validate_home_order
+            validate_home_order(value['orden_apartados'], value.get('bloques', self.context.get('bloques_previos', [])))
         for key in ('productos_destacados', 'categorias'):
             if len(value.get(key, [])) != len(set(value.get(key, []))):
                 raise serializers.ValidationError({key: 'No se permiten selecciones duplicadas.'})

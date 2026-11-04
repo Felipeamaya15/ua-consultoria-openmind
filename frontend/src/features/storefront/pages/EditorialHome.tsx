@@ -1,4 +1,4 @@
-import { LandingBlocks } from '../../landing/components/LandingBlocks';
+import { HomeSections } from '../../landing/components/HomeSections';
 import { VISUAL_SECTION } from '../visual/sectionIds';
 import { useLandingContent } from '../../landing/hooks/useLandingContent';
 import { LandingDetails } from '../../landing/components/LandingDetails';
@@ -13,7 +13,7 @@ import { Badge, Icon } from '../components/ui';
 export default function EditorialHome() {
   const { featured, categories, content } = useLandingContent();
   const isSectionVisible = useLandingSectionVisibility();
-  const { landing } = useStore();
+  const { landing, landingProducts } = useStore();
   const { route } = useStorefrontTemplate();
   return (
     <div data-landing-page="editorial" className="min-w-0 overflow-x-hidden">
@@ -48,10 +48,8 @@ export default function EditorialHome() {
         </div>
       </section>)}
 
-      <LandingBlocks />
-
-      {/* Featured products */}
-      {isSectionVisible('Productos destacados') && featured.length > 0 && (<section data-visual-section={VISUAL_SECTION.sections} data-visual-kind="featured" data-landing-content className="max-w-7xl mx-auto px-4 py-12 sm:py-16">
+      <HomeSections commerce={{
+        "sistema:destacados": isSectionVisible('Productos destacados') && featured.length > 0 && (<section data-visual-section={VISUAL_SECTION.sections} data-visual-kind="featured" data-landing-content className="max-w-7xl mx-auto px-4 py-12 sm:py-16">
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 mb-8">
           <div>
             <p className="text-xs font-semibold uppercase tracking-widest text-[var(--accent)] mb-1">Selección</p>
@@ -62,15 +60,13 @@ export default function EditorialHome() {
         <div data-visual-section={VISUAL_SECTION.productGrid} data-visual-grid="products" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
           {featured.map(p => <ProductCard key={p.id} product={p} />)}
         </div>
-      </section>)}
-
-      {/* Category grid */}
-      {isSectionVisible('Categorías') && categories.length > 0 && (<section data-visual-section={VISUAL_SECTION.categories} data-landing-content className="bg-[var(--muted)] py-12 sm:py-16">
+      </section>),
+        "sistema:categorias": isSectionVisible('Categorías') && categories.length > 0 && (<section data-visual-section={VISUAL_SECTION.categories} data-landing-content className="bg-[var(--muted)] py-12 sm:py-16">
         <div className="max-w-7xl mx-auto px-4">
           <h2 className="font-display text-2xl sm:text-3xl mb-6 sm:mb-8 text-center">Explorar por categoría</h2>
           <div data-visual-part="categoryList" className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
             {categories.map(cat => {
-              const image = featured.find(p => p.category === cat)?.images[0];
+              const image = landingProducts.find(p => p.category === cat)?.images[0];
               return (
                 <Link data-visual-part="categoryItem" key={cat} to={route(`catalogo?cat=${encodeURIComponent(cat)}`)} className="group relative rounded-xl overflow-hidden aspect-square">
                   {image && <img src={image} alt={cat} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />}
@@ -82,7 +78,8 @@ export default function EditorialHome() {
             })}
           </div>
         </div>
-      </section>)}
+      </section>)
+      }} />
       <LandingDetails />
     </div>
   );

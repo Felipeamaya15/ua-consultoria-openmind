@@ -109,7 +109,8 @@ class ConfiguracionLandingSerializer(serializers.ModelSerializer):
                     contact[network] = previous.get(network, '')
                 data['contacto'] = contact
             data = {**self.instance.contenido, **data}
-        return data
+        from apps.landing.home_sections import reconcile_home_order
+        return reconcile_home_order(data)
 
     def save(self, **kwargs):
         from apps.landing.block_images import store_block_images

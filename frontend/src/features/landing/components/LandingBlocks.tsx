@@ -5,11 +5,11 @@ import { PublishedSectionMedia, SectionElements } from './SectionElements';
 import './landing-blocks.css';
 
 /** The same store content is rendered in every template; design stays template scoped. */
-export function LandingBlocks({ onlyHistory = false }: { onlyHistory?: boolean }) {
+export function LandingBlocks({ onlyHistory = false, blockId, mediaProvided = false }: { onlyHistory?: boolean; blockId?: string; mediaProvided?: boolean }) {
   const { landing, blockStyles } = useStore();
   const { template } = useStorefrontTemplate();
-  const blocks = landing?.contenido?.bloques?.filter(block => block.visible && (!onlyHistory || block.tipo === 'historia')) ?? [];
-  const content = <><style data-block-appearance>{blockStyleSheet(blockStyles)}</style><div className="store-content-blocks" data-block-template={template}>
+  const blocks = landing?.contenido?.bloques?.filter(block => block.visible && (!blockId || block.id === blockId) && (!onlyHistory || block.tipo === 'historia')) ?? [];
+  const content = <>{!mediaProvided&&<style data-block-appearance>{blockStyleSheet(blockStyles)}</style>}<div className="store-content-blocks" data-block-template={template}>
     {blocks.map(block => <section key={block.id} data-content-block-id={block.id} data-block-type={block.tipo} data-landing-content data-visual-section="sections" className={`store-content-block ${block.imagenes.length ? 'has-images' : ''}`} aria-label={block.titulo || 'Sección de la tienda'}>
       {block.tipo === 'personalizada' ? <SectionElements elements={block.componentes || []} /> : <>
         {!!block.imagenes.length && <div className={block.tipo === 'galeria' ? 'store-block-gallery' : 'store-block-media'}>{block.imagenes.map(image => <figure key={image.id}><div className="store-block-image-frame"><img src={image.src} alt={image.alt || block.titulo || 'Imagen de la sección'} loading="lazy" /></div>{block.tipo === 'galeria' && image.alt && <figcaption>{image.alt}</figcaption>}</figure>)}</div>}
@@ -17,5 +17,5 @@ export function LandingBlocks({ onlyHistory = false }: { onlyHistory?: boolean }
       </>}
     </section>)}
   </div></>;
-  return blocks.some(block => block.tipo === 'personalizada') ? <PublishedSectionMedia>{content}</PublishedSectionMedia> : content;
+  return !mediaProvided && blocks.some(block => block.tipo === 'personalizada') ? <PublishedSectionMedia>{content}</PublishedSectionMedia> : content;
 }

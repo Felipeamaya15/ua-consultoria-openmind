@@ -7,6 +7,7 @@ import { WeeklyHoursEditor } from './WeeklyHoursEditor';
 import { AdminCard, Input, Toggle, Button } from './ui';
 
 type Props = {
+  showVisibilityToggle?: boolean;
   catalogReady?: boolean;
   onHoursPending?: (pending:boolean)=>void;
   sections?: string[];
@@ -16,7 +17,7 @@ type Props = {
 };
 const icons = { truck: 'Envío', lock: 'Seguridad', return: 'Devolución', chat: 'Soporte' };
 
-export function LandingContentEditor({ value, flags, products, onChange, onToggle, catalogReady = true, sections, onHoursPending }: Props) {
+export function LandingContentEditor({ value, flags, products, onChange, onToggle, catalogReady = true, sections, onHoursPending, showVisibilityToggle = true }: Props) {
   const categories = [...new Set(products.map(p => p.category).filter(Boolean))].sort();
   const ids = new Set(products.map(p => p.catalogId));
   function select(key: 'productos_destacados' | 'categorias', id: string, checked: boolean) {
@@ -25,8 +26,9 @@ export function LandingContentEditor({ value, flags, products, onChange, onToggl
   function card(name: string, controls: ReactNode) {
     if (sections && !sections.includes(name)) return null;
     const needsCatalog = name === 'Productos destacados' || name === 'Categorías';
-    return <AdminCard className="lp-content-card"><div className="flex items-center justify-between gap-4 mb-4"><h2 className="font-semibold">{name}</h2><Toggle ariaLabel={name} checked={(name==='Horarios de atención'?flags[name]!==false:flags[name]===true)} onChange={enabled => onToggle(name, enabled)} /></div>
-      <fieldset disabled={(name==='Horarios de atención'?flags[name]===false:flags[name]!==true) || (needsCatalog && !catalogReady)} className={(name==='Horarios de atención'?flags[name]!==false:flags[name]===true) ? 'space-y-3' : 'space-y-3 opacity-50'}>{needsCatalog && !catalogReady ? <p className="text-sm">Esperando la carga del catálogo. Tu selección se conserva.</p> : controls}</fieldset></AdminCard>;
+    const enabled = (needsCatalog && !showVisibilityToggle) || (name==='Horarios de atención'?flags[name]!==false:flags[name]===true);
+    return <AdminCard className="lp-content-card"><div className="flex items-center justify-between gap-4 mb-4"><h2 className="font-semibold">{name}</h2>{showVisibilityToggle&&<Toggle ariaLabel={name} checked={enabled} onChange={enabled => onToggle(name, enabled)} />}</div>
+      <fieldset disabled={!enabled || (needsCatalog && !catalogReady)} className={enabled ? 'space-y-3' : 'space-y-3 opacity-50'}>{needsCatalog && !catalogReady ? <p className="text-sm">Esperando la carga del catálogo. Tu selección se conserva.</p> : controls}</fieldset></AdminCard>;
   }
   return <>
     {card('Productos destacados', <>
