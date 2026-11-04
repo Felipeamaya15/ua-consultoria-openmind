@@ -255,7 +255,31 @@ button:not(:disabled), a { cursor: pointer; }
 button:disabled { cursor: not-allowed; opacity: .65; }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; } }
 
-/* Navegación móvil compacta compartida en cabeceras de la tienda */
+/* Navegación móvil desplegable en Editorial (#mobile-navigation) y compacta (.store-mobile-navigation) */
+[data-storefront-visual] [data-visual-section="header"] #mobile-navigation {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  width: 100%;
+  padding: 0.75rem 1rem;
+  background-color: var(--visual-global-surface, #ffffff) !important;
+  color: var(--visual-text, #0f1623) !important;
+  --foreground: var(--visual-text, #0f1623) !important;
+  --muted-foreground: var(--visual-muted, #5a6786) !important;
+  border-top: 1px solid var(--visual-global-border, #dde3f0);
+  box-shadow: var(--shadow-lg);
+  position: relative;
+  z-index: 50;
+}
+
+[data-storefront-visual] [data-visual-section="header"] #mobile-navigation :is(a, button, div, span) {
+  color: var(--visual-text, #0f1623) !important;
+}
+
+[data-storefront-visual] [data-visual-section="header"] #mobile-navigation :is(a, button):hover {
+  background-color: var(--visual-alternate, #eef1f8);
+}
+
 .store-mobile-navigation {
   position: relative;
 }
@@ -286,8 +310,8 @@ button:disabled { cursor: not-allowed; opacity: .65; }
   margin-top: 0.5rem;
   padding: 0.75rem;
   border-radius: 0.875rem;
-  background: var(--visual-global-surface, #ffffff);
-  color: var(--visual-text, #0f1623);
+  background: var(--visual-global-surface, #ffffff) !important;
+  color: var(--visual-text, #0f1623) !important;
   border: 1px solid var(--visual-global-border, #dde3f0);
   box-shadow: var(--shadow-lg);
 }
@@ -300,11 +324,19 @@ button:disabled { cursor: not-allowed; opacity: .65; }
   border-radius: 0.5rem;
   font-size: 0.875rem;
   font-weight: 500;
+  color: var(--visual-text, #0f1623) !important;
+}
+
+@media (max-width: 767px) {
+  [data-storefront-visual].template-editorial [data-visual-part="navigation"] {
+    display: none !important;
+  }
 }
 
 @media (min-width: 768px) {
-  .store-mobile-navigation {
-    display: none;
+  .store-mobile-navigation,
+  [data-storefront-visual] [data-visual-section="header"] #mobile-navigation {
+    display: none !important;
   }
 }
 
@@ -336,6 +368,44 @@ button:disabled { cursor: not-allowed; opacity: .65; }
 
   [data-landing-page] [data-landing-search] {
     border-radius: 1.25rem;
+  }
+
+  /* SCRUM-463: Tarjetas de "Explorar por categoría" amplias y legibles en móvil */
+  [data-landing-page="editorial"] [data-visual-section="categories"] [data-visual-part="categoryList"] {
+    display: grid !important;
+    grid-template-columns: repeat(auto-fit, minmax(155px, 1fr)) !important;
+    gap: 0.875rem !important;
+  }
+
+  [data-landing-page="editorial"] [data-visual-section="categories"] [data-visual-part="categoryItem"] {
+    min-height: 8.5rem !important;
+    aspect-ratio: 16 / 10 !important;
+    padding: 0 !important;
+    display: flex !important;
+    align-items: stretch !important;
+  }
+
+  [data-landing-page="editorial"] [data-visual-section="categories"] [data-visual-part="categoryLabel"] {
+    position: relative !important;
+    width: 100% !important;
+    min-height: 100% !important;
+    padding: 1rem !important;
+    display: flex !important;
+    align-items: flex-end !important;
+    justify-content: flex-start !important;
+    background: linear-gradient(to top, rgba(15, 22, 35, 0.72), rgba(15, 22, 35, 0.2)) !important;
+  }
+
+  [data-landing-page="editorial"] [data-visual-section="categories"] [data-visual-part="categoryLabel"] span {
+    color: #ffffff !important;
+    font-size: 1rem !important;
+    font-weight: 600 !important;
+  }
+
+  /* SCRUM-464: Evitar tarjetas de producto estrechas en dos columnas en móvil */
+  [data-storefront-visual] [data-visual-grid="catalog"],
+  [data-storefront-visual] [data-visual-grid="products"] {
+    grid-template-columns: minmax(0, 1fr) !important;
   }
 
   [data-catalog-page] [data-catalog-toolbar] {
