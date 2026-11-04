@@ -8,6 +8,7 @@ import { ContentPicker } from '../components/ContentPicker';
 import { FormatPicker } from '../components/FormatPicker';
 import { DesignStudio } from '../components/DesignStudio';
 import { DraftPanel } from '../components/DraftPanel';
+import { MarketingSections } from '../components/MarketingSections';
 import { useMarketingOwner } from '../hooks/useMarketingOwner';
 import { initialTemplateHistory, templateHistory } from '../domain/editor';
 import { restoreSession, snapshot, type DraftScope, type MarketingDraft } from '../domain/drafts';
@@ -121,7 +122,7 @@ function MarketingWorkspace({ scope, isCurrent }: { scope: DraftScope; isCurrent
     } catch (error) { if (mounted.current) setError(message(error)); }
     finally { savingRef.current = false; if (mounted.current) setBusy(false); }
   };
-  return <section className="marketing-module" aria-label="Generador de publicaciones">
+  return <MarketingSections busy={busy}><section className="marketing-module" aria-label="Generador de publicaciones">
     {showDrafts && <DraftPanel drafts={drafts} onOpen={openDraft} onRename={(draft, nextName) => run(() => {
       const next = repository.rename(draft.id, nextName, draft.updatedAt);
       if (opened?.id === draft.id) {
@@ -163,5 +164,5 @@ function MarketingWorkspace({ scope, isCurrent }: { scope: DraftScope; isCurrent
       {notice && !error && <div role="status"><Alert variant="success">{notice}</Alert></div>}
       {error && <div role="alert"><Alert variant="error">{error}</Alert></div>}
     </div>
-  </section>;
+  </section></MarketingSections>;
 }
