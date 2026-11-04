@@ -74,7 +74,8 @@ class ConfiguracionLandingSerializer(serializers.ModelSerializer):
     def validate_contenido(self, value):
         if not isinstance(value, dict):
             raise serializers.ValidationError('El contenido debe ser un objeto.')
-        serializer = ContenidoLandingSerializer(data=value)
+        serializer = ContenidoLandingSerializer(data=value, context={**self.context,
+            'bloques_previos': self.instance.contenido.get('bloques', []) if self.instance else []})
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
         ids, categorias = data.get('productos_destacados', []), data.get('categorias', [])

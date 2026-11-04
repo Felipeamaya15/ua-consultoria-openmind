@@ -39,13 +39,14 @@ def store_block_images(content, store_id):
     storage = block_storage()
     content = copy.deepcopy(content)
     for block in content['bloques']:
-        for image in block['imagenes']:
-            if image['src'].startswith('data:'):
-                data, extension = decode_image(image['src'])
-                name = f"{store_id}/{block['id']}/{hashlib.sha256(data).hexdigest()}.{extension}"
-                if not storage.exists(name):
-                    name = storage.save(name, ContentFile(data))
-                image['src'] = storage.url(name)
+        for container in [block, *block.get('componentes', [])]:
+            for image in container.get('imagenes', []):
+                if image['src'].startswith('data:'):
+                    data, extension = decode_image(image['src'])
+                    name = f"{store_id}/{block['id']}/{hashlib.sha256(data).hexdigest()}.{extension}"
+                    if not storage.exists(name):
+                        name = storage.save(name, ContentFile(data))
+                    image['src'] = storage.url(name)
     return content
 
 

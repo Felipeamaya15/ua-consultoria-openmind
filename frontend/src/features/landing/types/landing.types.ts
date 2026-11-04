@@ -12,11 +12,13 @@ export interface ContactoLanding {
 export interface UbicacionLanding {
   direccion: string; comuna: string; ciudad: string; region: string; enlace_maps: string;
 }
-export type TipoBloqueLanding = 'historia' | 'imagen_texto' | 'texto' | 'galeria' | 'cita';
+export type TipoBloqueLanding = 'historia' | 'imagen_texto' | 'texto' | 'galeria' | 'cita' | 'personalizada';
 export interface ImagenBloqueLanding { id: string; src: string; alt: string }
 export interface BloqueLanding {
   id: string; tipo: TipoBloqueLanding; visible: boolean;
   titulo: string; subtitulo: string; texto: string; imagenes: ImagenBloqueLanding[];
+  nombre_interno?: string;
+  componentes?: import('./sectionElements').SectionElement[];
 }
 export interface ContenidoLanding {
   /** Absent keeps legacy template content; an explicit empty list hides it. */

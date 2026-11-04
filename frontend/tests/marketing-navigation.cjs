@@ -19,6 +19,7 @@ function workspace() {
     '../../admin/components/ui': { Tabs: ui.Tabs, AdminCard: 'section', Button: 'button' },
     '../../admin/components/AdminPageHeader': { AdminHelp: 'p' },
     './SocialProfiles': { SocialProfiles: 'SocialProfiles' },
+    './MediaLibrary': { MediaLibrary: 'MediaLibrary' },
   }, { window: { location: { hash: '' } }, document: { getElementById: id => ({ focus: () => { focused = id; } }) } });
   const editor = React.createElement('input', { defaultValue: 'Edición sin guardar', 'data-editor': true });
   const render = busy => {

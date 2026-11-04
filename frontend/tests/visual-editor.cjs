@@ -15,7 +15,7 @@ function load(relative, mocks = {}) {
     if(id.endsWith('/palettes')&&!id.includes('visualEditor'))return {fetchPalettes:async()=>({propias:[]}),fetchAppearance:async()=>({}),saveAppearance:async()=>{},usePaletteLibrary:()=>({}),paletteOverrides:()=>undefined};
     if (Object.prototype.hasOwnProperty.call(mocks, id)) return mocks[id];
     if(id==='../visualEditor/content')return {ContentInspector:()=>null};
-    if(id==='../../landing/services/landingService')return {fetchLandingConfig:async()=>null,saveLandingConfig:async value=>value};
+    if(id==='../../landing/services/landingService')return {fetchPrivateLandingConfig:async()=>null,saveLandingConfig:async value=>value};
     if(id==='../../storefront/services/catalogService')return {fetchPublicProducts:async()=>[]};
     if (id.endsWith('.css')) return {};
     if (!id.startsWith('.')) return require(id);

@@ -1,0 +1,60 @@
+import { useEffect, useState } from 'react';
+import { AdminCard, Button, Input, Modal, Select, Textarea, Toggle } from './ui';
+import { ImageUpload } from './ui/ImageUpload';
+import { ErrorState, LoadingState } from '../../../shared/components/states';
+import { humanizeAdminError } from '../utils/humanizeError';
+import { MediaPreview } from '../../marketing/components/MediaPreview';
+import { MEDIA_TYPES, type MediaResource } from '../../marketing/domain/mediaLibrary';
+import { fetchSectionLibrary } from '../../landing/services/sectionResources';
+import { SectionElements } from '../../landing/components/SectionElements';
+import { SECTION_ELEMENTS, TEXT_ELEMENTS, newSectionElement, moveElement, type ElementKind, type SectionElement } from '../../landing/types/sectionElements';
+import type { BloqueLanding } from '../../landing/types/landing.types';
+import './flexible-sections.css';
+
+export function FlexibleSectionEditor({ section, onChange }: { section: BloqueLanding; onChange: (section: BloqueLanding) => void }) {
+  const elements = section.componentes || [];
+  const [kind, setKind] = useState<ElementKind>('titulo'), [picker, setPicker] = useState<string | null>(null), [preview, setPreview] = useState(false);
+  const [resources, setResources] = useState<MediaResource[] | null>(null), [loading, setLoading] = useState(false), [error, setError] = useState(''), [attempt, setAttempt] = useState(0);
+  const [search, setSearch] = useState(''), [filter, setFilter] = useState('');
+  const needLibrary = elements.some(element => element.tipo === 'biblioteca');
+  useEffect(() => {
+    if (!needLibrary) return;
+    const controller = new AbortController(); setLoading(true); setError('');
+    fetchSectionLibrary(controller.signal).then(next => { if (!controller.signal.aborted) setResources(next); }).catch(cause => { if (!controller.signal.aborted) setError(humanizeAdminError(cause instanceof Error ? cause.message : 'No pudimos cargar la biblioteca.')); }).finally(() => { if (!controller.signal.aborted) setLoading(false); });
+    return () => controller.abort();
+  }, [needLibrary, attempt]);
+  const set = (next: SectionElement[]) => onChange({ ...section, componentes: next });
+  const edit = (id: string, patch: Partial<SectionElement>) => set(elements.map(element => element.id === id ? { ...element, ...patch } : element));
+  const active = (resources || []).filter(resource => resource.activo && (!filter || resource.tipo === filter) && resource.titulo.toLocaleLowerCase('es').includes(search.toLocaleLowerCase('es')));
+  const resourceMap = Object.fromEntries((resources || []).map(resource => [resource.id, resource]));
+  function fields(element: SectionElement) {
+    const change = (patch: Partial<SectionElement>) => edit(element.id, patch);
+    if (TEXT_ELEMENTS.includes(element.tipo)) return <Textarea label={`Contenido de ${SECTION_ELEMENTS[element.tipo]}`} value={element.texto || ''} rows={element.tipo === 'titulo' || element.tipo === 'subtitulo' ? 2 : 4} maxLength={5000} hint={element.tipo === 'caracteristicas' ? 'Escribe una característica o beneficio por línea.' : undefined} onChange={event => change({ texto: event.target.value })} />;
+    if (element.tipo === 'imagen' || element.tipo === 'galeria') return <div className="flexible-image-list">{element.imagenes?.map((image, index) => <div key={image.id}><ImageUpload label={`Imagen ${index + 1}`} value={image.src} maxMB={2} allowSVG={false} onChange={src => change({ imagenes: src ? element.imagenes?.map(old => old.id === image.id ? { ...old, src } : old) : element.imagenes?.filter(old => old.id !== image.id) })} /><Input label={`Descripción de imagen ${index + 1}`} value={image.alt} maxLength={250} onChange={event => change({ imagenes: element.imagenes?.map(old => old.id === image.id ? { ...old, alt: event.target.value } : old) })} /></div>)}{(element.imagenes?.length || 0) < (element.tipo === 'imagen' ? 1 : 8) && <ImageUpload label="Agregar imagen al bloque" value="" maxMB={2} allowSVG={false} onChange={src => { if (src) change({ imagenes: [...(element.imagenes || []), { id: crypto.randomUUID(), src, alt: '' }] }); }} />}</div>;
+    if (element.tipo === 'biblioteca') return <><p>{resourceMap[element.recurso_id || '']?.titulo || (element.recurso_id ? 'Recurso guardado: ' + element.recurso_id : 'Aún no seleccionaste un recurso.')}</p>{element.recurso_id && !resourceMap[element.recurso_id]?.activo && !loading && <p>El recurso no está disponible. Elige otro u oculta este bloque.</p>}<Button type="button" variant="outline" onClick={() => { setAttempt(old => old + 1); setPicker(element.id); }}>Seleccionar desde biblioteca</Button></>;
+    if (element.tipo === 'youtube' || element.tipo === 'social') return <>{element.tipo === 'social' && <Select label="Red de la publicación" value={element.proveedor || 'instagram'} options={[{ value: 'instagram', label: 'Instagram' }, { value: 'facebook', label: 'Facebook' }]} onChange={event => change({ proveedor: event.target.value as 'instagram' | 'facebook', url: '' })} />}<Input label="URL pública del contenido" type="url" value={element.url || ''} maxLength={2000} onChange={event => change({ url: event.target.value })} /></>;
+    if (element.tipo === 'boton') return <><Input label="Texto del botón" value={element.etiqueta || ''} maxLength={100} onChange={event => change({ etiqueta: event.target.value })} /><Input label="Enlace HTTPS del botón" type="url" value={element.url || ''} maxLength={2000} onChange={event => change({ url: event.target.value })} /><p className="flexible-help">Abre información o un canal de contacto. No confirma compras ni inscripciones.</p></>;
+    if (element.tipo === 'whatsapp') return <><Input label="Texto del botón" value={element.etiqueta || ''} maxLength={100} onChange={event => change({ etiqueta: event.target.value })} /><Input label="WhatsApp con código de país" type="tel" value={element.numero || ''} maxLength={40} onChange={event => change({ numero: event.target.value })} /><Textarea label="Mensaje para solicitar información" value={element.mensaje || ''} maxLength={500} onChange={event => change({ mensaje: event.target.value })} /></>;
+    if (element.tipo === 'precio') return <><Input label="Precio informativo en CLP" type="number" min={0} max={999999999999} step={1} value={element.importe || ''} onChange={event => change({ importe: event.target.value })} /><p className="flexible-help">Es informativo. No crea un servicio comprable ni modifica precios del catálogo.</p></>;
+    if (element.tipo === 'fecha') return <Input label="Fecha de la actividad" type="date" value={element.fecha || ''} onChange={event => change({ fecha: event.target.value })} />;
+    if (element.tipo === 'horario') return <><Input label="Hora de inicio" type="time" value={element.inicio || ''} onChange={event => change({ inicio: event.target.value })} /><Input label="Hora de término (opcional)" type="time" value={element.termino || ''} onChange={event => { const next = { ...element }; if (event.target.value) next.termino = event.target.value; else delete next.termino; set(elements.map(old => old.id === element.id ? next : old)); }} /></>;
+    if (element.tipo === 'modalidad') return <Select label="Modalidad de la actividad" value={element.modalidad || 'presencial'} options={[{ value: 'presencial', label: 'Presencial' }, { value: 'online', label: 'Online' }, { value: 'mixta', label: 'Mixta' }]} onChange={event => change({ modalidad: event.target.value as 'presencial' | 'online' | 'mixta' })} />;
+    if (element.tipo === 'ubicacion') return <><Input label="Lugar o plataforma" value={element.texto || ''} maxLength={5000} onChange={event => change({ texto: event.target.value })} /><Input label="Enlace público informativo (opcional)" type="url" value={element.url || ''} onChange={event => { const next = { ...element }; if (event.target.value) next.url = event.target.value; else delete next.url; set(elements.map(old => old.id === element.id ? next : old)); }} /><p className="flexible-help">No publiques claves o enlaces privados de una reunión.</p></>;
+    return <p>Separador visual entre contenidos.</p>;
+  }
+  return <div className="flexible-section-editor">
+    <Input label="Nombre interno de la sección" value={section.nombre_interno || ''} maxLength={100} onChange={event => onChange({ ...section, nombre_interno: event.target.value })} />
+    <p className="flexible-help">El nombre interno es para organizarte. Los títulos públicos se agregan como bloques. Guarda los cambios de Página principal para publicar; puedes mantener la sección oculta.</p>
+    <div className="flexible-add"><Select label="Bloque que quieres agregar" value={kind} options={Object.entries(SECTION_ELEMENTS).map(([value, label]) => ({ value, label }))} onChange={event => setKind(event.target.value as ElementKind)} /><Button type="button" disabled={elements.length >= 30} onClick={() => set([...elements, newSectionElement(kind)])}>Agregar bloque</Button></div>
+    <p>{elements.length} de 30 bloques</p>
+    {loading && <LoadingState>Cargando recursos de biblioteca…</LoadingState>}{error && <ErrorState onRetry={() => setAttempt(old => old + 1)}>{humanizeAdminError(error)}</ErrorState>}
+    <ol className="flexible-elements-list">{elements.map((element, index) => <li key={element.id}><AdminCard><div className="flexible-element-heading"><h3>{index + 1}. {SECTION_ELEMENTS[element.tipo]}</h3><Toggle checked={element.visible} ariaLabel={`Mostrar bloque ${index + 1}`} onChange={visible => edit(element.id, { visible })} /></div><div className="flexible-element-fields">{fields(element)}</div><div className="flexible-element-actions"><Button type="button" variant="ghost" disabled={index === 0} aria-label={`Subir bloque ${index + 1}`} onClick={() => set(moveElement(elements, index, -1))}>↑ Subir</Button><Button type="button" variant="ghost" disabled={index === elements.length - 1} aria-label={`Bajar bloque ${index + 1}`} onClick={() => set(moveElement(elements, index, 1))}>↓ Bajar</Button><Button type="button" variant="ghost" aria-label={`Eliminar bloque ${index + 1}`} onClick={() => set(elements.filter(old => old.id !== element.id))}>Eliminar bloque</Button></div></AdminCard></li>)}</ol>
+    <Button type="button" variant="outline" onClick={() => setPreview(old => !old)}>{preview ? 'Cerrar vista previa de sección' : 'Vista previa de sección'}</Button>
+    {preview && <div className="flexible-section-preview" aria-label="Vista previa de sección"><SectionElements elements={elements} ownerResources={resourceMap} /></div>}
+    <Modal open={!!picker} onClose={() => setPicker(null)} title="Seleccionar recurso de biblioteca" size="xl" portal><Input label="Buscar recurso por título" value={search} onChange={event => setSearch(event.target.value)} /><Select label="Filtrar recursos por tipo" value={filter} options={[{ value: '', label: 'Todos los tipos' }, ...Object.entries(MEDIA_TYPES).map(([value, label]) => ({ value, label }))]} onChange={event => setFilter(event.target.value)} />
+      {loading && <LoadingState>Cargando recursos disponibles…</LoadingState>}{error && <ErrorState onRetry={() => setAttempt(old => old + 1)}>{humanizeAdminError(error)}</ErrorState>}
+      {!loading && !error && !active.length && <p>No hay recursos activos con este filtro. Puedes agregarlos desde Marketing → Biblioteca multimedia.</p>}
+      <div className="flexible-library-results">{active.map(resource => <AdminCard key={resource.id}><h3>{resource.titulo}</h3><p>{MEDIA_TYPES[resource.tipo]}</p><MediaPreview resource={resource} /><Button type="button" onClick={() => { if (picker) edit(picker, { recurso_id: resource.id }); setPicker(null); }}>Usar {resource.titulo}</Button></AdminCard>)}</div>
+    </Modal>
+  </div>;
+}

@@ -11,6 +11,7 @@ from django.db import transaction
 from rest_framework.exceptions import ValidationError
 from apps.core.models import Tienda
 from apps.landing.social_profiles import SocialProfilesSerializer, read_profiles
+from apps.landing.section_elements import public_section_content
 
 
 class ConfiguracionLandingAPIView(APIView):
@@ -42,9 +43,13 @@ class ConfiguracionLandingAPIView(APIView):
             configuracion,
             context={'request': request, 'tienda': tienda},
         )
+        data = serializer.data
+        owner = request.user.is_authenticated and Tienda.objects.del_propietario(request.user).filter(pk=tienda.pk).exists()
+        if not owner:
+            data['contenido'] = public_section_content(data.get('contenido', {}), tienda)
 
         return success_response(
-            data=serializer.data,
+            data=data,
             mensaje="Configuración de landing obtenida correctamente",
             status=status.HTTP_200_OK,
         )

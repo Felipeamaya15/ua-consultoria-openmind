@@ -56,7 +56,7 @@ async function verifyPageLoading() {
     if (id === 'react') return { useState: initial => { const i = index++; if (!(i in slots)) slots[i] = typeof initial==='function'?initial():initial; return [slots[i], next => { slots[i] = typeof next==='function'?next(slots[i]):next; }]; }, useRef: value => ({current:value}), useEffect: fn => { effects.push(fn); } };
     if (id.includes('storeInformationService')) return {fetchStoreInformation:async()=>({nombre:'Tienda existente',descripcion:'Negocio existente'})};
     if (id.includes('landingContent')) return normalizedModule.exports;
-    if (id.includes('landingService')) return { fetchLandingConfig: options => { requested.push(options); return configLoad; } };
+    if (id.includes('landingService')) return { fetchPrivateLandingConfig: options => { requested.push(options); return configLoad; } };
     if (id.includes('catalogService')) return { fetchPublicProducts: options => { requested.push(options); return catalogLoad; } };
     if (id.includes('StoreIdentityContext')) return { useStoreIdentity: () => ({ identity: null }) };
     if (id.includes('visual/storage')) return { readStoredStoreConfig: () => ({}) };

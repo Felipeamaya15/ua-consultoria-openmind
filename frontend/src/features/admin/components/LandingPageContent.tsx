@@ -14,7 +14,7 @@ import { useAdmin } from '../context/AdminContext';
 import { templatePaths } from '../config/navigation';
 import { AdminCard, Alert, Input, Textarea, Modal } from './ui';
 import { ImageUpload } from './ui/ImageUpload';
-import { fetchLandingConfig, saveLandingConfig } from '../../landing/services/landingService';
+import { fetchPrivateLandingConfig as fetchLandingConfig, saveLandingConfig } from '../../landing/services/landingService';
 import type { LandingInput } from '../../landing/types/landing.types';
 import { AdminHelp } from './AdminPageHeader';
 import { humanizeAdminError } from '../utils/humanizeError';

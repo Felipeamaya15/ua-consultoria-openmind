@@ -47,7 +47,8 @@ function MarketingWorkspace({ scope, isCurrent }: { scope: DraftScope; isCurrent
   const [baseline, setBaseline] = useState(() => JSON.stringify({ publication: current, name: '' }));
   const dirty = !!productId && JSON.stringify({ publication: current, name: name.trim() }) !== baseline;
   const [socialDirty, setSocialDirty] = useState(false);
-  const hasUnsavedChanges = dirty || socialDirty;
+  const [mediaDirty, setMediaDirty] = useState(false);
+  const hasUnsavedChanges = dirty || socialDirty || mediaDirty;
   const blocker = useBlocker(({ currentLocation, nextLocation }) => hasUnsavedChanges && (currentLocation.pathname !== nextLocation.pathname || currentLocation.search !== nextLocation.search));
   useEffect(() => {
     if (blocker.state === 'blocked') {
@@ -124,7 +125,7 @@ function MarketingWorkspace({ scope, isCurrent }: { scope: DraftScope; isCurrent
     } catch (error) { if (mounted.current) setError(message(error)); }
     finally { savingRef.current = false; if (mounted.current) setBusy(false); }
   };
-  return <MarketingSections busy={busy} isCurrent={isCurrent} onSocialDirty={setSocialDirty}><section className="marketing-module" aria-label="Generador de publicaciones">
+  return <MarketingSections busy={busy} isCurrent={isCurrent} onSocialDirty={setSocialDirty} onMediaDirty={setMediaDirty}><section className="marketing-module" aria-label="Generador de publicaciones">
     {showDrafts && <DraftPanel drafts={drafts} onOpen={openDraft} onRename={(draft, nextName) => run(() => {
       const next = repository.rename(draft.id, nextName, draft.updatedAt);
       if (opened?.id === draft.id) {

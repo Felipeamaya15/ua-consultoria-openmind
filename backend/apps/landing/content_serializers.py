@@ -58,17 +58,25 @@ class ImagenBloqueSerializer(serializers.Serializer):
 
 class BloqueLandingSerializer(serializers.Serializer):
     id = serializers.UUIDField(format='hex_verbose')
-    tipo = serializers.ChoiceField(choices=['historia', 'imagen_texto', 'texto', 'galeria', 'cita'])
+    tipo = serializers.ChoiceField(choices=['historia', 'imagen_texto', 'texto', 'galeria', 'cita', 'personalizada'])
     visible = serializers.BooleanField(default=True)
     titulo = serializers.CharField(max_length=255, allow_blank=True, default='')
     subtitulo = serializers.CharField(max_length=500, allow_blank=True, default='')
     texto = serializers.CharField(max_length=10000, allow_blank=True, default='')
     imagenes = ImagenBloqueSerializer(many=True, required=False, default=list)
+    nombre_interno = serializers.CharField(max_length=100, allow_blank=True, required=False)
+    from apps.landing.section_elements import SectionElementSerializer
+    componentes = SectionElementSerializer(many=True, required=False)
 
     def validate_id(self, value):
         return str(value)
 
     def validate(self, value):
+        elements = value.get('componentes', [])
+        if value['tipo'] != 'personalizada' and elements:
+            raise serializers.ValidationError('Los bloques configurables requieren una sección personalizada.')
+        if len(elements) > 30 or len({element['id'] for element in elements}) != len(elements):
+            raise serializers.ValidationError('Usa hasta 30 bloques con identificadores únicos por sección.')
         images = value['imagenes']
         limit = 8 if value['tipo'] == 'galeria' else 1 if value['tipo'] in ['historia', 'imagen_texto'] else 0
         if len(images) > limit:
@@ -86,9 +94,12 @@ class ContenidoLandingSerializer(serializers.Serializer):
             raise serializers.ValidationError('Se permiten hasta 20 secciones.')
         if len({b['id'] for b in value}) != len(value):
             raise serializers.ValidationError('Los identificadores de las secciones deben ser únicos.')
-        uploads = [i['src'] for b in value for i in b['imagenes'] if i['src'].startswith('data:')]
+        uploads = [image['src'] for block in value for container in [block, *block.get('componentes', [])]
+                   for image in container.get('imagenes', []) if image['src'].startswith('data:')]
         if sum(len(src) for src in uploads) > 14000000:
             raise serializers.ValidationError('Guarda las imágenes en grupos de hasta 10 MB.')
+        from apps.landing.section_elements import validate_media_references
+        validate_media_references(value, self.context.get('tienda'), self.context.get('bloques_previos', []))
         return value
 
     productos_destacados = serializers.ListField(child=serializers.RegexField(r'^[0-9a-f]{24}$'), max_length=6, required=False)
