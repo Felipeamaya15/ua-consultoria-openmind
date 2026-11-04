@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
 import { AdminCard, Alert, Button, Icon, Input, Textarea, Toggle } from '../../admin/components/ui';
+import { ErrorState, LoadingState } from '../../../shared/components/states';
 import { SOCIAL_LABELS, SOCIAL_NETWORKS, profileLink, type SocialNetwork, type SocialProfile, type SocialProfiles as Profiles } from '../../landing/types/socialProfiles';
 import { fetchSocialProfiles, saveSocialProfile } from '../services/socialProfilesService';
 
@@ -79,8 +80,8 @@ export function SocialProfiles({ active, isCurrent, onDirty }: { active: boolean
   }, [active, profiles, retry, isCurrent]);
   return <div className="social-profiles">
     <header><h2>Redes sociales de tu tienda</h2><p>Registra tus perfiles para que tus clientes puedan encontrarte.</p><p>Estos enlaces se muestran cuando Información de contacto está visible en la tienda. Registrar un enlace no conecta una cuenta ni autoriza publicaciones automáticas.</p></header>
-    {!profiles && !error && <p role="status">Cargando perfiles sociales…</p>}
-    {error && <Alert variant="error">{error}<Button type="button" variant="outline" onClick={() => setRetry(old => old + 1)}>Reintentar carga</Button></Alert>}
+    {!profiles && !error && <LoadingState>Cargando perfiles sociales…</LoadingState>}
+    {error && <ErrorState onRetry={() => setRetry(old => old + 1)}>{error}</ErrorState>}
     {profiles && <div className="social-profiles-grid">{SOCIAL_NETWORKS.map(network => <SocialProfileCard key={network} network={network} initial={profiles[network]} isCurrent={isCurrent} onDirty={cardDirty} />)}</div>}
   </div>;
 }

@@ -77,6 +77,8 @@ class SocialProfilesTests(TestCase):
     def test_valid_profile_variants(self):
         for network, profile in [
             ('instagram', 'instagram.com/mi.tienda?igsh=123'),
+            ('instagram', 'instagram.comercio'),
+            ('facebook', 'facebook.company'),
             ('facebook', 'https://m.facebook.com/profile.php?id=123456'),
             ('facebook', 'https://www.facebook.com/people/Mi-Tienda/123456/'),
             ('youtube', 'https://youtube.com/channel/UC' + 'a' * 22),
@@ -99,6 +101,8 @@ class SocialProfilesTests(TestCase):
             ('instagram', 'https://instagram.com/p/123'), ('instagram', 'bad..name'),
             ('facebook', 'https://facebook.com/profile.php?id=123&id=456'),
             ('facebook', 'https://facebook.com/profile.php?other=123'),
+            ('facebook', 'https://facebook.com/profile.php?id=123&other='),
+            ('facebook', '.'), ('facebook', '..'),
             ('youtube', 'https://youtube.com/watch?v=123'),
             ('youtube', 'https://youtu.be/123'), ('youtube', '@ab'),
             ('whatsapp', '123'), ('whatsapp', '+012345678'),
@@ -126,16 +130,23 @@ class SocialProfilesTests(TestCase):
         self.assertEqual(self.config.contenido, before)
 
     def test_stale_landing_put_cannot_restore_deleted_or_overwrite_managed_profiles(self):
-        self.patch({'instagram': None, 'youtube': {'perfil': '@mi-canal', 'activo': False}})
+        self.patch({'instagram': None, 'youtube': {'perfil': '@mi-canal', 'activo': False},
+                    'facebook': {'perfil': 'mi.tienda', 'activo': False},
+                    'whatsapp': {'perfil': '+56987654321', 'activo': True, 'mensaje': 'Mensaje vigente'}})
         result = self.client.put('/api/landing/configuracion/', {
             'titulo': 'Nuevo título', 'texto_boton': 'Ver',
             'contenido': {'contacto': {'instagram': 'https://instagram.com/antes', 'correo': 'nuevo@example.test',
-                                     'redes_sociales': {'youtube': {'activo': True}}, 'youtube': 'https://youtube.com/@otro'}}}, format='json')
+                                     'redes_sociales': {'youtube': {'activo': True}}, 'youtube': 'https://youtube.com/@otro',
+                                     'facebook': 'https://facebook.com/anterior', 'whatsapp': '+56123456789'}}}, format='json')
         self.assertEqual(result.status_code, 200, result.data)
         contact = self.stored()
         self.assertEqual(contact['instagram'], '')
         self.assertEqual(contact['youtube'], 'https://youtube.com/@mi-canal')
         self.assertFalse(contact['redes_sociales']['youtube']['activo'])
+        self.assertEqual(contact['facebook'], 'https://facebook.com/mi.tienda')
+        self.assertFalse(contact['redes_sociales']['facebook']['activo'])
+        self.assertEqual(contact['whatsapp'], '+56987654321')
+        self.assertEqual(contact['redes_sociales']['whatsapp']['mensaje'], 'Mensaje vigente')
         self.assertEqual(contact['correo'], 'nuevo@example.test')
         self.assertEqual(contact['horario'], 'Lunes')
 

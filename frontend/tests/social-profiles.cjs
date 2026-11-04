@@ -6,8 +6,11 @@ const { profileLink, publicSocialLinks } = load('src/features/landing/types/soci
 test('normalizes handles, official profile URLs and WhatsApp with an encoded message', () => {
   for (const [network, input, expected] of [
     ['instagram', '@mi.tienda', 'https://instagram.com/mi.tienda'],
+    ['instagram', 'instagram.comercio', 'https://instagram.com/instagram.comercio'],
+    ['instagram', 'https://instagram.com/mi%2Etienda', 'https://instagram.com/mi.tienda'],
     ['instagram', 'www.instagram.com/mi.tienda/?igsh=tracking', 'https://instagram.com/mi.tienda'],
     ['facebook', 'mi.tienda', 'https://facebook.com/mi.tienda'],
+    ['facebook', 'facebook.company', 'https://facebook.com/facebook.company'],
     ['facebook', 'https://m.facebook.com/profile.php?id=123', 'https://facebook.com/profile.php?id=123'],
     ['facebook', 'https://facebook.com/people/Mi-Tienda/123/', 'https://facebook.com/people/Mi-Tienda/123'],
     ['youtube', '@mi-canal', 'https://youtube.com/@mi-canal'],
@@ -104,6 +107,7 @@ function cardsHarness(persist) {
   const writes = [], changes = [], data = blank();
   const api = load('src/features/marketing/components/SocialProfiles.tsx', {
     react: hooks,
+    '../../../shared/components/states': { ErrorState: 'ErrorState', LoadingState: 'LoadingState' },
     '../../admin/components/ui': Object.fromEntries(['AdminCard', 'Alert', 'Button', 'Icon', 'Input', 'Textarea', 'Toggle'].map(name => [name, name])),
     '../services/socialProfilesService': { fetchSocialProfiles: async () => data, saveSocialProfile: async (network, value, signal) => { writes.push({ network, value, signal }); return persist ? persist(network, value, data) : { ...data, [network]: value || { perfil: '', activo: false, mensaje: '' } }; } },
   });

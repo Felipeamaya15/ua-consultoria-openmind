@@ -22,7 +22,7 @@ def normalize_profile(network, value):
              'facebook': ('facebook.com', 'www.facebook.com', 'm.facebook.com'),
              'youtube': ('youtube.com', 'www.youtube.com', 'm.youtube.com')}
     # A domain without scheme is accepted, but cannot be mistaken for a handle.
-    if value.lower().startswith(hosts[network]):
+    if any(value.lower() == host or value.lower().startswith((host + '/', host + ':', host + '?')) for host in hosts[network]):
         value = 'https://' + value
     if '://' not in value:
         path = value.removeprefix('@')
@@ -40,11 +40,11 @@ def normalize_profile(network, value):
         valid = re.fullmatch(r'[A-Za-z0-9_](?:[A-Za-z0-9_.]{0,28}[A-Za-z0-9_])?', path) and '..' not in path and path.lower() not in ('p', 'reel', 'reels', 'stories', 'explore', 'accounts', 'direct')
     elif network == 'facebook':
         if path == 'profile.php':
-            query = parse_qs(url.query)
+            query = parse_qs(url.query, keep_blank_values=True)
             if set(query) == {'id'} and len(query['id']) == 1 and re.fullmatch(r'[0-9]+', query['id'][0]):
                 return f'https://facebook.com/profile.php?id={query["id"][0]}'
             raise serializers.ValidationError('Usa un identificador de perfil de Facebook válido.')
-        valid = re.fullmatch(r'[A-Za-z0-9.]{1,100}', path) and path.lower() not in ('watch', 'reel', 'reels', 'stories', 'groups', 'events', 'sharer.php', 'login', 'plugins')
+        valid = re.fullmatch(r'[A-Za-z0-9.]{1,100}', path) and re.search(r'[A-Za-z0-9]', path) and path.lower() not in ('watch', 'reel', 'reels', 'stories', 'groups', 'events', 'sharer.php', 'login', 'plugins')
         valid = valid or re.fullmatch(r'people/[A-Za-z0-9_-]+/[0-9]+', path)
     else:
         valid = re.fullmatch(r'@[\w.-]{3,30}', path) or re.fullmatch(r'channel/UC[A-Za-z0-9_-]{22}', path) or re.fullmatch(r'(?:c|user)/[A-Za-z0-9_-]{1,100}', path)

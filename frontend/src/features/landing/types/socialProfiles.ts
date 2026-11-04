@@ -17,13 +17,14 @@ export function profileLink(network: SocialNetwork, input: string, message = '')
     return { value: '+' + digits, url: `https://wa.me/${digits}${message.trim() ? '?text=' + encodeURIComponent(message.trim()) : ''}`, error: '' };
   }
   const hosts = { instagram: ['instagram.com', 'www.instagram.com'], facebook: ['facebook.com', 'www.facebook.com', 'm.facebook.com'], youtube: ['youtube.com', 'www.youtube.com', 'm.youtube.com'] }[network];
-  if (hosts.some(host => value.toLowerCase().startsWith(host))) value = 'https://' + value;
+  if (hosts.some(host => value.toLowerCase() === host || ['/', ':', '?'].some(separator => value.toLowerCase().startsWith(host + separator)))) value = 'https://' + value;
   if (!value.includes('://')) value = `https://${hosts[0]}/${network === 'youtube' ? '@' : ''}${value.replace(/^@/, '')}`;
   let url: URL;
   try { url = new URL(value); } catch { return invalid(); }
   // URL normalizes explicit default ports; also reject them before normalization.
   if (!['http:', 'https:'].includes(url.protocol) || !hosts.includes(url.hostname) || url.username || url.password || /:\d+(?:\/|$)/.test(value) || url.hash) return invalid('Usa un enlace de perfil de la red indicada.');
-  const path = url.pathname.replace(/^\/+|\/+$/g, '');
+  let path: string;
+  try { path = decodeURIComponent(url.pathname).replace(/^\/+|\/+$/g, ''); } catch { return invalid(); }
   let valid = false;
   if (network === 'instagram') valid = /^[A-Za-z0-9_](?:[A-Za-z0-9_.]{0,28}[A-Za-z0-9_])?$/.test(path) && !path.includes('..') && !['p', 'reel', 'reels', 'stories', 'explore', 'accounts', 'direct'].includes(path.toLowerCase());
   if (network === 'facebook') {
@@ -33,12 +34,10 @@ export function profileLink(network: SocialNetwork, input: string, message = '')
       const canonical = `https://facebook.com/profile.php?id=${id[0]}`;
       return { value: canonical, url: canonical, error: '' };
     }
-    valid = (/^[A-Za-z0-9.]{1,100}$/.test(path) && !['watch', 'reel', 'reels', 'stories', 'groups', 'events', 'sharer.php', 'login', 'plugins'].includes(path.toLowerCase())) || /^people\/[A-Za-z0-9_-]+\/\d+$/.test(path);
+    valid = (/^[A-Za-z0-9.]{1,100}$/.test(path) && /[A-Za-z0-9]/.test(path) && !['watch', 'reel', 'reels', 'stories', 'groups', 'events', 'sharer.php', 'login', 'plugins'].includes(path.toLowerCase())) || /^people\/[A-Za-z0-9_-]+\/\d+$/.test(path);
   }
   if (network === 'youtube') {
-    let decoded: string;
-    try { decoded = decodeURIComponent(path); } catch { return invalid(); }
-    valid = /^@[\p{L}\p{N}_.-]{3,30}$/u.test(decoded) || /^channel\/UC[A-Za-z0-9_-]{22}$/.test(path) || /^(?:c|user)\/[A-Za-z0-9_-]{1,100}$/.test(path);
+    valid = /^@[\p{L}\p{N}_.-]{3,30}$/u.test(path) || /^channel\/UC[A-Za-z0-9_-]{22}$/.test(path) || /^(?:c|user)\/[A-Za-z0-9_-]{1,100}$/.test(path);
   }
   if (!valid) return invalid();
   const canonical = `https://${hosts[0]}/${path}`;
