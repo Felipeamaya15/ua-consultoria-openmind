@@ -103,7 +103,7 @@ export function EditorialLayout() {
                 className="block w-auto h-auto max-w-[80px] sm:max-w-[120px] xl:max-w-[160px] max-h-10 sm:max-h-11 shrink-0 object-contain object-center"
               />
             ) : (
-              <div className="w-8 h-8 rounded-full bg-[var(--primary)] flex items-center justify-center text-[var(--on-primary)] text-xs font-bold">
+              <div className="w-8 h-8 rounded-full bg-[var(--primary)] flex items-center justify-center text-[var(--on-primary)] text-xs font-bold shrink-0">
                 {config.name?.slice(0, 2).toUpperCase() || 'MT'}
               </div>
             )}
@@ -141,7 +141,7 @@ export function EditorialLayout() {
           </nav>
 
           {/* ACCIONES */}
-          <div className="flex items-center gap-3">
+          <div className="flex shrink-0 items-center gap-3">
             {/* Carrito */}
             <Link
               to="carrito"
@@ -172,7 +172,8 @@ export function EditorialLayout() {
             {/* Botón menú móvil */}
             <button
               type="button"
-              className="md:hidden text-[var(--foreground)] p-1 ml-2"
+              data-mobile-menu-toggle
+              className="md:hidden inline-flex items-center justify-center min-w-10 min-h-10 text-[var(--foreground)] p-2 ml-1 rounded-lg"
               onClick={() => setMobileOpen((open) => !open)}
               aria-label="Menú"
               aria-expanded={mobileOpen}
@@ -200,12 +201,13 @@ export function EditorialLayout() {
         {mobileOpen && (
           <nav
             id="mobile-navigation"
+            data-mobile-navigation
             aria-label="Navegación móvil"
-            className="md:hidden border-t border-[var(--border)] bg-white px-4 py-3 flex flex-col gap-2"
+            className="md:hidden border-t border-[var(--border)] bg-white px-4 py-3 flex flex-col gap-2 shadow-lg"
           >
             <Link
               to="."
-              className="text-sm py-2"
+              className="text-sm font-medium py-2.5 px-2 rounded-lg"
               onClick={() => setMobileOpen(false)}
             >
               Inicio
@@ -213,7 +215,7 @@ export function EditorialLayout() {
 
             <Link
               to="catalogo"
-              className="text-sm py-2"
+              className="text-sm font-medium py-2.5 px-2 rounded-lg"
               onClick={() => setMobileOpen(false)}
             >
               Catálogo
@@ -221,7 +223,7 @@ export function EditorialLayout() {
 
             <Link
               to="seguimiento"
-              className="text-sm py-2"
+              className="text-sm font-medium py-2.5 px-2 rounded-lg"
               onClick={() => setMobileOpen(false)}
             >
               Seguimiento
@@ -229,12 +231,15 @@ export function EditorialLayout() {
 
             {user ? (
               <>
-                <div className="text-sm py-2 font-semibold text-[var(--foreground)] border-t border-[var(--border)] mt-2 pt-4">
+                <div
+                  className="text-sm py-2.5 px-2 font-semibold border-t border-[var(--border)] mt-1 pt-3"
+                  onClick={() => setMobileOpen(false)}
+                >
                   <AccountNavigation className="underline" />
                 </div>
                 <button
                   type="button"
-                  className="text-sm py-2 text-left text-[var(--muted-foreground)]"
+                  className="text-sm font-medium py-2.5 px-2 text-left rounded-lg"
                   onClick={() => {
                     handleLogout();
                     setMobileOpen(false);
@@ -244,7 +249,12 @@ export function EditorialLayout() {
                 </button>
               </>
             ) : (
-              <AccountNavigation className="text-sm py-2 border-t border-[var(--border)] mt-2 pt-4" />
+              <div
+                className="border-t border-[var(--border)] mt-1 pt-3"
+                onClick={() => setMobileOpen(false)}
+              >
+                <AccountNavigation className="block text-sm font-medium py-2 px-2 rounded-lg" />
+              </div>
             )}
           </nav>
         )}
