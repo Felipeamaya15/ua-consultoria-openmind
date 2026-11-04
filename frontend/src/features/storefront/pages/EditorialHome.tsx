@@ -68,14 +68,14 @@ export default function EditorialHome() {
       {isSectionVisible('Categorías') && categories.length > 0 && (<section data-visual-section={VISUAL_SECTION.categories} data-landing-content className="bg-[var(--muted)] py-12 sm:py-16">
         <div className="max-w-7xl mx-auto px-4">
           <h2 className="font-display text-2xl sm:text-3xl mb-6 sm:mb-8 text-center">Explorar por categoría</h2>
-          <div data-visual-part="categoryList" className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+          <div data-visual-part="categoryList" className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 sm:gap-3">
             {categories.map(cat => {
               const image = featured.find(p => p.category === cat)?.images[0];
               return (
-                <Link data-visual-part="categoryItem" key={cat} to={route(`catalogo?cat=${encodeURIComponent(cat)}`)} className="group relative rounded-xl overflow-hidden aspect-square">
-                  {image && <img src={image} alt={cat} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />}
-                  <div data-visual-part="categoryLabel" className="absolute inset-0 bg-black/40 flex items-end p-3">
-                    <span className="text-white font-semibold text-sm break-words">{cat}</span>
+                <Link data-visual-part="categoryItem" key={cat} to={route(`catalogo?cat=${encodeURIComponent(cat)}`)} className="group relative rounded-xl overflow-hidden min-h-[140px] sm:min-h-0 aspect-[16/9] sm:aspect-square flex items-end">
+                  {image && <img src={image} alt={cat} className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform" />}
+                  <div data-visual-part="categoryLabel" className="relative z-10 w-full bg-black/45 flex items-end p-4 sm:p-3 min-h-full">
+                    <span className="text-white font-semibold text-base sm:text-sm break-words">{cat}</span>
                   </div>
                 </Link>
               );
