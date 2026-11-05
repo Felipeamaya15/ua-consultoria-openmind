@@ -1,20 +1,29 @@
 import { InstitutionalBadge } from '../../ui';
 import { CompactMobileNavigation } from '../CompactMobileNavigation';
 import { VISUAL_SECTION } from '../../../visual/sectionIds';
-import { AccountNavigation } from '../AccountNavigation';
+import { AccountNavigation, notifyStorefrontAuthChange, useStorefrontIdentity } from '../AccountNavigation';
 import { useStore } from '../../../context/StoreContext';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useCart } from '../../../context/CartContext';
 import { useStorefrontTemplate } from '../../../hooks/useStorefrontTemplate';
+import { authService } from '../../../../auth/services/authService';
 
 export function VisualHeader() {
   const { config, landing } = useStore();
   const { count } = useCart();
   const { route } = useStorefrontTemplate();
+  const { user } = useStorefrontIdentity();
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    authService.logout();
+    notifyStorefrontAuthChange();
+    navigate(route());
+  };
 
   return (
-       <header data-visual-section={VISUAL_SECTION.header} className="bg-white border-t-4 border-[var(--primary)] border-b border-black/10">
-      <div data-visual-part="headerLayout" className="max-w-6xl mx-auto px-5 min-h-16 flex items-center justify-between gap-5">
+    <header data-visual-section={VISUAL_SECTION.header} className="bg-white border-t-4 border-[var(--primary)] border-b border-black/10">
+      <div data-visual-part="headerLayout" className="max-w-6xl mx-auto px-5 min-h-16 flex items-center justify-between gap-4">
 
         <InstitutionalBadge compact /><Link data-visual-part="logo"
           to={route()}
@@ -28,7 +37,7 @@ export function VisualHeader() {
 
           <span className="hidden sm:block h-5 w-px bg-black/15" />
 
-          <span className="hidden sm:block text-[10px] tracking-[0.25em] text-black/60">
+          <span className="hidden sm:block text-xs tracking-[0.25em] opacity-80">
             TIENDA
           </span>
         </Link>
@@ -36,26 +45,36 @@ export function VisualHeader() {
         <nav data-visual-part="navigation" className="flex shrink-0 items-center gap-4 md:gap-6 text-sm">
           <Link
             to={route('catalogo')}
-            className="hover:opacity-50 transition-opacity"
+            className="hover:opacity-75 transition-opacity"
           >
             Catálogo
           </Link>
 
           {landing?.contenido?.bloques?.some(block=>block.visible&&block.tipo==='historia') && <Link
             to={route('nuestra-historia')}
-            className="hidden sm:block hover:opacity-50 transition-opacity"
+            className="hidden sm:block hover:opacity-75 transition-opacity"
           >
             Nuestra historia
           </Link>}
 
           <Link
             to={route('seguimiento')}
-            className="hidden md:block hover:opacity-50 transition-opacity"
+            className="hidden md:block hover:opacity-75 transition-opacity"
           >
             Seguimiento
           </Link>
 
-          <AccountNavigation className="hidden lg:block hover:opacity-50 transition-opacity" />
+          <AccountNavigation className="hidden md:inline-flex font-semibold underline underline-offset-4 hover:opacity-75 transition-opacity" />
+
+          {user && (
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="hidden md:inline-flex text-sm font-medium hover:opacity-75 transition-opacity"
+            >
+              Salir
+            </button>
+          )}
 
           <Link
             to={route('carrito')}
@@ -74,15 +93,15 @@ export function VisualHeader() {
             </svg>
 
             {count > 0 && (
-              <span className="absolute -top-2 -right-2 w-4 h-4 rounded-full bg-black text-white text-[9px] flex items-center justify-center">
+              <span className="absolute -top-2 -right-2 w-4 h-4 rounded-full bg-black text-white text-[10px] flex items-center justify-center">
                 {count}
               </span>
             )}
           </Link>
         </nav>
 
+        <CompactMobileNavigation />
       </div>
-    <CompactMobileNavigation />
-      </header>
+    </header>
   );
 }

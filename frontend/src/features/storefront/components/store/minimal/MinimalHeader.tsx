@@ -1,10 +1,12 @@
 import { InstitutionalBadge } from '../../ui';
 import { CompactMobileNavigation } from '../CompactMobileNavigation';
 import { VISUAL_SECTION } from '../../../visual/sectionIds';
-import { AccountNavigation } from '../AccountNavigation';
+import { AccountNavigation, notifyStorefrontAuthChange, useStorefrontIdentity } from '../AccountNavigation';
 import { useStore } from '../../../context/StoreContext';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useCart } from '../../../context/CartContext';
+import { authService } from '../../../../auth/services/authService';
+import { useStorefrontTemplate } from '../../../hooks/useStorefrontTemplate';
 
 function MinimalCartIcon({ count }: { count: number }) {
   return (
@@ -25,7 +27,7 @@ function MinimalCartIcon({ count }: { count: number }) {
       </svg>
 
       {count > 0 && (
-        <span className="absolute -top-2 -right-2 min-w-4 h-4 px-1 rounded-full bg-white text-[var(--primary)] text-[9px] font-bold flex items-center justify-center">
+        <span className="absolute -top-2 -right-2 min-w-4 h-4 px-1 rounded-full bg-white text-[var(--primary)] text-[10px] font-bold flex items-center justify-center">
           {count}
         </span>
       )}
@@ -36,58 +38,78 @@ function MinimalCartIcon({ count }: { count: number }) {
 export function MinimalHeader() {
   const { config } = useStore();
   const { count } = useCart();
+  const { user } = useStorefrontIdentity();
+  const { route } = useStorefrontTemplate();
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    authService.logout();
+    notifyStorefrontAuthChange();
+    navigate(route());
+  };
 
   return (
     <div data-visual-header-shell className="px-4 md:px-8 pt-5">
-      <header data-visual-section={VISUAL_SECTION.header} data-visual-part="headerLayout" className="max-w-6xl mx-auto bg-white rounded-2xl border border-black/5 shadow-sm px-4 md:px-6 h-16 md:max-lg:h-auto md:max-lg:min-h-16 md:max-lg:py-3 md:max-lg:flex-wrap flex items-center justify-between gap-4">
+      <header data-visual-section={VISUAL_SECTION.header} data-visual-part="headerLayout" className="max-w-6xl mx-auto bg-white rounded-2xl border border-black/5 shadow-sm px-4 md:px-6 py-3 min-h-16 flex items-center justify-between gap-4">
 
         {/* Nombre */}
         <InstitutionalBadge compact /><Link data-visual-part="logo"
           to="."
           aria-label={`Ir al inicio de ${config.name || 'la tienda'}`}
-          className="flex min-w-0 max-w-full items-center gap-2 font-semibold text-[var(--primary)]"
+          className="flex min-w-0 max-w-full items-center gap-2.5 font-semibold text-[var(--primary)]"
         >
           {config.logo && <img data-landing-image src={config.logo} alt={`Logo de ${config.name}`} className="block w-auto h-auto max-w-[80px] sm:max-w-[120px] xl:max-w-[160px] max-h-10 sm:max-h-11 shrink-0 object-contain object-center" />}
-          <span className="truncate">{config.name}</span>
+          <span className="truncate text-lg">{config.name}</span>
         </Link>
 
-        {/* Navegación */}
+        {/* Navegación (pastilla clara con texto oscuro legible) */}
         <nav data-visual-part="navigation"
-          className="hidden md:flex md:max-lg:order-3 md:max-lg:w-full md:max-lg:justify-center items-center bg-[#f4f4f4] rounded-full p-1"
+          data-minimal-nav-pill
+          className="hidden md:flex items-center gap-1 bg-[#f4f4f4] text-[#0f1623] rounded-full p-1.5 border border-black/10"
           aria-label="Navegación principal"
         >
           <Link
             to="."
-            className="px-5 py-2 rounded-full text-xs font-medium text-gray-600 hover:bg-white hover:text-[var(--primary)] transition-colors"
+            className="px-5 py-2 rounded-full text-xs font-semibold text-[#0f1623] hover:bg-white hover:text-[var(--primary)] transition-colors"
           >
             Inicio
           </Link>
 
           <Link
             to="catalogo"
-            className="px-5 py-2 rounded-full text-xs font-medium text-gray-600 hover:bg-white hover:text-[var(--primary)] transition-colors"
+            className="px-5 py-2 rounded-full text-xs font-semibold text-[#0f1623] hover:bg-white hover:text-[var(--primary)] transition-colors"
           >
             Catálogo
           </Link>
 
           <Link
             to="seguimiento"
-            className="px-5 py-2 rounded-full text-xs font-medium text-gray-600 hover:bg-white hover:text-[var(--primary)] transition-colors"
+            className="px-5 py-2 rounded-full text-xs font-semibold text-[#0f1623] hover:bg-white hover:text-[var(--primary)] transition-colors"
           >
             Seguimiento
           </Link>
         </nav>
 
         {/* Acciones */}
-        <div className="flex shrink-0 items-center gap-2 md:gap-4">
-          <AccountNavigation className="hidden sm:block text-xs font-medium text-[var(--primary)]" />
+        <div className="flex shrink-0 items-center gap-3 md:gap-4">
+          <AccountNavigation className="hidden sm:inline-flex text-xs font-semibold underline underline-offset-4" />
 
-          <Link
-            to="ingresar?modo=registro"
-            className="hidden md:block px-4 py-2 rounded-full border border-gray-200 text-xs font-medium text-[var(--primary)] hover:bg-gray-50 transition-colors"
-          >
-            Registrarse
-          </Link>
+          {user ? (
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="hidden sm:inline-flex px-4 py-2 rounded-full border border-current/30 text-xs font-semibold hover:opacity-80 transition-opacity"
+            >
+              Salir
+            </button>
+          ) : (
+            <Link
+              to="ingresar?modo=registro"
+              className="hidden md:inline-flex px-4 py-2 rounded-full border border-current/30 text-xs font-semibold hover:opacity-80 transition-opacity"
+            >
+              Registrarse
+            </Link>
+          )}
 
           <Link
             to="carrito"
@@ -97,7 +119,7 @@ export function MinimalHeader() {
             <MinimalCartIcon count={count} />
           </Link>
         </div>
-      <CompactMobileNavigation />
+        <CompactMobileNavigation />
       </header>
     </div>
   );

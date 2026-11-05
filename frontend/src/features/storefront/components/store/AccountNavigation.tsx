@@ -5,6 +5,13 @@ import { authService } from '../../../auth/services/authService';
 import { useStorefrontTemplate } from '../../hooks/useStorefrontTemplate';
 
 type User = { id?: number | string; email?: string; username?: string; is_staff: boolean; is_store_owner: boolean };
+
+const identityListeners = new Set<() => void>();
+
+export function notifyStorefrontAuthChange() {
+  identityListeners.forEach(listener => listener());
+}
+
 export function isStoreAdministrator(user: User | null): boolean {
   return Boolean(user && (user.is_store_owner));
 }
@@ -15,11 +22,25 @@ export function useStorefrontIdentity() {
   useEffect(() => {
     if (isActiveEditorPreview()) { setIdentity({user: null, loading: false}); return; }
     let active = true;
+    const refreshIdentity = () => {
+      if (typeof authService.getToken === 'function' && !authService.getToken()) {
+        if (active) setIdentity({user: null, loading: false});
+        return;
+      }
+      setIdentity({user: null, loading: true});
+      authService.getMe().then(response => {
+        if (active) setIdentity({user: response?.data ?? null, loading: false});
+      }).catch(() => { if (active) setIdentity({user: null, loading: false}); });
+    };
     setIdentity({user: null, loading: true});
     authService.getMe().then(response => {
       if (active) setIdentity({user: response?.data ?? null, loading: false});
     }).catch(() => { if (active) setIdentity({user: null, loading: false}); });
-    return () => { active = false; };
+    identityListeners.add(refreshIdentity);
+    return () => {
+      active = false;
+      identityListeners.delete(refreshIdentity);
+    };
   }, [pathname]);
   return identity;
 }

@@ -5,98 +5,100 @@ import { VISUAL_SECTION } from '../../../visual/sectionIds';
 import { Link } from 'react-router-dom';
 
 import { useStore } from '../../../context/StoreContext';
+import { useStorefrontTemplate } from '../../../hooks/useStorefrontTemplate';
 
 export function VisualFooter() {
   const { config, landing } = useStore();
+  const { route } = useStorefrontTemplate();
 
   return (
     <footer data-visual-section={VISUAL_SECTION.footer} className="bg-[var(--primary)] text-[var(--on-primary)] border-t border-[color-mix(in_srgb,currentColor_20%,transparent)]">
-      <div className="max-w-6xl mx-auto px-5 py-14">
+      <div className="max-w-6xl mx-auto px-5 py-12">
 
-        <div data-visual-part="footerLayout" className="grid grid-cols-1 md:grid-cols-3 gap-12">
+        <div data-visual-part="footerLayout" className="grid grid-cols-1 md:grid-cols-4 gap-8 text-left items-start">
 
-          <div>
+          <div className="md:col-span-2 text-left">
             {config.logo && <img data-landing-image className="store-footer-logo" src={config.logo} alt={`Logo de ${config.name}`} />}
-          <p data-visual-part="footerTitle" className="font-serif text-2xl mb-4">
+            <p data-visual-part="footerTitle" className="font-serif text-2xl mb-3 text-left">
               {config.name}
             </p>
-
-          <StoreBusinessDescription className="text-sm leading-relaxed max-w-sm" />
+            <StoreBusinessDescription className="text-sm leading-relaxed text-left" />
           </div>
 
-          <div>
-            <p data-visual-part="footerTitle" className="text-[10px] font-semibold tracking-[0.2em] mb-5">
-              TIENDA
+          <div className="text-left">
+            <p data-visual-part="footerTitle" className="text-xs font-semibold uppercase tracking-[0.2em] text-[color-mix(in_srgb,currentColor_70%,transparent)] mb-4 text-left">
+              Tienda
             </p>
 
-            <nav className="flex flex-col gap-3 text-sm text-[color-mix(in_srgb,currentColor_70%,transparent)]">
+            <nav className="flex flex-col gap-2.5 text-sm text-[color-mix(in_srgb,currentColor_80%,transparent)]">
               <Link
-                to="catalogo"
-                className="hover:text-inherit"
+                to={route('catalogo')}
+                className="hover:text-inherit transition-colors"
               >
                 Catálogo
               </Link>
 
               {landing?.contenido?.bloques?.some(block=>block.visible&&block.tipo==='historia') && <Link
-                to="nuestra-historia"
-                className="hover:text-inherit"
+                to={route('nuestra-historia')}
+                className="hover:text-inherit transition-colors"
               >
                 Nuestra historia
               </Link>}
 
               <Link
-                to="seguimiento"
-                className="hover:text-inherit"
+                to={route('seguimiento')}
+                className="hover:text-inherit transition-colors"
               >
                 Seguimiento
               </Link>
             </nav>
           </div>
 
-          <div data-visual-part="branding"><InstitutionalBadge showVersion={true} /></div>
+          <div className="text-left">
+            <p data-visual-part="footerTitle" className="text-xs font-semibold uppercase tracking-[0.2em] text-[color-mix(in_srgb,currentColor_70%,transparent)] mb-4 text-left">
+              Legal
+            </p>
+
+            <nav className="flex flex-col gap-2.5 text-sm text-[color-mix(in_srgb,currentColor_80%,transparent)]">
+              <Link
+                to={route('legal/terms')}
+                className="hover:text-inherit transition-colors"
+              >
+                Términos
+              </Link>
+
+              <Link
+                to={route('legal/privacy')}
+                className="hover:text-inherit transition-colors"
+              >
+                Privacidad
+              </Link>
+
+              <Link
+                to={route('legal/refund')}
+                className="hover:text-inherit transition-colors"
+              >
+                Reembolsos
+              </Link>
+
+              <Link
+                to={route('legal/cookies')}
+                className="hover:text-inherit transition-colors"
+              >
+                Cookies
+              </Link>
+            </nav>
+          </div>
 
         </div>
 
-        <div className="border-t border-[color-mix(in_srgb,currentColor_15%,transparent)] mt-12 pt-6 flex flex-col md:flex-row justify-between gap-4 text-xs text-[color-mix(in_srgb,currentColor_60%,transparent)]">
-
-          <p>
-            © 2026 {config.name}. Todos los derechos reservados.
-          </p>
-
-          <nav className="flex flex-wrap gap-5">
-            <Link
-              to="legal/terms"
-              className="hover:text-inherit"
-            >
-              Términos
-            </Link>
-
-            <Link
-              to="legal/privacy"
-              className="hover:text-inherit"
-            >
-              Privacidad
-            </Link>
-
-            <Link
-              to="legal/refund"
-              className="hover:text-inherit"
-            >
-              Reembolsos
-            </Link>
-
-            <Link
-              to="legal/cookies"
-              className="hover:text-inherit"
-            >
-              Cookies
-            </Link>
-          </nav>
-
+        <div data-visual-part="branding" className="border-t border-[color-mix(in_srgb,currentColor_15%,transparent)] mt-10 pt-5 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-[color-mix(in_srgb,currentColor_75%,transparent)]">
+          <InstitutionalBadge compact showVersion={true} />
+          <p className="text-center sm:text-right">© {new Date().getFullYear()} {config.name} · OpenMind</p>
         </div>
 
       </div>
-    <CommercialPreferencesLink />
+      <CommercialPreferencesLink />
     </footer>
   );
 }

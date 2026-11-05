@@ -56,9 +56,9 @@ export default function CatalogHome() {
           >
             <div
               data-visual-part="heroContent"
-              className="w-full min-w-0 max-w-[650px] px-5 sm:px-12 md:px-20 py-8"
+              className="w-full min-w-0 max-w-3xl px-5 sm:px-12 md:px-16 py-8"
             >
-              <p className="text-[var(--primary)] text-[11px] md:text-xs font-extrabold uppercase tracking-[0.08em]">
+              <p className="text-[var(--primary)] text-xs font-extrabold uppercase tracking-[0.08em]">
                 Producto destacado
               </p>
 
@@ -70,7 +70,7 @@ export default function CatalogHome() {
 
               <p
                 data-visual-part="heroSubtitle"
-                className="mt-5 sm:mt-7 max-w-md text-sm md:text-base leading-7 text-inherit opacity-85 break-words"
+                className="mt-5 sm:mt-7 max-w-xl text-sm md:text-base leading-7 text-inherit opacity-90 break-words"
               >
                 {landing?.descripcion}
               </p>
@@ -99,13 +99,13 @@ export default function CatalogHome() {
           data-landing-content
           data-visual-section={VISUAL_SECTION.sections}
           data-visual-kind="benefits"
-          className="w-full px-4 sm:px-5 md:px-8 py-5"
+          className="w-full px-4 sm:px-5 md:px-8 py-6"
         >
-          <div className="max-w-[1160px] mx-auto grid grid-cols-1 sm:grid-cols-2 lg:flex lg:flex-wrap items-start gap-x-12 gap-y-4">
+          <div className="max-w-[1160px] mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 items-start gap-6">
             {content.beneficios.map((benefit, index) => (
               <div
                 key={index}
-                className="flex min-w-0 max-w-full sm:max-w-[260px] items-start gap-3"
+                className="flex min-w-0 max-w-full items-start gap-3"
               >
                 <Icon
                   name={benefit.icono}
@@ -137,9 +137,9 @@ export default function CatalogHome() {
           data-visual-section={VISUAL_SECTION.sections}
           data-visual-kind="featured"
           data-landing-content
-          className="max-w-[1160px] mx-auto px-4 sm:px-5 py-14 sm:py-24 md:py-32"
+          className="max-w-[1160px] mx-auto px-4 sm:px-5 py-14 sm:py-20 md:py-24"
         >
-          <h2 className="max-w-[800px] text-[34px] sm:text-[62px] md:text-[76px] leading-[0.98] tracking-[-0.055em] font-black text-[var(--visual-text)] break-words">
+          <h2 className="max-w-4xl text-[34px] sm:text-[56px] md:text-[68px] leading-[0.98] tracking-[-0.055em] font-black text-[var(--visual-text)] break-words">
             Todo lo que necesitas.
             <br />
             Nada que no.
@@ -147,7 +147,7 @@ export default function CatalogHome() {
 
           <Link
             to={route(`producto/${mochila.id}`)}
-            className="group relative block mt-8 sm:mt-14 min-h-[360px] sm:min-h-[500px] md:min-h-[620px] overflow-hidden rounded-[22px] sm:rounded-[28px]"
+            className="group relative block mt-8 sm:mt-12 min-h-[360px] sm:min-h-[500px] md:min-h-[600px] overflow-hidden rounded-[22px] sm:rounded-[28px]"
           >
             <img
               src={mochila.images[0]}
@@ -157,7 +157,7 @@ export default function CatalogHome() {
 
             <div
               data-visual-part="heroOverlay"
-              className="absolute inset-0 bg-gradient-to-r from-black/65 via-black/25 to-transparent"
+              className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/30 to-transparent"
             />
 
             <div className="relative z-10 p-6 sm:p-8 md:p-12">
@@ -169,7 +169,7 @@ export default function CatalogHome() {
                 {mochila.name}
               </h3>
 
-              <p className="mt-3 max-w-sm text-sm text-white/80">
+              <p className="mt-3 max-w-md text-sm text-white/90">
                 Diseñado para acompañarte todos los días.
               </p>
             </div>
@@ -183,29 +183,25 @@ export default function CatalogHome() {
         data-visual-kind="content"
         className="bg-[var(--visual-alternate,var(--secondary))] text-[var(--on-alternate,var(--on-secondary))]"
       >
-        <div className="grid grid-cols-1 lg:grid-cols-2 min-h-[420px] lg:min-h-[560px]">
+        <div className="max-w-[1160px] mx-auto grid grid-cols-1 lg:grid-cols-2 min-h-[420px] lg:min-h-[540px]">
           <div className="flex items-center">
-            <div className="w-full max-w-[580px] min-w-0 px-5 sm:px-14 lg:pl-[max(4rem,calc((100vw-1160px)/2))] lg:pr-16 py-12 sm:py-20">
-              <p className="text-[var(--primary)] text-xs font-bold">
+            <div className="w-full min-w-0 px-5 sm:px-10 lg:px-12 py-12 sm:py-16">
+              <p className="text-[var(--primary)] text-xs font-bold uppercase tracking-wider">
                 Selección cuidada
               </p>
 
-              <h2 className="mt-5 sm:mt-7 text-[clamp(2.15rem,5vw,4.125rem)] leading-[1.02] tracking-[-0.05em] font-black break-words text-inherit">
-                Una mejor
-                <br />
-                forma de
-                <br />
-                elegir.
+              <h2 className="mt-4 sm:mt-6 text-[clamp(2.15rem,4.5vw,3.75rem)] leading-[1.04] tracking-[-0.04em] font-black break-words text-inherit">
+                Una mejor forma de elegir.
               </h2>
 
-              <p className="mt-5 sm:mt-7 max-w-md text-sm sm:text-base leading-7 text-[color-mix(in_srgb,var(--on-alternate,var(--on-secondary))_70%,transparent)]">
+              <p className="mt-5 sm:mt-6 max-w-xl text-sm sm:text-base leading-7 text-[color-mix(in_srgb,var(--on-alternate,var(--on-secondary))_85%,transparent)]">
                 Encuentra productos de calidad, con información clara,
                 precios transparentes y entrega a todo Chile.
               </p>
 
               <Link
                 to={route('catalogo')}
-                className="inline-flex items-center min-h-11 mt-6 sm:mt-8 text-[var(--accent)] text-base font-medium hover:translate-x-1 transition-transform"
+                className="inline-flex items-center min-h-11 mt-6 sm:mt-8 text-[var(--accent)] text-base font-semibold hover:translate-x-1 transition-transform"
               >
                 Explorar el catálogo →
               </Link>
@@ -228,7 +224,7 @@ export default function CatalogHome() {
           data-visual-section={VISUAL_SECTION.sections}
           data-visual-kind="featured"
           data-landing-content
-          className="max-w-[1160px] mx-auto px-4 sm:px-5 py-14 sm:py-24 md:py-28"
+          className="max-w-[1160px] mx-auto px-4 sm:px-5 py-14 sm:py-20 md:py-24"
         >
           <div className="flex items-end justify-between gap-6 mb-8 sm:mb-10">
             <div>
@@ -243,7 +239,7 @@ export default function CatalogHome() {
 
             <Link
               to={route('catalogo')}
-              className="hidden sm:block text-[var(--accent)] text-sm hover:opacity-70"
+              className="hidden sm:block text-[var(--accent)] text-sm font-semibold hover:opacity-80"
             >
               Ver todos →
             </Link>

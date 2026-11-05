@@ -47,12 +47,12 @@ export default function MinimalHome() {
           HERO / SHOP SEARCH
       ====================================================== */}
       <section data-visual-section={VISUAL_SECTION.hero} className="px-4 md:px-8 pt-6 sm:pt-10 md:pt-14">
-        <div data-visual-part="heroOverlay" className="absolute inset-0" /><div data-visual-layout="stack" data-visual-part="heroLayout" className="max-w-6xl mx-auto min-w-0">
+        <div data-visual-part="heroOverlay" className="absolute inset-0" /><div data-visual-layout="stack" data-visual-part="heroLayout" className="max-w-6xl mx-auto min-w-0 items-center text-center">
 
           {/* Tarjetas flotantes */}
-          <div data-visual-part="heroDecorations" data-landing-content className="flex justify-center items-end -space-x-6 sm:-space-x-4 md:-space-x-3 mb-4 min-h-[130px] sm:min-h-[170px] md:min-h-[180px] px-2 sm:px-6 max-w-full overflow-x-hidden">
+          <div data-visual-part="heroDecorations" data-landing-content className="flex justify-center items-end -space-x-6 sm:-space-x-4 md:-space-x-3 mb-4 min-h-[130px] sm:min-h-[170px] md:min-h-[180px] px-2 sm:px-6 max-w-full overflow-x-hidden mx-auto">
 
-            {!floatingProducts.length && landing?.imagen_principal && <img data-visual-part="heroImageFallback" data-landing-image src={landing.imagen_principal} alt={landing.titulo || 'Imagen principal de la tienda'} className="max-h-[180px] max-w-full rounded-2xl object-contain" />}
+            {!floatingProducts.length && landing?.imagen_principal && <img data-visual-part="heroImageFallback" data-landing-image src={landing.imagen_principal} alt={landing.titulo || 'Imagen principal de la tienda'} className="max-h-[180px] max-w-full rounded-2xl object-contain mx-auto" />}
             {floatingProducts.map((product, index) => {
               const rotations = [
                 '-rotate-6 translate-y-4',
@@ -92,8 +92,8 @@ export default function MinimalHome() {
                     />
                   </div>
 
-                  <div className="px-1 pt-2 pb-1">
-                    <p className="text-[10px] text-gray-500 truncate">
+                  <div className="px-1 pt-2 pb-1 text-left">
+                    <p className="text-[10px] text-gray-600 truncate">
                       {product.category}
                     </p>
 
@@ -106,7 +106,7 @@ export default function MinimalHome() {
                         ★★★★★
                       </span>
 
-                      <span className="text-[9px] text-gray-500">
+                      <span className="text-[10px] text-gray-600">
                         5.0
                       </span>
                     </div>
@@ -117,22 +117,24 @@ export default function MinimalHome() {
 
           </div>
 
-          {/* Título */}
-          <div data-visual-part="heroTitleBlock" className="text-center min-w-0">
+          {/* Título centrado */}
+          <div data-visual-part="heroTitleBlock" className="w-full text-center min-w-0 mx-auto flex flex-col items-center">
             <LandingStatus />
-            <h1 className="text-[clamp(2.5rem,11vw,4.5rem)] sm:text-[92px] md:text-[118px] leading-none tracking-[-0.06em] sm:tracking-[-0.08em] font-semibold text-[#151515] break-words">
+            <h1 className="w-full text-center mx-auto text-[clamp(2.5rem,11vw,4.5rem)] sm:text-[92px] md:text-[118px] leading-none tracking-[-0.06em] sm:tracking-[-0.08em] font-semibold text-[#151515] break-words">
               {landing?.titulo}
             </h1>
           </div>
 
-          <p data-visual-part="heroSubtitle" className="text-center text-gray-600 mt-4 px-2 break-words">{landing?.descripcion}</p>
+          <p data-visual-part="heroSubtitle" className="w-full text-center text-gray-700 mt-4 px-2 mx-auto break-words">
+            {landing?.descripcion}
+          </p>
 
-          {/* Buscador */}
+          {/* Buscador completo sin recortar el texto */}
           <form data-visual-part="heroCtaLayout"
             onSubmit={handleSearch}
-            className="max-w-3xl mx-auto mt-6 sm:mt-8 w-full"
+            className="w-full max-w-2xl mx-auto mt-6 sm:mt-8 flex justify-center"
           >
-            <div data-landing-search className="bg-white rounded-3xl sm:rounded-full border border-black/5 shadow-sm p-2 pl-4 sm:pl-6 flex flex-wrap sm:flex-nowrap items-center gap-2 sm:gap-3">
+            <div data-landing-search className="w-full bg-white rounded-3xl sm:rounded-full border border-black/10 shadow-sm p-2 pl-4 sm:pl-6 flex flex-wrap sm:flex-nowrap items-center gap-2 sm:gap-3">
 
               <svg
                 className="w-5 h-5 text-gray-500 flex-shrink-0"
@@ -153,15 +155,15 @@ export default function MinimalHome() {
                 type="search"
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
-                placeholder="What are you shopping for today?"
+                placeholder="¿Qué estás buscando hoy?"
                 aria-label="Buscar productos"
-                className="flex-1 min-w-[140px] h-10 bg-transparent outline-none text-sm md:text-base text-[#171717] placeholder:text-gray-500"
+                className="flex-1 min-w-[200px] w-full h-11 bg-transparent outline-none text-sm md:text-base text-[#171717] placeholder:text-gray-500"
               />
 
               <button data-visual-section={VISUAL_SECTION.heroCta}
                 type="submit"
                 aria-label={landing?.texto_boton || 'Buscar'}
-                className="px-5 min-w-11 min-h-11 w-full sm:w-auto gap-2 flex-shrink-0 rounded-full bg-[var(--primary)] text-[var(--on-primary)] flex items-center justify-center hover:scale-105 transition-transform"
+                className="px-6 min-w-11 min-h-11 w-full sm:w-auto gap-2 flex-shrink-0 rounded-full bg-[var(--primary)] text-[var(--on-primary)] flex items-center justify-center font-semibold hover:scale-105 transition-transform"
               >
                 {landing?.texto_boton}
                 <svg
@@ -193,16 +195,16 @@ export default function MinimalHome() {
           data-visual-section={VISUAL_SECTION.sections}
           data-visual-kind="benefits"
           data-landing-content
-          className="w-full px-4 md:px-8 py-5"
+          className="w-full px-4 md:px-8 py-6"
         >
-          <div className="max-w-6xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:flex lg:flex-wrap items-start gap-x-12 gap-y-4">
+          <div className="max-w-6xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 items-start gap-6">
             {content.beneficios.map((benefit, index) => (
-              <div key={index} className="min-w-0 max-w-full sm:max-w-[260px] flex items-start gap-3">
+              <div key={index} className="min-w-0 max-w-full flex items-start gap-3">
                 <Icon name={benefit.icono} className="w-5 h-5 shrink-0 mt-0.5" />
                 <div className="min-w-0">
                   <p className="text-sm font-semibold leading-5 break-words">{benefit.titulo}</p>
                   {benefit.descripcion && (
-                    <p className="mt-1 text-xs leading-5 opacity-70 break-words">{benefit.descripcion}</p>
+                    <p className="mt-1 text-xs leading-5 opacity-85 break-words">{benefit.descripcion}</p>
                   )}
                 </div>
               </div>
@@ -214,14 +216,14 @@ export default function MinimalHome() {
       <LandingBlocks />
 
       {/* Categorías */}
-      {isSectionVisible('Categorías') && categories.length > 0 && (<div data-visual-section={VISUAL_SECTION.categories} data-visual-part="categoryList" className="mt-5 px-4 flex flex-wrap justify-center gap-2">
+      {isSectionVisible('Categorías') && categories.length > 0 && (<div data-visual-section={VISUAL_SECTION.categories} data-visual-part="categoryList" className="mt-6 px-4 md:px-8 flex flex-wrap justify-center gap-3">
 
         {categories.map((category) => (
           <button data-visual-part="categoryItem"
             key={category}
             type="button"
             onClick={() => goToCategory(category)}
-            className="min-h-10 px-4 py-2 rounded-full bg-white border border-black/5 text-xs text-gray-600 hover:bg-[var(--primary)] hover:text-[var(--on-primary)] transition-colors"
+            className="min-h-11 px-5 py-2.5 rounded-full bg-white border border-black/10 text-sm font-medium text-[#171717] hover:bg-[var(--primary)] hover:text-[var(--on-primary)] transition-colors shadow-2xs"
           >
             {category}
           </button>
@@ -238,7 +240,7 @@ export default function MinimalHome() {
           <div className="flex items-end justify-between gap-6 mb-7">
 
             <div>
-              <p className="text-xs text-gray-500 mb-2">
+              <p className="text-xs font-medium text-gray-600 mb-2">
                 Para descubrir sin prisa
               </p>
 
@@ -249,7 +251,7 @@ export default function MinimalHome() {
 
             <Link
               to="catalogo"
-              className="hidden sm:inline-flex text-sm text-[var(--primary)] hover:opacity-60 transition-opacity"
+              className="hidden sm:inline-flex text-sm font-semibold text-[var(--primary)] hover:opacity-75 transition-opacity"
             >
               Ver todo →
             </Link>
@@ -272,7 +274,7 @@ export default function MinimalHome() {
 
                 <div data-visual-part="body" className="absolute inset-x-3 bottom-3 bg-white/95 backdrop-blur-sm rounded-2xl p-4">
 
-                  <p className="text-[10px] uppercase tracking-wide text-gray-500">
+                  <p className="text-[11px] uppercase tracking-wide text-gray-600 font-medium">
                     {product.category}
                   </p>
 
@@ -284,7 +286,7 @@ export default function MinimalHome() {
                       </h3>
 
                       <p data-visual-part="description">{product.description}</p>
-                      <p data-visual-part="price" className="text-xs text-gray-500 mt-1">
+                      <p data-visual-part="price" className="text-xs font-semibold text-gray-700 mt-1">
                         {formatPrice(product.basePrice)}
                       </p>
                     </div>
@@ -325,13 +327,13 @@ export default function MinimalHome() {
                 className="absolute inset-0 w-full h-full object-cover"
               />
 
-              <div className="absolute inset-0 bg-black/30" />
+              <div className="absolute inset-0 bg-black/35" />
 
               <div className="relative z-10 min-h-[340px] sm:min-h-[420px] md:min-h-[520px] flex items-end p-5 sm:p-7 md:p-12">
 
-                <div className="max-w-xl text-white min-w-0">
+                <div className="max-w-2xl text-white min-w-0">
 
-                  <p className="text-xs uppercase tracking-[0.18em] text-white/70 mb-3 sm:mb-4">
+                  <p className="text-xs uppercase tracking-[0.18em] text-white/85 mb-3 sm:mb-4">
                     Nueva selección
                   </p>
 
@@ -343,7 +345,7 @@ export default function MinimalHome() {
 
                   <Link
                     to="catalogo"
-                    className="inline-flex min-h-11 items-center mt-6 sm:mt-7 bg-white text-[#171717] rounded-full px-5 py-3 text-sm font-medium hover:bg-white/90 transition-colors"
+                    className="inline-flex min-h-11 items-center mt-6 sm:mt-7 bg-white text-[#171717] rounded-full px-6 py-3 text-sm font-semibold hover:bg-white/90 transition-colors"
                   >
                     Explorar colección
                     <span className="ml-2">→</span>
@@ -372,7 +374,7 @@ export default function MinimalHome() {
 
             <Link
               to="catalogo"
-              className="text-sm text-[var(--primary)] hover:opacity-60 transition-opacity"
+              className="text-sm font-semibold text-[var(--primary)] hover:opacity-75 transition-opacity"
             >
               Ver catálogo →
             </Link>
@@ -400,7 +402,7 @@ export default function MinimalHome() {
 
                   <div data-visual-part="body" className="pt-3">
 
-                    <p className="text-[10px] uppercase tracking-wide text-gray-500">
+                    <p className="text-[11px] uppercase tracking-wide text-gray-600 font-medium">
                       {product.category}
                     </p>
 
@@ -408,7 +410,7 @@ export default function MinimalHome() {
                       {product.name}
                     </h3>
 
-                    <p data-visual-part="price" className="text-sm text-gray-500 mt-1">
+                    <p data-visual-part="price" className="text-sm font-semibold text-gray-700 mt-1">
                       {formatPrice(product.basePrice)}
                     </p>
                     <p data-visual-part="description">{product.description}</p>
