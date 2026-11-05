@@ -19,6 +19,7 @@ export interface BloqueLanding {
   titulo: string; subtitulo: string; texto: string; imagenes: ImagenBloqueLanding[];
   nombre_interno?: string;
   componentes?: import('./sectionElements').SectionElement[];
+  actividad?: import('./sectionElements').SectionActivity | null;
 }
 export interface ContenidoLanding {
   /** Stable references to existing sections and unique commerce slots; no copied content. */

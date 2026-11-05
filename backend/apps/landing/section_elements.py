@@ -5,9 +5,9 @@ from apps.landing.media_library import media_url
 from apps.landing.social_profiles import normalize_profile
 
 
-TEXT_ELEMENTS = ('titulo', 'subtitulo', 'texto', 'nombre', 'caracteristicas', 'informacion', 'duracion')
+TEXT_ELEMENTS = ('titulo', 'subtitulo', 'texto', 'nombre', 'caracteristicas', 'informacion', 'duracion', 'requisitos', 'condiciones')
 ELEMENT_TYPES = TEXT_ELEMENTS + ('imagen', 'galeria', 'youtube', 'biblioteca', 'social', 'separador',
-                                 'boton', 'whatsapp', 'precio', 'fecha', 'horario', 'modalidad', 'ubicacion')
+                                 'boton', 'whatsapp', 'precio', 'fecha', 'horario', 'modalidad', 'ubicacion', 'consulta', 'inscripcion')
 
 
 class SectionElementSerializer(StrictSerializer):
@@ -23,6 +23,7 @@ class SectionElementSerializer(StrictSerializer):
     mensaje = serializers.CharField(max_length=500, allow_blank=True, required=False)
     importe = serializers.DecimalField(max_digits=12, decimal_places=0, min_value=0, required=False)
     fecha = serializers.DateField(required=False)
+    hasta = serializers.DateField(required=False)
     inicio = serializers.TimeField(required=False)
     termino = serializers.TimeField(required=False)
     modalidad = serializers.ChoiceField(choices=('presencial', 'online', 'mixta'), required=False)
@@ -41,7 +42,8 @@ class SectionElementSerializer(StrictSerializer):
                    'imagen': {'imagenes'}, 'galeria': {'imagenes'}, 'youtube': {'url'},
                    'biblioteca': {'recurso_id'}, 'social': {'proveedor', 'url'}, 'separador': set(),
                    'boton': {'etiqueta', 'url'}, 'whatsapp': {'etiqueta', 'numero', 'mensaje'},
-                   'precio': {'importe'}, 'fecha': {'fecha'}, 'horario': {'inicio', 'termino'},
+                   'precio': {'importe'}, 'fecha': {'fecha', 'hasta'}, 'horario': {'inicio', 'termino'},
+                   'consulta': {'etiqueta'}, 'inscripcion': {'etiqueta'},
                    'modalidad': {'modalidad'}, 'ubicacion': {'texto', 'url'}}[kind]
         if set(data) - fields - allowed:
             raise serializers.ValidationError('El bloque contiene campos que no corresponden a su tipo.')
@@ -50,6 +52,8 @@ class SectionElementSerializer(StrictSerializer):
             required = {'texto'}
         if kind == 'horario':
             required = {'inicio'}
+        if kind == 'fecha':
+            required = {'fecha'}
         if not required.issubset(data):
             raise serializers.ValidationError('Completa los campos del bloque antes de guardar.')
         if 'url' in data:
@@ -69,7 +73,9 @@ class SectionElementSerializer(StrictSerializer):
                 raise serializers.ValidationError('Las imágenes deben tener identificadores únicos.')
         if 'termino' in data and data['termino'] <= data['inicio']:
             raise serializers.ValidationError('La hora de término debe ser posterior al inicio.')
-        for key in ('fecha', 'inicio', 'termino'):
+        if 'hasta' in data and data['hasta'] < data['fecha']:
+            raise serializers.ValidationError('La fecha de término no puede ser anterior al inicio.')
+        for key in ('fecha', 'hasta', 'inicio', 'termino'):
             if key in data:
                 data[key] = data[key].isoformat()
         if 'importe' in data:
@@ -109,6 +115,8 @@ def public_section_content(content, store):
     published = []
     for block in result['bloques']:
         if block.get('tipo') == 'personalizada':
+            if block.get('actividad'):
+                block['actividad'].pop('enlace_reunion', None)
             if not block.get('visible'):
                 continue
             block.pop('nombre_interno', None)

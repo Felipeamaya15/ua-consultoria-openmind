@@ -21,6 +21,7 @@ export const menuItems = [
   { path: '/emprendedor/pedidos', label: 'Pedidos', icon: 'orders' },
   { path: '/emprendedor/ventas', label: 'Ventas', icon: 'file' },
   { path: '/emprendedor/landing', label: 'Página principal', icon: 'home' },
+  { path: '/emprendedor/actividades', label: 'Servicios y talleres', icon: 'file' },
   { path: '/emprendedor/diseno', label: 'Diseño', icon: 'settings' },
   { path: '/emprendedor/promociones', label: 'Promociones', icon: 'link' },
   { path: '/emprendedor/marketing', label: 'Marketing', icon: 'arrowUpRight' },

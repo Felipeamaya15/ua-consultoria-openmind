@@ -1,6 +1,7 @@
 from urllib.parse import urlparse
 
 from rest_framework import serializers
+from apps.landing.activities import ActivityConfigSerializer, validate_activity
 
 
 class WebURLField(serializers.URLField):
@@ -67,6 +68,7 @@ class BloqueLandingSerializer(serializers.Serializer):
     nombre_interno = serializers.CharField(max_length=100, allow_blank=True, required=False)
     from apps.landing.section_elements import SectionElementSerializer
     componentes = SectionElementSerializer(many=True, required=False)
+    actividad = ActivityConfigSerializer(required=False, allow_null=True)
 
     def validate_id(self, value):
         return str(value)
@@ -83,6 +85,7 @@ class BloqueLandingSerializer(serializers.Serializer):
             raise serializers.ValidationError({'imagenes': f'Este bloque permite hasta {limit} imágenes.'})
         if len({i['id'] for i in images}) != len(images):
             raise serializers.ValidationError({'imagenes': 'Los identificadores deben ser únicos.'})
+        validate_activity(value)
         return value
 
 
@@ -91,6 +94,18 @@ class ContenidoLandingSerializer(serializers.Serializer):
     orden_apartados = serializers.ListField(child=serializers.CharField(max_length=50), max_length=26, required=False)
 
     def validate_bloques(self, value):
+        previous = {block['id']: block for block in self.context.get('bloques_previos', [])}
+        for block in value:
+            if 'actividad' not in block and 'actividad' in previous.get(block['id'], {}):
+                import copy
+                block['actividad'] = copy.deepcopy(previous[block['id']]['actividad'])
+            validate_activity(block)
+            activity = block.get('actividad') or {}
+            if activity.get('cupos') and self.context.get('tienda'):
+                from apps.landing.models import SolicitudActividad
+                reserved = SolicitudActividad.objects.filter(tienda=self.context['tienda'], seccion_id=block['id'], tipo='inscripcion').exclude(estado='cancelada').count()
+                if activity['cupos'] < reserved:
+                    raise serializers.ValidationError('Los cupos no pueden ser menores que las inscripciones vigentes. Cancela las que correspondan antes de reducirlos.')
         if len(value) > 20:
             raise serializers.ValidationError('Se permiten hasta 20 secciones.')
         if len({b['id'] for b in value}) != len(value):

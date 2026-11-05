@@ -1,4 +1,5 @@
 from django.db import models
+from django.conf import settings
 import uuid
 from apps.core.domain.validators import validate_image_format_and_size
 
@@ -70,3 +71,36 @@ class RecursoMultimedia(models.Model):
     class Meta:
         ordering = ['-creado', '-id']
         indexes = [models.Index(fields=['tienda', 'eliminado', '-creado'], name='media_tienda_vigentes')]
+
+
+class SolicitudActividad(models.Model):
+    """Operational participation/contact data; never a marketing authorization or payment."""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    tienda = models.ForeignKey('core.Tienda', on_delete=models.CASCADE)
+    seccion_id = models.UUIDField()
+    titulo_actividad = models.CharField(max_length=255)
+    tipo_actividad = models.CharField(max_length=10, choices=[('servicio', 'Servicio'), ('taller', 'Taller')])
+    tipo = models.CharField(max_length=12, choices=[('consulta', 'Consulta'), ('inscripcion', 'Inscripción')])
+    usuario = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
+    nombre = models.CharField(max_length=100)
+    apellido = models.CharField(max_length=100, blank=True, default='')
+    email = models.EmailField(max_length=254)
+    telefono = models.CharField(max_length=40, blank=True, default='')
+    mensaje = models.TextField(blank=True, default='')
+    estado = models.CharField(max_length=12)
+    creado = models.DateTimeField(auto_now_add=True)
+    actualizado = models.DateTimeField(auto_now=True)
+    consentimiento_version = models.CharField(max_length=40)
+    consentimiento_fecha = models.DateTimeField()
+    solicitud_id = models.UUIDField()
+    huella = models.CharField(max_length=64)
+
+    class Meta:
+        ordering = ['-creado', '-id']
+        constraints = [
+            models.UniqueConstraint(fields=['tienda', 'solicitud_id'], name='actividad_solicitud_id_unico'),
+            models.UniqueConstraint(fields=['tienda', 'huella'], name='actividad_solicitud_huella_unica'),
+            models.UniqueConstraint(fields=['tienda', 'seccion_id', 'email'], condition=models.Q(tipo='inscripcion'), name='actividad_inscripcion_unica'),
+            models.CheckConstraint(condition=(models.Q(tipo='consulta', estado__in=['nueva', 'en_revision', 'respondida', 'cerrada']) | models.Q(tipo='inscripcion', estado__in=['pendiente', 'confirmada', 'cancelada'])), name='actividad_estado_tipo_valido'),
+        ]
+        indexes = [models.Index(fields=['tienda', 'tipo', 'seccion_id', 'estado'], name='actividad_gestion_tienda')]
