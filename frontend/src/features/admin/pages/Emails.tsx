@@ -7,7 +7,7 @@ import {
   EmailTemplateType,
 } from "../data/mockAdminData"
 import { Alert, Button, Toggle } from "../components/ui"
-import { fetchEmailTemplates, saveEmailTemplates, type RemoteEmailTemplates } from "../services/emailTemplateService"
+import { fetchEmailTemplates, saveEmailTemplates, sendEmergencyEmail, type RemoteEmailTemplates } from "../services/emailTemplateService"
 
 const templateTypes = Object.keys(emailTemplateDefinitions) as EmailTemplateType[]
 
@@ -24,6 +24,35 @@ export default function EmailTemplates() {
   const [remoteDefaults, setRemoteDefaults] = useState<RemoteEmailTemplates["por_defecto"]>({})
   const [fields,setFields] = useState<AutomaticField[]>([])
   const [required,setRequired] = useState<Record<string,string[]>>({})
+  const [emergencyOpen, setEmergencyOpen] = useState(false)
+  const [emergencyRecipient, setEmergencyRecipient] = useState('')
+  const [emergencyOrderId, setEmergencyOrderId] = useState('')
+  const [emergencySending, setEmergencySending] = useState(false)
+  const [emergencyResult, setEmergencyResult] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+
+  const handleEmergencySend = async () => {
+    if (emergencySending) return
+    setEmergencySending(true)
+    setEmergencyResult(null)
+    try {
+      const res = await sendEmergencyEmail({
+        tipo: activeType,
+        destinatario: emergencyRecipient.trim() || undefined,
+        id_pedido: emergencyOrderId.trim() ? Number(emergencyOrderId.trim()) : undefined,
+      })
+      setEmergencyResult({
+        type: 'success',
+        text: `Correo de emergencia enviado exitosamente a ${res.destinatario || emergencyRecipient.trim()}.`,
+      })
+    } catch (err) {
+      setEmergencyResult({
+        type: 'error',
+        text: err instanceof Error ? err.message : 'No se pudo enviar el correo de emergencia.',
+      })
+    } finally {
+      setEmergencySending(false)
+    }
+  }
   const activeTemplate = templates[activeType]
 
   const updateTemplate = (changes: Partial<typeof activeTemplate>) => {
@@ -118,12 +147,80 @@ export default function EmailTemplates() {
                 <h2 className="font-semibold">{emailTemplateDefinitions[activeType].label}</h2>
                 <p className="text-xs text-[var(--muted-foreground)] mt-1">Destino automático: <span className="font-mono"><span className="automatic-field-chip">Correo del cliente</span></span></p>
               </div>
-              <Toggle
+              <div className="flex flex-wrap items-center gap-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={saving || !loaded}
+                  onClick={() => { setEmergencyOpen(!emergencyOpen); setEmergencyResult(null); }}
+                >
+                  {emergencyOpen ? 'Cerrar envío manual' : 'Envío manual'}
+                </Button>
+                <Toggle
                 disabled={saving || !loaded}
                 label="Activar envío automático"
                 checked={activeTemplate.enabled}
                 onChange={(enabled) => updateTemplate({ enabled })}
-              />
+                />
+              </div>
+            {emergencyOpen && (
+              <div className="p-4 bg-[var(--muted)]/50 border border-[var(--border)] rounded-xl space-y-3">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xs font-semibold uppercase tracking-wider text-[var(--foreground)]">
+                    Envío manual de emergencia — {emailTemplateDefinitions[activeType].label}
+                  </h3>
+                  <span className="text-[11px] text-[var(--muted-foreground)]">
+                    Omite filtros automáticos y envía de inmediato
+                  </span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium text-[var(--muted-foreground)] mb-1">
+                      Correo destinatario (opcional si indicas pedido)
+                    </label>
+                    <input
+                      type="email"
+                      placeholder="cliente@gmail.com, outlook, hotmail, etc."
+                      value={emergencyRecipient}
+                      onChange={e => setEmergencyRecipient(e.target.value)}
+                      disabled={emergencySending}
+                      className="w-full text-xs px-3 py-2 bg-white border border-[var(--border)] rounded-lg outline-none focus:ring-2 focus:ring-[var(--primary)]"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-[var(--muted-foreground)] mb-1">
+                      N° o ID de pedido (opcional)
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Ej. 12 (deja vacío para último pedido)"
+                      value={emergencyOrderId}
+                      onChange={e => setEmergencyOrderId(e.target.value)}
+                      disabled={emergencySending}
+                      className="w-full text-xs px-3 py-2 bg-white border border-[var(--border)] rounded-lg outline-none focus:ring-2 focus:ring-[var(--primary)]"
+                    />
+                  </div>
+                </div>
+                <div className="flex items-center justify-between pt-1">
+                  <span className="text-xs text-[var(--muted-foreground)]">
+                    Compatible con Gmail, Outlook, Hotmail y demás proveedores.
+                  </span>
+                  <Button
+                    type="button"
+                    variant="primary"
+                    disabled={emergencySending}
+                    onClick={handleEmergencySend}
+                  >
+                    {emergencySending ? 'Enviando correo…' : 'Enviar correo ahora'}
+                  </Button>
+                </div>
+                {emergencyResult && (
+                  <Alert variant={emergencyResult.type === 'success' ? 'success' : 'error'}>
+                    {emergencyResult.text}
+                  </Alert>
+                )}
+              </div>
+            )}
             </div>
             <div className="grid gap-4">
               <AutomaticFieldEditor key={activeType+'-subject'} label="Asunto" value={activeTemplate.subject} onChange={subject=>updateTemplate({subject})} fields={fields} required={activeTemplate.enabled?required[activeType]:[]} maxLength={200} disabled={saving||!loaded||!activeTemplate.enabled}/>

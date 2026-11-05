@@ -183,18 +183,45 @@ PAYMENT_CREDENTIALS_KEY = os.getenv('PAYMENT_CREDENTIALS_KEY', '')
 # File content is converted to managed media before JSON persistence.
 DATA_UPLOAD_MAX_MEMORY_SIZE = 16 * 1024 * 1024
 
-# Correo transaccional (SCRUM-423). Sin configurar, los correos se imprimen en el log del backend
-# (docker compose logs backend). Para enviarlos de verdad: EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend
-# y los datos del servidor SMTP en las variables EMAIL_*. Ver docs/correo-despacho.md.
-EMAIL_BACKEND = os.getenv('EMAIL_BACKEND') or 'django.core.mail.backends.console.EmailBackend'
-EMAIL_HOST = os.getenv('EMAIL_HOST') or 'localhost'
-EMAIL_PORT = int(os.getenv('EMAIL_PORT') or 587)
-EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER') or ''
-EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD') or ''
-EMAIL_USE_SSL = (os.getenv('EMAIL_USE_SSL') or '0') == '1'
-EMAIL_USE_TLS = (os.getenv('EMAIL_USE_TLS') or '1') == '1' and not EMAIL_USE_SSL
+# ==============================================================================
+# CORREO TRANSACCIONAL - CONFIGURACIÓN DUAL (LOCAL Y PRODUCCIÓN)
+# ==============================================================================
+# Contexto 1: Producción / Envío Real SMTP
+#   Se activa automáticamente si se especifica EMAIL_HOST_USER (ej. Gmail, Outlook)
+#   o un EMAIL_HOST externo (ej. smtp.sendgrid.net, smtp.resend.com, etc.).
+# Contexto 2: Desarrollo Local
+#   Si no hay credenciales configuradas, se conecta automáticamente al servicio
+#   Mailpit local (puerto SMTP 1025), donde todos los correos se capturan de forma
+#   segura e inmediata y pueden visualizarse en http://localhost:8025.
+_env_email_backend = os.getenv('EMAIL_BACKEND', '').strip()
+_env_email_host = os.getenv('EMAIL_HOST', '').strip()
+_env_email_user = os.getenv('EMAIL_HOST_USER', '').strip()
+_env_email_port = os.getenv('EMAIL_PORT', '').strip()
+
+es_smtp_real = bool(_env_email_user or (_env_email_host and _env_email_host.lower() not in ('mailpit', 'localhost', '127.0.0.1')))
+
+EMAIL_BACKEND = _env_email_backend or 'django.core.mail.backends.smtp.EmailBackend'
+
+if es_smtp_real:
+    EMAIL_HOST = _env_email_host or 'smtp.gmail.com'
+    EMAIL_PORT = int(_env_email_port or 587)
+    EMAIL_USE_SSL = (os.getenv('EMAIL_USE_SSL') or '0').strip() in ('1', 'true', 'True')
+    EMAIL_USE_TLS = (os.getenv('EMAIL_USE_TLS') or '1').strip() in ('1', 'true', 'True') and not EMAIL_USE_SSL
+    EMAIL_HOST_USER = _env_email_user
+    EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', '')
+    DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', '').strip() or (f'Tienda <{EMAIL_HOST_USER}>' if EMAIL_HOST_USER else 'Tienda <no-reply@tienda.local>')
+else:
+    # Local: Buzón Mailpit por defecto (evita enviar correos falsos a internet durante desarrollo)
+    EMAIL_HOST = _env_email_host or 'mailpit'
+    # Si EMAIL_PORT venía con 587 por defecto en .env sin credenciales, usamos 1025 de Mailpit
+    EMAIL_PORT = 1025 if (not _env_email_port or _env_email_port == '587') else int(_env_email_port)
+    EMAIL_USE_SSL = False
+    EMAIL_USE_TLS = False
+    EMAIL_HOST_USER = ''
+    EMAIL_HOST_PASSWORD = ''
+    DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', '').strip() or 'Tienda <no-reply@tienda.local>'
+
 EMAIL_TIMEOUT = int(os.getenv('EMAIL_TIMEOUT') or 10)
-DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL') or 'Tienda <no-reply@tienda.local>'
 
 # Dirección pública de la tienda, base de los enlaces de los correos (SCRUM-434). El enlace de seguimiento queda
 # <STOREFRONT_PUBLIC_URL>/seguimiento?orden=ORD-...; en producción hay que poner la dirección real de la tienda.

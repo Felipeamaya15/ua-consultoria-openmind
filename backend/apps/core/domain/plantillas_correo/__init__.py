@@ -28,11 +28,14 @@ def plantilla_de_tienda(tienda, tipo):
     return plantilla, bool(guardada.get('enabled', True))
 
 
-def construir_correo(tipo, pedido):
+def construir_correo(tipo, pedido, forzar=False):
     if tipo not in TIPOS:
         raise PlantillaCorreoInvalida(f'Tipo de correo desconocido: {tipo}.')
-    renderizar, _ = TIPOS[tipo]
+    renderizar, por_defecto = TIPOS[tipo]
     plantilla, activa = plantilla_de_tienda(pedido.tienda, tipo)
-    if not activa:
+    if not activa and not forzar:
         return None
-    return renderizar(pedido, plantilla)
+    try:
+        return renderizar(pedido, plantilla or por_defecto, forzar=forzar)
+    except TypeError:
+        return renderizar(pedido, plantilla or por_defecto)

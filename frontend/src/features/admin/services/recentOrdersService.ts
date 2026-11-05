@@ -126,3 +126,23 @@ export function describeShipmentEmail(correo: OrderEmailOutcome | null | undefin
     default: return { text: 'No se pudo enviar el aviso de despacho al comprador. Revisa la configuración de correo.', failed: true };
   }
 }
+
+export async function sendManualOrderEmail(pedidoId: number, tipo: string, destinatario?: string) {
+  const token = authService.getToken();
+  if (!token) throw new Error('Inicia sesión como propietario para enviar correos.');
+  const response = await requestJson(`${API_BASE_URL}/api/tienda/pedidos/${pedidoId}/enviar-correo/`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Token ${token}`,
+    },
+    body: JSON.stringify({ tipo, destinatario }),
+  });
+  return response as {
+    enviado: boolean;
+    codigo: string;
+    tipo: string;
+    destinatario: string;
+    notificaciones?: Record<string, unknown>;
+  };
+}

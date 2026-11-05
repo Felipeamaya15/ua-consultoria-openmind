@@ -208,7 +208,12 @@ export default function TransbankReturnResult({
               </Button>
             </Link>
           ) : (
-            <Link data-page-action="ghost" to={route('checkout')} className="flex-1">
+            <Link
+              data-page-action="ghost"
+              to={`${route('checkout')}?orderNumber=${encodeURIComponent(orderLabel)}`}
+              state={{ orderNumber: orderLabel }}
+              className="flex-1"
+            >
               <Button variant="primary" fullWidth>
                 Volver al checkout
               </Button>

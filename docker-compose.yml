@@ -60,18 +60,19 @@ services:
       - MONGO_DB_NAME=${MONGO_DB_NAME}
       - PICKUP_GEOCODING_PROVIDER=${PICKUP_GEOCODING_PROVIDER:-}
       - PICKUP_GOOGLE_GEOCODING_KEY=${PICKUP_GOOGLE_GEOCODING_KEY:-}
-      - EMAIL_BACKEND=${EMAIL_BACKEND:-}
-      - EMAIL_HOST=${EMAIL_HOST:-}
-      - EMAIL_PORT=${EMAIL_PORT:-}
+      - EMAIL_BACKEND=${EMAIL_BACKEND:-django.core.mail.backends.smtp.EmailBackend}
+      - EMAIL_HOST=${EMAIL_HOST:-mailpit}
+      - EMAIL_PORT=${EMAIL_PORT:-1025}
       - EMAIL_HOST_USER=${EMAIL_HOST_USER:-}
       - EMAIL_HOST_PASSWORD=${EMAIL_HOST_PASSWORD:-}
-      - EMAIL_USE_TLS=${EMAIL_USE_TLS:-}
-      - EMAIL_USE_SSL=${EMAIL_USE_SSL:-}
-      - DEFAULT_FROM_EMAIL=${DEFAULT_FROM_EMAIL:-}
+      - EMAIL_USE_TLS=${EMAIL_USE_TLS:-0}
+      - EMAIL_USE_SSL=${EMAIL_USE_SSL:-0}
+      - DEFAULT_FROM_EMAIL=${DEFAULT_FROM_EMAIL:-Tienda <no-reply@tienda.local>}
       - STOREFRONT_PUBLIC_URL=${STOREFRONT_PUBLIC_URL:-}
     depends_on:
       - db
       - mongodb
+      - mailpit
 
   # 4. FRONTEND (React + Vite)
   frontend:
@@ -91,12 +92,10 @@ services:
     depends_on:
       - backend
 
-  # 5. BUZON DE PRUEBA DE CORREO (opcional): docker compose --profile correo up -d mailpit
-  #    Se ven los correos en http://localhost:8025 (ver docs/correo-despacho.md).
+  # 5. BUZON DE PRUEBA DE CORREO LOCAL (Mailpit): siempre activo en local para ver correos en http://localhost:8025
   mailpit:
     image: axllent/mailpit:latest
     container_name: mailpit_consultoria
-    profiles: ["correo"]
     restart: unless-stopped
     ports:
       - "8025:8025"
