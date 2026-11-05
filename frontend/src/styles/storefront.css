@@ -33,7 +33,7 @@
   --institutional: #1a3a6b;
   --institutional-light: #2a5aab;
 
-  /* Core palette */
+  /* Core palette (contraste reforzado en textos secundarios) */
   --background: #f7f8fb;
   --foreground: #0f1623;
   --card: #ffffff;
@@ -43,7 +43,7 @@
   --secondary: #eef1f8;
   --secondary-foreground: #1a3a6b;
   --muted: #f1f3f9;
-  --muted-foreground: #5a6786;
+  --muted-foreground: #334155;
   --accent: #c2410c;
   --on-primary: #ffffff;
   --on-accent: #ffffff;
@@ -173,9 +173,10 @@ body {
   --t-heading-font: 'Plus Jakarta Sans', sans-serif;
 }
 
+/* Dimensiones equilibradas para evitar contenido aislado a un costado de la pantalla */
 [data-storefront-visual] {
-  --storefront-wide-width: min(92vw, 1560px);
-  --storefront-focused-width: min(92vw, 1080px);
+  --storefront-wide-width: min(92vw, 1280px);
+  --storefront-focused-width: min(92vw, 960px);
   --visual-content-width: var(--storefront-wide-width) !important;
   --visual-catalog-width: var(--storefront-wide-width) !important;
   --visual-catalog-grid-max-width: var(--storefront-wide-width) !important;
@@ -191,6 +192,22 @@ body {
 [data-storefront-visual] [data-visual-page]:not([data-visual-page="login"]) {
   --visual-page-width: var(--storefront-wide-width) !important;
   --visual-page-form-width: 100% !important;
+}
+
+/* Páginas de lectura/formulario de una columna centradas para que nunca queden aisladas a un lado */
+[data-storefront-visual] :is(
+  [data-visual-page="tracking"],
+  [data-visual-page="confirmation"],
+  [data-visual-page="profile"],
+  [data-visual-page="orders"],
+  [data-visual-page="terms"],
+  [data-visual-page="privacy"],
+  [data-visual-page="refund"],
+  [data-visual-page="story"]
+) {
+  --visual-page-width: var(--storefront-focused-width) !important;
+  max-width: var(--storefront-focused-width) !important;
+  margin-inline: auto !important;
 }
 
 [data-storefront-visual] > main,
@@ -218,9 +235,197 @@ body {
 [data-storefront-visual] .ua-store-page:not([data-visual-page="login"]) > div,
 [data-storefront-visual] .ua-store-page:not([data-visual-page="login"]) > main,
 [data-storefront-visual] .ua-store-page:not([data-visual-page="login"]) > section,
-[data-storefront-visual] .ua-store-page:not([data-visual-page="login"]) [data-page-form] {
+[data-storefront-visual] .ua-store-page:not([data-visual-page="login"]):not([data-visual-page="tracking"]) [data-page-form] {
   max-width: 100% !important;
   width: 100%;
+  margin-inline: auto;
+}
+
+/* Buscador de Seguimiento y formularios de Perfil centrados y proporcionados */
+[data-storefront-visual] [data-visual-page="tracking"] [data-page-form] {
+  max-width: 640px !important;
+  width: 100%;
+  margin-inline: auto;
+}
+
+[data-storefront-visual] [data-visual-page="profile"] [data-page-form] {
+  max-width: 720px !important;
+  width: 100%;
+  margin-inline: auto;
+}
+
+/* ==========================================================================
+   LOGO INSTITUCIONAL UNIVERSIDAD AUTÓNOMA (GRANDE Y LEGIBLE EN TODAS LAS VISTAS)
+   ========================================================================== */
+[data-storefront-visual] [data-visual-part="headerLayout"] {
+  min-height: 74px !important;
+  padding-block: 6px;
+}
+
+[data-storefront-visual] .ua-institutional-badge {
+  min-height: 54px !important;
+}
+
+/* Tamaño general y en cabeceras (54px alto × ~102px ancho) */
+[data-storefront-visual] .ua-institutional-badge img,
+[data-storefront-visual] [data-visual-section="header"] .ua-institutional-badge img {
+  width: auto !important;
+  height: 54px !important;
+  min-width: 102px !important;
+  max-width: 148px !important;
+  padding: 2px 4px !important;
+  background: transparent !important;
+  border: 0 !important;
+  border-radius: 8px !important;
+  object-fit: contain !important;
+  box-shadow: none !important;
+  opacity: 0.96;
+}
+
+/* Tamaño en pies de página (64px alto × ~121px ancho) */
+[data-storefront-visual] [data-visual-section="footer"] .ua-institutional-badge img {
+  width: auto !important;
+  height: 64px !important;
+  min-width: 120px !important;
+  max-width: 172px !important;
+  padding: 2px 4px !important;
+}
+
+/* Tamaño destacado en Login y Registro (88px alto × ~166px ancho) */
+[data-storefront-visual] [data-visual-page="login"] [data-login-header] .ua-institutional-badge img {
+  width: auto !important;
+  height: 88px !important;
+  min-width: 166px !important;
+  max-width: 225px !important;
+  padding: 10px 16px !important;
+  border-radius: 12px !important;
+  opacity: 1;
+}
+
+/* En superficies claras (cabecera Minimal o Login sobre fondo claro), pastilla institucional para contraste */
+[data-storefront-visual].template-minimal [data-visual-section="header"] .ua-institutional-badge img,
+[data-storefront-visual]:not(.template-catalog) [data-visual-page="login"] [data-login-header] .ua-institutional-badge img {
+  background: var(--primary, #1a3a6b) !important;
+  box-shadow: 0 2px 6px rgba(10, 20, 50, 0.12) !important;
+  opacity: 1;
+}
+
+[data-storefront-visual].template-minimal [data-visual-section="header"] .ua-institutional-badge img {
+  padding: 5px 10px !important;
+}
+
+@media (max-width: 767px) {
+  [data-storefront-visual] .ua-institutional-badge img,
+  [data-storefront-visual] [data-visual-section="header"] .ua-institutional-badge img {
+    height: 44px !important;
+    min-width: 84px !important;
+    max-width: 116px !important;
+  }
+
+  [data-storefront-visual] [data-visual-section="footer"] .ua-institutional-badge img {
+    height: 54px !important;
+    min-width: 102px !important;
+    max-width: 145px !important;
+  }
+
+  [data-storefront-visual] [data-visual-page="login"] [data-login-header] .ua-institutional-badge img {
+    height: 76px !important;
+    min-width: 144px !important;
+    max-width: 195px !important;
+  }
+}
+
+/* Visibilidad mejorada de textos en todos los widgets y vistas (evita textos pálidos o diminutos) */
+[data-storefront-visual] :is(.text-\[9px\], .text-\[10px\], .text-\[11px\]) {
+  font-size: 0.75rem !important;
+  line-height: 1.4 !important;
+}
+
+[data-storefront-visual] :is(
+  [class*="text-[var(--visual-page-color)]/30"],
+  [class*="text-[var(--visual-page-color)]/35"],
+  [class*="text-[var(--visual-page-color)]/40"],
+  [class*="text-[var(--visual-page-color)]/45"],
+  [class*="text-[var(--visual-page-color)]/50"],
+  [class*="text-[var(--visual-page-color)]/60"]
+) {
+  color: color-mix(in srgb, var(--visual-page-color, var(--visual-text, #0f1623)) 85%, transparent) !important;
+}
+
+[data-storefront-visual] :is(.opacity-40, .opacity-50, .opacity-60, .opacity-70) {
+  opacity: 0.9 !important;
+}
+
+/* Corrección de contraste en Plantilla 4 (Catalog - fondo oscuro) para textos que usaban text-black */
+[data-storefront-visual].template-catalog .ua-store-page :is(.text-black, .text-black\/80, .text-black\/60, .text-\[\#151515\]) {
+  color: var(--visual-page-color, #ffffff) !important;
+}
+
+/* Distribución centrada y uniforme en widgets de Beneficios, Contacto, Horarios y Ubicación */
+[data-storefront-visual] [data-visual-kind="benefits"] > div,
+[data-storefront-visual] section[aria-label="Beneficios de la tienda"] > div {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)) !important;
+  gap: 1.25rem !important;
+  justify-items: center !important;
+  align-items: start !important;
+}
+
+[data-storefront-visual] section[aria-label="Beneficios de la tienda"] > div > div {
+  max-width: 320px !important;
+  width: 100%;
+  justify-content: center;
+}
+
+[data-storefront-visual] .landing-details__heading {
+  text-align: center;
+  margin-bottom: 1.5rem;
+}
+
+[data-storefront-visual] .landing-details__hours {
+  max-width: 100% !important;
+  width: 100%;
+}
+
+[data-storefront-visual] .landing-details__label {
+  font-size: 0.75rem !important;
+  font-weight: 600;
+}
+
+[data-storefront-visual] .landing-details__value,
+[data-storefront-visual] .landing-details__hours-list li,
+[data-storefront-visual] .landing-details__address p {
+  font-size: 0.875rem !important;
+}
+
+/* Legibilidad reforzada en textos sobre imágenes Hero */
+[data-storefront-visual] [data-visual-section="hero"] :is(h1, [data-visual-part="heroSubtitle"]) {
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.35);
+}
+
+[data-storefront-visual].template-minimal [data-visual-section="hero"] :is(h1, [data-visual-part="heroSubtitle"]) {
+  text-shadow: none;
+}
+
+/* Respetar el centrado explícito en encabezados de Login, Registro, Seguimiento, Confirmación y estados vacíos */
+[data-storefront-visual] .ua-store-page .text-center :is(h1, h2, p),
+[data-storefront-visual] .ua-store-page :is(h1, h2, p).text-center,
+[data-storefront-visual] [data-visual-page="login"] [data-login-header],
+[data-storefront-visual] [data-visual-page="login"] [data-login-header] :is(h1, h2, p) {
+  text-align: center !important;
+  margin-inline: auto;
+}
+
+[data-storefront-visual] [data-visual-page="login"] [data-login-header] .ua-institutional-badge {
+  margin-inline: auto;
+  justify-content: center;
+}
+
+[data-storefront-visual] [data-visual-page="login"] [data-page-panel] > form[data-page-form] {
+  border: 0 !important;
+  padding: 0 !important;
+  box-shadow: none !important;
+  background: transparent !important;
 }
 
 /* Animation utilities */
@@ -265,7 +470,7 @@ button:disabled { cursor: not-allowed; opacity: .65; }
   background-color: var(--visual-global-surface, #ffffff) !important;
   color: var(--visual-text, #0f1623) !important;
   --foreground: var(--visual-text, #0f1623) !important;
-  --muted-foreground: var(--visual-muted, #5a6786) !important;
+  --muted-foreground: var(--visual-muted, #334155) !important;
   border-top: 1px solid var(--visual-global-border, #dde3f0);
   box-shadow: var(--shadow-lg);
   position: relative;
@@ -514,23 +719,5 @@ button:disabled { cursor: not-allowed; opacity: .65; }
     min-height: 2.75rem;
     white-space: normal;
     overflow-wrap: anywhere;
-  }
-
-  [data-storefront-visual] [data-visual-page="login"] [data-login-header],
-  [data-storefront-visual] [data-visual-page="login"] [data-login-header] :is(h1, h2, p) {
-    text-align: center !important;
-    margin-inline: auto;
-  }
-
-  [data-storefront-visual] [data-visual-page="login"] [data-login-header] .ua-institutional-badge {
-    margin-inline: auto;
-    justify-content: center;
-  }
-
-  [data-storefront-visual] [data-visual-page="login"] [data-page-panel] > form[data-page-form] {
-    border: 0 !important;
-    padding: 0 !important;
-    box-shadow: none !important;
-    background: transparent !important;
   }
 }

@@ -1,4 +1,4 @@
-/** Contrato responsive de cierre: Landing page móvil, Catálogo, Detalle, Carrito, Checkout, Login y Panel Admin. */
+/** Contrato responsive y revisión general del Frontend: Landing, Catálogo, Detalle, Carrito, Checkout, Login y Panel Admin. */
 const fs = require('node:fs');
 const path = require('node:path');
 const assert = require('node:assert/strict');
@@ -8,6 +8,7 @@ const checkout = fs.readFileSync(path.join(root, 'src/features/storefront/pages/
 const catalog = fs.readFileSync(path.join(root, 'src/features/storefront/pages/Catalog.tsx'), 'utf8');
 const productCard = fs.readFileSync(path.join(root, 'src/features/storefront/components/store/ProductCard.tsx'), 'utf8');
 const editorialLayout = fs.readFileSync(path.join(root, 'src/features/storefront/components/store/EditorialLayout.tsx'), 'utf8');
+const minimalHeader = fs.readFileSync(path.join(root, 'src/features/storefront/components/store/minimal/MinimalHeader.tsx'), 'utf8');
 const editorialHome = fs.readFileSync(path.join(root, 'src/features/storefront/pages/EditorialHome.tsx'), 'utf8');
 const minimalHome = fs.readFileSync(path.join(root, 'src/features/storefront/pages/MinimalHome.tsx'), 'utf8');
 const visualHome = fs.readFileSync(path.join(root, 'src/features/storefront/pages/VisualHome.tsx'), 'utf8');
@@ -54,6 +55,7 @@ test('el catálogo y las tarjetas de producto se adaptan a dispositivos móviles
   assert.match(productCard, /flex-col sm:flex-row/);
   assert.match(css, /\[data-catalog-page\]/);
   assert.match(css, /\[data-storefront-visual\] \[data-visual-card="list"\]/);
+  assert.match(css, /\[data-storefront-visual\] \[data-visual-grid="catalog"\]/);
 });
 
 test('el checkout mobile es el mismo componente real de las cuatro plantillas', () => {
@@ -80,7 +82,7 @@ test('las acciones importantes siguen visibles en pantallas angostas', () => {
   assert.match(checkout, /disabled=\{isPaymentDisabled\}/);
 });
 
-test('las seis vistas prioritarias (catálogo, detalle, carrito, checkout, login y admin) cumplen los fixes responsive', () => {
+test('las seis vistas prioritarias (catálogo, detalle, carrito, checkout, login y admin) cumplen los fixes visuales y de navegación', () => {
   const productDetail = fs.readFileSync(path.join(root, 'src/features/storefront/pages/ProductDetail.tsx'), 'utf8');
   const cart = fs.readFileSync(path.join(root, 'src/features/storefront/pages/Cart.tsx'), 'utf8');
   const login = fs.readFileSync(path.join(root, 'src/features/storefront/pages/Login.tsx'), 'utf8');
@@ -96,7 +98,10 @@ test('las seis vistas prioritarias (catálogo, detalle, carrito, checkout, login
 
   assert.match(css, /\[data-checkout-page\] \[data-page-panel\] \.grid\.grid-cols-2 > span/);
 
+  assert.match(login, /data-login-header/);
   assert.doesNotMatch(login, /onClick=\{\(\) => loginConGoogle\(\)\}[\s\S]{0,250}¿Olvidaste tu contraseña\?/);
+  assert.match(css, /\[data-storefront-visual\] \[data-visual-page="login"\] \[data-login-header\]/);
+  assert.match(minimalHeader, /to="ingresar\?modo=registro"/);
 
   assert.match(adminCss, /@media\(max-width:639px\)\{[\s\S]*?\.catalog-overview\{grid-template-columns:minmax\(0,1fr\)\}/);
 });

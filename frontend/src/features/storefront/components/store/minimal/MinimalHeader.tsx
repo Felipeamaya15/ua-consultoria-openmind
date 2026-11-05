@@ -83,7 +83,7 @@ export function MinimalHeader() {
           <AccountNavigation className="hidden sm:block text-xs font-medium text-[var(--primary)]" />
 
           <Link
-            to="ingresar"
+            to="ingresar?modo=registro"
             className="hidden md:block px-4 py-2 rounded-full border border-gray-200 text-xs font-medium text-[var(--primary)] hover:bg-gray-50 transition-colors"
           >
             Registrarse
