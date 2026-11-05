@@ -227,13 +227,17 @@ body {
   width: 100%;
 }
 
-/* Evitar que el nombre de la tienda al lado del logo se corte a "ti..." */
+/* Evitar que el nombre de la tienda al lado del logo se corte a "ti..." o "t..." */
 [data-storefront-visual] [data-visual-part="logo"] {
   max-width: none !important;
 }
 
+[data-storefront-visual] [data-visual-part="logo"] span {
+  white-space: nowrap !important;
+}
+
 /* ==========================================================================
-   PLANTILLA 2 (MINIMAL): CENTRADO DE HERO, BUSCADOR COMPLETO Y PASTILLA DE NAV LEGIBLE
+   PLANTILLA 2 (MINIMAL): CENTRADO DE HERO, BUSCADOR EN LÍNEA Y PASTILLA DE NAV LEGIBLE
    ========================================================================== */
 [data-storefront-visual].template-minimal [data-visual-layout="stack"] {
   align-items: center !important;
@@ -255,10 +259,21 @@ body {
   width: min(100%, 720px) !important;
   margin-inline: auto !important;
   justify-content: center !important;
+  flex-wrap: nowrap !important;
 }
 
 [data-storefront-visual].template-minimal [data-landing-search] {
   width: 100% !important;
+  display: flex !important;
+  flex-wrap: nowrap !important;
+  align-items: center !important;
+  border-radius: 9999px !important;
+}
+
+[data-storefront-visual].template-minimal [data-landing-search] [data-visual-section="heroCta"] {
+  width: auto !important;
+  flex-shrink: 0 !important;
+  white-space: nowrap !important;
 }
 
 /* Pastilla blanca de navegación debajo del logo en MinimalHeader: texto oscuro 100% legible */
@@ -358,10 +373,10 @@ body {
 }
 
 [data-storefront-visual] .ua-institutional-badge {
-  min-height: 50px !important;
+  min-height: 48px;
 }
 
-/* Tamaño general y en cabeceras (50px alto × ~96px ancho) */
+/* Tamaño general y en cabeceras en escritorio/tablet (50px alto × ~96px ancho) */
 [data-storefront-visual] .ua-institutional-badge img,
 [data-storefront-visual] [data-visual-section="header"] .ua-institutional-badge img {
   width: auto !important;
@@ -410,11 +425,39 @@ body {
 }
 
 @media (max-width: 767px) {
+  [data-storefront-visual] [data-visual-part="headerLayout"] {
+    gap: 6px !important;
+    padding-inline: 10px !important;
+    min-height: 60px !important;
+    flex-wrap: nowrap !important;
+  }
+
+  [data-storefront-visual] .ua-institutional-badge {
+    min-height: 34px !important;
+    margin-right: 0 !important;
+  }
+
   [data-storefront-visual] .ua-institutional-badge img,
   [data-storefront-visual] [data-visual-section="header"] .ua-institutional-badge img {
-    height: 42px !important;
-    min-width: 80px !important;
-    max-width: 112px !important;
+    height: 32px !important;
+    min-width: 60px !important;
+    max-width: 72px !important;
+    padding: 1px 2px !important;
+  }
+
+  [data-storefront-visual] [data-visual-part="logo"] {
+    gap: 6px !important;
+    min-width: 0 !important;
+  }
+
+  [data-storefront-visual] [data-visual-part="logo"] img {
+    max-width: 44px !important;
+    max-height: 32px !important;
+  }
+
+  [data-storefront-visual] [data-visual-part="logo"] span {
+    font-size: 14px !important;
+    white-space: nowrap !important;
   }
 
   [data-storefront-visual] [data-visual-section="footer"] .ua-institutional-badge img {
@@ -581,6 +624,7 @@ button:disabled { cursor: not-allowed; opacity: .65; }
 .store-mobile-navigation {
   position: relative;
   flex-shrink: 0;
+  padding: 0 !important;
 }
 
 .store-mobile-navigation > summary {
@@ -588,8 +632,8 @@ button:disabled { cursor: not-allowed; opacity: .65; }
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 2.5rem;
-  padding: 0.375rem 0.875rem;
+  min-height: 2.25rem;
+  padding: 0.35rem 0.7rem;
   border-radius: 999px;
   border: 1px solid currentColor;
   font-size: 0.75rem;
@@ -666,7 +710,7 @@ button:disabled { cursor: not-allowed; opacity: .65; }
     --storefront-focused-width: 100%;
   }
 
-  [data-landing-page] [data-visual-part="heroCtaLayout"] {
+  [data-landing-page]:not([data-landing-page="minimal"]) [data-visual-part="heroCtaLayout"] {
     flex-wrap: wrap;
   }
 
@@ -674,8 +718,15 @@ button:disabled { cursor: not-allowed; opacity: .65; }
     min-height: 2.75rem;
   }
 
-  [data-landing-page] [data-landing-search] {
-    border-radius: 1.25rem;
+  [data-landing-page="minimal"] [data-landing-search] {
+    border-radius: 9999px !important;
+    flex-wrap: nowrap !important;
+  }
+
+  [data-landing-page="minimal"] [data-landing-search] [data-visual-section="heroCta"] {
+    width: auto !important;
+    padding: 0.5rem 1rem !important;
+    font-size: 0.75rem !important;
   }
 
   /* SCRUM-463: Tarjetas de "Explorar por categoría" amplias y legibles en móvil (Editorial y Minimal) */

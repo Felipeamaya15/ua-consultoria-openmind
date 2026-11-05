@@ -12,7 +12,7 @@ export function VisualFooter() {
   const { route } = useStorefrontTemplate();
 
   return (
-    <footer data-visual-section={VISUAL_SECTION.footer} className="bg-[var(--primary)] text-[var(--on-primary)] border-t border-[color-mix(in_srgb,currentColor_20%,transparent)]">
+    <footer data-visual-section={VISUAL_SECTION.footer} className="bg-[var(--primary)] text-[var(--on-primary)] border-t border-[color-mix(in_srgb,currentColor_20%,transparent)] mt-16">
       <div className="max-w-6xl mx-auto px-5 py-12">
 
         <div data-visual-part="footerLayout" className="grid grid-cols-1 md:grid-cols-4 gap-8 text-left items-start">

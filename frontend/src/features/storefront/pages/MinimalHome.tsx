@@ -129,15 +129,15 @@ export default function MinimalHome() {
             {landing?.descripcion}
           </p>
 
-          {/* Buscador completo sin recortar el texto */}
+          {/* Buscador en una sola línea (input + botón al lado tanto en móvil como en escritorio) */}
           <form data-visual-part="heroCtaLayout"
             onSubmit={handleSearch}
             className="w-full max-w-2xl mx-auto mt-6 sm:mt-8 flex justify-center"
           >
-            <div data-landing-search className="w-full bg-white rounded-3xl sm:rounded-full border border-black/10 shadow-sm p-2 pl-4 sm:pl-6 flex flex-wrap sm:flex-nowrap items-center gap-2 sm:gap-3">
+            <div data-landing-search className="w-full bg-white rounded-full border border-black/10 shadow-sm p-1.5 pl-3.5 sm:p-2 sm:pl-6 flex flex-nowrap items-center gap-2 sm:gap-3">
 
               <svg
-                className="w-5 h-5 text-gray-500 flex-shrink-0"
+                className="w-4 h-4 sm:w-5 sm:h-5 text-gray-500 flex-shrink-0"
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
@@ -157,17 +157,17 @@ export default function MinimalHome() {
                 onChange={(event) => setSearch(event.target.value)}
                 placeholder="¿Qué estás buscando hoy?"
                 aria-label="Buscar productos"
-                className="flex-1 min-w-[200px] w-full h-11 bg-transparent outline-none text-sm md:text-base text-[#171717] placeholder:text-gray-500"
+                className="flex-1 min-w-0 w-full h-10 sm:h-11 bg-transparent outline-none text-xs sm:text-sm md:text-base text-[#171717] placeholder:text-gray-500"
               />
 
               <button data-visual-section={VISUAL_SECTION.heroCta}
                 type="submit"
                 aria-label={landing?.texto_boton || 'Buscar'}
-                className="px-6 min-w-11 min-h-11 w-full sm:w-auto gap-2 flex-shrink-0 rounded-full bg-[var(--primary)] text-[var(--on-primary)] flex items-center justify-center font-semibold hover:scale-105 transition-transform"
+                className="px-4 sm:px-6 min-w-11 min-h-11 w-auto shrink-0 gap-1.5 sm:gap-2 rounded-full bg-[var(--primary)] text-[var(--on-primary)] inline-flex items-center justify-center text-xs sm:text-sm font-semibold hover:scale-105 transition-transform whitespace-nowrap"
               >
                 {landing?.texto_boton}
                 <svg
-                  className="w-4 h-4"
+                  className="w-4 h-4 shrink-0"
                   viewBox="0 0 24 24"
                   fill="none"
                   stroke="currentColor"
