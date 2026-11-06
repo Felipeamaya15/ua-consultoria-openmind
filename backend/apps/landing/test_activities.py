@@ -233,6 +233,154 @@ class ActivityTests(TestCase):
         self.assertEqual(self.submit().status_code, 503)
         self.assertEqual(self.management().status_code, 503)
 
+    # QA Sprint 8: historial y archivado de consultas (sin alterar inscripciones).
+    def archive(self, record, archivada, **extra):
+        return self.owner_client.patch(
+            f'/api/landing/solicitudes-actividades/{record.pk}/',
+            {'archivada': archivada, **extra},
+            format='json',
+        )
+
+    def test_consultation_is_active_by_default_and_archive_fields_are_public_to_owner(self):
+        self.assertEqual(self.submit().status_code, 202)
+        record = SolicitudActividad.objects.get(tipo='consulta')
+        self.assertFalse(record.archivada)
+        self.assertIsNone(record.archivada_en)
+
+        response = self.management(tipo='consulta')
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data['data']['total'], 1)
+        listed = response.data['data']['resultados'][0]
+        self.assertEqual(listed['id'], str(record.pk))
+        self.assertIs(listed['archivada'], False)
+        self.assertIsNone(listed['archivada_en'])
+
+    def test_archiving_and_unarchiving_preserves_consultation_state_and_content(self):
+        self.assertEqual(self.submit().status_code, 202)
+        record = SolicitudActividad.objects.get(tipo='consulta')
+        self.assertEqual(self.state(record, 'respondida').status_code, 200)
+        original_message = record.mensaje
+        original_email = record.email
+
+        archived = self.archive(record, True)
+        self.assertEqual(archived.status_code, 200, archived.data)
+        self.assertIs(archived.data['data']['archivada'], True)
+        self.assertIsNotNone(archived.data['data']['archivada_en'])
+        self.assertEqual(archived.data['data']['estado'], 'respondida')
+        record.refresh_from_db()
+        self.assertTrue(record.archivada)
+        self.assertIsNotNone(record.archivada_en)
+        self.assertEqual(record.estado, 'respondida')
+        self.assertEqual((record.mensaje, record.email), (original_message, original_email))
+
+        restored = self.archive(record, False)
+        self.assertEqual(restored.status_code, 200, restored.data)
+        self.assertIs(restored.data['data']['archivada'], False)
+        self.assertIsNone(restored.data['data']['archivada_en'])
+        record.refresh_from_db()
+        self.assertFalse(record.archivada)
+        self.assertIsNone(record.archivada_en)
+        self.assertEqual(record.estado, 'respondida')
+        self.assertEqual((record.mensaje, record.email), (original_message, original_email))
+
+    def test_archived_consultations_are_hidden_from_active_list_and_can_be_filtered(self):
+        self.assertEqual(self.submit().status_code, 202)
+        record = SolicitudActividad.objects.get(tipo='consulta')
+        self.assertEqual(self.archive(record, True).status_code, 200)
+
+        active_default = self.management(tipo='consulta').data['data']
+        active_explicit = self.management(tipo='consulta', archivada='false').data['data']
+        archived = self.management(tipo='consulta', archivada='true').data['data']
+        self.assertEqual(active_default['total'], 0)
+        self.assertEqual(active_explicit['total'], 0)
+        self.assertEqual(active_default['resultados'], [])
+        self.assertEqual(archived['total'], 1)
+        self.assertEqual(archived['resultados'][0]['id'], str(record.pk))
+        self.assertTrue(archived['resultados'][0]['archivada'])
+
+        self.assertEqual(self.archive(record, False).status_code, 200)
+        self.assertEqual(self.management(tipo='consulta').data['data']['total'], 1)
+        self.assertEqual(self.management(tipo='consulta', archivada='true').data['data']['total'], 0)
+
+    def test_enrollments_cannot_be_archived_or_removed_from_capacity(self):
+        self.assertEqual(self.submit('inscripciones').status_code, 202)
+        record = SolicitudActividad.objects.get(tipo='inscripcion')
+        rejected = self.archive(record, True)
+        self.assertEqual(rejected.status_code, 400, rejected.data)
+        record.refresh_from_db()
+        self.assertFalse(record.archivada)
+        self.assertIsNone(record.archivada_en)
+        self.assertEqual(record.estado, 'pendiente')
+        self.assertEqual(self.management(tipo='inscripcion').data['data']['total'], 1)
+        self.assertEqual(self.management(tipo='inscripcion', archivada='true').data['data']['total'], 0)
+
+        # La inscripción sigue ocupando un cupo tras el intento fallido.
+        self.assertEqual(
+            self.submit('inscripciones', submission(email='segunda@example.test')).status_code,
+            202,
+        )
+        self.assertEqual(
+            self.submit('inscripciones', submission(email='tercera@example.test')).status_code,
+            400,
+        )
+
+    def test_archiving_rejects_mixed_actions_and_unexpected_fields(self):
+        self.assertEqual(self.submit().status_code, 202)
+        record = SolicitudActividad.objects.get(tipo='consulta')
+        for payload in (
+            {'estado': 'cerrada', 'archivada': True},
+            {'archivada': True, 'mensaje': 'No autorizado'},
+            {},
+            {'archivada': 'no-es-booleano'},
+        ):
+            with self.subTest(payload=payload):
+                response = self.owner_client.patch(
+                    f'/api/landing/solicitudes-actividades/{record.pk}/',
+                    payload,
+                    format='json',
+                )
+                self.assertEqual(response.status_code, 400, response.data)
+        record.refresh_from_db()
+        self.assertEqual(record.estado, 'nueva')
+        self.assertFalse(record.archivada)
+        self.assertEqual(record.mensaje, '¿Qué materiales debo llevar?')
+
+    def test_archiving_requires_owner_and_cannot_access_another_store_record(self):
+        from unittest.mock import patch
+
+        self.assertEqual(self.submit().status_code, 202)
+        record = SolicitudActividad.objects.get(tipo='consulta')
+        endpoint = f'/api/landing/solicitudes-actividades/{record.pk}/'
+
+        guest = self.client.patch(endpoint, {'archivada': True}, format='json')
+        self.assertIn(guest.status_code, (401, 403))
+        self.client.force_authenticate(self.buyer)
+        unauthorized = self.client.patch(endpoint, {'archivada': True}, format='json')
+        self.assertEqual(unauthorized.status_code, 403, unauthorized.data)
+        record.refresh_from_db()
+        self.assertFalse(record.archivada)
+
+        # Simular un registro que pertenece a otra tienda. Forzamos la
+        # resolución de la tienda del propietario para aislar el control del
+        # queryset, independientemente de la selección de tenant en desarrollo.
+        other_owner = get_user_model().objects.create_user(username='other-activity-owner')
+        other_store = Tienda.objects.create(
+            nombre='Otra tienda con consultas',
+            id_usuario_propietario=other_owner,
+        )
+        record.tienda = other_store
+        record.save(update_fields=['tienda'])
+
+        with patch('apps.landing.activity_views.resolver_tienda', return_value=self.store):
+            self.assertEqual(self.management(tipo='consulta', archivada='true').data['data']['total'], 0)
+            self.assertEqual(self.management(tipo='consulta').data['data']['total'], 0)
+            foreign_write = self.owner_client.patch(
+                endpoint, {'archivada': True}, format='json'
+            )
+        self.assertEqual(foreign_write.status_code, 404, foreign_write.data)
+        record.refresh_from_db()
+        self.assertFalse(record.archivada)
+
     def test_basic_abuse_limits_do_not_log_or_expose_recipient(self):
         for _ in range(5): self.assertEqual(self.submit().status_code, 202)
         limited = self.submit()

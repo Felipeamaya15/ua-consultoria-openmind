@@ -88,6 +88,8 @@ class SolicitudActividad(models.Model):
     telefono = models.CharField(max_length=40, blank=True, default='')
     mensaje = models.TextField(blank=True, default='')
     estado = models.CharField(max_length=12)
+    archivada = models.BooleanField(default=False)
+    archivada_en = models.DateTimeField(null=True, blank=True)
     creado = models.DateTimeField(auto_now_add=True)
     actualizado = models.DateTimeField(auto_now=True)
     consentimiento_version = models.CharField(max_length=40)

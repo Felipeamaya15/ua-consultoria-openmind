@@ -103,17 +103,26 @@ class ActivityManagementQuery(StrictSerializer):
     estado = serializers.ChoiceField(choices=CONSULT_STATES + ENROLL_STATES, required=False)
     seccion = serializers.UUIDField(required=False)
     pagina = serializers.IntegerField(min_value=1, max_value=100000, default=1)
+    archivada = serializers.BooleanField(required=False, default=False)
 
 
 class ActivityStateSerializer(StrictSerializer):
-    estado = serializers.ChoiceField(choices=CONSULT_STATES + ENROLL_STATES)
+    estado = serializers.ChoiceField(choices=CONSULT_STATES + ENROLL_STATES, required=False)
+    archivada = serializers.BooleanField(required=False)
+
+    def validate(self, attrs):
+        # Only one operation per PATCH; status changes never archive automatically.
+        if ('estado' in attrs) == ('archivada' in attrs):
+            raise serializers.ValidationError('Envía solamente el estado o la opción de archivar.')
+        return attrs
 
 
 class ActivityRequestOutput(serializers.ModelSerializer):
     class Meta:
         model = SolicitudActividad
         fields = ['id', 'seccion_id', 'titulo_actividad', 'tipo_actividad', 'tipo', 'nombre', 'apellido', 'email',
-                  'telefono', 'mensaje', 'estado', 'creado', 'actualizado', 'consentimiento_version', 'consentimiento_fecha']
+                  'telefono', 'mensaje', 'estado', 'archivada', 'archivada_en', 'creado', 'actualizado',
+                  'consentimiento_version', 'consentimiento_fecha']
 
 
 class ActivityRequestsView(NoStoreActivityView):
@@ -124,7 +133,8 @@ class ActivityRequestsView(NoStoreActivityView):
         query = ActivityManagementQuery(data=request.query_params)
         query.is_valid(raise_exception=True)
         filters = query.validated_data
-        records = SolicitudActividad.objects.filter(tienda=store)
+        # By default the inbox excludes archived consultations.
+        records = SolicitudActividad.objects.filter(tienda=store, archivada=filters['archivada'])
         for field in ('tipo', 'estado'):
             if field in filters:
                 records = records.filter(**{field: filters[field]})
@@ -147,6 +157,16 @@ class ActivityRequestView(NoStoreActivityView):
         record = get_object_or_404(SolicitudActividad.objects.select_for_update(), tienda=store, pk=pk)
         data = ActivityStateSerializer(data=request.data)
         data.is_valid(raise_exception=True)
+
+        if 'archivada' in data.validated_data:
+            if record.tipo != 'consulta':
+                raise ValidationError({'archivada': 'Solo se pueden archivar consultas, no inscripciones.'})
+            archived = data.validated_data['archivada']
+            record.archivada = archived
+            record.archivada_en = timezone.now() if archived else None
+            record.save(update_fields=['archivada', 'archivada_en', 'actualizado'])
+            return success_response(data=ActivityRequestOutput(record).data)
+
         state = data.validated_data['estado']
         if state not in (CONSULT_STATES if record.tipo == 'consulta' else ENROLL_STATES):
             raise ValidationError('El estado no corresponde a este tipo de solicitud.')
