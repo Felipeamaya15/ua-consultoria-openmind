@@ -183,46 +183,49 @@ PAYMENT_CREDENTIALS_KEY = os.getenv('PAYMENT_CREDENTIALS_KEY', '')
 # File content is converted to managed media before JSON persistence.
 DATA_UPLOAD_MAX_MEMORY_SIZE = 16 * 1024 * 1024
 
+# Correo transaccional (SCRUM-423). Sin configurar, los correos se imprimen en el log del backend
+# (docker compose logs backend). Para enviarlos de verdad: EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend
+# y los datos del servidor SMTP en las variables EMAIL_*. Ver docs/correo-despacho.md.
+# Configuración de Correo Transaccional
+
+EMAIL_BACKEND = os.getenv('EMAIL_BACKEND', '').strip() or 'django.core.mail.backends.smtp.EmailBackend'
+
+EMAIL_HOST = os.getenv('EMAIL_HOST', 'smtp-relay.brevo.com')
+
+_email_port = os.getenv('EMAIL_PORT', '').strip()
+EMAIL_PORT = int(_email_port) if _email_port.isdigit() else 587
+
+EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', '')
+EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', '')
+
+# Conversión estricta a booleano
+EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS', '1') in ('1', 'True', 'true', True)
+EMAIL_USE_SSL = os.getenv('EMAIL_USE_SSL', '0') in ('1', 'True', 'true', True)
+
+DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', EMAIL_HOST_USER)
+EMAIL_TIMEOUT = 10  # Timeout en segundos para no colgar el worker si hay microcortes
+
+
+
+
 # ==============================================================================
-# CORREO TRANSACCIONAL - CONFIGURACIÓN DUAL (LOCAL Y PRODUCCIÓN)
+# NOTA PARA EQUIPO DE DESPLIEGUE / DEVOPS: CONFIGURACIÓN HTTPS & TLS 1.2+
 # ==============================================================================
-# Contexto 1: Producción / Envío Real SMTP
-#   Se activa automáticamente si se especifica EMAIL_HOST_USER (ej. Gmail, Outlook)
-#   o un EMAIL_HOST externo (ej. smtp.sendgrid.net, smtp.resend.com, etc.).
-# Contexto 2: Desarrollo Local
-#   Si no hay credenciales configuradas, se conecta automáticamente al servicio
-#   Mailpit local (puerto SMTP 1025), donde todos los correos se capturan de forma
-#   segura e inmediata y pueden visualizarse en http://localhost:8025.
-_env_email_backend = os.getenv('EMAIL_BACKEND', '').strip()
-_env_email_host = os.getenv('EMAIL_HOST', '').strip()
-_env_email_user = os.getenv('EMAIL_HOST_USER', '').strip()
-_env_email_port = os.getenv('EMAIL_PORT', '').strip()
+# Este backend está preparado para operar detrás de un proxy inverso o balanceador
+# con terminación SSL/TLS (Nginx, Traefik, AWS ALB, Cloudflare, etc.).
+#
+# REQUERIMIENTOS DE INFRAESTRUCTURA AL DESPLEGAR EN PRODUCCIÓN:
+# 1. Configurar la terminación HTTPS en el servidor/proxy con TLS 1.2 o superior.
+# 2. Asegurarse de que el proxy envíe la cabecera: X-Forwarded-Proto: https
+# 3. Establecer la variable de entorno DEBUG=False en el contenedor backend.
+# ==============================================================================
 
-es_smtp_real = bool(_env_email_user or (_env_email_host and _env_email_host.lower() not in ('mailpit', 'localhost', '127.0.0.1')))
 
-EMAIL_BACKEND = _env_email_backend or 'django.core.mail.backends.smtp.EmailBackend'
 
-if es_smtp_real:
-    EMAIL_HOST = _env_email_host or 'smtp.gmail.com'
-    EMAIL_PORT = int(_env_email_port or 587)
-    EMAIL_USE_SSL = (os.getenv('EMAIL_USE_SSL') or '0').strip() in ('1', 'true', 'True')
-    EMAIL_USE_TLS = (os.getenv('EMAIL_USE_TLS') or '1').strip() in ('1', 'true', 'True') and not EMAIL_USE_SSL
-    EMAIL_HOST_USER = _env_email_user
-    EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', '')
-    DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', '').strip() or (f'Tienda <{EMAIL_HOST_USER}>' if EMAIL_HOST_USER else 'Tienda <no-reply@tienda.local>')
-else:
-    # Local: Buzón Mailpit por defecto (evita enviar correos falsos a internet durante desarrollo)
-    EMAIL_HOST = _env_email_host or 'mailpit'
-    # Si EMAIL_PORT venía con 587 por defecto en .env sin credenciales, usamos 1025 de Mailpit
-    EMAIL_PORT = 1025 if (not _env_email_port or _env_email_port == '587') else int(_env_email_port)
-    EMAIL_USE_SSL = False
-    EMAIL_USE_TLS = False
-    EMAIL_HOST_USER = ''
-    EMAIL_HOST_PASSWORD = ''
-    DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', '').strip() or 'Tienda <no-reply@tienda.local>'
-
-EMAIL_TIMEOUT = int(os.getenv('EMAIL_TIMEOUT') or 10)
-
-# Dirección pública de la tienda, base de los enlaces de los correos (SCRUM-434). El enlace de seguimiento queda
-# <STOREFRONT_PUBLIC_URL>/seguimiento?orden=ORD-...; en producción hay que poner la dirección real de la tienda.
-STOREFRONT_PUBLIC_URL = (os.getenv('STOREFRONT_PUBLIC_URL') or 'http://localhost:5173/plantilla/1').rstrip('/')
+# Le indica a Django que si el proxy web envía este header, la conexión original fue HTTPS
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+# Obliga a redirigir tráfico no seguro a HTTPS (solo en producción)
+SECURE_SSL_REDIRECT = not DEBUG
+# Solo viajarán si la conexión es HTTPS (se puede condicionar con una variable DEBUG=False)
+SESSION_COOKIE_SECURE = not DEBUG
+CSRF_COOKIE_SECURE = not DEBUG
