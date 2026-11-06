@@ -41,7 +41,7 @@ function normalizeConfig(data: LandingConfig | null): LandingConfig | null {
   return {
     ...data,
     ...(data.contenido ? { contenido: { ...data.contenido,
-      ...(Array.isArray(data.contenido.bloques) ? { bloques: data.contenido.bloques.map((block: import('../types/landing.types').BloqueLanding) => ({...block, imagenes: block.imagenes.map(image => ({...image,src:normalizeMediaUrl(image.src) || ''}))})) } : {}),
+      ...(Array.isArray(data.contenido.bloques) ? { bloques: data.contenido.bloques.map((block: import('../types/landing.types').BloqueLanding) => ({...block, imagenes: block.imagenes.map(image => ({...image,src:normalizeMediaUrl(image.src) || ''})), ...(block.componentes ? { componentes: block.componentes.map(element => ({ ...element, ...(element.imagenes ? { imagenes: element.imagenes.map(image => ({ ...image, src: normalizeMediaUrl(image.src) || '' })) } : {}) })) } : {})})) } : {}),
     } } : {}),
     imagen_principal: normalizeMediaUrl(data.imagen_principal),
     logo: normalizeMediaUrl(data.logo),
@@ -50,6 +50,12 @@ function normalizeConfig(data: LandingConfig | null): LandingConfig | null {
 
 export async function fetchLandingConfig(options?: InitialLoadOptions): Promise<LandingConfig | null> {
   return readResponse(await fetchInitialLoad(endpoint, { ...options, cache: 'no-store' }));
+}
+
+export async function fetchPrivateLandingConfig(options?: InitialLoadOptions): Promise<LandingConfig | null> {
+  const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+  if (!token) throw new Error('Inicia sesión como propietario para editar el contenido de tu tienda.');
+  return readResponse(await fetchInitialLoad(endpoint, { ...options, cache: 'no-store', headers: { Authorization: `Token ${token}` } }));
 }
 
 export async function saveLandingConfig(config: LandingInput): Promise<LandingConfig> {

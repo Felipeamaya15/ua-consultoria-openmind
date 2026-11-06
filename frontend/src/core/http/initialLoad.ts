@@ -2,6 +2,7 @@ export interface InitialLoadOptions {
   signal?: AbortSignal;
   retry?: boolean;
   cache?: RequestCache;
+  headers?: HeadersInit;
 }
 
 const retryDelays = [750, 1000, 1500];
@@ -21,11 +22,11 @@ function waitForRetry(ms: number, signal?: AbortSignal): Promise<void> {
 
 // Solo GET iniciales que habilitan explícitamente retry. Nunca reintenta un guardado.
 export async function fetchInitialLoad(url: string, options: InitialLoadOptions = {}): Promise<Response> {
-  const { signal, retry = false, cache } = options;
+  const { signal, retry = false, cache, headers } = options;
   for (let attempt = 0; ; attempt++) {
     if (signal?.aborted) throw abortError();
     try {
-      const response = await fetch(url, { signal, ...(cache ? { cache } : {}) });
+      const response = await fetch(url, { signal, ...(cache ? { cache } : {}), ...(headers ? { headers } : {}) });
       const temporary = response.status === 408 || response.status === 429 || response.status >= 500;
       if (!retry || !temporary || attempt >= retryDelays.length) return response;
       await response.body?.cancel();

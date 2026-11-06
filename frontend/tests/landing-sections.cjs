@@ -6,12 +6,13 @@ test('all four home pages place enabled benefits directly after the hero, before
   const landing={titulo:'Portada QA',descripcion:'Texto real',texto_boton:'Ver productos',contenido:{bloques:[{id:'fec00000-0000-4000-8000-000000000001',tipo:'texto',visible:true,titulo:'Sección del negocio QA',subtitulo:'',texto:'Texto administrable',imagenes:[]}]}};
   const content={beneficios:[{titulo:'Beneficio QA de orden',descripcion:'Compacto',icono:'truck'}],categorias:[],productos_destacados:[]};
   for(const page of ['EditorialHome','MinimalHome','VisualHome','CatalogHome']){
-    const useStore=()=>({landing,blockStyles:{},config:{name:'Tienda QA'}});
+    const useStore=()=>({landing,landingProducts:[],blockStyles:{},config:{name:'Tienda QA'}});
     const template=()=>({template:'editorial',route:(path='')=>'/plantilla/1/'+path});
     const {default:Home}=load(`src/features/storefront/pages/${page}.tsx`,{
       '../../landing/components/LandingDetails':{LandingDetails:()=>null},
       '../../landing/components/LandingStatus':{LandingStatus:()=>null},
       '../../landing/hooks/useLandingContent':{useLandingContent:()=>({featured:[],categories:[],content})},
+      '../hooks/useLandingContent':{useLandingContent:()=>({featured:[],categories:[],content})},
       '../../landing/hooks/useLandingSectionVisibility':{useLandingSectionVisibility:()=>name=>name==='Beneficios'},
       '../context/StoreContext':{useStore},'../../storefront/context/StoreContext':{useStore},
       '../hooks/useStorefrontTemplate':{useStorefrontTemplate:template},'../../storefront/hooks/useStorefrontTemplate':{useStorefrontTemplate:template},
@@ -33,8 +34,11 @@ test('Velta renders no unmanageable demo stories when there are no saved blocks'
     '../../landing/components/LandingDetails':{LandingDetails:()=>null},
     '../../landing/components/LandingStatus':{LandingStatus:()=>null},
     '../../landing/hooks/useLandingContent':{useLandingContent:()=>({featured:[],content:{beneficios:[]}})},
+    '../hooks/useLandingContent':{useLandingContent:()=>({featured:[],categories:[],content:{beneficios:[]}})},
     '../../landing/hooks/useLandingSectionVisibility':{useLandingSectionVisibility:()=>()=>false},
     '../context/StoreContext':{useStore:()=>({landing:{titulo:'Mi tienda',descripcion:'Real',texto_boton:'Ver'},config:{name:'Mi tienda'}})},
+    '../../storefront/context/StoreContext':{useStore:()=>({landing:{titulo:'Mi tienda',descripcion:'Real',texto_boton:'Ver'},landingProducts:[],config:{name:'Mi tienda'}})},
+    '../../storefront/hooks/useStorefrontTemplate':{useStorefrontTemplate:()=>({template:'visual',route:path=>'/plantilla/3/'+path})},
     'react-router-dom':{Link:({children})=>React.createElement('a',null,children)},
     '../components/ui':{Icon:()=>null},
   });

@@ -59,8 +59,8 @@ function payload(promotion: Partial<Promotion>) {
 }
 
 export const promotionService = {
-  async list(): Promise<Promotion[]> {
-    const rows = await request();
+  async list(signal?: AbortSignal): Promise<Promotion[]> {
+    const rows = await request('', {signal, cache:'no-store'});
     if (!Array.isArray(rows)) throw new Error('El listado de promociones no es válido.');
     return rows.map(normalize);
   },

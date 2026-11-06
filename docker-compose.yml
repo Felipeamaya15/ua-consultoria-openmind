@@ -12,6 +12,12 @@ services:
       - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\""]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
 
   # 2. BASE DE DATOS NOSQL (MongoDB)
   mongodb:
@@ -41,7 +47,7 @@ services:
       - "8000:8000"
     environment:
       - SECRET_KEY=${DJANGO_SECRET_KEY}
-      - PAYMENT_CREDENTIALS_KEY=${PAYMENT_CREDENTIALS_KEY}
+      - PAYMENT_CREDENTIALS_KEY=${PAYMENT_CREDENTIALS_KEY:-}
       - DEBUG=${DJANGO_DEBUG}
       - DJANGO_ALLOWED_HOSTS=${DJANGO_ALLOWED_HOSTS:-localhost,127.0.0.1,backend,testserver}
       - DJANGO_CORS_ALLOWED_ORIGINS=${DJANGO_CORS_ALLOWED_ORIGINS:-http://localhost:5173,http://127.0.0.1:5173}
@@ -70,8 +76,10 @@ services:
       - DEFAULT_FROM_EMAIL=${DEFAULT_FROM_EMAIL:-}
       - STOREFRONT_PUBLIC_URL=${STOREFRONT_PUBLIC_URL:-}
     depends_on:
-      - db
-      - mongodb
+      db:
+        condition: service_healthy
+      mongodb:
+        condition: service_started
 
   # 4. FRONTEND (React + Vite)
   frontend:

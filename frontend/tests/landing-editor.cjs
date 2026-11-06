@@ -56,7 +56,8 @@ async function verifyPageLoading() {
     if (id === 'react') return { useState: initial => { const i = index++; if (!(i in slots)) slots[i] = typeof initial==='function'?initial():initial; return [slots[i], next => { slots[i] = typeof next==='function'?next(slots[i]):next; }]; }, useRef: value => ({current:value}), useEffect: fn => { effects.push(fn); } };
     if (id.includes('storeInformationService')) return {fetchStoreInformation:async()=>({nombre:'Tienda existente',descripcion:'Negocio existente'})};
     if (id.includes('landingContent')) return normalizedModule.exports;
-    if (id.includes('landingService')) return { fetchLandingConfig: options => { requested.push(options); return configLoad; } };
+    if (id.includes('homeSections')) return require('./source-loader.cjs').load('src/features/landing/types/homeSections.ts');
+    if (id.includes('landingService')) return { fetchPrivateLandingConfig: options => { requested.push(options); return configLoad; } };
     if (id.includes('catalogService')) return { fetchPublicProducts: options => { requested.push(options); return catalogLoad; } };
     if (id.includes('StoreIdentityContext')) return { useStoreIdentity: () => ({ identity: null }) };
     if (id.includes('visual/storage')) return { readStoredStoreConfig: () => ({}) };
@@ -79,6 +80,16 @@ async function verifyPageLoading() {
   resolveCatalog([]); await new Promise(setImmediate);
   page = render(); assert.equal(page.find(n => n.props?.label === 'Título principal').props.value, 'Edición mientras carga');
   assert(!page.includes('Cargando productos y categorías...'));
+  const block={id:'81386c65-c014-4bda-9e4c-4ce4213f0381',tipo:'texto',visible:true,titulo:'Contenido nuevo',subtitulo:'',texto:'Texto',imagenes:[]};
+  page.find(n=>n.type==='LandingBlocksEditor').props.onChange([block]);
+  page=render();
+  assert.equal(page.find(n=>n.type==='LandingContentEditor').props.value.orden_apartados,undefined,'editing content must not silently replace legacy template ordering');
+  page.find(n=>n.type==='LandingBlocksEditor').props.layout.onMove(['sistema:destacados',block.id,'sistema:categorias']);
+  page=render();
+  assert.equal(JSON.stringify(page.find(n=>n.type==='LandingContentEditor').props.value.orden_apartados),JSON.stringify(['sistema:destacados',block.id,'sistema:categorias']));
+  page.find(n=>n.type==='LandingBlocksEditor').props.onChange([]);
+  page=render();
+  assert(!page.find(n=>n.type==='LandingContentEditor').props.value.orden_apartados.includes(block.id),'removing a section must retire its reference');
   cleanup(); assert(requested[0].signal.aborted);
 }
 

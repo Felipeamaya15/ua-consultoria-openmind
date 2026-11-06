@@ -6,6 +6,7 @@ import { LandingBlocksEditor } from './LandingBlocksEditor';
 import { LandingContentEditor } from './LandingContentEditor';
 import { BusinessInformationFields } from './BusinessInformation';
 import { parseWeeklyHours, validHour } from './WeeklyHoursEditor';
+import { homeSectionOrder, reconcileHomeOrder, type SystemSectionId } from '../../landing/types/homeSections';
 import { normalizeLandingContent } from '../../landing/types/landingContent';
 import { fetchPublicProducts } from '../../storefront/services/catalogService';
 import { fetchStoreInformation, saveStoreInformation } from '../../storefront/services/storeInformationService';
@@ -14,11 +15,12 @@ import { useAdmin } from '../context/AdminContext';
 import { templatePaths } from '../config/navigation';
 import { AdminCard, Alert, Input, Textarea, Modal } from './ui';
 import { ImageUpload } from './ui/ImageUpload';
-import { fetchLandingConfig, saveLandingConfig } from '../../landing/services/landingService';
+import { fetchPrivateLandingConfig as fetchLandingConfig, saveLandingConfig } from '../../landing/services/landingService';
 import type { LandingInput } from '../../landing/types/landing.types';
 import { AdminHelp } from './AdminPageHeader';
 import { humanizeAdminError } from '../utils/humanizeError';
 import './landing-workspace.css';
+import { ApiError } from '../../../shared/services/apiRequest';
 
 type Business = {nombre:string;descripcion:string;correo_negocio:string};
 type Draft = LandingInput & {negocio:Business};
@@ -27,7 +29,7 @@ const panels: {id:Panel;label:string;short:string;description:string}[] = [
   {id:'business',label:'Información del negocio',short:'Negocio',description:'El nombre y la descripción que identifican tu tienda.'},
   {id:'cover',label:'Portada de la tienda',short:'Portada',description:'La primera impresión: tu mensaje, imagen principal y logo propio.'},
   {id:'blocks',label:'Secciones de mi tienda',short:'Secciones',description:'Organiza las historias, textos e imágenes de tu tienda.'},
-  {id:'catalog',label:'Productos, categorías y beneficios',short:'Productos y beneficios',description:'Elige qué destacar de tu catálogo y los beneficios de comprar contigo.'},
+  {id:'catalog',label:'Beneficios de comprar en tu tienda',short:'Beneficios',description:'Este apartado fijo aparece inmediatamente después de Portada. Productos y categorías se administran en Secciones.'},
   {id:'contact',label:'Contacto, horarios y ubicación',short:'Contacto y horarios',description:'Ayuda a tus clientes a encontrarte y conocer tus horarios.'},
 ];
 const panelFromHash = (hash:string):Panel => hash === '#secciones-tienda' ? 'blocks' : hash === '#pagina-principal' ? 'cover' : hash === '#contacto-horarios' ? 'contact' : 'business';
@@ -143,31 +145,56 @@ export default function LandingPageContent() {
       if(contentDirty){const result=await saveLandingConfig(contentOf(form));next={...loadedContent(result),negocio:next.negocio};}
       setForm(next);setBaseline(next);setPast([]);setFuture([]);setSavedAt(new Date().toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit'}));
       setConfirmation(businessDirty && !contentDirty ? 'Información de tu tienda guardada correctamente.' : 'Cambios de la página principal guardados correctamente.');
-    } catch(err){setError((businessSaved ? 'La información del negocio se guardó. El contenido sigue pendiente. ' : '')+humanizeAdminError(err instanceof Error ? err.message : '', 'No pudimos guardar los cambios. Tu borrador se conserva.'));}
+    } catch (err) {
+      // Los errores de catálogo pertenecen al apartado Secciones.
+      // Cambiar la pestaña no recarga el contenido ni descarta el borrador.
+      if (
+        err instanceof ApiError &&
+        (err.issueField === 'productos_destacados' || err.issueField === 'categorias')
+      ) {
+        setActive('blocks');
+      }
+
+      const detail = err instanceof ApiError
+        ? err.message
+        : humanizeAdminError(
+            err instanceof Error ? err.message : '',
+            'No pudimos guardar los cambios. Tu borrador se conserva.'
+          );
+
+      setError(
+        (businessSaved
+          ? 'La información del negocio se guardó. El contenido sigue pendiente. '
+          : '') + detail
+      );
+    }
     finally{savingRef.current=false;setSaving(false);}
   }
-  const contentEditor=(sections:string[]) => <LandingContentEditor catalogReady={!catalogLoading&&!catalogError} sections={sections} value={normalizeLandingContent(form.contenido)} flags={form.secciones} products={products} onChange={contenido=>change({...form,contenido})} onToggle={(name,enabled)=>change({...form,secciones:{...form.secciones,[name]:enabled}})} onHoursPending={setHoursPending} />;
+  const contentEditor=(sections:string[], showVisibilityToggle=true) => <LandingContentEditor showVisibilityToggle={showVisibilityToggle} catalogReady={!catalogLoading&&!catalogError} sections={sections} value={normalizeLandingContent(form.contenido)} flags={form.secciones} products={products} onChange={contenido=>change({...form,contenido})} onToggle={(name,enabled)=>change({...form,secciones:{...form.secciones,[name]:enabled}})} onHoursPending={setHoursPending} />;
+  const sectionOrder=homeSectionOrder(form.contenido,config.template,true);
+  const renderCommerceConfig=(id:SystemSectionId)=>id==='sistema:contenido'?<p>Bloque editorial propio de la plantilla Catálogo. Puedes ocultarlo o cambiar su posición. Su apariencia se conserva.</p>:<>{contentEditor([id==='sistema:categorias'?'Categorías':'Productos destacados'],false)}{id!=='sistema:destacados'&&id!=='sistema:categorias'&&<p>Reutiliza la selección de productos destacados. Su diseño y agrupación corresponden a la plantilla indicada.</p>}</>;
   if(loading || businessLoading)return <LoadingState align="start" spacing="compact">Cargando configuración...</LoadingState>;
   return <div className="lp-workspace" aria-busy={saving}>
     <header className="lp-page-heading"><div><p className="lp-eyebrow">MI TIENDA / CONTENIDO</p><h1>Página principal</h1><p id="lp-page-description" hidden={!showHelp}>Todo el contenido de tu tienda, organizado en un solo lugar.</p></div><div className="lp-heading-actions"><button type="button" className="lp-button" aria-expanded={showHelp} aria-controls="lp-page-description" onClick={toggleHelp}>{showHelp?'Ocultar ayudas':'Mostrar ayudas'}</button><a className="lp-button" href={templatePaths[config.template]} target="_blank" rel="noreferrer">Ver mi tienda ↗</a></div></header>
     <nav className="lp-tabs" role="tablist" aria-label="Apartados de Página principal">{panels.map((panel,index)=><button type="button" role="tab" id={'lp-tab-'+panel.id} aria-controls={'lp-panel-'+panel.id} aria-selected={active===panel.id} tabIndex={active===panel.id?0:-1} key={panel.id} disabled={saving} onClick={()=>selectPanel(panel.id)} onKeyDown={event=>{if(!['ArrowRight','ArrowLeft','Home','End'].includes(event.key))return;event.preventDefault();const next=event.key==='Home'?0:event.key==='End'?panels.length-1:(index+(event.key==='ArrowRight'?1:-1)+panels.length)%panels.length;selectPanel(panels[next].id);document.getElementById('lp-tab-'+panels[next].id)?.focus();}}><span className="lp-tab-number" aria-hidden="true">0{index+1}</span><span>{panel.short}</span></button>)}</nav>
     <form noValidate onSubmit={event=>void save(event)} className="lp-form">
-      {error&&<ErrorState className="lp-feedback" onRetry={loadFailed?()=>setAttempt(n=>n+1):undefined} retryLabel="Reintentar carga">{humanizeAdminError(error)}</ErrorState>}
+      {error&&<ErrorState className="lp-feedback" onRetry={loadFailed?()=>setAttempt(n=>n+1):undefined} retryLabel="Reintentar carga">{error}</ErrorState>}
       <fieldset disabled={saving||loadFailed} className="lp-panels">
         {panels.map(panel=><section key={panel.id} id={'lp-panel-'+panel.id} role="tabpanel" aria-labelledby={'lp-tab-'+panel.id} data-landing-panel={panel.id} hidden={active!==panel.id}>
           {panel.id!=='blocks'&&<div className="lp-panel-heading"><h2>{panel.label}</h2><p>{panel.description}</p></div>}
           {panel.id==='business'&&<AdminCard><div id="informacion-negocio"><BusinessInformationFields value={form.negocio} onChange={negocio=>change({...form,negocio})} /><AdminHelp>Estos datos se muestran en las cuatro plantillas. El nombre es obligatorio.</AdminHelp></div></AdminCard>}
           {panel.id==='cover'&&<div className="lp-cover-grid" id="pagina-principal"><AdminCard className="lp-cover-copy"><Input label="Título principal" required maxLength={255} value={form.titulo} onChange={e=>change({...form,titulo:e.target.value})} /><AdminHelp>Tu mensaje de bienvenida. Es obligatorio.</AdminHelp><Textarea label="Descripción de portada" rows={4} value={form.descripcion} onChange={e=>change({...form,descripcion:e.target.value})} /><Input label="Texto del botón principal" required maxLength={100} value={form.texto_boton} onChange={e=>change({...form,texto_boton:e.target.value})} /><AdminHelp>Por ejemplo: Ver productos. Es obligatorio.</AdminHelp></AdminCard><div className="lp-cover-media"><AdminCard><h3>Imagen principal</h3><ImageUpload label="Subir imagen principal" value={form.imagen_principal || ''} maxMB={2} allowSVG={false} onChange={image=>change({...form,imagen_principal:image || null})} /></AdminCard><AdminCard><h3>Logo de tu negocio</h3><ImageUpload label="Subir logo del negocio" value={form.logo || ''} maxMB={1} allowSVG={false} onChange={logo=>change({...form,logo:logo || null})} /><AdminHelp>Usa tu propia marca. Es opcional.</AdminHelp></AdminCard></div></div>}
           {panel.id==='blocks'&&<>
+            {catalogLoading&&<LoadingState align="start" spacing="compact">Cargando productos y categorías...</LoadingState>}{catalogError&&<Alert variant="error">{catalogError}</Alert>}
             <div className="lp-sections-refresh"><p>El contenido guardado se comparte entre las cuatro plantillas.</p><button type="button" className="lp-button" disabled={saving||sectionsLoading} onClick={()=>void refreshSections()}>Actualizar secciones</button></div>
             {sectionsLoading&&<LoadingState size="sm" align="start" spacing="compact">Cargando secciones guardadas…</LoadingState>}
             {sectionsError&&<ErrorState onRetry={()=>void refreshSections()} retryLabel="Reintentar secciones">{humanizeAdminError(sectionsError)}</ErrorState>}
             {sectionsNotice&&<p role="status" className="lp-sections-notice">{sectionsNotice}</p>}
             <fieldset disabled={sectionsLoading||!!sectionsError} aria-busy={sectionsLoading}>
-              <LandingBlocksEditor value={form.contenido?.bloques} onChange={bloques=>change({...form,contenido:{...normalizeLandingContent(form.contenido),bloques}})} />
+              <LandingBlocksEditor value={form.contenido?.bloques} onChange={bloques=>change({...form,contenido:{...normalizeLandingContent(form.contenido),bloques,...(form.contenido?.orden_apartados?{orden_apartados:reconcileHomeOrder(sectionOrder,bloques)}:{})}})} layout={{order:sectionOrder,flags:form.secciones,onMove:orden_apartados=>change({...form,contenido:{...normalizeLandingContent(form.contenido),orden_apartados}}),onToggle:(name,enabled)=>change({...form,secciones:{...form.secciones,[name]:enabled}}),renderConfig:renderCommerceConfig}} />
             </fieldset>
           </>}
-          {panel.id==='catalog'&&<>{catalogLoading&&<LoadingState align="start" spacing="compact">Cargando productos y categorías...</LoadingState>}{catalogError&&<Alert variant="error">{catalogError}</Alert>}<div className="lp-catalog-grid">{contentEditor(['Productos destacados','Categorías','Beneficios'])}</div></>}
+          {panel.id==='catalog'&&<>{catalogLoading&&<LoadingState align="start" spacing="compact">Cargando productos y categorías...</LoadingState>}{catalogError&&<Alert variant="error">{catalogError}</Alert>}<div className="lp-catalog-grid">{contentEditor(['Beneficios'])}</div></>}
           {panel.id==='contact'&&<div className="lp-contact-layout" id="contacto-horarios" key={hoursRevision}>{contentEditor(['Información de contacto','Horarios de atención','Mapa / ubicación'])}</div>}
         </section>)}
       </fieldset>
