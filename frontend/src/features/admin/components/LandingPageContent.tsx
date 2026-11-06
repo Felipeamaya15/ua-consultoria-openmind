@@ -20,6 +20,7 @@ import type { LandingInput } from '../../landing/types/landing.types';
 import { AdminHelp } from './AdminPageHeader';
 import { humanizeAdminError } from '../utils/humanizeError';
 import './landing-workspace.css';
+import { ApiError } from '../../../shared/services/apiRequest';
 
 type Business = {nombre:string;descripcion:string;correo_negocio:string};
 type Draft = LandingInput & {negocio:Business};
@@ -144,7 +145,29 @@ export default function LandingPageContent() {
       if(contentDirty){const result=await saveLandingConfig(contentOf(form));next={...loadedContent(result),negocio:next.negocio};}
       setForm(next);setBaseline(next);setPast([]);setFuture([]);setSavedAt(new Date().toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit'}));
       setConfirmation(businessDirty && !contentDirty ? 'Información de tu tienda guardada correctamente.' : 'Cambios de la página principal guardados correctamente.');
-    } catch(err){setError((businessSaved ? 'La información del negocio se guardó. El contenido sigue pendiente. ' : '')+humanizeAdminError(err instanceof Error ? err.message : '', 'No pudimos guardar los cambios. Tu borrador se conserva.'));}
+    } catch (err) {
+      // Los errores de catálogo pertenecen al apartado Secciones.
+      // Cambiar la pestaña no recarga el contenido ni descarta el borrador.
+      if (
+        err instanceof ApiError &&
+        (err.issueField === 'productos_destacados' || err.issueField === 'categorias')
+      ) {
+        setActive('blocks');
+      }
+
+      const detail = err instanceof ApiError
+        ? err.message
+        : humanizeAdminError(
+            err instanceof Error ? err.message : '',
+            'No pudimos guardar los cambios. Tu borrador se conserva.'
+          );
+
+      setError(
+        (businessSaved
+          ? 'La información del negocio se guardó. El contenido sigue pendiente. '
+          : '') + detail
+      );
+    }
     finally{savingRef.current=false;setSaving(false);}
   }
   const contentEditor=(sections:string[], showVisibilityToggle=true) => <LandingContentEditor showVisibilityToggle={showVisibilityToggle} catalogReady={!catalogLoading&&!catalogError} sections={sections} value={normalizeLandingContent(form.contenido)} flags={form.secciones} products={products} onChange={contenido=>change({...form,contenido})} onToggle={(name,enabled)=>change({...form,secciones:{...form.secciones,[name]:enabled}})} onHoursPending={setHoursPending} />;
@@ -155,7 +178,7 @@ export default function LandingPageContent() {
     <header className="lp-page-heading"><div><p className="lp-eyebrow">MI TIENDA / CONTENIDO</p><h1>Página principal</h1><p id="lp-page-description" hidden={!showHelp}>Todo el contenido de tu tienda, organizado en un solo lugar.</p></div><div className="lp-heading-actions"><button type="button" className="lp-button" aria-expanded={showHelp} aria-controls="lp-page-description" onClick={toggleHelp}>{showHelp?'Ocultar ayudas':'Mostrar ayudas'}</button><a className="lp-button" href={templatePaths[config.template]} target="_blank" rel="noreferrer">Ver mi tienda ↗</a></div></header>
     <nav className="lp-tabs" role="tablist" aria-label="Apartados de Página principal">{panels.map((panel,index)=><button type="button" role="tab" id={'lp-tab-'+panel.id} aria-controls={'lp-panel-'+panel.id} aria-selected={active===panel.id} tabIndex={active===panel.id?0:-1} key={panel.id} disabled={saving} onClick={()=>selectPanel(panel.id)} onKeyDown={event=>{if(!['ArrowRight','ArrowLeft','Home','End'].includes(event.key))return;event.preventDefault();const next=event.key==='Home'?0:event.key==='End'?panels.length-1:(index+(event.key==='ArrowRight'?1:-1)+panels.length)%panels.length;selectPanel(panels[next].id);document.getElementById('lp-tab-'+panels[next].id)?.focus();}}><span className="lp-tab-number" aria-hidden="true">0{index+1}</span><span>{panel.short}</span></button>)}</nav>
     <form noValidate onSubmit={event=>void save(event)} className="lp-form">
-      {error&&<ErrorState className="lp-feedback" onRetry={loadFailed?()=>setAttempt(n=>n+1):undefined} retryLabel="Reintentar carga">{humanizeAdminError(error)}</ErrorState>}
+      {error&&<ErrorState className="lp-feedback" onRetry={loadFailed?()=>setAttempt(n=>n+1):undefined} retryLabel="Reintentar carga">{error}</ErrorState>}
       <fieldset disabled={saving||loadFailed} className="lp-panels">
         {panels.map(panel=><section key={panel.id} id={'lp-panel-'+panel.id} role="tabpanel" aria-labelledby={'lp-tab-'+panel.id} data-landing-panel={panel.id} hidden={active!==panel.id}>
           {panel.id!=='blocks'&&<div className="lp-panel-heading"><h2>{panel.label}</h2><p>{panel.description}</p></div>}

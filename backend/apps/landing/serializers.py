@@ -1,3 +1,4 @@
+
 from rest_framework import serializers
 
 from apps.landing.models import ConfiguracionLanding
@@ -13,29 +14,56 @@ class WebImageField(serializers.ImageField):
         from apps.core.image_processing import process_upload
         from django.core.exceptions import ValidationError
         from django.core.files.uploadedfile import SimpleUploadedFile
+
         try:
             image = process_upload(data, self.max_mb)
         except (AttributeError, ValidationError) as error:
-            raise serializers.ValidationError(getattr(error, 'messages', ['Selecciona una imagen válida.'])) from error
-        return super().to_internal_value(SimpleUploadedFile(f'imagen.{image.extension}', image.data, content_type=image.mime))
+            raise serializers.ValidationError(
+                getattr(
+                    error,
+                    'messages',
+                    ['Selecciona una imagen válida.']
+                )
+            ) from error
+
+        return super().to_internal_value(
+            SimpleUploadedFile(
+                f'imagen.{image.extension}',
+                image.data,
+                content_type=image.mime
+            )
+        )
 
 
 class ConfiguracionLandingSerializer(serializers.ModelSerializer):
-    imagen_principal = WebImageField(max_mb=2, required=False, allow_null=True)
-    logo = WebImageField(max_mb=1, required=False, allow_null=True)
+    imagen_principal = WebImageField(
+        max_mb=2,
+        required=False,
+        allow_null=True
+    )
+
+    logo = WebImageField(
+        max_mb=1,
+        required=False,
+        allow_null=True
+    )
+
     titulo = serializers.CharField(
         max_length=255,
         trim_whitespace=True,
     )
+
     descripcion = serializers.CharField(
         required=False,
         allow_blank=True,
         trim_whitespace=True,
     )
+
     texto_boton = serializers.CharField(
         max_length=100,
         trim_whitespace=True,
     )
+
     secciones = serializers.JSONField(
         required=False,
         default=dict,
@@ -64,58 +92,208 @@ class ConfiguracionLandingSerializer(serializers.ModelSerializer):
     def validate_secciones(self, value):
         if not isinstance(value, dict):
             raise serializers.ValidationError(
-                "Las secciones de la landing deben enviarse como un objeto."
+                'Las secciones de la landing deben enviarse como un objeto.'
             )
 
-        if any(not isinstance(enabled, bool) for enabled in value.values()):
-            raise serializers.ValidationError('Las banderas de secciones deben ser true o false.')
+        if any(
+            not isinstance(enabled, bool)
+            for enabled in value.values()
+        ):
+            raise serializers.ValidationError(
+                'Las banderas de secciones deben ser true o false.'
+            )
+
         return value
 
     def validate_contenido(self, value):
         if not isinstance(value, dict):
-            raise serializers.ValidationError('El contenido debe ser un objeto.')
-        serializer = ContenidoLandingSerializer(data=value, context={**self.context,
-            'bloques_previos': self.instance.contenido.get('bloques', []) if self.instance else []})
+            raise serializers.ValidationError(
+                'El contenido debe ser un objeto.'
+            )
+
+        # Recuperar el contenido previamente guardado.
+        contenido_anterior = {}
+
+        if self.instance and isinstance(self.instance.contenido, dict):
+            contenido_anterior = self.instance.contenido
+
+        # Validar la estructura, las secciones y sus componentes.
+        serializer = ContenidoLandingSerializer(
+            data=value,
+            context={
+                **self.context,
+                'bloques_previos': contenido_anterior.get('bloques', []),
+            }
+        )
+
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
-        ids, categorias = data.get('productos_destacados', []), data.get('categorias', [])
-        if ids or categorias:
-            from apps.catalog.infrastructure.repositories import ProductRepository
+
+        # ---------------------------------------------------------
+        # QA SPRINT 8
+        # Validación de productos destacados y categorías.
+        #
+        # Problema anterior:
+        # Se rechazaba cualquier guardado si un producto o una
+        # categoría previamente seleccionada dejaba de existir.
+        #
+        # Solución:
+        # Validar solamente las referencias NUEVAS.
+        # Las referencias antiguas no bloquean modificaciones
+        # independientes, como editar la portada o el logo.
+        # ---------------------------------------------------------
+
+        ids_actuales = data.get('productos_destacados', [])
+        categorias_actuales = data.get('categorias', [])
+
+        ids_anteriores = contenido_anterior.get(
+            'productos_destacados', []
+        )
+        categorias_anteriores = contenido_anterior.get(
+            'categorias', []
+        )
+
+        # Identificar nuevas selecciones.
+        ids_nuevos = []
+
+        if 'productos_destacados' in data:
+            ids_previos = set(ids_anteriores)
+
+            ids_nuevos = [
+                product_id
+                for product_id in ids_actuales
+                if product_id not in ids_previos
+            ]
+
+        categorias_nuevas = []
+
+        if 'categorias' in data:
+            categorias_previas = set(categorias_anteriores)
+
+            categorias_nuevas = [
+                categoria
+                for categoria in categorias_actuales
+                if categoria not in categorias_previas
+            ]
+
+        # Consultar MongoDB solamente cuando se agregan
+        # nuevos productos destacados o categorías.
+        if ids_nuevos or categorias_nuevas:
+            from apps.catalog.infrastructure.repositories import (
+                ProductRepository
+            )
             from pymongo.errors import PyMongoError
             from rest_framework.exceptions import APIException
+
             tienda = self.context.get('tienda')
+
             if tienda is None:
-                raise serializers.ValidationError('No se pudo identificar la tienda.')
+                raise serializers.ValidationError(
+                    'No se pudo identificar la tienda.'
+                )
+
             try:
-                productos = ProductRepository().list_by_store(str(tienda.pk), activo=True)
+                productos = ProductRepository().list_by_store(
+                    str(tienda.pk),
+                    activo=True
+                )
+
             except PyMongoError:
-                error = APIException('No se pudo validar la selección contra el catálogo. Intenta nuevamente.')
+                error = APIException(
+                    'No se pudo validar la selección contra el '
+                    'catálogo. Intenta nuevamente.'
+                )
                 error.status_code = 503
                 raise error from None
-            valid_ids = {str(p['_id']) for p in productos}
-            valid_categories = {p.get('categoria') for p in productos}
-            if any(product_id not in valid_ids for product_id in ids):
-                raise serializers.ValidationError({'productos_destacados': 'Selecciona productos activos de esta tienda.'})
-            if any(category not in valid_categories for category in categorias):
-                raise serializers.ValidationError({'categorias': 'Selecciona categorías disponibles de esta tienda.'})
+
+            valid_ids = {
+                str(producto['_id'])
+                for producto in productos
+            }
+
+            valid_categories = {
+                producto.get('categoria')
+                for producto in productos
+            }
+
+            # No permitir productos nuevos inexistentes,
+            # inactivos o pertenecientes a otra tienda.
+            ids_invalidos = [
+                product_id
+                for product_id in ids_nuevos
+                if product_id not in valid_ids
+            ]
+
+            if ids_invalidos:
+                raise serializers.ValidationError({
+                    'productos_destacados': (
+                        'Uno o más productos seleccionados no '
+                        'están activos o no pertenecen a esta '
+                        'tienda. Revisa Productos destacados.'
+                    )
+                })
+
+            # No permitir categorías nuevas que no estén
+            # disponibles en el catálogo activo.
+            categorias_invalidas = [
+                categoria
+                for categoria in categorias_nuevas
+                if categoria not in valid_categories
+            ]
+
+            if categorias_invalidas:
+                raise serializers.ValidationError({
+                    'categorias': (
+                        'Una o más categorías seleccionadas '
+                        'no están disponibles en esta tienda. '
+                        'Revisa la sección Categorías.'
+                    )
+                })
+
+        # ---------------------------------------------------------
+        # Conservar la información existente.
+        # ---------------------------------------------------------
+
         if self.instance:
-            # An older client may not know optional keys; preserve them on update.
+            # Un cliente antiguo puede no conocer ciertas claves
+            # opcionales. No debemos eliminarlas al actualizar.
+
             if 'contacto' in data:
-                previous = self.instance.contenido.get('contacto', {})
-                contact = {**previous, **data['contacto']}
-                # Marketing is the writer for profiles once managed there. Stale
-                # landing forms cannot reactivate, restore or overwrite them.
+                previous = contenido_anterior.get('contacto', {})
+                contact = {
+                    **previous,
+                    **data['contacto'],
+                }
+
+                # Marketing administra los perfiles sociales.
+                # Un formulario antiguo de Landing no debe
+                # restaurar ni reactivar redes deshabilitadas.
                 for network in previous.get('redes_sociales', {}):
                     contact[network] = previous.get(network, '')
+
                 data['contacto'] = contact
-            data = {**self.instance.contenido, **data}
+
+            data = {
+                **contenido_anterior,
+                **data,
+            }
+
+        # Mantener la lógica existente del orden unificado.
         from apps.landing.home_sections import reconcile_home_order
+
         return reconcile_home_order(data)
 
     def save(self, **kwargs):
         from apps.landing.block_images import store_block_images
+
         content = self.validated_data.get('contenido')
+
         if content is not None and 'bloques' in content:
             tienda = kwargs.get('tienda') or self.context['tienda']
-            self.validated_data['contenido'] = store_block_images(content, tienda.pk)
+
+            self.validated_data['contenido'] = store_block_images(
+                content,
+                tienda.pk
+            )
+
         return super().save(**kwargs)
