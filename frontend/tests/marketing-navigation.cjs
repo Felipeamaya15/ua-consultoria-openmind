@@ -20,10 +20,11 @@ function workspace() {
     '../../admin/components/AdminPageHeader': { AdminHelp: 'p' },
     './SocialProfiles': { SocialProfiles: 'SocialProfiles' },
     './MediaLibrary': { MediaLibrary: 'MediaLibrary' },
+    './Sharing': { Sharing: 'Sharing' },
   }, { window: { location: { hash: '' } }, document: { getElementById: id => ({ focus: () => { focused = id; } }) } });
   const editor = React.createElement('input', { defaultValue: 'Edición sin guardar', 'data-editor': true });
   const render = busy => {
-    const tree = api.MarketingSections({ children: editor, busy });
+    const tree = api.MarketingSections({ children: editor, busy, onPrepare:async()=>true });
     const navigation = children(tree).find(node => node.type === ui.Tabs);
     return { tree, tabs: children(ui.Tabs(navigation.props)).filter(node => node.props?.role === 'tab'), panels: children(tree).filter(node => node.props?.role === 'tabpanel') };
   };
@@ -58,11 +59,11 @@ test('keyboard navigation wraps, supports Home/End, moves focus and is disabled 
   press(0, 'End', true); assert.equal(focused, 0);
 });
 
-test('manual sharing returns to the existing editor and focuses its tab', () => {
+test('manual sharing returns to the existing editor and focuses its tab after preparing content', async () => {
   const page = workspace();
   page.render().tabs[3].props.onClick();
-  const action = children(page.render().panels[3]).find(node => node.type === 'button');
-  action.props.onClick();
+  const action = children(page.render().panels[3]).find(node => node.type === 'Sharing');
+  await action.props.onPrepare({},'square');
   assert.equal(page.render().panels[0].props.hidden, false);
   assert.equal(page.focused(), 'marketing-test-tab-publications');
 });
