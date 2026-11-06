@@ -6,23 +6,24 @@ import { RequireAdmin } from './auth/RequireAdmin';
 import { AdminProvider } from './context/AdminContext';
 import { AdminLayout } from './components/layout/AdminLayout';
 
-import Dashboard from './pages/Dashboard';
-import { ProductList, ProductForm } from './pages/Products';
-import Orders from './pages/Orders';
+const Dashboard = lazyPage(() => import('./pages/Dashboard'));
+const ProductList = lazyPage(() => import('./pages/Products').then(module => ({default:module.ProductList})));
+const ProductForm = lazyPage(() => import('./pages/Products').then(module => ({default:module.ProductForm})));
+const Orders = lazyPage(() => import('./pages/Orders'));
 const Sales = lazyPage(() => import('./pages/Sales'));
 const Contacts = lazyPage(() => import('./pages/Contacts'));
 const Activities = lazyPage(() => import('./pages/Activities'));
-import Design from './pages/Design';
+const Design = lazyPage(() => import('./pages/Design'));
 const ThemeEditor = lazyPage(() => import('./pages/ThemeEditor'));
 const Marketing = lazyPage(() => import('../marketing/pages/Marketing'));
-import Promotions from './pages/Promotions';
-import Payments from './pages/Payments';
-import Shipping from './pages/Shipping';
-import Authentication from './pages/Authentication';
-import Emails from './pages/Emails';
-import SeoAnalytics from './pages/SeoAnalytics';
-import LandingPage from './pages/LandingPage';
-import Legal from './pages/Legal';
+const Promotions = lazyPage(() => import('./pages/Promotions'));
+const Payments = lazyPage(() => import('./pages/Payments'));
+const Shipping = lazyPage(() => import('./pages/Shipping'));
+const Authentication = lazyPage(() => import('./pages/Authentication'));
+const Emails = lazyPage(() => import('./pages/Emails'));
+const SeoAnalytics = lazyPage(() => import('./pages/SeoAnalytics'));
+const LandingPage = lazyPage(() => import('./pages/LandingPage'));
+const Legal = lazyPage(() => import('./pages/Legal'));
 
 function LegacySettingsRedirect() {
   const { search, hash, state } = useLocation();
