@@ -90,6 +90,51 @@ class MediaLibraryTests(TestCase):
                 self.assertEqual(response.status_code, 201, response.data)
         self.assertEqual(ArchivoMultimedia.objects.count(), 0)
 
+    def test_instagram_shared_urls_are_accepted_and_normalized(self):
+        valid_urls = [
+            (
+                'https://www.instagram.com/share/reel/ABC_123xyz/?igsh=tracking',
+                'https://www.instagram.com/share/reel/ABC_123xyz/'
+            ),
+            (
+                'https://www.instagram.com/share/p/ABC_123xyz/',
+                'https://www.instagram.com/share/p/ABC_123xyz/'
+            ),
+        ]
+
+        for original, expected in valid_urls:
+            with self.subTest(url=original):
+                response = self.create(
+                    tipo='instagram',
+                    url=original
+                )
+
+                self.assertEqual(
+                    response.status_code,
+                    201,
+                    response.data
+                )
+
+                self.assertEqual(
+                    response.data['data']['url'],
+                    expected
+                )
+
+        invalid_urls = [
+            'https://instagram.com/share/stories/ABC_123xyz/',
+            'https://instagram.com.evil.test/share/reel/ABC_123xyz/',
+            'http://instagram.com/share/reel/ABC_123xyz/',
+        ]
+
+        for url in invalid_urls:
+            with self.subTest(url=url):
+                response = self.create(
+                    tipo='instagram',
+                    url=url
+                )
+
+                self.assertEqual(response.status_code, 400)
+
     def test_rejects_unsafe_urls_provider_spoofing_private_hosts_and_embed_html(self):
         for kind, url in [
             ('enlace', 'javascript:alert(1)'), ('enlace', 'data:text/html,test'),
