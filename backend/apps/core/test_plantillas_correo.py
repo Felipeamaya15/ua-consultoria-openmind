@@ -160,7 +160,7 @@ class PlantillasPersonalizadasTests(PlantillasCorreoBase):
 
     def test_get_devuelve_las_plantillas_por_defecto(self):
         datos = self.api.get(self.URL).json()['data']['plantillas']
-        self.assertEqual(set(datos), {'order_received', 'payment_rejected', 'payment_success', 'order_shipped'})
+        self.assertEqual(set(datos), {'order_received', 'payment_success', 'order_shipped', 'order_delivered', 'order_cancelled'})
         self.assertEqual(datos['order_received']['subject'], 'Recibimos tu pedido {{orderNumber}}')
 
     def test_la_plantilla_guardada_reemplaza_a_la_de_por_defecto(self):

@@ -10,12 +10,13 @@ const MAX_LIMIT = 20;
 export const ALLOWED_ORDER_STATUSES = [
   'pendiente',
   'pagado',
+  'en_camino',
+  'entregado',
+  'cancelado',
   'preparando',
   'en_origen',
   'enviado',
   'en_reparto',
-  'entregado',
-  'cancelado',
 ] as const;
 
 export interface RecentOrder {

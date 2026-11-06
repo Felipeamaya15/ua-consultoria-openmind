@@ -13,7 +13,7 @@ PLANTILLA_PAGO_EXITOSO = PlantillaCorreo(
         'Comenzaremos a preparar tu compra.\n\n'
         'Resumen de compra:\n'
         '{{orderSummary}}\n\n'
-        'Te enviaremos otra actualización cuando tu pedido sea despachado.\n\n'
+        'Te enviaremos otra actualización cuando tu pedido vaya en camino.\n\n'
         '{{storeName}}'
     ),
 )

@@ -265,7 +265,8 @@ class CorreoPagoRechazadoTests(CorreosPedidoBase):
         pedido = self.pedido()
         respuesta = self.api.patch(f'/api/tienda/pedidos/{pedido.pk}/estado/', {'estado': 'cancelado'}, format='json')
         self.assertEqual(respuesta.status_code, 200)
-        self.assertEqual(mail.outbox, [])
+        self.assertIsNone(self.marca(pedido, 'payment_rejected'))
+        self.assertTrue(self.marca(pedido, 'order_cancelled')['enviado'])
 
 class CorreoDelCompradorTests(CorreosPedidoBase):
     def aprobar(self, pedido):

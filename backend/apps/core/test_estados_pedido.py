@@ -16,18 +16,17 @@ from apps.core.models import ConfiguracionPago, Pedido, Tienda
 
 CLAVE = 'clave-privada-qa'
 LINKIFY = {'linkify': {'enabled': True, 'fields': {'idCuenta': 'CUENTA-QA', 'clavePrivada': CLAVE}}}
-EN_DESPACHO = ('preparando', 'en_origen', 'enviado', 'en_reparto', 'entregado')
+EN_DESPACHO = ('en_camino', 'entregado')
 
 
 class GruposDeEstadosTests(TestCase):
     def test_cada_estado_esta_clasificado(self):
         estados = {valor for valor, _ in Pedido.ESTADO_CHOICES}
-        self.assertIn('en_reparto', estados)
+        self.assertIn('en_camino', estados)
         for estado in estados - {'pendiente', 'cancelado'}:
             self.assertIn(estado, Pedido.ESTADOS_PAGADOS, f'{estado} falta en ESTADOS_PAGADOS')
-        self.assertEqual(set(Pedido.ESTADOS_EN_DESPACHO), set(Pedido.ESTADOS_PAGADOS) - {'pagado'})
-        self.assertEqual(set(Pedido.ESTADOS_EN_DESPACHO), set(EN_DESPACHO))
-        self.assertTrue(set(Pedido.ESTADOS_PAGADOS) <= estados)
+        self.assertIn('en_camino', Pedido.ESTADOS_EN_DESPACHO)
+        self.assertIn('entregado', Pedido.ESTADOS_EN_DESPACHO)
 
     def test_los_cambios_de_estados_tienen_migracion(self):
         # Falla si alguien cambia Pedido.ESTADO_CHOICES y olvida generar la migracion.

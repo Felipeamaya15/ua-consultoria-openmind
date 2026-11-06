@@ -129,11 +129,20 @@ export default function Orders() {
     }
   };
 
+  const SELECTABLE_STATUSES = [
+    { key: 'pendiente', label: 'Pendiente' },
+    { key: 'pagado', label: 'Pagado/En preparación' },
+    { key: 'en_camino', label: 'En camino' },
+    { key: 'entregado', label: 'Entregado' },
+    { key: 'cancelado', label: 'Cancelado' },
+  ] as const;
+
   const EMAIL_EVENTS = [
-    { key: 'order_received', label: 'Confirmación de recepción', desc: 'Aviso inicial de compra' },
-    { key: 'payment_success', label: 'Pago exitoso', desc: 'Confirmación de pago aprobado' },
-    { key: 'payment_rejected', label: 'Pago rechazado', desc: 'Aviso de pago cancelado' },
-    { key: 'order_shipped', label: 'Pedido despachado', desc: 'Notificación de despacho' },
+    { key: 'order_received', label: 'Pendiente', desc: 'Aviso inicial de compra en estado Pendiente' },
+    { key: 'payment_success', label: 'Pagado/En preparación', desc: 'Confirmación de pago y preparación' },
+    { key: 'order_shipped', label: 'En camino', desc: 'Aviso de despacho con seguimiento' },
+    { key: 'order_delivered', label: 'Entregado', desc: 'Confirmación de entrega al cliente' },
+    { key: 'order_cancelled', label: 'Cancelado', desc: 'Aviso de pedido cancelado' },
   ] as const;
 
   const handleManualEmail = async (orderId: number, tipo: string) => {
@@ -196,7 +205,7 @@ export default function Orders() {
         <label className="orders-other-status">Otros estados
           <select aria-label="Otros estados del pedido" value={Object.prototype.hasOwnProperty.call(STATUS_BADGE, filter) && filter !== 'pendiente' ? filter : ''} onChange={event => setFilter(event.target.value || 'all')}>
             <option value="">Seleccionar estado</option>
-            {Object.entries(STATUS_BADGE).filter(([value]) => value !== 'pendiente').map(([value, status]) => <option key={value} value={value}>{status.label}</option>)}
+            {SELECTABLE_STATUSES.filter(s => s.key !== 'pendiente').map(s => <option key={s.key} value={s.key}>{s.label}</option>)}
           </select>
         </label>
       </section>
@@ -300,8 +309,8 @@ export default function Orders() {
                   onChange={(e) => handleStatusChange(selectedOrder.id_pedido, e.target.value)}
                   className="w-full mt-1 border border-[var(--border)] rounded-md p-1.5 text-xs bg-white focus:ring-2 focus:ring-[var(--primary)] outline-none disabled:opacity-50 transition-opacity"
                 >
-                  {Object.entries(STATUS_BADGE).map(([key, config]) => (
-                    <option key={key} value={key}>{config.label}</option>
+                  {SELECTABLE_STATUSES.map(s => (
+                    <option key={s.key} value={s.key}>{s.label}</option>
                   ))}
                 </select>
               </div>

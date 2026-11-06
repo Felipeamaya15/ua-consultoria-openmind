@@ -30,7 +30,15 @@ from apps.core.models import Pedido
 logger = logging.getLogger(__name__)
 
 # Qué correo corresponde cuando un pedido llega a cada estado.
-CORREO_POR_ESTADO = {'pagado': 'payment_success', 'enviado': 'order_shipped'}
+CORREO_POR_ESTADO = {
+    'pagado': 'payment_success',
+    'en_camino': 'order_shipped',
+    'entregado': 'order_delivered',
+    'cancelado': 'order_cancelled',
+    'enviado': 'order_shipped',
+    'en_reparto': 'order_shipped',
+    'preparando': 'payment_success',
+}
 ESPERA_ENVIO_EN_CURSO = timedelta(minutes=5)
 
 # Códigos del resultado además de los del servicio de correo (enviado, destinatario_invalido, ...).

@@ -14,7 +14,20 @@ const templateTypes = Object.keys(emailTemplateDefinitions) as EmailTemplateType
 
 export default function EmailTemplates() {
   const { config, setConfig } = useAdmin()
-  const [templates, setTemplates] = useState(() => config.emailTemplates ?? createDefaultEmailTemplates())
+  const defaults = createDefaultEmailTemplates()
+  const [templates, setTemplates] = useState(() => {
+    const defs = createDefaultEmailTemplates()
+    const stored = (config.emailTemplates ?? {}) as Partial<typeof defs>
+    return Object.fromEntries(
+      (Object.keys(defs) as EmailTemplateType[]).map((type) => [
+        type,
+        {
+          ...defs[type],
+          ...(stored[type] ?? {}),
+        },
+      ])
+    ) as typeof defs
+  })
   const [activeType, setActiveType] = useState<EmailTemplateType>("order_received")
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState("")
@@ -53,13 +66,18 @@ export default function EmailTemplates() {
       setEmergencySending(false)
     }
   }
-  const activeTemplate = templates[activeType]
+  const activeTemplate = templates[activeType] ?? defaults[activeType] ?? {
+    enabled: true,
+    subject: '',
+    preheader: '',
+    body: '',
+  }
 
   const updateTemplate = (changes: Partial<typeof activeTemplate>) => {
     if (savingRef.current) return
     setTemplates((current) => ({
       ...current,
-      [activeType]: { ...current[activeType], ...changes },
+      [activeType]: { ...(current[activeType] ?? defaults[activeType]), ...changes },
     }))
     setSaved(false)
   }
@@ -73,7 +91,20 @@ export default function EmailTemplates() {
         setRemoteDefaults(remote.por_defecto)
         setFields(remote.variables??[])
         setRequired(remote.obligatorias??{})
-        setTemplates((current) => ({ ...current, ...(remote.plantillas as Partial<typeof current>) }))
+        setTemplates((current) => {
+          const defs = createDefaultEmailTemplates()
+          const remotePlantillas = (remote.plantillas ?? {}) as Partial<typeof defs>
+          return Object.fromEntries(
+            (Object.keys(defs) as EmailTemplateType[]).map((type) => [
+              type,
+              {
+                ...defs[type],
+                ...(current[type] ?? {}),
+                ...(remotePlantillas[type] ?? {}),
+              },
+            ])
+          ) as typeof defs
+        })
         setLoaded(true)
       })
       .catch((reason) => { if (active) setError(reason instanceof Error ? reason.message : "No se pudieron cargar las plantillas.") })
@@ -90,8 +121,8 @@ export default function EmailTemplates() {
       const remoteTypes = Object.keys(remoteDefaults)
       if (!remoteTypes.length) throw new Error('No pudimos confirmar las plantillas disponibles. Recarga antes de guardar.')
       if(!fields.length) throw new Error('No pudimos cargar los campos automáticos. Recarga antes de guardar.')
-      for(const type of remoteTypes){const template=templates[type as EmailTemplateType];const message=validateAutomaticFields([template.subject,template.preheader,template.body],fields,template.enabled?required[type]??[]:[]);if(message){setActiveType(type as EmailTemplateType);throw new Error(message)}}
-      const toSave = Object.fromEntries(remoteTypes.map((type) => [type, templates[type as EmailTemplateType]]))
+      for(const type of remoteTypes){const template=templates[type as EmailTemplateType] ?? defaults[type as EmailTemplateType];const message=validateAutomaticFields([template.subject,template.preheader,template.body],fields,template.enabled?required[type]??[]:[]);if(message){setActiveType(type as EmailTemplateType);throw new Error(message)}}
+      const toSave = Object.fromEntries(remoteTypes.map((type) => [type, templates[type as EmailTemplateType] ?? defaults[type as EmailTemplateType]]))
       await saveEmailTemplates(toSave)
       if (setConfig({ ...config, emailTemplates: templates })) setSaved(true)
       else setError('Las plantillas se guardaron en el servidor, pero no se pudo actualizar la copia del navegador.')
@@ -105,15 +136,15 @@ export default function EmailTemplates() {
   }
 
   const restoreSelected = () => {
-    const defaults = { ...createDefaultEmailTemplates(), ...remoteDefaults } as typeof templates
-    setTemplates((current) => ({ ...current, [activeType]: defaults[activeType] }))
+    const allDefaults = { ...createDefaultEmailTemplates(), ...remoteDefaults } as typeof templates
+    setTemplates((current) => ({ ...current, [activeType]: allDefaults[activeType] }))
     setSaved(false)
   }
 
   return (
     <div className="w-full space-y-6 animate-fade-in">
       <Alert variant="info" title="Envío automático">
-        Estos mensajes se envían solos al comprador: «Confirmación de recepción» al crear el pedido, «Pago exitoso» al confirmarse el pago, «Pago rechazado» cuando se rechaza o se anula el pago (transferencia o Webpay) y «Pedido despachado» se envía automáticamente al marcar el pedido como enviado. Puedes desactivar el que no quieras enviar.
+        Estos mensajes se envían solos al comprador según el estado del pedido: «Pendiente», «Pagado/En preparación», «En camino», «Entregado» y «Cancelado». Puedes desactivar o editar el que prefieras.
       </Alert>
 
       <div className="grid grid-cols-1 lg:grid-cols-[240px_minmax(0,1fr)] gap-5">
@@ -122,6 +153,8 @@ export default function EmailTemplates() {
           <div className="space-y-1">
             {templateTypes.map((type) => {
               const definition = emailTemplateDefinitions[type]
+              const template = templates[type] ?? defaults[type]
+              const isEnabled = Boolean(template?.enabled)
               const selected = type === activeType
               return (
                 <button
@@ -131,8 +164,8 @@ export default function EmailTemplates() {
                 >
                   <span className="block text-sm font-semibold">{definition.label}</span>
                   <span className="block text-xs text-[var(--muted-foreground)] mt-1 leading-relaxed">{definition.description}</span>
-                  <span className={`inline-block mt-2 text-[11px] font-medium ${templates[type].enabled ? "text-[var(--success)]" : "text-[var(--muted-foreground)]"}`}>
-                    {templates[type].enabled ? "Activo" : "Desactivado"}
+                  <span className={`inline-block mt-2 text-[11px] font-medium ${isEnabled ? "text-[var(--success)]" : "text-[var(--muted-foreground)]"}`}>
+                    {isEnabled ? "Activo" : "Desactivado"}
                   </span>
                 </button>
               )

@@ -1,9 +1,9 @@
-"""Plantilla del correo de pedido despachado (SCRUM-427, 431 y 434). Tipo de correo: order_shipped."""
+"""Plantilla del correo de pedido despachado / en camino (SCRUM-427, 431 y 434). Tipo de correo: order_shipped."""
 import re
 
 from apps.core.domain.plantillas_correo.base import _MARCADOR, PlantillaCorreo, PlantillaCorreoInvalida, contexto_pedido
 
-ESTADOS_DESPACHADOS = ('enviado', 'en_reparto', 'entregado')
+ESTADOS_DESPACHADOS = ('en_camino', 'entregado', 'enviado', 'en_reparto')
 
 PLANTILLA_PEDIDO_DESPACHADO = PlantillaCorreo(
     asunto='Tu pedido ya fue despachado · {{orderNumber}}',
