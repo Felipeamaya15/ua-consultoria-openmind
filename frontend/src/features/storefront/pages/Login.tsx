@@ -173,23 +173,23 @@ export default function Login() {
   if (isCatalog) {
     return (
       <div className="min-h-[76vh] bg-[var(--visual-page-panel-background)] text-[var(--visual-page-color)] flex items-center justify-center px-5 py-14 md:py-20">
-        <div className="w-full max-w-[460px]">
-          <div className="text-center mb-8">
+        <div className="w-full max-w-[460px] mx-auto">
+          <div data-login-header className="text-center mb-8 flex flex-col items-center">
             <div className="flex justify-center mb-5">
               <InstitutionalBadge />
             </div>
 
-            <p className="text-[var(--primary)] text-[10px] font-black uppercase tracking-[0.16em]">
+            <p className="text-[var(--primary)] text-[10px] font-black uppercase tracking-[0.16em] text-center">
               {config.name} · Tu cuenta
             </p>
 
-            <h1 className="mt-3 text-[42px] md:text-[50px] leading-none tracking-[-0.045em] font-black">
+            <h1 className="mt-3 text-[42px] md:text-[50px] leading-none tracking-[-0.045em] font-black text-center">
               {mode === 'login'
                 ? 'Bienvenido de nuevo'
                 : 'Crear cuenta'}
             </h1>
 
-            <p className="mt-4 text-[13px] text-[var(--visual-page-color)]/45">
+            <p className="mt-4 text-[13px] text-[var(--visual-page-color)]/60 text-center">
               {mode === 'login'
                 ? '¿No tienes cuenta?'
                 : '¿Ya tienes cuenta?'}{' '}
@@ -197,7 +197,7 @@ export default function Login() {
               <button data-page-action="ghost"
                 type="button"
                 onClick={changeMode}
-                className="font-semibold text-[var(--primary)] hover:opacity-70 transition-opacity"
+                className="font-semibold text-[var(--primary)] hover:opacity-70 transition-opacity underline underline-offset-4"
               >
                 {mode === 'login'
                   ? 'Regístrate'
@@ -206,7 +206,7 @@ export default function Login() {
             </p>
           </div>
 
-          <div data-page-panel className="rounded-[16px] bg-[var(--visual-page-panel-background)] p-6 md:p-8 text-[var(--visual-page-color)] flex flex-col gap-5">
+          <div data-page-panel data-visual-section="pagePanel" className="rounded-[16px] bg-[var(--visual-page-panel-background)] p-6 md:p-8 text-[var(--visual-page-color)] flex flex-col gap-5">
             {message && (
               <Alert variant="info">
                 {message}
@@ -215,15 +215,11 @@ export default function Login() {
 
             <button data-page-action="outline"
               type="button"
-              onClick={() =>
-                setMessage(
-                  'Acceso con Google simulado. No se conecta a una cuenta real.',
-                )
-              }
-              className="h-12 flex items-center justify-center gap-3 border border-[var(--visual-global-border)]/10 bg-[var(--visual-page-panel-background)] rounded-[9px] text-[12px] font-semibold hover:border-[var(--visual-global-border)]/30 transition-colors"
+              onClick={() => loginConGoogle()}
+              className="w-full h-12 flex items-center justify-center gap-3 border border-[var(--visual-global-border)]/20 bg-[var(--visual-page-panel-background)] rounded-[9px] text-[12px] font-semibold hover:border-[var(--visual-global-border)]/40 transition-colors"
             >
               <svg
-                className="w-5 h-5"
+                className="w-5 h-5 shrink-0"
                 viewBox="0 0 24 24"
                 aria-hidden="true"
               >
@@ -237,16 +233,15 @@ export default function Login() {
             </button>
 
             <div className="flex items-center gap-3">
-              <div className="flex-1 h-px bg-[var(--visual-page-panel-background)]/10" />
-              <span className="text-[10px] text-[var(--visual-page-color)]/35">o</span>
-              <div className="flex-1 h-px bg-[var(--visual-page-panel-background)]/10" />
+              <div className="flex-1 h-px bg-[var(--visual-global-border)]/20" />
+              <span className="text-[11px] text-[var(--visual-page-color)]/50">o</span>
+              <div className="flex-1 h-px bg-[var(--visual-global-border)]/20" />
             </div>
 
-            <form data-page-form data-visual-section="pagePanel" data-page-panel
+            <form data-page-form
               onSubmit={handleSubmit}
-              className="flex flex-col gap-4 [&_label]:text-[#151515] [&_input]:text-[#151515]"
+              className="flex flex-col gap-4 text-left"
             >
-{mode === 'register' && <CommercialOptIn checked={commercial} onChange={setCommercial} disabled={loading} />}
               {mode === 'register' && (
                 <Input
                   label="Nombre completo"
@@ -291,8 +286,8 @@ export default function Login() {
               />
 
               {mode === 'register' && (
-                <div className="flex flex-col gap-2 -mt-2">
-                  <p className="text-xs text-[var(--visual-page-color)]">
+                <div className="flex flex-col gap-2">
+                  <p className="text-xs text-[var(--visual-page-color)]/75 leading-relaxed">
                     La contraseña debe contener al menos 8 caracteres, números, caracteres especiales y mayúsculas.
                   </p>
                   {passwordErrors.length > 0 && (
@@ -307,8 +302,12 @@ export default function Login() {
                 </div>
               )}
 
+              {mode === 'register' && (
+                <CommercialOptIn checked={commercial} onChange={setCommercial} disabled={loading} />
+              )}
+
               {mode === 'login' && (
-                <div className="text-right -mt-2">
+                <div className="text-right -mt-1">
                   <button
                     data-page-action="ghost"
                     type="button"
@@ -340,14 +339,14 @@ export default function Login() {
             <div className="text-center pt-1">
               <Link data-page-action="ghost"
                 to={route()}
-                className="text-[10px] uppercase tracking-[0.12em] text-[var(--visual-page-color)]/45 hover:text-[var(--primary)] transition-colors"
+                className="text-[11px] uppercase tracking-[0.12em] text-[var(--visual-page-color)]/60 hover:text-[var(--primary)] transition-colors"
               >
                 Continuar como invitado →
               </Link>
             </div>
           </div>
 
-          <p className="text-center text-[10px] text-[var(--visual-page-color)]/30 mt-5">
+          <p className="text-center text-[11px] text-[var(--visual-page-color)]/45 mt-5">
             Compra de forma segura y sencilla.
           </p>
         </div>
@@ -358,19 +357,19 @@ export default function Login() {
   if (isVisual) {
     return (
       <div className="min-h-[72vh] bg-[var(--visual-page-panel-background)] text-[var(--visual-page-color)] flex items-center justify-center px-5 md:px-8 py-14 md:py-20">
-        <div className="w-full max-w-[460px]">
-          <div className="text-center mb-8">
-            <p className="mb-3 text-[9px] font-medium uppercase tracking-[0.18em] text-[var(--visual-page-color)]">
+        <div className="w-full max-w-[460px] mx-auto">
+          <div data-login-header className="text-center mb-8 flex flex-col items-center">
+            <p className="mb-3 text-[9px] font-medium uppercase tracking-[0.18em] text-[var(--visual-page-color)] text-center">
               {config.name} · Tu cuenta
             </p>
 
-            <h1 className="font-serif text-[42px] md:text-[50px] leading-none tracking-[-0.025em]">
+            <h1 className="font-serif text-[42px] md:text-[50px] leading-none tracking-[-0.025em] text-center">
               {mode === 'login'
                 ? 'Bienvenido de nuevo'
                 : 'Crear cuenta'}
             </h1>
 
-            <p className="mt-4 text-[13px] text-[var(--visual-page-color)]">
+            <p className="mt-4 text-[13px] text-[var(--visual-page-color)] text-center">
               {mode === 'login'
                 ? '¿No tienes cuenta?'
                 : '¿Ya tienes cuenta?'}{' '}
@@ -387,7 +386,7 @@ export default function Login() {
             </p>
           </div>
 
-          <div data-page-panel className="rounded-[10px] bg-[var(--visual-page-panel-background)] p-6 md:p-8 flex flex-col gap-5">
+          <div data-page-panel data-visual-section="pagePanel" className="rounded-[10px] bg-[var(--visual-page-panel-background)] p-6 md:p-8 flex flex-col gap-5">
             {message && (
               <Alert variant="info">
                 {message}
@@ -397,11 +396,10 @@ export default function Login() {
             <button data-page-action="outline"
               type="button"
               onClick={() => loginConGoogle()}
-                
-              className="h-12 flex items-center justify-center gap-3 border border-[var(--visual-global-border)]/15 bg-[var(--visual-page-panel-background)] rounded-[8px] text-[12px] font-semibold hover:border-[var(--visual-global-border)] transition-colors"
+              className="w-full h-12 flex items-center justify-center gap-3 border border-[var(--visual-global-border)]/15 bg-[var(--visual-page-panel-background)] rounded-[8px] text-[12px] font-semibold hover:border-[var(--visual-global-border)] transition-colors"
             >
               <svg
-                className="w-5 h-5"
+                className="w-5 h-5 shrink-0"
                 viewBox="0 0 24 24"
                 aria-hidden="true"
               >
@@ -415,18 +413,17 @@ export default function Login() {
             </button>
 
             <div className="flex items-center gap-3">
-              <div className="flex-1 h-px bg-[var(--visual-page-panel-background)]/10" />
+              <div className="flex-1 h-px bg-[var(--visual-global-border)]/15" />
               <span className="text-[10px] text-[var(--visual-page-color)]">
                 o
               </span>
-              <div className="flex-1 h-px bg-[var(--visual-page-panel-background)]/10" />
+              <div className="flex-1 h-px bg-[var(--visual-global-border)]/15" />
             </div>
 
-            <form data-page-form data-visual-section="pagePanel" data-page-panel
+            <form data-page-form
               onSubmit={handleSubmit}
-              className="flex flex-col gap-4"
+              className="flex flex-col gap-4 text-left"
             >
-{mode === 'register' && <CommercialOptIn checked={commercial} onChange={setCommercial} disabled={loading} />}
               {mode === 'register' && (
                 <Input
                   label="Nombre completo"
@@ -471,8 +468,8 @@ export default function Login() {
               />
 
               {mode === 'register' && (
-                <div className="flex flex-col gap-2 -mt-2">
-                  <p className="text-xs text-[#77716e]">
+                <div className="flex flex-col gap-2">
+                  <p className="text-xs text-[#77716e] leading-relaxed">
                     La contraseña debe contener al menos 8 caracteres, números, caracteres especiales y mayúsculas.
                   </p>
                   {passwordErrors.length > 0 && (
@@ -487,8 +484,12 @@ export default function Login() {
                 </div>
               )}
 
+              {mode === 'register' && (
+                <CommercialOptIn checked={commercial} onChange={setCommercial} disabled={loading} />
+              )}
+
               {mode === 'login' && (
-                <div className="text-right -mt-2">
+                <div className="text-right -mt-1">
                   <button data-page-action="ghost"
                     type="button"
                     onClick={() => 
@@ -496,7 +497,7 @@ export default function Login() {
                         'Recuperación de contraseña de demostración. No se envían correos.',
                       )
                     }
-                    className="text-[10px] text-[var(--visual-page-color)] hover:text-[var(--visual-page-color)] transition-colors"
+                    className="text-[11px] text-[var(--visual-page-color)] hover:underline transition-colors"
                   >
                     ¿Olvidaste tu contraseña?
                   </button>
@@ -519,7 +520,7 @@ export default function Login() {
             <div className="text-center pt-1">
               <Link data-page-action="ghost"
                 to={route()}
-                className="text-[10px] uppercase tracking-[0.12em] text-[var(--visual-page-color)] hover:text-[var(--visual-page-color)] transition-colors"
+                className="text-[10px] uppercase tracking-[0.12em] text-[var(--visual-page-color)] hover:underline transition-colors"
               >
                 Continuar como invitado →
               </Link>
@@ -542,12 +543,13 @@ export default function Login() {
           : 'min-h-[80vh] flex items-center justify-center px-4 py-12'
       }
     >
-      <div className="w-full max-w-md">
+      <div className="w-full max-w-md mx-auto">
         <div
+          data-login-header
           className={
             isMinimal
-              ? 'text-center mb-7'
-              : 'text-center mb-8'
+              ? 'text-center mb-7 flex flex-col items-center'
+              : 'text-center mb-8 flex flex-col items-center'
           }
         >
           {!isMinimal && (
@@ -557,7 +559,7 @@ export default function Login() {
           )}
 
           {isMinimal && (
-            <p className="text-xs text-[var(--visual-page-color)] mb-2">
+            <p className="text-xs text-[var(--visual-page-color)] mb-2 text-center">
               {config.name}
             </p>
           )}
@@ -565,8 +567,8 @@ export default function Login() {
           <h1
             className={
               isMinimal
-                ? 'text-3xl md:text-4xl font-semibold tracking-tight text-[var(--visual-page-color)]'
-                : 'text-2xl font-bold'
+                ? 'text-3xl md:text-4xl font-semibold tracking-tight text-[var(--visual-page-color)] text-center'
+                : 'text-2xl font-bold text-center'
             }
           >
             {mode === 'login'
@@ -574,7 +576,7 @@ export default function Login() {
               : 'Crear cuenta'}
           </h1>
 
-          <p className="text-sm text-[var(--muted-foreground)] mt-2">
+          <p className="text-sm text-[var(--muted-foreground)] mt-2 text-center">
             {mode === 'login'
               ? '¿No tienes cuenta?'
               : '¿Ya tienes cuenta?'}{' '}
@@ -584,7 +586,7 @@ export default function Login() {
               onClick={changeMode}
               className={
                 isMinimal
-                  ? 'text-[var(--primary)] font-semibold hover:opacity-60 transition-opacity'
+                  ? 'text-[var(--primary)] font-semibold hover:opacity-60 transition-opacity underline underline-offset-4'
                   : 'text-[var(--primary)] font-semibold hover:underline'
               }
             >
@@ -595,11 +597,11 @@ export default function Login() {
           </p>
         </div>
 
-        <div data-page-panel
+        <div data-page-panel data-visual-section="pagePanel"
           className={
             isMinimal
               ? 'bg-[var(--visual-page-panel-background)] border border-[var(--visual-global-border)]/5 rounded-[28px] p-6 md:p-8 flex flex-col gap-5'
-              : 'bg-[var(--visual-page-panel-background)] border border-[var(--border)] rounded-2xl p-6 flex flex-col gap-4'
+              : 'bg-[var(--visual-page-panel-background)] border border-[var(--border)] rounded-2xl p-6 md:p-8 flex flex-col gap-5'
           }
         >
           {message && (
@@ -611,15 +613,14 @@ export default function Login() {
           <button data-page-action="outline"
             type="button"
             onClick={() => loginConGoogle()}
-              
             className={
               isMinimal
-                ? 'h-12 flex items-center justify-center gap-3 border border-[var(--visual-global-border)]/10 rounded-full text-sm font-medium hover:bg-[var(--visual-page-panel-background)] transition-colors'
-                : 'flex items-center justify-center gap-3 border border-[var(--border)] rounded-xl py-2.5 text-sm font-medium hover:bg-[var(--muted)] transition-colors'
+                ? 'w-full h-12 flex items-center justify-center gap-3 border border-[var(--visual-global-border)]/10 rounded-full text-sm font-medium hover:bg-[var(--visual-page-panel-background)] transition-colors'
+                : 'w-full h-11 flex items-center justify-center gap-3 border border-[var(--border)] rounded-xl py-2.5 text-sm font-medium hover:bg-[var(--muted)] transition-colors'
             }
           >
             <svg
-              className="w-5 h-5"
+              className="w-5 h-5 shrink-0"
               viewBox="0 0 24 24"
               aria-hidden="true"
             >
@@ -640,11 +641,10 @@ export default function Login() {
             <div className="flex-1 h-px bg-[var(--border)]" />
           </div>
 
-          <form data-page-form data-visual-section="pagePanel" data-page-panel
+          <form data-page-form
             onSubmit={handleSubmit}
-            className="flex flex-col gap-4"
+            className="flex flex-col gap-4 text-left"
           >
-{mode === 'register' && <CommercialOptIn checked={commercial} onChange={setCommercial} disabled={loading} />}
             {mode === 'register' && (
               <Input
                 label="Nombre completo"
@@ -689,8 +689,8 @@ export default function Login() {
             />
 
             {mode === 'register' && (
-              <div className="flex flex-col gap-2 -mt-2">
-                <p className="text-xs text-[var(--muted-foreground)]">
+              <div className="flex flex-col gap-2">
+                <p className="text-xs text-[var(--muted-foreground)] leading-relaxed">
                   La contraseña debe contener al menos 8 caracteres, números, caracteres especiales y mayúsculas.
                 </p>
                 {passwordErrors.length > 0 && (
@@ -705,8 +705,12 @@ export default function Login() {
               </div>
             )}
 
+            {mode === 'register' && (
+              <CommercialOptIn checked={commercial} onChange={setCommercial} disabled={loading} />
+            )}
+
             {mode === 'login' && (
-              <div className="text-right -mt-2">
+              <div className="text-right -mt-1">
                 <button data-page-action="ghost"
                   type="button"
                   onClick={() =>
@@ -766,11 +770,9 @@ export default function Login() {
           </div>
         </div>
 
-        {isMinimal && (
-          <p className="text-center text-[11px] text-[var(--visual-page-color)] mt-5">
-            Compra de forma segura y sencilla.
-          </p>
-        )}
+        <p className="text-center text-xs text-[var(--muted-foreground)] mt-5">
+          Compra de forma segura y sencilla.
+        </p>
       </div>
     </div>
   );
