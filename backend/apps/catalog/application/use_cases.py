@@ -606,7 +606,11 @@ class ConfirmarPagoTransbankUseCase:
                 tienda_id=tienda_pk, medio_pago="Transbank", estado="pendiente", webpay_token=token_ws
             ).first()
             if pedido:
-                notificar_pago_rechazado(pedido)
+                try:
+                    notificar_pago_rechazado(pedido)
+                finally:
+                    Pedido.objects.filter(pk=pedido.pk, estado="pendiente", webpay_token=token_ws).update(
+                        webpay_token="", webpay_url="")
         except Exception:
             logging.getLogger(__name__).exception("No se pudo avisar el pago rechazado de Webpay.")
 

@@ -784,7 +784,7 @@ export default function Checkout() {
       if (paymentMethod === 'Transbank') {
         try {
           sessionStorage.setItem(`order-tracking:${orderNumber}`, JSON.stringify({
-            identificador: order.identificador, email: contact.email.trim(),
+            identificador: order.identificador, email: contact.email.trim(), monto: Number(order.monto_total),
           }));
         } catch {
           // Sin almacenamiento, Seguimiento conserva la búsqueda manual.
@@ -803,7 +803,7 @@ export default function Checkout() {
 
       if (paymentMethod === 'PayPal') {
         const returnUrl = `${window.location.origin}${route('pedido-confirmado')}?orderNumber=${orderNumber}&paypal_success=true`;
-        const cancelUrl = `${window.location.origin}${route('checkout')}?paypal_cancel=true`;
+        const cancelUrl = `${window.location.origin}${route('compra')}?paypal_cancel=true`;
         
         const result = await paypalPaymentService.iniciarPago(
           order.tienda_id, orderNumber, Number(order.monto_total), returnUrl, cancelUrl

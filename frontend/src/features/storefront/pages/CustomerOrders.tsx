@@ -7,6 +7,7 @@ import { CustomerAccountNavigation } from '../components/store/CustomerAccountNa
 import { formatBusinessDate } from '../../admin/services/businessTime';
 import { formatReportMoney } from '../../admin/services/reportFormatting';
 import { PickupSelectionSummary } from '../components/checkout/PickupSchedule';
+import { PagarPedidoPendiente } from '../components/checkout/PagarPedidoPendiente';
 
 export default function CustomerOrders() {
   const { id } = useParams();
@@ -47,6 +48,7 @@ export default function CustomerOrders() {
           <p>Productos: {order.cantidad_productos}</p>
           {Number(order.descuento) > 0 && <p>Descuento aplicado: −{formatReportMoney(order.descuento!)}</p>}
           <p>Total: {formatReportMoney(order.monto_total)}</p>
+          <PagarPedidoPendiente orderNumber={order.identificador} estado={order.estado} medioPago={order.medio_pago} conSesion />
           <PickupSelectionSummary selection={order.entrega?.retiro?.seleccion} />
           
           {!id && <Link data-page-action="ghost" to={route(`mis-pedidos/${order.id_pedido}`)} className="font-medium text-[var(--primary)] hover:underline">Ver detalle y seguimiento</Link>}

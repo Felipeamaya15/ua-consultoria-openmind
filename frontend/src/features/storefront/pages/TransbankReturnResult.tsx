@@ -33,6 +33,8 @@ export default function TransbankReturnResult({
   const { route } = useStorefrontTemplate();
   const started = useRef(false);
   const [result, setResult] = useState<Result>({ status: 'loading' });
+  const [retrying, setRetrying] = useState(false);
+  const [retryError, setRetryError] = useState('');
 
   useEffect(() => {
     if (started.current) return;
@@ -101,11 +103,13 @@ export default function TransbankReturnResult({
     orderNumber || (approvedData.orden_compra ? String(approvedData.orden_compra) : '');
   let identificador = '';
   let email = '';
+  let monto = 0;
   try {
     const stored: unknown = JSON.parse(sessionStorage.getItem(`order-tracking:${orderLabel}`) ?? 'null');
     if (stored && typeof stored === 'object') {
       if ('identificador' in stored && typeof stored.identificador === 'string') identificador = stored.identificador.trim();
       if ('email' in stored && typeof stored.email === 'string') email = stored.email;
+      if ('monto' in stored && typeof stored.monto === 'number') monto = stored.monto;
     }
   } catch {
     // El retorno puede abrirse sin la sesión original: queda la búsqueda manual.
@@ -113,6 +117,24 @@ export default function TransbankReturnResult({
   const trackingRoute = identificador
     ? `${route('seguimiento')}?orden=${encodeURIComponent(identificador)}`
     : route('seguimiento');
+
+  const canRetry = (result.status === 'rejected' || result.status === 'cancelled') && Boolean(orderLabel && email && monto > 0);
+  const retryPayment = async () => {
+    if (retrying || !canRetry) return;
+    setRetrying(true);
+    setRetryError('');
+    try {
+      const returnUrl = `${window.location.origin}${route('pedido-confirmado')}?orderNumber=${encodeURIComponent(orderLabel)}&tienda=${tiendaId}`;
+      const res = await transbankPaymentService.iniciarPago(tiendaId, orderLabel, monto, returnUrl, email);
+      if (!res?.exito || !res.data?.url || !res.data?.token) {
+        throw new Error(res?.mensaje || 'No pudimos iniciar el pago. Intenta nuevamente.');
+      }
+      transbankPaymentService.redirigirAWebpay(res.data.url, res.data.token);
+    } catch (cause) {
+      setRetryError(cause instanceof Error ? cause.message : 'No pudimos iniciar el pago. Intenta nuevamente.');
+      setRetrying(false);
+    }
+  };
 
   const view = {
     loading: { glyph: '…', tone: 'bg-gray-100 text-gray-600', title: 'Confirmando tu pago…' },
@@ -195,6 +217,8 @@ export default function TransbankReturnResult({
         </div>
       )}
 
+      {retryError && <p role="alert" className="text-sm text-red-600">{retryError}</p>}
+
       {result.status !== 'loading' && (
         <div className="flex flex-col sm:flex-row gap-3 w-full">
           {result.status === 'approved' ? (
@@ -207,10 +231,20 @@ export default function TransbankReturnResult({
                 Ver mi pedido
               </Button>
             </Link>
+          ) : canRetry ? (
+            <Button variant="primary" fullWidth className="flex-1" onClick={retryPayment} disabled={retrying}>
+              {retrying ? 'Redirigiendo a Webpay…' : 'Reintentar pago'}
+            </Button>
+          ) : (result.status === 'rejected' || result.status === 'cancelled') && orderLabel ? (
+            <Link data-page-action="ghost" to={trackingRoute} state={{ orderNumber: orderLabel, email }} className="flex-1">
+              <Button variant="primary" fullWidth>
+                Ver mi pedido y pagar
+              </Button>
+            </Link>
           ) : (
             <Link
               data-page-action="ghost"
-              to={`${route('checkout')}?orderNumber=${encodeURIComponent(orderLabel)}`}
+              to={`${route('compra')}?orderNumber=${encodeURIComponent(orderLabel)}`}
               state={{ orderNumber: orderLabel }}
               className="flex-1"
             >
