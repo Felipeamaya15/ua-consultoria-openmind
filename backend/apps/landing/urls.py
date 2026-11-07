@@ -1,10 +1,9 @@
 from django.urls import path
-
 from apps.landing.views import ConfiguracionLandingAPIView, AparienciaBloquesAPIView, RedesSocialesAPIView
 from apps.landing.media_views import MediaLibraryView, MediaResourceView, MediaImageView
 from apps.landing.public_section_media import PublicSectionMediaView, PublicSectionImageView
 from apps.landing.activity_views import ActivitySubmissionView, ActivityEnrollmentView, ActivityRequestsView, ActivityRequestView
-
+from apps.landing.carrusel_views import (ImagenesCarruselLandingAPIView, ImagenCarruselLandingDetalleAPIView, OrdenImagenesCarruselLandingAPIView)
 
 urlpatterns = [
     path('actividades/<uuid:pk>/consultas/', ActivitySubmissionView.as_view(), name='consulta-actividad'),
@@ -18,9 +17,8 @@ urlpatterns = [
     path('biblioteca/<uuid:pk>/imagen/', MediaImageView.as_view(), name='imagen-biblioteca'),
     path('redes-sociales/', RedesSocialesAPIView.as_view(), name='redes-sociales'),
     path('apariencia/', AparienciaBloquesAPIView.as_view(), name='apariencia-bloques'),
-    path(
-        "configuracion/",
-        ConfiguracionLandingAPIView.as_view(),
-        name="configuracion-landing",
-    ),
+    path("configuracion/", ConfiguracionLandingAPIView.as_view(), name="configuracion-landing"),
+    path('carrusel/', ImagenesCarruselLandingAPIView.as_view(), name='imagenes-carrusel-landing'),
+    path('carrusel/orden/', OrdenImagenesCarruselLandingAPIView.as_view(), name='orden-imagenes-carrusel'),
+    path('carrusel/<uuid:pk>/', ImagenCarruselLandingDetalleAPIView.as_view(), name='detalle-imagen-carrusel'),
 ]

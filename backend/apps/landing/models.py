@@ -40,6 +40,42 @@ class ConfiguracionLanding(models.Model):
         db_table = 'configuracion_landing'
 
 
+class ImagenCarruselLanding(models.Model):
+    """
+    Imágenes configurables de la portada de una tienda.
+    Su comportamiento visual se define en el editor de plantillas.
+    """
+
+    id = models.UUIDField(
+        primary_key=True,
+        default=uuid.uuid4,
+        editable=False,
+    )
+
+    configuracion = models.ForeignKey(
+        ConfiguracionLanding,
+        on_delete=models.CASCADE,
+        related_name='imagenes_carrusel',
+    )
+
+    archivo = models.ImageField(
+        upload_to='landing/carrusel/',
+        validators=[validate_landing_image],
+    )
+
+    orden = models.PositiveIntegerField(default=0)
+
+    texto_alternativo = models.CharField(
+        max_length=250,
+        blank=True,
+        default='',
+    )
+
+    class Meta:
+        db_table = 'landing_imagen_carrusel'
+        ordering = ['orden', 'id']
+
+
 class ArchivoMultimedia(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     tienda = models.ForeignKey('core.Tienda', on_delete=models.CASCADE)
