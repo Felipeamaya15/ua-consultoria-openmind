@@ -34,6 +34,13 @@ export interface ContenidoLanding {
   ubicacion: UbicacionLanding;
 }
 
+export interface ImagenCarruselLanding {
+  id: string;
+  archivo: string;
+  orden: number;
+  texto_alternativo: string;
+}
+
 export interface LandingConfig {
   id: number;
   tienda: number;
@@ -41,6 +48,7 @@ export interface LandingConfig {
   descripcion: string;
   texto_boton: string;
   imagen_principal: string | null;
+  imagenes_carrusel?: ImagenCarruselLanding[];
   logo: string | null;
   secciones: Record<string, boolean>;
   contenido?: Partial<ContenidoLanding>;

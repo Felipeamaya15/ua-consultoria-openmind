@@ -1,0 +1,173 @@
+
+.lp-carousel-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-width: 0;
+}
+
+.lp-carousel-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.lp-carousel-heading h3,
+.lp-carousel-upload h4 {
+  margin: 0 0 0.4rem;
+}
+
+.lp-carousel-heading p {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.lp-carousel-counter {
+  flex-shrink: 0;
+  padding: 0.35rem 0.65rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.lp-carousel-info,
+.lp-carousel-empty,
+.lp-carousel-error,
+.lp-carousel-success {
+  padding: 0.85rem 1rem;
+  border-radius: 0.65rem;
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+
+.lp-carousel-info,
+.lp-carousel-empty {
+  background: #eff6ff;
+  color: #1e40af;
+}
+
+.lp-carousel-error {
+  background: #fef2f2;
+  color: #991b1b;
+}
+
+.lp-carousel-success {
+  background: #f0fdf4;
+  color: #166534;
+}
+
+.lp-carousel-grid {
+  display: grid;
+  grid-template-columns: repeat(
+    auto-fit,
+    minmax(min(100%, 200px), 1fr)
+  );
+  gap: 1rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.lp-carousel-item {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid #cbd5e1;
+  border-radius: 0.75rem;
+  background: #fff;
+  color: #1e293b;
+}
+
+.lp-carousel-item img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+}
+
+.lp-carousel-item-content {
+  padding: 0.8rem;
+}
+
+.lp-carousel-item-content strong {
+  display: block;
+  font-size: 0.9rem;
+}
+
+.lp-carousel-item-content p {
+  margin: 0.35rem 0 0.75rem;
+  font-size: 0.82rem;
+  overflow-wrap: anywhere;
+}
+
+.lp-carousel-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.lp-carousel-actions button {
+  padding: 0.4rem 0.55rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 0.4rem;
+  background: #fff;
+  color: #1e293b;
+  font: inherit;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.lp-carousel-actions button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.lp-carousel-actions .lp-carousel-delete {
+  color: #b91c1c;
+  border-color: #fecaca;
+}
+
+.lp-carousel-upload {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding-top: 1rem;
+  border-top: 1px solid #cbd5e1;
+}
+
+.lp-carousel-upload label {
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.lp-carousel-upload input[type="file"],
+.lp-carousel-upload input[type="text"] {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  padding: 0.65rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 0.5rem;
+  background: #fff;
+  color: #1e293b;
+}
+
+.lp-carousel-upload small {
+  font-size: 0.78rem;
+  opacity: 0.8;
+}
+
+.lp-carousel-footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  margin-top: 0.5rem;
+}
+
+.lp-carousel-editor button:focus-visible,
+.lp-carousel-editor input:focus-visible {
+  outline: 3px solid #2563eb;
+  outline-offset: 2px;
+}

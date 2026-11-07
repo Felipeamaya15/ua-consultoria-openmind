@@ -8,7 +8,7 @@ from django.urls import path
 from django.views.static import serve
 
 
-IMAGE_TREES = ('images', 'logos', 'blocks')
+IMAGE_TREES = ('images', 'logos', 'blocks', 'carrusel')
 IMAGE_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.webp'}
 
 
