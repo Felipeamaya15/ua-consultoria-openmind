@@ -1,4 +1,37 @@
 .marketing-module{--mk-panel:#fff;min-width:0;font-size:14px}
+.marketing-sections{min-width:0;width:100%}
+.social-profiles{display:grid;gap:24px;min-width:0}
+.social-profiles>header{display:grid;gap:8px;max-width:800px;color:#52617a;font-size:14px;line-height:1.6}
+.social-profiles h2{font-size:22px;font-weight:700;color:#1d2f4c}
+.social-profiles-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px}
+.social-profile-card,.social-profile-card form,.social-profile-fields{min-width:0}
+.social-profile-fields{display:grid;gap:18px;margin-top:22px}
+.social-profile-heading{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.social-profile-heading h3{font-size:18px;font-weight:700;color:#1d2f4c}
+.social-profile-icon{display:grid;place-items:center;width:42px;height:42px;border-radius:12px;background:#f1f5fa;color:#1a3a6b}
+.social-profile-state{font-size:12px;color:#52617a;margin-left:auto}
+.social-profile-preview{display:grid;gap:6px;padding:14px;background:#f6f8fb;border-radius:8px;font-size:12px;color:#52617a;overflow-wrap:anywhere}
+.social-profile-preview>span{font-weight:600;color:#1d2f4c}
+.social-profile-preview a{color:#1a3a6b;text-decoration:underline}
+.social-profile-actions{display:flex;gap:8px;flex-wrap:wrap}
+.social-profile-delete{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:14px;border:1px solid var(--border);border-radius:8px;font-size:13px}
+.social-profile-delete p{width:100%}
+.social-profile-pending{font-size:12px;color:#755000;margin-top:12px}
+.social-profile-notice{font-size:13px;color:#17613c;margin-top:12px}
+@media(max-width:767px){.social-profiles-grid{grid-template-columns:minmax(0,1fr)}.social-profile-card{padding:16px}.social-profile-actions>button{flex-grow:1}}
+.marketing-section-navigation{min-width:0;margin-bottom:20px}
+.marketing-section-navigation .admin-numbered-tabs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));padding:6px;gap:5px;border:1px solid var(--border);border-radius:13px;background:#fff;overflow-x:auto}
+.marketing-section-navigation .admin-numbered-tabs>button{display:flex;align-items:center;justify-content:center;gap:9px;min-height:54px;padding:10px 7px;border-radius:8px;font:inherit;font-size:12px;font-weight:600;color:var(--muted-foreground);white-space:nowrap}
+.marketing-section-navigation .admin-numbered-tabs>button[aria-selected=true]{background:#f0efff;color:#4f46d5;box-shadow:inset 0 0 0 1px #e3dfff}
+.marketing-section-navigation .admin-numbered-tabs>button:disabled{opacity:.5;cursor:wait}
+.marketing-section-navigation .admin-tab-number{font-size:10px;opacity:.65}
+.marketing-section-panel{min-width:0}
+.marketing-section-panel[hidden]{display:none!important}
+.marketing-section-information{display:flex;flex-direction:column;align-items:flex-start;gap:14px;font-size:14px;line-height:1.6}
+.marketing-section-information h3{font-size:19px;font-weight:650}
+.marketing-section-information p{max-width:68ch;color:var(--muted-foreground)}
+.marketing-section-panel:focus-visible,.marketing-section-navigation button:focus-visible{outline:3px solid #a5a0fb;outline-offset:3px}
+@media(max-width:900px){.marketing-section-navigation .admin-numbered-tabs{display:flex}.marketing-section-navigation .admin-numbered-tabs>button{flex:0 0 auto;min-height:46px;padding-inline:14px}}
 .marketing-module *{box-sizing:border-box}
 .marketing-intro{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:24px}
 .marketing-intro>p{color:var(--muted-foreground);max-width:640px;line-height:1.7}

@@ -1,6 +1,7 @@
 from urllib.parse import urlparse
 
 from rest_framework import serializers
+from apps.landing.activities import ActivityConfigSerializer, validate_activity
 
 
 class WebURLField(serializers.URLField):
@@ -58,37 +59,63 @@ class ImagenBloqueSerializer(serializers.Serializer):
 
 class BloqueLandingSerializer(serializers.Serializer):
     id = serializers.UUIDField(format='hex_verbose')
-    tipo = serializers.ChoiceField(choices=['historia', 'imagen_texto', 'texto', 'galeria', 'cita'])
+    tipo = serializers.ChoiceField(choices=['historia', 'imagen_texto', 'texto', 'galeria', 'cita', 'personalizada'])
     visible = serializers.BooleanField(default=True)
     titulo = serializers.CharField(max_length=255, allow_blank=True, default='')
     subtitulo = serializers.CharField(max_length=500, allow_blank=True, default='')
     texto = serializers.CharField(max_length=10000, allow_blank=True, default='')
     imagenes = ImagenBloqueSerializer(many=True, required=False, default=list)
+    nombre_interno = serializers.CharField(max_length=100, allow_blank=True, required=False)
+    from apps.landing.section_elements import SectionElementSerializer
+    componentes = SectionElementSerializer(many=True, required=False)
+    actividad = ActivityConfigSerializer(required=False, allow_null=True)
 
     def validate_id(self, value):
         return str(value)
 
     def validate(self, value):
+        elements = value.get('componentes', [])
+        if value['tipo'] != 'personalizada' and elements:
+            raise serializers.ValidationError('Los bloques configurables requieren una sección personalizada.')
+        if len(elements) > 30 or len({element['id'] for element in elements}) != len(elements):
+            raise serializers.ValidationError('Usa hasta 30 bloques con identificadores únicos por sección.')
         images = value['imagenes']
         limit = 8 if value['tipo'] == 'galeria' else 1 if value['tipo'] in ['historia', 'imagen_texto'] else 0
         if len(images) > limit:
             raise serializers.ValidationError({'imagenes': f'Este bloque permite hasta {limit} imágenes.'})
         if len({i['id'] for i in images}) != len(images):
             raise serializers.ValidationError({'imagenes': 'Los identificadores deben ser únicos.'})
+        validate_activity(value)
         return value
 
 
 class ContenidoLandingSerializer(serializers.Serializer):
     bloques = BloqueLandingSerializer(many=True, required=False)
+    orden_apartados = serializers.ListField(child=serializers.CharField(max_length=50), max_length=26, required=False)
 
     def validate_bloques(self, value):
+        previous = {block['id']: block for block in self.context.get('bloques_previos', [])}
+        for block in value:
+            if 'actividad' not in block and 'actividad' in previous.get(block['id'], {}):
+                import copy
+                block['actividad'] = copy.deepcopy(previous[block['id']]['actividad'])
+            validate_activity(block)
+            activity = block.get('actividad') or {}
+            if activity.get('cupos') and self.context.get('tienda'):
+                from apps.landing.models import SolicitudActividad
+                reserved = SolicitudActividad.objects.filter(tienda=self.context['tienda'], seccion_id=block['id'], tipo='inscripcion').exclude(estado='cancelada').count()
+                if activity['cupos'] < reserved:
+                    raise serializers.ValidationError('Los cupos no pueden ser menores que las inscripciones vigentes. Cancela las que correspondan antes de reducirlos.')
         if len(value) > 20:
             raise serializers.ValidationError('Se permiten hasta 20 secciones.')
         if len({b['id'] for b in value}) != len(value):
             raise serializers.ValidationError('Los identificadores de las secciones deben ser únicos.')
-        uploads = [i['src'] for b in value for i in b['imagenes'] if i['src'].startswith('data:')]
+        uploads = [image['src'] for block in value for container in [block, *block.get('componentes', [])]
+                   for image in container.get('imagenes', []) if image['src'].startswith('data:')]
         if sum(len(src) for src in uploads) > 14000000:
             raise serializers.ValidationError('Guarda las imágenes en grupos de hasta 10 MB.')
+        from apps.landing.section_elements import validate_media_references
+        validate_media_references(value, self.context.get('tienda'), self.context.get('bloques_previos', []))
         return value
 
     productos_destacados = serializers.ListField(child=serializers.RegexField(r'^[0-9a-f]{24}$'), max_length=6, required=False)
@@ -103,6 +130,9 @@ class ContenidoLandingSerializer(serializers.Serializer):
         return value
 
     def validate(self, value):
+        if 'orden_apartados' in value:
+            from apps.landing.home_sections import validate_home_order
+            validate_home_order(value['orden_apartados'], value.get('bloques', self.context.get('bloques_previos', [])))
         for key in ('productos_destacados', 'categorias'):
             if len(value.get(key, [])) != len(set(value.get(key, []))):
                 raise serializers.ValidationError({key: 'No se permiten selecciones duplicadas.'})

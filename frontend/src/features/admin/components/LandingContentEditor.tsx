@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { Link } from 'react-router-dom';
 import type { Product } from '../../storefront/data/mockData';
 import type { ContenidoLanding, ContactoLanding } from '../../landing/types/landing.types';
 import { ChileAddressEditor } from './ChileAddressEditor';
@@ -6,6 +7,7 @@ import { WeeklyHoursEditor } from './WeeklyHoursEditor';
 import { AdminCard, Input, Toggle, Button } from './ui';
 
 type Props = {
+  showVisibilityToggle?: boolean;
   catalogReady?: boolean;
   onHoursPending?: (pending:boolean)=>void;
   sections?: string[];
@@ -15,7 +17,7 @@ type Props = {
 };
 const icons = { truck: 'Envío', lock: 'Seguridad', return: 'Devolución', chat: 'Soporte' };
 
-export function LandingContentEditor({ value, flags, products, onChange, onToggle, catalogReady = true, sections, onHoursPending }: Props) {
+export function LandingContentEditor({ value, flags, products, onChange, onToggle, catalogReady = true, sections, onHoursPending, showVisibilityToggle = true }: Props) {
   const categories = [...new Set(products.map(p => p.category).filter(Boolean))].sort();
   const ids = new Set(products.map(p => p.catalogId));
   function select(key: 'productos_destacados' | 'categorias', id: string, checked: boolean) {
@@ -24,8 +26,9 @@ export function LandingContentEditor({ value, flags, products, onChange, onToggl
   function card(name: string, controls: ReactNode) {
     if (sections && !sections.includes(name)) return null;
     const needsCatalog = name === 'Productos destacados' || name === 'Categorías';
-    return <AdminCard className="lp-content-card"><div className="flex items-center justify-between gap-4 mb-4"><h2 className="font-semibold">{name}</h2><Toggle ariaLabel={name} checked={(name==='Horarios de atención'?flags[name]!==false:flags[name]===true)} onChange={enabled => onToggle(name, enabled)} /></div>
-      <fieldset disabled={(name==='Horarios de atención'?flags[name]===false:flags[name]!==true) || (needsCatalog && !catalogReady)} className={(name==='Horarios de atención'?flags[name]!==false:flags[name]===true) ? 'space-y-3' : 'space-y-3 opacity-50'}>{needsCatalog && !catalogReady ? <p className="text-sm">Esperando la carga del catálogo. Tu selección se conserva.</p> : controls}</fieldset></AdminCard>;
+    const enabled = (needsCatalog && !showVisibilityToggle) || (name==='Horarios de atención'?flags[name]!==false:flags[name]===true);
+    return <AdminCard className="lp-content-card"><div className="flex items-center justify-between gap-4 mb-4"><h2 className="font-semibold">{name}</h2>{showVisibilityToggle&&<Toggle ariaLabel={name} checked={enabled} onChange={enabled => onToggle(name, enabled)} />}</div>
+      <fieldset disabled={!enabled || (needsCatalog && !catalogReady)} className={enabled ? 'space-y-3' : 'space-y-3 opacity-50'}>{needsCatalog && !catalogReady ? <p className="text-sm">Esperando la carga del catálogo. Tu selección se conserva.</p> : controls}</fieldset></AdminCard>;
   }
   return <>
     {card('Productos destacados', <>
@@ -52,8 +55,9 @@ export function LandingContentEditor({ value, flags, products, onChange, onToggl
     </>)}
     {card('Información de contacto', <>
       <div className="lp-contact-grid">
-      {([['telefono', 'Teléfono (con código de país)', 'tel'], ['whatsapp', 'WhatsApp (número con código de país)', 'tel'], ['correo', 'Correo público de contacto', 'email'], ['instagram', 'Instagram (URL completa)', 'url'], ['facebook', 'Facebook (URL completa)', 'url'], ['sitio_web', 'Sitio web', 'url']] as const).map(([key, label, type]) => <Input key={key} label={label} type={type} maxLength={type === 'tel' ? 40 : undefined} pattern={type === 'tel' ? '\+?[0-9 ()-]{5,40}' : undefined} hint={type === 'tel' ? 'Ejemplo: +56 9 1234 5678' : undefined} value={value.contacto[key]} onChange={e => onChange({ ...value, contacto: { ...value.contacto, [key as keyof ContactoLanding]: e.target.value } })} />)}
+      {([['telefono', 'Teléfono (con código de país)', 'tel'], ['correo', 'Correo público de contacto', 'email'], ['sitio_web', 'Sitio web', 'url']] as const).map(([key, label, type]) => <Input key={key} label={label} type={type} maxLength={type === 'tel' ? 40 : undefined} pattern={type === 'tel' ? '\+?[0-9 ()-]{5,40}' : undefined} hint={type === 'tel' ? 'Ejemplo: +56 9 1234 5678' : undefined} value={value.contacto[key]} onChange={e => onChange({ ...value, contacto: { ...value.contacto, [key as keyof ContactoLanding]: e.target.value } })} />)}
       </div>
+      <p className="text-sm">Instagram, Facebook, YouTube y WhatsApp se administran en <Link className="underline" to="/emprendedor/marketing#redes-sociales">Marketing → Redes sociales</Link>. Se conservan los perfiles ya guardados.</p>
     </>)}
     {card('Horarios de atención', <WeeklyHoursEditor onPendingChange={onHoursPending} value={value.contacto.horario} onChange={horario => onChange({ ...value, contacto: { ...value.contacto, horario } })} />)}
     {card('Mapa / ubicación', <>

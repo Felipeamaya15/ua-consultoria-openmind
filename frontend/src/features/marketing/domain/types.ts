@@ -15,6 +15,8 @@ export interface MarketingProduct {
 export type ContentSource = 'product' | 'promotion';
 export interface PricedVariant { variant: MarketingVariant; price: number; originalPrice: number | null }
 export interface PublicationContent {
+  /** Informational sources reuse the same renderer without inventing a sale price. */
+  hidePrice?: boolean;
   productId: string; productName: string; category: string; image: string | null;
   description?: string;
   /** Importes en centavos CLP, redondeados como el checkout (half-up). */

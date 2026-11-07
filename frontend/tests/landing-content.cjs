@@ -12,7 +12,7 @@ const products = Array.from({ length: 7 }, (_, i) => ({ catalogId: String(i + 1)
 function load(file) {
   const module = { exports: {} };
   const code = ts.transpileModule(fs.readFileSync(path.join(root, file), 'utf8'), { compilerOptions: { target: ts.ScriptTarget.ES2020, module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX } }).outputText;
-  vm.runInNewContext(code, { module, exports: module.exports, require: req });
+  vm.runInNewContext(code, { module, exports: module.exports, require: req, URL });
   return module.exports;
 }
 function req(id) {
@@ -23,6 +23,7 @@ function req(id) {
   if (id.includes('useLandingContent')) return load('src/features/landing/hooks/useLandingContent.ts');
   if (id.includes('useLandingSectionVisibility')) return load('src/features/landing/hooks/useLandingSectionVisibility.ts');
   if (id.includes('weeklyHours')) return load('src/features/landing/types/weeklyHours.ts');
+  if (id.includes('socialProfiles')) return load('src/features/landing/types/socialProfiles.ts');
   if (id.endsWith('.css')) return {};
   if (id.includes('landingContent')) return load('src/features/landing/types/landingContent.ts');
   if (id.includes('useStorefrontTemplate')) return { useStorefrontTemplate: () => ({ template, route: p => `/plantilla/1/${p}`, isCatalog: template === 'catalog', isVisual: template === 'visual' }) };
@@ -113,6 +114,14 @@ for (template of ['editorial', 'minimal', 'visual', 'catalog']) {
     assert(details.some(n => n.type === 'section' && n.props['aria-label'] === other));
     state.landing.secciones[flag] = true;
   }
+  state.landing.contenido.contacto = { ...empty.contacto, instagram: 'https://instagram.com/mi.tienda', facebook: 'https://facebook.com/mi.tienda', youtube: 'https://youtube.com/@mi-canal', whatsapp: '+56912345678', redes_sociales: { instagram: { activo: false }, whatsapp: { activo: true, mensaje: 'Hola & gracias' } } };
+  details = nodes(Details({}));
+  assert(!details.some(n => n.props?.href === 'https://instagram.com/mi.tienda'), `${template}: red desactivada`);
+  assert(details.some(n => n.props?.href === 'https://facebook.com/mi.tienda'), `${template}: compatibilidad anterior`);
+  assert(details.some(n => n.props?.href === 'https://youtube.com/@mi-canal'), `${template}: YouTube`);
+  assert(details.some(n => n.props?.href === 'https://wa.me/56912345678?text=Hola%20%26%20gracias'), `${template}: mensaje WhatsApp`);
+  state.landing.secciones['Información de contacto'] = false;
+  assert(!nodes(Details({})).some(n => n.props?.href?.includes('youtube.com')), `${template}: visibilidad de sección`);
 }
 template = 'editorial';
 // El editor conserva contenido cuando se desactiva; agregar/quitar y límites.

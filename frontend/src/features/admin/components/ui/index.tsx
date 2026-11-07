@@ -40,19 +40,22 @@ export function Toggle({checked,onChange,label,id,ariaLabel,disabled=false}:{che
   return <label htmlFor={id ?? generated} className="flex items-center gap-3 cursor-pointer select-none"><span className="relative shrink-0"><input id={id ?? generated} type="checkbox" disabled={disabled} className="sr-only peer" aria-label={ariaLabel || label || 'Activar opción'} checked={checked} onChange={e=>onChange(e.target.checked)}/><span className={'block w-10 h-5 rounded-full transition-colors peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 '+(checked?'bg-[var(--primary)]':'bg-[var(--border)]')}/><span className={'absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform '+(checked?'translate-x-5':'')}/></span>{label && <span className="text-sm">{label}</span>}</label>;
 }
 export function AdminCard({children,className=''}:{children:ReactNode;className?:string}) {return <section className={'bg-white border border-[var(--border)] rounded-xl p-5 '+className}>{children}</section>;}
-export function Tabs({tabs,active,onChange}:{tabs:{id:string;label:string}[];active:string;onChange:(id:string)=>void}) {
+export function Tabs({tabs,active,onChange,label,idPrefix,numbered=false,disabled=false}:{tabs:{id:string;label:string}[];active:string;onChange:(id:string)=>void;label?:string;idPrefix?:string;numbered?:boolean;disabled?:boolean}) {
   return (
-    <div role="tablist" className="flex overflow-x-auto border-b border-[var(--border)] gap-1">
+    <div role="tablist" aria-label={label} className={numbered ? 'admin-numbered-tabs' : 'flex overflow-x-auto border-b border-[var(--border)] gap-1'}>
       {tabs.map((tab, index) => (
         <button
           type="button"
           role="tab"
+          id={idPrefix ? `${idPrefix}-tab-${tab.id}` : undefined}
+          aria-controls={idPrefix ? `${idPrefix}-panel-${tab.id}` : undefined}
+          disabled={disabled}
           aria-selected={active === tab.id}
           tabIndex={active === tab.id ? 0 : -1}
           key={tab.id}
           onClick={() => onChange(tab.id)}
           onKeyDown={event => {
-            if (!['ArrowRight', 'ArrowLeft', 'Home', 'End'].includes(event.key) || tabs.length === 0) return;
+            if (disabled || !['ArrowRight', 'ArrowLeft', 'Home', 'End'].includes(event.key) || tabs.length === 0) return;
             event.preventDefault();
             const nextIndex =
               event.key === 'Home'
@@ -65,9 +68,9 @@ export function Tabs({tabs,active,onChange}:{tabs:{id:string;label:string}[];act
             const buttons = event.currentTarget.parentElement?.querySelectorAll<HTMLButtonElement>('[role="tab"]');
             buttons?.[nextIndex]?.focus();
           }}
-          className={'shrink-0 px-4 py-2.5 text-sm border-b-2 ' + (active === tab.id ? 'border-[var(--primary)] text-[var(--primary)]' : 'border-transparent text-[var(--muted-foreground)]')}
+          className={numbered ? undefined : 'shrink-0 px-4 py-2.5 text-sm border-b-2 ' + (active === tab.id ? 'border-[var(--primary)] text-[var(--primary)]' : 'border-transparent text-[var(--muted-foreground)]')}
         >
-          {tab.label}
+          {numbered && <span className="admin-tab-number" aria-hidden="true">{String(index + 1).padStart(2, '0')}</span>}{tab.label}
         </button>
       ))}
     </div>

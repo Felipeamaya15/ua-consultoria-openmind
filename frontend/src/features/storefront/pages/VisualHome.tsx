@@ -1,4 +1,5 @@
-import { LandingBlocks } from '../../landing/components/LandingBlocks';
+import { HomeSections } from '../../landing/components/HomeSections';
+import { HomeCategories } from '../../landing/components/HomeCategories';
 import { VISUAL_SECTION } from '../visual/sectionIds';
 import { useLandingContent } from '../../landing/hooks/useLandingContent';
 import { LandingDetails } from '../../landing/components/LandingDetails';
@@ -161,13 +162,8 @@ export default function VisualHome() {
         </section>
       )}
 
-      <LandingBlocks />
-
-
-      {/* ======================================================
-          PRODUCTOS DESTACADOS
-      ====================================================== */}
-      {isSectionVisible('Productos destacados') && visualProducts.length > 0 && (<section data-visual-section={VISUAL_SECTION.sections} data-visual-kind="featured" data-landing-content className="px-4 sm:px-5 md:px-8 py-14 sm:py-20 md:py-28">
+      <HomeSections commerce={{
+        "sistema:destacados": isSectionVisible('Productos destacados') && visualProducts.length > 0 && (<section data-visual-section={VISUAL_SECTION.sections} data-visual-kind="featured" data-landing-content className="px-4 sm:px-5 md:px-8 py-14 sm:py-20 md:py-28">
         <div className="max-w-6xl mx-auto">
           <header className="mb-8 sm:mb-12">
             <p
@@ -225,8 +221,9 @@ export default function VisualHome() {
             </Link>
           </div>
         </div>
-      </section>)}
-
+      </section>),
+        'sistema:categorias': <HomeCategories />
+      }} />
       <LandingDetails />
     </div>
   );
