@@ -31,7 +31,7 @@ class PlantillaDespachoBase(TestCase):
 @override_settings(STOREFRONT_PUBLIC_URL='https://tienda.test/plantilla/1')
 class RenderizadoDelDespachoTests(PlantillaDespachoBase):
     def test_el_tipo_esta_registrado_junto_a_los_otros_tres(self):
-        self.assertEqual(set(TIPOS), {'order_received', 'payment_success', 'payment_rejected', 'order_shipped'})
+        self.assertEqual(set(TIPOS), {'order_received', 'payment_success', 'order_shipped', 'order_delivered', 'order_cancelled'})
 
     def test_renderiza_el_despacho_con_transportista_y_codigo(self):
         pedido = self.pedido()

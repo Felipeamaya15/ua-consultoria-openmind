@@ -10,7 +10,7 @@ import { OrderFilters } from '../components/OrderFilters'
 import { useCommercialExport } from '../hooks/useCommercialHistory'
 import { getOrderHistory, getOrderDetail, historyParams, emptyPagination, type HistoryOrder as StoreOrder } from '../services/commercialService'
 import { approveManualTransfer, verifyTransfer } from "../services/pendingTransfersService"
-import { describeShipmentEmail, updateOrderStatus } from '../services/recentOrdersService';
+import { describeShipmentEmail, updateOrderStatus, sendManualOrderEmail, formatRecentOrderDate } from '../services/recentOrdersService';
 import { hasOrderFilters } from '../services/emptyStates';
 
 import { Link, useSearchParams } from 'react-router-dom'
@@ -48,6 +48,7 @@ export default function Orders() {
   const [updatingStatus, setUpdatingStatus] = useState(false)
   const operationPending = useRef(false)
   const [verifyMessage, setVerifyMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null)
+  const [sendingEmailType, setSendingEmailType] = useState<string | null>(null)
 
   useEffect(() => {
     const controller = new AbortController()
@@ -128,6 +129,45 @@ export default function Orders() {
     }
   };
 
+  const SELECTABLE_STATUSES = [
+    { key: 'pendiente', label: 'Pendiente' },
+    { key: 'pagado', label: 'Pagado/En preparación' },
+    { key: 'en_camino', label: 'En camino' },
+    { key: 'entregado', label: 'Entregado' },
+    { key: 'cancelado', label: 'Cancelado' },
+  ] as const;
+
+  const EMAIL_EVENTS = [
+    { key: 'order_received', label: 'Pendiente', desc: 'Aviso inicial de compra en estado Pendiente' },
+    { key: 'payment_success', label: 'Pagado/En preparación', desc: 'Confirmación de pago y preparación' },
+    { key: 'order_shipped', label: 'En camino', desc: 'Aviso de despacho con seguimiento' },
+    { key: 'order_delivered', label: 'Entregado', desc: 'Confirmación de entrega al cliente' },
+    { key: 'order_cancelled', label: 'Cancelado', desc: 'Aviso de pedido cancelado' },
+  ] as const;
+
+  const handleManualEmail = async (orderId: number, tipo: string) => {
+    if (operationPending.current) return;
+    operationPending.current = true;
+    setSendingEmailType(tipo);
+    setVerifyMessage(null);
+    try {
+      const res = await sendManualOrderEmail(orderId, tipo);
+      setVerifyMessage({
+        type: 'success',
+        text: `Correo enviado exitosamente${res.destinatario ? ` a ${res.destinatario}` : ''}.`,
+      });
+      setRefreshKey(prev => prev + 1);
+    } catch (cause) {
+      setVerifyMessage({
+        type: 'error',
+        text: cause instanceof Error ? cause.message : 'Error al enviar el correo.',
+      });
+    } finally {
+      operationPending.current = false;
+      setSendingEmailType(null);
+    }
+  };
+
   const filtered = filters.error ? [] : pedidos
 
   const selectedOrder = selectedId
@@ -165,7 +205,7 @@ export default function Orders() {
         <label className="orders-other-status">Otros estados
           <select aria-label="Otros estados del pedido" value={Object.prototype.hasOwnProperty.call(STATUS_BADGE, filter) && filter !== 'pendiente' ? filter : ''} onChange={event => setFilter(event.target.value || 'all')}>
             <option value="">Seleccionar estado</option>
-            {Object.entries(STATUS_BADGE).filter(([value]) => value !== 'pendiente').map(([value, status]) => <option key={value} value={value}>{status.label}</option>)}
+            {SELECTABLE_STATUSES.filter(s => s.key !== 'pendiente').map(s => <option key={s.key} value={s.key}>{s.label}</option>)}
           </select>
         </label>
       </section>
@@ -269,8 +309,8 @@ export default function Orders() {
                   onChange={(e) => handleStatusChange(selectedOrder.id_pedido, e.target.value)}
                   className="w-full mt-1 border border-[var(--border)] rounded-md p-1.5 text-xs bg-white focus:ring-2 focus:ring-[var(--primary)] outline-none disabled:opacity-50 transition-opacity"
                 >
-                  {Object.entries(STATUS_BADGE).map(([key, config]) => (
-                    <option key={key} value={key}>{config.label}</option>
+                  {SELECTABLE_STATUSES.map(s => (
+                    <option key={s.key} value={s.key}>{s.label}</option>
                   ))}
                 </select>
               </div>
@@ -333,6 +373,58 @@ export default function Orders() {
               <div className="flex justify-between font-bold">
                 <span>Total</span>
                 <span>{formatPrice(selectedOrder.monto_total)}</span>
+              </div>
+            </div>
+
+            {/* Avisos por correo al cliente */}
+            <div className="border-t border-[var(--border)] pt-3">
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-xs font-semibold text-[var(--muted-foreground)] uppercase tracking-wider">
+                  Avisos por correo al cliente
+                </p>
+                <span className="text-[11px] font-mono text-[var(--muted-foreground)] truncate max-w-[150px]" title={selectedOrder.correo_contacto || ''}>
+                  {selectedOrder.correo_contacto || 'Sin correo'}
+                </span>
+              </div>
+              <div className="space-y-2">
+                {EMAIL_EVENTS.map(evt => {
+                  const notif = (selectedOrder.entrega as Record<string, any>)?.notificaciones?.[evt.key];
+                  const isSending = sendingEmailType === evt.key;
+                  return (
+                    <div key={evt.key} className="bg-[var(--muted)]/40 border border-[var(--border)] rounded-lg p-2.5 flex items-center justify-between gap-2 text-xs">
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="font-semibold text-xs">{evt.label}</span>
+                          {notif?.enviado ? (
+                            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-green-100 text-green-800">
+                              Enviado {notif.manual ? '(Manual)' : '(Auto)'}
+                            </span>
+                          ) : notif?.codigo ? (
+                            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-100 text-amber-800">
+                              {notif.codigo}
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-gray-100 text-gray-600">
+                              No enviado
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-[11px] text-[var(--muted-foreground)] truncate mt-0.5">
+                          {notif?.fecha ? `Último envío: ${formatRecentOrderDate(notif.fecha)}` : evt.desc}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        disabled={isSending || verifying || updatingStatus}
+                        onClick={() => handleManualEmail(selectedOrder.id_pedido, evt.key)}
+                        className="shrink-0 px-2.5 py-1 text-xs font-medium rounded border border-[var(--border)] bg-white hover:bg-[var(--secondary)] text-[var(--foreground)] transition-colors disabled:opacity-50 shadow-sm"
+                        title="Enviar correo de emergencia de este evento"
+                      >
+                        {isSending ? 'Enviando…' : notif?.enviado ? 'Reenviar' : 'Enviar manual'}
+                      </button>
+                    </div>
+                  );
+                })}
               </div>
             </div>
 

@@ -23,7 +23,7 @@ let passed = 0;
 function test(name, fn) { return Promise.resolve().then(fn).then(() => { console.log('OK ' + name); passed++; }); }
 
 const orden = (n, extra = {}) => ({ id_pedido: n, identificador: `ORD-20261013-A${n}BC`, nombre_contacto: `Cliente ${n}`, estado: 'pendiente', estado_etiqueta: 'Pendiente', monto_total: `${1000 + n}.00`, fecha_creacion: new Date(2026, 9, 13, 15, 5).toISOString(), ...extra });
-const ESTADOS = ['pendiente', 'pagado', 'preparando', 'en_origen', 'enviado', 'en_reparto', 'entregado', 'cancelado'];
+const ESTADOS = ['pendiente', 'pagado', 'en_camino', 'entregado', 'cancelado', 'preparando', 'en_origen', 'enviado', 'en_reparto'];
 
 // ------------------------------------------------------------------ servicio
 function servicio(opciones = {}) {
@@ -149,8 +149,8 @@ const fechas = load('src/features/admin/services/recentOrdersService.ts', { '../
 
 async function pruebasDeEstadosYFechas() {
   await test('cada estado del pedido tiene su etiqueta y su color', async () => {
-    const esperado = { pendiente: ['Pendiente', 'warning'], pagado: ['Pagado', 'info'], preparando: ['En preparación', 'info'], en_origen: ['En origen', 'info'],
-      enviado: ['En tránsito', 'info'], en_reparto: ['En reparto', 'info'], entregado: ['Entregado', 'success'], cancelado: ['Cancelado', 'error'] };
+    const esperado = { pendiente: ['Pendiente', 'warning'], pagado: ['Pagado/En preparación', 'info'], en_camino: ['En camino', 'info'], entregado: ['Entregado', 'success'], cancelado: ['Cancelado', 'error'],
+      preparando: ['Pagado/En preparación', 'info'], en_origen: ['En camino', 'info'], enviado: ['En camino', 'info'], en_reparto: ['En camino', 'info'] };
     same(Object.keys(estados.ORDER_STATUS_BADGE), ESTADOS);
     for (const estado of ESTADOS) same(estados.orderStatusBadge(estado), { label: esperado[estado][0], variant: esperado[estado][1] }, estado);
   });
@@ -195,7 +195,7 @@ async function pruebasDeLaVista() {
     assert.ok(salida.includes('href="/emprendedor/pedidos"') && salida.includes('Ver todos'));
     for (const encabezado of ['Orden', 'Cliente', 'Fecha', 'Estado', 'Total']) assert.ok(salida.includes(`>${encabezado}</th>`), encabezado);
     assert.equal((salida.split('<tbody')[1].match(/<tr /g) || []).length, 5, 'una fila por orden');
-    for (const [i, etiqueta] of ['Pendiente', 'Pagado', 'En preparación', 'En origen', 'En tránsito'].entries()) {
+    for (const [i, etiqueta] of ['Pendiente', 'Pagado/En preparación', 'En camino', 'Entregado', 'Cancelado'].entries()) {
       assert.ok(salida.includes(`ORD-20261013-A${i + 1}BC`) && salida.includes(`Cliente ${i + 1}`) && salida.includes(`>${etiqueta}</span>`), etiqueta);
       assert.ok(salida.includes(`$${(1001 + i).toLocaleString('es-CL')} CLP`), 'total y moneda explícita');
     }

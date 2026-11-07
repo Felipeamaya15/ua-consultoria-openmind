@@ -11,12 +11,35 @@ const visualColorKeys = { primaryColor: 'primary', secondaryColor: 'secondary', 
 function hydrate(config: Record<string, unknown>): AdminConfig {
   const defaults = createDefaultAdminConfig();
   const themes = isRecord(config.themeEditor) ? config.themeEditor : {};
-  return {...defaults,...config, template: templates.find(template => template === config.template) ?? defaults.template, themeEditor: {
-        editorial: loadThemeCustomization('editorial', themes.editorial, config, config.visualConfig),
-        minimal: loadThemeCustomization('minimal', themes.minimal, config, config.visualConfig),
-        visual: loadThemeCustomization('visual', themes.visual, config, config.visualConfig),
-        catalog: loadThemeCustomization('catalog', themes.catalog, config, config.visualConfig),
-      }};
+  const rawEmailTemplates = isRecord(config.emailTemplates) ? config.emailTemplates : {};
+  const emailTemplates = Object.fromEntries(
+    (Object.keys(defaults.emailTemplates) as (keyof typeof defaults.emailTemplates)[]).map((key) => {
+      const def = defaults.emailTemplates[key];
+      const raw = isRecord(rawEmailTemplates[key]) ? (rawEmailTemplates[key] as Record<string, unknown>) : {};
+      return [
+        key,
+        {
+          enabled: typeof raw.enabled === 'boolean' ? raw.enabled : def.enabled,
+          subject: typeof raw.subject === 'string' ? raw.subject : def.subject,
+          preheader: typeof raw.preheader === 'string' ? raw.preheader : def.preheader,
+          body: typeof raw.body === 'string' ? raw.body : def.body,
+        },
+      ];
+    })
+  ) as typeof defaults.emailTemplates;
+
+  return {
+    ...defaults,
+    ...config,
+    emailTemplates,
+    template: templates.find(template => template === config.template) ?? defaults.template,
+    themeEditor: {
+      editorial: loadThemeCustomization('editorial', themes.editorial, config, config.visualConfig),
+      minimal: loadThemeCustomization('minimal', themes.minimal, config, config.visualConfig),
+      visual: loadThemeCustomization('visual', themes.visual, config, config.visualConfig),
+      catalog: loadThemeCustomization('catalog', themes.catalog, config, config.visualConfig),
+    },
+  };
 }
 
 /** Effective colors are UI conveniences, not implicit persisted overrides. */

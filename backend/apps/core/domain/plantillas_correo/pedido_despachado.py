@@ -1,10 +1,9 @@
-"""Plantilla del correo de pedido despachado (SCRUM-427). Tipo de correo: order_shipped."""
+"""Plantilla del correo de pedido despachado / en camino (SCRUM-427, 431 y 434). Tipo de correo: order_shipped."""
 import re
 
-from .base import _MARCADOR, PlantillaCorreo, PlantillaCorreoInvalida, contexto_pedido
+from apps.core.domain.plantillas_correo.base import _MARCADOR, PlantillaCorreo, PlantillaCorreoInvalida, contexto_pedido
 
-# Estados en los que el pedido ya salió hacia el comprador.
-ESTADOS_DESPACHADOS = ('enviado', 'en_reparto', 'entregado')
+ESTADOS_DESPACHADOS = ('en_camino', 'entregado', 'enviado', 'en_reparto')
 
 PLANTILLA_PEDIDO_DESPACHADO = PlantillaCorreo(
     asunto='Tu pedido ya fue despachado · {{orderNumber}}',
@@ -21,11 +20,7 @@ PLANTILLA_PEDIDO_DESPACHADO = PlantillaCorreo(
 
 
 def _sin_datos_ausentes(texto, contexto):
-    """Quita las líneas cuyos datos no existen, para que no quede «Código de seguimiento: » vacío.
-
-    Una línea se omite solo si usa variables y ninguna tiene valor; las líneas con texto fijo o con
-    algún dato presente se conservan. Después se juntan los saltos de línea que hayan quedado de más.
-    """
+    """Quita las líneas con variables vacías (ej. transportista o código cuando no hay datos)."""
     lineas = []
     for linea in texto.split('\n'):
         variables = _MARCADOR.findall(linea)
@@ -35,10 +30,10 @@ def _sin_datos_ausentes(texto, contexto):
     return re.sub(r'\n{3,}', '\n\n', '\n'.join(lineas)).strip('\n')
 
 
-def renderizar_pedido_despachado(pedido, plantilla=None):
-    if pedido.estado not in ESTADOS_DESPACHADOS:
+def renderizar_pedido_despachado(pedido, plantilla=None, forzar=False):
+    if not forzar and pedido.estado not in ESTADOS_DESPACHADOS:
         raise PlantillaCorreoInvalida('Solo se avisa el despacho de un pedido que ya fue enviado.')
-    if (pedido.entrega or {}).get('metodo') == 'Retiro':
+    if not forzar and (pedido.entrega or {}).get('metodo') == 'Retiro':
         raise PlantillaCorreoInvalida('Un pedido con retiro en tienda no se despacha.')
     base = plantilla or PLANTILLA_PEDIDO_DESPACHADO
     contexto = contexto_pedido(pedido)

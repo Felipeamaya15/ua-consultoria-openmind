@@ -5,14 +5,16 @@ la plantilla de la tienda (apps/core/domain/plantillas_correo) y lo envía con e
 (apps/core/infrastructure/email_service). Nunca lanza una excepción: un correo que falla no debe impedir
 el cambio de estado.
 
-Para no enviar dos veces el mismo aviso, en el pedido queda una marca en `entrega['notificaciones'][tipo]`:
+Para no enviar dos veces el mismo aviso automático, en el pedido queda una marca en `entrega['notificaciones'][tipo]`:
 
     {'enviado': True | False, 'codigo': 'enviado' | 'error_de_envio' | ..., 'fecha': ISO, 'intentos': N}
 
 - La marca guarda también el destinatario enmascarado (`m***@gmail.com`): el correo completo nunca se copia al registro.
-- Si el aviso ya salió (`enviado`), no se repite aunque el pedido vuelva a ese estado.
+- Si el aviso ya salió (`enviado`), el automático no se repite aunque el pedido vuelva a ese estado.
 - Si falló, se reintenta la próxima vez que el pedido entre en ese estado.
-- Mientras un envío está en curso (`codigo` "enviando", hace menos de 5 minutos) no se inicia otro.
+- Mientras un envío está en curso (`codigo` "enviando", hace menos de 5 minutos) no se inicia otro automático.
+- Para envíos manuales de emergencia (`enviar_correo_manual`), se omite la restricción de plantilla desactivada
+  y de ya enviado, permitiendo reintentar o emitir en cualquier momento.
 """
 import logging
 from datetime import datetime, timedelta
@@ -28,7 +30,15 @@ from apps.core.models import Pedido
 logger = logging.getLogger(__name__)
 
 # Qué correo corresponde cuando un pedido llega a cada estado.
-CORREO_POR_ESTADO = {'pagado': 'payment_success', 'enviado': 'order_shipped'}
+CORREO_POR_ESTADO = {
+    'pagado': 'payment_success',
+    'en_camino': 'order_shipped',
+    'entregado': 'order_delivered',
+    'cancelado': 'order_cancelled',
+    'enviado': 'order_shipped',
+    'en_reparto': 'order_shipped',
+    'preparando': 'payment_success',
+}
 ESPERA_ENVIO_EN_CURSO = timedelta(minutes=5)
 
 # Códigos del resultado además de los del servicio de correo (enviado, destinatario_invalido, ...).
@@ -40,19 +50,22 @@ ERROR_INESPERADO = 'error_inesperado'
 ENVIANDO = 'enviando'
 
 
-def notificar_pedido(tipo, pedido):
+def notificar_pedido(tipo, pedido, forzar=False, destinatario_override=None):
     """Construye el correo `tipo` del pedido y lo envía. No guarda marcas ni lanza por datos del pedido."""
     try:
-        correo = construir_correo(tipo, pedido)
+        correo = construir_correo(tipo, pedido, forzar=forzar)
     except PlantillaCorreoInvalida as error:
         return ResultadoEnvio(False, NO_CORRESPONDE, str(error))
     if correo is None:
         return ResultadoEnvio(False, PLANTILLA_DESACTIVADA, 'El propietario desactivó este correo.')
     contexto = contexto_pedido(pedido)
+    destinatario = destinatario_override or contexto['customerEmail']
+    reply_to = getattr(getattr(pedido, 'tienda', None), 'correo_negocio', '') or ''
     return enviar_correo(
-        contexto['customerEmail'], correo.asunto, correo.cuerpo,
+        destinatario, correo.asunto, correo.cuerpo,
         preheader=correo.preheader, nombre_remitente=contexto['storeName'],
         referencia=f"{tipo} {contexto['orderNumber']}",
+        reply_to=reply_to,
     )
 
 
@@ -103,7 +116,7 @@ def _reservar(pedido, tipo):
 
 
 def notificar_evento(tipo, pedido):
-    """Envía el aviso `tipo` del pedido una sola vez (ver la marca en el encabezado). Nunca lanza.
+    """Envía el aviso `tipo` del pedido una sola vez (automático). Nunca lanza.
 
     Devuelve un `ResultadoEnvio`, o None si falló algo inesperado antes de poder enviar.
     """
@@ -123,11 +136,36 @@ def notificar_evento(tipo, pedido):
                 'enviado': resultado.enviado, 'codigo': resultado.codigo, 'fecha': timezone.now().isoformat(),
                 'intentos': anterior.get('intentos', 0) + 1,
                 'destinatario': correo_enmascarado(correo_comprador(pedido)),  # a quién se avisó, sin el correo completo
+                'manual': False,
             })
         return resultado
     except Exception:
         logger.exception('Falló el aviso por correo %s del pedido %s', tipo, getattr(pedido, 'pk', '?'))
         return None
+
+
+def enviar_correo_manual(pedido, tipo, destinatario_override=None):
+    """Envío forzado y manual de emergencia.
+
+    Bypasa el bloqueo de plantilla desactivada y de ya_enviado.
+    Actualiza la marca del pedido con manual=True.
+    """
+    try:
+        resultado = notificar_pedido(tipo, pedido, forzar=True, destinatario_override=destinatario_override)
+        anterior = _marca(pedido, tipo)
+        destinatario_final = destinatario_override or correo_comprador(pedido)
+        _guardar_marca(pedido, tipo, {
+            'enviado': resultado.enviado,
+            'codigo': resultado.codigo,
+            'fecha': timezone.now().isoformat(),
+            'intentos': anterior.get('intentos', 0) + 1,
+            'destinatario': correo_enmascarado(destinatario_final),
+            'manual': True,
+        })
+        return resultado
+    except Exception:
+        logger.exception('Falló el envío manual de emergencia del correo %s del pedido %s', tipo, getattr(pedido, 'pk', '?'))
+        return ResultadoEnvio(False, ERROR_INESPERADO, 'Error inesperado al realizar el envío manual.')
 
 
 def notificar_cambio_de_estado(pedido, estado_anterior):
@@ -140,9 +178,11 @@ def notificar_cambio_de_estado(pedido, estado_anterior):
         return None
     return notificar_evento(tipo, pedido)
 
+
 def notificar_pago_rechazado(pedido):
     """Correo de pago rechazado (SCRUM-430): se envía cuando el propietario rechaza el pago del pedido."""
     return notificar_evento('payment_rejected', pedido)
+
 
 def notificar_recepcion(pedido):
     """Correo de confirmación de recepción del pedido (SCRUM-428): se envía al crear el pedido."""

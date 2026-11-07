@@ -30,5 +30,23 @@ async function request(init: RequestInit = {}): Promise<RemoteEmailTemplates> {
 
 export const fetchEmailTemplates = () => request();
 
+export const sendEmergencyEmail = async (params: { tipo: string; destinatario?: string; id_pedido?: number }) => {
+  const auth = token();
+  const data = await requestJson(`${API_BASE_URL}/api/tienda/correos/enviar-manual/`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+      ...(auth ? { Authorization: `Token ${auth}` } : {}),
+    },
+    body: JSON.stringify(params),
+  });
+  return data as {
+    enviado: boolean;
+    codigo: string;
+    destinatario: string;
+  };
+};
+
 export const saveEmailTemplates = (plantillas: Record<string, EmailTemplate>) =>
   request({ method: 'PUT', body: JSON.stringify({ plantillas }) });

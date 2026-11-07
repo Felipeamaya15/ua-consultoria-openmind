@@ -43,9 +43,9 @@ class DashboardTests(TestCase):
         for estado, _ in Pedido.ESTADO_CHOICES:
             self.crear(estado)
         data = self.datos()
-        self.assertEqual(data['total_ventas'], '6000.00')
-        self.assertEqual(data['total_pedidos'], 8)
-        self.assertEqual(data['por_despachar'], 4)
+        self.assertEqual(data['total_ventas'], '3000.00')
+        self.assertEqual(data['total_pedidos'], 5)
+        self.assertEqual(data['por_despachar'], 2)
         self.assertEqual(sum(Decimal(row['ventas']) for row in data['historico']), Decimal(data['total_ventas']))
         self.assertEqual(sum(row['pedidos'] for row in data['historico']), data['total_pedidos'])
 

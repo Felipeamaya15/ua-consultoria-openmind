@@ -13,7 +13,7 @@ PLANTILLA_PAGO_EXITOSO = PlantillaCorreo(
         'Comenzaremos a preparar tu compra.\n\n'
         'Resumen de compra:\n'
         '{{orderSummary}}\n\n'
-        'Te enviaremos otra actualización cuando tu pedido sea despachado.\n\n'
+        'Te enviaremos otra actualización cuando tu pedido vaya en camino.\n\n'
         '{{storeName}}'
     ),
 )
@@ -37,8 +37,8 @@ def _sin_datos_ausentes(texto, contexto):
     return re.sub(r'\n{3,}', '\n\n', '\n'.join(lineas)).strip('\n')
 
 
-def renderizar_pago_exitoso(pedido, plantilla=None):
-    if pedido.estado not in Pedido.ESTADOS_PAGADOS:
+def renderizar_pago_exitoso(pedido, plantilla=None, forzar=False):
+    if not forzar and pedido.estado not in Pedido.ESTADOS_PAGADOS:
         raise PlantillaCorreoInvalida('Solo se confirma el pago de un pedido que ya está pagado.')
     base = plantilla or PLANTILLA_PAGO_EXITOSO
     contexto = contexto_pedido(pedido)
