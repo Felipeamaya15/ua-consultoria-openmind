@@ -114,12 +114,12 @@ export interface VisualSections {
     carouselIndicators?: boolean;
     // OPENMIND_PRODUCT_HOVER_V1
     /** Efectos de fotografías; opcionales y compartidos por las cuatro plantillas. */
-    hoverFeaturedMotion?: 'none' | 'zoom' | 'lift' | 'tilt' | 'rotate';
-    hoverFeaturedLight?: 'none' | 'shine' | 'flash' | 'glow' | 'sparkle';
-    hoverCatalogMotion?: 'none' | 'zoom' | 'lift' | 'tilt' | 'rotate';
-    hoverCatalogLight?: 'none' | 'shine' | 'flash' | 'glow' | 'sparkle';
-    hoverCategoryMotion?: 'none' | 'zoom' | 'lift' | 'tilt' | 'rotate';
-    hoverCategoryLight?: 'none' | 'shine' | 'flash' | 'glow' | 'sparkle';
+    hoverFeaturedMotion?: 'none' | 'zoom' | 'lift' | 'tilt' | 'rotate' | 'pop' | 'slide' | 'lean' | 'shrink';
+    hoverFeaturedLight?: 'none' | 'shine' | 'flash' | 'glow' | 'sparkle' | 'beam' | 'pulse' | 'border' | 'twinkle';
+    hoverCatalogMotion?: 'none' | 'zoom' | 'lift' | 'tilt' | 'rotate' | 'pop' | 'slide' | 'lean' | 'shrink';
+    hoverCatalogLight?: 'none' | 'shine' | 'flash' | 'glow' | 'sparkle' | 'beam' | 'pulse' | 'border' | 'twinkle';
+    hoverCategoryMotion?: 'none' | 'zoom' | 'lift' | 'tilt' | 'rotate' | 'pop' | 'slide' | 'lean' | 'shrink';
+    hoverCategoryLight?: 'none' | 'shine' | 'flash' | 'glow' | 'sparkle' | 'beam' | 'pulse' | 'border' | 'twinkle';
   };
   heroCta: {
     size: 'small' | 'medium' | 'large';

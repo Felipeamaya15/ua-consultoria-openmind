@@ -95,6 +95,27 @@
   45% { opacity: .9; transform: scale(1.01); }
 }
 
+/* OPENMIND_EFFECT_LIBRARY_V2 */
+/* Nuevas iluminaciones compatibles con los contenedores de V1.3. */
+@keyframes om-product-beam {
+  0% { opacity: 0; transform: translateX(-110%); }
+  25% { opacity: .7; }
+  75% { opacity: .8; }
+  100% { opacity: 0; transform: translateX(110%); }
+}
+@keyframes om-product-pulse {
+  from { opacity: .06; }
+  to { opacity: .34; }
+}
+@keyframes om-product-border {
+  from { opacity: .65; box-shadow: inset 0 0 0 2px rgba(255,255,255,.65), inset 0 0 9px rgba(255,255,255,.2); }
+  to { opacity: 1; box-shadow: inset 0 0 0 4px rgba(255,255,255,.95), inset 0 0 24px rgba(255,255,255,.4); }
+}
+@keyframes om-product-twinkle {
+  0%, 100% { opacity: .1; transform: scale(.97); }
+  50% { opacity: .95; transform: scale(1.03); }
+}
+
 @media (prefers-reduced-motion: reduce) {
   [data-storefront-visual] [data-visual-section="productCard"] img,
   [data-storefront-visual] [data-visual-kind="featured"] a:has(> img) > img,
