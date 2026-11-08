@@ -58,8 +58,18 @@ def _iniciar_webpay(request, pedido, return_url):
     return {'metodo': 'Transbank', 'accion': 'formulario', 'url': resultado['url'], 'token': resultado['token']}
 
 
+def _iniciar_paypal(request, pedido, return_url):
+    from apps.core.presentation.pagos_externos import iniciar_paypal_pedido
+    return iniciar_paypal_pedido(request, pedido, return_url)
+
+
+def _iniciar_mercadopago(request, pedido, return_url):
+    from apps.core.presentation.pagos_externos import iniciar_mercadopago_pedido
+    return iniciar_mercadopago_pedido(request, pedido, return_url)
+
+
 # Medio de pago del pedido -> funcion que inicia un cobro nuevo y devuelve a donde llevar al comprador.
-PASARELAS = {'Transbank': _iniciar_webpay}
+PASARELAS = {'Transbank': _iniciar_webpay, 'PayPal': _iniciar_paypal, 'MercadoPago': _iniciar_mercadopago}
 
 
 class _Entrada(serializers.Serializer):

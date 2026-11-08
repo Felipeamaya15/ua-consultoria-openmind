@@ -95,29 +95,34 @@ class FinalPaymentAuditTests(TestCase):
         self.assertEqual(Pedido.objects.count(), 1)
 
     @patch('apps.catalog.infrastructure.adapters.paypal_adapter.PayPalAdapter')
-    def test_incomplete_gateways_are_unavailable_and_paypal_cannot_charge_or_capture(self, adapter):
+    def test_paypal_sin_tipo_de_cambio_no_puede_cobrar_ni_capturar(self, adapter):
+        """SCRUM-509: Mercado Pago ya se ofrece; PayPal solo con tipo de cambio CLP/USD configurado."""
         ConfiguracionPayPal.objects.create(id_tienda=self.store, activo=True, client_id='audit', client_secret='audit-secret')
         ConfiguracionMercadoPago.objects.create(id_tienda=self.store, activo=True, public_key='audit', access_token='audit-token')
-        methods = self.api.get('/api/pagos/activos/').data['data']
+        from django.core.cache import cache
+        cache.clear()
+        with patch('apps.core.infrastructure.tipo_cambio._descargar', return_value=None):
+            methods = self.api.get('/api/pagos/activos/').data['data']
+            response = self.api.post('/api/pagos/paypal/iniciar/', {'order_number': self.order.identificador,
+                'return_url': 'http://localhost:5173/pedido-confirmado'}, format='json')
         self.assertTrue(methods['transbank']['enabled'])
-        for key in ('paypal', 'mercadopago'):
-            self.assertFalse(methods[key]['enabled'])
-            self.assertTrue(methods[key]['reason'])
-        for url in ('/api/pagos/paypal/iniciar/', '/api/pagos/paypal/capturar/'):
-            response = self.api.post(url, {'order_number': self.order.identificador, 'amount': 1,
-                'order_id': 'unbound-remote-order'}, format='json')
-            self.assertEqual(response.status_code, 409, response.data)
+        self.assertTrue(methods['mercadopago']['enabled'])
+        self.assertFalse(methods['paypal']['enabled'])
+        self.assertTrue(methods['paypal']['reason'])
+        self.assertEqual(response.status_code, 409, response.data)
+        response = self.api.post('/api/pagos/paypal/capturar/', {'order_number': self.order.identificador,
+            'order_id': 'unbound-remote-order'}, format='json')
+        self.assertEqual(response.status_code, 404, response.data)  # el pedido no es de PayPal
         adapter.assert_not_called()
         from uuid import uuid4
-        for method in ('PayPal', 'MercadoPago'):
-            with patch('apps.core.presentation.checkout.ProductRepository') as repository:
-                response = self.api.post('/api/checkout/pedidos/', {
-                    'clave_checkout': str(uuid4()), 'medio_pago': method, 'metodo_entrega': 'Retiro',
-                    'contacto': {'nombre': 'Audit', 'email': 'buyer@example.test'},
-                    'items': [{'producto_id': '0123456789abcdef01234567', 'sku': 'QA', 'cantidad': 1}],
-                }, format='json')
-                self.assertEqual(response.status_code, 400, response.data)
-                repository.assert_not_called()
+        with patch('apps.core.presentation.checkout.ProductRepository') as repository:
+            response = self.api.post('/api/checkout/pedidos/', {
+                'clave_checkout': str(uuid4()), 'medio_pago': 'PayPal', 'metodo_entrega': 'Retiro',
+                'contacto': {'nombre': 'Audit', 'email': 'buyer@example.test'},
+                'items': [{'producto_id': '0123456789abcdef01234567', 'sku': 'QA', 'cantidad': 1}],
+            }, format='json')
+            self.assertEqual(response.status_code, 400, response.data)
+            repository.assert_not_called()
         self.assertEqual(Pedido.objects.count(), 1)
 
     def test_guest_and_customer_cannot_decrement_stock_through_legacy_purchase_route(self):

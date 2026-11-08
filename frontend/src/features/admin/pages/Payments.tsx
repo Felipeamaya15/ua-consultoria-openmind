@@ -1301,7 +1301,7 @@ export default function Payments() {
 
               <p className="text-xs text-[var(--muted-foreground)]">
 
-                Configuración disponible. Las compras estarán habilitadas cuando se complete la confirmación del pago.
+                Los compradores pagan en pesos (CLP) en Mercado Pago y el pedido pasa a Pagado cuando el pago es aprobado.
 
               </p>
 
@@ -1478,7 +1478,7 @@ export default function Payments() {
 
               <p className="text-xs text-[var(--muted-foreground)]">
 
-                Configuración disponible. Las compras en CLP requieren completar la moneda y captura del pago.
+                PayPal no admite pesos: el cobro se hace en USD con el dólar observado (se actualiza solo) más un margen configurable en el servidor (PAYPAL_FX_MARGEN_PCT, 2% por defecto). Si no hay un tipo de cambio reciente, PayPal no se ofrece en el checkout. El pedido pasa a Pagado al capturar el pago.
 
               </p>
 

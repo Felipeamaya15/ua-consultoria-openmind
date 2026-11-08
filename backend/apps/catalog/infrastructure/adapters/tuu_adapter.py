@@ -3,6 +3,7 @@
 Documentación: https://developers.tuu.cl/docs/payment-intent
 - Autenticación: x_account_id + llave secreta (HMAC-SHA256 sobre los campos x_*)
 """
+import hashlib
 import hmac
 import json
 from typing import Any, Dict, Mapping

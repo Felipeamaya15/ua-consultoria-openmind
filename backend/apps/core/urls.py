@@ -6,6 +6,9 @@ from apps.core.presentation.checkout import CheckoutOrderAPIView
 from apps.core.presentation.shipping import ShippingQuoteAPIView
 from apps.core.presentation.linkify_notificacion import LinkifyNotificacionView
 from apps.core.presentation.tuu_callback import TuuCallbackView
+from apps.core.presentation.pagos_externos import (
+    CapturarPagoPayPalView, ConfirmarPagoMercadoPagoView, IniciarPagoMercadoPagoView, IniciarPagoPayPalView,
+)
 from apps.core.presentation.legal import (
     ConfiguracionLegalAPIView,
     ConsultaVersionVigenteAPIView,
@@ -40,8 +43,6 @@ from apps.core.presentation.views import (
     MetodosPagoActivosAPIView,
     RegistrarCompraView,
     TiendaPagoActualAPIView,
-    IniciarPagoPayPalView,
-    CapturarPagoPayPalView,
     WebhookLinkifyAPIView,
     VerificarTransferenciaLinkifyAPIView,
     TransferenciasPendientesAPIView,
@@ -88,6 +89,8 @@ urlpatterns = [
     path('pagos/pedido/pagar/', PagarPedidoPendienteView.as_view(), name='pagar-pedido-pendiente'),
     path('pagos/paypal/iniciar/', IniciarPagoPayPalView.as_view(), name='paypal_iniciar'),
     path('pagos/paypal/capturar/', CapturarPagoPayPalView.as_view(), name='paypal_capturar'),
+    path('pagos/mercadopago/iniciar/', IniciarPagoMercadoPagoView.as_view(), name='mercadopago_iniciar'),
+    path('pagos/mercadopago/confirmar/', ConfirmarPagoMercadoPagoView.as_view(), name='mercadopago_confirmar'),
     path('pagos/linkify/notificacion/', LinkifyNotificacionView.as_view(), name='linkify_notificacion'),
     path('pagos/tuu/callback/', TuuCallbackView.as_view(), name='tuu_callback'),
     path('pagos/linkify/webhook/', WebhookLinkifyAPIView.as_view(), name='linkify_webhook'),

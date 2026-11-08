@@ -42,7 +42,7 @@ export function PagarPedidoPendiente({ orderNumber, estado, medioPago, email, co
 
   return (
     <div className="col-span-full flex flex-col gap-2" data-testid="pagar-pedido-pendiente">
-      <p className="text-sm">Este pedido sigue pendiente de pago. Puedes pagarlo ahora con {medioPago === 'Transbank' ? 'Webpay' : medioPago}.</p>
+      <p className="text-sm">Este pedido sigue pendiente de pago. Puedes pagarlo ahora con {ETIQUETAS[medioPago] ?? medioPago}.</p>
       <div>
         <Button variant="primary" onClick={pagar} disabled={loading}>
           {loading ? 'Redirigiendo…' : 'Pagar ahora'}

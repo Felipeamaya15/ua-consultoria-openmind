@@ -7,6 +7,7 @@ import {
 import { Button, Icon } from '../components/ui';
 import { useStorefrontTemplate } from '../hooks/useStorefrontTemplate';
 import TransbankReturnResult from './TransbankReturnResult';
+import ExternalPaymentReturnResult from './ExternalPaymentReturnResult';
 import type { CreatedOrder } from '../services/orderService';
 import { isStorefrontEditorPreview } from '../visual/pages';
 
@@ -34,6 +35,19 @@ export default function OrderConfirmation() {
         tokenWs={tokenWs}
         tbkToken={tbkToken}
         tiendaId={Number(query.get('tienda')) || 1}
+      />
+    );
+  }
+
+  // Retorno desde PayPal (?token=) o Mercado Pago (?payment_id=): el servidor confirma el pago.
+  const gateway = query.get('gateway');
+  if (gateway === 'paypal' || gateway === 'mercadopago') {
+    return (
+      <ExternalPaymentReturnResult
+        gateway={gateway}
+        orderNumber={query.get('orderNumber') ?? ''}
+        tiendaId={Number(query.get('tienda')) || 1}
+        reference={query.get('cancelado') === '1' ? '' : (gateway === 'paypal' ? query.get('token') : query.get('payment_id')) ?? ''}
       />
     );
   }

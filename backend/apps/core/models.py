@@ -219,6 +219,7 @@ class Pedido(models.Model):
     medio_pago = models.CharField(max_length=40, blank=True, default='')
     costo_envio = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     descuento = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    pago_fx = models.JSONField(default=dict, blank=True)
 
     class Meta:
         db_table = 'pedido'

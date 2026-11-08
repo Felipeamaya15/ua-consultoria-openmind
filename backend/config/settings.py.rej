@@ -1,0 +1,16 @@
+diff a/backend/config/settings.py b/backend/config/settings.py	(rejected hunks)
+@@ -232,6 +232,14 @@ CSRF_COOKIE_SECURE = not DEBUG
+ 
+ 
+ # Dirección pública de la tienda, base de los enlaces de los correos (SCRUM-434).
++# PayPal no admite CLP: se cobra en USD con el dolar observado (se refresca solo). Ver infrastructure/tipo_cambio.py.
++# Margen sobre el observado (%), horas maximas de antiguedad del dato (sin dato vigente PayPal se oculta) y cada
++# cuantas horas se refresca. BCCH_* son opcionales (API SIETE del Banco Central); sin ellos se usa mindicador.cl.
++PAYPAL_FX_MARGEN_PCT = os.getenv('PAYPAL_FX_MARGEN_PCT', '2').strip() or '2'
++PAYPAL_FX_MAX_EDAD_HORAS = float(os.getenv('PAYPAL_FX_MAX_EDAD_HORAS') or 96)
++PAYPAL_FX_REFRESCO_HORAS = float(os.getenv('PAYPAL_FX_REFRESCO_HORAS') or 6)
++BCCH_USUARIO = (os.getenv('BCCH_USUARIO') or '').strip()
++BCCH_CLAVE = (os.getenv('BCCH_CLAVE') or '').strip()
+ STOREFRONT_PUBLIC_URL = (os.getenv('STOREFRONT_PUBLIC_URL') or 'http://localhost:5173/plantilla/1').rstrip('/')
+ 
+ # URL publica HTTPS del backend para el callback de TUU (obligatoria en TUU; sin ella TUU no se ofrece).

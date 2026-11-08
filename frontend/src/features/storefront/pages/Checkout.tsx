@@ -25,6 +25,7 @@ import { useStoreIdentity } from '../context/StoreIdentityContext';
 import { readCheckoutAuthSettings, type CheckoutAuthSettings as AuthSettings } from '../services/storePreferences';
 import { transbankPaymentService } from '../../checkout/services/transbankPaymentService';
 import { paypalPaymentService } from '../../checkout/services/paypalPaymentService';
+import { mercadoPagoPaymentService } from '../../checkout/services/mercadoPagoPaymentService';
 
 const STEPS = [
   { id: 'contact', label: 'Contacto' },
@@ -424,6 +425,8 @@ export default function Checkout() {
   const [paymentsLoading, setPaymentsLoading] = useState(true);
   const [paymentsError, setPaymentsError] = useState('');
   const [transferDetails, setTransferDetails] = useState<TransferDetails | null>(null);
+  // PayPal cobra en USD: el servidor informa el tipo de cambio vigente para mostrarlo antes de pagar.
+  const [paypalFx, setPaypalFx] = useState<{tipo_cambio: string; margen_pct: string; fecha_dato: string; fuente: string} | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -488,6 +491,7 @@ export default function Checkout() {
                 }
               : null,
           );
+          setPaypalFx(body.data.paypal?.enabled === true && body.data.paypal.fx ? body.data.paypal.fx : null);
           setPaymentOptions(enabled);
           setPaymentsError('');
         }
@@ -778,7 +782,7 @@ export default function Checkout() {
       checkoutAttempt.current = {signature, key: crypto.randomUUID()};
     }
     try {
-      if (!['Transbank', 'Linkify', 'TUU', 'Transferencia'].includes(paymentMethod)) {
+      if (!['Transbank', 'PayPal', 'MercadoPago', 'Linkify', 'TUU', 'Transferencia'].includes(paymentMethod)) {
         throw new Error('Este medio de pago todavía no está disponible para completar la compra.');
       }
       const order = await orderService.create({
@@ -809,8 +813,8 @@ export default function Checkout() {
       }
 
       if (paymentMethod === 'PayPal') {
-        const returnUrl = `${window.location.origin}${route('pedido-confirmado')}?orderNumber=${orderNumber}&paypal_success=true`;
-        const cancelUrl = `${window.location.origin}${route('compra')}?paypal_cancel=true`;
+        const returnUrl = `${window.location.origin}${route('pedido-confirmado')}?orderNumber=${orderNumber}&tienda=${order.tienda_id}&gateway=paypal`;
+        const cancelUrl = `${returnUrl}&cancelado=1`; // PayPal agrega ?token= tambien al cancelar: 'cancelado' evita capturar
         
         const result = await paypalPaymentService.iniciarPago(
           order.tienda_id, orderNumber, Number(order.monto_total), returnUrl, cancelUrl
@@ -821,6 +825,17 @@ export default function Checkout() {
         }
         await clearCart();
         window.location.href = result.data.approve_url;
+        return;
+      }
+
+      if (paymentMethod === 'MercadoPago') {
+        const returnUrl = `${window.location.origin}${route('pedido-confirmado')}?orderNumber=${orderNumber}&tienda=${order.tienda_id}&gateway=mercadopago`;
+        const result = await mercadoPagoPaymentService.iniciarPago(order.tienda_id, orderNumber, returnUrl);
+        if (!result.exito || !result.data?.url) {
+          throw new Error(result.mensaje || `Pedido #${orderNumber} registrado; no se pudo conectar con Mercado Pago.`);
+        }
+        await clearCart();
+        window.location.href = result.data.url;
         return;
       }
 
@@ -1796,6 +1811,19 @@ export default function Checkout() {
                       </p>
                     </div>
                   </div>
+
+                  {paypalFx && Number(paypalFx.tipo_cambio) > 0 && (
+                    <div className="text-xs text-[var(--visual-page-color)] space-y-1" data-testid="paypal-fx-notice">
+                      <p className="font-semibold">
+                        PayPal cobra en dólares (USD): total estimado US$ {(Math.max(0.01, Math.round((total / Number(paypalFx.tipo_cambio)) * 100) / 100)).toFixed(2)}
+                      </p>
+                      <p>
+                        Tipo de cambio aplicado: ${Number(paypalFx.tipo_cambio).toLocaleString('es-CL', {maximumFractionDigits: 2})} por US$ 1
+                        (dólar observado del {paypalFx.fecha_dato.split('-').reverse().join('-')} más {paypalFx.margen_pct}% de margen).
+                        El monto final en USD se fija al confirmar y se muestra antes de pagar en PayPal.
+                      </p>
+                    </div>
+                  )}
 
                   <p className="flex items-center gap-1.5 text-xs text-[var(--visual-page-color)]">
                     <Icon

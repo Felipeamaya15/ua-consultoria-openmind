@@ -142,22 +142,6 @@ class MetodosPagoActivosAPIView(APIView):
         from apps.core.payments import payment_methods_for_store
         return success_response(data=payment_methods_for_store(resolver_tienda(request)))
 
-class IniciarPagoPayPalView(APIView):
-    """El checkout CLP no puede cobrar su total como USD sin conciliación de moneda."""
-    permission_classes = [AllowAny]
-
-    def post(self, request):
-        tienda = resolver_tienda(request)
-        if not ConfiguracionPayPal.objects.filter(id_tienda=tienda, activo=True).exists():
-            return error_response(mensaje="PayPal no configurado para esta tienda.", codigo="PAYPAL_NO_CONFIGURADO", status=400)
-        from apps.core.payments import UNAVAILABLE_CHECKOUT_METHODS
-        return error_response(mensaje=UNAVAILABLE_CHECKOUT_METHODS["paypal"], codigo="PAYPAL_NO_DISPONIBLE", status=409)
-
-
-class CapturarPagoPayPalView(IniciarPagoPayPalView):
-    """Mantiene la ruta sin capturar órdenes remotas que no están vinculadas a un Pedido."""
-
-
 class WebhookLinkifyAPIView(LinkifyNotificacionView):
     """Compatibilidad del webhook antiguo con la firma y estados de SCRUM-316/317."""
 
