@@ -9,7 +9,6 @@ import { AdminCard, Alert, Input, Toggle, Button, Icon, Select } from '../compon
 import { TransferConfigForm } from '../components/TransferConfigForm';
 import { PendingTransfers } from '../components/PendingTransfers';
 import {
-  hasLinkifyCredentialData,
   linkifyRequiredFields,
   validateLinkifyFields,
 } from '../services/linkifyValidation';
@@ -132,6 +131,8 @@ export default function Payments() {
   const [transferSaving, setTransferSaving] = useState(false);
   const [transferFeedback, setTransferFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [linkifyFieldErrors, setLinkifyFieldErrors] = useState<Record<string, string>>({});
+  const [linkifySaving, setLinkifySaving] = useState(false);
+  const [linkifyFeedback, setLinkifyFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [transferFieldErrors, setTransferFieldErrors] = useState<Record<string, string>>({});
   const [tiendaId, setTiendaId] = useState<number | null>(null);
   const [tiendaError, setTiendaError] = useState<string | null>(null);
@@ -776,7 +777,7 @@ export default function Payments() {
     }
     const enabledSecondary = otherMethods.filter((method) => form[method.id]?.enabled);
     const linkifyFields = form.linkify?.fields ?? {};
-    if (form.linkify?.enabled || hasLinkifyCredentialData(linkifyFields)) {
+    if (form.linkify?.enabled) {
       const linkifyValidation = validateLinkifyFields(linkifyFields);
       setLinkifyFieldErrors(linkifyValidation.errors);
       if (linkifyValidation.invalidFields.length) return linkifyValidation.message;
@@ -943,17 +944,30 @@ export default function Payments() {
             onChange={(enabled) => updateField('linkify', 'autoExpireLinks', String(enabled))}
           />
         </div>
+
+        {linkifyFeedback && <Alert variant={linkifyFeedback.type}>{linkifyFeedback.message}</Alert>}
+        <div className="flex justify-end">
+          <Button type="button" size="sm" variant="primary" loading={linkifySaving} onClick={handleSaveLinkify}>
+            Guardar Linkify
+          </Button>
+        </div>
       </div>
     );
   };
 
   const syncLinkify = async () => {
     const current = form.linkify ?? { enabled: false, fields: {} };
-    if (current.enabled || hasLinkifyCredentialData(current.fields)) {
+    if (current.enabled) {
       const validation = validateLinkifyFields(current.fields);
       setLinkifyFieldErrors(validation.errors);
       if (validation.invalidFields.length) throw new Error(validation.message);
+    } else {
+      setLinkifyFieldErrors({});
     }
+    // Apagado sin clave escrita: el backend conserva las credenciales ya guardadas.
+    const fieldsToSend = current.enabled || String(current.fields?.clavePrivada ?? '').trim()
+      ? { ...(current.fields ?? {}) }
+      : {};
 
     const currentBody: any = await requestEnvelope(`${API_BASE}/api/pagos/configuracion/`, {
       method: 'GET',
@@ -967,10 +981,27 @@ export default function Payments() {
         ...(currentBody.data ?? {}),
         linkify: {
           enabled: current.enabled === true,
-          fields: { ...(current.fields ?? {}) },
+          fields: fieldsToSend,
         },
       }),
     });
+  };
+
+  const handleSaveLinkify = async () => {
+    if (linkifySaving || syncing.current) return;
+    setLinkifySaving(true);
+    setLinkifyFeedback(null);
+    try {
+      await syncLinkify();
+      setLinkifyFeedback({ type: 'success', message: 'Configuración de Linkify guardada.' });
+    } catch (err) {
+      setLinkifyFeedback({
+        type: 'error',
+        message: err instanceof Error ? humanizeAdminError(err.message) : 'No se pudo guardar Linkify.',
+      });
+    } finally {
+      setLinkifySaving(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -1664,7 +1695,7 @@ export default function Payments() {
 
 
 
-      <Button type="submit" className="whitespace-normal" disabled={tbLoading || ppLoading || mpLoading || transferLoading || Boolean(tiendaError)} loading={isSyncing || tbSaving || ppSaving || mpSaving || transferSaving}>
+      <Button type="submit" className="whitespace-normal" disabled={tbLoading || ppLoading || mpLoading || transferLoading || Boolean(tiendaError)} loading={isSyncing || tbSaving || ppSaving || mpSaving || transferSaving || linkifySaving}>
 
         Guardar todos los métodos de pago
 

@@ -60,7 +60,14 @@ class ConfiguracionPagoAPIView(APIView):
                 return error_response(mensaje="Datos incompletos.", codigo="ERROR_VALIDACION", detalles=serializer.errors, status=400)
 
             config_pago, _ = ConfiguracionPago.objects.get_or_create(tienda=tienda)
-            config_pago.datos = serializer.validated_data
+            datos = serializer.validated_data
+            linkify = datos.get('linkify')
+            if (isinstance(linkify, dict) and linkify.get('enabled') is False
+                    and not any(linkify.get('fields', {}).get(k) for k in ('idCuenta', 'clavePrivada'))):
+                previos = ((config_pago.datos or {}).get('linkify') or {}).get('fields')
+                if isinstance(previos, dict) and previos:
+                    datos['linkify'] = {'enabled': False, 'fields': dict(previos)}
+            config_pago.datos = datos
             config_pago.save()
 
             return success_response(mensaje="Métodos guardados.", data=config_pago.datos)
