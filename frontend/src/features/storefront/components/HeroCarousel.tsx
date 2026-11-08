@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import type { LandingConfig } from '../../landing/types/landing.types';
 import './hero-carousel.css';
+import { CAROUSEL_TRANSITIONS, type CarouselTransitionId } from '../visual/carouselTransitionLibrary';
 
 type HeroSlide = { id: string; src: string; alt: string };
 type HeroCarouselProps = { landing?: LandingConfig | null; intervalMs?: number };
 type CarouselMode = 'static' | 'manual' | 'automatic';
-type CarouselTransition = 'fade' | 'slide' | 'zoom' | 'blur' | 'rise' | 'reveal';
+type CarouselTransition = CarouselTransitionId;
 
 type CarouselSettings = {
   mode: CarouselMode;
@@ -21,9 +22,7 @@ const DEFAULT_SETTINGS: CarouselSettings = {
   indicators: true,
 };
 
-const VALID_TRANSITIONS: readonly string[] = [
-  'fade', 'slide', 'zoom', 'blur', 'rise', 'reveal',
-];
+const VALID_TRANSITIONS: readonly string[] = CAROUSEL_TRANSITIONS.map(effect => effect.id);
 
 function getHeroSlides(landing?: LandingConfig | null): HeroSlide[] {
   const images = [...(landing?.imagenes_carrusel ?? [])]

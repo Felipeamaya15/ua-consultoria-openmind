@@ -110,7 +110,7 @@ export interface VisualSections {
     /** Personalización de portada por plantilla; los valores omitidos usan defaults. */
     carouselMode?: 'static' | 'manual' | 'automatic';
     carouselInterval?: 5 | 10 | 20;
-    carouselTransition?: 'fade' | 'slide' | 'zoom' | 'blur' | 'rise' | 'reveal';
+    carouselTransition?: import('./carouselTransitionLibrary').CarouselTransitionId;
     carouselIndicators?: boolean;
     // OPENMIND_PRODUCT_HOVER_V1
     /** Efectos de fotografías; opcionales y compartidos por las cuatro plantillas. */

@@ -181,3 +181,75 @@
   .hero-carousel .hero-carousel__image--transition-rise,
   .hero-carousel .hero-carousel__image--transition-reveal { animation: none !important; filter: none; transform: none; clip-path: none; }
 }
+
+/* OPENMIND_CAROUSEL_LIBRARY_V1: transiciones adicionales compartidas por editor y tienda. */
+.hero-carousel .hero-carousel__image--transition-curtain {
+  animation: openmind-carrusel-curtain 700ms ease-in-out both;
+}
+.hero-carousel .hero-carousel__image--transition-curtain-up {
+  animation: openmind-carrusel-curtain-up 700ms ease-in-out both;
+}
+.hero-carousel .hero-carousel__image--transition-drop {
+  animation: openmind-carrusel-drop 700ms cubic-bezier(.2,.8,.2,1) both;
+}
+.hero-carousel .hero-carousel__image--transition-flip {
+  animation: openmind-carrusel-flip 700ms cubic-bezier(.2,.8,.2,1) both;
+  backface-visibility: hidden;
+}
+.hero-carousel .hero-carousel__image--transition-diagonal {
+  animation: openmind-carrusel-diagonal 700ms ease-out both;
+}
+.hero-carousel .hero-carousel__image--transition-bounce {
+  animation: openmind-carrusel-bounce 700ms cubic-bezier(.2,.8,.2,1) both;
+}
+.hero-carousel .hero-carousel__image--transition-spin {
+  animation: openmind-carrusel-spin 700ms ease-out both;
+}
+.hero-carousel .hero-carousel__image--transition-zoom-blur {
+  animation: openmind-carrusel-zoom-blur 700ms ease-out both;
+}
+@keyframes openmind-carrusel-curtain {
+  from { clip-path: inset(0 0 0 100%); }
+  to { clip-path: inset(0 0 0 0); }
+}
+@keyframes openmind-carrusel-curtain-up {
+  from { clip-path: inset(100% 0 0 0); }
+  to { clip-path: inset(0 0 0 0); }
+}
+@keyframes openmind-carrusel-drop {
+  from { opacity: .3; transform: translateY(-16%); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes openmind-carrusel-flip {
+  from { opacity: .35; transform: perspective(850px) rotateY(-34deg) scale(1.05); }
+  to { opacity: 1; transform: perspective(850px) rotateY(0) scale(1); }
+}
+@keyframes openmind-carrusel-diagonal {
+  from { opacity: .3; transform: translate(-12%, 10%) scale(1.06); }
+  to { opacity: 1; transform: translate(0, 0) scale(1); }
+}
+@keyframes openmind-carrusel-bounce {
+  0% { opacity: .2; transform: translateY(18%) scale(.95); }
+  65% { opacity: 1; transform: translateY(-2%) scale(1.015); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes openmind-carrusel-spin {
+  from { opacity: .25; transform: rotate(-7deg) scale(1.12); }
+  to { opacity: 1; transform: rotate(0) scale(1); }
+}
+@keyframes openmind-carrusel-zoom-blur {
+  from { opacity: .3; filter: blur(10px); transform: scale(1.12); }
+  to { opacity: 1; filter: blur(0); transform: scale(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hero-carousel .hero-carousel__image--transition-curtain,
+  .hero-carousel .hero-carousel__image--transition-curtain-up,
+  .hero-carousel .hero-carousel__image--transition-drop,
+  .hero-carousel .hero-carousel__image--transition-flip,
+  .hero-carousel .hero-carousel__image--transition-diagonal,
+  .hero-carousel .hero-carousel__image--transition-bounce,
+  .hero-carousel .hero-carousel__image--transition-spin,
+  .hero-carousel .hero-carousel__image--transition-zoom-blur {
+    animation: none !important; filter: none; transform: none; clip-path: none;
+  }
+}

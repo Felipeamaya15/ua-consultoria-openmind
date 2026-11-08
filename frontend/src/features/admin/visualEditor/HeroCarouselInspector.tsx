@@ -1,4 +1,7 @@
+import { useState } from 'react';
 import type { VisualConfig } from '../../storefront/visual/types';
+import { carouselTransitionById } from '../../storefront/visual/carouselTransitionLibrary';
+import { CarouselTransitionLibrary } from './CarouselTransitionLibrary';
 import './heroCarouselInspector.css';
 
 type CarouselField =
@@ -36,6 +39,7 @@ export function HeroCarouselInspector({ hero, imageCount, onEdit }: Props) {
   const mode = hero.carouselMode ?? 'automatic';
   const interval = hero.carouselInterval ?? 10;
   const transition = hero.carouselTransition ?? 'fade';
+  const [libraryOpen, setLibraryOpen] = useState(false);
   const indicators = hero.carouselIndicators ?? true;
   const gap = Math.min(72, Math.max(0, Math.round(hero.gap ?? 24)));
 
@@ -113,6 +117,25 @@ export function HeroCarouselInspector({ hero, imageCount, onEdit }: Props) {
               </label>
             ))}
           </div>
+          {!transitions.some(option => option.value === transition) && (
+            <p className="ve-carousel-panel__subhint" role="status">
+              Transición en uso: {carouselTransitionById(transition)?.title ?? transition}
+            </p>
+          )}
+          <button
+            className="ve-carousel-library-launch"
+            type="button"
+            aria-expanded={libraryOpen}
+            onClick={() => setLibraryOpen(open => !open)}
+          >
+            {libraryOpen ? 'Cerrar biblioteca de transiciones' : 'Explorar más transiciones'}
+          </button>
+          {libraryOpen && (
+            <CarouselTransitionLibrary
+              current={transition}
+              onApply={value => onEdit('carouselTransition', value)}
+            />
+          )}
         </fieldset>
       )}
 
