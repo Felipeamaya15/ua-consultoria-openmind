@@ -3,7 +3,6 @@
 import logging
 from decimal import Decimal
 
-from django.db import transaction
 from rest_framework import serializers
 from rest_framework.permissions import AllowAny
 from rest_framework.views import APIView
@@ -15,6 +14,8 @@ from apps.catalog.infrastructure.adapters.paypal_adapter import PayPalAdapter
 from apps.catalog.presentation.serializers import IniciarPagoTransbankSerializer
 from apps.core.infrastructure.tenant import resolver_tienda
 from apps.core.infrastructure.tipo_cambio import tipo_cambio_vigente
+from apps.core.infrastructure.conciliacion_pagos import marcar_pedido_pagado
+from apps.core.infrastructure.expiracion_pedidos import vence_en
 from apps.core.models import ConfiguracionMercadoPago, ConfiguracionPayPal, Pedido
 from apps.core.presentation.pago_pedido_pendiente import ErrorPago, url_retorno_pedido
 from apps.core.presentation.responses import error_response, success_response
@@ -45,19 +46,15 @@ def _pedido_pendiente(tienda, order_number, medio_pago):
 
 def _marcar_pagado(pedido_pk):
     """Pasa a Pagado de forma atómica e idempotente y envía el correo de pago exitoso."""
-    with transaction.atomic():
-        pedido = Pedido.objects.select_for_update().get(pk=pedido_pk)
-        pasa_a_pagado = pedido.estado == 'pendiente'
-        if pasa_a_pagado:
-            pedido.estado = 'pagado'
-            pedido.save(update_fields=['estado'])
-    if pasa_a_pagado:
-        try:
-            from apps.core.infrastructure.notificaciones_pedido import notificar_cambio_de_estado
-            notificar_cambio_de_estado(pedido, 'pendiente')
-        except Exception:
-            logger.exception('No se pudo notificar el pago del pedido %s.', pedido.pk)
-    return pedido
+    return marcar_pedido_pagado(pedido_pk)
+
+
+def _pago_sobre_pedido_cancelado(pedido, detalle):
+    logger.critical('PAGO_SOBRE_PEDIDO_CANCELADO pedido=%s tienda=%s medio=%s %s',
+                    pedido.pk, pedido.tienda_id, pedido.medio_pago, detalle)
+    return error_response(
+        'Recibimos tu pago, pero el pedido ya había expirado. Contacta a la tienda con el número de pedido '
+        f'{pedido.identificador} para regularizarlo.', 'PAGO_SOBRE_PEDIDO_CANCELADO', status=409)
 
 
 class _PagoExternoBase(APIView):
@@ -77,7 +74,9 @@ def _adaptador_mp(tienda):
 def _crear_pago_mercadopago(adaptador, pedido, return_url):
     """Preferencia de pago nueva para el pedido (monto del pedido). Lo usan el checkout y 'Pagar ahora'."""
     try:
-        pago = adaptador.iniciar_pago(pedido.identificador, pedido.monto_total, f'Pedido {pedido.identificador}', return_url)
+        # El enlace de pago vence junto con el pedido: despues de cancelarlo ya no se puede pagar.
+        pago = adaptador.iniciar_pago(pedido.identificador, pedido.monto_total, f'Pedido {pedido.identificador}',
+                                      return_url, expira_en=vence_en(pedido))
     except PagoGatewayException:
         logger.exception('No se pudo iniciar Mercado Pago del pedido %s.', pedido.pk)
         raise ErrorPago('No pudimos iniciar el pago con Mercado Pago. Intenta nuevamente.',
@@ -129,7 +128,8 @@ class ConfirmarPagoMercadoPagoView(_PagoExternoBase):
             return error_response('Mercado Pago rechazó el pago.', 'PAGO_RECHAZADO', status=402)
         if resultado.estado != EstadoPago.APROBADO:
             return error_response('El pago sigue pendiente en Mercado Pago.', 'PAGO_PENDIENTE', status=202)
-        _marcar_pagado(pedido.pk)
+        if _marcar_pagado(pedido.pk).estado == 'cancelado':
+            return _pago_sobre_pedido_cancelado(pedido, f'mercadopago_payment_id={payment_id}')
         return success_response(mensaje='Pago aprobado.', data={
             'orden_compra': pedido.identificador, 'monto': str(pedido.monto_total)})
 
@@ -229,7 +229,8 @@ class CapturarPagoPayPalView(_PagoExternoBase):
         if referencia != pedido.identificador or moneda != 'USD' or monto != esperado:
             logger.error('Captura PayPal no coincide con el pedido %s.', pedido.pk)
             return error_response('El pago no corresponde a este pedido.', 'PAGO_NO_COINCIDE', status=409)
-        _marcar_pagado(pedido.pk)
+        if _marcar_pagado(pedido.pk).estado == 'cancelado':
+            return _pago_sobre_pedido_cancelado(pedido, f'paypal_order_id={order_id}')
         return success_response(mensaje='Pago aprobado.', data=_datos_pago_paypal(pedido))
 
 

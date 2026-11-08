@@ -48,7 +48,7 @@ export default function CustomerOrders() {
           <p>Productos: {order.cantidad_productos}</p>
           {Number(order.descuento) > 0 && <p>Descuento aplicado: −{formatReportMoney(order.descuento!)}</p>}
           <p>Total: {formatReportMoney(order.monto_total)}</p>
-          <PagarPedidoPendiente orderNumber={order.identificador} estado={order.estado} medioPago={order.medio_pago} conSesion />
+          <PagarPedidoPendiente orderNumber={order.identificador} estado={order.estado} medioPago={order.medio_pago} venceEn={order.vence_en} conSesion />
           <PickupSelectionSummary selection={order.entrega?.retiro?.seleccion} />
           
           {!id && <Link data-page-action="ghost" to={route(`mis-pedidos/${order.id_pedido}`)} className="font-medium text-[var(--primary)] hover:underline">Ver detalle y seguimiento</Link>}

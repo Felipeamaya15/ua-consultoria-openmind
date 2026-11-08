@@ -7,6 +7,7 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.views import APIView
 from apps.authentication.presentation.profile import IsCustomer
 from apps.core.models import Pedido, ItemPedido
+from apps.core.infrastructure.expiracion_pedidos import liberar_vencidos_de_tienda, vence_en
 from apps.core.infrastructure.tenant import resolver_tienda
 from apps.core.presentation.responses import success_response
 
@@ -39,13 +40,19 @@ class OrderItemSerializer(serializers.ModelSerializer):
 class OrderSerializer(serializers.ModelSerializer):
     estado_etiqueta = serializers.CharField(source='get_estado_display')
     cantidad_productos = serializers.SerializerMethodField()
+    vence_en = serializers.SerializerMethodField()
 
     class Meta:
         model = Pedido
-        fields = ['id_pedido', 'identificador', 'fecha_creacion', 'estado', 'estado_etiqueta', 'medio_pago', 'monto_total', 'cantidad_productos']
+        fields = ['id_pedido', 'identificador', 'fecha_creacion', 'estado', 'estado_etiqueta', 'medio_pago', 'monto_total', 'cantidad_productos', 'vence_en']
 
     def get_cantidad_productos(self, order):
         return sum(item.cantidad for item in order.itempedido_set.all())
+
+    def get_vence_en(self, order):
+        """Fecha limite para pagar un pedido pendiente (ISO); None si no vence."""
+        limite = vence_en(order)
+        return limite.isoformat() if limite else None
 
 
 class OrderDetailSerializer(OrderSerializer):
@@ -70,7 +77,7 @@ class CustomerOrdersAPIView(APIView):
         if any(key in request.query_params for key in ('user_id', 'id_usuario', 'comprador', 'comprador_id')):
             raise ValidationError('El comprador se determina exclusivamente desde la sesión autenticada.')
         tienda = resolver_tienda(request)
-        # Los pedidos anteriores al snapshot conservan su vínculo explícito al comprador.
+        liberar_vencidos_de_tienda(tienda.pk)  # el comprador no ve como pendiente un pedido ya vencido
         orders = Pedido.objects.filter(Q(tienda=tienda) | Q(tienda__isnull=True), comprador=request.user).prefetch_related(
             Prefetch('itempedido_set', queryset=ItemPedido.objects.select_related('id_producto'))
         ).order_by('-fecha_creacion', '-id_pedido')

@@ -594,6 +594,7 @@ export default function Tracking() {
                 estado={order.estado}
                 medioPago={order.medio_pago}
                 email={lookupEmail.current}
+                venceEn={order.vence_en}
               />
 
               {Number(order.descuento) > 0 && (

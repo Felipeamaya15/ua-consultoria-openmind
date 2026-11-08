@@ -47,7 +47,7 @@ class TransferenciasPendientesTests(TransferFixtureMixin, TestCase):
         self.assertEqual(len(response.data['data']), 1)
         data = response.data['data'][0]
         self.assertEqual(set(data), {'id_pedido', 'identificador', 'fecha_creacion', 'nombre_contacto',
-                                     'correo_contacto', 'monto_total', 'medio_pago', 'estado'})
+                                     'correo_contacto', 'monto_total', 'medio_pago', 'estado', 'vence_en'})
         self.assertEqual(data['id_pedido'], order.pk)
         self.assertEqual(data['identificador'], order.identificador)
         self.assertEqual(data['nombre_contacto'], 'Comprador')

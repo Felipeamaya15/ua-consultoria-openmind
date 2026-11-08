@@ -4,7 +4,8 @@ import { pagarPedidoService } from '../../../checkout/services/pagarPedidoServic
 import { useStorefrontTemplate } from '../../hooks/useStorefrontTemplate';
 import { Button } from '../ui';
 
-const PAGABLES = ['Transbank'];
+const PAGABLES = ['Transbank', 'PayPal', 'MercadoPago'];
+const ETIQUETAS: Record<string, string> = { Transbank: 'Webpay', PayPal: 'PayPal', MercadoPago: 'Mercado Pago' };
 
 interface Props {
   orderNumber?: string;
@@ -13,14 +14,20 @@ interface Props {
   // Correo de la compra (Seguimiento). Con sesion iniciada no hace falta: el servidor comprueba que el pedido sea del cliente.
   email?: string;
   conSesion?: boolean;
+  venceEn?: string | null;
 }
 
-export function PagarPedidoPendiente({ orderNumber, estado, medioPago, email, conSesion }: Props) {
+const formatoVencimiento = new Intl.DateTimeFormat('es-CL', { dateStyle: 'long', timeStyle: 'short' });
+
+export function PagarPedidoPendiente({ orderNumber, estado, medioPago, email, conSesion, venceEn }: Props) {
   const { route } = useStorefrontTemplate();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  if (!orderNumber || estado !== 'pendiente' || !medioPago || !PAGABLES.includes(medioPago)) return null;
+  if (!orderNumber || estado !== 'pendiente' || !medioPago) return null;
+  const pagable = PAGABLES.includes(medioPago);
+  const limite = venceEn && !Number.isNaN(Date.parse(venceEn)) ? formatoVencimiento.format(new Date(venceEn)) : '';
+  if (!pagable && !limite) return null;
 
   const pagar = async () => {
     if (loading) return;
@@ -42,12 +49,13 @@ export function PagarPedidoPendiente({ orderNumber, estado, medioPago, email, co
 
   return (
     <div className="col-span-full flex flex-col gap-2" data-testid="pagar-pedido-pendiente">
-      <p className="text-sm">Este pedido sigue pendiente de pago. Puedes pagarlo ahora con {ETIQUETAS[medioPago] ?? medioPago}.</p>
-      <div>
+      {pagable && <p className="text-sm">Este pedido sigue pendiente de pago. Puedes pagarlo ahora con {ETIQUETAS[medioPago] ?? medioPago}.</p>}
+      {limite && <p className="text-sm" data-testid="vencimiento-pedido">Tienes hasta el {limite} para pagar. Pasado ese plazo el pedido se cancela automáticamente.</p>}
+      {pagable && <div>
         <Button variant="primary" onClick={pagar} disabled={loading}>
           {loading ? 'Redirigiendo…' : 'Pagar ahora'}
         </Button>
-      </div>
+      </div>}
       {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
     </div>
   );

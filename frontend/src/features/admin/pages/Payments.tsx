@@ -8,6 +8,7 @@ import { useAdminForm } from '../hooks/useAdminForm';
 import { AdminCard, Alert, Input, Toggle, Button, Icon, Select } from '../components/ui';
 import { TransferConfigForm } from '../components/TransferConfigForm';
 import { PendingTransfers } from '../components/PendingTransfers';
+import { OrderExpirationSettings } from '../components/OrderExpirationSettings';
 import {
   linkifyRequiredFields,
   validateLinkifyFields,
@@ -1161,7 +1162,6 @@ export default function Payments() {
             <div className="rounded-xl bg-[var(--muted)] p-4 text-sm grid gap-2">
               <h3 className="font-semibold">Conecta tu comercio con Webpay</h3>
               <p className="text-[var(--muted-foreground)]">El código de comercio identifica tu negocio y la clave secreta autoriza la conexión con Transbank. Usa las credenciales del mismo entorno.</p>
-              <a href="https://transbankdevelopers.com/documentacion/como_empezar" target="_blank" rel="noreferrer" className="font-medium underline underline-offset-2 text-[var(--primary)]">Cómo obtener las credenciales de Transbank (abre una nueva pestaña)</a>
               <p className="text-[var(--muted-foreground)]">Para pruebas, consulta las credenciales de integración. Para ventas reales, utiliza el código y la clave que Transbank entrega a tu comercio después de la afiliación y habilitación.</p>
             </div>
 
@@ -1478,7 +1478,7 @@ export default function Payments() {
 
               <p className="text-xs text-[var(--muted-foreground)]">
 
-                PayPal no admite pesos: el cobro se hace en USD con el dólar observado (se actualiza solo) más un margen configurable en el servidor (PAYPAL_FX_MARGEN_PCT, 2% por defecto). Si no hay un tipo de cambio reciente, PayPal no se ofrece en el checkout. El pedido pasa a Pagado al capturar el pago.
+                PayPal no admite pesos: el cobro se hace en USD con el dólar observado  más el margen configurado.
 
               </p>
 
@@ -1714,6 +1714,8 @@ export default function Payments() {
       })}
 
 
+
+      <OrderExpirationSettings />
 
       {saved && !backendError && !validationError && !isSyncing && (
         <Alert variant="success">Métodos de pago guardados correctamente.</Alert>

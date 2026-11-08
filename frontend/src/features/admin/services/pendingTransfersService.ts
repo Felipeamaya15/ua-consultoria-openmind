@@ -12,6 +12,7 @@ export type PendingTransfer = {
   monto_total: string;
   medio_pago: 'Transferencia' | 'Linkify'; // <-- Agregamos Linkify
   estado: 'pendiente';
+  vence_en: string | null; // fecha límite para pagar; null si el pedido no vence
 };
 
 function isPendingTransfer(value: unknown): value is PendingTransfer {
@@ -23,7 +24,8 @@ function isPendingTransfer(value: unknown): value is PendingTransfer {
     && typeof item.nombre_contacto === 'string' && typeof item.correo_contacto === 'string'
     && typeof item.monto_total === 'string' && Number.isFinite(Number(item.monto_total))
     && (item.medio_pago === 'Transferencia' || item.medio_pago === 'Linkify') // <-- Agregamos Linkify
-    && item.estado === 'pendiente';
+    && item.estado === 'pendiente'
+    && (item.vence_en === null || (typeof item.vence_en === 'string' && !Number.isNaN(Date.parse(item.vence_en))));
 }
 
 export async function getPendingTransfers(signal?: AbortSignal): Promise<PendingTransfer[]> {

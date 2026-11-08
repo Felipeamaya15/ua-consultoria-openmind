@@ -11,6 +11,7 @@ from rest_framework import serializers
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
 from apps.core.presentation.serializers import PedidoEstadoUpdateSerializer
+from apps.core.infrastructure.expiracion_pedidos import devolver_stock_de_pedido_cancelado, liberar_vencidos_de_tienda
 from apps.core.infrastructure.notificaciones_pedido import notificar_cambio_de_estado
 from apps.core.infrastructure.tenant import resolver_tienda
 from apps.core.models import Pedido
@@ -54,6 +55,7 @@ class UltimasOrdenesAPIView(APIView):
         limite = leer_limite(request.query_params.get('limite'))
         if limite is None:
             return error_response(MENSAJE_LIMITE, 'LIMITE_INVALIDO')
+        liberar_vencidos_de_tienda(tienda.pk)
         ordenes = (
             Pedido.objects.filter(tienda=tienda)
             .only('id_pedido', 'identificador', 'nombre_contacto', 'estado', 'monto_total', 'fecha_creacion')
@@ -96,6 +98,8 @@ class ActualizarEstadoPedidoAPIView(APIView):
         estado_anterior = pedido.estado
         pedido.estado = estado_normalizado
         pedido.save(update_fields=['estado'])
+        if estado_normalizado == 'cancelado' and estado_anterior in ('pendiente', 'pagado'):
+            devolver_stock_de_pedido_cancelado(pedido)  
         correo = notificar_cambio_de_estado(pedido, estado_anterior)
 
         return success_response(

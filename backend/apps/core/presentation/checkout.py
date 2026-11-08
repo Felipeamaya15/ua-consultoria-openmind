@@ -17,6 +17,7 @@ from apps.authentication.infrastructure.models import ConfiguracionAutenticacion
 from apps.authentication.presentation.profile import IsCustomer, StrictSerializer
 from apps.catalog.domain.stock import validate_stock, is_variant_active
 from apps.catalog.infrastructure.repositories import ProductRepository
+from apps.core.infrastructure.expiracion_pedidos import liberar_vencidos_de_tienda
 from apps.core.infrastructure.notificaciones_pedido import notificar_recepcion
 from apps.core.infrastructure.tenant import resolver_tienda
 from apps.core.models import Pedido, ItemPedido, Tienda, Producto, ConfiguracionPago, Promocion
@@ -97,6 +98,7 @@ class CheckoutOrderAPIView(ErroresDeCotizacionMixin, APIView):
         data = serializer.validated_data
         fingerprint = sha256(json.dumps({key: value for key, value in data.items() if key != 'cotizacion'},
                                        sort_keys=True, default=str).encode()).hexdigest()
+        liberar_vencidos_de_tienda(tienda.pk)
         with transaction.atomic():
             Tienda.objects.select_for_update().get(pk=tienda.pk)
             previous = Pedido.objects.filter(clave_checkout=data['clave_checkout']).first()

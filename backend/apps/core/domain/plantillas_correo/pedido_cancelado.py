@@ -1,7 +1,9 @@
 """Plantilla del correo de pedido cancelado. Tipo de correo: order_cancelled."""
 import re
 
-from apps.core.domain.plantillas_correo.base import _MARCADOR, PlantillaCorreo, PlantillaCorreoInvalida, contexto_pedido
+from apps.core.domain.plantillas_correo.base import (
+    _MARCADOR, PlantillaCorreo, PlantillaCorreoInvalida, con_aviso_de_plazo, contexto_pedido,
+)
 
 PLANTILLA_PEDIDO_CANCELADO = PlantillaCorreo(
     asunto='Tu pedido fue cancelado · {{orderNumber}}',
@@ -40,8 +42,14 @@ def renderizar_pedido_cancelado(pedido, plantilla=None, forzar=False):
         raise PlantillaCorreoInvalida('Solo se avisa la cancelación de un pedido que está cancelado.')
     base = plantilla or PLANTILLA_PEDIDO_CANCELADO
     contexto = contexto_pedido(pedido)
-    return PlantillaCorreo(
+    correo = PlantillaCorreo(
         asunto=base.asunto,
         preheader=base.preheader,
         cuerpo=_sin_datos_ausentes(base.cuerpo, contexto),
     ).renderizar(contexto)
+    if (pedido.entrega or {}).get('motivo_cancelacion') == 'plazo_vencido':
+        aviso = ('El pedido se canceló porque venció el plazo para pagarlo. '
+                 'Si ya realizaste el pago, responde a este correo para que lo revisemos.')
+        correo = type(correo)(asunto=correo.asunto, preheader=correo.preheader,
+                              cuerpo=con_aviso_de_plazo(correo.cuerpo, aviso))
+    return correo

@@ -10,6 +10,7 @@ from rest_framework.exceptions import NotFound
 from rest_framework.permissions import AllowAny
 from rest_framework.views import APIView
 
+from apps.core.infrastructure.expiracion_pedidos import expirar_pedido_pendiente, pedido_expirado, plazo_vencido
 from apps.core.infrastructure.tenant import resolver_tienda
 from apps.core.models import Pedido
 from apps.core.presentation.responses import error_response, success_response
@@ -122,6 +123,16 @@ class PagarPedidoPendienteView(APIView):
 
         if pedido.estado != 'pendiente':
             return error_response('Este pedido ya no está pendiente de pago.', 'PEDIDO_NO_DISPONIBLE', status=409)
+        if plazo_vencido(pedido):
+            if pedido_expirado(pedido):
+                expirar_pedido_pendiente(pedido.pk)
+                pedido.refresh_from_db()
+                if pedido.estado != 'pendiente' and pedido.estado != 'cancelado':
+                    return error_response('Este pedido ya no está pendiente de pago.', 'PEDIDO_NO_DISPONIBLE', status=409)
+                if pedido.estado == 'pendiente':
+                    return error_response('Estamos verificando tu pago con la pasarela. Revisa el estado del pedido en unos minutos.',
+                                          'PAGO_EN_VERIFICACION', status=409)
+            return error_response('Este pedido expiró. Realiza una nueva compra.', 'PEDIDO_EXPIRADO', status=409)
         iniciar = PASARELAS.get(pedido.medio_pago)
         if not iniciar:
             return error_response('Este pedido no se puede pagar en línea.', 'MEDIO_NO_DISPONIBLE', status=409)

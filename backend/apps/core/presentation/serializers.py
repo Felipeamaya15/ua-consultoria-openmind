@@ -475,13 +475,22 @@ class PedidoSerializer(serializers.ModelSerializer):
         read_only_fields = ['identificador']
 
 class TransferenciaPendienteSerializer(serializers.ModelSerializer):
+    # Hasta cuando el comprador puede pagar; None si la tienda dejo el plazo manual en 0 (nunca expira).
+    vence_en = serializers.SerializerMethodField()
+
     class Meta:
         model = Pedido
         fields = [
             'id_pedido', 'identificador', 'fecha_creacion', 'nombre_contacto',
-            'correo_contacto', 'monto_total', 'medio_pago', 'estado',
+            'correo_contacto', 'monto_total', 'medio_pago', 'estado', 'vence_en',
         ]
         read_only_fields = fields
+
+    def get_vence_en(self, pedido):
+        from apps.core.infrastructure.expiracion_pedidos import vence_en
+
+        limite = vence_en(pedido)
+        return limite.isoformat() if limite else None
 
 
 class ItemPedidoTiendaSerializer(serializers.ModelSerializer):

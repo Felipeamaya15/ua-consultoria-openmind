@@ -516,10 +516,13 @@ class IniciarPagoTransbankUseCase:
             if not monto.is_finite() or monto <= 0 or monto != monto.to_integral_value():
                 raise ConfiguracionPagoInvalidaException("Webpay requiere un total positivo en pesos enteros.")
 
-            # Si Webpay ya respondió correctamente, reutilizar el token y la URL.
-            if pedido.webpay_token and pedido.webpay_url:
+            from apps.core.infrastructure.expiracion_pedidos import pedido_expirado, token_webpay_vigente
+
+            if pedido_expirado(pedido):
+                raise ConfiguracionPagoInvalidaException("Este pedido expiró. Realiza una nueva compra.")
+            if token_webpay_vigente(pedido):
                 return {"token": pedido.webpay_token, "url": pedido.webpay_url}
-            if pedido.webpay_token or pedido.webpay_url:
+            if bool(pedido.webpay_token) != bool(pedido.webpay_url):
                 raise TransbankTransaccionException("El inicio de Webpay requiere revisión.")
 
             config = ConfiguracionTransbank.objects.filter(id_tienda_id=tienda_pk).first()
@@ -548,7 +551,8 @@ class IniciarPagoTransbankUseCase:
                 raise TransbankTransaccionException("Webpay devolvió una transacción incompleta.")
             pedido.webpay_token = respuesta["token"]
             pedido.webpay_url = respuesta["url"]
-            pedido.save(update_fields=["webpay_token", "webpay_url"])
+            pedido.webpay_iniciado_en = timezone.now()
+            pedido.save(update_fields=["webpay_token", "webpay_url", "webpay_iniciado_en"])
             return {"token": pedido.webpay_token, "url": pedido.webpay_url}
 
     def ejecutar(self, *args, **kwargs) -> Dict[str, Any]:

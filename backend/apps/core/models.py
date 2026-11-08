@@ -1,5 +1,6 @@
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.db.models import Q
 from django.db.models.functions import Upper
@@ -44,6 +45,10 @@ class Tienda(models.Model):
     nombre = models.CharField(max_length=150)
     descripcion = models.TextField(blank=True, null=True)
     correo_negocio = models.EmailField(blank=True, default='')
+    horas_expiracion_pedido_en_linea = models.PositiveSmallIntegerField(
+        default=2, validators=[MinValueValidator(1), MaxValueValidator(720)])
+    horas_expiracion_pedido_manual = models.PositiveSmallIntegerField(
+        default=48, validators=[MinValueValidator(0), MaxValueValidator(720)])
     fecha_creacion = models.DateTimeField(auto_now_add=True)
 
     objects = TiendaQuerySet.as_manager()
@@ -214,6 +219,8 @@ class Pedido(models.Model):
     # Se conserva el inicio exitoso de Webpay para que un reintento no cree otro cobro.
     webpay_token = models.CharField(max_length=512, blank=True, default='')
     webpay_url = models.CharField(max_length=2048, blank=True, default='')
+    webpay_iniciado_en = models.DateTimeField(null=True, blank=True)
+    stock_devuelto = models.BooleanField(default=False)
     contacto = models.JSONField(default=dict, blank=True)
     entrega = models.JSONField(default=dict, blank=True)
     medio_pago = models.CharField(max_length=40, blank=True, default='')

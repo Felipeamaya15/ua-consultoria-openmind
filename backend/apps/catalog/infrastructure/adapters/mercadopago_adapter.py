@@ -1,5 +1,6 @@
 
 import math
+from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 
 import requests
@@ -65,7 +66,10 @@ class MercadoPagoAdapter(PaymentGatewayPort):
         monto: Decimal,
         descripcion: str,
         url_retorno: str,
+        expira_en=None,
     ) -> PagoIniciado:
+        """Crea la preferencia de pago. Con `expira_en` (datetime con zona horaria) el enlace deja de servir
+        pasada esa fecha: asi nadie puede pagar un pedido que la tienda ya cancelo por vencimiento."""
         monto = Decimal(str(monto))
 
         payload = {
@@ -88,6 +92,12 @@ class MercadoPagoAdapter(PaymentGatewayPort):
                 "pending": url_retorno,
             },
         }
+
+        if expira_en is not None:
+            ahora = datetime.now(timezone.utc)
+            payload["expires"] = True
+            payload["expiration_date_from"] = self._fecha_mp(ahora)
+            payload["expiration_date_to"] = self._fecha_mp(max(expira_en, ahora + timedelta(minutes=1)))
 
         datos = self._request(
             "POST",
@@ -131,6 +141,50 @@ class MercadoPagoAdapter(PaymentGatewayPort):
             ),
             detalle_estado=datos.get("status_detail") or status,
         )
+
+    def buscar_pagos_por_referencia(self, orden_compra: str) -> list:
+        """Todos los pagos que Mercado Pago tiene registrados para el pedido (external_reference), normalizados.
+
+        Sirve para conciliar un pedido pendiente: el comprador pudo pagar y no volver nunca a la tienda.
+        Lanza PagoGatewayException si Mercado Pago no responde o responde algo invalido.
+        """
+        datos = self._request(
+            "GET",
+            f"{self.BASE_URL}/v1/payments/search",
+            params={
+                "external_reference": str(orden_compra),
+                "sort": "date_created",
+                "criteria": "desc",
+                "limit": 50,
+            },
+            timeout=max(self.timeout, 20),
+        )
+        resultados = datos.get("results")
+        if not isinstance(resultados, list):
+            raise PagoGatewayException("Mercado Pago devolvió una respuesta inválida.")
+        pagos = []
+        for pago in resultados:
+            if not isinstance(pago, dict):
+                continue
+            status = pago.get("status", "")
+            try:
+                monto = Decimal(str(pago.get("transaction_amount", 0)))
+            except ArithmeticError:
+                raise PagoGatewayException("Mercado Pago devolvió una respuesta inválida.") from None
+            pagos.append(ResultadoPago(
+                id_transaccion=str(pago.get("id", "")),
+                orden_compra=str(pago.get("external_reference") or ""),
+                monto=monto,
+                estado=self.ESTADOS.get(status, EstadoPago.PENDIENTE),
+                detalle_estado=pago.get("status_detail") or status,
+            ))
+        return pagos
+
+    @staticmethod
+    def _fecha_mp(valor) -> str:
+        """Formato que exige Mercado Pago: yyyy-MM-dd'T'HH:mm:ss.SSSZ (con desfase, por ejemplo +00:00)."""
+        valor = valor.astimezone(timezone.utc)
+        return valor.strftime("%Y-%m-%dT%H:%M:%S.") + f"{valor.microsecond // 1000:03d}+00:00"
 
     def _request(self, metodo: str, url: str, **kwargs) -> dict:
         kwargs.setdefault("timeout", self.timeout)
