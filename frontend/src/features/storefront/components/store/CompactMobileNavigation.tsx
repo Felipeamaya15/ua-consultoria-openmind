@@ -1,15 +1,26 @@
 import { useStore } from '../../context/StoreContext';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useEffect, useRef } from 'react';
 import { useStorefrontTemplate } from '../../hooks/useStorefrontTemplate';
-import { AccountNavigation } from './AccountNavigation';
+import { AccountNavigation, notifyStorefrontAuthChange, useStorefrontIdentity } from './AccountNavigation';
+import { authService } from '../../../auth/services/authService';
 
 export function CompactMobileNavigation() {
   const {landing} = useStore();
   const {route,template} = useStorefrontTemplate();
   const {pathname} = useLocation();
+  const {user} = useStorefrontIdentity();
+  const navigate = useNavigate();
   const ref = useRef<HTMLDetailsElement>(null);
   useEffect(() => { if(ref.current) ref.current.open=false; }, [pathname]);
+
+  const handleLogout = () => {
+    authService.logout();
+    notifyStorefrontAuthChange();
+    if (ref.current) ref.current.open = false;
+    navigate(route());
+  };
+
   return (
     <details
       ref={ref}
@@ -29,6 +40,11 @@ export function CompactMobileNavigation() {
         <Link to={route('seguimiento')}>Seguimiento</Link>
         {template === 'visual' && landing?.contenido?.bloques?.some(block=>block.visible&&block.tipo==='historia') && <Link to={route('nuestra-historia')}>Nuestra historia</Link>}
         <AccountNavigation />
+        {user && (
+          <button type="button" onClick={handleLogout} className="text-left text-sm font-medium px-2.5 py-1.5 rounded-lg">
+            Salir
+          </button>
+        )}
       </nav>
     </details>
   );
