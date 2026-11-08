@@ -1,0 +1,245 @@
+import { useEffect, useRef, useState } from 'react';
+import type { LandingConfig } from '../../landing/types/landing.types';
+import './hero-carousel.css';
+
+type HeroSlide = { id: string; src: string; alt: string };
+type HeroCarouselProps = { landing?: LandingConfig | null; intervalMs?: number };
+type CarouselMode = 'static' | 'manual' | 'automatic';
+type CarouselTransition = 'fade' | 'slide' | 'zoom' | 'blur' | 'rise' | 'reveal';
+
+type CarouselSettings = {
+  mode: CarouselMode;
+  interval: number;
+  transition: CarouselTransition;
+  indicators: boolean;
+};
+
+const DEFAULT_SETTINGS: CarouselSettings = {
+  mode: 'automatic',
+  interval: 10,
+  transition: 'fade',
+  indicators: true,
+};
+
+const VALID_TRANSITIONS: readonly string[] = [
+  'fade', 'slide', 'zoom', 'blur', 'rise', 'reveal',
+];
+
+function getHeroSlides(landing?: LandingConfig | null): HeroSlide[] {
+  const images = [...(landing?.imagenes_carrusel ?? [])]
+    .filter(image => Boolean(image.archivo))
+    .sort((a, b) => a.orden - b.orden);
+
+  if (images.length > 0) {
+    return images.map(image => ({
+      id: image.id,
+      src: image.archivo,
+      alt: image.texto_alternativo || '',
+    }));
+  }
+
+  if (landing?.imagen_principal) {
+    return [{
+      id: 'imagen-principal',
+      src: landing.imagen_principal,
+      alt: landing.titulo || 'Portada de la tienda',
+    }];
+  }
+
+  return [];
+}
+
+export function hasHeroSlides(landing?: LandingConfig | null): boolean {
+  return Boolean(
+    landing?.imagenes_carrusel?.some(image => image.archivo) ||
+    landing?.imagen_principal,
+  );
+}
+
+function getSettings(element: HTMLElement): CarouselSettings {
+  const style = window.getComputedStyle(element);
+  const read = (name: string) => style.getPropertyValue(name).trim();
+  const mode = read('--openmind-carousel-mode');
+  const transition = read('--openmind-carousel-transition');
+  const seconds = Number(read('--openmind-carousel-interval'));
+  const indicators = read('--openmind-carousel-indicators');
+
+  return {
+    mode: mode === 'static' || mode === 'manual' ? mode : 'automatic',
+    interval: [5, 10, 20].includes(seconds) ? seconds : DEFAULT_SETTINGS.interval,
+    transition: VALID_TRANSITIONS.includes(transition)
+      ? transition as CarouselTransition
+      : DEFAULT_SETTINGS.transition,
+    indicators: indicators === '' ? DEFAULT_SETTINGS.indicators : indicators !== '0',
+  };
+}
+
+export function HeroCarousel({ landing, intervalMs }: HeroCarouselProps) {
+  const hostRef = useRef<HTMLDivElement>(null);
+  const previousSlide = useRef<HeroSlide | null>(null);
+  const [outgoing, setOutgoing] = useState<HeroSlide | null>(null);
+  const [settings, setSettings] = useState<CarouselSettings>(DEFAULT_SETTINGS);
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [manualPaused, setManualPaused] = useState(false);
+  const [hovered, setHovered] = useState(false);
+  const [focused, setFocused] = useState(false);
+  const [reducedMotion, setReducedMotion] = useState(false);
+  const [pageVisible, setPageVisible] = useState(true);
+
+  const slides = getHeroSlides(landing);
+  const count = slides.length;
+  const currentIndex = count > 0 && settings.mode !== 'static'
+    ? activeIndex % count
+    : 0;
+  const active = slides[currentIndex];
+  const showDots = count > 1 && settings.mode !== 'static' &&
+    (settings.mode === 'manual' || settings.indicators);
+
+  // Configuración compartida entre tienda pública y vista previa del editor.
+  useEffect(() => {
+    const node = hostRef.current;
+    if (!node) return;
+    const doc = node.ownerDocument;
+    const sync = () => {
+      const next = getSettings(node);
+      setSettings(previous =>
+        previous.mode === next.mode &&
+        previous.interval === next.interval &&
+        previous.transition === next.transition &&
+        previous.indicators === next.indicators
+          ? previous : next,
+      );
+    };
+    const observer = new MutationObserver(sync);
+    const root = node.closest('[data-storefront-visual]');
+    if (root) observer.observe(root, { attributes: true, attributeFilter: ['style', 'class'] });
+    // El editor notifica sus cambios directamente; evitamos observar todo head.
+    doc.defaultView?.addEventListener('openmind:carousel:sync', sync);
+    sync();
+    return () => {
+      observer.disconnect();
+      doc.defaultView?.removeEventListener('openmind:carousel:sync', sync);
+    };
+  }, []);
+
+  useEffect(() => {
+    const preference = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const update = () => setReducedMotion(preference.matches);
+    update();
+    preference.addEventListener('change', update);
+    return () => preference.removeEventListener('change', update);
+  }, []);
+
+  useEffect(() => {
+    const update = () => setPageVisible(!document.hidden);
+    update();
+    document.addEventListener('visibilitychange', update);
+    return () => document.removeEventListener('visibilitychange', update);
+  }, []);
+
+  useEffect(() => {
+    setManualPaused(false);
+  }, [settings.mode]);
+
+  useEffect(() => {
+    if (count <= 1 || settings.mode !== 'automatic' || manualPaused || hovered ||
+      focused || reducedMotion || !pageVisible) return;
+    const milliseconds = intervalMs ?? settings.interval * 1000;
+    const timer = window.setInterval(() => {
+      setActiveIndex(index => (index + 1) % count);
+    }, milliseconds);
+    return () => window.clearInterval(timer);
+  }, [count, settings.mode, settings.interval, intervalMs, manualPaused,
+    hovered, focused, reducedMotion, pageVisible]);
+
+  // Conserva brevemente la fotografía anterior debajo de la nueva.
+  // Así las animaciones revelan una imagen y no un fondo vacío.
+  useEffect(() => {
+    const last = previousSlide.current;
+    const changed = Boolean(last && active && (last.id !== active.id || last.src !== active.src));
+    previousSlide.current = active ?? null;
+    if (!changed || reducedMotion || settings.mode === 'static') {
+      setOutgoing(null);
+      return;
+    }
+    setOutgoing(last);
+    const timeout = window.setTimeout(() => setOutgoing(null), 760);
+    return () => window.clearTimeout(timeout);
+  }, [active?.id, active?.src, reducedMotion, settings.mode, settings.transition]);
+
+  function selectSlide(index: number) {
+    if (settings.mode === 'automatic' && index === currentIndex && manualPaused) {
+      setManualPaused(false);
+      return;
+    }
+    setActiveIndex(index);
+    if (settings.mode === 'automatic') setManualPaused(true);
+  }
+
+  return (
+    <div
+      ref={hostRef}
+      className="hero-carousel"
+      role="region"
+      aria-roledescription="carrusel"
+      aria-label="Fotografías de portada"
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      onFocusCapture={() => setFocused(true)}
+      onBlurCapture={event => {
+        const next = event.relatedTarget;
+        if (!(next instanceof Node) || !event.currentTarget.contains(next)) setFocused(false);
+      }}
+    >
+      {outgoing && (
+        <img
+          key={`anterior:${outgoing.id}`}
+          src={outgoing.src}
+          alt=""
+          aria-hidden="true"
+          className="hero-carousel__image hero-carousel__image--outgoing"
+        />
+      )}
+
+      {active && (
+        <img
+          key={`${active.id}:${active.src}:${settings.transition}`}
+          data-visual-part="heroImage"
+          data-landing-image
+          src={active.src}
+          alt={active.alt}
+          className={`hero-carousel__image hero-carousel__image--transition-${settings.transition}`}
+        />
+      )}
+
+      <div
+        className="hero-carousel__dots"
+        role="group"
+        aria-label="Seleccionar fotografía de portada"
+        aria-hidden={!showDots}
+        style={{ display: showDots ? 'flex' : 'none' }}
+      >
+          {slides.map((slide, index) => (
+            <button
+              key={slide.id}
+              type="button"
+              className={`hero-carousel__dot${index === currentIndex ? ' is-active' : ''}`}
+              aria-current={index === currentIndex ? 'true' : undefined}
+              aria-label={settings.mode === 'automatic'
+                ? index === currentIndex && manualPaused
+                  ? 'Reanudar cambio automático de fotografías'
+                  : `Mostrar fotografía ${index + 1} de ${count} y pausar`
+                : `Mostrar fotografía ${index + 1} de ${count}`}
+              title={settings.mode === 'automatic' && index === currentIndex && manualPaused
+                ? 'Reanudar carrusel' : `Fotografía ${index + 1}`}
+              tabIndex={showDots ? 0 : -1}
+              disabled={!showDots}
+              onClick={() => selectSlide(index)}
+            >
+              <span aria-hidden="true" />
+            </button>
+          ))}
+      </div>
+    </div>
+  );
+}

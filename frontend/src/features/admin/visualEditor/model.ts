@@ -56,19 +56,40 @@ function colors(value: unknown): LegacyThemeColors {
   const record = isRecord(value) ? value : {};
   return Object.fromEntries(colorKeys.filter(key => typeof record[key] === 'string').map(key => [key, record[key]]));
 }
+// OPENMIND_CAROUSEL_PRESERVE_V3
+/** Las nuevas propiedades del carrusel no deben perderse al fusionar apariencia. */
+function carouselFields(hero?: VisualConfigOverrides['hero']) {
+  return {
+    ...(hero?.carouselMode !== undefined ? {carouselMode: hero.carouselMode} : {}),
+    ...(hero?.carouselInterval !== undefined ? {carouselInterval: hero.carouselInterval} : {}),
+    ...(hero?.carouselTransition !== undefined ? {carouselTransition: hero.carouselTransition} : {}),
+    ...(hero?.carouselIndicators !== undefined ? {carouselIndicators: hero.carouselIndicators} : {}),
+  };
+}
+export function retainCarouselFields(raw: VisualConfigOverrides | null | undefined, merged: VisualConfigOverrides): VisualConfigOverrides {
+  const fields = carouselFields(raw?.hero);
+  return Object.keys(fields).length ? {...merged, hero: {...merged.hero, ...fields}} : merged;
+}
+
 export function createEditorDocument(config: AdminConfig, template: TemplateId, raw: unknown): EditorDocument {
   const store = isRecord(raw) ? raw : {};
   const themes = isRecord(store.themeEditor) ? store.themeEditor : {};
   const theme = isRecord(themes[template]) ? themes[template] : {};
-  return { ...(config.themeEditor[template]?.blockStyles ? {blockStyles:readBlockStyles(config.themeEditor[template]?.blockStyles)} : {}), storeOverrides: mergeVisualOverrides(config.visualConfig, {}), overrides: mergeVisualOverrides(config.themeEditor[template]?.visualConfig, {}), storeColors: colors(store), templateColors: colors(theme), images: readThemeImages(config.themeEditor[template]?.images) };
+  return { ...(config.themeEditor[template]?.blockStyles ? {blockStyles:readBlockStyles(config.themeEditor[template]?.blockStyles)} : {}), storeOverrides: mergeVisualOverrides(config.visualConfig, {}), overrides: retainCarouselFields(config.themeEditor[template]?.visualConfig, mergeVisualOverrides(config.themeEditor[template]?.visualConfig, {})), storeColors: colors(store), templateColors: colors(theme), images: readThemeImages(config.themeEditor[template]?.images) };
 }
 export function resolveEditorDocument(document: EditorDocument, template: TemplateId): VisualConfig {
-  return resolveStoreVisualConfig({ ...document.storeColors, visualConfig: document.storeOverrides }, template, { ...document.templateColors, visualConfig: document.overrides });
+  const effective = resolveStoreVisualConfig({ ...document.storeColors, visualConfig: document.storeOverrides }, template, { ...document.templateColors, visualConfig: document.overrides });
+  return { ...effective, hero: { ...effective.hero, ...carouselFields(document.overrides.hero) } };
 }
 export function readPath(value: unknown, path: string): unknown {
   return path.split('.').reduce<unknown>((current, key) => isRecord(current) ? current[key] : undefined, value);
 }
 export function editProperty(document: EditorDocument, path: string, value: string | number | boolean): EditorDocument {
+  // Preserva las propiedades del carrusel sin pasar por filtros de claves del resolvedor.
+  if (/^hero\.(carouselMode|carouselInterval|carouselTransition|carouselIndicators)$/.test(path)) {
+    const field = path.slice('hero.'.length);
+    return {...document, overrides: {...document.overrides, hero: {...document.overrides.hero, [field]: value}} as VisualConfigOverrides};
+  }
   const patch = path.split('.').reduceRight<unknown>((branch, key) => ({ [key]: branch }), value);
   return { ...document, overrides: mergeVisualOverrides(document.overrides, patch as VisualConfigOverrides) };
 }

@@ -6,6 +6,7 @@ import { Icon } from '../components/ui';
 import { useLandingSectionVisibility } from '../../landing/hooks/useLandingSectionVisibility';
 import { useStore } from '../context/StoreContext';
 import { LandingStatus } from '../../landing/components/LandingStatus';
+import { HeroCarousel, hasHeroSlides } from '../components/HeroCarousel';
 import { FormEvent, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 
@@ -15,6 +16,7 @@ export default function MinimalHome() {
   const { featured, categories, content } = useLandingContent();
   const isSectionVisible = useLandingSectionVisibility();
   const { landing } = useStore();
+  const heroHasPhoto = hasHeroSlides(landing);
   const navigate = useNavigate();
   const [search, setSearch] = useState('');
 
@@ -52,7 +54,14 @@ export default function MinimalHome() {
           {/* Tarjetas flotantes */}
           <div data-visual-part="heroDecorations" data-landing-content className="flex justify-center items-end -space-x-6 sm:-space-x-4 md:-space-x-3 mb-4 min-h-[130px] sm:min-h-[170px] md:min-h-[180px] px-2 sm:px-6 max-w-full overflow-x-hidden">
 
-            {!floatingProducts.length && landing?.imagen_principal && <img data-visual-part="heroImageFallback" data-landing-image src={landing.imagen_principal} alt={landing.titulo || 'Imagen principal de la tienda'} className="max-h-[180px] max-w-full rounded-2xl object-contain" />}
+            {!floatingProducts.length && heroHasPhoto && (
+              <div
+                data-visual-part="heroImageFallback"
+                className="relative h-[180px] w-full max-w-[640px] overflow-hidden rounded-2xl"
+              >
+                <HeroCarousel landing={landing} />
+              </div>
+            )}
             {floatingProducts.map((product, index) => {
               const rotations = [
                 '-rotate-6 translate-y-4',
@@ -85,9 +94,8 @@ export default function MinimalHome() {
                 >
                   <div className="aspect-[4/3] rounded-xl overflow-hidden bg-gray-100">
                     <img
-                      data-landing-image={index === 0 && landing?.imagen_principal ? true : undefined}
-                      src={index === 0 && landing?.imagen_principal ? landing.imagen_principal : product.images[0]}
-                      alt={index === 0 && landing?.imagen_principal ? landing.titulo : product.name}
+                      src={product.images[0]}
+                      alt={product.name}
                       className="w-full h-full object-cover"
                     />
                   </div>
@@ -116,6 +124,13 @@ export default function MinimalHome() {
             })}
 
           </div>
+
+          {/* Carrusel independiente: conserva intactas las tarjetas de productos. */}
+          {floatingProducts.length > 0 && heroHasPhoto && (
+            <div className="relative mx-auto mb-5 h-[160px] sm:h-[200px] w-full max-w-[640px] overflow-hidden rounded-2xl">
+              <HeroCarousel landing={landing} />
+            </div>
+          )}
 
           {/* Título */}
           <div data-visual-part="heroTitleBlock" className="text-center min-w-0">

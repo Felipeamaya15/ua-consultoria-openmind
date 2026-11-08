@@ -1,0 +1,183 @@
+
+.hero-carousel {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.hero-carousel__image {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+
+  object-fit: cover;
+  object-position: center;
+
+  animation: hero-carousel-fade 500ms ease-out both;
+}
+
+@keyframes hero-carousel-fade {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+/* Indicadores adaptados a la paleta activa */
+.hero-carousel__dots {
+  position: absolute;
+  z-index: 30;
+  right: 20px;
+  bottom: 18px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+
+  padding: 3px 8px;
+  border-radius: 999px;
+
+  /* Color principal de la tienda */
+  background: var(--primary, #1d4ed8);
+
+  /* Transparencia conservando el color de la paleta */
+  background: color-mix(
+    in srgb,
+    var(--primary, #1d4ed8) 88%,
+    transparent
+  );
+
+  color: var(--on-primary, #ffffff);
+
+  border: 1px solid color-mix(
+    in srgb,
+    var(--on-primary, #ffffff) 16%,
+    transparent
+  );
+
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.12);
+}
+
+/* Área de interacción */
+.hero-carousel__dot {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
+  width: 28px;
+  height: 28px;
+
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+
+  background: transparent;
+  cursor: pointer;
+}
+
+/* Indicadores inactivos */
+.hero-carousel__dot span {
+  display: block;
+  width: 6px;
+  height: 6px;
+
+  border-radius: 999px;
+
+  background: var(--on-primary, #ffffff);
+  opacity: 0.45;
+
+  transition:
+    width 250ms ease,
+    opacity 250ms ease,
+    background-color 250ms ease;
+}
+
+/* Indicador de fotografía activa */
+.hero-carousel__dot.is-active span {
+  width: 20px;
+
+  background: var(--on-primary, #ffffff);
+  opacity: 1;
+}
+
+/* Interacción */
+.hero-carousel__dot:hover span {
+  opacity: 1;
+}
+
+.hero-carousel__dot:focus-visible {
+  outline: 2px solid var(--on-primary, #ffffff);
+  outline-offset: -2px;
+}
+
+/* Adaptación para dispositivos móviles */
+@media (max-width: 480px) {
+  .hero-carousel__dots {
+    right: 10px;
+    bottom: 12px;
+    padding: 2px 5px;
+  }
+
+  .hero-carousel__dot {
+    width: 26px;
+    height: 26px;
+  }
+}
+
+/* Accesibilidad: movimiento reducido */
+@media (prefers-reduced-motion: reduce) {
+  .hero-carousel__image {
+    animation: none;
+  }
+
+  .hero-carousel__dot span {
+    transition: none;
+  }
+}
+
+/* Transición alternativa elegible desde el editor visual. */
+.hero-carousel__image--slide {
+  animation: hero-carousel-slide-in 500ms ease-out both;
+}
+
+@keyframes hero-carousel-slide-in {
+  from { opacity: 0.75; transform: translateX(4%); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-carousel__image--slide { animation: none; }
+}
+
+/* OPENMIND_CAROUSEL_TRANSITIONS_V2: seis efectos disponibles en todas las plantillas. */
+.hero-carousel .hero-carousel__image--outgoing { animation: none !important; pointer-events: none; }
+.hero-carousel .hero-carousel__image--transition-fade { animation: openmind-carrusel-fade 700ms ease-in-out both; }
+.hero-carousel .hero-carousel__image--transition-slide { animation: openmind-carrusel-slide 700ms cubic-bezier(.25,.8,.25,1) both; }
+.hero-carousel .hero-carousel__image--transition-zoom { animation: openmind-carrusel-zoom 700ms ease-out both; }
+.hero-carousel .hero-carousel__image--transition-blur { animation: openmind-carrusel-blur 700ms ease-out both; }
+.hero-carousel .hero-carousel__image--transition-rise { animation: openmind-carrusel-rise 700ms cubic-bezier(.2,.7,.3,1) both; }
+.hero-carousel .hero-carousel__image--transition-reveal { animation: openmind-carrusel-reveal 700ms ease-in-out both; }
+@keyframes openmind-carrusel-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes openmind-carrusel-slide { from { transform: translateX(12%); opacity: .4; } to { transform: translateX(0); opacity: 1; } }
+@keyframes openmind-carrusel-zoom { from { transform: scale(1.08); opacity: .35; } to { transform: scale(1); opacity: 1; } }
+@keyframes openmind-carrusel-blur { from { filter: blur(12px); opacity: .4; } to { filter: blur(0); opacity: 1; } }
+@keyframes openmind-carrusel-rise { from { transform: translateY(12%); opacity: .4; } to { transform: translateY(0); opacity: 1; } }
+@keyframes openmind-carrusel-reveal { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
+@media (prefers-reduced-motion: reduce) {
+  .hero-carousel .hero-carousel__image--transition-fade,
+  .hero-carousel .hero-carousel__image--transition-slide,
+  .hero-carousel .hero-carousel__image--transition-zoom,
+  .hero-carousel .hero-carousel__image--transition-blur,
+  .hero-carousel .hero-carousel__image--transition-rise,
+  .hero-carousel .hero-carousel__image--transition-reveal { animation: none !important; filter: none; transform: none; clip-path: none; }
+}

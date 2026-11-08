@@ -8,7 +8,7 @@ import { useStore } from '../context/StoreContext';
 import { LandingStatus } from '../../landing/components/LandingStatus';
 import { Link } from 'react-router-dom';
 import { Icon } from '../components/ui';
-
+import { HeroCarousel, hasHeroSlides } from '../components/HeroCarousel';
 import { formatPrice } from '../data/mockData';
 import { useStorefrontTemplate } from '../hooks/useStorefrontTemplate';
 
@@ -16,6 +16,7 @@ export default function CatalogHome() {
   const { featured, content } = useLandingContent();
   const isSectionVisible = useLandingSectionVisibility();
   const { landing } = useStore();
+  const heroHasPhoto = hasHeroSlides(landing);
   const { route } = useStorefrontTemplate();
 
   const mochila = featured[0];
@@ -30,25 +31,18 @@ export default function CatalogHome() {
       >
         <div
           data-visual-part="heroFrame"
-          className={`relative min-h-[460px] sm:min-h-[620px] md:min-h-[720px] overflow-hidden rounded-[22px] sm:rounded-[28px] ${landing?.imagen_principal ? 'text-white' : 'bg-[var(--primary)] text-[var(--on-primary)]'}`}
+          className={`relative min-h-[460px] sm:min-h-[620px] md:min-h-[720px] overflow-hidden rounded-[22px] sm:rounded-[28px] ${heroHasPhoto ? 'text-white' : 'bg-[var(--primary)] text-[var(--on-primary)]'}`}
         >
-          <img
-            data-visual-part="heroImage"
-            data-landing-image={landing?.imagen_principal ? true : undefined}
-            src={landing?.imagen_principal || undefined}
-            hidden={!landing?.imagen_principal}
-            alt={landing?.titulo || 'Imagen principal de la tienda'}
-            className="absolute inset-0 w-full h-full object-cover object-center"
-          />
+          <HeroCarousel landing={landing} />
 
           <div
             data-visual-part="heroOverlay"
-            className={`absolute inset-0 bg-gradient-to-r from-black/90 via-black/55 to-black/15 ${landing?.imagen_principal ? '' : 'hidden'}`}
+            className={`absolute inset-0 bg-gradient-to-r from-black/90 via-black/55 to-black/15 ${heroHasPhoto ? '' : 'hidden'}`}
           />
 
           <div
             data-visual-part="heroOverlaySecondary"
-            className={`absolute inset-0 bg-gradient-to-t from-black/45 via-transparent to-black/10 ${landing?.imagen_principal ? '' : 'hidden'}`}
+            className={`absolute inset-0 bg-gradient-to-t from-black/45 via-transparent to-black/10 ${heroHasPhoto ? '' : 'hidden'}`}
           />
 
           <div

@@ -4,6 +4,7 @@ import { BlockAppearanceInspector } from '../visualEditor/blocks';
 import { editBlockAppearance } from '../../storefront/visual/blockAppearance';
 import type { SetStateAction } from 'react';
 import type { EditorDocument } from '../visualEditor/model';
+import type { VisualConfig } from '../../storefront/visual/types';
 import { createHistory, recordHistory, undoHistory, redoHistory } from '../visualEditor/history';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useBlocker, useSearchParams } from 'react-router-dom';
@@ -13,7 +14,7 @@ import { readStoredStoreConfig } from '../../storefront/visual/storage';
 import { templatePaths } from '../config/navigation';
 import type { TemplateId } from '../data/mockAdminData';
 import { VISUAL_SECTIONS, type VisualSectionId } from '../visualEditor/sections';
-import { createEditorDocument, editScopedProperty, isEditorDirty, publishEditorDocument, resetProperty, resetSection, resolveEditorDocument, restorePreset, sectionOverridePath } from '../visualEditor/model';
+import { createEditorDocument, editScopedProperty, isEditorDirty, publishEditorDocument, resetProperty, resetSection, resolveEditorDocument, restorePreset, sectionOverridePath, retainCarouselFields } from '../visualEditor/model';
 import { VisualInspector, getInspectorGroups } from '../visualEditor/inspector';
 import { LegacyImageInspector } from '../visualEditor/images';
 import { FieldHelp, SECTION_HELP } from '../visualEditor/help';
@@ -22,11 +23,39 @@ import { STORE_PAGES, previewPath, CHECKOUT_PREVIEW_STEPS, type PreviewPageId } 
 import { connectVisualPreview } from '../visualEditor/preview';
 import { TemplateGallery } from '../visualEditor/templates';
 import { ContentInspector } from '../visualEditor/content';
+import { HeroCarouselInspector } from '../visualEditor/HeroCarouselInspector';
 import { fetchPrivateLandingConfig as fetchLandingConfig, saveLandingConfig, saveBlockStyles } from '../../landing/services/landingService';
 import '../admin.css';
 import '../visualEditor/editor.css';
 import '../visualEditor/workspace.css';
 const ABSENT_SECTION_NOTICE = 'Esta sección no está visible en esta página. Sus ajustes se aplicarán cuando tenga contenido o esté habilitada.';
+
+// OPENMIND_SHARED_CAROUSEL_V4
+/** Comportamiento compartido del carrusel, no del diseño de cada portada. */
+type SharedCarouselSettings = {
+  carouselMode: NonNullable<VisualConfig['hero']['carouselMode']>;
+  carouselInterval: NonNullable<VisualConfig['hero']['carouselInterval']>;
+  carouselTransition: NonNullable<VisualConfig['hero']['carouselTransition']>;
+  carouselIndicators: boolean;
+};
+function readSharedCarousel(hero: VisualConfig['hero']): SharedCarouselSettings {
+  return {
+    carouselMode: hero.carouselMode ?? 'automatic',
+    carouselInterval: hero.carouselInterval ?? 10,
+    carouselTransition: hero.carouselTransition ?? 'fade',
+    carouselIndicators: hero.carouselIndicators ?? true,
+  };
+}
+function applySharedCarousel(document: EditorDocument, shared: SharedCarouselSettings | null): EditorDocument {
+  if (!shared) return document;
+  return {
+    ...document,
+    overrides: {
+      ...document.overrides,
+      hero: { ...document.overrides.hero, ...shared },
+    },
+  };
+}
 
 export default function ThemeEditor() {
   const { config, setConfig, storageError } = useAdmin();
@@ -36,7 +65,8 @@ export default function ThemeEditor() {
   const template: TemplateId = requested && Object.prototype.hasOwnProperty.call(templatePaths, requested) ? requested as TemplateId : config.template;
   const remote = useRef<{appearance:Appearance;library:PaletteLibrary}|null>(null);
   const [loadingContent,setLoadingContent]=useState(false);
-  const load = () => { const document=createEditorDocument(config,template,readStoredStoreConfig(identity));const entry=remote.current?.appearance[template];return entry?{...document,overrides:paletteOverrides(entry,remote.current?.library)??{},paletteId:entry.paleta_id}:document; };
+  const [sharedCarousel, setSharedCarousel] = useState<SharedCarouselSettings | null>(null);
+  const load = () => { const document=createEditorDocument(config,template,readStoredStoreConfig(identity));const entry=remote.current?.appearance[template];return entry?{...document,overrides:retainCarouselFields(entry.visualConfig, paletteOverrides(entry,remote.current?.library)??{}),paletteId:entry.paleta_id}:document; };
   const [baseline, setBaseline] = useState(load);
   const [history, setHistory] = useState(() => createHistory(load()));
   const draft = history.present;
@@ -80,7 +110,10 @@ export default function ThemeEditor() {
   const [previewBounds, setPreviewBounds] = useState({ width: 900, height: 700 });
   const frameWidth = viewport === 'mobile' ? 375 : viewport === 'tablet' ? 768 : 1440;
   const previewScale = zoom === 'fit' ? Math.min(1, Math.max(1, previewBounds.width - 32) / frameWidth) : Number(zoom) / 100;
-  const effective = useMemo(() => resolveEditorDocument(draft, template), [draft, template]);
+  const effective = useMemo(() => {
+    const base = resolveEditorDocument(draft, template);
+    return sharedCarousel ? { ...base, hero: { ...base.hero, ...sharedCarousel } } : base;
+  }, [draft, template, sharedCarousel]);
   const latest = useRef({ effective, draft, selectedSection, imageMode }); latest.current = { effective, draft, selectedSection, imageMode };
   const draftDirty = isEditorDirty(draft, baseline);
   const cachedDirty = Object.entries(templateDrafts.current).some(([id, item]) => id !== template && item && isEditorDirty(item.history.present, item.baseline));
@@ -97,8 +130,10 @@ export default function ThemeEditor() {
     void Promise.all([fetchLandingConfig({signal:controller.signal}),fetchAppearance(controller.signal),fetchPalettes(controller.signal)]).then(([landing,appearance,library]) => {
       remote.current={appearance,library};
       const entry=appearance[template];
-      const remoteDesign=entry?{overrides:paletteOverrides(entry,library)??{},paletteId:entry.paleta_id}:{};
+      const remoteDesign=entry?{overrides:retainCarouselFields(entry.visualConfig, paletteOverrides(entry,library)??{}),paletteId:entry.paleta_id}:{};
       if (controller.signal.aborted) return;
+      const initial = createEditorDocument(config, template, readStoredStoreConfig(identity));
+      setSharedCarousel(readSharedCarousel(resolveEditorDocument({ ...initial, ...remoteDesign }, template).hero));
       if (!landing) {setContentError('No hay una portada disponible. Puedes guardar el diseño y configurar contenido desde Página principal.');setBaseline(current=>({...current,...remoteDesign}));setHistory(current=>({...current,present:{...current.present,...remoteDesign}}));return;}
       if(String(landing.tienda)!==identity?.storeId){setContentLoadFailed(true);setContentError('El contenido no corresponde a esta tienda. Recarga para verificar la identidad.');return;}
       const blockStyles = landing.contenido?.apariencia_bloques?.[template] ?? config.themeEditor[template]?.blockStyles;
@@ -148,11 +183,18 @@ export default function ThemeEditor() {
       if (saving) return;
       if (event.key === 'Escape') { setExpanded(false); return; }
       if (!(event.ctrlKey || event.metaKey) || (event.target instanceof Element && event.target.closest('input,textarea,select,[contenteditable=true]'))) return;
-      if (event.key.toLowerCase() === 'z') { event.preventDefault(); setHistory(event.shiftKey ? redoHistory : undoHistory); }
-      else if (event.key.toLowerCase() === 'y') { event.preventDefault(); setHistory(redoHistory); }
+      if (event.key.toLowerCase() === 'z') { event.preventDefault(); stepEditorHistory(event.shiftKey ? 'redo' : 'undo'); }
+      else if (event.key.toLowerCase() === 'y') { event.preventDefault(); stepEditorHistory('redo'); }
     };
     window.addEventListener('keydown', shortcut); return () => window.removeEventListener('keydown', shortcut);
-  }, [saving]);
+  }, [saving, history, template]);
+  function stepEditorHistory(direction: 'undo' | 'redo') {
+    const next = direction === 'undo' ? undoHistory(history) : redoHistory(history);
+    const before = readSharedCarousel(resolveEditorDocument(history.present, template).hero);
+    const after = readSharedCarousel(resolveEditorDocument(next.present, template).hero);
+    setHistory(next);
+    if (JSON.stringify(before) !== JSON.stringify(after)) setSharedCarousel(after);
+  }
   function selectSection(section: VisualSectionId) {
     setSelectedBlockId(undefined); setInspectorOpen(true); setTool('style'); setContentImage(false);
     setSelectedSection(section); setInspectorGroup(undefined); setSelectedImage(null); setNavigationHref(undefined); setImageMode(false);
@@ -183,6 +225,24 @@ export default function ThemeEditor() {
         setHistory(current=>({...current,present:{...current.present,landing:savedContent}}));
       }
       const pending=[...Object.entries(templateDrafts.current).filter(([id])=>id!==template).map(([id,item])=>({id:id as TemplateId,document:item!.history.present,baseline:item!.baseline})),{id:template,document:submitted,baseline}];
+      if (sharedCarousel) {
+        // Las plantillas no abiertas también deben recibir el mismo carrusel.
+        const templates: TemplateId[] = ['catalog', 'editorial', 'minimal', 'visual'];
+        for (const id of templates) {
+          if (pending.some(item => item.id === id)) continue;
+          const initial = createEditorDocument(config, id, readStoredStoreConfig(identity));
+          const entry = remote.current?.appearance[id];
+          const original: EditorDocument = entry ? {
+            ...initial,
+            overrides: retainCarouselFields(entry.visualConfig, paletteOverrides(entry, remote.current?.library) ?? {}),
+            paletteId: entry.paleta_id,
+          } : initial;
+          pending.push({ id, document: original, baseline: original });
+        }
+        for (const item of pending) {
+          item.document = applySharedCarousel(item.document, sharedCarousel);
+        }
+      }
       for(const item of pending)if(JSON.stringify(item.document.blockStyles??{})!==JSON.stringify(item.baseline.blockStyles??{}))await saveBlockStyles(item.id,item.document.blockStyles??{});
       const appearances:Appearance={};
       const paletteLibrary=await fetchPalettes();
@@ -192,17 +252,24 @@ export default function ThemeEditor() {
         const palette=paletteLibrary.propias.find(value=>value.id===item.document.paletteId);
         const paletteMatches=palette&&Object.entries(palette.colores).every(([key,value])=>effective.global.colors[key as keyof typeof effective.global.colors]===value);
         const legacy=Object.fromEntries(Object.entries({...item.document.storeColors,...item.document.templateColors}).map(([key,value])=>[key.replace('Color',''),value]));
-        const visualConfig=mergeVisualOverrides(mergeVisualOverrides(item.document.storeOverrides,{global:{colors:legacy}}),item.document.overrides);
+        const visualConfig=retainCarouselFields(item.document.overrides, mergeVisualOverrides(mergeVisualOverrides(item.document.storeOverrides,{global:{colors:legacy}}),item.document.overrides));
         appearances[item.id]={visualConfig,paleta_id:paletteMatches?palette.id:null};
       }
       await saveAppearance(appearances);
       let nextConfig=config;
       for(const item of pending)nextConfig=publishEditorDocument(nextConfig,item.id,item.document);
       if(!setConfig({...nextConfig,template}))throw new Error('La apariencia se guardó en el servidor, pero no pudimos guardar la copia local. Conservamos el borrador para reintentar.');
-      for(const item of Object.values(templateDrafts.current))if(item){item.baseline={...item.history.present,landing:savedContent};item.history.present={...item.history.present,landing:savedContent};}
-      const published={...submitted,landing:savedContent,paletteId:appearances[template]?.paleta_id};
+      if (remote.current) {
+        remote.current.appearance = { ...remote.current.appearance, ...appearances };
+      }
+      for (const item of pending) {
+        if (item.id === template) continue;
+        const stored = { ...item.document, landing: savedContent, paletteId: appearances[item.id]?.paleta_id };
+        templateDrafts.current[item.id] = { baseline: stored, history: createHistory(stored) };
+      }
+      const published={...applySharedCarousel(submitted, sharedCarousel),landing:savedContent,paletteId:appearances[template]?.paleta_id};
       setHistory(current=>({...current,present:published}));setBaseline(published);setSaved(true);
-      setNotice('Cambios guardados. El contenido, las fuentes, la paleta y la apariencia están disponibles en tu tienda.');
+      setNotice('Cambios guardados. El carrusel se aplica a las cuatro plantillas; la apariencia individual se conserva.');
       return true;
     }catch(error){setSaveError(true);setNotice((savedContent!==baseline.landing?'El contenido ya se guardó. La apariencia sigue pendiente. ':'')+(error instanceof Error?error.message:'No se pudieron guardar los cambios. Conservamos tu borrador.'));return false;}
     finally{setSaving(false);}
@@ -231,10 +298,10 @@ export default function ThemeEditor() {
   return <div aria-busy={saving} className={`ve-editor ve-redesign ${expanded ? 've-expanded' : ''}`}>
     <header className="ve-toolbar">
       <Link className="ve-institution" aria-label="Volver a Mi tienda · Universidad Autónoma de Chile" to="/emprendedor/diseno"><img src="/logo-universidad-autonoma.png" alt="" /><span>Universidad Autónoma de Chile</span></Link><strong>{config.name || 'Mi tienda'}<small>Editor visual de tu tienda</small></strong>
-      <button type="button" disabled={!history.past.length || saving} onClick={() => setHistory(undoHistory)}>Deshacer</button><button type="button" disabled={!history.future.length || saving} onClick={() => setHistory(redoHistory)}>Rehacer</button>
+      <button type="button" disabled={!history.past.length || saving} onClick={() => stepEditorHistory('undo')}>Deshacer</button><button type="button" disabled={!history.future.length || saving} onClick={() => stepEditorHistory('redo')}>Rehacer</button>
       <button type="button" aria-pressed={expanded} onClick={() => setExpanded(!expanded)}>{expanded ? 'Volver al editor' : 'Ampliar vista'}</button><button type="button" aria-expanded={inspectorOpen} aria-controls="ve-properties" onClick={() => setInspectorOpen(!inspectorOpen)}>Opciones</button>
       <span role="status" aria-live="polite" className={saveError ? 've-save-error' : dirty ? 've-dirty' : 've-saved'}>{saving ? 'Guardando…' : saveError ? 'No se pudo guardar' : dirty ? 'Cambios sin guardar' : saved ? '✓ Guardado' : '✓ Sin cambios pendientes'}</span>
-      <button type="button" disabled={!dirty || saving || loadingContent || contentLoadFailed} onClick={() => { templateDrafts.current = {}; setHistory(createHistory(baseline)); setSaved(false); setSaveError(false); setNotice('Borrador descartado.'); if (template !== config.template) { discarding.current = true; setParams({plantilla:config.template}); } }}>Descartar cambios</button>
+      <button type="button" disabled={!dirty || saving || loadingContent || contentLoadFailed} onClick={() => { templateDrafts.current = {}; setSharedCarousel(readSharedCarousel(resolveEditorDocument(baseline, template).hero)); setHistory(createHistory(baseline)); setSaved(false); setSaveError(false); setNotice('Borrador descartado.'); if (template !== config.template) { discarding.current = true; setParams({plantilla:config.template}); } }}>Descartar cambios</button>
       <button type="button" className="ve-primary" disabled={!dirty || saving || loadingContent || contentLoadFailed} onClick={save}>{saving ? 'Guardando…' : 'Guardar cambios'}</button>
     </header>
     <fieldset className="ve-editor-controls" disabled={saving || loadingContent}>
@@ -260,7 +327,14 @@ export default function ThemeEditor() {
       <aside className="ve-properties" id="ve-properties" aria-label="Opciones del elemento seleccionado" hidden={!inspectorOpen}>
         <div className="ve-property-tabs" role="group" aria-label="Edición contextual"><button type="button" aria-pressed={tool === 'style'} onClick={() => chooseTool('style')}>Apariencia</button><button type="button" aria-pressed={tool === 'content'} onClick={() => chooseTool('content')}>Contenido</button><button type="button" aria-label="Ocultar propiedades" onClick={() => setInspectorOpen(false)}>×</button></div>
         <div className="ve-inspector-heading"><div><small>{tool === 'templates' ? 'ELIGE TU ESTILO' : imageMode ? 'IMAGEN SELECCIONADA' : 'EDICIÓN CONTEXTUAL'}</small><h1 aria-live="polite">{tool === 'templates' ? 'Plantillas de tienda' : imageMode ? 'Imágenes' : currentLabel}</h1></div>{!imageMode && !selectedBlock && SECTION_HELP[selectedSection] && <FieldHelp label={currentLabel || ''}>{SECTION_HELP[selectedSection]!}</FieldHelp>}</div>
-        {tool === 'templates' ? <TemplateGallery selected={template} onSelect={id => { if (id !== template) setParams({plantilla:id}); }} /> : tool === 'content' ? <ContentInspector section={selectedSection} home={previewPage === 'home'} error={contentError} landing={draft.landing} onChange={landing=>setDraft(current=>({...current,landing}))} /> : selectedBlock && tool === 'style' ? <><p className="ve-hint ve-scope-hint">{editScope === 'all' ? 'Diseño general · Se adapta a todas las pantallas.' : `Solo ${optionLabel(viewport).toLowerCase()}.`}</p><BlockAppearanceInspector key={selectedBlock.id} block={selectedBlock} styles={draft.blockStyles ?? {}} device={viewport} onEdit={(key,value) => setDraft(current => ({...current,blockStyles:editBlockAppearance(current.blockStyles ?? {},selectedBlock.id,key,value,editScope,viewport)}))} onReset={() => setDraft(current => { const next={...current.blockStyles};delete next[selectedBlock.id];return {...current,blockStyles:next};})} /></> : imageMode && !selectedImage ? <ContentInspector section={selectedSection} home={previewPage==='home'} error={contentError} landing={draft.landing} imagesOnly onChange={landing=>setDraft(current=>({...current,landing}))} /> : imageMode && selectedImage ? <><p className="ve-hint">Reemplazar la imagen se aplica a todos los dispositivos.</p><LegacyImageInspector key={selectedImage.key} selected={selectedImage} document={draft} onChange={setDraft} /></> : <><p className="ve-hint ve-scope-hint">{editScope === 'all' ? 'Diseño general · Cada ajuste se aplica a todas las pantallas. Reemplaza la variante de esa propiedad.' : `Apariencia exclusiva de ${optionLabel(viewport).toLowerCase()}.`}</p><VisualInspector key={`${selectedSection}:${activePage}:${inspectorGroup ?? ''}`} section={selectedSection} effective={effective} document={draft} viewport={viewport} editScope={editScope} catalogPage={previewPage === 'catalog'} page={activePage} groupLabel={inspectorGroup} onPaletteSelect={paletteId=>setDraft(current=>({...current,paletteId}))} onEditMany={edits => setDraft(current => Object.entries(edits).reduce((document, [path,value]) => editScopedProperty(document,template,path,value,editScope,viewport), current))} onEdit={(path, value) => setDraft(current => editScopedProperty(current, template, path, value, editScope, viewport))} onReset={path => setDraft(current => resetProperty(current, path))} /><button className="ve-reset-section ve-danger" type="button" onClick={resetVisibleSection}>Restablecer sección ↺</button></>}
+        {tool === 'templates' ? <TemplateGallery selected={template} onSelect={id => { if (id !== template) setParams({plantilla:id}); }} /> : tool === 'content' ? <ContentInspector section={selectedSection} home={previewPage === 'home'} error={contentError} landing={draft.landing} onChange={landing=>setDraft(current=>({...current,landing}))} /> : selectedBlock && tool === 'style' ? <><p className="ve-hint ve-scope-hint">{editScope === 'all' ? 'Diseño general · Se adapta a todas las pantallas.' : `Solo ${optionLabel(viewport).toLowerCase()}.`}</p><BlockAppearanceInspector key={selectedBlock.id} block={selectedBlock} styles={draft.blockStyles ?? {}} device={viewport} onEdit={(key,value) => setDraft(current => ({...current,blockStyles:editBlockAppearance(current.blockStyles ?? {},selectedBlock.id,key,value,editScope,viewport)}))} onReset={() => setDraft(current => { const next={...current.blockStyles};delete next[selectedBlock.id];return {...current,blockStyles:next};})} /></> : imageMode && !selectedImage ? <ContentInspector section={selectedSection} home={previewPage==='home'} error={contentError} landing={draft.landing} imagesOnly onChange={landing=>setDraft(current=>({...current,landing}))} /> : imageMode && selectedImage ? <><p className="ve-hint">Reemplazar la imagen se aplica a todos los dispositivos.</p><LegacyImageInspector key={selectedImage.key} selected={selectedImage} document={draft} onChange={setDraft} /></> : <><p className="ve-hint ve-scope-hint">{editScope === 'all' ? 'Diseño general · Cada ajuste se aplica a todas las pantallas. Reemplaza la variante de esa propiedad.' : `Apariencia exclusiva de ${optionLabel(viewport).toLowerCase()}.`}</p><VisualInspector key={`${selectedSection}:${activePage}:${inspectorGroup ?? ''}`} section={selectedSection} effective={effective} document={draft} viewport={viewport} editScope={editScope} catalogPage={previewPage === 'catalog'} page={activePage} groupLabel={inspectorGroup} onPaletteSelect={paletteId=>setDraft(current=>({...current,paletteId}))} onEditMany={edits => setDraft(current => Object.entries(edits).reduce((document, [path,value]) => editScopedProperty(document,template,path,value,editScope,viewport), current))} onEdit={(path, value) => setDraft(current => editScopedProperty(current, template, path, value, editScope, viewport))} onReset={path => setDraft(current => resetProperty(current, path))} />{selectedSection === 'hero' && previewPage === 'home' && (<HeroCarouselInspector hero={effective.hero} imageCount={draft.landing?.imagenes_carrusel?.length ?? 0} onEdit={(field, value) => {
+          if (field !== 'gap') {
+            setSharedCarousel(current => ({ ...(
+              current ?? readSharedCarousel(effective.hero)
+            ), [field]: value } as SharedCarouselSettings));
+          }
+          setDraft(current => editScopedProperty(current, template, `hero.${field}`, value, 'all', 'desktop'));
+        }} />)}<button className="ve-reset-section ve-danger" type="button" onClick={resetVisibleSection}>Restablecer sección ↺</button></>}
         <details className="ve-restore"><summary>Opciones del diseño</summary><button type="button" className="ve-danger" onClick={() => setRestoreRequested(true)}>Volver al diseño original</button><Link to="/emprendedor/diseno">Volver a Mi tienda</Link></details>
       </aside>
     </div>

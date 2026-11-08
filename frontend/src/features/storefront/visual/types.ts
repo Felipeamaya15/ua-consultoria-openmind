@@ -107,6 +107,11 @@ export interface VisualSections {
     textMaxWidth: number;
     gap: number;
     ctaPosition: 'inline' | 'below';
+    /** Personalización de portada por plantilla; los valores omitidos usan defaults. */
+    carouselMode?: 'static' | 'manual' | 'automatic';
+    carouselInterval?: 5 | 10 | 20;
+    carouselTransition?: 'fade' | 'slide' | 'zoom' | 'blur' | 'rise' | 'reveal';
+    carouselIndicators?: boolean;
   };
   heroCta: {
     size: 'small' | 'medium' | 'large';

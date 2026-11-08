@@ -2,7 +2,7 @@ import { VISUAL_SECTION, type VisualSectionId } from '../../storefront/visual/se
 export type { VisualSectionId } from '../../storefront/visual/sectionIds';
 export const VISUAL_SECTIONS = [
   [VISUAL_SECTION.global, 'Estilo general'], [VISUAL_SECTION.topBar, 'Identidad institucional'], [VISUAL_SECTION.header, 'Encabezado'],
-  [VISUAL_SECTION.hero, 'Banner principal'], [VISUAL_SECTION.heroCta, 'Botón principal'], [VISUAL_SECTION.categories, 'Categorías'],
+  [VISUAL_SECTION.hero, 'Portada'], [VISUAL_SECTION.heroCta, 'Botón principal'], [VISUAL_SECTION.categories, 'Categorías'],
   [VISUAL_SECTION.productGrid, 'Distribución de productos'], [VISUAL_SECTION.productCard, 'Tarjeta de producto'],
   [VISUAL_SECTION.sections, 'Secciones generales'], [VISUAL_SECTION.contact, 'Contacto'], [VISUAL_SECTION.location, 'Ubicación'],
   [VISUAL_SECTION.footer, 'Pie de página'], [VISUAL_SECTION.catalog, 'Catálogo'],

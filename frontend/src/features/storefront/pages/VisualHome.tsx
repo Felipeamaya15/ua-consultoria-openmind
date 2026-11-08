@@ -8,6 +8,7 @@ import { useStore } from '../context/StoreContext';
 import { LandingStatus } from '../../landing/components/LandingStatus';
 import { Link } from 'react-router-dom';
 import { Icon } from '../components/ui';
+import { HeroCarousel } from '../components/HeroCarousel';
 
 import { formatPrice } from '../data/mockData';
 
@@ -29,12 +30,7 @@ export default function VisualHome() {
             flex items-end
           "
         >
-          <img data-visual-part="heroImage"
-            data-landing-image={landing?.imagen_principal ? true : undefined}
-            src={landing?.imagen_principal || undefined} hidden={!landing?.imagen_principal}
-            alt={landing?.titulo || 'Imagen principal de la tienda'}
-            className="absolute inset-0 w-full h-full object-cover"
-          />
+          <HeroCarousel landing={landing} />
 
           <div data-visual-part="heroOverlay"
             className="
