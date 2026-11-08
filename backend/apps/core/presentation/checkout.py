@@ -18,6 +18,7 @@ from apps.authentication.presentation.profile import IsCustomer, StrictSerialize
 from apps.catalog.domain.stock import validate_stock, is_variant_active
 from apps.catalog.infrastructure.repositories import ProductRepository
 from apps.core.infrastructure.expiracion_pedidos import liberar_vencidos_de_tienda
+from apps.core.infrastructure.stock_pedidos import cantidad_apartada
 from apps.core.infrastructure.notificaciones_pedido import notificar_recepcion
 from apps.core.infrastructure.tenant import resolver_tienda
 from apps.core.models import Pedido, ItemPedido, Tienda, Producto, ConfiguracionPago, Promocion
@@ -156,7 +157,7 @@ class CheckoutOrderAPIView(ErroresDeCotizacionMixin, APIView):
                     if (not price.is_finite() or not base.is_finite() or price < 0 or base < 0
                             or price > base or base > Decimal('9999999999.99')):
                         raise ValueError('Precio invalido.')
-                    if quantity > variant.get('stock', 0):
+                    if quantity > variant.get('stock', 0) - cantidad_apartada(tienda.pk, key[0], item['sku']):
                         raise ValueError(f"Stock insuficiente para {item['sku']}.")
                 except (ValueError, InvalidOperation, KeyError) as exc:
                     raise ValidationError({'items': str(exc)}) from exc
@@ -200,30 +201,6 @@ class CheckoutOrderAPIView(ErroresDeCotizacionMixin, APIView):
             if promotion_amounts.promotion:
                 Promocion.objects.filter(pk=promotion_amounts.promotion.pk).update(usos=F('usos') + 1)
             result = self.result(order, self._url_pago(order, tienda))
-            reserved = []
-            try:
-                for line in lines.values():
-                    if not repository.decrease_stock(str(tienda.pk), line['sku'], line['cantidad']):
-                        raise ValidationError({'items': f"Stock insuficiente para {line['sku']}."})
-                    reserved.append(line)
-                    id_prod_pg = line.get('id_producto_id')
-                    if id_prod_pg:
-                        try:
-                            prod_pg = Producto.objects.select_for_update().get(pk=id_prod_pg, id_tienda=tienda)
-                            current_product = repository.get_by_id(str(tienda.pk), line['producto_mongo_id'])
-                            prod_pg.stock = sum(v.get('stock', 0) for v in current_product['variantes'])
-                            prod_pg.save(update_fields=['stock'])
-                        except Producto.DoesNotExist:
-                            pass
-            except Exception:
-                # PostgreSQL revierte su transacción; Mongo requiere compensar las reservas ya confirmadas.
-                for line in reversed(reserved):
-                    try:
-                        if not repository.restore_stock(str(tienda.pk), line['producto_mongo_id'], line['sku'], line['cantidad']):
-                            raise RuntimeError('No se encontró la reserva a restituir.')
-                    except Exception:
-                        logger.exception('No se pudo restituir stock del pedido %s, SKU %s', order.pk, line['sku'])
-                raise
             transaction.on_commit(lambda: notificar_recepcion(order))
             return success_response(data=result, mensaje='Pedido creado correctamente.', status=201)
 

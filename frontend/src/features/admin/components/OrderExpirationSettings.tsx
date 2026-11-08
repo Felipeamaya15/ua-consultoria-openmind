@@ -71,7 +71,7 @@ export function OrderExpirationSettings() {
       {loading ? <LoadingState size="sm" align="start" spacing="compact">Cargando plazos...</LoadingState> : <>
         <fieldset disabled={saving || loadFailed} className="grid gap-3 sm:grid-cols-2">
           <Input
-            label="Pagos en línea (Webpay, PayPal y Mercado Pago), en horas" type="number" inputMode="numeric" min={1} max={MAX_HOURS} step={1}
+            label="Pagos en línea (Webpay, PayPal, Mercado Pago y TUU), en horas" type="number" inputMode="numeric" min={1} max={MAX_HOURS} step={1}
             value={draft.online} onChange={event => { setMessage(null); setDraft({ ...draft, online: event.target.value }); }}
             error={online === null ? `Escribe un número entero de 1 a ${MAX_HOURS}.` : undefined}
             persistentHint hint="Normalmente el comprador paga en minutos. Recomendado: 2 horas."

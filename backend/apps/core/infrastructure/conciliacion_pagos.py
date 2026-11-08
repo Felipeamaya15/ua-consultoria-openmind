@@ -11,6 +11,7 @@ from django.db import transaction
 from apps.catalog.domain.exceptions import PagoGatewayException
 from apps.catalog.domain.ports.payment_gateway import EstadoPago
 
+from apps.core.infrastructure.stock_pedidos import descontar_stock_de_pedido
 logger = logging.getLogger(__name__)
 
 # Una orden de PayPal aprobada que nadie capturo no puede cobrarse sola (la captura la hace este servidor y solo
@@ -35,6 +36,8 @@ def marcar_pedido_pagado(pedido_pk):
         if pasa_a_pagado:
             pedido.estado = 'pagado'
             pedido.save(update_fields=['estado'])
+    if pedido.estado in pedido.ESTADOS_PAGADOS:
+        descontar_stock_de_pedido(pedido.pk)
     if pasa_a_pagado:
         try:
             from apps.core.infrastructure.notificaciones_pedido import notificar_cambio_de_estado

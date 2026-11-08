@@ -644,6 +644,9 @@ class ConfirmarPagoTransbankUseCase:
             if pasa_a_pagado:
                 pedido.estado = "pagado"
                 pedido.save(update_fields=["estado"])
+        if pedido.estado in Pedido.ESTADOS_PAGADOS:
+            from apps.core.infrastructure.stock_pedidos import descontar_stock_de_pedido
+            descontar_stock_de_pedido(pedido.pk)
         if pasa_a_pagado:
             # Correo de pago exitoso al comprador (SCRUM-429); no interrumpe la confirmación si falla.
             from apps.core.infrastructure.notificaciones_pedido import notificar_cambio_de_estado

@@ -329,7 +329,7 @@ class RegistroTransferenciasTests(TransferFixtureMixin, TestCase):
         self.assertEqual(order.contacto, self.payload['contacto'])
         self.assertEqual(order.estado, 'pendiente')
 
-    def test_idempotent_retry_does_not_duplicate_transfer_items_or_stock_decrease(self):
+    def test_idempotent_retry_does_not_duplicate_transfer_items_and_does_not_reserve_stock(self):
         first = self.api.post(self.checkout_url, self.payload, format='json')
         self.assertEqual(first.status_code, 201, first.data)
         second = self.api.post(self.checkout_url, self.payload, format='json')
@@ -337,21 +337,21 @@ class RegistroTransferenciasTests(TransferFixtureMixin, TestCase):
         self.assertEqual(first.data['data']['id_pedido'], second.data['data']['id_pedido'])
         self.assertEqual(Pedido.objects.count(), 1)
         self.assertEqual(ItemPedido.objects.count(), 1)
-        self.assertEqual(self.repository.descuentos, [('QA-M', 2)])
+        self.assertEqual(self.repository.descuentos, [])  # RN-03: el stock se descuenta al confirmar el pago
         self.product.refresh_from_db()
-        self.assertEqual(self.product.stock, 5)
+        self.assertEqual(self.product.stock, 7)
         self.api.force_authenticate(self.owner)
         self.assertEqual(len(self.api.get(self.url).data['data']), 1)
 
-    def test_reusing_checkout_key_with_changed_contact_is_rejected_without_stock_changes(self):
+    def test_reusing_checkout_key_with_changed_contact_is_rejected(self):
         first = self.api.post(self.checkout_url, self.payload, format='json')
         self.assertEqual(first.status_code, 201, first.data)
         changed = {**self.payload, 'contacto': {**self.payload['contacto'], 'email': 'changed@example.com'}}
         self.assertEqual(self.api.post(self.checkout_url, changed, format='json').status_code, 400)
         self.assertEqual(Pedido.objects.count(), 1)
-        self.assertEqual(self.repository.descuentos, [('QA-M', 2)])
+        self.assertEqual(self.repository.descuentos, [])  # RN-03: el stock se descuenta al confirmar el pago
         self.product.refresh_from_db()
-        self.assertEqual(self.product.stock, 5)
+        self.assertEqual(self.product.stock, 7)
 
     def test_other_checkout_payment_methods_do_not_become_pending_transfers(self):
         from apps.core.models import ConfiguracionTransbank, ConfiguracionPayPal, ConfiguracionMercadoPago

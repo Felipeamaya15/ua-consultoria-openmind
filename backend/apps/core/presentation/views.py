@@ -6,6 +6,7 @@ from django.db import transaction
 
 from apps.core.delivery import delivery_data, delivery_for_store
 from apps.core.infrastructure.expiracion_pedidos import devolver_stock_de_pedido_cancelado, liberar_vencidos_de_tienda
+from apps.core.infrastructure.stock_pedidos import descontar_stock_de_pedido
 from apps.core.infrastructure.notificaciones_pedido import notificar_cambio_de_estado, notificar_pago_rechazado
 from apps.core.infrastructure.tenant import resolver_tienda, resolver_tienda_id
 from apps.core.models import (
@@ -63,12 +64,12 @@ class ConfiguracionPagoAPIView(APIView):
             config_pago, _ = ConfiguracionPago.objects.get_or_create(tienda=tienda)
             datos = serializer.validated_data
             for metodo, claves in (('linkify', ('idCuenta', 'clavePrivada')), ('tuu', ('accountId', 'secretKey'))):
-               nuevo = datos.get(metodo)
-            if (isinstance(nuevo, dict) and nuevo.get('enabled') is False
+                nuevo = datos.get(metodo)
+                if (isinstance(nuevo, dict) and nuevo.get('enabled') is False
                         and not any(nuevo.get('fields', {}).get(k) for k in claves)):
-                previos = ((config_pago.datos or {}).get(metodo) or {}).get('fields')
-                if isinstance(previos, dict) and previos:
-                    datos[metodo] = {'enabled': False, 'fields': dict(previos)}
+                    previos = ((config_pago.datos or {}).get(metodo) or {}).get('fields')
+                    if isinstance(previos, dict) and previos:
+                        datos[metodo] = {'enabled': False, 'fields': dict(previos)}
             config_pago.datos = datos
             config_pago.save()
 
@@ -219,6 +220,8 @@ class VerificarTransferenciaLinkifyAPIView(APIView):
                         pedido.save(update_fields=['estado'])
                     elif pedido.estado != 'pagado':
                         return error_response('El pedido requiere revisión manual.', 'ESTADO_PEDIDO_INVALIDO', status=409)
+                if pedido.estado in Pedido.ESTADOS_PAGADOS:
+                    descontar_stock_de_pedido(pedido.pk)
                 if pasa_a_pagado:
                     notificar_cambio_de_estado(pedido, 'pendiente')
                 return success_response(mensaje="¡Match exitoso! Transferencia encontrada y pedido actualizado.")
@@ -293,6 +296,7 @@ class AprobarTransferenciaManualAPIView(APIView):
             pedido.estado = 'pagado'
             pedido.save(update_fields=['estado'])
 
+        descontar_stock_de_pedido(pedido.pk)
         notificar_cambio_de_estado(pedido, 'pendiente')
         return success_response(
             data={'id_pedido': pedido.pk, 'estado': pedido.estado},

@@ -16,7 +16,7 @@ Las pruebas manuales de SCRUM-499 dejaron 3 casos NO CUMPLE (P1 a P3, retorno de
 | P6-P8 | Transferencia | Aprobar, rechazar, doble aprobación | CUMPLE | Sin cambios | CUMPLE |
 | P9 | Linkify | Inicio de transacción | NO EJECUTABLE (sin credenciales) | Botón "Guardar Linkify" propio; apagarlo ya no exige ni borra credenciales | **No validado** |
 | P10 | Mercado Pago | Activar y pagar | NO EJECUTABLE (no aparecía en el checkout) | Se habilita: inicio del cobro, retorno y confirmación en el servidor | Test automático OK; **probar manual con credenciales de prueba** |
-| P11 | PayPal | Activar y pagar | NO EJECUTABLE (no aparecía en el checkout) | Se habilita: cobro en USD y captura en el servidor | Test automático OK; **falta  manual** |
+| P11 | PayPal | Activar y pagar | NO EJECUTABLE (no aparecía en el checkout) | Se habilita: cobro en USD y captura en el servidor | Test automático OK; **falta prueba manual con cuenta sandbox (requiere tipo de cambio vigente)** |
 
 
 Evidencia adjuntada en: `docs/pruebas-integracion-pagos/Pruebas pagos Scrum-509`
@@ -31,7 +31,7 @@ Fuente: documentación oficial de TUU (developers.tuu.cl).
 | --- | --- | --- |
 | Qué es | Intento de pago online con página de pago de TUU | Webservice que envía el cobro a un POS físico |
 | Autenticación | `x_account_id` + llave secreta (firma HMAC-SHA256 `x_signature`) | API Key del comercio (Espacio de Trabajo, Pagos > Configuración > API) |
-| Endpoint | Integración: `https://frontend-api.payment.haulmer.dev/v1/payment`; Producción: `https://core.payment.haulmer.com/api/v1/payment` |` |
+| Endpoint | Integración: `https://frontend-api.payment.haulmer.dev/v1/payment`; Producción: `https://core.payment.haulmer.com/api/v1/payment` | |
 |Resultado | Callback POST servidor a servidor (HTTPS) + redirecciones GET | Consulta del estado de la solicitud (Pending, Sent, Canceled, Processing, Failed, Completed) |
 | Límites | Solo CLP | Monto entre 100 y 99.999.999; 1 solicitud por minuto y máximo 5 en cola por terminal |
 | Ambiente de pruebas | **Sí**: credenciales y tarjetas de prueba publicadas | No documentado: requiere dispositivo |

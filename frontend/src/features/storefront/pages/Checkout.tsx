@@ -792,6 +792,15 @@ export default function Checkout() {
 
       const orderNumber = String(order.identificador || order.id_pedido);
 
+      if (paymentMethod === 'PayPal' || paymentMethod === 'MercadoPago') {
+        try {
+          sessionStorage.setItem(`order-tracking:${orderNumber}`, JSON.stringify({
+            identificador: order.identificador, email: contact.email.trim(),
+          }));
+        } catch {
+        }
+      }
+
       if (paymentMethod === 'Transbank') {
         try {
           sessionStorage.setItem(`order-tracking:${orderNumber}`, JSON.stringify({

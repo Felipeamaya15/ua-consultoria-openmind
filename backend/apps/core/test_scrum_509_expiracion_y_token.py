@@ -86,7 +86,7 @@ class ExpiracionYTokenTests(TestCase):
 
     # --- Expiracion y stock ---
     @patch(ADAPTADOR)
-    def test_un_pedido_vencido_no_se_envia_a_webpay_y_se_cancela_devolviendo_el_stock(self, adaptador):
+    def test_un_pedido_vencido_no_se_envia_a_webpay_y_se_cancela_sin_tocar_el_stock(self, adaptador):
         self.envejecer(fecha_creacion=timezone.now() - timedelta(hours=3))
         repositorio = MagicMock()
         repositorio.restore_stock.return_value = True
@@ -96,10 +96,10 @@ class ExpiracionYTokenTests(TestCase):
         self.assertEqual((r.status_code, r.data['error']['codigo']), (409, 'PEDIDO_EXPIRADO'))
         adaptador.return_value.iniciar_transaccion.assert_not_called()
         self.assertEqual(Pedido.objects.get(pk=self.pedido.pk).estado, 'cancelado')
-        repositorio.restore_stock.assert_called_once_with(str(self.tienda.pk), 'a' * 24, 'SKU-1', 2)
+        repositorio.restore_stock.assert_not_called()
         with patch(REPOSITORIO, return_value=repositorio), self.captureOnCommitCallbacks(execute=True):
             self.assertEqual(self.pagar().status_code, 409)
-        repositorio.restore_stock.assert_called_once()
+        repositorio.restore_stock.assert_not_called()
 
     @patch(ADAPTADOR)
     def test_el_endpoint_de_inicio_de_webpay_tambien_rechaza_un_pedido_vencido(self, adaptador):
@@ -184,10 +184,11 @@ class PlazoManualSinVencimientoYStockTests(TestCase):
         self.repositorio.restore_stock.return_value = True
         self.repositorio.get_by_id.return_value = {'variantes': [{'stock': 5}]}
 
-    def pedido(self, medio='Transferencia', horas=60, estado='pendiente'):
+    def pedido(self, medio='Transferencia', horas=60, estado='pendiente', descontado=False):
         pedido = Pedido.objects.create(
             tienda=self.tienda, monto_total=Decimal('9990'), estado=estado, nombre_contacto='Ana',
-            correo_contacto='ana@example.com', medio_pago=medio, entrega={'metodo': 'Retiro'})
+            correo_contacto='ana@example.com', medio_pago=medio, entrega={'metodo': 'Retiro'},
+            stock_descontado=descontado)
         ItemPedido.objects.create(id_pedido=pedido, producto_mongo_id='b' * 24, sku='CURSO-1', cantidad=3,
                                   precio_unitario=Decimal('3330'), nombre_producto='Curso')
         Pedido.objects.filter(pk=pedido.pk).update(fecha_creacion=timezone.now() - timedelta(hours=horas))
@@ -224,8 +225,9 @@ class PlazoManualSinVencimientoYStockTests(TestCase):
 
     def test_el_stock_se_devuelve_una_sola_vez(self):
         from apps.core.infrastructure.expiracion_pedidos import devolver_stock_de_pedido_cancelado
-        pedido = self.pedido(horas=60)
-        self.assertEqual(self.expirar(), 1)
+        pedido = self.pedido(horas=1, estado='cancelado', descontado=True)
+        with patch(REPOSITORIO, return_value=self.repositorio), self.captureOnCommitCallbacks(execute=True):
+            self.assertTrue(devolver_stock_de_pedido_cancelado(pedido))
         self.repositorio.restore_stock.assert_called_once_with(str(self.tienda.pk), 'b' * 24, 'CURSO-1', 3)
         pedido.refresh_from_db()
         self.assertTrue(pedido.stock_devuelto)
@@ -240,19 +242,20 @@ class PlazoManualSinVencimientoYStockTests(TestCase):
             self.assertFalse(devolver_stock_de_pedido_cancelado(pedido))
         self.repositorio.restore_stock.assert_not_called()
 
-    def test_rechazar_una_transferencia_devuelve_el_stock(self):
+    def test_rechazar_una_transferencia_pendiente_no_devuelve_stock_porque_nunca_se_descontó(self):
         pedido = self.pedido(horas=1)
         api = APIClient()
         api.force_authenticate(self.duenio)
         with patch(REPOSITORIO, return_value=self.repositorio), self.captureOnCommitCallbacks(execute=True):
             r = api.post(f'/api/pagos/transferencias/{pedido.pk}/rechazar/')
         self.assertEqual(r.status_code, 200, r.data)
-        self.repositorio.restore_stock.assert_called_once_with(str(self.tienda.pk), 'b' * 24, 'CURSO-1', 3)
+        self.repositorio.restore_stock.assert_not_called()
 
     def test_cancelar_a_mano_un_pedido_pagado_devuelve_stock_pero_uno_despachado_no(self):
         api = APIClient()
         api.force_authenticate(self.duenio)
-        pagado, despachado = self.pedido(horas=1, estado='pagado'), self.pedido(horas=1, estado='en_camino')
+        pagado = self.pedido(horas=1, estado='pagado', descontado=True)
+        despachado = self.pedido(horas=1, estado='en_camino', descontado=True)
         with patch(REPOSITORIO, return_value=self.repositorio), self.captureOnCommitCallbacks(execute=True):
             for pedido in (pagado, despachado):
                 r = api.patch(f'/api/tienda/pedidos/{pedido.pk}/estado/', {'estado': 'cancelado'}, format='json')
@@ -277,7 +280,7 @@ class PlazoManualSinVencimientoYStockTests(TestCase):
         self.assertCountEqual(ids, [vigente.pk, otro.pk])
         self.assertEqual(Pedido.objects.get(pk=otro.pk).estado, 'pendiente')
         self.assertFalse(Pedido.objects.get(pk=otro.pk).stock_devuelto)
-        self.repositorio.restore_stock.assert_called_once()  # solo la llamada directa de arriba
+        self.repositorio.restore_stock.assert_not_called()  # los pendientes vencidos no descontaron stock
         self.assertTrue(all(fila['vence_en'] for fila in r.data['data']))
         from apps.core.infrastructure.expiracion_pedidos import expirar_pedidos_pendientes
         with patch(REPOSITORIO, return_value=self.repositorio), self.captureOnCommitCallbacks(execute=True):

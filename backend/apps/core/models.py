@@ -220,6 +220,7 @@ class Pedido(models.Model):
     webpay_token = models.CharField(max_length=512, blank=True, default='')
     webpay_url = models.CharField(max_length=2048, blank=True, default='')
     webpay_iniciado_en = models.DateTimeField(null=True, blank=True)
+    stock_descontado = models.BooleanField(default=False)
     stock_devuelto = models.BooleanField(default=False)
     contacto = models.JSONField(default=dict, blank=True)
     entrega = models.JSONField(default=dict, blank=True)

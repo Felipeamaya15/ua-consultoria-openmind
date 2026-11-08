@@ -16,7 +16,8 @@ MEDIOS_EN_LINEA = ('Transbank',)
 # Pago manual: el comprador necesita tiempo para transferir y el aviso depende de la tienda o de Linkify.
 MEDIOS_MANUALES = ('Transferencia', 'Linkify')
 MEDIOS_EXTERNOS = ('PayPal', 'MercadoPago')
-MEDIOS_EXPIRABLES = MEDIOS_EN_LINEA + MEDIOS_EXTERNOS + MEDIOS_MANUALES
+MEDIOS_CON_CALLBACK = ('TUU',)
+MEDIOS_EXPIRABLES = MEDIOS_EN_LINEA + MEDIOS_EXTERNOS + MEDIOS_CON_CALLBACK + MEDIOS_MANUALES
 MOTIVO_PLAZO_VENCIDO = 'plazo_vencido' 
 
 
@@ -64,7 +65,7 @@ def plazo_vencido(pedido, ahora=None):
 
 def pedido_expirado(pedido, ahora=None):
     limite = vence_en(pedido)
-    if limite is not None and pedido.medio_pago in MEDIOS_EXTERNOS:
+    if limite is not None and pedido.medio_pago in MEDIOS_EXTERNOS + MEDIOS_CON_CALLBACK:
         limite += margen_pasarela()
     return limite is not None and (ahora or timezone.now()) >= limite
 
@@ -100,7 +101,7 @@ def devolver_stock_de_pedido_cancelado(pedido):
 
     with transaction.atomic():
         bloqueado = Pedido.objects.select_for_update().filter(pk=pedido.pk).first()
-        if not bloqueado or bloqueado.estado != 'cancelado' or bloqueado.stock_devuelto:
+        if not bloqueado or bloqueado.estado != 'cancelado' or bloqueado.stock_devuelto or not bloqueado.stock_descontado:
             return False
         bloqueado.stock_devuelto = True
         bloqueado.save(update_fields=['stock_devuelto'])
@@ -180,7 +181,6 @@ def _candidatos(limite=None, externos=True, **filtros):
 
 
 def ejecutar_ciclo_de_expiracion(limite=500):
-    """
     resumen = Counter()
     for pk in list(_candidatos(limite)):
         try:

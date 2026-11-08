@@ -18,9 +18,10 @@ from rest_framework.test import APIClient
 from apps.catalog.domain.exceptions import PagoGatewayException
 from apps.catalog.domain.ports.payment_gateway import EstadoPago, ResultadoPago
 from apps.catalog.infrastructure.adapters.mercadopago_adapter import MercadoPagoAdapter
+from apps.catalog.infrastructure.adapters.tuu_adapter import firmar
 from apps.core.infrastructure.expiracion_pedidos import (
     ejecutar_ciclo_de_expiracion, liberar_vencidos_de_tienda, pedido_expirado, plazo_vencido)
-from apps.core.models import ConfiguracionMercadoPago, ConfiguracionPayPal, ItemPedido, Pedido, Tienda
+from apps.core.models import ConfiguracionMercadoPago, ConfiguracionPago, ConfiguracionPayPal, ItemPedido, Pedido, Tienda
 
 MP = 'apps.core.presentation.pagos_externos.MercadoPagoAdapter'
 PP = 'apps.core.presentation.pagos_externos.PayPalAdapter'
@@ -74,13 +75,13 @@ class BaseConciliacion(TestCase):
 
 class MercadoPagoExpiracionTests(BaseConciliacion):
     @patch(MP)
-    def test_sin_pagos_en_mercado_pago_se_cancela_y_vuelve_el_stock(self, adaptador):
+    def test_sin_pagos_en_mercado_pago_se_cancela_sin_tocar_el_stock(self, adaptador):
         adaptador.return_value.buscar_pagos_por_referencia.return_value = []
         pedido = self.pedido('MercadoPago')
         self.assertEqual(self.ciclo()['cancelado'], 1)
         self.assertEqual(self.estado(pedido), 'cancelado')
-        self.assertTrue(Pedido.objects.get(pk=pedido.pk).stock_devuelto)
-        self.repositorio.restore_stock.assert_called_once()
+        self.assertFalse(Pedido.objects.get(pk=pedido.pk).stock_devuelto)  # RN-03: nunca descontó stock
+        self.repositorio.restore_stock.assert_not_called()
         adaptador.return_value.buscar_pagos_por_referencia.assert_called_once_with('ORD-1')
 
     @patch(MP)
@@ -178,7 +179,7 @@ class PayPalExpiracionTests(BaseConciliacion):
         self.ciclo()
         self.assertEqual(self.estado(pedido), 'cancelado')
         adaptador.return_value.consultar_pago.assert_called_once_with('PP-1')
-        self.repositorio.restore_stock.assert_called_once()
+        self.repositorio.restore_stock.assert_not_called()  # RN-03: nunca descontó stock
 
     @patch(PP)
     def test_orden_completada_deja_el_pedido_pagado(self, adaptador):
@@ -220,6 +221,38 @@ class PayPalExpiracionTests(BaseConciliacion):
         self.ciclo()
         self.assertEqual(self.estado(pedido), 'cancelado')
 
+
+class TuuExpiracionTests(BaseConciliacion):
+    def test_un_pedido_de_tuu_vencido_se_cancela_sin_tocar_el_stock(self):
+        pedido = self.pedido('TUU')
+        self.assertEqual(self.ciclo()['cancelado'], 1)
+        self.assertEqual(self.estado(pedido), 'cancelado')
+        self.assertFalse(Pedido.objects.get(pk=pedido.pk).stock_devuelto)  # RN-03: nunca descontó stock
+        self.repositorio.restore_stock.assert_not_called()
+
+    def test_dentro_del_margen_posterior_al_plazo_no_se_cancela(self):
+        pedido = self.pedido('TUU')
+        Pedido.objects.filter(pk=pedido.pk).update(fecha_creacion=timezone.now() - timedelta(hours=2, minutes=5))
+        self.ciclo()
+        self.assertEqual(self.estado(pedido), 'pendiente')
+
+    def test_un_pedido_de_tuu_vigente_no_se_toca(self):
+        pedido = self.pedido('TUU', horas=1)
+        self.ciclo()
+        self.assertEqual(self.estado(pedido), 'pendiente')
+
+    def test_un_aviso_de_pago_sobre_un_pedido_ya_cancelado_queda_en_el_log_y_no_lo_reabre(self):
+        ConfiguracionPago.objects.create(tienda=self.tienda, datos={'tuu': {
+            'enabled': True, 'fields': {'accountId': '62224230', 'secretKey': 'clave-tuu'}}})
+        pedido = self.pedido('TUU', estado='cancelado')
+        datos = {'x_account_id': '62224230', 'x_reference': pedido.identificador, 'x_amount': '19000',
+                 'x_currency': 'CLP', 'x_result': 'completed'}
+        datos['x_signature'] = firmar(datos, 'clave-tuu')
+        with self.assertLogs('apps.core.presentation.tuu_callback', level='CRITICAL') as log:
+            r = APIClient().post(f'/api/pagos/tuu/callback/?tienda={self.tienda.pk}', datos)
+        self.assertEqual(r.status_code, 200)
+        self.assertIn('PAGO_SOBRE_PEDIDO_CANCELADO', log.output[0])
+        self.assertEqual(self.estado(pedido), 'cancelado')
 
 class RutasWebNoLlamanALasPasarelasTests(BaseConciliacion):
     @patch(PP)
