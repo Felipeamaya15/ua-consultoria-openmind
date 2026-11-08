@@ -1,10 +1,19 @@
 import { humanizeAdminError } from '../../features/admin/utils/humanizeError';
 
+export type ApiIssueField = 'productos_destacados' | 'categorias';
+
 export class ApiError extends Error {
-  constructor(message: string, public readonly status?: number, public readonly code?: string) {
-    super(message); this.name = 'ApiError';
+  constructor(
+    message: string,
+    public readonly status?: number,
+    public readonly code?: string,
+    public readonly issueField?: ApiIssueField
+  ) {
+    super(message);
+    this.name = 'ApiError';
   }
 }
+
 const record = (value: unknown): value is Record<string, unknown> => !!value && typeof value === 'object' && !Array.isArray(value);
 const messages = (value: unknown, depth = 0): string[] => depth > 5 ? [] : typeof value === 'string' ? [value]
   : record(value) || Array.isArray(value) ? Object.entries(value).slice(0, 30)
@@ -13,6 +22,27 @@ const messages = (value: unknown, depth = 0): string[] => depth > 5 ? [] : typeo
       if (/password/i.test(key)) return nested.filter(message => /^(?:Este campo es obligatorio\.|Este campo no puede estar en blanco\.|La contraseña actual es incorrecta\.|Las contraseñas no coinciden\.|La contraseña debe (?:tener|contener) [^.:=]{1,120}\.)$/.test(message));
       return /secret|token|credential|credencial|clave[_\s-]*(?:privada|secreta)|private[_\s-]?key|api[_-]?key|authorization|trace|provider|proveedor|response|respuesta/i.test(key) ? [] : nested;
     }) : [];
+
+function findLandingIssueField(
+  value: unknown
+): ApiIssueField | undefined {
+  if (!record(value)) return undefined;
+
+  const details = record(value.contenido)
+    ? value.contenido
+    : value;
+
+  if ('productos_destacados' in details) {
+    return 'productos_destacados';
+  }
+
+  if ('categorias' in details) {
+    return 'categorias';
+  }
+
+  return undefined;
+}
+
 const statusMessages: Record<number, string> = {
   400: 'Revisa los datos ingresados e intenta nuevamente.',
   401: 'Tu sesión venció. Vuelve a iniciar sesión.',
@@ -36,12 +66,49 @@ export async function readApiEnvelope(response: Response, fallback = 'No pudimos
     throw new ApiError(response.ok ? 'La respuesta recibida no es válida. Comprueba si se guardó antes de volver a intentarlo.' : statusMessages[response.status] || fallback, response.status);
   }
   if (!response.ok || (record(body) && body.exito === false)) {
-    const error = record(body) && record(body.error) ? body.error : {};
-    const candidates = record(body) ? [...messages(error.detalles), ...messages(body.detail), ...messages(body.mensaje)] : [];
-    const safe = candidates.map(message => humanizeAdminError(message, '')).find(Boolean);
-    const code = typeof error.codigo === 'string' && /^[A-Z][A-Z0-9_]{0,63}$/.test(error.codigo) ? error.codigo : undefined;
-    throw new ApiError(safe || statusMessages[response.status] || fallback, response.status, code);
-  }
+  const error =
+    record(body) && record(body.error)
+      ? body.error
+      : {};
+
+  const candidates = record(body)
+    ? [
+        ...messages(error.detalles),
+        ...messages(body.detail),
+        ...messages(body.mensaje),
+      ]
+    : [];
+
+  const safe = candidates
+    .map(message => humanizeAdminError(message, ''))
+    .find(Boolean);
+
+  const code =
+    typeof error.codigo === 'string' &&
+    /^[A-Z][A-Z0-9_]{0,63}$/.test(error.codigo)
+      ? error.codigo
+      : undefined;
+
+  const issueField = findLandingIssueField(error.detalles);
+
+  const contextMessage =
+    issueField === 'productos_destacados'
+      ? 'Revisa Productos destacados en «Secciones de mi tienda».'
+      : issueField === 'categorias'
+        ? 'Revisa las categorías seleccionadas en «Secciones de mi tienda».'
+        : '';
+
+  const message = contextMessage
+    ? `${contextMessage}${safe ? ` ${safe}` : ''}`
+    : safe || statusMessages[response.status] || fallback;
+
+  throw new ApiError(
+    message,
+    response.status,
+    code,
+    issueField
+  );
+}
   if (!record(body) || body.exito !== true || !Object.prototype.hasOwnProperty.call(body, 'data')) {
     throw new ApiError('La respuesta recibida no es válida. Comprueba si se guardó antes de volver a intentarlo.', response.status);
   }

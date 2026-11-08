@@ -39,11 +39,11 @@ class OrderStatusIntegrationTests(TestCase):
     def test_confirmed_state_updates_list_recent_metrics_and_public_timeline(self):
         response = self.update('en_reparto')
         self.assertEqual(response.status_code, 200, response.data)
-        self.assertEqual(response.data['data']['estado'], 'en_reparto')
+        self.assertEqual(response.data['data']['estado'], 'en_camino')
         self.order.refresh_from_db()
-        self.assertEqual(self.order.estado, 'en_reparto')
-        self.assertEqual(self.api.get('/api/tienda/pedidos/').data[0]['estado'], 'en_reparto')
-        self.assertEqual(self.api.get('/api/tienda/pedidos/ultimos/').data['data'][0]['estado'], 'en_reparto')
+        self.assertEqual(self.order.estado, 'en_camino')
+        self.assertEqual(self.api.get('/api/tienda/pedidos/').data[0]['estado'], 'en_camino')
+        self.assertEqual(self.api.get('/api/tienda/pedidos/ultimos/').data['data'][0]['estado'], 'en_camino')
         dashboard = self.api.get('/api/tienda/dashboard/?periodo=7').data['data']
         self.assertEqual(dashboard['total_ventas'], '1000.00')
         self.assertEqual(dashboard['por_despachar'], 0)
@@ -51,15 +51,15 @@ class OrderStatusIntegrationTests(TestCase):
             {'identificador': self.order.identificador, 'email': self.order.correo_contacto}, format='json')
         self.assertEqual(tracking.status_code, 200, tracking.data)
         current = [step for step in tracking.data['data']['linea_tiempo'] if step['actual']]
-        self.assertEqual([step['estado'] for step in current], ['en_reparto'])
+        self.assertEqual([step['estado'] for step in current], ['en_camino'])
 
     def test_aliases_normalize_and_invalid_state_does_not_mutate(self):
-        for alias, expected in [('preparacion', 'preparando'), ('despachado', 'enviado')]:
+        for alias, expected in [('preparacion', 'pagado'), ('despachado', 'en_camino')]:
             self.assertEqual(self.update(alias).data['data']['estado'], expected)
         for invalid in ['', 'solo espacios invalidos', 'desconocido']:
             self.assertEqual(self.update(invalid).status_code, 400)
         self.order.refresh_from_db()
-        self.assertEqual(self.order.estado, 'enviado')
+        self.assertEqual(self.order.estado, 'en_camino')
         self.assertEqual(self.api.patch(self.url, {}, format='json').status_code, 400)
 
     def test_guest_and_non_owner_cannot_change_state(self):

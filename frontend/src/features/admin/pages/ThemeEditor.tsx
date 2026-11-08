@@ -22,7 +22,7 @@ import { STORE_PAGES, previewPath, CHECKOUT_PREVIEW_STEPS, type PreviewPageId } 
 import { connectVisualPreview } from '../visualEditor/preview';
 import { TemplateGallery } from '../visualEditor/templates';
 import { ContentInspector } from '../visualEditor/content';
-import { fetchLandingConfig, saveLandingConfig, saveBlockStyles } from '../../landing/services/landingService';
+import { fetchPrivateLandingConfig as fetchLandingConfig, saveLandingConfig, saveBlockStyles } from '../../landing/services/landingService';
 import '../admin.css';
 import '../visualEditor/editor.css';
 import '../visualEditor/workspace.css';

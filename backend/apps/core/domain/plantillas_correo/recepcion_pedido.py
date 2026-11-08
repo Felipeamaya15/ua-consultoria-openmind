@@ -37,8 +37,8 @@ def _sin_datos_ausentes(texto, contexto):
     return re.sub(r'\n{3,}', '\n\n', '\n'.join(lineas)).strip('\n')
 
 
-def renderizar_recepcion_pedido(pedido, plantilla=None):
-    if pedido.estado == 'cancelado':
+def renderizar_recepcion_pedido(pedido, plantilla=None, forzar=False):
+    if not forzar and pedido.estado == 'cancelado':
         raise PlantillaCorreoInvalida('No se confirma la recepción de un pedido cancelado.')
     base = plantilla or PLANTILLA_RECEPCION_PEDIDO
     contexto = contexto_pedido(pedido)

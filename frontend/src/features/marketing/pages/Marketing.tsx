@@ -8,12 +8,18 @@ import { ContentPicker } from '../components/ContentPicker';
 import { FormatPicker } from '../components/FormatPicker';
 import { DesignStudio } from '../components/DesignStudio';
 import { DraftPanel } from '../components/DraftPanel';
+import { MarketingSections } from '../components/MarketingSections';
 import { useMarketingOwner } from '../hooks/useMarketingOwner';
 import { initialTemplateHistory, templateHistory } from '../domain/editor';
 import { restoreSession, snapshot, type DraftScope, type MarketingDraft } from '../domain/drafts';
 import { draftRepository } from '../services/draftStorage';
 import { downloadPublication, publicationFilename, renderPublication, type ExportType } from '../services/exportPublication';
 import type { ContentSource, PublicationDesign } from '../domain/types';
+import { useAdmin } from '../../admin/context/AdminContext';
+import { templatePaths } from '../../admin/config/navigation';
+import { resolveSharingItem } from '../services/sharingService';
+import { sharingKey, type SharingItem, type SharingReference } from '../domain/sharing';
+import type { PublicationFormat } from '../domain/types';
 import '../marketing.css';
 import '../editor.css';
 
@@ -25,6 +31,12 @@ export default function Marketing() {
 
 function MarketingWorkspace({ scope, isCurrent }: { scope: DraftScope; isCurrent: () => boolean }) {
   const [params] = useSearchParams();
+  const {config}=useAdmin();
+  const home=window.location.origin+templatePaths[config.template];
+  const [sharingReference,setSharingReference]=useState<SharingReference>();
+  const [sharingItem,setSharingItem]=useState<SharingItem|null>(null);
+  const [sharingLoading,setSharingLoading]=useState(false);
+  const [sharingAttempt,setSharingAttempt]=useState(0);
   const [productId, setProductId] = useState(() => params.get('producto') || '');
   const [sku, setSku] = useState('');
   const [source, setSource] = useState<ContentSource>('product');
@@ -40,22 +52,26 @@ function MarketingWorkspace({ scope, isCurrent }: { scope: DraftScope; isCurrent
   const repository = useMemo(() => draftRepository(scope), [scope.apiBaseUrl, scope.storeId, scope.userId]);
   const previewRef = useRef<HTMLDivElement>(null), mounted = useRef(true);
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
-  const current = snapshot(productId, sku, source, design.format, session);
+  const current = snapshot(productId, sku, source, design.format, session, sharingReference);
   const serialized = JSON.stringify(current);
   const revision = useRef(serialized); revision.current = serialized;
   const [baseline, setBaseline] = useState(() => JSON.stringify({ publication: current, name: '' }));
-  const dirty = !!productId && JSON.stringify({ publication: current, name: name.trim() }) !== baseline;
-  const blocker = useBlocker(({ currentLocation, nextLocation }) => dirty && (currentLocation.pathname !== nextLocation.pathname || currentLocation.search !== nextLocation.search));
+  const dirty = (!!productId||!!sharingReference) && JSON.stringify({ publication: current, name: name.trim() }) !== baseline;
+  const [socialDirty, setSocialDirty] = useState(false);
+  const [mediaDirty, setMediaDirty] = useState(false);
+  const [sharingDirty,setSharingDirty]=useState(false);
+  const hasUnsavedChanges = dirty || socialDirty || mediaDirty || sharingDirty;
+  const blocker = useBlocker(({ currentLocation, nextLocation }) => hasUnsavedChanges && (currentLocation.pathname !== nextLocation.pathname || currentLocation.search !== nextLocation.search));
   useEffect(() => {
     if (blocker.state === 'blocked') {
       if (window.confirm('Tienes cambios sin guardar en Marketing. ¿Salir y descartarlos?')) blocker.proceed(); else blocker.reset();
     }
   }, [blocker]);
   useEffect(() => {
-    if (!dirty) return;
+    if (!hasUnsavedChanges) return;
     const leave = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = ''; };
     window.addEventListener('beforeunload', leave); return () => window.removeEventListener('beforeunload', leave);
-  }, [dirty]);
+  }, [hasUnsavedChanges]);
   const loadList = () => { try { setDrafts(repository.list()); setError(''); } catch (error) { setError(message(error)); } };
   useEffect(() => {
     loadList();
@@ -72,17 +88,26 @@ function MarketingWorkspace({ scope, isCurrent }: { scope: DraftScope; isCurrent
   const sources = useMarketingSources();
   const product = sources.products.find(p => p.id === productId);
   const problem = product ? productProblem(product, source) : productId && !sources.loading && !sources.productError ? 'Este producto ya no está disponible en tu catálogo. Selecciona otro.' : null;
-  const content = product && !sources.loading ? buildPublication(product, source, sku) : null;
+  const content = sharingReference ? sharingItem?.content||null : product && !sources.loading ? buildPublication(product, source, sku) : null;
+  const images=sharingReference?sharingItem?.images||[]:product?.images||[];
+  const sharingKeyValue=sharingReference?sharingKey(sharingReference):'';
+  useEffect(()=>{
+    if(!sharingReference){setSharingItem(null);return;}
+    const controller=new AbortController();setSharingLoading(true);setSharingItem(null);
+    resolveSharingItem(sharingReference,home,controller.signal).then(item=>{if(!controller.signal.aborted&&isCurrent())setSharingItem(item);}).catch(cause=>{if(!controller.signal.aborted&&isCurrent())setError(message(cause));}).finally(()=>{if(!controller.signal.aborted&&isCurrent())setSharingLoading(false);});
+    return()=>controller.abort();
+  },[sharingKeyValue,home,sharingAttempt]);
   revision.current = JSON.stringify([current, content, sources.brand, product?.images]);
   const missingVariant = !!product && !problem && !!sku && !content && !sources.loading;
   const changeProduct = (id: string) => { if (id !== productId && !discard()) return; setNotice(''); setProductId(id); setSku(''); if (id !== productId) { setSession(initialTemplateHistory()); setSessionVersion(n => n + 1); setOpened(null); if (productId) setName(''); } };
-  const refresh = () => { setSku(''); sources.refresh(); };
+  const refresh = () => { setSku(''); sources.refresh();setSharingAttempt(value=>value+1); };
   const openDraft = (row: MarketingDraft) => {
     if (!discard()) return;
     run(() => {
       const draft = repository.list().find(d => d.id === row.id);
       if (!draft) throw new Error('El borrador ya no está disponible.');
       const p = draft.publication;
+      setSharingReference(p.sharingReference);setSharingItem(null);
       setProductId(p.productId); setSku(p.sku); setSource(p.source); setDesign({ format: p.format, layout: 'product-spotlight' });
       setSession(restoreSession(p)); setSessionVersion(n => n + 1); setPickerVersion(n => n + 1); setOpened(draft); setName(draft.name);
       setBaseline(JSON.stringify({ publication: p, name: draft.name })); setNotice('Borrador abierto. Se consultan de nuevo los productos, precios e identidad de tu tienda.');
@@ -90,7 +115,7 @@ function MarketingWorkspace({ scope, isCurrent }: { scope: DraftScope; isCurrent
     });
   };
   const saveDraft = async () => {
-    if (savingRef.current || busy || !dirty || !productId) return;
+    if (savingRef.current || busy || !dirty || (!productId&&!sharingReference)) return;
     savingRef.current = true; setSavingDraft(true); setBusy(true);
     try {
       run(() => {
@@ -104,6 +129,7 @@ function MarketingWorkspace({ scope, isCurrent }: { scope: DraftScope; isCurrent
   const newPublication = () => {
     if (!discard()) return;
     const nextSession = initialTemplateHistory();
+    setSharingReference(undefined);setSharingItem(null);
     setProductId(''); setSku(''); setSource('product'); setDesign({ format: 'square', layout: 'product-spotlight' }); setSession(nextSession);
     setSessionVersion(n => n + 1); setPickerVersion(n => n + 1); setOpened(null); setName(''); setError(''); setNotice('Nueva publicación. Los borradores anteriores se conservan.');
     setBaseline(JSON.stringify({ publication: snapshot('', '', 'product', 'square', nextSession), name: '' }));
@@ -115,13 +141,23 @@ function MarketingWorkspace({ scope, isCurrent }: { scope: DraftScope; isCurrent
     savingRef.current = true;
     setError(''); setNotice(''); setBusy(true); const start = revision.current;
     try {
+      if(sharingReference){const fresh=await resolveSharingItem(sharingReference,home,new AbortController().signal);if(JSON.stringify([fresh.content,fresh.images])!==JSON.stringify([sharingItem?.content,sharingItem?.images])){setSharingItem(fresh);throw new Error('El contenido cambió. Revisa la vista previa actualizada y vuelve a descargar.');}}
       const blob = await renderPublication(art, design.format, type, () => mounted.current && isCurrent() && revision.current === start);
       downloadPublication(blob, publicationFilename(session.active, design.format, type));
       if (mounted.current) setNotice(`Archivo ${type.toUpperCase()} generado. Se solicitó su descarga al navegador.`);
     } catch (error) { if (mounted.current) setError(message(error)); }
     finally { savingRef.current = false; if (mounted.current) setBusy(false); }
   };
-  return <section className="marketing-module" aria-label="Generador de publicaciones">
+  async function prepareSharing(item:SharingItem,format:PublicationFormat):Promise<boolean>{
+    if(!discard()||!isCurrent())return false;
+    const fresh=await resolveSharingItem(item.reference,home,new AbortController().signal);
+    if(!mounted.current||!isCurrent())return false;
+    const next=initialTemplateHistory();
+    for(const history of Object.values(next.documents))history.present={...history.present,showDescription:true,cta:fresh.group==='Servicios'||fresh.group==='Talleres'?'Solicita información en nuestra tienda':'Conoce más en nuestra tienda'};
+    setProductId('');setSku('');setSource('product');setDesign({format,layout:'product-spotlight'});setSharingReference(fresh.reference);setSharingItem(fresh);setSharingAttempt(value=>value+1);setSession(next);setSessionVersion(value=>value+1);setOpened(null);setName('');setError('');setNotice('Contenido preparado desde Difusión. Edita y descarga aquí; todavía no está publicado en redes.');
+    return true;
+  }
+  return <MarketingSections home={home} onPrepare={prepareSharing} onSharingDirty={setSharingDirty} busy={busy} isCurrent={isCurrent} onSocialDirty={setSocialDirty} onMediaDirty={setMediaDirty}><section className="marketing-module" aria-label="Generador de publicaciones">
     {showDrafts && <DraftPanel drafts={drafts} onOpen={openDraft} onRename={(draft, nextName) => run(() => {
       const next = repository.rename(draft.id, nextName, draft.updatedAt);
       if (opened?.id === draft.id) {
@@ -133,15 +169,16 @@ function MarketingWorkspace({ scope, isCurrent }: { scope: DraftScope; isCurrent
       onDelete={draft => run(() => { repository.remove(draft.id, draft.updatedAt); if (opened?.id === draft.id) { setOpened(null); setBaseline(''); } setDrafts(repository.list()); setNotice('Borrador eliminado.'); })} />}
     <div className="marketing-intro"><p>Elige un producto y su formato. Tu publicación se compone con los datos y colores de tu tienda.</p>
       <Button type="button" variant="outline" size="sm" disabled={busy || sources.loading} onClick={refresh}>Actualizar datos</Button></div>
+    {sharingLoading&&<LoadingState>Cargando contenido publicado para la composición…</LoadingState>}
     {sources.loading && <LoadingState align="start" spacing="none" className="marketing-loading">Cargando productos e identidad de tu tienda...</LoadingState>}
     {sources.productError && <div role="alert"><Alert variant="error">{sources.productError}</Alert></div>}
     {sources.brandError && <div role="alert"><Alert variant="error">{sources.brandError}</Alert></div>}
     {!sources.loading && (sources.productError || sources.brandError) && <Button type="button" onClick={refresh}>Reintentar carga</Button>}
-    <DesignStudio sourceKey={`${sessionVersion}:${productId}:${source}`} sourceData={content} brandData={sources.brand} design={design} images={product?.images || []}
+    <DesignStudio sourceKey={`${sessionVersion}:${productId}:${source}:${sharingKeyValue}`} sourceData={content} brandData={sources.brand} design={design} images={images}
       session={session} onAction={action => { setNotice(''); setSession(value => templateHistory(value, action)); }} previewRef={previewRef} busy={busy} selection={
-      <div className="marketing-controls"><fieldset disabled={sources.loading || !!sources.productError} className="marketing-control-group">
-        <ContentPicker key={pickerVersion} catalogReady={!sources.loading && !sources.productError} source={source} products={sources.products} productId={productId} sku={sku}
-          onSource={next => { if (discard()) { setNotice(''); setSource(next); setProductId(''); setSku(''); setSession(initialTemplateHistory()); setSessionVersion(n => n + 1); setOpened(null); if (productId) setName(''); } }} onProduct={changeProduct} onSku={value => { setNotice(''); setSku(value); }} />
+      <div className="marketing-controls"><fieldset disabled={sharingReference?sharingLoading:sources.loading || !!sources.productError} className="marketing-control-group">
+        {sharingReference?<div><p>Contenido de Difusión: {sharingItem?.title||'verificando publicación…'}</p><Button type="button" variant="outline" onClick={()=>{if(discard()){setSharingReference(undefined);setSharingItem(null);setProductId('');setSession(initialTemplateHistory());setSessionVersion(value=>value+1);setOpened(null);}}}>Elegir un producto en su lugar</Button></div>:<ContentPicker key={pickerVersion} catalogReady={!sources.loading && !sources.productError} source={source} products={sources.products} productId={productId} sku={sku}
+          onSource={next => { if (discard()) { setNotice(''); setSource(next); setProductId(''); setSku(''); setSession(initialTemplateHistory()); setSessionVersion(n => n + 1); setOpened(null); if (productId) setName(''); } }} onProduct={changeProduct} onSku={value => { setNotice(''); setSku(value); }} />}
       </fieldset><FormatPicker value={design.format} onChange={format => { setNotice(''); setDesign({ ...design, format }); }} />
         <p className="marketing-hint">Puedes probar los formatos sin cambiar tu catálogo. Guarda un borrador para continuar después.</p>
         <Link to="/emprendedor/productos" className="marketing-text-link">Administrar productos →</Link>
@@ -153,7 +190,7 @@ function MarketingWorkspace({ scope, isCurrent }: { scope: DraftScope; isCurrent
     <div className="marketing-publication-actions" aria-label="Borradores y descargas" aria-busy={busy}>
       <Input label="Nombre del borrador" value={name} maxLength={80} disabled={busy} onChange={event => { setNotice(''); setName(event.target.value); }} placeholder="Ej.: Colección de primavera" />
       <div className="marketing-editor-actions">
-        <Button type="button" size="sm" disabled={busy || !productId || !dirty} onClick={() => void saveDraft()}>{savingDraft ? 'Guardando…' : 'Guardar borrador'}</Button>
+        <Button type="button" size="sm" disabled={busy || (!productId&&!sharingReference) || !dirty} onClick={() => void saveDraft()}>{savingDraft ? 'Guardando…' : 'Guardar borrador'}</Button>
         <Button type="button" size="sm" variant="outline" disabled={busy} aria-expanded={showDrafts} onClick={() => { loadList(); setShowDrafts(value => !value); }}>Mis borradores</Button>
         <Button type="button" size="sm" variant="outline" disabled={busy} onClick={newPublication}>Nueva publicación</Button>
         <Button type="button" size="sm" variant="outline" disabled={busy || !content || !sources.brand} onClick={() => void exportImage('png')}>Descargar PNG</Button>
@@ -163,5 +200,5 @@ function MarketingWorkspace({ scope, isCurrent }: { scope: DraftScope; isCurrent
       {notice && !error && <div role="status"><Alert variant="success">{notice}</Alert></div>}
       {error && <div role="alert"><Alert variant="error">{error}</Alert></div>}
     </div>
-  </section>;
+  </section></MarketingSections>;
 }

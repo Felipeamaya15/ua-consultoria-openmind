@@ -5,7 +5,8 @@ import { LoadingState } from '../../../shared/components/states';
 import { withoutPrivateCredentials } from '../../../shared/services/sensitiveConfiguration';
 
 import { useAdminForm } from '../hooks/useAdminForm';
-import { AdminCard, Alert, Input, Toggle, Button, Icon, Select, Textarea } from '../components/ui';
+import { AdminCard, Alert, Input, Toggle, Button, Icon, Select } from '../components/ui';
+import { TransferConfigForm } from '../components/TransferConfigForm';
 import { PendingTransfers } from '../components/PendingTransfers';
 import {
   hasLinkifyCredentialData,
@@ -13,7 +14,8 @@ import {
   validateLinkifyFields,
 } from '../services/linkifyValidation';
 import {
-  transferFieldLabels,
+  findTransferBank,
+  transferBanks,
   transferRequiredFields,
   hasTransferConfigurationData,
   validateTransferFields,
@@ -58,6 +60,7 @@ export default function Payments() {
   const { form, setForm, save, saved } = useAdminForm('paymentConfiguration');
   const syncing = useRef(false);
   const pendingSaves = useRef(new Set<string>());
+  const savedTransfer = useRef<{ enabled: boolean; fields: Record<string, string> } | null>(null);
 
 
 
@@ -244,13 +247,17 @@ export default function Payments() {
         }
 
         const transfer = transferBody.data?.transfer;
-        if (active && transfer && typeof transfer === 'object') {
+        if (active) {
+          savedTransfer.current = {
+            enabled: transfer?.enabled === true,
+            fields: transfer?.fields && typeof transfer.fields === 'object' ? transfer.fields : {},
+          };
           setForm({
             ...(form || {}),
             transfer: {
-              enabled: transfer.enabled === true,
+              enabled: transfer?.enabled === true,
               fields:
-                transfer.fields && typeof transfer.fields === 'object'
+                transfer?.fields && typeof transfer.fields === 'object'
                   ? transfer.fields
                   : {},
             },
@@ -296,7 +303,7 @@ export default function Payments() {
     setTbFeedback(null);
 
     if (
-      tbActivo &&
+      (tbActivo || tbCodigo.trim() || tbApiKey.trim()) &&
       (
         !tbCodigo.trim() ||
         (!tbApiKey.trim() && !tbIsConfigured)
@@ -304,7 +311,7 @@ export default function Payments() {
     ) {
       setTbFeedback({
         type: 'error',
-        message: 'Completa el código de comercio y la clave secreta para activar Transbank.',
+        message: 'Completa el código de comercio y la clave de Transbank antes de guardar.',
       });
       setTbSaving(false);
       return false;
@@ -394,7 +401,7 @@ export default function Payments() {
 
 
     if (
-      ppActivo &&
+      (ppActivo || ppClientId.trim() || ppClientSecret.trim()) &&
       (
         !ppClientId.trim() ||
         (!ppClientSecret.trim() && !ppIsConfigured)
@@ -402,7 +409,7 @@ export default function Payments() {
     ) {
       setPpFeedback({
         type: 'error',
-        message: 'Completa el identificador y la clave secreta de PayPal para activarlo.',
+        message: 'Completa el identificador y la clave de PayPal antes de guardar.',
       });
       setPpSaving(false);
       return false;
@@ -613,7 +620,9 @@ export default function Payments() {
     const current = form.transfer ?? { enabled: false, fields: {} };
     const validation = validateTransferFields(current.fields);
     setTransferFieldErrors(validation.errors);
-    if ((current.enabled || hasTransferConfigurationData(current.fields)) && validation.missing.length) {
+    const onlyDisabling = !current.enabled && savedTransfer.current?.enabled === true &&
+      JSON.stringify(current.fields) === JSON.stringify(savedTransfer.current.fields);
+    if (!onlyDisabling && validation.invalidFields.length) {
       setTransferFeedback({ type: 'error', message: validation.message });
       setTransferSaving(false);
       return false;
@@ -641,6 +650,7 @@ export default function Payments() {
         body: JSON.stringify(mergedConfiguration),
       });
 
+      savedTransfer.current = structuredClone(current);
       setTransferFeedback({
         type: 'success',
         message: 'Datos bancarios guardados para esta tienda.',
@@ -676,11 +686,11 @@ export default function Payments() {
         const validation = id === 'transfer'
           ? validateTransferFields(current.fields)
           : {
-              missing: requiredKeysFor(id).filter((key) => !current.fields?.[key]?.trim()),
+              invalidFields: requiredKeysFor(id).filter((key) => !current.fields?.[key]?.trim()),
               errors: {},
               message: '',
             };
-        if (validation.missing.length > 0) {
+        if (validation.invalidFields.length > 0) {
           if (id === 'transfer') setTransferFieldErrors(validation.errors);
           setValidationError(id === 'transfer'
             ? validation.message
@@ -700,8 +710,14 @@ export default function Payments() {
 
   const updateField = (id: string, field: string, value: string) => {
     const current = form[id] ?? { enabled: false, fields: {} };
+    const nextFields = { ...current.fields, [field]: value };
+    if (id === 'transfer' && field === 'bank_name') {
+      const bank = findTransferBank(value, transferBanks);
+      if (!bank?.account_types.includes(nextFields.account_type)) nextFields.account_type = '';
+    }
     
     let shouldDisable = false;
+    if (id === 'transfer' && current.enabled && !nextFields.account_type?.trim()) shouldDisable = true;
     if (current.enabled && !value.trim()) {
       if (id === 'linkify') {
         if (linkifyRequiredFields.includes(field)) shouldDisable = true;
@@ -715,7 +731,7 @@ export default function Payments() {
       [id]: { 
         ...current, 
         enabled: shouldDisable ? false : current.enabled,
-        fields: { ...current.fields, [field]: value },
+        fields: nextFields,
       },
     });
 
@@ -729,15 +745,17 @@ export default function Payments() {
       });
     }
 
-    if (id === 'transfer' && value.trim()) {
+    if (id === 'transfer') {
+      const validation = validateTransferFields(nextFields);
       setTransferFieldErrors((currentErrors) => {
         const nextErrors = { ...currentErrors };
-        delete nextErrors[field];
+        for (const key of new Set([field, ...Object.keys(currentErrors)])) {
+          if (validation.errors[key]) nextErrors[key] = validation.errors[key];
+          else delete nextErrors[key];
+        }
         return nextErrors;
       });
-      setTransferFeedback((currentFeedback) =>
-        currentFeedback?.type === 'error' ? null : currentFeedback,
-      );
+      setTransferFeedback(null);
     }
 
     if (shouldDisable) {
@@ -748,12 +766,32 @@ export default function Payments() {
   };
 
   const validate = () => {
+    if ((tbActivo || tbCodigo.trim() || tbApiKey.trim()) &&
+        (!tbCodigo.trim() || (!tbApiKey.trim() && !tbIsConfigured))) {
+      return 'Completa el código de comercio y la clave de Transbank antes de guardar.';
+    }
+    if ((ppActivo || ppClientId.trim() || ppClientSecret.trim()) &&
+        (!ppClientId.trim() || (!ppClientSecret.trim() && !ppIsConfigured))) {
+      return 'Completa el identificador y la clave de PayPal antes de guardar.';
+    }
     const enabledSecondary = otherMethods.filter((method) => form[method.id]?.enabled);
     const linkifyFields = form.linkify?.fields ?? {};
     if (form.linkify?.enabled || hasLinkifyCredentialData(linkifyFields)) {
       const linkifyValidation = validateLinkifyFields(linkifyFields);
       setLinkifyFieldErrors(linkifyValidation.errors);
       if (linkifyValidation.invalidFields.length) return linkifyValidation.message;
+    }
+
+    const transfer = form.transfer;
+    if (transfer && JSON.stringify(transfer) !== JSON.stringify(savedTransfer.current) &&
+        (transfer.enabled || hasTransferConfigurationData(transfer.fields))) {
+      const onlyDisabling = !transfer.enabled && savedTransfer.current?.enabled === true &&
+        JSON.stringify(transfer.fields) === JSON.stringify(savedTransfer.current.fields);
+      const result = validateTransferFields(transfer.fields);
+      if (!onlyDisabling) {
+        setTransferFieldErrors(result.errors);
+        if (result.invalidFields.length) return result.message;
+      }
     }
 
     if (!enabledSecondary.length && !tbActivo && !ppActivo && !mpActivo) {
@@ -954,7 +992,7 @@ export default function Payments() {
         handleSaveTransbank(),
         handleSavePayPal(),
         handleSaveMercadoPago(),
-        handleSaveTransfer(),
+        JSON.stringify(form.transfer) === JSON.stringify(savedTransfer.current) ? Promise.resolve(true) : handleSaveTransfer(),
       ]);
       if (results.every(result => result === true)) save(withoutPrivateCredentials(form));
       else setBackendError('Algunas configuraciones no se guardaron. Revisa los mensajes de cada medio de pago y vuelve a intentarlo.');
@@ -970,7 +1008,7 @@ export default function Payments() {
 
   return (
 
-    <form className="flex flex-col gap-5 max-w-2xl" onSubmit={handleSubmit}>
+    <form className="flex min-w-0 w-full flex-col gap-5 max-w-2xl" onSubmit={handleSubmit} noValidate>
 
       <Alert variant="info">
 
@@ -1063,6 +1101,13 @@ export default function Payments() {
 
           <div className="flex flex-col gap-3 border-t border-[var(--border)] pt-3">
 
+            <div className="rounded-xl bg-[var(--muted)] p-4 text-sm grid gap-2">
+              <h3 className="font-semibold">Conecta tu comercio con Webpay</h3>
+              <p className="text-[var(--muted-foreground)]">El código de comercio identifica tu negocio y la clave secreta autoriza la conexión con Transbank. Usa las credenciales del mismo entorno.</p>
+              <a href="https://transbankdevelopers.com/documentacion/como_empezar" target="_blank" rel="noreferrer" className="font-medium underline underline-offset-2 text-[var(--primary)]">Cómo obtener las credenciales de Transbank (abre una nueva pestaña)</a>
+              <p className="text-[var(--muted-foreground)]">Para pruebas, consulta las credenciales de integración. Para ventas reales, utiliza el código y la clave que Transbank entrega a tu comercio después de la afiliación y habilitación.</p>
+            </div>
+
             <div className="grid sm:grid-cols-2 gap-3">
 
               <Select
@@ -1070,6 +1115,8 @@ export default function Payments() {
                 label="Entorno de Operación"
 
                 value={tbAmbiente}
+                persistentHint
+                hint="Integración permite hacer pruebas. Producción utiliza credenciales reales de tu comercio."
 
                 onChange={(e: any) => setTbAmbiente(e.target.value)}
 
@@ -1088,6 +1135,8 @@ export default function Payments() {
               <Input
 
                 label="Código de Comercio"
+                persistentHint
+                hint="Ingresa el código de comercio de Webpay Plus entregado por Transbank."
 
                 autoComplete="off"
 
@@ -1124,7 +1173,7 @@ export default function Payments() {
 
                   ? `Clave guardada: ${tbMaskedKey}. Déjalo vacío si no deseas modificarla.`
 
-                  : undefined
+                  : 'Pega la API Key Secret de Transbank, no tu contraseña de acceso al portal. Esta clave permite autorizar la conexión.'
 
               }
 
@@ -1145,6 +1194,7 @@ export default function Payments() {
                 variant="primary"
 
                 loading={tbSaving}
+                className="w-full sm:w-auto whitespace-normal"
 
                 onClick={handleSaveTransbank}
 
@@ -1417,6 +1467,13 @@ export default function Payments() {
 
           <div className="flex flex-col gap-3 border-t border-[var(--border)] pt-3">
 
+            <div className="rounded-xl bg-[var(--muted)] p-4 text-sm grid gap-2">
+              <h3 className="font-semibold">Configura tu aplicación de PayPal</h3>
+              <p className="text-[var(--muted-foreground)]">El Client ID identifica tu aplicación y el Client Secret autoriza su conexión con PayPal. No son el correo ni la contraseña de tu cuenta.</p>
+              <a href="https://developer.paypal.com/dashboard/applications" target="_blank" rel="noreferrer" className="font-medium underline underline-offset-2 text-[var(--primary)]">Obtener credenciales en PayPal Developer (abre una nueva pestaña)</a>
+              <p className="text-[var(--muted-foreground)]">Inicia sesión y abre Apps &amp; Credentials. Selecciona Sandbox o Live, crea o abre una aplicación y copia su Client ID y Secret. Ambos deben corresponder al entorno seleccionado.</p>
+            </div>
+
             <div className="grid sm:grid-cols-2 gap-3">
 
               <Select
@@ -1424,6 +1481,8 @@ export default function Payments() {
                 label="Entorno de Operación"
 
                 value={ppAmbiente}
+                persistentHint
+                hint="Sandbox sirve para pruebas. Live usa las credenciales de producción de tu aplicación."
 
                 onChange={(e: any) => setPpAmbiente(e.target.value)}
 
@@ -1442,6 +1501,8 @@ export default function Payments() {
               <Input
 
                 label="Identificador de PayPal"
+                persistentHint
+                hint="Pega el Client ID de tu aplicación desde Apps & Credentials en PayPal Developer."
 
                 autoComplete="off"
 
@@ -1478,7 +1539,7 @@ export default function Payments() {
 
                   ? `Clave guardada: ${ppMaskedSecret}. Déjalo vacío si no deseas modificarla.`
 
-                  : undefined
+                  : 'Pega el Client Secret de la misma aplicación y entorno. Mantén esta clave privada.'
 
               }
 
@@ -1499,6 +1560,7 @@ export default function Payments() {
                 variant="primary"
 
                 loading={ppSaving}
+                className="w-full sm:w-auto whitespace-normal"
 
                 onClick={handleSavePayPal}
 
@@ -1554,35 +1616,16 @@ export default function Payments() {
             {method.id === 'linkify' ? (
               renderLinkifyConfig()
             ) : (
-              <div className="grid sm:grid-cols-2 gap-3 border-t border-[var(--border)] pt-3">
-                {method.fields.map((field) => (
-                  <Input
-                    key={field}
-                    label={method.id === 'transfer' ? (transferFieldLabels[field] ?? field) : field}
-                    autoComplete="off"
-                    type={/key|token|secret/i.test(field) ? 'password' : (field === 'confirmation_email' ? 'email' : 'text')}
-                    value={current.fields?.[field] ?? ''}
-                    placeholder={method.id === 'transfer' ? 'Dato bancario real de la tienda' : 'Credencial demo'}
-                    required={method.id === 'transfer'}
-                    error={method.id === 'transfer' ? transferFieldErrors[field] : undefined}
-                    onChange={(e: any) =>
-                       updateField(method.id, field, e.target.value)}
-                  />
-                ))}
-              </div>
+              <TransferConfigForm
+                fields={current.fields ?? {}}
+                errors={transferFieldErrors}
+                disabled={transferLoading || transferSaving || Boolean(tiendaError)}
+                onChange={(field, value) => updateField('transfer', field, value)}
+              />
             )}
 
             {method.id === 'transfer' && (
               <>
-                <div className="border-t border-[var(--border)] pt-3 mt-3">
-                  <Textarea
-                    label="Instrucciones de conciliación"
-                    value={current.fields?.instructions ?? ''}
-                    placeholder="Validar el comprobante contra monto, correo y número de pedido."
-                    rows={3}
-                    onChange={(e: any) => updateField('transfer', 'instructions', e.target.value)}
-                  />
-                </div>
                 <div className="flex flex-col gap-3 pt-3">
                   {transferLoading && (
                     <LoadingState size="sm" align="start" spacing="none">Cargando datos bancarios guardados...</LoadingState>
@@ -1596,6 +1639,8 @@ export default function Payments() {
                       size="sm"
                       variant="primary"
                       loading={transferSaving}
+                      disabled={transferLoading || Boolean(tiendaError)}
+                      className="w-full sm:w-auto whitespace-normal"
                       onClick={handleSaveTransfer}
                     >
                       Guardar transferencia bancaria
@@ -1619,7 +1664,7 @@ export default function Payments() {
 
 
 
-      <Button type="submit" loading={isSyncing || tbSaving || ppSaving || mpSaving || transferSaving}>
+      <Button type="submit" className="whitespace-normal" disabled={tbLoading || ppLoading || mpLoading || transferLoading || Boolean(tiendaError)} loading={isSyncing || tbSaving || ppSaving || mpSaving || transferSaving}>
 
         Guardar todos los métodos de pago
 

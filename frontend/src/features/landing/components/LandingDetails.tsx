@@ -3,6 +3,7 @@ import { useLandingContent } from '../hooks/useLandingContent';
 import { useLandingSectionVisibility } from '../hooks/useLandingSectionVisibility';
 import { useStorefrontTemplate } from '../../storefront/hooks/useStorefrontTemplate';
 import { weeklyHours } from '../types/weeklyHours';
+import { publicSocialLinks } from '../types/socialProfiles';
 import './LandingDetails.css';
 import { Icon } from '../../storefront/components/ui';
 
@@ -23,10 +24,8 @@ export function LandingDetails({includeBenefits = false,onlyBenefits = false,}: 
   const mapEmbed=hasAddress?'https://maps.google.com/maps?q='+encodeURIComponent(mapQuery)+'&output=embed':undefined;
   const contacts = [
     { label: 'Teléfono', icon: 'phone', text: c.telefono, href: c.telefono ? `tel:${c.telefono.replace(/[^+0-9]/g, '')}` : undefined },
-    { label: 'WhatsApp', icon: 'chat', text: c.whatsapp, href: c.whatsapp ? `https://wa.me/${c.whatsapp.replace(/\D/g, '')}` : undefined },
+    ...publicSocialLinks(c),
     { label: 'Correo', icon: 'mail', text: c.correo, href: c.correo ? `mailto:${c.correo}` : undefined },
-    { label: 'Instagram', icon: 'instagram', text: c.instagram, href: webLink(c.instagram) },
-    { label: 'Facebook', icon: 'facebook', text: c.facebook, href: webLink(c.facebook) },
     { label: 'Sitio web', icon: 'globe', text: c.sitio_web, href: webLink(c.sitio_web) },
   ].filter(item => item.text);
   return <>

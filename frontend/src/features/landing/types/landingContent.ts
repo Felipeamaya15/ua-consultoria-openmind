@@ -2,6 +2,7 @@ import type { ContenidoLanding } from './landing.types';
 
 export function normalizeLandingContent(value?: Partial<ContenidoLanding>): ContenidoLanding {
   return {
+    ...(Array.isArray(value?.orden_apartados) ? {orden_apartados:value.orden_apartados} : {}),
     ...(value?.apariencia_bloques ? {apariencia_bloques:value.apariencia_bloques} : {}),
     ...(Array.isArray(value?.bloques) ? { bloques: value.bloques } : {}),
     productos_destacados: value?.productos_destacados ?? [],

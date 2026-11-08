@@ -69,7 +69,7 @@ class EnvioAlDespacharTests(CorreoDeDespachoBase):
         pedido = self.pedido()
         datos = self.cambiar(pedido).json()['data']
         self.assertEqual(datos['correo'], {'enviado': True, 'codigo': 'enviado'})
-        self.assertEqual((datos['id_pedido'], datos['identificador'], datos['estado']), (pedido.id_pedido, pedido.identificador, 'enviado'))
+        self.assertEqual((datos['id_pedido'], datos['identificador'], datos['estado']), (pedido.id_pedido, pedido.identificador, 'en_camino'))
         self.assertIn('estado_etiqueta', datos)
 
     def test_queda_una_marca_en_el_pedido_y_el_resto_de_la_entrega_no_cambia(self):
@@ -96,7 +96,7 @@ class EnvioAlDespacharTests(CorreoDeDespachoBase):
 
         with patch.object(notificaciones_pedido, 'enviar_correo', side_effect=espia):
             self.cambiar(pedido)
-        self.assertEqual(vistos, ['enviado'])
+        self.assertEqual(vistos, ['en_camino'])
 
     def test_se_usa_la_plantilla_propia_de_la_tienda(self):
         ConfiguracionCorreo.objects.create(tienda=self.tienda, plantillas={'order_shipped': {
@@ -116,8 +116,7 @@ class EnvioAlDespacharTests(CorreoDeDespachoBase):
 
 class CuandoNoSeEnviaTests(CorreoDeDespachoBase):
     def test_los_otros_cambios_de_estado_no_envian_correo(self):
-        for origen, destino in (('pagado', 'preparando'), ('preparando', 'en_origen'), ('enviado', 'en_reparto'),
-                                ('en_reparto', 'entregado'), ('pagado', 'cancelado'), ('entregado', 'pendiente')):
+        for origen, destino in (('pagado', 'pendiente'), ('entregado', 'pendiente'), ('en_camino', 'enviado')):
             respuesta = self.cambiar(self.pedido(estado=origen), destino)
             self.assertEqual(respuesta.status_code, 200, (origen, destino))
             self.assertIsNone(respuesta.json()['data']['correo'], (origen, destino))
@@ -134,7 +133,7 @@ class CuandoNoSeEnviaTests(CorreoDeDespachoBase):
     def test_si_el_pedido_vuelve_a_enviado_no_se_duplica_el_aviso(self):
         pedido = self.pedido()
         self.cambiar(pedido)
-        self.cambiar(pedido, 'en_reparto')
+        self.cambiar(pedido, 'pendiente')
         respuesta = self.cambiar(pedido, 'enviado')
         self.assertEqual(respuesta.json()['data']['correo'], {'enviado': False, 'codigo': 'ya_enviado'})
         self.assertEqual(len(mail.outbox), 1)
@@ -150,7 +149,7 @@ class CuandoNoSeEnviaTests(CorreoDeDespachoBase):
         self.assertNotIn('notificaciones', self.refrescar(pedido).entrega)
         # Al volver a activarlo, el siguiente despacho sí lo envía.
         ConfiguracionCorreo.objects.filter(tienda=self.tienda).update(plantillas={})
-        self.cambiar(pedido, 'en_reparto')
+        self.cambiar(pedido, 'pendiente')
         self.cambiar(pedido, 'enviado')
         self.assertEqual(len(mail.outbox), 1)
 
@@ -167,7 +166,7 @@ class CuandoNoSeEnviaTests(CorreoDeDespachoBase):
         respuesta = self.cambiar(pedido)
         self.assertEqual(respuesta.status_code, 200)
         self.assertEqual(respuesta.json()['data']['correo'], {'enviado': False, 'codigo': 'destinatario_invalido'})
-        self.assertEqual(self.refrescar(pedido).estado, 'enviado')
+        self.assertEqual(self.refrescar(pedido).estado, 'en_camino')
         self.assertEqual(mail.outbox, [])
 
     def test_un_envio_en_curso_no_se_repite_pero_uno_antiguo_si(self):
@@ -193,9 +192,8 @@ class CuandoNoSeEnviaTests(CorreoDeDespachoBase):
         self.assertEqual(len(mail.outbox), 1)
 
     def test_la_funcion_ignora_cambios_que_no_generan_aviso(self):
-        pedido = self.pedido(estado='preparando')
-        self.assertIsNone(notificar_cambio_de_estado(pedido, 'preparando'))
-        self.assertIsNone(notificar_cambio_de_estado(pedido, 'pagado'))
+        pedido = self.pedido(estado='pendiente')
+        self.assertIsNone(notificar_cambio_de_estado(pedido, 'pendiente'))
         self.assertEqual(mail.outbox, [])
 
 
@@ -206,7 +204,7 @@ class FallasDelCorreoTests(CorreoDeDespachoBase):
             respuesta = self.cambiar(pedido)
         self.assertEqual(respuesta.status_code, 200, respuesta.content)
         self.assertEqual(respuesta.json()['data']['correo'], {'enviado': False, 'codigo': 'error_de_envio'})
-        self.assertEqual(self.refrescar(pedido).estado, 'enviado')
+        self.assertEqual(self.refrescar(pedido).estado, 'en_camino')
         marca = self.marca(pedido)
         self.assertEqual((marca['enviado'], marca['codigo'], marca['intentos']), (False, 'error_de_envio', 1))
 
@@ -215,7 +213,7 @@ class FallasDelCorreoTests(CorreoDeDespachoBase):
         with patch.object(EmailMultiAlternatives, 'send', side_effect=OSError('red caída')):
             self.cambiar(pedido)
         self.assertEqual(mail.outbox, [])
-        self.cambiar(pedido, 'en_reparto')
+        self.cambiar(pedido, 'pendiente')
         respuesta = self.cambiar(pedido, 'enviado')
         self.assertEqual(respuesta.json()['data']['correo'], {'enviado': True, 'codigo': 'enviado'})
         self.assertEqual(len(mail.outbox), 1)
@@ -229,7 +227,7 @@ class FallasDelCorreoTests(CorreoDeDespachoBase):
                 respuesta = self.cambiar(pedido)
         self.assertEqual(respuesta.status_code, 200)
         self.assertEqual(respuesta.json()['data']['correo'], {'enviado': False, 'codigo': 'error_inesperado'})
-        self.assertEqual(self.refrescar(pedido).estado, 'enviado')
+        self.assertEqual(self.refrescar(pedido).estado, 'en_camino')
         self.assertEqual(self.marca(pedido)['codigo'], 'error_inesperado')
 
     def test_un_error_al_reservar_el_aviso_tampoco_rompe_el_cambio_de_estado(self):
@@ -239,7 +237,7 @@ class FallasDelCorreoTests(CorreoDeDespachoBase):
                 respuesta = self.cambiar(pedido)
         self.assertEqual(respuesta.status_code, 200)
         self.assertIsNone(respuesta.json()['data']['correo'])
-        self.assertEqual(self.refrescar(pedido).estado, 'enviado')
+        self.assertEqual(self.refrescar(pedido).estado, 'en_camino')
 
     def test_el_registro_de_una_falla_no_contiene_el_correo_del_comprador(self):
         pedido = self.pedido()

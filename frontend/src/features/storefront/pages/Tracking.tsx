@@ -24,33 +24,18 @@ import { describeTrackingState } from '../data/trackingStates';
 const STATUS_STEPS = [
   {
     id: 'pendiente',
-    label: 'Pedido recibido',
+    label: 'Pendiente',
     icon: 'orders',
   },
   {
     id: 'pagado',
-    label: 'Pago confirmado',
+    label: 'Pagado/En preparación',
     icon: 'card',
   },
   {
-    id: 'preparando',
-    label: 'En preparación',
-    icon: 'box',
-  },
-  {
-    id: 'en_origen',
-    label: 'En origen',
-    icon: 'store',
-  },
-  {
-    id: 'enviado',
-    label: 'En tránsito',
+    id: 'en_camino',
+    label: 'En camino',
     icon: 'truck',
-  },
-  {
-    id: 'en_reparto',
-    label: 'En reparto',
-    icon: 'home',
   },
   {
     id: 'entregado',
@@ -76,23 +61,11 @@ const ORDER_STATUS_MAP: Record<
     variant: 'warning',
   },
   pagado: {
-    label: 'Pagado',
+    label: 'Pagado/En preparación',
     variant: 'info',
   },
-  preparando: {
-    label: 'En preparación',
-    variant: 'info',
-  },
-  en_origen: {
-    label: 'En origen',
-    variant: 'info',
-  },
-  enviado: {
-    label: 'En tránsito',
-    variant: 'info',
-  },
-  en_reparto: {
-    label: 'En reparto',
+  en_camino: {
+    label: 'En camino',
     variant: 'info',
   },
   entregado: {
@@ -102,6 +75,22 @@ const ORDER_STATUS_MAP: Record<
   cancelado: {
     label: 'Cancelado',
     variant: 'error',
+  },
+  preparando: {
+    label: 'Pagado/En preparación',
+    variant: 'info',
+  },
+  en_origen: {
+    label: 'En camino',
+    variant: 'info',
+  },
+  enviado: {
+    label: 'En camino',
+    variant: 'info',
+  },
+  en_reparto: {
+    label: 'En camino',
+    variant: 'info',
   },
 };
 

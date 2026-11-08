@@ -10,7 +10,7 @@ function load(relative,mocks={}) {
     if(id.endsWith('/fontLibrary')){const library=load(path.resolve(path.dirname(file),id)+'.ts');return {...library,loadVisualFonts(){}};}
 if(id.endsWith('/PaletteLibrary'))return {PaletteLibrary:function PaletteLibrary(){return null;}};if(id.endsWith('/palettes')&&!id.includes('visualEditor'))return {fetchPalettes:async()=>({propias:[]}),fetchAppearance:async()=>({}),saveAppearance:async()=>{},usePaletteLibrary:()=>({}),paletteOverrides:()=>undefined};if(id in mocks)return mocks[id];
     if(id==='../visualEditor/content')return {ContentInspector:()=>null};
-    if(id==='../../landing/services/landingService')return {fetchLandingConfig:async()=>null,saveLandingConfig:async value=>value};
+    if(id==='../../landing/services/landingService')return {fetchPrivateLandingConfig:async()=>null,saveLandingConfig:async value=>value};
     if(id==='../../storefront/services/catalogService')return {fetchPublicProducts:async()=>[]};if(id.endsWith('.css'))return {};if(!id.startsWith('.'))return require(id);const p=path.resolve(path.dirname(file),id);return load(['.ts','.tsx'].map(ext=>p+ext).find(fs.existsSync)||path.join(p,'index.ts'),mocks);};
   vm.runInNewContext(code,{module,exports:module.exports,require:req,requestAnimationFrame: callback => callback(), structuredClone,URLSearchParams,localStorage,window:{dispatchEvent(){}},Event,CustomEvent:class extends Event{},ResizeObserver:undefined});
   if(!Object.keys(mocks).length)cache.set(file,module.exports);return module.exports;

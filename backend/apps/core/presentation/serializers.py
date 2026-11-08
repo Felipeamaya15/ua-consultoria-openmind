@@ -567,14 +567,18 @@ class PedidoEstadoUpdateSerializer(serializers.Serializer):
 
     def validate_estado(self, value):
         alias_estados = {
-            'preparacion': 'preparando',
-            'despachado': 'enviado',
+            'preparacion': 'pagado',
+            'preparando': 'pagado',
+            'despachado': 'en_camino',
+            'enviado': 'en_camino',
+            'en_reparto': 'en_camino',
+            'en_origen': 'en_camino',
         }
-        estado_normalizado = alias_estados.get(str(value).strip().lower(), str(value).strip().lower())
+        val = str(value).strip().lower()
+        estado_normalizado = alias_estados.get(val, val)
         estados_permitidos = [
-            'pendiente', 'pagado', 'preparando', 'en_origen',
-            'enviado', 'en_reparto', 'entregado', 'cancelado',
+            'pendiente', 'pagado', 'en_camino', 'entregado', 'cancelado',
         ]
         if estado_normalizado not in estados_permitidos:
-            raise serializers.ValidationError("Estado logístico no válido.")
+            raise serializers.ValidationError("Estado del pedido no válido.")
         return estado_normalizado

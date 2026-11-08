@@ -1,4 +1,4 @@
-import { LandingBlocks } from '../../landing/components/LandingBlocks';
+import { HomeSections } from '../../landing/components/HomeSections';
 import { VISUAL_SECTION } from '../visual/sectionIds';
 import { useLandingContent } from '../../landing/hooks/useLandingContent';
 import { LandingDetails } from '../../landing/components/LandingDetails';
@@ -213,10 +213,13 @@ export default function MinimalHome() {
         </section>
       )}
 
-      <LandingBlocks />
-
-      {/* Categorías */}
-      {isSectionVisible('Categorías') && categories.length > 0 && (<div data-visual-section={VISUAL_SECTION.categories} data-visual-part="categoryList" className="mt-6 px-4 md:px-8 flex flex-wrap justify-center gap-3">
+      <HomeSections commerce={{
+        "sistema:categorias": isSectionVisible('Categorías') && categories.length > 0 && (
+          <div
+            data-visual-section={VISUAL_SECTION.categories}
+            data-visual-part="categoryList"
+            className="mt-6 px-4 md:px-8 flex flex-wrap justify-center gap-3"
+          >
 
         {categories.map((category) => (
           <button data-visual-part="categoryItem"
@@ -229,12 +232,8 @@ export default function MinimalHome() {
           </button>
         ))}
 
-      </div>)}
-
-      {/* =====================================================
-          DESCUBRIMIENTO
-      ====================================================== */}
-      {isSectionVisible('Productos destacados') && discoveryProducts.length > 0 && (<section data-visual-section={VISUAL_SECTION.sections} data-visual-kind="featured" data-landing-content className="px-4 md:px-8 mt-12 sm:mt-16 md:mt-20">
+      </div>),
+        "sistema:destacados": isSectionVisible('Productos destacados') && discoveryProducts.length > 0 && (<section data-visual-section={VISUAL_SECTION.sections} data-visual-kind="featured" data-landing-content className="px-4 md:px-8 mt-12 sm:mt-16 md:mt-20">
         <div className="max-w-6xl mx-auto">
 
           <div className="flex items-end justify-between gap-6 mb-7">
@@ -310,12 +309,8 @@ export default function MinimalHome() {
           </Link>
 
         </div>
-      </section>)}
-
-      {/* =====================================================
-          BANNER
-      ====================================================== */}
-      {isSectionVisible('Productos destacados') && activeProducts[0] && (
+      </section>),
+        "sistema:banner": activeProducts[0] && (
         <section data-visual-section={VISUAL_SECTION.sections} data-visual-kind="featured" data-landing-content className="px-4 md:px-8 mt-14 sm:mt-20">
           <div className="max-w-6xl mx-auto">
 
@@ -358,12 +353,8 @@ export default function MinimalHome() {
 
           </div>
         </section>
-      )}
-
-      {/* =====================================================
-          MÁS PARA TI
-      ====================================================== */}
-      {isSectionVisible('Productos destacados') && moreProducts.length > 0 && (<section data-visual-section={VISUAL_SECTION.sections} data-visual-kind="featured" data-landing-content className="px-4 md:px-8 mt-14 sm:mt-20">
+      ),
+        "sistema:mas-productos": moreProducts.length > 0 && (<section data-visual-section={VISUAL_SECTION.sections} data-visual-kind="featured" data-landing-content className="px-4 md:px-8 mt-14 sm:mt-20">
         <div className="max-w-6xl mx-auto">
 
           <div className="flex items-center justify-between gap-4 mb-7">
@@ -423,8 +414,8 @@ export default function MinimalHome() {
           ) : null}
 
         </div>
-      </section>)}
-
+      </section>)
+      }} />
       <LandingDetails />
     </div>
   );
