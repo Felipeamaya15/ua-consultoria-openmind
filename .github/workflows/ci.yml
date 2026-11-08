@@ -1,0 +1,83 @@
+name: CI - OpenMind
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  pruebas-backend:
+    name: Pruebas de inventario y pagos (Django)
+    runs-on: ubuntu-latest
+    services:
+      mongodb:
+        image: mongo:7.0
+        env:
+          MONGO_INITDB_ROOT_USERNAME: ci_user
+          MONGO_INITDB_ROOT_PASSWORD: ci_password_local
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd "mongosh --quiet --username ci_user --password ci_password_local --authenticationDatabase admin --eval 'db.adminCommand({ping: 1}).ok'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DEBUG: '1'
+      MONGO_HOST: 127.0.0.1
+      MONGO_PORT: '27017'
+      MONGO_USER: ci_user
+      MONGO_PASSWORD: ci_password_local
+      MONGO_DB_NAME: ci_openmind
+
+    steps:
+      - name: Descargar el codigo
+        uses: actions/checkout@v4
+
+      - name: Preparar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+          cache-dependency-path: backend/requirements-test.txt
+
+      - name: Instalar dependencias de Django
+        run: python -m pip install -r backend/requirements-test.txt
+
+      - name: Comprobar compilacion de Python
+        run: python -m compileall -q backend
+
+      - name: Verificar configuracion de Django
+        working-directory: backend
+        run: python manage.py check
+
+      - name: Ejecutar pruebas de stock por SKU y puerto de pagos
+        working-directory: backend
+        run: python manage.py test apps.catalog.test_stock apps.catalog.test_payment_port --verbosity 2
+
+  construccion-frontend:
+    name: Construccion de React + TypeScript
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - name: Descargar el codigo
+        uses: actions/checkout@v4
+
+      - name: Preparar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Instalar dependencias del frontend
+        run: npm ci
+
+      - name: Comprobar tipos y construir el frontend
+        run: npm run build
