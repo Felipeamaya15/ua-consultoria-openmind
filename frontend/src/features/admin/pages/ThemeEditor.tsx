@@ -23,6 +23,7 @@ import { STORE_PAGES, previewPath, CHECKOUT_PREVIEW_STEPS, type PreviewPageId } 
 import { connectVisualPreview } from '../visualEditor/preview';
 import { TemplateGallery } from '../visualEditor/templates';
 import { ContentInspector } from '../visualEditor/content';
+import { ProductHoverInspector } from '../visualEditor/ProductHoverInspector';
 import { HeroCarouselInspector } from '../visualEditor/HeroCarouselInspector';
 import { fetchPrivateLandingConfig as fetchLandingConfig, saveLandingConfig, saveBlockStyles } from '../../landing/services/landingService';
 import '../admin.css';
@@ -37,6 +38,12 @@ type SharedCarouselSettings = {
   carouselInterval: NonNullable<VisualConfig['hero']['carouselInterval']>;
   carouselTransition: NonNullable<VisualConfig['hero']['carouselTransition']>;
   carouselIndicators: boolean;
+  hoverFeaturedMotion: NonNullable<VisualConfig['hero']['hoverFeaturedMotion']>;
+  hoverFeaturedLight: NonNullable<VisualConfig['hero']['hoverFeaturedLight']>;
+  hoverCatalogMotion: NonNullable<VisualConfig['hero']['hoverCatalogMotion']>;
+  hoverCatalogLight: NonNullable<VisualConfig['hero']['hoverCatalogLight']>;
+  hoverCategoryMotion: NonNullable<VisualConfig['hero']['hoverCategoryMotion']>;
+  hoverCategoryLight: NonNullable<VisualConfig['hero']['hoverCategoryLight']>;
 };
 function readSharedCarousel(hero: VisualConfig['hero']): SharedCarouselSettings {
   return {
@@ -44,6 +51,12 @@ function readSharedCarousel(hero: VisualConfig['hero']): SharedCarouselSettings 
     carouselInterval: hero.carouselInterval ?? 10,
     carouselTransition: hero.carouselTransition ?? 'fade',
     carouselIndicators: hero.carouselIndicators ?? true,
+    hoverFeaturedMotion: hero.hoverFeaturedMotion ?? 'none',
+    hoverFeaturedLight: hero.hoverFeaturedLight ?? 'none',
+    hoverCatalogMotion: hero.hoverCatalogMotion ?? 'none',
+    hoverCatalogLight: hero.hoverCatalogLight ?? 'none',
+    hoverCategoryMotion: hero.hoverCategoryMotion ?? 'none',
+    hoverCategoryLight: hero.hoverCategoryLight ?? 'none',
   };
 }
 function applySharedCarousel(document: EditorDocument, shared: SharedCarouselSettings | null): EditorDocument {
@@ -334,7 +347,22 @@ export default function ThemeEditor() {
             ), [field]: value } as SharedCarouselSettings));
           }
           setDraft(current => editScopedProperty(current, template, `hero.${field}`, value, 'all', 'desktop'));
-        }} />)}<button className="ve-reset-section ve-danger" type="button" onClick={resetVisibleSection}>Restablecer sección ↺</button></>}
+        }} />)}{/* OPENMIND_PRODUCT_HOVER_V1 */}
+          {(previewPage === 'home' || previewPage === 'catalog') &&
+            ['sections', 'productCard', 'productGrid', 'categories'].includes(selectedSection) && (
+              <ProductHoverInspector
+                hero={effective.hero}
+                suggestedArea={selectedSection === 'categories' ? 'category' : previewPage === 'catalog' ? 'catalog' : 'featured'}
+                onEdit={(field, value) => {
+                  setSharedCarousel(current => ({
+                    ...(current ?? readSharedCarousel(effective.hero)),
+                    [field]: value,
+                  } as SharedCarouselSettings));
+                  setDraft(current => editScopedProperty(current, template, `hero.${field}`, value, 'all', 'desktop'));
+                }}
+              />
+          )}
+          <button className="ve-reset-section ve-danger" type="button" onClick={resetVisibleSection}>Restablecer sección ↺</button></>}
         <details className="ve-restore"><summary>Opciones del diseño</summary><button type="button" className="ve-danger" onClick={() => setRestoreRequested(true)}>Volver al diseño original</button><Link to="/emprendedor/diseno">Volver a Mi tienda</Link></details>
       </aside>
     </div>

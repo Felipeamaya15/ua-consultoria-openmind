@@ -112,6 +112,14 @@ export interface VisualSections {
     carouselInterval?: 5 | 10 | 20;
     carouselTransition?: 'fade' | 'slide' | 'zoom' | 'blur' | 'rise' | 'reveal';
     carouselIndicators?: boolean;
+    // OPENMIND_PRODUCT_HOVER_V1
+    /** Efectos de fotografías; opcionales y compartidos por las cuatro plantillas. */
+    hoverFeaturedMotion?: 'none' | 'zoom' | 'lift' | 'tilt' | 'rotate';
+    hoverFeaturedLight?: 'none' | 'shine' | 'flash' | 'glow' | 'sparkle';
+    hoverCatalogMotion?: 'none' | 'zoom' | 'lift' | 'tilt' | 'rotate';
+    hoverCatalogLight?: 'none' | 'shine' | 'flash' | 'glow' | 'sparkle';
+    hoverCategoryMotion?: 'none' | 'zoom' | 'lift' | 'tilt' | 'rotate';
+    hoverCategoryLight?: 'none' | 'shine' | 'flash' | 'glow' | 'sparkle';
   };
   heroCta: {
     size: 'small' | 'medium' | 'large';
