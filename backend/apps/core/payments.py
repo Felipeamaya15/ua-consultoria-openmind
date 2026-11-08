@@ -5,7 +5,7 @@ from apps.core.models import (
 
 PAYMENT_METHODS = {
     'Transbank': 'transbank', 'PayPal': 'paypal', 'MercadoPago': 'mercadopago',
-    'Linkify': 'linkify', 'Transferencia': 'transfer',
+    'Linkify': 'linkify', 'Transferencia': 'transfer', 'TUU': 'tuu',
 }
 UNAVAILABLE_CHECKOUT_METHODS = {
     "paypal": "PayPal requiere conciliación de moneda y captura antes de habilitar compras en CLP.",
@@ -29,7 +29,8 @@ def payment_methods_for_store(tienda):
                             if key in UNAVAILABLE_CHECKOUT_METHODS else {'enabled': True})
     config = ConfiguracionPago.objects.filter(tienda=tienda).first()
     data = config.datos if config and isinstance(config.datos, dict) else {}
-    for key, required in (('linkify', ('idCuenta', 'clavePrivada')), ('transfer', TRANSFER_PUBLIC_FIELDS)):
+    for key, required in (('linkify', ('idCuenta', 'clavePrivada')), ('tuu', ('accountId', 'secretKey')),
+                          ('transfer', TRANSFER_PUBLIC_FIELDS)):
         method = data.get(key)
         if not isinstance(method, dict) or method.get('enabled') is not True:
             continue

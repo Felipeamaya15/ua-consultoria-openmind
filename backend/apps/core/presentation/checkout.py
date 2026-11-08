@@ -63,7 +63,7 @@ class CheckoutSerializer(StrictSerializer):
     clave_checkout = serializers.UUIDField()
     items = CheckoutItemSerializer(many=True, allow_empty=False, max_length=100)
     contacto = ContactSerializer()
-    medio_pago = serializers.ChoiceField(choices=['Transbank', 'PayPal', 'MercadoPago', 'Linkify', 'Transferencia'])
+    medio_pago = serializers.ChoiceField(choices=['Transbank', 'PayPal', 'MercadoPago', 'Linkify', 'Transferencia', 'TUU'])
     metodo_entrega = serializers.ChoiceField(choices=['Chilexpress', 'Starken', 'Retiro'])
     direccion = AddressSerializer(required=False)
     cotizacion = serializers.CharField(max_length=4096, required=False)
@@ -239,12 +239,41 @@ class CheckoutOrderAPIView(ErroresDeCotizacionMixin, APIView):
 
     def _url_pago(self, order, tienda):
         """URL de pago de Linkify del pedido; None si el pedido no es de Linkify o no se puede generar."""
+        if (order.medio_pago or '').strip().lower() == 'tuu':
+            return self._url_pago_tuu(order, tienda)
         if (order.medio_pago or '').strip().lower() != 'linkify':
             return None
         credenciales = self._credenciales_linkify(tienda)
         if not credenciales:
             return None
         return LinkifyAdapter(*credenciales).url_de_pago(str(order.pk))
+
+    @staticmethod
+    def _url_pago_tuu(order, tienda):
+        """URL de pago de TUU Pago Online; None si no está configurado, no hay callback HTTPS o TUU falla."""
+        from urllib.parse import quote
+        from django.conf import settings
+        from apps.catalog.infrastructure.adapters.tuu_adapter import TuuPagoOnlineAdapter
+        from apps.catalog.domain.exceptions import PagoGatewayException
+        from apps.core.presentation.tuu_callback import credenciales_tuu
+        credenciales = credenciales_tuu(tienda)
+        base = getattr(settings, 'TUU_CALLBACK_BASE_URL', '')
+        if not credenciales or not base.startswith('https://'):
+            return None
+        nombre, _, apellido = (order.nombre_contacto or '').strip().partition(' ')
+        tienda_url = settings.STOREFRONT_PUBLIC_URL
+        try:
+            return TuuPagoOnlineAdapter(*credenciales).crear_intento(
+                referencia=order.identificador, monto=int(order.monto_total), email=order.correo_contacto,
+                nombre=nombre, apellido=apellido, telefono=order.telefono_contacto or '',
+                descripcion=f'Pedido {order.identificador}', tienda=tienda.nombre,
+                url_callback=f'{base}/api/pagos/tuu/callback/?tienda={tienda.pk}',
+                url_complete=f'{tienda_url}/seguimiento?orden={quote(order.identificador)}',
+                url_cancel=f'{tienda_url}/seguimiento?orden={quote(order.identificador)}',
+            )
+        except PagoGatewayException:
+            logger.exception('No se pudo iniciar el pago TUU del pedido %s.', order.pk)
+            return None
 
     def order_data(self, request, tienda):
         return request.data

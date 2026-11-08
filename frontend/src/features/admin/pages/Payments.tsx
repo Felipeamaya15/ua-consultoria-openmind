@@ -37,6 +37,13 @@ const otherMethods = [
     fields: [],
   },
   {
+    id: 'tuu',
+    name: 'TUU Pago Online',
+    icon: 'card',
+    desc: 'Pago con tarjeta mediante TUU (Haulmer). Requiere cuenta TUU y callback HTTPS público',
+    fields: ['accountId', 'secretKey'],
+  },
+  {
     id: 'transfer',
     name: 'Transferencia bancaria',
     icon: 'bank',
@@ -669,7 +676,7 @@ export default function Payments() {
     }
   };
   const requiredKeysFor = (id: string): string[] =>
-    id === 'linkify' ? linkifyRequiredFields : id === 'transfer' ? transferRequiredFields : [];
+    id === 'linkify' ? linkifyRequiredFields : id === 'tuu' ? ['accountId', 'secretKey'] : id === 'transfer' ? transferRequiredFields : [];
   const methodName = (id: string) => otherMethods.find((method) => method.id === id)?.name ?? id;
 
   const updateEnabled = (id: string, enabled: boolean) => {
@@ -987,6 +994,24 @@ export default function Payments() {
     });
   };
 
+  const syncTuu = async () => {
+    const current = form.tuu ?? { enabled: false, fields: {} };
+    const complete = ['accountId', 'secretKey'].every((key) => String(current.fields?.[key] ?? '').trim());
+    if (current.enabled && !complete) throw new Error('Completa el ID de cuenta y la llave secreta de TUU.');
+    const currentBody: any = await requestEnvelope(`${API_BASE}/api/pagos/configuracion/`, {
+      method: 'GET',
+      headers: getAuthHeaders(),
+    });
+    await requestEnvelope(`${API_BASE}/api/pagos/configuracion/`, {
+      method: 'PUT',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({
+        ...(currentBody.data ?? {}),
+        tuu: { enabled: current.enabled === true, fields: current.enabled || complete ? { ...(current.fields ?? {}) } : {} },
+      }),
+    });
+  };
+
   const handleSaveLinkify = async () => {
     if (linkifySaving || syncing.current) return;
     setLinkifySaving(true);
@@ -1019,6 +1044,7 @@ export default function Payments() {
 
     try {
       await syncLinkify();
+      await syncTuu();
       const results = await Promise.all([
         handleSaveTransbank(),
         handleSavePayPal(),

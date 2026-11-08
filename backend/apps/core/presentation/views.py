@@ -61,12 +61,13 @@ class ConfiguracionPagoAPIView(APIView):
 
             config_pago, _ = ConfiguracionPago.objects.get_or_create(tienda=tienda)
             datos = serializer.validated_data
-            linkify = datos.get('linkify')
-            if (isinstance(linkify, dict) and linkify.get('enabled') is False
-                    and not any(linkify.get('fields', {}).get(k) for k in ('idCuenta', 'clavePrivada'))):
-                previos = ((config_pago.datos or {}).get('linkify') or {}).get('fields')
+            for metodo, claves in (('linkify', ('idCuenta', 'clavePrivada')), ('tuu', ('accountId', 'secretKey'))):
+               nuevo = datos.get(metodo)
+            if (isinstance(nuevo, dict) and nuevo.get('enabled') is False
+                        and not any(nuevo.get('fields', {}).get(k) for k in claves)):
+                previos = ((config_pago.datos or {}).get(metodo) or {}).get('fields')
                 if isinstance(previos, dict) and previos:
-                    datos['linkify'] = {'enabled': False, 'fields': dict(previos)}
+                    datos[metodo] = {'enabled': False, 'fields': dict(previos)}
             config_pago.datos = datos
             config_pago.save()
 

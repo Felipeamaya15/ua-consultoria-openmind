@@ -154,6 +154,12 @@ const paymentPresentation: PaymentOption[] = [
     desc: 'Pago por link',
   },
   {
+    id: 'TUU',
+    label: 'TUU',
+    icon: 'card',
+    desc: 'Tarjeta de crédito o débito con TUU',
+  },
+  {
     id: 'Transferencia',
     label: 'Transferencia bancaria',
     icon: 'bank',
@@ -434,6 +440,7 @@ export default function Checkout() {
           MercadoPago: 'mercadopago',
           PayPal: 'paypal',
           Linkify: 'linkify',
+          TUU: 'tuu',
           Transferencia: 'transfer',
         };
 
@@ -771,7 +778,7 @@ export default function Checkout() {
       checkoutAttempt.current = {signature, key: crypto.randomUUID()};
     }
     try {
-      if (!['Transbank', 'Linkify', 'Transferencia'].includes(paymentMethod)) {
+      if (!['Transbank', 'Linkify', 'TUU', 'Transferencia'].includes(paymentMethod)) {
         throw new Error('Este medio de pago todavía no está disponible para completar la compra.');
       }
       const order = await orderService.create({
@@ -814,6 +821,15 @@ export default function Checkout() {
         }
         await clearCart();
         window.location.href = result.data.approve_url;
+        return;
+      }
+
+      if (paymentMethod === 'TUU') {
+        if (!order.url_pago) {
+          throw new Error(`Pedido #${orderNumber} registrado, pero no pudimos iniciar el pago con TUU. Contacta a la tienda para completarlo.`);
+        }
+        await clearCart();
+        window.location.href = order.url_pago;
         return;
       }
 
@@ -889,6 +905,7 @@ export default function Checkout() {
     MercadoPago: 'Mercado Pago',
     PayPal: 'PayPal',
     Linkify: 'Linkify',
+    TUU: 'TUU',
     Transferencia: 'Transferencia bancaria',
   };
 

@@ -334,6 +334,7 @@ class ConfiguracionPagoSerializer(serializers.Serializer):
         'mercadopago': ['public_key', 'access_token'],
         'paypal': ['client_id', 'client_secret'],
         'linkify': ['idCuenta', 'clavePrivada'],
+        'tuu': ['accountId', 'secretKey'],
         'transfer': [
             'bank_name',
             'account_type',
@@ -346,6 +347,8 @@ class ConfiguracionPagoSerializer(serializers.Serializer):
     FIELD_LABELS = {
         'idCuenta': 'ID de cuenta',
         'clavePrivada': 'Clave privada',
+        'accountId': 'ID de cuenta TUU',
+        'secretKey': 'Llave secreta TUU',
         'bank_name': 'Banco',
         'account_type': 'Tipo de cuenta',
         'account_number': 'N° de cuenta',

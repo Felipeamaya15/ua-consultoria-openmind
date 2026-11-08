@@ -233,3 +233,4 @@ CSRF_COOKIE_SECURE = not DEBUG
 
 # Dirección pública de la tienda, base de los enlaces de los correos (SCRUM-434).
 STOREFRONT_PUBLIC_URL = (os.getenv('STOREFRONT_PUBLIC_URL') or 'http://localhost:5173/plantilla/1').rstrip('/')
+TUU_CALLBACK_BASE_URL = (os.getenv('TUU_CALLBACK_BASE_URL') or '').rstrip('/')
