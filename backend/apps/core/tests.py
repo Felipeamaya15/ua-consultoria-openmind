@@ -129,7 +129,7 @@ class ConfiguracionTiendaTests(TestCase):
     def test_admin_crea_primera_y_rechaza_segunda_por_get_y_post(self):
         url = '/admin/core/tienda/add/'
         self.assertEqual(self.client.get(url).status_code, 200)
-        data = {'nombre': 'Primera', 'id_usuario_propietario': self.owner.pk, '_save': 'Save'}
+        data = {'nombre': 'Primera', 'id_usuario_propietario': self.owner.pk, 'horas_expiracion_pedido_en_linea': 2, 'horas_expiracion_pedido_manual': 48, '_save': 'Save'}
         self.assertEqual(self.client.post(url, data).status_code, 302)
         tienda = Tienda.objects.del_propietario(self.owner).get()
         self.assertEqual(self.client.get(url).status_code, 403)
@@ -144,6 +144,7 @@ class ConfiguracionTiendaTests(TestCase):
         self.assertTrue(admin.has_add_permission(request))
         formulario = admin.get_form(request)(data={
             'nombre': 'Segunda', 'id_usuario_propietario': self.owner.pk,
+            'horas_expiracion_pedido_en_linea': 2, 'horas_expiracion_pedido_manual': 48,
         })
         self.assertTrue(formulario.is_valid(), formulario.errors)
         primera, _ = configurar_tienda(self.owner, nombre='Primera')
@@ -155,7 +156,7 @@ class ConfiguracionTiendaTests(TestCase):
         tienda, _ = configurar_tienda(self.owner, nombre='Original')
         response = self.client.post(
             f'/admin/core/tienda/{tienda.pk}/change/',
-            {'nombre': 'Actualizada', 'descripcion': 'Nueva', '_save': 'Save'},
+            {'nombre': 'Actualizada', 'descripcion': 'Nueva', 'horas_expiracion_pedido_en_linea': 2, 'horas_expiracion_pedido_manual': 48, '_save': 'Save'},
         )
         self.assertEqual(response.status_code, 302)
         tienda.refresh_from_db()

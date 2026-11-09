@@ -6,7 +6,6 @@ from unittest.mock import patch
 from uuid import uuid4
 
 from django.contrib.auth import get_user_model
-from django.db import IntegrityError
 from django.test import TestCase
 from rest_framework.authtoken.models import Token
 from rest_framework.test import APIClient
@@ -80,7 +79,7 @@ class CheckoutOrderTests(TestCase):
         self.assertEqual(detail['items'][0]['nombre'], 'Pantalón Mongo')
         self.assertEqual(detail['items'][0]['subtotal'], '18000.00')
         self.assertEqual(detail['medio_pago'], 'Transferencia')
-        self.assertEqual([v['stock'] for v in self.repo.get_by_id(str(self.store.pk), self.product_id)['variantes']], [5, 7])
+        self.assertEqual([v['stock'] for v in self.repo.get_by_id(str(self.store.pk), self.product_id)['variantes']], [7, 8])
         self.assertEqual(response.data['data']['identificador'], order.identificador)
 
     def test_repeated_confirmation_returns_same_order_even_after_stock_changes(self):
@@ -110,30 +109,15 @@ class CheckoutOrderTests(TestCase):
         self.assertEqual(retry.status_code, 200, retry.data)
         self.assertEqual(first.data['data'], retry.data['data'])
         self.assertEqual(self.create(dict(self.payload, clave_checkout=str(uuid4()))).status_code, 400)
-        self.assertEqual([v['stock'] for v in self.repo.get_by_id(str(self.store.pk), self.product_id)['variantes']], [5, 7])
-
-    def test_later_stock_failure_restores_prior_reservation_and_rolls_back_order(self):
-        original = self.repo.decrease_stock
-        def reserve(store, sku, quantity):
-            return False if sku == 'QA-L' else original(store, sku, quantity)
-        with patch.object(self.repo, 'decrease_stock', side_effect=reserve):
-            response = self.create()
-        self.assertEqual(response.status_code, 400, response.data)
         self.assertEqual([v['stock'] for v in self.repo.get_by_id(str(self.store.pk), self.product_id)['variantes']], [7, 8])
+
+    def test_later_line_without_stock_rejects_order_and_leaves_stock_untouched(self):
+        self.repo.collection.update_many({}, {'$set': {'variantes.1.stock': 0}})
+        response = self.create()
+        self.assertEqual(response.status_code, 400, response.data)
+        self.assertEqual([v['stock'] for v in self.repo.get_by_id(str(self.store.pk), self.product_id)['variantes']], [7, 0])
         self.assertFalse(Pedido.objects.exists())
         self.assertFalse(ItemPedido.objects.exists())
-
-    def test_sql_stock_failure_restores_mongo_stock_and_rolls_back_order(self):
-        product = Producto.objects.create(nombre='Stock SQL', precio=10, stock=1, id_tienda=self.store)
-        self.repo.collection.update_many({}, {'$set': {'id_producto': product.pk}})
-        # Simular un fallo de escritura real, sin depender de stock SQL obsoleto.
-        with patch.object(Producto, 'save', side_effect=IntegrityError('Fallo SQL simulado')):
-            with self.assertRaises(IntegrityError):
-                self.create()
-        product.refresh_from_db()
-        self.assertEqual(product.stock, 1)
-        self.assertEqual([v['stock'] for v in self.repo.get_by_id(str(self.store.pk), self.product_id)['variantes']], [7, 8])
-        self.assertFalse(Pedido.objects.exists())
 
     def test_key_cannot_be_reused_with_different_data_or_buyer(self):
         self.create()

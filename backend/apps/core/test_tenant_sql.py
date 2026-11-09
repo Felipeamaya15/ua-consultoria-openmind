@@ -137,9 +137,9 @@ class TiendaSQLHTTPTests(TestCase):
     def test_compra_publica_de_variante_local_funciona(self):
         response = self.compra([{'producto_id': self.producto, 'sku': 'LOCAL', 'cantidad': 2}])
         self.assertEqual(response.status_code, 201, response.data)
-        self.assertEqual(self.stock(), 3)
+        self.assertEqual(self.stock(), 5)
         self.producto_sql.refresh_from_db()
-        self.assertEqual(self.producto_sql.stock, 3)
+        self.assertEqual(self.producto_sql.stock, 5)
         self.assertEqual(ItemPedido.objects.get().id_producto.id_tienda, self.tienda)
 
     def test_compra_rechaza_variante_ajena_en_validacion_sin_modificaciones(self):

@@ -834,7 +834,7 @@ export default function Payments() {
 
   const changeTuuEnvironment = (value: string) => {
     const current = form.tuu ?? { enabled: false, fields: {} };
-    const fields = { ...(current.fields ?? {}), environment: value };
+    const fields: Record<string, string> = { ...(current.fields ?? {}), environment: value };
     const usaPrueba = TUU_TEST_ACCOUNT_IDS.includes(String(fields.accountId ?? '').trim());
     if (value === 'produccion' && usaPrueba) {
       fields.accountId = '';
