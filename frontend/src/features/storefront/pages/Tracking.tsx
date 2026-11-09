@@ -20,6 +20,7 @@ import {
 import { useStorefrontTemplate } from '../hooks/useStorefrontTemplate';
 import { shippingService, type DetalleSeguimiento } from '../services/shippingService';
 import { describeTrackingState } from '../data/trackingStates';
+import { PagarPedidoPendiente } from '../components/checkout/PagarPedidoPendiente';
 
 const STATUS_STEPS = [
   {
@@ -121,6 +122,7 @@ export default function Tracking() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const requestRef = useRef<AbortController | null>(null);
+  const lookupEmail = useRef('');
 
   const [liveTracking, setLiveTracking] = useState<DetalleSeguimiento | null>(null);
 
@@ -154,7 +156,10 @@ export default function Tracking() {
         if (!controller.signal.aborted) setLiveTracking(live);
       } else {
         const found = await orderService.track(number, customerEmail, controller.signal);
-        if (!controller.signal.aborted) setOrder(found);
+        if (!controller.signal.aborted) {
+          lookupEmail.current = customerEmail.trim();
+          setOrder(found);
+        }
       }
     } catch (err: any) {
       if (!controller.signal.aborted) {
@@ -583,6 +588,14 @@ export default function Tracking() {
                   {order.medio_pago}
                 </p>
               </div>
+
+              <PagarPedidoPendiente
+                orderNumber={order.identificador}
+                estado={order.estado}
+                medioPago={order.medio_pago}
+                email={lookupEmail.current}
+                venceEn={order.vence_en}
+              />
 
               {Number(order.descuento) > 0 && (
                 <div>

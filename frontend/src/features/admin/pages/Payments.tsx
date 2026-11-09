@@ -8,8 +8,8 @@ import { useAdminForm } from '../hooks/useAdminForm';
 import { AdminCard, Alert, Input, Toggle, Button, Icon, Select } from '../components/ui';
 import { TransferConfigForm } from '../components/TransferConfigForm';
 import { PendingTransfers } from '../components/PendingTransfers';
+import { OrderExpirationSettings } from '../components/OrderExpirationSettings';
 import {
-  hasLinkifyCredentialData,
   linkifyRequiredFields,
   validateLinkifyFields,
 } from '../services/linkifyValidation';
@@ -27,6 +27,11 @@ const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 
 
+// Credenciales de prueba publicadas por TUU (https://developers.tuu.cl/docs/payment-intent). Solo sirven en integración.
+const TUU_TEST_ACCOUNT_ID = '62224230';
+const TUU_TEST_SECRET_KEY = 'yAk0dXTJLQzkeEWODsQWVpPX0bn7ND50qwoQrXgqqNiUyEpgxIPxPtoCgKeLNeh1upTw72JZx5O9x5IaAtPIGUAVcMNcsUSg3M0M8tgWdUb4F8qkS8I7rHpOUmZqzvfS';
+const TUU_TEST_ACCOUNT_IDS = [TUU_TEST_ACCOUNT_ID, '26274343'];
+
 // Métodos de demostración secundarios restantes
 
 const otherMethods = [
@@ -36,6 +41,13 @@ const otherMethods = [
     icon: 'link', 
     desc: 'Validación automática de transferencias bancarias', 
     fields: [],
+  },
+  {
+    id: 'tuu',
+    name: 'TUU Pago Online',
+    icon: 'card',
+    desc: 'Pago con tarjeta mediante TUU (Haulmer). Requiere cuenta TUU y callback HTTPS público',
+    fields: ['accountId', 'secretKey'],
   },
   {
     id: 'transfer',
@@ -132,6 +144,8 @@ export default function Payments() {
   const [transferSaving, setTransferSaving] = useState(false);
   const [transferFeedback, setTransferFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [linkifyFieldErrors, setLinkifyFieldErrors] = useState<Record<string, string>>({});
+  const [linkifySaving, setLinkifySaving] = useState(false);
+  const [linkifyFeedback, setLinkifyFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [transferFieldErrors, setTransferFieldErrors] = useState<Record<string, string>>({});
   const [tiendaId, setTiendaId] = useState<number | null>(null);
   const [tiendaError, setTiendaError] = useState<string | null>(null);
@@ -668,7 +682,7 @@ export default function Payments() {
     }
   };
   const requiredKeysFor = (id: string): string[] =>
-    id === 'linkify' ? linkifyRequiredFields : id === 'transfer' ? transferRequiredFields : [];
+    id === 'linkify' ? linkifyRequiredFields : id === 'tuu' ? ['accountId', 'secretKey'] : id === 'transfer' ? transferRequiredFields : [];
   const methodName = (id: string) => otherMethods.find((method) => method.id === id)?.name ?? id;
 
   const updateEnabled = (id: string, enabled: boolean) => {
@@ -776,7 +790,7 @@ export default function Payments() {
     }
     const enabledSecondary = otherMethods.filter((method) => form[method.id]?.enabled);
     const linkifyFields = form.linkify?.fields ?? {};
-    if (form.linkify?.enabled || hasLinkifyCredentialData(linkifyFields)) {
+    if (form.linkify?.enabled) {
       const linkifyValidation = validateLinkifyFields(linkifyFields);
       setLinkifyFieldErrors(linkifyValidation.errors);
       if (linkifyValidation.invalidFields.length) return linkifyValidation.message;
@@ -805,6 +819,85 @@ export default function Payments() {
       }
     }
     return '';
+  };
+
+  const fillTuuTestCredentials = () => {
+    const current = form.tuu ?? { enabled: false, fields: {} };
+    setForm({
+      ...form,
+      tuu: {
+        ...current,
+        fields: { ...(current.fields ?? {}), accountId: TUU_TEST_ACCOUNT_ID, secretKey: TUU_TEST_SECRET_KEY, environment: 'integracion' },
+      },
+    });
+  };
+
+  const changeTuuEnvironment = (value: string) => {
+    const current = form.tuu ?? { enabled: false, fields: {} };
+    const fields: Record<string, string> = { ...(current.fields ?? {}), environment: value };
+    const usaPrueba = TUU_TEST_ACCOUNT_IDS.includes(String(fields.accountId ?? '').trim());
+    if (value === 'produccion' && usaPrueba) {
+      fields.accountId = '';
+      fields.secretKey = '';
+    }
+    setForm({
+      ...form,
+      tuu: { ...current, enabled: value === 'produccion' && usaPrueba ? false : current.enabled, fields },
+    });
+  };
+
+  const renderTuuConfig = () => {
+    const current = form.tuu ?? { enabled: false, fields: {} };
+    const environment = current.fields?.environment === 'produccion' ? 'produccion' : 'integracion';
+
+    return (
+      <div className="border-t border-[var(--border)] pt-3 grid gap-4">
+        <Input
+          label="ID de cuenta TUU *"
+          required
+          maxLength={200}
+          autoComplete="off"
+          value={current.fields?.accountId ?? ''}
+          placeholder="Lo entrega TUU al crear tu cuenta"
+          onChange={(event) => updateField('tuu', 'accountId', event.target.value)}
+        />
+        <Input
+          label="Llave secreta *"
+          type="password"
+          required
+          maxLength={500}
+          autoComplete="off"
+          value={current.fields?.secretKey ?? ''}
+          placeholder="Llave secreta del mismo ambiente"
+          onChange={(event) => updateField('tuu', 'secretKey', event.target.value)}
+        />
+        <Select
+          label="Ambiente"
+          value={environment}
+          onChange={(event) => changeTuuEnvironment(event.target.value)}
+          options={[
+            { value: 'integracion', label: 'Modo de prueba (integración)' },
+            { value: 'produccion', label: 'Producción' },
+          ]}
+        />
+        {environment === 'integracion' && (
+          <div>
+            <Button type="button" size="sm" variant="secondary" onClick={fillTuuTestCredentials}>
+              Usar credenciales de prueba de TUU
+            </Button>
+          </div>
+        )}
+        {environment === 'produccion' ? (
+          <Alert variant="warning">
+            Producción cobra pagos reales. Usa el ID de cuenta y la llave secreta de producción entregados por TUU.
+          </Alert>
+        ) : (
+          <p className="text-xs text-[var(--muted-foreground)]">
+            En modo de prueba no se cobra dinero real. Usa las credenciales de integración y las tarjetas de prueba de TUU.
+          </p>
+        )}
+      </div>
+    );
   };
 
   const renderLinkifyConfig = () => {
@@ -943,17 +1036,30 @@ export default function Payments() {
             onChange={(enabled) => updateField('linkify', 'autoExpireLinks', String(enabled))}
           />
         </div>
+
+        {linkifyFeedback && <Alert variant={linkifyFeedback.type}>{linkifyFeedback.message}</Alert>}
+        <div className="flex justify-end">
+          <Button type="button" size="sm" variant="primary" loading={linkifySaving} onClick={handleSaveLinkify}>
+            Guardar Linkify
+          </Button>
+        </div>
       </div>
     );
   };
 
   const syncLinkify = async () => {
     const current = form.linkify ?? { enabled: false, fields: {} };
-    if (current.enabled || hasLinkifyCredentialData(current.fields)) {
+    if (current.enabled) {
       const validation = validateLinkifyFields(current.fields);
       setLinkifyFieldErrors(validation.errors);
       if (validation.invalidFields.length) throw new Error(validation.message);
+    } else {
+      setLinkifyFieldErrors({});
     }
+    // Apagado sin clave escrita: el backend conserva las credenciales ya guardadas.
+    const fieldsToSend = current.enabled || String(current.fields?.clavePrivada ?? '').trim()
+      ? { ...(current.fields ?? {}) }
+      : {};
 
     const currentBody: any = await requestEnvelope(`${API_BASE}/api/pagos/configuracion/`, {
       method: 'GET',
@@ -967,10 +1073,45 @@ export default function Payments() {
         ...(currentBody.data ?? {}),
         linkify: {
           enabled: current.enabled === true,
-          fields: { ...(current.fields ?? {}) },
+          fields: fieldsToSend,
         },
       }),
     });
+  };
+
+  const syncTuu = async () => {
+    const current = form.tuu ?? { enabled: false, fields: {} };
+    const complete = ['accountId', 'secretKey'].every((key) => String(current.fields?.[key] ?? '').trim());
+    if (current.enabled && !complete) throw new Error('Completa el ID de cuenta y la llave secreta de TUU.');
+    const currentBody: any = await requestEnvelope(`${API_BASE}/api/pagos/configuracion/`, {
+      method: 'GET',
+      headers: getAuthHeaders(),
+    });
+    await requestEnvelope(`${API_BASE}/api/pagos/configuracion/`, {
+      method: 'PUT',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({
+        ...(currentBody.data ?? {}),
+        tuu: { enabled: current.enabled === true, fields: current.enabled || complete ? { ...(current.fields ?? {}), environment: current.fields?.environment === 'produccion' ? 'produccion' : 'integracion' } : {} },
+      }),
+    });
+  };
+
+  const handleSaveLinkify = async () => {
+    if (linkifySaving || syncing.current) return;
+    setLinkifySaving(true);
+    setLinkifyFeedback(null);
+    try {
+      await syncLinkify();
+      setLinkifyFeedback({ type: 'success', message: 'Configuración de Linkify guardada.' });
+    } catch (err) {
+      setLinkifyFeedback({
+        type: 'error',
+        message: err instanceof Error ? humanizeAdminError(err.message) : 'No se pudo guardar Linkify.',
+      });
+    } finally {
+      setLinkifySaving(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -988,6 +1129,7 @@ export default function Payments() {
 
     try {
       await syncLinkify();
+      await syncTuu();
       const results = await Promise.all([
         handleSaveTransbank(),
         handleSavePayPal(),
@@ -1104,7 +1246,6 @@ export default function Payments() {
             <div className="rounded-xl bg-[var(--muted)] p-4 text-sm grid gap-2">
               <h3 className="font-semibold">Conecta tu comercio con Webpay</h3>
               <p className="text-[var(--muted-foreground)]">El código de comercio identifica tu negocio y la clave secreta autoriza la conexión con Transbank. Usa las credenciales del mismo entorno.</p>
-              <a href="https://transbankdevelopers.com/documentacion/como_empezar" target="_blank" rel="noreferrer" className="font-medium underline underline-offset-2 text-[var(--primary)]">Cómo obtener las credenciales de Transbank (abre una nueva pestaña)</a>
               <p className="text-[var(--muted-foreground)]">Para pruebas, consulta las credenciales de integración. Para ventas reales, utiliza el código y la clave que Transbank entrega a tu comercio después de la afiliación y habilitación.</p>
             </div>
 
@@ -1244,7 +1385,7 @@ export default function Payments() {
 
               <p className="text-xs text-[var(--muted-foreground)]">
 
-                Configuración disponible. Las compras estarán habilitadas cuando se complete la confirmación del pago.
+                Los compradores pagan en pesos (CLP) en Mercado Pago y el pedido pasa a Pagado cuando el pago es aprobado.
 
               </p>
 
@@ -1421,7 +1562,7 @@ export default function Payments() {
 
               <p className="text-xs text-[var(--muted-foreground)]">
 
-                Configuración disponible. Las compras en CLP requieren completar la moneda y captura del pago.
+                PayPal no admite pesos: el cobro se hace en USD con el dólar observado  más el margen configurado.
 
               </p>
 
@@ -1615,6 +1756,8 @@ export default function Payments() {
 
             {method.id === 'linkify' ? (
               renderLinkifyConfig()
+            ) : method.id === 'tuu' ? (
+              renderTuuConfig()
             ) : (
               <TransferConfigForm
                 fields={current.fields ?? {}}
@@ -1658,13 +1801,15 @@ export default function Payments() {
 
 
 
+      <OrderExpirationSettings />
+
       {saved && !backendError && !validationError && !isSyncing && (
         <Alert variant="success">Métodos de pago guardados correctamente.</Alert>
       )}
 
 
 
-      <Button type="submit" className="whitespace-normal" disabled={tbLoading || ppLoading || mpLoading || transferLoading || Boolean(tiendaError)} loading={isSyncing || tbSaving || ppSaving || mpSaving || transferSaving}>
+      <Button type="submit" className="whitespace-normal" disabled={tbLoading || ppLoading || mpLoading || transferLoading || Boolean(tiendaError)} loading={isSyncing || tbSaving || ppSaving || mpSaving || transferSaving || linkifySaving}>
 
         Guardar todos los métodos de pago
 

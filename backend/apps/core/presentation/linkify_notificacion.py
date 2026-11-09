@@ -37,6 +37,7 @@ from rest_framework.views import APIView
 
 from apps.core.infrastructure.linkify_client import LinkifyAdapter
 from apps.core.infrastructure.notificaciones_pedido import notificar_cambio_de_estado
+from apps.core.infrastructure.stock_pedidos import descontar_stock_de_pedido
 from apps.core.models import ConfiguracionPago, Pedido
 from apps.core.presentation.responses import error_response
 
@@ -149,7 +150,7 @@ class LinkifyNotificacionView(APIView):
     @staticmethod
     def _verificar_firma(request, pedido, *firmados):
         config = ConfiguracionPago.objects.filter(tienda=pedido.tienda).first()
-        linkify = ((config.datos or {}).get("linkify") or {}) if config else {}
+        linkify = (config.datos_descifrados.get("linkify") or {}) if config else {}
         campos = linkify.get("fields") or {}
         id_cuenta, clave = campos.get("idCuenta"), campos.get("clavePrivada")
         # No se exige "enabled": un pago en curso debe poder cerrarse aunque
@@ -182,6 +183,8 @@ class LinkifyNotificacionView(APIView):
                 pedido.save(update_fields=["estado"])
                 logger.info("Linkify: pedido %s marcado como pagado", pedido.pk)
             # Ya pagado (o en despacho): el aviso ya se habia procesado (es idempotente).
+        if pedido.estado in Pedido.ESTADOS_PAGADOS:
+            descontar_stock_de_pedido(pedido.pk)
         if pasa_a_pagado:
             notificar_cambio_de_estado(pedido, "pendiente")
         return Response({"exito": True, "mensaje": "Pago registrado.", "estado": pedido.estado})

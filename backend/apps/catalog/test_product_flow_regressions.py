@@ -111,13 +111,13 @@ class CheckoutVariantRegressionTests(CheckoutOrderTests):
         self.assertFalse(Pedido.objects.exists())
         self.assertEqual(self.repo.get_by_id(str(self.store.pk), self.product_id)['variantes'][0]['stock'], 7)
 
-    def test_checkout_refreshes_stale_sql_stock_from_mongo_without_negative_stock(self):
+    def test_checkout_does_not_touch_sql_stock_nor_leave_it_negative(self):
         from bson import ObjectId
         product = Producto.objects.create(id_tienda=self.store, nombre='Espejo', precio=10000, stock=0)
         self.repo.collection.update_one({'_id': ObjectId(self.product_id)}, {'$set': {'id_producto': product.pk}})
         self.assertEqual(self.create().status_code, 201)
         product.refresh_from_db()
-        self.assertEqual(product.stock, 12)  # 7 + 8 - 2 - 1, una sola reserva por línea.
+        self.assertEqual(product.stock, 0)  # RN-03: el stock (SQL y Mongo) se sincroniza al pagar, no al crear el pedido.
 
 
 def load_tests(loader, tests, pattern):
@@ -125,6 +125,6 @@ def load_tests(loader, tests, pattern):
     suite = loader.loadTestsFromTestCase(PublicVariantRegressionTests)
     suite.addTests(unittest.TestSuite(CheckoutVariantRegressionTests(name) for name in (
         'test_checkout_rejects_legacy_soft_deleted_variant_without_order_or_stock_change',
-        'test_checkout_refreshes_stale_sql_stock_from_mongo_without_negative_stock',
+        'test_checkout_does_not_touch_sql_stock_nor_leave_it_negative',
     )))
     return suite

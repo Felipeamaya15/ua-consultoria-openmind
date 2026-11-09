@@ -219,10 +219,10 @@ class EndToEndPurchaseFlowTests(TestCase):
         self.api.delete(f'/api/catalog/carrito/items/{cart_item_id}/')
         self.assertEqual(ItemCarrito.objects.count(), 0)
 
-        # Verificar descuento de stock en MongoDB (POL-M pasa de 6 a 4; POL-L permanece en 4)
+        # el pedido pendiente no descuenta stock; solo se descuenta al confirmar el pago
         updated_doc = self.repo.get_by_id(str(self.store.pk), self.product_id)
         stocks = {v['sku']: v['stock'] for v in updated_doc['variantes']}
-        self.assertEqual(stocks, {'POL-M': 4, 'POL-L': 4})
+        self.assertEqual(stocks, {'POL-M': 6, 'POL-L': 4})
 
         # ETAPA 10A: Consulta del pedido en el historial del comprador autenticado (/mis-pedidos)
         history_res = self.api.get('/api/mi-cuenta/pedidos/')

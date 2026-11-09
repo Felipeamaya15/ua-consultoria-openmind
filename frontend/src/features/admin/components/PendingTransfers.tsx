@@ -81,7 +81,7 @@ export function PendingTransfers() {
     <div className="flex items-center justify-between gap-3 mb-3">
       <div>
         <h3 className="text-sm font-semibold">Transferencias pendientes de verificación</h3>
-        <p className="text-xs text-[var(--muted-foreground)]">Pedidos por transferencia bancaria que todavía no figuran como pagados.</p>
+        <p className="text-xs text-[var(--muted-foreground)]">Pedidos por transferencia bancaria que todavía no figuran como pagados. Al pasar su fecha de vencimiento se cancelan automáticamente (en el siguiente ciclo del proceso programado) y su stock vuelve al inventario; hasta entonces aún puedes aprobarlos; el plazo se cambia en «Plazo para pagar los pedidos».</p>
       </div>
       <Button type="button" size="sm" variant="outline" disabled={loading} onClick={() => setRefresh(value => value + 1)}>
         {error ? 'Reintentar' : 'Actualizar'}
@@ -100,6 +100,7 @@ export function PendingTransfers() {
             <th scope="col" className="py-2 pr-3">Cliente</th>
             <th scope="col" className="py-2 pr-3">Monto</th>
             <th scope="col" className="py-2">Fecha</th>
+            <th scope="col" className="py-2 pl-3">Vence</th>
             <th scope="col" className="py-2 pl-3 text-right">Acción</th>
           </tr></thead>
           <tbody>{transfers.map(transfer => <tr key={transfer.id_pedido} className="border-b border-[var(--border)] last:border-0">
@@ -107,6 +108,7 @@ export function PendingTransfers() {
             <td className="py-3 pr-3"><p>{transfer.nombre_contacto || 'Cliente sin nombre'}</p><p className="text-xs text-[var(--muted-foreground)]">{transfer.correo_contacto}</p></td>
             <td className="py-3 pr-3 whitespace-nowrap">{formatPrice(Number(transfer.monto_total))}</td>
             <td className="py-3 whitespace-nowrap"><time dateTime={transfer.fecha_creacion}>{dateFormat.format(new Date(transfer.fecha_creacion))}</time></td>
+            <td className="py-3 pl-3 whitespace-nowrap">{transfer.vence_en ? <><time dateTime={transfer.vence_en}>{dateFormat.format(new Date(transfer.vence_en))}</time>{Date.parse(transfer.vence_en) < Date.now() && <span className="ml-2 text-xs font-medium text-red-600" data-testid="transferencia-vencida">Vencido</span>}</> : <span className="text-xs text-[var(--muted-foreground)]">Sin vencimiento</span>}</td>
             <td className="py-3 pl-3 text-right">
               {transfer.medio_pago === 'Transferencia' ? <div className="flex justify-end gap-2">
                 <Button

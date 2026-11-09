@@ -75,4 +75,4 @@ class PickupCheckoutSelectionTests(TestCase):
             retry = api.post('/api/checkout/pedidos/', payload, format='json')
             self.assertEqual(retry.status_code, 200, retry.data)
             self.assertEqual(retry.data['data'], first.data['data'])
-            repository.return_value.decrease_stock.assert_called_once()
+            repository.return_value.decrease_stock.assert_not_called()

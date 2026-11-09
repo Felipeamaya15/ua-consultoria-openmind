@@ -334,6 +334,7 @@ class ConfiguracionPagoSerializer(serializers.Serializer):
         'mercadopago': ['public_key', 'access_token'],
         'paypal': ['client_id', 'client_secret'],
         'linkify': ['idCuenta', 'clavePrivada'],
+        'tuu': ['accountId', 'secretKey'],
         'transfer': [
             'bank_name',
             'account_type',
@@ -343,9 +344,13 @@ class ConfiguracionPagoSerializer(serializers.Serializer):
             'confirmation_email',
         ],
     }
+    TUU_ENVIRONMENTS = ('integracion', 'produccion')
+    TUU_CUENTAS_DE_PRUEBA = ('62224230', '26274343')
     FIELD_LABELS = {
         'idCuenta': 'ID de cuenta',
         'clavePrivada': 'Clave privada',
+        'accountId': 'ID de cuenta TUU',
+        'secretKey': 'Llave secreta TUU',
         'bank_name': 'Banco',
         'account_type': 'Tipo de cuenta',
         'account_number': 'N° de cuenta',
@@ -426,6 +431,20 @@ class ConfiguracionPagoSerializer(serializers.Serializer):
                 if field_errors:
                     errores_metodos[method_id] = ' '.join(field_errors)
 
+            if method_id == 'tuu':
+                tuu_errors = []
+                for field in ('accountId', 'secretKey', 'environment'):
+                    if field in fields and not isinstance(fields[field], str):
+                        tuu_errors.append(f'{field} debe ser texto.')
+                environment = fields.get('environment')
+                if isinstance(environment, str) and environment not in self.TUU_ENVIRONMENTS:
+                    tuu_errors.append('Ambiente de TUU no es válido: usa integracion o produccion.')
+                if (environment == 'produccion'
+                        and str(fields.get('accountId') or '').strip() in self.TUU_CUENTAS_DE_PRUEBA):
+                    tuu_errors.append('Las credenciales de prueba de TUU no sirven en producción.')
+                if tuu_errors:
+                    errores_metodos[method_id] = ' '.join(tuu_errors)
+
             # Las credenciales parciales tampoco pueden persistirse con Linkify deshabilitado.
             has_linkify_data = method_id == 'linkify' and any(
                 fields.get(field) not in (None, '') for field in ('idCuenta', 'clavePrivada')
@@ -472,13 +491,22 @@ class PedidoSerializer(serializers.ModelSerializer):
         read_only_fields = ['identificador']
 
 class TransferenciaPendienteSerializer(serializers.ModelSerializer):
+    # Hasta cuando el comprador puede pagar; None si la tienda dejo el plazo manual en 0 (nunca expira).
+    vence_en = serializers.SerializerMethodField()
+
     class Meta:
         model = Pedido
         fields = [
             'id_pedido', 'identificador', 'fecha_creacion', 'nombre_contacto',
-            'correo_contacto', 'monto_total', 'medio_pago', 'estado',
+            'correo_contacto', 'monto_total', 'medio_pago', 'estado', 'vence_en',
         ]
         read_only_fields = fields
+
+    def get_vence_en(self, pedido):
+        from apps.core.infrastructure.expiracion_pedidos import vence_en
+
+        limite = vence_en(pedido)
+        return limite.isoformat() if limite else None
 
 
 class ItemPedidoTiendaSerializer(serializers.ModelSerializer):

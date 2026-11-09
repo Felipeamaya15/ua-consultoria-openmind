@@ -254,7 +254,7 @@ class DeliveryCheckoutTests(TestCase):
         self.assertEqual(order.entrega['metodo'], 'Retiro')
         self.assertEqual(order.costo_envio, 0)
         self.assertEqual(order.monto_total, 1000)
-        self.repository.decrease_stock.assert_called_once_with(str(self.store.pk), 'DELIVERY-SKU', 1)
+        self.repository.decrease_stock.assert_not_called()
 
     def test_panel_save_public_checkout_and_disable_preserve_carriers_and_payments(self):
         admin = APIClient()
@@ -292,7 +292,7 @@ class DeliveryCheckoutTests(TestCase):
         self.assertEqual(ConfiguracionPago.objects.get(tienda=self.store).datos, payments)
         order.refresh_from_db()
         self.assertEqual(order.entrega['retiro']['location']['comuna'], 'Providencia')
-        self.assertEqual(self.repository.decrease_stock.call_count, 1)
+        self.assertEqual(self.repository.decrease_stock.call_count, 0)
 
     def test_retry_of_existing_order_survives_disable_without_new_stock_changes(self):
         config = ConfiguracionEntrega.objects.create(tienda=self.store, datos=self.configuration)
@@ -304,6 +304,6 @@ class DeliveryCheckoutTests(TestCase):
         self.assertEqual(retry.status_code, 200, retry.data)
         self.assertEqual(retry.data['data']['id_pedido'], first.data['data']['id_pedido'])
         self.assertEqual(Pedido.objects.count(), 1)
-        self.assertEqual(self.repository.decrease_stock.call_count, 1)
+        self.assertEqual(self.repository.decrease_stock.call_count, 0)
         new_data = {**self.payload, 'clave_checkout': str(uuid4())}
         self.assertEqual(self.api.post(self.url, new_data, format='json').status_code, 400)

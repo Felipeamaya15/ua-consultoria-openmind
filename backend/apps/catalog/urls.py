@@ -25,6 +25,7 @@ from apps.catalog.presentation.views import (
     IniciarPagoTransbankView,
     ConfirmarPagoTransbankView,
     PagoAbortadoTransbankView,
+    RetornoTransbankView,
     ConfiguracionPayPalView,
     ConfiguracionMercadoPagoView,
 )
@@ -153,6 +154,11 @@ urlpatterns = [
         "pagos/transbank/confirmar/",
         ConfirmarPagoTransbankView.as_view(),
         name="pago-transbank-confirmar",
+    ),
+    path(
+        "pagos/transbank/retorno/",
+        RetornoTransbankView.as_view(),
+        name="pago-transbank-retorno",
     ),
     path(
         "pagos/transbank/abortado/",

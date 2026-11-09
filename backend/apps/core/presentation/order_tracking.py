@@ -10,6 +10,7 @@ from rest_framework.throttling import AnonRateThrottle
 from rest_framework.views import APIView
 
 from apps.authentication.presentation.profile import StrictSerializer
+from apps.core.infrastructure.expiracion_pedidos import expirar_pedido_pendiente, pedido_expirado
 from apps.core.infrastructure.tenant import resolver_tienda
 from apps.core.models import ItemPedido, Pedido
 from apps.core.presentation.customer_orders import OrderDetailSerializer
@@ -80,6 +81,8 @@ class OrderTrackingAPIView(APIView):
 
         guard.register_success()
         order = matches[0]
+        if pedido_expirado(order) and expirar_pedido_pendiente(order.pk, consultar_pasarela=False):
+            order.refresh_from_db() 
         data = OrderDetailSerializer(order).data
 
         # --- SCRUM-377: Construcción de Línea de Tiempo (RF-02.4) ---

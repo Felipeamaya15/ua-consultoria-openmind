@@ -11,7 +11,7 @@ from apps.core.presentation.responses import success_response
 class InformacionTiendaSerializer(serializers.ModelSerializer):
     class Meta:
         model = Tienda
-        fields = ['nombre', 'descripcion', 'correo_negocio']
+        fields = ['nombre', 'descripcion', 'correo_negocio', 'horas_expiracion_pedido_en_linea', 'horas_expiracion_pedido_manual']
 
 
 class InformacionTiendaAPIView(APIView):
@@ -22,14 +22,21 @@ class InformacionTiendaAPIView(APIView):
         tienda = resolver_tienda(request)
         data = dict(InformacionTiendaSerializer(tienda).data)
         if not (request.user.is_authenticated and request.user.is_active and tienda.id_usuario_propietario_id == request.user.pk):
-            data.pop('correo_negocio', None)
+            for campo in ('correo_negocio', 'horas_expiracion_pedido_en_linea', 'horas_expiracion_pedido_manual'):
+                data.pop(campo, None)
         response = success_response(data=data)
         response['Cache-Control'] = 'no-store'
         return response
 
     def put(self, request):
+        return self._guardar(request, partial=False)
+
+    def patch(self, request):
+        return self._guardar(request, partial=True)
+
+    def _guardar(self, request, partial):
         tienda = resolver_tienda(request, exigir_propietario=True)
-        serializer = InformacionTiendaSerializer(tienda, data=request.data)
+        serializer = InformacionTiendaSerializer(tienda, data=request.data, partial=partial)
         serializer.is_valid(raise_exception=True)
         serializer.save()
         response = success_response(data=serializer.data, mensaje='Información del negocio guardada.')

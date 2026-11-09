@@ -130,9 +130,9 @@ class LinkifyCheckoutTests(TestCase):
         datos = respuesta.json()['data']
         self.assertEqual(datos['estado'], 'pendiente')
         self.assertEqual(datos['url_pago'], f"https://app.linkify.cl/pay/CUENTA-QA/remote/{datos['id_pedido']}")
-        self.assertEqual(self.repositorio.descuentos, [('QA-M', 2)])
+        self.assertEqual(self.repositorio.descuentos, [])
 
-    def test_el_reintento_tambien_entrega_el_link_y_no_descuenta_otra_vez(self):
+    def test_el_reintento_tambien_entrega_el_link_y_no_crea_otro_pedido(self):
         self.configurar_linkify()
         clave = str(uuid4())
         primera = self.comprar(self.payload(clave=clave)).json()['data']
@@ -140,7 +140,7 @@ class LinkifyCheckoutTests(TestCase):
         self.assertEqual(segunda.status_code, 200, segunda.content)
         self.assertEqual(segunda.json()['data']['id_pedido'], primera['id_pedido'])
         self.assertEqual(segunda.json()['data']['url_pago'], primera['url_pago'])
-        self.assertEqual(len(self.repositorio.descuentos), 1)
+        self.assertEqual(self.repositorio.descuentos, [])
         self.assertEqual(Pedido.objects.count(), 1)
 
     def test_sin_configurar_linkify_se_rechaza_antes_de_crear_el_pedido(self):
