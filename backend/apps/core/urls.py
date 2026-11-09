@@ -1,9 +1,14 @@
 
 from apps.core.presentation.customer_orders import CustomerOrdersAPIView
+from apps.core.presentation.pago_pedido_pendiente import PagarPedidoPendienteView
 from apps.core.presentation.order_tracking import OrderTrackingAPIView
 from apps.core.presentation.checkout import CheckoutOrderAPIView
 from apps.core.presentation.shipping import ShippingQuoteAPIView
 from apps.core.presentation.linkify_notificacion import LinkifyNotificacionView
+from apps.core.presentation.tuu_callback import TuuCallbackView
+from apps.core.presentation.pagos_externos import (
+    CapturarPagoPayPalView, ConfirmarPagoMercadoPagoView, IniciarPagoMercadoPagoView, IniciarPagoPayPalView,
+)
 from apps.core.presentation.legal import (
     ConfiguracionLegalAPIView,
     ConsultaVersionVigenteAPIView,
@@ -20,7 +25,11 @@ from apps.core.presentation.commercial_exports import (InformeXLSXAPIView, Pedid
 from apps.core.presentation.dashboard import DashboardAPIView
 from apps.core.presentation.reports import InformeAPIView, InformePDFAPIView
 from apps.core.presentation.store_configuration import InformacionTiendaAPIView
-from apps.core.presentation.plantillas_correo import PlantillasCorreoAPIView
+from apps.core.presentation.plantillas_correo import (
+    PlantillasCorreoAPIView,
+    EnviarCorreoManualPedidoAPIView,
+    ProbarCorreoEventoAPIView,
+)
 from apps.core.presentation.pickup_address import PickupAddressAPIView
 from apps.core.presentation.promotions import PromocionesAPIView, PromocionDetalleAPIView, ValidarPromocionAPIView
 from django.urls import path
@@ -34,8 +43,6 @@ from apps.core.presentation.views import (
     MetodosPagoActivosAPIView,
     RegistrarCompraView,
     TiendaPagoActualAPIView,
-    IniciarPagoPayPalView,
-    CapturarPagoPayPalView,
     WebhookLinkifyAPIView,
     VerificarTransferenciaLinkifyAPIView,
     TransferenciasPendientesAPIView,
@@ -58,6 +65,8 @@ urlpatterns = [
     path('tienda/contactos/exportar/', ContactosExportAPIView.as_view(), name='tienda-contactos-exportar'),
     path('tienda/configuracion/', InformacionTiendaAPIView.as_view(), name='tienda-configuracion'),
     path('tienda/correos/', PlantillasCorreoAPIView.as_view(), name='tienda-correos'),
+    path('tienda/correos/enviar-manual/', ProbarCorreoEventoAPIView.as_view(), name='tienda-correos-enviar-manual'),
+    path('tienda/pedidos/<int:id_pedido>/enviar-correo/', EnviarCorreoManualPedidoAPIView.as_view(), name='tienda-pedido-enviar-correo'),
     path('promociones/', PromocionesAPIView.as_view(), name='promotions'),
     path('promociones/validar/', ValidarPromocionAPIView.as_view(), name='promotion-validate'),
     path('promociones/<int:promotion_id>/', PromocionDetalleAPIView.as_view(), name='promotion-detail'),
@@ -77,9 +86,13 @@ urlpatterns = [
     path('entregas/alternativas/', AlternativasEntregaAPIView.as_view(), name='entregas-alternativas'),
     path('entregas/cotizacion/', ShippingQuoteAPIView.as_view(), name='entregas-cotizacion'),
     path('pagos/activos/', MetodosPagoActivosAPIView.as_view(), name='pagos-activos'),
+    path('pagos/pedido/pagar/', PagarPedidoPendienteView.as_view(), name='pagar-pedido-pendiente'),
     path('pagos/paypal/iniciar/', IniciarPagoPayPalView.as_view(), name='paypal_iniciar'),
     path('pagos/paypal/capturar/', CapturarPagoPayPalView.as_view(), name='paypal_capturar'),
+    path('pagos/mercadopago/iniciar/', IniciarPagoMercadoPagoView.as_view(), name='mercadopago_iniciar'),
+    path('pagos/mercadopago/confirmar/', ConfirmarPagoMercadoPagoView.as_view(), name='mercadopago_confirmar'),
     path('pagos/linkify/notificacion/', LinkifyNotificacionView.as_view(), name='linkify_notificacion'),
+    path('pagos/tuu/callback/', TuuCallbackView.as_view(), name='tuu_callback'),
     path('pagos/linkify/webhook/', WebhookLinkifyAPIView.as_view(), name='linkify_webhook'),
     path('pagos/linkify/verificar/', VerificarTransferenciaLinkifyAPIView.as_view(), name='linkify_verificar'),
     path('pagos/transferencias/pendientes/', TransferenciasPendientesAPIView.as_view(), name='transferencias-pendientes'),

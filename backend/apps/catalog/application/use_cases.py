@@ -516,10 +516,13 @@ class IniciarPagoTransbankUseCase:
             if not monto.is_finite() or monto <= 0 or monto != monto.to_integral_value():
                 raise ConfiguracionPagoInvalidaException("Webpay requiere un total positivo en pesos enteros.")
 
-            # Si Webpay ya respondió correctamente, reutilizar el token y la URL.
-            if pedido.webpay_token and pedido.webpay_url:
+            from apps.core.infrastructure.expiracion_pedidos import pedido_expirado, token_webpay_vigente
+
+            if pedido_expirado(pedido):
+                raise ConfiguracionPagoInvalidaException("Este pedido expiró. Realiza una nueva compra.")
+            if token_webpay_vigente(pedido):
                 return {"token": pedido.webpay_token, "url": pedido.webpay_url}
-            if pedido.webpay_token or pedido.webpay_url:
+            if bool(pedido.webpay_token) != bool(pedido.webpay_url):
                 raise TransbankTransaccionException("El inicio de Webpay requiere revisión.")
 
             config = ConfiguracionTransbank.objects.filter(id_tienda_id=tienda_pk).first()
@@ -548,7 +551,8 @@ class IniciarPagoTransbankUseCase:
                 raise TransbankTransaccionException("Webpay devolvió una transacción incompleta.")
             pedido.webpay_token = respuesta["token"]
             pedido.webpay_url = respuesta["url"]
-            pedido.save(update_fields=["webpay_token", "webpay_url"])
+            pedido.webpay_iniciado_en = timezone.now()
+            pedido.save(update_fields=["webpay_token", "webpay_url", "webpay_iniciado_en"])
             return {"token": pedido.webpay_token, "url": pedido.webpay_url}
 
     def ejecutar(self, *args, **kwargs) -> Dict[str, Any]:
@@ -606,7 +610,11 @@ class ConfirmarPagoTransbankUseCase:
                 tienda_id=tienda_pk, medio_pago="Transbank", estado="pendiente", webpay_token=token_ws
             ).first()
             if pedido:
-                notificar_pago_rechazado(pedido)
+                try:
+                    notificar_pago_rechazado(pedido)
+                finally:
+                    Pedido.objects.filter(pk=pedido.pk, estado="pendiente", webpay_token=token_ws).update(
+                        webpay_token="", webpay_url="")
         except Exception:
             logging.getLogger(__name__).exception("No se pudo avisar el pago rechazado de Webpay.")
 
@@ -636,6 +644,9 @@ class ConfirmarPagoTransbankUseCase:
             if pasa_a_pagado:
                 pedido.estado = "pagado"
                 pedido.save(update_fields=["estado"])
+        if pedido.estado in Pedido.ESTADOS_PAGADOS:
+            from apps.core.infrastructure.stock_pedidos import descontar_stock_de_pedido
+            descontar_stock_de_pedido(pedido.pk)
         if pasa_a_pagado:
             # Correo de pago exitoso al comprador (SCRUM-429); no interrumpe la confirmación si falla.
             from apps.core.infrastructure.notificaciones_pedido import notificar_cambio_de_estado

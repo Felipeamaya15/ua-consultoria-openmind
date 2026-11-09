@@ -5,6 +5,8 @@ from rest_framework.exceptions import APIException
 from django.db import transaction
 
 from apps.core.delivery import delivery_data, delivery_for_store
+from apps.core.infrastructure.expiracion_pedidos import devolver_stock_de_pedido_cancelado, liberar_vencidos_de_tienda
+from apps.core.infrastructure.stock_pedidos import descontar_stock_de_pedido
 from apps.core.infrastructure.notificaciones_pedido import notificar_cambio_de_estado, notificar_pago_rechazado
 from apps.core.infrastructure.tenant import resolver_tienda, resolver_tienda_id
 from apps.core.models import (
@@ -48,7 +50,7 @@ class ConfiguracionPagoAPIView(APIView):
         try:
             tienda = resolver_tienda(request, exigir_propietario=True)
             config_pago, _ = ConfiguracionPago.objects.get_or_create(tienda=tienda)
-            return success_response(data=config_pago.datos or {})
+            return success_response(data=config_pago.datos_enmascarados)
         except Exception as e:
             return error_response(mensaje=str(e), codigo="ERROR_PAGO", status=getattr(e, "status_code", 400))
 
@@ -60,10 +62,26 @@ class ConfiguracionPagoAPIView(APIView):
                 return error_response(mensaje="Datos incompletos.", codigo="ERROR_VALIDACION", detalles=serializer.errors, status=400)
 
             config_pago, _ = ConfiguracionPago.objects.get_or_create(tienda=tienda)
-            config_pago.datos = serializer.validated_data
+            datos = serializer.validated_data
+            actuales = config_pago.datos_descifrados
+            for metodo, campos in ConfiguracionPago.CAMPOS_SECRETOS.items():
+                nuevos = (datos.get(metodo) or {}).get('fields') if isinstance(datos.get(metodo), dict) else None
+                previos = (actuales.get(metodo) or {}).get('fields') or {}
+                if isinstance(nuevos, dict):
+                    for campo in campos:
+                        if nuevos.get(campo) and nuevos[campo] == ConfiguracionPago.enmascarar(previos.get(campo, '')):
+                            nuevos[campo] = previos[campo]
+            for metodo, claves in (('linkify', ('idCuenta', 'clavePrivada')), ('tuu', ('accountId', 'secretKey'))):
+                nuevo = datos.get(metodo)
+                if (isinstance(nuevo, dict) and nuevo.get('enabled') is False
+                        and not any(nuevo.get('fields', {}).get(k) for k in claves)):
+                    previos = ((config_pago.datos or {}).get(metodo) or {}).get('fields')
+                    if isinstance(previos, dict) and previos:
+                        datos[metodo] = {'enabled': False, 'fields': dict(previos)}
+            config_pago.datos = datos
             config_pago.save()
 
-            return success_response(mensaje="Métodos guardados.", data=config_pago.datos)
+            return success_response(mensaje="Métodos guardados.", data=config_pago.datos_enmascarados)
         except Exception as e:
             return error_response(mensaje=str(e), codigo="ERROR_PAGO", status=getattr(e, "status_code", 400))
 
@@ -134,22 +152,6 @@ class MetodosPagoActivosAPIView(APIView):
         from apps.core.payments import payment_methods_for_store
         return success_response(data=payment_methods_for_store(resolver_tienda(request)))
 
-class IniciarPagoPayPalView(APIView):
-    """El checkout CLP no puede cobrar su total como USD sin conciliación de moneda."""
-    permission_classes = [AllowAny]
-
-    def post(self, request):
-        tienda = resolver_tienda(request)
-        if not ConfiguracionPayPal.objects.filter(id_tienda=tienda, activo=True).exists():
-            return error_response(mensaje="PayPal no configurado para esta tienda.", codigo="PAYPAL_NO_CONFIGURADO", status=400)
-        from apps.core.payments import UNAVAILABLE_CHECKOUT_METHODS
-        return error_response(mensaje=UNAVAILABLE_CHECKOUT_METHODS["paypal"], codigo="PAYPAL_NO_DISPONIBLE", status=409)
-
-
-class CapturarPagoPayPalView(IniciarPagoPayPalView):
-    """Mantiene la ruta sin capturar órdenes remotas que no están vinculadas a un Pedido."""
-
-
 class WebhookLinkifyAPIView(LinkifyNotificacionView):
     """Compatibilidad del webhook antiguo con la firma y estados de SCRUM-316/317."""
 
@@ -195,7 +197,7 @@ class VerificarTransferenciaLinkifyAPIView(APIView):
                 return error_response('El pedido requiere revisión manual.', 'ESTADO_PEDIDO_INVALIDO', status=409)
             
             config_pago = ConfiguracionPago.objects.get(tienda=tienda)
-            linkify_config = (config_pago.datos or {}).get("linkify", {})
+            linkify_config = config_pago.datos_descifrados.get("linkify", {})
             
 
             fields = linkify_config.get("fields", {})
@@ -226,6 +228,8 @@ class VerificarTransferenciaLinkifyAPIView(APIView):
                         pedido.save(update_fields=['estado'])
                     elif pedido.estado != 'pagado':
                         return error_response('El pedido requiere revisión manual.', 'ESTADO_PEDIDO_INVALIDO', status=409)
+                if pedido.estado in Pedido.ESTADOS_PAGADOS:
+                    descontar_stock_de_pedido(pedido.pk)
                 if pasa_a_pagado:
                     notificar_cambio_de_estado(pedido, 'pendiente')
                 return success_response(mensaje="¡Match exitoso! Transferencia encontrada y pedido actualizado.")
@@ -300,6 +304,7 @@ class AprobarTransferenciaManualAPIView(APIView):
             pedido.estado = 'pagado'
             pedido.save(update_fields=['estado'])
 
+        descontar_stock_de_pedido(pedido.pk)
         notificar_cambio_de_estado(pedido, 'pendiente')
         return success_response(
             data={'id_pedido': pedido.pk, 'estado': pedido.estado},
@@ -350,6 +355,7 @@ class RechazarTransferenciaManualAPIView(APIView):
 
             pedido.estado = 'cancelado'
             pedido.save(update_fields=['estado'])
+            devolver_stock_de_pedido_cancelado(pedido)
 
         notificar_pago_rechazado(pedido)
         return success_response(
@@ -369,6 +375,7 @@ class TiendaPedidosAPIView(generics.ListAPIView):
             exigir_propietario=True
         )
 
+        liberar_vencidos_de_tienda(tienda.pk)
         pedidos = Pedido.objects.filter(
             tienda=tienda
         )

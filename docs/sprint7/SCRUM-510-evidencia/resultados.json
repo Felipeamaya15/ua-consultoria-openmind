@@ -1,0 +1,16 @@
+{
+  "status": "PASS",
+  "environment": "Chrome headless; API Django existente; SQLite en memoria; identidad visual simulada",
+  "checks": [
+    "Ayudas de Transbank y PayPal visibles, con enlaces oficiales.",
+    "El guardado individual vacío muestra errores por campo y no envía PUT.",
+    "RUT y correo inválidos bloqueados; CuentaRUT guardada en la API real y recuperada al recargar.",
+    "Edición persistida: banco, tipo, titular y número con ceros iniciales. CuentaRUT restringida a BancoEstado.",
+    "Guardar todos también bloquea datos bancarios inválidos antes de enviar cambios.",
+    "PayPal rechaza credenciales parciales; guarda las completas y conserva el secreto al recargar. Transbank conserva su clave guardada.",
+    "Un rechazo de la API no muestra éxito ni cambia la información guardada.",
+    "Panel y formularios sin desbordamiento horizontal a 1440, 390 y 320 px.",
+    "Configuración histórica conservada al guardar otros métodos; se muestra sin reemplazar datos antiguos."
+  ],
+  "javascriptErrors": []
+}

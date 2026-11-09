@@ -57,12 +57,12 @@ class ReportTests(TestCase):
             for estado, _ in Pedido.ESTADO_CHOICES:
                 self.order(f'2026-{month:02d}-10T12:00:00-03:00', estado, '0.10')
         data = self.data(anio=2026)
-        self.assertEqual(data['total_pedidos'], 24)
-        self.assertEqual(data['pedidos_pagados'], 18)
-        self.assertEqual(data['total_ventas'], '1.80')
+        self.assertEqual(data['total_pedidos'], 15)
+        self.assertEqual(data['pedidos_pagados'], 9)
+        self.assertEqual(data['total_ventas'], '0.90')
         self.assertEqual(sum(Decimal(r['ventas']) for r in data['meses']), Decimal(data['total_ventas']))
         self.assertEqual(sum(r['pedidos'] for r in data['meses']), data['total_pedidos'])
-        self.assertEqual(sum(r['pedidos'] for r in data['distribucion_estados']), 24)
+        self.assertEqual(sum(r['pedidos'] for r in data['distribucion_estados']), 15)
         self.assertEqual(data['mejores_meses'], {'ventas': [1, 3, 10], 'pedidos': [1, 3, 10]})
         total = Decimal(0)
         for month in range(1, 13):

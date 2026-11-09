@@ -1,5 +1,7 @@
+import copy
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.db.models import Q
 from django.db.models.functions import Upper
@@ -44,6 +46,10 @@ class Tienda(models.Model):
     nombre = models.CharField(max_length=150)
     descripcion = models.TextField(blank=True, null=True)
     correo_negocio = models.EmailField(blank=True, default='')
+    horas_expiracion_pedido_en_linea = models.PositiveSmallIntegerField(
+        default=2, validators=[MinValueValidator(1), MaxValueValidator(720)])
+    horas_expiracion_pedido_manual = models.PositiveSmallIntegerField(
+        default=48, validators=[MinValueValidator(0), MaxValueValidator(720)])
     fecha_creacion = models.DateTimeField(auto_now_add=True)
 
     objects = TiendaQuerySet.as_manager()
@@ -175,18 +181,15 @@ def generar_identificador_orden():
 class Pedido(models.Model):
     ESTADO_CHOICES = [
         ('pendiente', 'Pendiente'),
-        ('pagado', 'Pagado'),
-        ('preparando', 'En preparación'),
-        ('en_origen', 'En origen'),
-        ('enviado', 'Enviado/En tránsito'),
-        ('en_reparto', 'En reparto'),
+        ('pagado', 'Pagado/En preparación'),
+        ('en_camino', 'En camino'),
         ('entregado', 'Entregado'),
         ('cancelado', 'Cancelado'),
     ]
     # Ya pagado: un aviso o una confirmacion repetida del pago es inofensiva.
-    ESTADOS_PAGADOS = ('pagado', 'preparando', 'en_origen', 'enviado', 'en_reparto', 'entregado')
+    ESTADOS_PAGADOS = ('pagado', 'en_camino', 'entregado', 'preparando', 'en_origen', 'enviado', 'en_reparto')
     # Ya se empezo a preparar o despachar: revertir o reconciliar el pago exige revision manual.
-    ESTADOS_EN_DESPACHO = ('preparando', 'en_origen', 'enviado', 'en_reparto', 'entregado')
+    ESTADOS_EN_DESPACHO = ('en_camino', 'entregado', 'preparando', 'en_origen', 'enviado', 'en_reparto')
     id_pedido = models.BigAutoField(primary_key=True)
     
     identificador = models.CharField(
@@ -217,11 +220,15 @@ class Pedido(models.Model):
     # Se conserva el inicio exitoso de Webpay para que un reintento no cree otro cobro.
     webpay_token = models.CharField(max_length=512, blank=True, default='')
     webpay_url = models.CharField(max_length=2048, blank=True, default='')
+    webpay_iniciado_en = models.DateTimeField(null=True, blank=True)
+    stock_descontado = models.BooleanField(default=False)
+    stock_devuelto = models.BooleanField(default=False)
     contacto = models.JSONField(default=dict, blank=True)
     entrega = models.JSONField(default=dict, blank=True)
     medio_pago = models.CharField(max_length=40, blank=True, default='')
     costo_envio = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     descuento = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    pago_fx = models.JSONField(default=dict, blank=True)
 
     class Meta:
         db_table = 'pedido'
@@ -477,8 +484,44 @@ class ConfiguracionPago(models.Model):
     datos = models.JSONField(default=dict, blank=True)
     fecha_actualizacion = models.DateTimeField(auto_now=True)
 
+    CAMPOS_SECRETOS = {'linkify': ('clavePrivada',), 'tuu': ('secretKey',)}
+
     class Meta:
         db_table = 'configuracion_pago'
+
+    @classmethod
+    def transformar_secretos(cls, datos, funcion):
+        resultado = copy.deepcopy(datos) if isinstance(datos, dict) else {}
+        for metodo, campos in cls.CAMPOS_SECRETOS.items():
+            fields = (resultado.get(metodo) or {}).get('fields') if isinstance(resultado.get(metodo), dict) else None
+            if not isinstance(fields, dict):
+                continue
+            for campo in campos:
+                if isinstance(fields.get(campo), str):
+                    fields[campo] = funcion(fields[campo])
+        return resultado
+
+    @staticmethod
+    def enmascarar(valor):
+        if not valor:
+            return ''
+        if len(valor) <= 8:
+            return '********'
+        return f"{'*' * (len(valor) - 4)}{valor[-4:]}"
+
+    @property
+    def datos_enmascarados(self):
+        return self.transformar_secretos(self.datos_descifrados, self.enmascarar)
+
+    @property
+    def datos_descifrados(self):
+        from apps.core.infrastructure.encryption import descifrar
+        return self.transformar_secretos(self.datos, descifrar)
+
+    def save(self, *args, **kwargs):
+        from apps.core.infrastructure.encryption import cifrar
+        self.datos = self.transformar_secretos(self.datos, cifrar)
+        super().save(*args, **kwargs)
 
 class ConfiguracionEntrega(models.Model):
     tienda = models.OneToOneField(

@@ -1577,6 +1577,50 @@ class VariantPurchaseView(VariantTenantMixin, APIView):
             return Response({"error": f"Error interno: {str(e)}", "codigo": "ERROR_INTERNO"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
+def url_retorno_webpay(request, destino: str) -> str:
+    """URL de retorno enviada a Webpay: endpoint del backend que acepta POST/GET y redirige a `destino`."""
+    from urllib.parse import urlencode
+    from django.urls import reverse
+    base = request.build_absolute_uri(reverse("pago-transbank-retorno"))
+    return f"{base}?{urlencode({'destino': destino})}"
+
+
+class RetornoTransbankView(APIView):
+    """
+    Puente de retorno desde Webpay
+    """
+    permission_classes = [AllowAny]
+    authentication_classes = []
+    PARAMETROS = ("token_ws", "TBK_TOKEN", "TBK_ORDEN_COMPRA", "TBK_ID_SESION")
+
+    def _redirigir(self, request):
+        from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
+        from django.http import HttpResponse
+        destino = request.query_params.get("destino", "")
+        try:
+            destino = IniciarPagoTransbankSerializer().validate_return_url(destino)
+        except Exception:
+            return error_response("Destino de retorno no válido.", "DATOS_INVALIDOS", status=400)
+        recibidos = {}
+        for fuente in (request.query_params, request._request.POST):
+            for clave in self.PARAMETROS:
+                valor = fuente.get(clave)
+                if valor:
+                    recibidos[clave] = str(valor)[:512]
+        partes = urlsplit(destino)
+        consulta = [par for par in parse_qsl(partes.query) if par[0] not in self.PARAMETROS]
+        consulta += list(recibidos.items())
+        respuesta = HttpResponse(status=303)
+        respuesta["Location"] = urlunsplit(partes._replace(query=urlencode(consulta)))
+        return respuesta
+
+    def get(self, request):
+        return self._redirigir(request)
+
+    def post(self, request):
+        return self._redirigir(request)
+
+
 class IniciarPagoTransbankView(APIView):
     """
     Inicia la transacción contra Transbank para el checkout.
@@ -1602,7 +1646,7 @@ class IniciarPagoTransbankView(APIView):
             orden_compra=serializer.validated_data["orden_compra"],
             monto=serializer.validated_data["monto"],
             session_id=serializer.validated_data["session_id"],
-            return_url=serializer.validated_data["return_url"],
+            return_url=url_retorno_webpay(request, serializer.validated_data["return_url"]),
             email=serializer.validated_data["email"],
         )
 

@@ -5,12 +5,23 @@ from apps.core.models import (
 
 PAYMENT_METHODS = {
     'Transbank': 'transbank', 'PayPal': 'paypal', 'MercadoPago': 'mercadopago',
-    'Linkify': 'linkify', 'Transferencia': 'transfer',
+    'Linkify': 'linkify', 'Transferencia': 'transfer', 'TUU': 'tuu',
 }
-UNAVAILABLE_CHECKOUT_METHODS = {
-    "paypal": "PayPal requiere conciliación de moneda y captura antes de habilitar compras en CLP.",
-    "mercadopago": "Mercado Pago requiere conectar el inicio y la confirmación del cobro al pedido.",
-}
+PAYPAL_SIN_TIPO_DE_CAMBIO = 'PayPal no está disponible: no hay un tipo de cambio CLP/USD reciente.'
+
+
+def _paypal_checkout_state():
+    """PayPal cobra en USD: solo se ofrece con un tipo de cambio vigente, que se informa al comprador."""
+    from apps.core.infrastructure.tipo_cambio import tipo_cambio_vigente
+    tipo = tipo_cambio_vigente()
+    if not tipo:
+        return {'enabled': False, 'reason': PAYPAL_SIN_TIPO_DE_CAMBIO}
+    return {'enabled': True, 'fx': {
+        'moneda': 'USD', 'tipo_cambio': str(tipo.aplicado), 'observado': str(tipo.observado),
+        'margen_pct': str(tipo.margen_pct), 'fecha_dato': tipo.fecha_dato.isoformat(), 'fuente': tipo.fuente,
+    }}
+
+
 TRANSFER_PUBLIC_FIELDS = (
     'bank_name', 'account_type', 'account_number', 'holder_rut', 'holder_name', 'confirmation_email',
 )
@@ -25,11 +36,11 @@ def payment_methods_for_store(tienda):
     ):
         config = model.objects.filter(id_tienda=tienda, activo=True).first()
         if config and all(str(getattr(config, field) or '').strip() for field in credentials):
-            methods[key] = ({'enabled': False, 'reason': UNAVAILABLE_CHECKOUT_METHODS[key]}
-                            if key in UNAVAILABLE_CHECKOUT_METHODS else {'enabled': True})
+            methods[key] = _paypal_checkout_state() if key == 'paypal' else {'enabled': True}
     config = ConfiguracionPago.objects.filter(tienda=tienda).first()
     data = config.datos if config and isinstance(config.datos, dict) else {}
-    for key, required in (('linkify', ('idCuenta', 'clavePrivada')), ('transfer', TRANSFER_PUBLIC_FIELDS)):
+    for key, required in (('linkify', ('idCuenta', 'clavePrivada')), ('tuu', ('accountId', 'secretKey')),
+                          ('transfer', TRANSFER_PUBLIC_FIELDS)):
         method = data.get(key)
         if not isinstance(method, dict) or method.get('enabled') is not True:
             continue

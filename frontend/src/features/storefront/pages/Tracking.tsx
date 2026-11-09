@@ -20,37 +20,23 @@ import {
 import { useStorefrontTemplate } from '../hooks/useStorefrontTemplate';
 import { shippingService, type DetalleSeguimiento } from '../services/shippingService';
 import { describeTrackingState } from '../data/trackingStates';
+import { PagarPedidoPendiente } from '../components/checkout/PagarPedidoPendiente';
 
 const STATUS_STEPS = [
   {
     id: 'pendiente',
-    label: 'Pedido recibido',
+    label: 'Pendiente',
     icon: 'orders',
   },
   {
     id: 'pagado',
-    label: 'Pago confirmado',
+    label: 'Pagado/En preparación',
     icon: 'card',
   },
   {
-    id: 'preparando',
-    label: 'En preparación',
-    icon: 'box',
-  },
-  {
-    id: 'en_origen',
-    label: 'En origen',
-    icon: 'store',
-  },
-  {
-    id: 'enviado',
-    label: 'En tránsito',
+    id: 'en_camino',
+    label: 'En camino',
     icon: 'truck',
-  },
-  {
-    id: 'en_reparto',
-    label: 'En reparto',
-    icon: 'home',
   },
   {
     id: 'entregado',
@@ -76,23 +62,11 @@ const ORDER_STATUS_MAP: Record<
     variant: 'warning',
   },
   pagado: {
-    label: 'Pagado',
+    label: 'Pagado/En preparación',
     variant: 'info',
   },
-  preparando: {
-    label: 'En preparación',
-    variant: 'info',
-  },
-  en_origen: {
-    label: 'En origen',
-    variant: 'info',
-  },
-  enviado: {
-    label: 'En tránsito',
-    variant: 'info',
-  },
-  en_reparto: {
-    label: 'En reparto',
+  en_camino: {
+    label: 'En camino',
     variant: 'info',
   },
   entregado: {
@@ -102,6 +76,22 @@ const ORDER_STATUS_MAP: Record<
   cancelado: {
     label: 'Cancelado',
     variant: 'error',
+  },
+  preparando: {
+    label: 'Pagado/En preparación',
+    variant: 'info',
+  },
+  en_origen: {
+    label: 'En camino',
+    variant: 'info',
+  },
+  enviado: {
+    label: 'En camino',
+    variant: 'info',
+  },
+  en_reparto: {
+    label: 'En camino',
+    variant: 'info',
   },
 };
 
@@ -132,6 +122,7 @@ export default function Tracking() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const requestRef = useRef<AbortController | null>(null);
+  const lookupEmail = useRef('');
 
   const [liveTracking, setLiveTracking] = useState<DetalleSeguimiento | null>(null);
 
@@ -165,7 +156,10 @@ export default function Tracking() {
         if (!controller.signal.aborted) setLiveTracking(live);
       } else {
         const found = await orderService.track(number, customerEmail, controller.signal);
-        if (!controller.signal.aborted) setOrder(found);
+        if (!controller.signal.aborted) {
+          lookupEmail.current = customerEmail.trim();
+          setOrder(found);
+        }
       }
     } catch (err: any) {
       if (!controller.signal.aborted) {
@@ -594,6 +588,14 @@ export default function Tracking() {
                   {order.medio_pago}
                 </p>
               </div>
+
+              <PagarPedidoPendiente
+                orderNumber={order.identificador}
+                estado={order.estado}
+                medioPago={order.medio_pago}
+                email={lookupEmail.current}
+                venceEn={order.vence_en}
+              />
 
               {Number(order.descuento) > 0 && (
                 <div>

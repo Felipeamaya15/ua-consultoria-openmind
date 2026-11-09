@@ -149,3 +149,26 @@ def contexto_pedido(pedido):
         'trackingLink': enlace_seguimiento(pedido),
         'storeName': pedido.tienda.nombre if pedido.tienda_id else '',
     }
+def fecha_limite_de_pago(pedido):
+    """Texto con la fecha limite para pagar (hora de Chile), o '' si el pedido no vence."""
+    from apps.core.infrastructure.expiracion_pedidos import vence_en
+
+    limite = vence_en(pedido)
+    if limite is None:
+        return ''
+    try:
+        from zoneinfo import ZoneInfo
+        local, zona = limite.astimezone(ZoneInfo('America/Santiago')), 'hora de Chile'
+    except Exception:  # sin base de zonas horarias en el servidor
+        local, zona = limite, 'UTC'
+    return f'{local:%d-%m-%Y %H:%M} ({zona})'
+
+
+def con_aviso_de_plazo(cuerpo, aviso):
+    """Inserta `aviso` como parrafo propio despues del primero (tras el saludo y la frase inicial)."""
+    if not aviso:
+        return cuerpo
+    partes = cuerpo.split('\n\n')
+    posicion = 2 if len(partes) > 2 else len(partes)
+    partes.insert(posicion, aviso)
+    return '\n\n'.join(partes)

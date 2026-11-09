@@ -75,3 +75,22 @@ class LinkifyConfiguracionTests(TestCase):
         for datos in (desactivado, sin_clave):
             ConfiguracionPago.objects.update_or_create(tienda=self.tienda, defaults={'datos': datos})
             self.assertNotIn('linkify', APIClient().get(ACTIVOS_URL).json()['data'])
+
+
+class LinkifyApagarTests(TestCase):
+
+    def setUp(self):
+        propietario = get_user_model().objects.create_user(username='linkify-apagar-owner')
+        self.tienda = Tienda.objects.create(nombre='Tienda apagar', id_usuario_propietario=propietario)
+        self.api = APIClient()
+        self.api.credentials(HTTP_AUTHORIZATION='Token ' + Token.objects.create(user=propietario).key)
+
+    def test_apagar_sin_credenciales_conserva_las_guardadas(self):
+        self.api.put(CONFIG_URL, LINKIFY, format='json')
+        respuesta = self.api.put(CONFIG_URL, {'linkify': {'enabled': False, 'fields': {}}}, format='json')
+        self.assertEqual(respuesta.status_code, 200, respuesta.content)
+        config = ConfiguracionPago.objects.get(tienda=self.tienda)
+        linkify = config.datos_descifrados['linkify']
+        self.assertFalse(linkify['enabled'])
+        self.assertEqual(linkify['fields']['clavePrivada'], 'clave-privada-qa')
+        self.assertTrue(config.datos['linkify']['fields']['clavePrivada'].startswith('enc::'))

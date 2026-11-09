@@ -1,7 +1,9 @@
 """Plantilla del correo de recepción de pedido (SCRUM-428, SCRUM-432). Tipo de correo: order_received."""
 import re
 
-from .base import _MARCADOR, PlantillaCorreo, PlantillaCorreoInvalida, contexto_pedido
+from .base import (
+    _MARCADOR, PlantillaCorreo, PlantillaCorreoInvalida, con_aviso_de_plazo, contexto_pedido, fecha_limite_de_pago,
+)
 
 PLANTILLA_RECEPCION_PEDIDO = PlantillaCorreo(
     asunto='Recibimos tu pedido {{orderNumber}}',
@@ -37,13 +39,20 @@ def _sin_datos_ausentes(texto, contexto):
     return re.sub(r'\n{3,}', '\n\n', '\n'.join(lineas)).strip('\n')
 
 
-def renderizar_recepcion_pedido(pedido, plantilla=None):
-    if pedido.estado == 'cancelado':
+def renderizar_recepcion_pedido(pedido, plantilla=None, forzar=False):
+    if not forzar and pedido.estado == 'cancelado':
         raise PlantillaCorreoInvalida('No se confirma la recepción de un pedido cancelado.')
     base = plantilla or PLANTILLA_RECEPCION_PEDIDO
     contexto = contexto_pedido(pedido)
-    return PlantillaCorreo(
+    correo = PlantillaCorreo(
         asunto=base.asunto,
         preheader=base.preheader,
         cuerpo=_sin_datos_ausentes(base.cuerpo, contexto),
     ).renderizar(contexto)
+    limite = fecha_limite_de_pago(pedido)
+    if limite and pedido.estado == 'pendiente':
+        aviso = (f'Tienes hasta el {limite} para pagar. Pasado ese plazo el pedido se cancela '
+                 'automáticamente y los productos vuelven al inventario.')
+        correo = type(correo)(asunto=correo.asunto, preheader=correo.preheader,
+                              cuerpo=con_aviso_de_plazo(correo.cuerpo, aviso))
+    return correo

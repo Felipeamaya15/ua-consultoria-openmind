@@ -186,16 +186,56 @@ DATA_UPLOAD_MAX_MEMORY_SIZE = 16 * 1024 * 1024
 # Correo transaccional (SCRUM-423). Sin configurar, los correos se imprimen en el log del backend
 # (docker compose logs backend). Para enviarlos de verdad: EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend
 # y los datos del servidor SMTP en las variables EMAIL_*. Ver docs/correo-despacho.md.
-EMAIL_BACKEND = os.getenv('EMAIL_BACKEND') or 'django.core.mail.backends.console.EmailBackend'
-EMAIL_HOST = os.getenv('EMAIL_HOST') or 'localhost'
-EMAIL_PORT = int(os.getenv('EMAIL_PORT') or 587)
-EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER') or ''
-EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD') or ''
-EMAIL_USE_SSL = (os.getenv('EMAIL_USE_SSL') or '0') == '1'
-EMAIL_USE_TLS = (os.getenv('EMAIL_USE_TLS') or '1') == '1' and not EMAIL_USE_SSL
-EMAIL_TIMEOUT = int(os.getenv('EMAIL_TIMEOUT') or 10)
-DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL') or 'Tienda <no-reply@tienda.local>'
+# Configuración de Correo Transaccional
 
-# Dirección pública de la tienda, base de los enlaces de los correos (SCRUM-434). El enlace de seguimiento queda
-# <STOREFRONT_PUBLIC_URL>/seguimiento?orden=ORD-...; en producción hay que poner la dirección real de la tienda.
+EMAIL_BACKEND = os.getenv('EMAIL_BACKEND', '').strip() or 'django.core.mail.backends.smtp.EmailBackend'
+
+EMAIL_HOST = os.getenv('EMAIL_HOST', 'smtp-relay.brevo.com')
+
+_email_port = os.getenv('EMAIL_PORT', '').strip()
+EMAIL_PORT = int(_email_port) if _email_port.isdigit() else 587
+
+EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', '')
+EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', '')
+
+# Conversión estricta a booleano
+EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS', '1') in ('1', 'True', 'true', True)
+EMAIL_USE_SSL = os.getenv('EMAIL_USE_SSL', '0') in ('1', 'True', 'true', True)
+
+DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', EMAIL_HOST_USER)
+EMAIL_TIMEOUT = 10  # Timeout en segundos para no colgar el worker si hay microcortes
+
+
+
+
+# ==============================================================================
+# NOTA PARA EQUIPO DE DESPLIEGUE / DEVOPS: CONFIGURACIÓN HTTPS & TLS 1.2+
+# ==============================================================================
+# Este backend está preparado para operar detrás de un proxy inverso o balanceador
+# con terminación SSL/TLS (Nginx, Traefik, AWS ALB, Cloudflare, etc.).
+#
+# REQUERIMIENTOS DE INFRAESTRUCTURA AL DESPLEGAR EN PRODUCCIÓN:
+# 1. Configurar la terminación HTTPS en el servidor/proxy con TLS 1.2 o superior.
+# 2. Asegurarse de que el proxy envíe la cabecera: X-Forwarded-Proto: https
+# 3. Establecer la variable de entorno DEBUG=False en el contenedor backend.
+# ==============================================================================
+
+
+
+# Le indica a Django que si el proxy web envía este header, la conexión original fue HTTPS
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+# Obliga a redirigir tráfico no seguro a HTTPS (solo en producción)
+SECURE_SSL_REDIRECT = not DEBUG
+# Solo viajarán si la conexión es HTTPS (se puede condicionar con una variable DEBUG=False)
+SESSION_COOKIE_SECURE = not DEBUG
+CSRF_COOKIE_SECURE = not DEBUG
+
+
+# Dirección pública de la tienda, base de los enlaces de los correos (SCRUM-434).
+PAYPAL_FX_MARGEN_PCT = os.getenv('PAYPAL_FX_MARGEN_PCT', '2').strip() or '2'
+PAYPAL_FX_MAX_EDAD_HORAS = float(os.getenv('PAYPAL_FX_MAX_EDAD_HORAS') or 96)
+PAYPAL_FX_REFRESCO_HORAS = float(os.getenv('PAYPAL_FX_REFRESCO_HORAS') or 6)
+BCCH_USUARIO = (os.getenv('BCCH_USUARIO') or '').strip()
+BCCH_CLAVE = (os.getenv('BCCH_CLAVE') or '').strip()
 STOREFRONT_PUBLIC_URL = (os.getenv('STOREFRONT_PUBLIC_URL') or 'http://localhost:5173/plantilla/1').rstrip('/')
+TUU_CALLBACK_BASE_URL = (os.getenv('TUU_CALLBACK_BASE_URL') or '').rstrip('/')

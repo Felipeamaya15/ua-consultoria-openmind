@@ -26,6 +26,7 @@ export function checkoutPreviewStep(search: string, embedded: boolean, parentPat
 }
 export function pageFromPath(pathname: string): StorePageId | null {
   const relative = pathname.replace(/^\/plantilla\/[1-4]\/?/, '').replace(/\/$/, '');
+  if (relative === 'legal/cookies' || relative.startsWith('legal/cookies/')) return 'terms';
   return STORE_PAGES.find(page => relative === page.path || relative.startsWith(page.path + '/'))?.id ?? null;
 }
 export function previewPath(page: PreviewPageId, productId = '', register = false): string {
@@ -40,4 +41,3 @@ export function isActiveEditorPreview(): boolean {
   try { return isStorefrontEditorPreview(window.parent !== window, window.parent.location.pathname); }
   catch { return false; }
 }
-

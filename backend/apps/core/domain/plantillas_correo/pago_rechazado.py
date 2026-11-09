@@ -12,7 +12,7 @@ PLANTILLA_PAGO_RECHAZADO = PlantillaCorreo(
 )
 
 
-def renderizar_pago_rechazado(pedido, plantilla=None):
-    if pedido.estado not in ('pendiente', 'cancelado'):
+def renderizar_pago_rechazado(pedido, plantilla=None, forzar=False):
+    if not forzar and pedido.estado not in ('pendiente', 'cancelado'):
         raise PlantillaCorreoInvalida('Solo se informa un pago rechazado en un pedido que no está pagado.')
     return (plantilla or PLANTILLA_PAGO_RECHAZADO).renderizar(contexto_pedido(pedido))

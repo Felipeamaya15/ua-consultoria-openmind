@@ -10,6 +10,7 @@ from rest_framework.throttling import AnonRateThrottle
 from rest_framework.views import APIView
 
 from apps.authentication.presentation.profile import StrictSerializer
+from apps.core.infrastructure.expiracion_pedidos import expirar_pedido_pendiente, pedido_expirado
 from apps.core.infrastructure.tenant import resolver_tienda
 from apps.core.models import ItemPedido, Pedido
 from apps.core.presentation.customer_orders import OrderDetailSerializer
@@ -80,23 +81,29 @@ class OrderTrackingAPIView(APIView):
 
         guard.register_success()
         order = matches[0]
+        if pedido_expirado(order) and expirar_pedido_pendiente(order.pk, consultar_pasarela=False):
+            order.refresh_from_db() 
         data = OrderDetailSerializer(order).data
 
         # --- SCRUM-377: Construcción de Línea de Tiempo (RF-02.4) ---
-        alias_estado = {'preparacion': 'preparando', 'despachado': 'enviado'}
+        alias_estado = {
+            'preparacion': 'pagado',
+            'preparando': 'pagado',
+            'despachado': 'en_camino',
+            'enviado': 'en_camino',
+            'en_reparto': 'en_camino',
+            'en_origen': 'en_camino',
+        }
         estado_actual = alias_estado.get(getattr(order, 'estado', 'pendiente'), getattr(order, 'estado', 'pendiente'))
         estados_map = {
-            'pendiente': 'Pendiente de pago',
-            'pagado': 'Pago confirmado',
-            'preparando': 'En preparación',
-            'en_origen': 'En origen',
-            'enviado': 'Despachado / En tránsito',
-            'en_reparto': 'En reparto',
+            'pendiente': 'Pendiente',
+            'pagado': 'Pagado/En preparación',
+            'en_camino': 'En camino',
             'entregado': 'Entregado',
             'cancelado': 'Cancelado',
         }
 
-        orden_estados = ['pendiente', 'pagado', 'preparando', 'en_origen', 'enviado', 'en_reparto', 'entregado']
+        orden_estados = ['pendiente', 'pagado', 'en_camino', 'entregado']
 
         if estado_actual == 'cancelado':
             linea_tiempo = [{'estado': 'cancelado', 'etiqueta': 'Cancelado', 'completado': True, 'actual': True}]
@@ -107,12 +114,9 @@ class OrderTrackingAPIView(APIView):
                 indice_actual = 0
 
             pasos = [
-                {'estado': 'pendiente', 'etiqueta': 'Recibido'},
-                {'estado': 'pagado', 'etiqueta': 'Pago Confirmado'},
-                {'estado': 'preparando', 'etiqueta': 'En Preparación'},
-                {'estado': 'en_origen', 'etiqueta': 'En Origen'},
-                {'estado': 'enviado', 'etiqueta': 'En Tránsito'},
-                {'estado': 'en_reparto', 'etiqueta': 'En Reparto'},
+                {'estado': 'pendiente', 'etiqueta': 'Pendiente'},
+                {'estado': 'pagado', 'etiqueta': 'Pagado/En preparación'},
+                {'estado': 'en_camino', 'etiqueta': 'En camino'},
                 {'estado': 'entregado', 'etiqueta': 'Entregado'},
             ]
             for i, paso in enumerate(pasos):

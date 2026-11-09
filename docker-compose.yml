@@ -45,9 +45,15 @@ services:
       - ./backend:/app
     ports:
       - "8000:8000"
-    environment:
+    environment: &backend_env
       - SECRET_KEY=${DJANGO_SECRET_KEY}
       - PAYMENT_CREDENTIALS_KEY=${PAYMENT_CREDENTIALS_KEY:-}
+      - TUU_CALLBACK_BASE_URL=${TUU_CALLBACK_BASE_URL:-}
+      - PAYPAL_FX_MARGEN_PCT=${PAYPAL_FX_MARGEN_PCT:-2}
+      - PAYPAL_FX_MAX_EDAD_HORAS=${PAYPAL_FX_MAX_EDAD_HORAS:-96}
+      - PAYPAL_FX_REFRESCO_HORAS=${PAYPAL_FX_REFRESCO_HORAS:-6}
+      - BCCH_USUARIO=${BCCH_USUARIO:-}
+      - BCCH_CLAVE=${BCCH_CLAVE:-}
       - DEBUG=${DJANGO_DEBUG}
       - DJANGO_ALLOWED_HOSTS=${DJANGO_ALLOWED_HOSTS:-localhost,127.0.0.1,backend,testserver}
       - DJANGO_CORS_ALLOWED_ORIGINS=${DJANGO_CORS_ALLOWED_ORIGINS:-http://localhost:5173,http://127.0.0.1:5173}
@@ -66,19 +72,47 @@ services:
       - MONGO_DB_NAME=${MONGO_DB_NAME}
       - PICKUP_GEOCODING_PROVIDER=${PICKUP_GEOCODING_PROVIDER:-}
       - PICKUP_GOOGLE_GEOCODING_KEY=${PICKUP_GOOGLE_GEOCODING_KEY:-}
-      - EMAIL_BACKEND=${EMAIL_BACKEND:-}
-      - EMAIL_HOST=${EMAIL_HOST:-}
-      - EMAIL_PORT=${EMAIL_PORT:-}
+      - EMAIL_BACKEND=${EMAIL_BACKEND:-django.core.mail.backends.smtp.EmailBackend}
+      - EMAIL_HOST=${EMAIL_HOST:-mailpit}
+      - EMAIL_PORT=${EMAIL_PORT:-1025}
       - EMAIL_HOST_USER=${EMAIL_HOST_USER:-}
       - EMAIL_HOST_PASSWORD=${EMAIL_HOST_PASSWORD:-}
-      - EMAIL_USE_TLS=${EMAIL_USE_TLS:-}
-      - EMAIL_USE_SSL=${EMAIL_USE_SSL:-}
-      - DEFAULT_FROM_EMAIL=${DEFAULT_FROM_EMAIL:-}
+      - EMAIL_USE_TLS=${EMAIL_USE_TLS:-0}
+      - EMAIL_USE_SSL=${EMAIL_USE_SSL:-0}
+      - DEFAULT_FROM_EMAIL=${DEFAULT_FROM_EMAIL:-Tienda <no-reply@tienda.local>}
       - STOREFRONT_PUBLIC_URL=${STOREFRONT_PUBLIC_URL:-}
     depends_on:
       db:
         condition: service_healthy
       mongodb:
+        condition: service_started
+      mailpit:
+        condition: service_started
+
+  expirador_pedidos:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: django_expirador_pedidos
+    restart: unless-stopped
+    init: true
+    stop_grace_period: 60s
+    command: ["python", "manage.py", "expirar_pedidos_pendientes", "--daemon", "--intervalo", "300"]
+    volumes:
+      - ./backend:/app
+    environment: *backend_env
+    healthcheck:
+      test: ["CMD-SHELL", "find /tmp/expirador_pedidos.heartbeat -mmin -15 2>/dev/null | grep -q ."]
+      interval: 60s
+      timeout: 5s
+      retries: 3
+      start_period: 90s
+    depends_on:
+      db:
+        condition: service_healthy
+      mongodb:
+        condition: service_started
+      backend:
         condition: service_started
 
   # 4. FRONTEND (React + Vite)
@@ -99,12 +133,10 @@ services:
     depends_on:
       - backend
 
-  # 5. BUZON DE PRUEBA DE CORREO (opcional): docker compose --profile correo up -d mailpit
-  #    Se ven los correos en http://localhost:8025 (ver docs/correo-despacho.md).
+  # 5. BUZON DE PRUEBA DE CORREO LOCAL (Mailpit): siempre activo en local para ver correos en http://localhost:8025
   mailpit:
     image: axllent/mailpit:latest
     container_name: mailpit_consultoria
-    profiles: ["correo"]
     restart: unless-stopped
     ports:
       - "8025:8025"

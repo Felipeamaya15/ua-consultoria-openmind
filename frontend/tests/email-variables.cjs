@@ -15,7 +15,7 @@ function test(name, fn) { fn(); console.log('OK ' + name); passed++; }
 
 // Si cambia VARIABLES_PERMITIDAS o TIPOS en backend/apps/core/domain/plantillas_correo, hay que cambiar esto y la pantalla.
 const VARIABLES_DEL_BACKEND = ['customerName', 'customerEmail', 'orderNumber', 'orderTotal', 'orderSummary', 'shippingMethod', 'carrier', 'trackingCode', 'trackingLink', 'storeName'];
-const TIPOS_DEL_BACKEND = ['order_received', 'order_shipped', 'payment_rejected', 'payment_success'];
+const TIPOS_DEL_BACKEND = ['order_cancelled', 'order_delivered', 'order_received', 'order_shipped', 'payment_success'];
 
 const pantalla = fs.readFileSync(path.join(root, 'src/features/admin/pages/Emails.tsx'), 'utf8').replace(/\r/g, '');
 const backendFields=fs.readFileSync(path.join(root,'../backend/apps/core/domain/plantillas_correo/base.py'),'utf8');

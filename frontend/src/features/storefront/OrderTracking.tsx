@@ -76,7 +76,7 @@ export const OrderTracking = () => {
             </span>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-2 pt-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 pt-4">
             {/* Se declaran explícitamente los tipos (LineaTiempoPaso y number) para resolver los errores ts(7006) */}
             {orderData.linea_tiempo.map((paso: LineaTiempoPaso, idx: number) => (
               <div

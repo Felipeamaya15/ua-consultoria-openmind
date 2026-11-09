@@ -2,7 +2,6 @@ import { StorePageContent } from '../StorePageContent';
 import { Outlet } from 'react-router-dom';
 
 import { VisualHeader } from './VisualHeader';
-import { VisualCTA } from './VisualCTA';
 import { VisualFooter } from './VisualFooter';
 import { StoreVisualRoot } from '../StoreVisualRoot';
 
@@ -17,7 +16,6 @@ export function VisualLayout() {
         </StorePageContent>
       </main>
 
-      <VisualCTA />
       <VisualFooter />
     </StoreVisualRoot>
   );

@@ -33,7 +33,7 @@
   --institutional: #1a3a6b;
   --institutional-light: #2a5aab;
 
-  /* Core palette */
+  /* Core palette (contraste reforzado en textos secundarios) */
   --background: #f7f8fb;
   --foreground: #0f1623;
   --card: #ffffff;
@@ -43,7 +43,7 @@
   --secondary: #eef1f8;
   --secondary-foreground: #1a3a6b;
   --muted: #f1f3f9;
-  --muted-foreground: #5a6786;
+  --muted-foreground: #334155;
   --accent: #c2410c;
   --on-primary: #ffffff;
   --on-accent: #ffffff;
@@ -173,9 +173,12 @@ body {
   --t-heading-font: 'Plus Jakarta Sans', sans-serif;
 }
 
+/* ==========================================================================
+   APROVECHAMIENTO DEL ESPACIO HORIZONTAL EN LAS 4 PLANTILLAS
+   ========================================================================== */
 [data-storefront-visual] {
-  --storefront-wide-width: min(92vw, 1560px);
-  --storefront-focused-width: min(92vw, 1080px);
+  --storefront-wide-width: min(96%, 1760px);
+  --storefront-focused-width: min(96%, 1280px);
   --visual-content-width: var(--storefront-wide-width) !important;
   --visual-catalog-width: var(--storefront-wide-width) !important;
   --visual-catalog-grid-max-width: var(--storefront-wide-width) !important;
@@ -209,7 +212,8 @@ body {
 [data-storefront-visual] [data-visual-section="sections"]:not([data-content-block-id]),
 [data-storefront-visual] [data-visual-section="footer"] > div,
 [data-storefront-visual] .landing-details__inner,
-[data-storefront-visual] :is(.max-w-5xl, .max-w-6xl, .max-w-7xl, .max-w-\[1160px\], .max-w-\[1180px\], .max-w-\[1320px\]) {
+[data-storefront-visual] .store-content-blocks:not([style*="--lb-width"]) .store-content-block,
+[data-storefront-visual] :is(.max-w-4xl, .max-w-5xl, .max-w-6xl, .max-w-7xl, .max-w-\[1160px\], .max-w-\[1180px\], .max-w-\[1320px\]) {
   max-width: var(--storefront-wide-width) !important;
   width: 100%;
   margin-inline: auto;
@@ -221,6 +225,341 @@ body {
 [data-storefront-visual] .ua-store-page:not([data-visual-page="login"]) [data-page-form] {
   max-width: 100% !important;
   width: 100%;
+}
+
+/* Evitar que el nombre de la tienda al lado del logo se corte a "ti..." o "t..." */
+[data-storefront-visual] [data-visual-part="logo"] {
+  max-width: none !important;
+}
+
+[data-storefront-visual] [data-visual-part="logo"] span {
+  white-space: nowrap !important;
+}
+
+/* ==========================================================================
+   PLANTILLA 2 (MINIMAL): CENTRADO DE HERO, BUSCADOR EN LÍNEA Y PASTILLA DE NAV LEGIBLE
+   ========================================================================== */
+[data-storefront-visual].template-minimal [data-visual-layout="stack"] {
+  align-items: center !important;
+  text-align: center !important;
+}
+
+[data-storefront-visual].template-minimal [data-visual-layout="stack"] > * {
+  width: min(100%, 1120px) !important;
+  margin-inline: auto !important;
+}
+
+[data-storefront-visual].template-minimal [data-visual-section="hero"] :is(h1, [data-visual-part="heroTitleBlock"], [data-visual-part="heroSubtitle"]) {
+  text-align: center !important;
+  margin-inline: auto !important;
+  max-width: 100% !important;
+}
+
+[data-storefront-visual].template-minimal [data-visual-part="heroCtaLayout"] {
+  width: min(100%, 720px) !important;
+  margin-inline: auto !important;
+  justify-content: center !important;
+  flex-wrap: nowrap !important;
+}
+
+[data-storefront-visual].template-minimal [data-landing-search] {
+  width: 100% !important;
+  display: flex !important;
+  flex-wrap: nowrap !important;
+  align-items: center !important;
+  border-radius: 9999px !important;
+}
+
+[data-storefront-visual].template-minimal [data-landing-search] [data-visual-section="heroCta"] {
+  width: auto !important;
+  flex-shrink: 0 !important;
+  white-space: nowrap !important;
+}
+
+/* Pastilla blanca de navegación debajo del logo en MinimalHeader: texto oscuro 100% legible */
+[data-storefront-visual].template-minimal [data-visual-section="header"] [data-minimal-nav-pill] {
+  background-color: #f4f4f4 !important;
+  color: #0f1623 !important;
+}
+
+[data-storefront-visual].template-minimal [data-visual-section="header"] [data-minimal-nav-pill] a {
+  color: #0f1623 !important;
+}
+
+[data-storefront-visual].template-minimal [data-visual-section="header"] [data-minimal-nav-pill] a:hover {
+  background-color: #ffffff !important;
+  color: var(--primary, #1a3a6b) !important;
+}
+
+[data-storefront-visual].template-minimal [data-visual-section="categories"] {
+  max-width: var(--storefront-wide-width) !important;
+  width: 100%;
+  margin-inline: auto;
+}
+
+/* ==========================================================================
+   PLANTILLA 4 (CATALOG): HEADER EN UNA SOLA FILA COMPACTA
+   ========================================================================== */
+[data-storefront-visual].template-catalog [data-visual-part="headerLayout"] {
+  flex-direction: row !important;
+  flex-wrap: nowrap !important;
+  justify-content: space-between !important;
+  min-height: 62px !important;
+  padding-block: 6px !important;
+}
+
+[data-storefront-visual].template-catalog [data-visual-section="header"] [data-visual-part="navigation"] {
+  flex-grow: 0 !important;
+  justify-content: flex-end !important;
+}
+
+/* Pies de página de las 4 plantillas: 4 columnas alineadas a la izquierda en escritorio (ejemplo Plantilla 1) */
+@media (min-width: 768px) {
+  [data-storefront-visual] [data-visual-part="footerLayout"] {
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    text-align: left !important;
+    align-items: start !important;
+  }
+
+  [data-storefront-visual] [data-visual-part="footerLayout"] > div:first-child {
+    grid-column: span 2 / span 2 !important;
+  }
+}
+
+/* Plantilla 3 (Visual): mantener 1 columna en la sub-grilla apilada junto al producto destacado grande */
+[data-landing-page="visual"] [data-visual-grid="products"] > [data-visual-grid="products"].grid-cols-1 {
+  grid-template-columns: minmax(0, 1fr) !important;
+}
+
+/* Plantilla 3 (Visual) Catálogo: cuando se despliega el panel superior de filtros, ocupa el 100% del ancho */
+[data-catalog-page="visual"] [data-visual-part="catalogFilters"] {
+  width: 100% !important;
+}
+
+/* Plantilla 4 (Catalog) Catálogo: en escritorio mantiene la barra lateral de filtros a la izquierda y resultados a la derecha */
+@media (min-width: 768px) {
+  [data-catalog-page="catalog"] [data-visual-part="catalogLayout"] {
+    flex-direction: row !important;
+    align-items: flex-start;
+  }
+
+  [data-catalog-page="catalog"] [data-visual-part="catalogFilters"] {
+    width: 270px !important;
+  }
+}
+
+/* ==========================================================================
+   PÁGINAS LEGALES: BOTONES CON ESTILO UNIFICADO Y OPCIÓN SELECCIONADA SUBRAYADA
+   ========================================================================== */
+[data-storefront-visual] [data-legal-switcher] a[data-page-action="primary"] {
+  background-color: var(--visual-page-button-background, var(--primary, #1a3a6b)) !important;
+  color: var(--visual-page-button-color, var(--on-primary, #ffffff)) !important;
+  padding: 0.625rem 1.25rem !important;
+  min-height: 2.5rem;
+}
+
+[data-storefront-visual] [data-legal-switcher] a[data-legal-link="active"] {
+  text-decoration: underline !important;
+  text-underline-offset: 4px !important;
+  font-weight: 700 !important;
+}
+
+/* ==========================================================================
+   LOGO INSTITUCIONAL UNIVERSIDAD AUTÓNOMA (GRANDE Y LEGIBLE EN LAS 4 PLANTILLAS)
+   ========================================================================== */
+[data-storefront-visual] [data-visual-part="headerLayout"] {
+  min-height: 70px;
+  padding-block: 6px;
+}
+
+[data-storefront-visual] .ua-institutional-badge {
+  min-height: 48px;
+}
+
+/* Tamaño general y en cabeceras en escritorio/tablet (50px alto × ~96px ancho) */
+[data-storefront-visual] .ua-institutional-badge img,
+[data-storefront-visual] [data-visual-section="header"] .ua-institutional-badge img {
+  width: auto !important;
+  height: 50px !important;
+  min-width: 96px !important;
+  max-width: 140px !important;
+  padding: 2px 4px !important;
+  background: transparent !important;
+  border: 0 !important;
+  border-radius: 8px !important;
+  object-fit: contain !important;
+  box-shadow: none !important;
+  opacity: 0.96;
+}
+
+/* Tamaño en pies de página (64px alto × ~121px ancho) */
+[data-storefront-visual] [data-visual-section="footer"] .ua-institutional-badge img {
+  width: auto !important;
+  height: 64px !important;
+  min-width: 120px !important;
+  max-width: 172px !important;
+  padding: 2px 4px !important;
+}
+
+/* Tamaño destacado en Login y Registro (88px alto × ~166px ancho) */
+[data-storefront-visual] [data-visual-page="login"] [data-login-header] .ua-institutional-badge img {
+  width: auto !important;
+  height: 88px !important;
+  min-width: 166px !important;
+  max-width: 225px !important;
+  padding: 10px 16px !important;
+  border-radius: 12px !important;
+  opacity: 1;
+}
+
+/* En superficies claras (Login sobre fondo claro), pastilla institucional para contraste del logo blanco */
+[data-storefront-visual]:not(.template-catalog) [data-visual-page="login"] [data-login-header] .ua-institutional-badge img {
+  background: var(--primary, #1a3a6b) !important;
+  box-shadow: 0 2px 6px rgba(10, 20, 50, 0.12) !important;
+  opacity: 1;
+}
+
+/* En MinimalHeader, asegurar que el ícono del carrito sobre fondo primario conserve su color blanco */
+[data-storefront-visual].template-minimal [data-visual-section="header"] a[aria-label*="carrito"] {
+  color: var(--on-primary, #ffffff) !important;
+}
+
+@media (max-width: 767px) {
+  [data-storefront-visual] [data-visual-part="headerLayout"] {
+    gap: 6px !important;
+    padding-inline: 10px !important;
+    min-height: 60px !important;
+    flex-wrap: nowrap !important;
+  }
+
+  [data-storefront-visual] .ua-institutional-badge {
+    min-height: 34px !important;
+    margin-right: 0 !important;
+  }
+
+  [data-storefront-visual] .ua-institutional-badge img,
+  [data-storefront-visual] [data-visual-section="header"] .ua-institutional-badge img {
+    height: 32px !important;
+    min-width: 60px !important;
+    max-width: 72px !important;
+    padding: 1px 2px !important;
+  }
+
+  [data-storefront-visual] [data-visual-part="logo"] {
+    gap: 6px !important;
+    min-width: 0 !important;
+  }
+
+  [data-storefront-visual] [data-visual-part="logo"] img {
+    max-width: 44px !important;
+    max-height: 32px !important;
+  }
+
+  [data-storefront-visual] [data-visual-part="logo"] span {
+    font-size: 14px !important;
+    white-space: nowrap !important;
+  }
+
+  [data-storefront-visual] [data-visual-section="footer"] .ua-institutional-badge img {
+    height: 54px !important;
+    min-width: 102px !important;
+    max-width: 145px !important;
+  }
+
+  [data-storefront-visual] [data-visual-page="login"] [data-login-header] .ua-institutional-badge img {
+    height: 76px !important;
+    min-width: 144px !important;
+    max-width: 195px !important;
+  }
+}
+
+/* ==========================================================================
+   VISIBILIDAD Y DISTRIBUCIÓN DE TEXTOS Y WIDGETS EN LAS 4 PLANTILLAS
+   ========================================================================== */
+[data-storefront-visual] :is(.text-\[9px\], .text-\[10px\], .text-\[11px\]) {
+  font-size: 0.75rem !important;
+  line-height: 1.4 !important;
+}
+
+[data-storefront-visual] :is(
+  [class*="text-[var(--visual-page-color)]/30"],
+  [class*="text-[var(--visual-page-color)]/35"],
+  [class*="text-[var(--visual-page-color)]/40"],
+  [class*="text-[var(--visual-page-color)]/45"],
+  [class*="text-[var(--visual-page-color)]/50"],
+  [class*="text-[var(--visual-page-color)]/60"]
+):not([data-page-action="primary"]) {
+  color: color-mix(in srgb, var(--visual-page-color, var(--visual-text, #0f1623)) 85%, transparent) !important;
+}
+
+[data-storefront-visual] :is(.opacity-40, .opacity-50, .opacity-60, .opacity-70) {
+  opacity: 0.9 !important;
+}
+
+/* Corrección de contraste en Plantilla 4 (Catalog - fondo oscuro) para textos que usaban text-black */
+[data-storefront-visual].template-catalog .ua-store-page :is(.text-black, .text-black\/80, .text-black\/60, .text-\[\#151515\]):not([data-page-action="primary"]) {
+  color: var(--visual-page-color, #ffffff) !important;
+}
+
+/* Distribución uniforme en widgets de Beneficios, Contacto, Horarios y Ubicación en las 4 plantillas */
+[data-storefront-visual] [data-visual-kind="benefits"] > div,
+[data-storefront-visual] section[aria-label="Beneficios de la tienda"] > div {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)) !important;
+  gap: 1.5rem !important;
+  width: 100% !important;
+  align-items: start !important;
+}
+
+[data-storefront-visual] section[aria-label="Beneficios de la tienda"] > div > div {
+  max-width: 100% !important;
+  width: 100%;
+}
+
+[data-storefront-visual] .landing-details__hours {
+  max-width: 100% !important;
+  width: 100%;
+}
+
+[data-storefront-visual] .landing-details__label {
+  font-size: 0.75rem !important;
+  font-weight: 600;
+}
+
+[data-storefront-visual] .landing-details__value,
+[data-storefront-visual] .landing-details__hours-list li,
+[data-storefront-visual] .landing-details__address p {
+  font-size: 0.875rem !important;
+}
+
+/* Legibilidad reforzada en textos sobre imágenes Hero */
+[data-storefront-visual] [data-visual-section="hero"] :is(h1, [data-visual-part="heroSubtitle"]) {
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.35);
+}
+
+[data-storefront-visual].template-minimal [data-visual-section="hero"] :is(h1, [data-visual-part="heroSubtitle"]) {
+  text-shadow: none;
+}
+
+/* Respetar el centrado explícito en encabezados de Login, Registro, Seguimiento, Confirmación y estados vacíos */
+[data-storefront-visual] .ua-store-page .text-center :is(h1, h2, p),
+[data-storefront-visual] .ua-store-page :is(h1, h2, p).text-center,
+[data-storefront-visual] [data-visual-page="login"] [data-login-header],
+[data-storefront-visual] [data-visual-page="login"] [data-login-header] :is(h1, h2, p) {
+  text-align: center !important;
+  margin-inline: auto;
+}
+
+[data-storefront-visual] [data-visual-page="login"] [data-login-header] .ua-institutional-badge {
+  margin-inline: auto;
+  justify-content: center;
+}
+
+[data-storefront-visual] [data-visual-page="login"] [data-page-panel] > form[data-page-form] {
+  border: 0 !important;
+  padding: 0 !important;
+  box-shadow: none !important;
+  background: transparent !important;
 }
 
 /* Animation utilities */
@@ -255,7 +594,9 @@ button:not(:disabled), a { cursor: pointer; }
 button:disabled { cursor: not-allowed; opacity: .65; }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; } }
 
-/* Navegación móvil desplegable en Editorial (#mobile-navigation) y compacta (.store-mobile-navigation) */
+/* ==========================================================================
+   NAVEGACIÓN MÓVIL EN LAS 4 PLANTILLAS (#mobile-navigation y .store-mobile-navigation)
+   ========================================================================== */
 [data-storefront-visual] [data-visual-section="header"] #mobile-navigation {
   display: flex;
   flex-direction: column;
@@ -265,7 +606,7 @@ button:disabled { cursor: not-allowed; opacity: .65; }
   background-color: var(--visual-global-surface, #ffffff) !important;
   color: var(--visual-text, #0f1623) !important;
   --foreground: var(--visual-text, #0f1623) !important;
-  --muted-foreground: var(--visual-muted, #5a6786) !important;
+  --muted-foreground: var(--visual-muted, #334155) !important;
   border-top: 1px solid var(--visual-global-border, #dde3f0);
   box-shadow: var(--shadow-lg);
   position: relative;
@@ -282,6 +623,8 @@ button:disabled { cursor: not-allowed; opacity: .65; }
 
 .store-mobile-navigation {
   position: relative;
+  flex-shrink: 0;
+  padding: 0 !important;
 }
 
 .store-mobile-navigation > summary {
@@ -289,8 +632,8 @@ button:disabled { cursor: not-allowed; opacity: .65; }
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 2.5rem;
-  padding: 0.375rem 0.75rem;
+  min-height: 2.25rem;
+  padding: 0.35rem 0.7rem;
   border-radius: 999px;
   border: 1px solid currentColor;
   font-size: 0.75rem;
@@ -303,20 +646,25 @@ button:disabled { cursor: not-allowed; opacity: .65; }
   display: none;
 }
 
+.store-mobile-navigation[open] > nav,
 .store-mobile-navigation > nav {
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
-  margin-top: 0.5rem;
   padding: 0.75rem;
   border-radius: 0.875rem;
   background: var(--visual-global-surface, #ffffff) !important;
   color: var(--visual-text, #0f1623) !important;
-  border: 1px solid var(--visual-global-border, #dde3f0);
+  border: 1px solid var(--visual-global-border, #dde3f0) !important;
   box-shadow: var(--shadow-lg);
+  position: absolute !important;
+  right: 0 !important;
+  top: calc(100% + 0.5rem) !important;
+  z-index: 60 !important;
+  min-width: 210px;
 }
 
-.store-mobile-navigation > nav a {
+[data-storefront-visual] [data-visual-section="header"] .store-mobile-navigation > nav :is(a, button) {
   display: flex;
   align-items: center;
   min-height: 2.5rem;
@@ -325,6 +673,10 @@ button:disabled { cursor: not-allowed; opacity: .65; }
   font-size: 0.875rem;
   font-weight: 500;
   color: var(--visual-text, #0f1623) !important;
+}
+
+[data-storefront-visual] [data-visual-section="header"] .store-mobile-navigation > nav :is(a, button):hover {
+  background-color: var(--visual-alternate, #eef1f8);
 }
 
 @media (max-width: 767px) {
@@ -358,7 +710,7 @@ button:disabled { cursor: not-allowed; opacity: .65; }
     --storefront-focused-width: 100%;
   }
 
-  [data-landing-page] [data-visual-part="heroCtaLayout"] {
+  [data-landing-page]:not([data-landing-page="minimal"]) [data-visual-part="heroCtaLayout"] {
     flex-wrap: wrap;
   }
 
@@ -366,11 +718,18 @@ button:disabled { cursor: not-allowed; opacity: .65; }
     min-height: 2.75rem;
   }
 
-  [data-landing-page] [data-landing-search] {
-    border-radius: 1.25rem;
+  [data-landing-page="minimal"] [data-landing-search] {
+    border-radius: 9999px !important;
+    flex-wrap: nowrap !important;
   }
 
-  /* SCRUM-463: Tarjetas de "Explorar por categoría" amplias y legibles en móvil */
+  [data-landing-page="minimal"] [data-landing-search] [data-visual-section="heroCta"] {
+    width: auto !important;
+    padding: 0.5rem 1rem !important;
+    font-size: 0.75rem !important;
+  }
+
+  /* SCRUM-463: Tarjetas de "Explorar por categoría" amplias y legibles en móvil (Editorial y Minimal) */
   [data-landing-page="editorial"] [data-visual-section="categories"] [data-visual-part="categoryList"] {
     display: grid !important;
     grid-template-columns: repeat(auto-fit, minmax(155px, 1fr)) !important;
@@ -400,6 +759,21 @@ button:disabled { cursor: not-allowed; opacity: .65; }
     color: #ffffff !important;
     font-size: 1rem !important;
     font-weight: 600 !important;
+  }
+
+  [data-landing-page="minimal"] [data-visual-section="categories"][data-visual-part="categoryList"] {
+    display: grid !important;
+    grid-template-columns: repeat(auto-fit, minmax(145px, 1fr)) !important;
+    gap: 0.625rem !important;
+  }
+
+  [data-landing-page="minimal"] [data-visual-section="categories"] [data-visual-part="categoryItem"] {
+    min-height: 3.25rem !important;
+    font-size: 0.875rem !important;
+    font-weight: 600 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
   }
 
   /* SCRUM-464: Evitar tarjetas de producto estrechas en dos columnas en móvil */
@@ -514,23 +888,5 @@ button:disabled { cursor: not-allowed; opacity: .65; }
     min-height: 2.75rem;
     white-space: normal;
     overflow-wrap: anywhere;
-  }
-
-  [data-storefront-visual] [data-visual-page="login"] [data-login-header],
-  [data-storefront-visual] [data-visual-page="login"] [data-login-header] :is(h1, h2, p) {
-    text-align: center !important;
-    margin-inline: auto;
-  }
-
-  [data-storefront-visual] [data-visual-page="login"] [data-login-header] .ua-institutional-badge {
-    margin-inline: auto;
-    justify-content: center;
-  }
-
-  [data-storefront-visual] [data-visual-page="login"] [data-page-panel] > form[data-page-form] {
-    border: 0 !important;
-    padding: 0 !important;
-    box-shadow: none !important;
-    background: transparent !important;
   }
 }

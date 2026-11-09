@@ -8,7 +8,7 @@ const initial = () => ({
   landing: { id: 1, tienda: 1, titulo: 'Portada QA', descripcion: 'Bienvenidos', texto_boton: 'Ver productos', logo: null, imagen_principal: null, secciones: {}, contenido: {} },
   product: { id, revision: 1, nombre: 'Producto QA', descripcion: 'Descripción de prueba', categoria: 'Pruebas', activo: true, imagenes: [pixel], variantes: [{ sku: 'QA-UNO', precio: 10000, precio_oferta: null, stock: 4, atributos_variante: [] }], seo: {} },
   promotions: [], orderStatus: 'pagado', emailFailed: false, counts: {}, failBusiness: false, failLanding: false, failLegal: false, failPayment: false, failEmails: false, delay: 0,
-  emailTemplates: Object.fromEntries(['order_received', 'payment_success', 'payment_rejected', 'order_shipped'].map(type => [type, { enabled: true, subject: 'Asunto QA', preheader: 'Vista previa QA', body: 'Hola {{customerName}}' }])),
+  emailTemplates: Object.fromEntries(['order_received', 'payment_success', 'order_shipped', 'order_delivered', 'order_cancelled'].map(type => [type, { enabled: true, subject: 'Asunto QA', preheader: 'Vista previa QA', body: 'Hola {{customerName}}' }])),
   ownerEmail: 'owner@example.test', transfers: [], legalPages: legalPages(),
   shipping: { chilexpress: { enabled: false, accountId: '', apiKey: '', status: 'not_configured', tarifas: [] }, starken: { enabled: false, accountId: '', apiKey: '', status: 'not_configured', tarifas: [] }, pickup: { enabled: false, address: '', schedule: '' } },
 });

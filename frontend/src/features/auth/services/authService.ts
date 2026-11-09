@@ -29,7 +29,7 @@ async function profileRequest<T = CustomerProfile>(path: string, method = 'GET',
 }
 
 export type CustomerOrderItem = { id_item_pedido: number; producto_id: number | string; nombre: string; cantidad: number; precio_unitario: string; subtotal: string; sku?: string; atributos_variante?: {clave: string; etiqueta: string; valor: string}[] };
-export type CustomerOrder = { id_pedido: number; identificador?: string; fecha_creacion: string; estado: string; estado_etiqueta: string; monto_total: string; cantidad_productos: number; costo_envio?: string; descuento?: string; items?: CustomerOrderItem[]; entrega?: { retiro?: { seleccion?: { fecha: string; hora: string } } } };
+export type CustomerOrder = { id_pedido: number; identificador?: string; fecha_creacion: string; estado: string; estado_etiqueta: string; medio_pago?: string; vence_en?: string | null; monto_total: string; cantidad_productos: number; costo_envio?: string; descuento?: string; items?: CustomerOrderItem[]; entrega?: { retiro?: { seleccion?: { fecha: string; hora: string } } } };
 
 export const authService = {
   getToken() {
