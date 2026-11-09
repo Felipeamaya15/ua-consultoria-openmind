@@ -344,6 +344,7 @@ class ConfiguracionPagoSerializer(serializers.Serializer):
             'confirmation_email',
         ],
     }
+    TUU_ENVIRONMENTS = ('integracion', 'produccion')
     FIELD_LABELS = {
         'idCuenta': 'ID de cuenta',
         'clavePrivada': 'Clave privada',
@@ -428,6 +429,17 @@ class ConfiguracionPagoSerializer(serializers.Serializer):
 
                 if field_errors:
                     errores_metodos[method_id] = ' '.join(field_errors)
+
+            if method_id == 'tuu':
+                tuu_errors = []
+                for field in ('accountId', 'secretKey', 'environment'):
+                    if field in fields and not isinstance(fields[field], str):
+                        tuu_errors.append(f'{field} debe ser texto.')
+                environment = fields.get('environment')
+                if isinstance(environment, str) and environment not in self.TUU_ENVIRONMENTS:
+                    tuu_errors.append('Ambiente de TUU no es válido: usa integracion o produccion.')
+                if tuu_errors:
+                    errores_metodos[method_id] = ' '.join(tuu_errors)
 
             # Las credenciales parciales tampoco pueden persistirse con Linkify deshabilitado.
             has_linkify_data = method_id == 'linkify' and any(

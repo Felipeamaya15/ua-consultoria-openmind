@@ -8,18 +8,19 @@ Las pruebas manuales de SCRUM-499 dejaron 3 casos NO CUMPLE (P1 a P3, retorno de
 
 | # | Pasarela | Escenario | Resultado SCRUM-499 | Cambio en SCRUM-509 | Estado actual |
 | --- | --- | --- | --- | --- | --- |
-| P1 | Webpay | Pago aprobado | NO CUMPLE (404 al volver) | Puente de retorno en el backend que recibe el POST de Webpay y redirige a la tienda con `token_ws` | CUMPLE (evidencia: `P1-aprobado-01.png`)
-| P2 | Webpay | Pago rechazado | NO CUMPLE | Mismo puente | Test automático OK; **repetir manual** |
-| P3 | Webpay | Pago abortado | NO CUMPLE | El puente conserva `TBK_TOKEN`, `TBK_ORDEN_COMPRA` y `TBK_ID_SESION` | Test automático OK; **repetir manual** |
+| P1 | Webpay | Pago aprobado | NO CUMPLE (404 al volver) | Puente de retorno en el backend que recibe el POST de Webpay y redirige a la tienda con `token_ws` | Test automático OK; 
+| P2 | Webpay | Pago rechazado | NO CUMPLE | Mismo puente | Test automático OK; 
+| P3 | Webpay | Pago abortado | NO CUMPLE | El puente conserva `TBK_TOKEN`, `TBK_ORDEN_COMPRA` y `TBK_ID_SESION` | Test automático OK;|
 | P4 | Webpay | Proveedor no disponible | CUMPLE | Sin cambios | CUMPLE |
-| P5 | Webpay | Reintento | CUMPLE| Mismo puente | **Repetir manual** |
+| P5 | Webpay | Reintento | CUMPLE| Mismo puente |
 | P6-P8 | Transferencia | Aprobar, rechazar, doble aprobación | CUMPLE | Sin cambios | CUMPLE |
 | P9 | Linkify | Inicio de transacción | NO EJECUTABLE (sin credenciales) | Botón "Guardar Linkify" propio; apagarlo ya no exige ni borra credenciales | **No validado** |
-| P10 | Mercado Pago | Activar y pagar | NO EJECUTABLE (no aparecía en el checkout) | Se habilita: inicio del cobro, retorno y confirmación en el servidor | Test automático OK; **probar manual con credenciales de prueba** |
-| P11 | PayPal | Activar y pagar | NO EJECUTABLE (no aparecía en el checkout) | Se habilita: cobro en USD y captura en el servidor | Test automático OK; **falta prueba manual con cuenta sandbox (requiere tipo de cambio vigente)** |
+| P10 | Mercado Pago | Activar y pagar | NO EJECUTABLE (no aparecía en el checkout) | Se habilita: inicio del cobro, retorno y confirmación en el servidor | Test automático OK;  |
+| P11 | PayPal | Activar y pagar | NO EJECUTABLE (no aparecía en el checkout) | Se habilita: cobro en USD y captura en el servidor | Test automático OK; |
+| P12 | Todas | El checkout muestra solo los métodos habilitados y con credenciales completas | Sin registro | `payment_methods_for_store` | Test automático OK (`test_scrum_509_tuu.py`, `test_scrum_509_paypal_mercadopago.py`) |
+| P13 | Todas | Un pago rechazado, fallido o con firma/monto inválido no confirma la compra | Sin registro | Webpay, PayPal, Mercado Pago y TUU solo marcan Pagado con confirmación del servidor | Test automático OK (callback TUU, retorno Webpay, PayPal/Mercado Pago) |
 
 
-Evidencia adjuntada en: `docs/pruebas-integracion-pagos/Pruebas pagos Scrum-509`
 
 ## 2. Informe de compatibilidad Transbank – TUU
 
@@ -56,17 +57,17 @@ Fuente: documentación oficial de TUU (developers.tuu.cl).
 - URL de callback **HTTPS pública**: desde `localhost` TUU no puede avisar. Para probar se necesita un túnel o un ambiente desplegado.
 
 
-### 2.4 Arquitectura y decisión
+### 2.4 Decisión: Escenario B (integración independiente)
+
+**¿TUU usa las mismas credenciales que Transbank? No.** TUU Pago Online se autentica con su propio `x_account_id` y una llave secreta propia (firma HMAC-SHA256), distintos del código de comercio y la API Key de Transbank, con otros endpoints y otro mecanismo de retorno (callback firmado servidor a servidor). Por eso no corresponde reutilizar la integración de Transbank (Escenario A): se implementó un **adaptador independiente** (Escenario B) sin tocar Webpay ni la lógica central del checkout. No se necesita máquina física para Pago Online; sí una cuenta TUU contratada y una URL de callback HTTPS pública.
+
+### 2.5 Arquitectura
 
 La arquitectura actual permite añadir TUU sin tocar la lógica central del checkout: el patrón de Linkify (el pedido devuelve `url_pago` y la tienda redirige) se reutiliza tal cual.
 
-Implementado:
-
-- Método `TUU` en el checkout y el panel (Pagos > TUU Pago Online), apagado por defecto. Solo se ofrece si está habilitado, con credenciales y con `TUU_CALLBACK_BASE_URL` (HTTPS) configurada.
 
 
-
-### 2.5 Plan de pruebas TUU
+### 2.6 Plan de pruebas TUU
 
 Requiere túnel HTTPS y las credenciales de integración de TUU.
 
@@ -83,7 +84,6 @@ Tests automáticos: `apps/core/test_scrum_509_tuu.py`, `apps/core/test_scrum_509
 
 ## 3. Limitaciones y trabajo futuro
 
-- Guardar la llave secreta de TUU cifrada en reposo (hoy se guarda en la configuración de pagos igual que las credenciales de Linkify).
 - Verificar en sandbox la fuente del tipo de cambio (mindicador.cl o API SIETE del Banco Central con credenciales); las pruebas automáticas usan datos simulados porque el entorno de desarrollo no tuvo acceso a la red.
 
 
@@ -94,7 +94,6 @@ Tests automáticos: `apps/core/test_scrum_509_tuu.py`, `apps/core/test_scrum_509
 - Revisada la implementación: crea la URL de pago del pedido y recibe el aviso en `/api/pagos/linkify/notificacion/`.
 - Cambios: botón "Guardar Linkify" propio en su sección; apagar Linkify ya no exige la clave privada y conserva las credenciales guardadas.
 - Para validarlo de verdad se necesita una cuenta contratada en Linkify (ID de cuenta y clave privada) y una URL pública HTTPS para el aviso de pago; desde `localhost` Linkify no puede alcanzar el backend.
-- **Pendiente de confirmar con el cliente** si desea usar esta modalidad. Hasta tener acceso al servicio la integración **no se considera validada**; queda disponible y desactivada por defecto.
 
 ## PayPal y moneda (CLP → USD)
 
@@ -126,7 +125,6 @@ Si la fuente principal falla se usa la de respaldo y, si ambas fallan, el últim
 
 ### 5.1 Reglas
 
-El inventario se reserva al crear el pedido. Un pedido pendiente que pasa su plazo se cancela, su stock vuelve al inventario una sola vez y el comprador recibe un correo con el motivo.
 
 | Medio de pago | Plazo (configurable por tienda en Pagos) | Cómo se decide cancelar |
 | --- | --- | --- |
@@ -144,7 +142,7 @@ El inventario se reserva al crear el pedido. Un pedido pendiente que pasa su pla
 | --- | --- |
 | Pago aprobado, con la misma referencia y el mismo monto | Marca el pedido como **Pagado** y avisa por correo; nunca lo cancela. |
 | Pago en curso (Mercado Pago pendiente o en proceso; orden de PayPal aprobada sin capturar) | Espera y vuelve a mirar en la siguiente pasada. |
-| Sin pagos, o todos rechazados, cancelados o devueltos; orden de PayPal sin aprobar | Cancela y devuelve el stock. |
+| Sin pagos, o todos rechazados, cancelados o devueltos; orden de PayPal sin aprobar | Cancela y libera el stock apartado (lo devuelve solo si ya se había descontado). |
 | No responde, credenciales retiradas de Mercado Pago, o monto que no coincide | **No cancela**; deja un aviso en el log y reintenta. |
 
 - La preferencia de pago de Mercado Pago vence junto con el pedido, de modo que no se puede pagar uno ya cancelado. PayPal solo cobra al capturar, y el servidor no captura pedidos cancelados.

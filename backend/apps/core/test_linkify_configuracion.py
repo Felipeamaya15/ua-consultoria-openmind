@@ -89,6 +89,8 @@ class LinkifyApagarTests(TestCase):
         self.api.put(CONFIG_URL, LINKIFY, format='json')
         respuesta = self.api.put(CONFIG_URL, {'linkify': {'enabled': False, 'fields': {}}}, format='json')
         self.assertEqual(respuesta.status_code, 200, respuesta.content)
-        linkify = ConfiguracionPago.objects.get(tienda=self.tienda).datos['linkify']
+        config = ConfiguracionPago.objects.get(tienda=self.tienda)
+        linkify = config.datos_descifrados['linkify']
         self.assertFalse(linkify['enabled'])
         self.assertEqual(linkify['fields']['clavePrivada'], 'clave-privada-qa')
+        self.assertTrue(config.datos['linkify']['fields']['clavePrivada'].startswith('enc::'))

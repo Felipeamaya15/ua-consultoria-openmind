@@ -816,6 +816,53 @@ export default function Payments() {
     return '';
   };
 
+  const renderTuuConfig = () => {
+    const current = form.tuu ?? { enabled: false, fields: {} };
+    const environment = current.fields?.environment === 'produccion' ? 'produccion' : 'integracion';
+
+    return (
+      <div className="border-t border-[var(--border)] pt-3 grid gap-4">
+        <Input
+          label="ID de cuenta TUU *"
+          required
+          maxLength={200}
+          autoComplete="off"
+          value={current.fields?.accountId ?? ''}
+          placeholder="Lo entrega TUU al crear tu cuenta"
+          onChange={(event) => updateField('tuu', 'accountId', event.target.value)}
+        />
+        <Input
+          label="Llave secreta *"
+          type="password"
+          required
+          maxLength={500}
+          autoComplete="off"
+          value={current.fields?.secretKey ?? ''}
+          placeholder="Llave secreta del mismo ambiente"
+          onChange={(event) => updateField('tuu', 'secretKey', event.target.value)}
+        />
+        <Select
+          label="Ambiente"
+          value={environment}
+          onChange={(event) => updateField('tuu', 'environment', event.target.value)}
+          options={[
+            { value: 'integracion', label: 'Modo de prueba (integración)' },
+            { value: 'produccion', label: 'Producción' },
+          ]}
+        />
+        {environment === 'produccion' ? (
+          <Alert variant="warning">
+            Producción cobra pagos reales. Usa el ID de cuenta y la llave secreta de producción entregados por TUU.
+          </Alert>
+        ) : (
+          <p className="text-xs text-[var(--muted-foreground)]">
+            En modo de prueba no se cobra dinero real. Usa las credenciales de integración y las tarjetas de prueba de TUU.
+          </p>
+        )}
+      </div>
+    );
+  };
+
   const renderLinkifyConfig = () => {
     const current = form.linkify ?? { enabled: false, fields: {} };
 
@@ -1008,7 +1055,7 @@ export default function Payments() {
       headers: getAuthHeaders(),
       body: JSON.stringify({
         ...(currentBody.data ?? {}),
-        tuu: { enabled: current.enabled === true, fields: current.enabled || complete ? { ...(current.fields ?? {}) } : {} },
+        tuu: { enabled: current.enabled === true, fields: current.enabled || complete ? { ...(current.fields ?? {}), environment: current.fields?.environment === 'produccion' ? 'produccion' : 'integracion' } : {} },
       }),
     });
   };
@@ -1672,6 +1719,8 @@ export default function Payments() {
 
             {method.id === 'linkify' ? (
               renderLinkifyConfig()
+            ) : method.id === 'tuu' ? (
+              renderTuuConfig()
             ) : (
               <TransferConfigForm
                 fields={current.fields ?? {}}

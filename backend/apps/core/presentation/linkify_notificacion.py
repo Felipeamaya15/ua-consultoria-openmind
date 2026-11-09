@@ -150,7 +150,7 @@ class LinkifyNotificacionView(APIView):
     @staticmethod
     def _verificar_firma(request, pedido, *firmados):
         config = ConfiguracionPago.objects.filter(tienda=pedido.tienda).first()
-        linkify = ((config.datos or {}).get("linkify") or {}) if config else {}
+        linkify = (config.datos_descifrados.get("linkify") or {}) if config else {}
         campos = linkify.get("fields") or {}
         id_cuenta, clave = campos.get("idCuenta"), campos.get("clavePrivada")
         # No se exige "enabled": un pago en curso debe poder cerrarse aunque

@@ -240,7 +240,7 @@ class ShippingQuoteTests(TestCase):
         retry = self.submit(cotizacion=self.token())
         self.assertEqual(retry.status_code, 200, retry.data)
         self.assertEqual(retry.data['data'], first.data['data'])
-        self.repository.decrease_stock.assert_called_once()
+        self.repository.decrease_stock.assert_not_called()
 
     def test_owner_configures_tariffs_public_quote_uses_saved_configuration(self):
         self.api.force_authenticate(self.owner)

@@ -338,6 +338,13 @@ class MercadoPagoAdapterTests(TestCase):
 
 
 class ComandoExpiradorTests(BaseConciliacion):
+    def setUp(self):
+        super().setUp()
+        for objetivo in ('close_old_connections', 'connections'):
+            parche = patch(f'{COMANDO}.{objetivo}')
+            parche.start()
+            self.addCleanup(parche.stop)
+
     def ejecutar(self, *args):
         salida = StringIO()
         call_command('expirar_pedidos_pendientes', *args, stdout=salida)

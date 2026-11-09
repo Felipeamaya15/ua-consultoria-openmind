@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 def credenciales_tuu(tienda):
     """(account_id, llave_secreta, ambiente) si TUU está habilitado y configurado; si no, None."""
     config = ConfiguracionPago.objects.filter(tienda=tienda).first()
-    tuu = ((config.datos or {}).get('tuu') or {}) if config else {}
+    tuu = (config.datos_descifrados.get('tuu') or {}) if config else {}
     campos = tuu.get('fields') or {}
     cuenta = str(campos.get('accountId') or '').strip()
     clave = str(campos.get('secretKey') or '').strip()

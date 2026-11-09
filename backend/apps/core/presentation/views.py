@@ -50,7 +50,7 @@ class ConfiguracionPagoAPIView(APIView):
         try:
             tienda = resolver_tienda(request, exigir_propietario=True)
             config_pago, _ = ConfiguracionPago.objects.get_or_create(tienda=tienda)
-            return success_response(data=config_pago.datos or {})
+            return success_response(data=config_pago.datos_enmascarados)
         except Exception as e:
             return error_response(mensaje=str(e), codigo="ERROR_PAGO", status=getattr(e, "status_code", 400))
 
@@ -63,6 +63,14 @@ class ConfiguracionPagoAPIView(APIView):
 
             config_pago, _ = ConfiguracionPago.objects.get_or_create(tienda=tienda)
             datos = serializer.validated_data
+            actuales = config_pago.datos_descifrados
+            for metodo, campos in ConfiguracionPago.CAMPOS_SECRETOS.items():
+                nuevos = (datos.get(metodo) or {}).get('fields') if isinstance(datos.get(metodo), dict) else None
+                previos = (actuales.get(metodo) or {}).get('fields') or {}
+                if isinstance(nuevos, dict):
+                    for campo in campos:
+                        if nuevos.get(campo) and nuevos[campo] == ConfiguracionPago.enmascarar(previos.get(campo, '')):
+                            nuevos[campo] = previos[campo]
             for metodo, claves in (('linkify', ('idCuenta', 'clavePrivada')), ('tuu', ('accountId', 'secretKey'))):
                 nuevo = datos.get(metodo)
                 if (isinstance(nuevo, dict) and nuevo.get('enabled') is False
@@ -73,7 +81,7 @@ class ConfiguracionPagoAPIView(APIView):
             config_pago.datos = datos
             config_pago.save()
 
-            return success_response(mensaje="Métodos guardados.", data=config_pago.datos)
+            return success_response(mensaje="Métodos guardados.", data=config_pago.datos_enmascarados)
         except Exception as e:
             return error_response(mensaje=str(e), codigo="ERROR_PAGO", status=getattr(e, "status_code", 400))
 
@@ -189,7 +197,7 @@ class VerificarTransferenciaLinkifyAPIView(APIView):
                 return error_response('El pedido requiere revisión manual.', 'ESTADO_PEDIDO_INVALIDO', status=409)
             
             config_pago = ConfiguracionPago.objects.get(tienda=tienda)
-            linkify_config = (config_pago.datos or {}).get("linkify", {})
+            linkify_config = config_pago.datos_descifrados.get("linkify", {})
             
 
             fields = linkify_config.get("fields", {})

@@ -208,7 +208,7 @@ class CheckoutOrderAPIView(ErroresDeCotizacionMixin, APIView):
     def _credenciales_linkify(tienda):
         """(id_cuenta, clave_privada) si Linkify esta habilitado y configurado en la tienda; si no, None."""
         config_pago = ConfiguracionPago.objects.filter(tienda=tienda).first()
-        linkify = ((config_pago.datos or {}).get('linkify') or {}) if config_pago else {}
+        linkify = (config_pago.datos_descifrados.get('linkify') or {}) if config_pago else {}
         campos = linkify.get('fields') or {}
         id_cuenta = str(campos.get('idCuenta') or '').strip()
         clave = str(campos.get('clavePrivada') or '').strip()

@@ -102,7 +102,7 @@ def _descargar():
         try:
             encontrado = fuente()
         except Exception:
-            logger.warning('Fuente de tipo de cambio %s no disponible.', fuente.__name__, exc_info=True)
+            logger.warning('Fuente de tipo de cambio %s no disponible.', getattr(fuente, '__name__', repr(fuente)), exc_info=True)
             continue
         if encontrado:
             return encontrado

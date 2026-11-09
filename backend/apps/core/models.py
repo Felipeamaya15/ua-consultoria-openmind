@@ -1,3 +1,4 @@
+import copy
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.validators import MaxValueValidator, MinValueValidator
@@ -483,8 +484,44 @@ class ConfiguracionPago(models.Model):
     datos = models.JSONField(default=dict, blank=True)
     fecha_actualizacion = models.DateTimeField(auto_now=True)
 
+    CAMPOS_SECRETOS = {'linkify': ('clavePrivada',), 'tuu': ('secretKey',)}
+
     class Meta:
         db_table = 'configuracion_pago'
+
+    @classmethod
+    def transformar_secretos(cls, datos, funcion):
+        resultado = copy.deepcopy(datos) if isinstance(datos, dict) else {}
+        for metodo, campos in cls.CAMPOS_SECRETOS.items():
+            fields = (resultado.get(metodo) or {}).get('fields') if isinstance(resultado.get(metodo), dict) else None
+            if not isinstance(fields, dict):
+                continue
+            for campo in campos:
+                if isinstance(fields.get(campo), str):
+                    fields[campo] = funcion(fields[campo])
+        return resultado
+
+    @staticmethod
+    def enmascarar(valor):
+        if not valor:
+            return ''
+        if len(valor) <= 8:
+            return '********'
+        return f"{'*' * (len(valor) - 4)}{valor[-4:]}"
+
+    @property
+    def datos_enmascarados(self):
+        return self.transformar_secretos(self.datos_descifrados, self.enmascarar)
+
+    @property
+    def datos_descifrados(self):
+        from apps.core.infrastructure.encryption import descifrar
+        return self.transformar_secretos(self.datos, descifrar)
+
+    def save(self, *args, **kwargs):
+        from apps.core.infrastructure.encryption import cifrar
+        self.datos = self.transformar_secretos(self.datos, cifrar)
+        super().save(*args, **kwargs)
 
 class ConfiguracionEntrega(models.Model):
     tienda = models.OneToOneField(
