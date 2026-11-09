@@ -82,10 +82,11 @@ Requiere túnel HTTPS y las credenciales de integración de TUU.
 
 Tests automáticos: `apps/core/test_scrum_509_tuu.py`, `apps/core/test_scrum_509_retorno_webpay.py` y `apps/core/test_scrum_509_paypal_mercadopago.py` y `apps/core/test_scrum_509_tipo_cambio.py`.
 
-## 3. Limitaciones y trabajo futuro
+## 3. Limitaciones
 
 - Verificar en sandbox la fuente del tipo de cambio (mindicador.cl o API SIETE del Banco Central con credenciales); las pruebas automáticas usan datos simulados porque el entorno de desarrollo no tuvo acceso a la red.
 
+-Credenciales de prueba:** TUU publica un ID de cuenta, una llave secreta y tarjetas de prueba para integración en https://developers.tuu.cl/docs/payment-intent. pero no se comprobaron.
 
 - TUU Pago Remoto queda fuera del alcance: requiere POS físico, que este proyecto no contempla adquirir.
 

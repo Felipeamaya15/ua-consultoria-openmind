@@ -345,6 +345,7 @@ class ConfiguracionPagoSerializer(serializers.Serializer):
         ],
     }
     TUU_ENVIRONMENTS = ('integracion', 'produccion')
+    TUU_CUENTAS_DE_PRUEBA = ('62224230', '26274343')
     FIELD_LABELS = {
         'idCuenta': 'ID de cuenta',
         'clavePrivada': 'Clave privada',
@@ -438,6 +439,9 @@ class ConfiguracionPagoSerializer(serializers.Serializer):
                 environment = fields.get('environment')
                 if isinstance(environment, str) and environment not in self.TUU_ENVIRONMENTS:
                     tuu_errors.append('Ambiente de TUU no es válido: usa integracion o produccion.')
+                if (environment == 'produccion'
+                        and str(fields.get('accountId') or '').strip() in self.TUU_CUENTAS_DE_PRUEBA):
+                    tuu_errors.append('Las credenciales de prueba de TUU no sirven en producción.')
                 if tuu_errors:
                     errores_metodos[method_id] = ' '.join(tuu_errors)
 

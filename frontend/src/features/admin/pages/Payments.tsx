@@ -27,6 +27,11 @@ const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 
 
+// Credenciales de prueba publicadas por TUU (https://developers.tuu.cl/docs/payment-intent). Solo sirven en integración.
+const TUU_TEST_ACCOUNT_ID = '62224230';
+const TUU_TEST_SECRET_KEY = 'yAk0dXTJLQzkeEWODsQWVpPX0bn7ND50qwoQrXgqqNiUyEpgxIPxPtoCgKeLNeh1upTw72JZx5O9x5IaAtPIGUAVcMNcsUSg3M0M8tgWdUb4F8qkS8I7rHpOUmZqzvfS';
+const TUU_TEST_ACCOUNT_IDS = [TUU_TEST_ACCOUNT_ID, '26274343'];
+
 // Métodos de demostración secundarios restantes
 
 const otherMethods = [
@@ -816,6 +821,31 @@ export default function Payments() {
     return '';
   };
 
+  const fillTuuTestCredentials = () => {
+    const current = form.tuu ?? { enabled: false, fields: {} };
+    setForm({
+      ...form,
+      tuu: {
+        ...current,
+        fields: { ...(current.fields ?? {}), accountId: TUU_TEST_ACCOUNT_ID, secretKey: TUU_TEST_SECRET_KEY, environment: 'integracion' },
+      },
+    });
+  };
+
+  const changeTuuEnvironment = (value: string) => {
+    const current = form.tuu ?? { enabled: false, fields: {} };
+    const fields = { ...(current.fields ?? {}), environment: value };
+    const usaPrueba = TUU_TEST_ACCOUNT_IDS.includes(String(fields.accountId ?? '').trim());
+    if (value === 'produccion' && usaPrueba) {
+      fields.accountId = '';
+      fields.secretKey = '';
+    }
+    setForm({
+      ...form,
+      tuu: { ...current, enabled: value === 'produccion' && usaPrueba ? false : current.enabled, fields },
+    });
+  };
+
   const renderTuuConfig = () => {
     const current = form.tuu ?? { enabled: false, fields: {} };
     const environment = current.fields?.environment === 'produccion' ? 'produccion' : 'integracion';
@@ -844,12 +874,19 @@ export default function Payments() {
         <Select
           label="Ambiente"
           value={environment}
-          onChange={(event) => updateField('tuu', 'environment', event.target.value)}
+          onChange={(event) => changeTuuEnvironment(event.target.value)}
           options={[
             { value: 'integracion', label: 'Modo de prueba (integración)' },
             { value: 'produccion', label: 'Producción' },
           ]}
         />
+        {environment === 'integracion' && (
+          <div>
+            <Button type="button" size="sm" variant="secondary" onClick={fillTuuTestCredentials}>
+              Usar credenciales de prueba de TUU
+            </Button>
+          </div>
+        )}
         {environment === 'produccion' ? (
           <Alert variant="warning">
             Producción cobra pagos reales. Usa el ID de cuenta y la llave secreta de producción entregados por TUU.

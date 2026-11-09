@@ -197,8 +197,8 @@ class AmbienteTuuTests(TestCase):
         self.api = APIClient()
         self.api.credentials(HTTP_AUTHORIZATION='Token ' + Token.objects.create(user=owner).key)
 
-    def guardar(self, environment):
-        fields = {'accountId': '62224230', 'secretKey': CLAVE}
+    def guardar(self, environment, cuenta='70000001'):
+        fields = {'accountId': cuenta, 'secretKey': CLAVE}
         if environment is not None:
             fields['environment'] = environment
         return self.api.put('/api/pagos/configuracion/', {'tuu': {'enabled': True, 'fields': fields}}, format='json')
@@ -208,6 +208,10 @@ class AmbienteTuuTests(TestCase):
         for ambiente in ('integracion', 'produccion'):
             self.assertEqual(self.guardar(ambiente).status_code, 200)
             self.assertEqual(credenciales_tuu(self.tienda)[2], ambiente)
+
+    def test_las_credenciales_de_prueba_no_se_aceptan_en_produccion(self):
+        self.assertEqual(self.guardar('produccion', cuenta='62224230').status_code, 400)
+        self.assertEqual(self.guardar('integracion', cuenta='62224230').status_code, 200)
 
     def test_rechaza_un_ambiente_invalido(self):
         self.assertEqual(self.guardar('otro').status_code, 400)
