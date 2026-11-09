@@ -21,6 +21,9 @@ import { LANDING_CONFIG_CHANGED, fetchLandingConfig } from '../../landing/servic
 import { fetchStoreInformation, STORE_INFORMATION_CHANGED, type StoreInformation } from '../services/storeInformationService';
 import type { LandingConfig } from '../../landing/types/landing.types';
 import { isRecord, resolveVisualConfig, resolveStoreVisualConfig } from '../visual/resolveVisualConfig';
+import { CAROUSEL_TRANSITIONS } from '../visual/carouselTransitionLibrary';
+import { isOnlineEffectId } from '../visual/onlineEffects';
+import type { VisualConfig } from '../visual/types';
 import { useStoreIdentity } from './StoreIdentityContext';
 import { readPublishedLegalPages } from '../data/legalPublication';
 import { templateFromPath } from '../visual/templates';
@@ -51,6 +54,20 @@ function readTheme(saved: Record<string, unknown>, template: TemplateId): Record
   } catch {
     return null;
   }
+}
+// OPENMIND_PUBLIC_CAROUSEL_TRANSITION_V5
+// La apariencia general valida colores, pero los identificadores del carrusel
+// no son colores. Recuperar SOLO transiciones reconocidas del valor guardado.
+function allowedSavedCarouselTransition(value: unknown): VisualConfig['hero']['carouselTransition'] | undefined {
+  if (typeof value !== 'string') return undefined;
+  if (isOnlineEffectId(value)) return value;
+  return CAROUSEL_TRANSITIONS.some(effect => effect.id === value)
+    ? value as VisualConfig['hero']['carouselTransition']
+    : undefined;
+}
+function readSavedCarouselTransition(config: unknown): VisualConfig['hero']['carouselTransition'] | undefined {
+  if (!isRecord(config) || !isRecord(config.hero)) return undefined;
+  return allowedSavedCarouselTransition(config.hero.carouselTransition);
 }
 function applyImageCustomizations(theme: Record<string, unknown> | null, originals: Map<HTMLImageElement, OriginalImageStyle>) {
   const settings = readThemeImages(theme?.images);
@@ -83,7 +100,7 @@ export function StoreProvider({
   children: ReactNode;
 }) {
   const { pathname } = useLocation();
-  const { identity } = useStoreIdentity();
+  const { identity, loading: identityLoading, error: identityError } = useStoreIdentity();
   const storageKey = identity ? getStoreConfigKey(identity) : null;
   const [storageRevision, setStorageRevision] = useState(0);
   useEffect(() => {
@@ -102,9 +119,29 @@ export function StoreProvider({
   const activeTemplate: TemplateId = templateFromPath(pathname) ?? (['editorial','minimal','visual','catalog'].includes(String(savedConfig.template)) ? savedConfig.template as TemplateId : 'editorial');
   const paletteSource=usePaletteLibrary();
   const visualConfig = useMemo(() => {
-    const remote=paletteOverrides(paletteSource.appearance?.[activeTemplate],paletteSource.library);
-    const local=readTheme(savedConfig,activeTemplate);
-    return resolveStoreVisualConfig(savedConfig, activeTemplate, remote ? {...local,visualConfig:remote} : undefined);
+    const appearance = paletteSource.appearance?.[activeTemplate];
+    const remote = paletteOverrides(appearance, paletteSource.library);
+    const local = readTheme(savedConfig, activeTemplate);
+    // Mantener ajustes promocionales locales si una API antigua omite esos campos.
+    const localVisual = isRecord(local?.visualConfig) ? local.visualConfig : {};
+    const localHero = isRecord(localVisual.hero) ? localVisual.hero : {};
+    const remoteHero: Record<string, unknown> = isRecord(remote?.hero) ? remote.hero : {};
+    const promoKeys = ['promoText','promoVisible','promoAlign','promoBackground','promoTextColor','promoTextSize','promoRadius','promoBorderWidth','promoBorderColor'];
+    const recoveredPromo = Object.fromEntries(promoKeys.filter(key => remoteHero[key] === undefined && localHero[key] !== undefined).map(key => [key, localHero[key]]));
+    const compatibleRemote = remote ? {
+      ...remote,
+      hero: { ...remoteHero, ...recoveredPromo },
+    } : undefined;
+    const resolved = resolveStoreVisualConfig(savedConfig, activeTemplate, compatibleRemote ? { ...local, visualConfig: compatibleRemote } : undefined);
+    // El editor guarda los valores especiales directamente en visualConfig.hero.
+    // paletteOverrides / resolveStoreVisualConfig pueden descartarlos al validar
+    // campos de color; se conserva solo una transicion permitida.
+    const transition = readSavedCarouselTransition(appearance?.visualConfig)
+      ?? readSavedCarouselTransition(local?.visualConfig)
+      ?? readSavedCarouselTransition(savedConfig.visualConfig);
+    return transition
+      ? { ...resolved, hero: { ...resolved.hero, carouselTransition: transition } }
+      : resolved;
   }, [activeTemplate, savedConfig, paletteSource.appearance, paletteSource.library]);
   // Async results are usable only for their confirmed installation and store.
   const [businessResult, setBusiness] = useState<{ key: string; value: StoreInformation } | null>(null);
@@ -216,6 +253,22 @@ export function StoreProvider({
       }
     };
   }, [pathname, savedConfig]);
+  // OPENMIND_PUBLIC_THEME_BOOTSTRAP_V1
+  // Evitar mostrar el tema por defecto antes de recibir la apariencia publica.
+  const publicStorefront = pathname.startsWith('/plantilla/') && !isActiveEditorPreview();
+  const initialPalettePending = identityLoading ||
+    (identity !== null && !paletteSource.library && !paletteSource.error);
+
+  if (publicStorefront && !identityError && initialPalettePending) {
+    return (
+      <div
+        role="status"
+        aria-label="Cargando la apariencia de la tienda"
+        style={{ minHeight: '100vh', backgroundColor: '#ffffff' }}
+      />
+    );
+  }
+
   return (
     <StoreContext.Provider
       value={{

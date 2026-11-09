@@ -86,7 +86,10 @@ export function connectVisualPreview(doc: Document, onSelect: (section: VisualSe
   const observer = Observer ? new Observer(apply) : null;
   observer?.observe(doc.body, { childList: true, subtree: true });
   return {
-    update(config: VisualConfig, nextImages: Record<string, ThemeImageSetting>) { effective = config; loadVisualFonts(config, doc); variableCss = `[data-storefront-visual]{${Object.entries(visualConfigWithCarouselVars(effective)).map(([key,value]) => `${key}:${value}!important;`).join('')}}`; images = nextImages; apply(); const event = doc.createEvent('Event'); event.initEvent('openmind:carousel:sync', false, false); doc.defaultView?.dispatchEvent(event); },
+    update(config: VisualConfig, nextImages: Record<string, ThemeImageSetting>) { effective = config; // OPENMIND_EDITORIAL_PROMO_V1
+      const promoEvent = doc.createEvent('CustomEvent');
+      promoEvent.initCustomEvent('openmind:editor-promo-preview', false, false, { text: config.hero.promoText, visible: config.hero.promoVisible });
+      doc.defaultView?.dispatchEvent(promoEvent); loadVisualFonts(config, doc); variableCss = `[data-storefront-visual]{${Object.entries(visualConfigWithCarouselVars(effective)).map(([key,value]) => `${key}:${value}!important;`).join('')}}`; images = nextImages; apply(); const event = doc.createEvent('Event'); event.initEvent('openmind:carousel:sync', false, false); doc.defaultView?.dispatchEvent(event); },
     content(value: import('../../landing/types/landing.types').LandingConfig | undefined) {
       if (!value) return;
       const event = doc.createEvent('CustomEvent');

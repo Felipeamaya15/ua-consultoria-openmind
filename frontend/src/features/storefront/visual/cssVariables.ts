@@ -50,9 +50,27 @@ function sectionVariables(config: VisualSections, viewport: Viewport): Record<st
   variables['--visual-topbar-brand-color'] = institutionalTextColor(config.topBar.background === 'currentColor' ? colors.primary : config.topBar.background, colors.background);
   variables['--visual-footer-brand-color'] = institutionalTextColor(linked ? structural : config.footer.background, colors.background);
   const h = config.header;
-  add('header', { bg: linked ? structural : h.background, color: linked ? structureText : h.textColor, height: px(h.height), logoSize: px(h.logoSize), logoOrder: h.logoPosition === 'right' ? '3' : h.logoPosition === 'center' ? '1' : '0', navAlign: flexAlign(h.navAlign), gap: px(h.gap), border: border(h.border, colors.border), shadow: shadows[h.shadow], position: h.sticky ? 'sticky' : 'relative', direction: h.layout === 'centered' ? 'column' : 'row' });
+  const logoRadius = (shape: string) => shape === 'circle' || shape === 'pill' ? '9999px' : shape === 'rounded' ? '12px' : '0px';
+  add('header', { bg: linked ? structural : h.background, color: linked ? structureText : h.textColor, height: px(h.height), logoSize: px(h.logoSize), storeLogoRadius: logoRadius(h.storeLogoShape), institutionLogoRadius: logoRadius(h.institutionLogoShape), storeLogoPadding: px(h.storeLogoPadding), institutionLogoPadding: px(h.institutionLogoPadding), storeLogoShape: h.storeLogoShape, institutionLogoShape: h.institutionLogoShape,
+      // OPENMIND_LOGO_SHAPES_RENDER_V2: geometría y espacio seguro para logos originales.
+      storeLogoWidth: h.storeLogoShape === 'original' ? 'auto' : h.storeLogoShape === 'pill' ? `calc(${px(h.logoSize)} * 1.5)` : px(h.logoSize),
+      institutionLogoWidth: h.institutionLogoShape === 'original' ? `calc(${px(h.institutionLogoSize)} * 1.3)` : h.institutionLogoShape === 'pill' ? `calc(${px(h.institutionLogoSize)} * 1.5)` : px(h.institutionLogoSize),
+      institutionLogoSize: px(h.institutionLogoSize), institutionLogoOrder: h.institutionLogoPosition === 'right' ? '5' : h.institutionLogoPosition === 'center' ? '1' : '-1', institutionLogoGap: px(h.institutionLogoGap),
+      storeLogoBackground: h.storeLogoShape === 'original' ? 'transparent' : '#ffffff',
+      storeLogoFooterHeight: h.storeLogoShape === 'original' ? 'auto' : `min(${px(h.logoSize)}, 52px)`,
+      storeLogoSafePadding: h.storeLogoShape === 'circle' ? `max(${px(h.storeLogoPadding)}, calc(${px(h.logoSize)} * 0.18))` : px(h.storeLogoPadding),
+      institutionLogoSafePadding: h.institutionLogoShape === 'circle' ? `max(${px(h.institutionLogoPadding)}, calc(var(--ua-logo-base-size) * 0.18))` : h.institutionLogoShape === 'original' ? 'calc(var(--ua-logo-base-size) / 12)' : px(h.institutionLogoPadding), logoOrder: h.logoPosition === 'right' ? '3' : h.logoPosition === 'center' ? '1' : '0', navAlign: flexAlign(h.navAlign), gap: px(h.gap), border: border(h.border, colors.border), shadow: shadows[h.shadow], position: h.sticky ? 'sticky' : 'relative', direction: h.layout === 'centered' ? 'column' : 'row' });
   const hero = config.hero;
-  add('hero', { height: px(hero.height), imagePosition: hero.imagePosition, width: px(hero.contentWidth), horizontal: flexAlign(hero.horizontalAlign), vertical: flexAlign(hero.verticalAlign), align: hero.horizontalAlign, overlay: hero.overlay ? String(hero.overlayOpacity) : '0', overlayColor: hero.overlayColor, titleSize: px(hero.titleSize), subtitleSize: px(hero.subtitleSize), textWidth: px(hero.textMaxWidth), gap: px(hero.gap), ctaDisplay: hero.ctaPosition === 'inline' ? 'inline-flex' : 'flex', ctaLayoutWidth: hero.ctaPosition === 'inline' ? 'fit-content' : '100%' });
+  // OPENMIND_EDITORIAL_PROMO_V1: el color por defecto sigue el acento activo.
+  add('hero-promo', {
+    background: hero.promoBackground === 'currentColor' ? colors.accent : hero.promoBackground,
+    color: hero.promoTextColor === 'currentColor' ? institutionalTextColor(hero.promoBackground === 'currentColor' ? colors.accent : hero.promoBackground, colors.background) : hero.promoTextColor,
+    borderColor: hero.promoBorderColor === 'currentColor' ? colors.accent : hero.promoBorderColor,
+    fontSize: px(hero.promoTextSize), radius: px(hero.promoRadius),
+    borderWidth: px(hero.promoBorderWidth),
+    align: flexAlign(hero.promoAlign),
+  });
+  add('hero', { height: px(hero.height), imagePosition: hero.imagePosition, width: px(hero.contentWidth), horizontal: flexAlign(hero.horizontalAlign), vertical: flexAlign(hero.verticalAlign), align: hero.horizontalAlign, overlay: hero.overlay ? String(hero.overlayOpacity) : '0', overlayColor: hero.overlayColor, titleSize: px(hero.titleSize), subtitleSize: px(hero.subtitleSize), textWidth: px(hero.textMaxWidth), gap: px(hero.gap), ctaDisplay: hero.ctaPosition === 'inline' ? 'inline-flex' : 'flex', ctaLayoutWidth: hero.ctaPosition === 'inline' ? 'fit-content' : '100%', ctaAreaWidth: hero.ctaPosition === 'inline' ? `min(100vw, ${px(hero.contentWidth)})` : '100%' });
   const cta = config.heroCta;
   const ctaColor = cta.background === 'currentColor' ? button : cta.background;
   add('cta', { width: cta.width === 'full' ? '100%' : cta.width === 'custom' ? px(cta.customWidth) : 'auto', align: flexAlign(cta.align), paddingX: px(cta.paddingX), paddingY: px(cta.paddingY), fontSize: px(cta.fontSize), fontWeight: String(cta.fontWeight), radius: radius(cta.shape, cta.radius), background: cta.variant === 'solid' ? ctaColor : 'transparent', color: cta.textColor === '#ffffff' ? colors.buttonText : cta.textColor === 'currentColor' ? institutionalTextColor(ctaColor, colors.background) : cta.textColor, border: cta.variant === 'ghost' ? '0 solid transparent' : border(cta.border, colors.border) });

@@ -65,6 +65,49 @@ class PaletteTests(TestCase):
         self.assertEqual(self.api.put(APPEARANCE, {'plantillas': configs}, format='json').status_code, 400)
         self.assertIsNone(APIClient().get(APPEARANCE).data['data']['plantillas']['editorial']['paleta_id'])
 
+    def test_editorial_promo_text_with_spaces_is_saved_and_retrieved(self):
+        # El mensaje real no es un token de CSS: incluye espacios y caracteres latinos.
+        message = '¡Bienvenidos a EcoCrespo! Noviembre 2026'
+        changes = {
+            'editorial': {
+                'visualConfig': {'hero': {
+                    'promoText': message,
+                    'promoVisible': True,
+                    'promoTextSize': 18,
+                }},
+                'paleta_id': None,
+            },
+        }
+        response = self.api.put(APPEARANCE, {'plantillas': changes}, format='json')
+        self.assertEqual(response.status_code, 200, response.data)
+        retrieved = APIClient().get(APPEARANCE)
+        self.assertEqual(retrieved.status_code, 200)
+        hero = retrieved.data['data']['plantillas']['editorial']['visualConfig']['hero']
+        self.assertEqual(hero['promoText'], message)
+        self.assertEqual(hero['promoTextSize'], 18)
+
+    def test_editorial_promo_text_length_and_safety(self):
+        def payload(message):
+            return {'plantillas': {'editorial': {
+                'visualConfig': {'hero': {'promoText': message}},
+                'paleta_id': None,
+            }}}
+
+        self.assertEqual(
+            self.api.put(APPEARANCE, payload('A' * 100), format='json').status_code, 200,
+        )
+        for message in ('A' * 101, '<script>alert(1)</script>', 'Hola\nMundo'):
+            with self.subTest(message=repr(message)):
+                self.assertEqual(
+                    self.api.put(APPEARANCE, payload(message), format='json').status_code, 400,
+                )
+        # Otros campos siguen limitados a valores de apariencia seguros.
+        invalid = {'plantillas': {'editorial': {
+            'visualConfig': {'hero': {'overlayColor': 'Noviembre 2026'}},
+            'paleta_id': None,
+        }}}
+        self.assertEqual(self.api.put(APPEARANCE, invalid, format='json').status_code, 400)
+
     def test_email_is_private_and_independent_of_public_contact(self):
         from apps.landing.models import ConfiguracionLanding
         landing = ConfiguracionLanding.objects.create(tienda=self.store, titulo='Hola', texto_boton='Ver', contenido={'contacto': {'correo': 'publico@example.test'}})

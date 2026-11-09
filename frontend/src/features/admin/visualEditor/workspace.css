@@ -90,3 +90,12 @@
 .ve-content-panel label{display:grid;gap:6px;margin-block:14px;font-size:12px;font-weight:600}.ve-content-panel input,.ve-content-panel textarea{width:100%;padding:9px;border:1px solid #aeb9ca;border-radius:6px;font-weight:400}
 .ve-content-panel h3{margin-top:16px;font-size:13px;font-weight:650}
 @media(max-width:639px){.ve-redesign .ve-preview-toolbar label{min-width:140px}.ve-redesign .ve-preview-toolbar [role=group]{flex:1;justify-content:center}}
+
+/* OPENMIND_PORTADA_V3: el editor ocupa exactamente la ventana, sin scroll blanco externo. */
+@media (min-width: 761px) {
+  body:has(> #root .ve-redesign),
+  html:has(.ve-redesign) { overflow: hidden; }
+  .ve-redesign { height: 100dvh; max-height: 100dvh; min-height: 0; overflow: hidden; }
+  .ve-redesign .ve-workspace { flex: 1 1 0; min-height: 0; }
+  .ve-redesign .ve-properties { min-height: 0; overscroll-behavior: contain; }
+}

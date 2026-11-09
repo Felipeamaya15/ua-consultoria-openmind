@@ -42,7 +42,7 @@ function CartIcon({ count }: { count: number }) {
 }
 
 export function EditorialLayout() {
-  const { config } = useStore();
+  const { config, landingLoading } = useStore();
   const { count } = useCart();
   const navigate = useNavigate();
 
@@ -102,6 +102,8 @@ export function EditorialLayout() {
                 alt={`Logo de ${config.name}`}
                 className="block w-auto h-auto max-w-[80px] sm:max-w-[120px] xl:max-w-[160px] max-h-10 sm:max-h-11 shrink-0 object-contain object-center"
               />
+            ) : landingLoading ? (
+              <div className="w-8 h-8 shrink-0" aria-hidden="true" />
             ) : (
               <div className="w-8 h-8 rounded-full bg-[var(--primary)] flex items-center justify-center text-[var(--on-primary)] text-xs font-bold shrink-0">
                 {config.name?.slice(0, 2).toUpperCase() || 'MT'}

@@ -6,7 +6,7 @@ const section: SectionConfig = { paddingY: 64, paddingTop: 64, paddingBottom: 64
 const info: InfoConfig = { cardRadius: 12, border, shadow: 'none', layout: 'grid', columns: 3, padding: 24, background: 'transparent', titleSize: 32 };
 const grid = { columns: { desktop: 4, tablet: 2, mobile: 1 }, gapX: 20, gapY: 20, maxWidth: 1280 };
 const card: ProductCardConfig = { radius: 12, border, shadow: 'none', padding: 12, imageRatio: 4 / 3, imageRadius: 0, titleSize: 14, priceSize: 16, showDescription: false, buttonVisible: true, buttonFullWidth: true, buttonShape: 'rounded', buttonRadius: 12, align: 'left', density: 'normal' };
-const hero: VisualConfig['hero'] = { height: 600, imagePosition: 'center', contentWidth: 1280, horizontalAlign: 'left', verticalAlign: 'center', overlay: true, overlayColor: '#000000', overlayOpacity: 0.35, titleSize: 72, subtitleSize: 20, textMaxWidth: 640, gap: 24, ctaPosition: 'below' };
+const hero: VisualConfig['hero'] = { /* OPENMIND_EDITORIAL_PROMO_V1 */ promoText: 'Descubre nuestros productos', promoVisible: true, promoAlign: 'left', promoBackground: 'currentColor', promoTextColor: 'currentColor', promoTextSize: 12, promoRadius: 999, promoBorderWidth: 0, promoBorderColor: 'currentColor', height: 600, imagePosition: 'center', contentWidth: 1280, horizontalAlign: 'left', verticalAlign: 'center', overlay: true, overlayColor: '#000000', overlayOpacity: 0.35, titleSize: 72, subtitleSize: 20, textMaxWidth: 640, gap: 24, ctaPosition: 'below' };
 const page: PageAppearance = {
   content: { imageRatio: 1, optionSize: 14, quantityWidth: 132, align: 'center', layout: 'split', imageWidth: 50, imageSize: 520, imageRadius: 12, gallerySize: 72, infoSize: 16, priceSize: 28, formWidth: 560 },
   layout: { maxWidth: 1280, padding: 16, gap: 24, background: 'transparent', textColor: 'currentColor', titleSize: 36, titleAlign: 'left' },
@@ -26,7 +26,7 @@ export const VISUAL_DEFAULTS: VisualConfig = {
     radius: 8, baseSpacing: 8, contentMaxWidth: 1280, density: 'normal',
   },
   topBar: { visible: true, background: 'currentColor', textColor: 'currentColor', height: 48, align: 'center', fontSize: 12 },
-  header: { layout: 'inline', height: 64, logoPosition: 'left', logoSize: 44, navAlign: 'center', gap: 24, linkStyle: 'plain', border, shadow: 'none', background: '#ffffff', textColor: 'currentColor', sticky: true },
+  header: { layout: 'inline', height: 64, logoPosition: 'left', logoSize: 44, storeLogoShape: 'original', institutionLogoShape: 'original', institutionLogoSize: 48, institutionLogoPosition: 'left', institutionLogoGap: 8, storeLogoPadding: 0, institutionLogoPadding: 0, navAlign: 'center', gap: 24, linkStyle: 'plain', border, shadow: 'none', background: '#ffffff', textColor: 'currentColor', sticky: true },
   hero,
   heroCta: { size: 'medium', paddingX: 32, paddingY: 16, width: 'auto', customWidth: 320, align: 'left', radius: 8, shape: 'rounded', variant: 'solid', fontSize: 16, fontWeight: 600, border: { ...border, width: 1 }, background: 'currentColor', textColor: 'currentColor' },
   categories: { layout: 'grid', columns: 6, gap: 12, presentation: 'cards', radius: 12, padding: 16, textSize: 14, align: 'center', border, shadow: 'none', background: 'transparent' },

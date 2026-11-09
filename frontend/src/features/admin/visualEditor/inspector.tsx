@@ -4,21 +4,23 @@ import { contrastRatio } from './contrast';
 import { institutionalTextColor } from '../../storefront/visual/contrast';
 import type { VisualConfig, Viewport } from '../../storefront/visual/types';
 import { resolveVisualViewport } from '../../storefront/visual/resolveVisualConfig';
-import { ALIGNMENTS, DENSITIES, FONT_FAMILIES, SHADOWS, SHAPES } from '../../storefront/visual/types';
+import { ALIGNMENTS, DENSITIES, FONT_FAMILIES, SHADOWS, SHAPES, LOGO_SHAPES } from '../../storefront/visual/types';
 import type { VisualSectionId } from './sections';
 import { readPath, type EditorDocument } from './model';
 import * as Controls from './controls';
 import { PALETTE_PATHS } from './palettes';
 import type { StorePageId } from '../../storefront/visual/pages';
 import { BannerSizeControl } from './banner';
+import { HeroSpacingControl } from './HeroCarouselInspector'; // OPENMIND_PORTADA_UI_UNIFICADA_V1
 import { InstitutionalNotice } from './help';
 
 type LeafPath<T> = { [K in keyof T & string]: T[K] extends object ? `${K}.${LeafPath<T[K]>}` : K }[keyof T & string];
 export type VisualPropertyPath = LeafPath<VisualConfig>;
-type Kind = 'color' | 'select' | 'slider' | 'number' | 'toggle' | 'alignment' | 'segmented' | 'spacing' | 'radius' | 'shadow' | 'size';
+type Kind = 'text' | 'color' | 'select' | 'slider' | 'number' | 'toggle' | 'alignment' | 'segmented' | 'spacing' | 'radius' | 'shadow' | 'size';
 export interface InspectorField { path: VisualPropertyPath; label: string; kind: Kind; options?: readonly string[]; min?: number; max?: number; step?: number }
 interface Group { label: string; fields: InspectorField[] }
 const n = (path: VisualPropertyPath, label: string, kind: Kind = 'number', max = 2000, min = 0, step = 1): InspectorField => ({ path, label, kind, max, min, step });
+const txt = (path: VisualPropertyPath, label: string): InspectorField => ({ path, label, kind: 'text' }); // OPENMIND_EDITORIAL_PROMO_V1
 const c = (path: VisualPropertyPath, label: string): InspectorField => ({ path, label, kind: 'color' });
 const t = (path: VisualPropertyPath, label: string): InspectorField => ({ path, label, kind: 'toggle' });
 const s = (path: VisualPropertyPath, label: string, options: readonly string[], kind: Kind = 'select'): InspectorField => ({ path, label, kind, options });
@@ -41,8 +43,8 @@ export const INSPECTOR_GROUPS: Record<VisualSectionId, Group[]> = {
   pageButton: [g('Botones principales', [c('pages.login.button.background', 'Fondo del botón'), c('pages.login.button.textColor', 'Texto del botón'), n('pages.login.button.radius', 'Bordes redondeados', 'radius', 100), n('pages.login.button.paddingX', 'Espacio a los lados', 'spacing', 80), n('pages.login.button.paddingY', 'Espacio arriba y abajo', 'spacing', 40), n('pages.login.button.fontSize', 'Tamaño del texto', 'size', 40, 10)])],
   global: [g('Letras y distribución', [s('global.typography.body', 'Fuente de textos', FONT_FAMILIES), s('global.typography.heading', 'Fuente de títulos', FONT_FAMILIES), n('global.radius', 'Bordes generales', 'radius'), s('global.density', 'Espacio del contenido', DENSITIES, 'segmented'), n('global.contentMaxWidth', 'Ancho máximo', 'size', 3000), n('global.baseSpacing', 'Espaciado general', 'spacing')]), g('Colores', [c('global.colors.primary', 'Principal'), c('global.colors.secondary', 'Secundario'), c('global.colors.accent', 'Acento'), c('global.colors.background', 'Fondo general'), c('global.colors.text', 'Texto principal'), c('global.colors.surface', 'Fondo de tarjetas'), c('global.colors.alternate', 'Fondo alternativo de secciones'), c('global.colors.muted', 'Texto secundario'), c('global.colors.structural', 'Color estructural · encabezado y pie'), c('global.colors.button', 'Color de botones'), c('global.colors.buttonText', 'Texto de botones'), c('global.colors.border', 'Bordes'), t('global.unlinkStructural', 'Desvincular colores (avanzado)')])],
   topBar: [g('Identidad institucional integrada', [c('global.colors.structural', 'Color estructural · encabezado y pie')])],
-  header: [g('Distribución', [s('header.layout', 'Distribución', ['inline', 'centered', 'split']), n('header.height', 'Altura', 'size', 300), n('header.logoSize', 'Tamaño logo', 'size', 300, 1), a('header.logoPosition', 'Posición logo'), a('header.navAlign', 'Alineación del menú'), n('header.gap', 'Separación de enlaces', 'spacing'), t('header.sticky', 'Fijar al desplazarse')]), g('Apariencia', [c('header.background', 'Fondo'), c('header.textColor', 'Texto'), s('header.border.style', 'Borde inferior', ['none', 'solid', 'dashed']), n('header.border.width', 'Ancho borde', 'number', 20), c('header.border.color', 'Color borde'), s('header.shadow', 'Sombra', SHADOWS, 'shadow')])],
-  hero: [g('Distribución', [s('hero.imagePosition', 'Encuadre de la imagen', ['top','center','bottom'], 'segmented'), n('hero.contentWidth', 'Ancho contenido', 'size', 3000), a('hero.horizontalAlign', 'Alineación horizontal'), s('hero.verticalAlign', 'Alineación vertical', ['top', 'center', 'bottom'], 'segmented')]), g('Texto', [n('hero.titleSize', 'Tamaño título', 'size', 200, 1), n('hero.subtitleSize', 'Tamaño subtítulo', 'size', 100, 1), n('hero.textMaxWidth', 'Ancho máximo texto', 'size', 2000)]), g('Fondo', [t('hero.overlay', 'Oscurecer imagen'), c('hero.overlayColor', 'Color del oscurecimiento'), n('hero.overlayOpacity', 'Intensidad del oscurecimiento', 'slider', 1, 0, .01)]), g('Espaciado', [n('hero.gap', 'Espacio entre textos', 'spacing')]), g('Botón principal', [s('hero.ctaPosition', 'Posición del botón', ['inline', 'below'])])],
+  header: [g('Distribución', [s('header.layout', 'Distribución', ['inline', 'centered', 'split']), n('header.height', 'Altura', 'size', 300), a('header.logoPosition', 'Posición logo'), a('header.navAlign', 'Alineación del menú'), n('header.gap', 'Separación de enlaces', 'spacing'), t('header.sticky', 'Fijar al desplazarse')]), g('Forma del logo del emprendedor', [n('header.logoSize', 'Tamaño del logo (px)', 'size', 300, 1), s('header.storeLogoShape', 'Forma', LOGO_SHAPES), n('header.storeLogoPadding', 'Margen interior (px)', 'number', 24, 0)]), g('Forma del logo de la universidad', [n('header.institutionLogoSize', 'Tamaño del logo (px)', 'size', 96, 24), a('header.institutionLogoPosition', 'Posición institucional'), n('header.institutionLogoGap', 'Separación respecto a la tienda (px)', 'number', 80, 0), s('header.institutionLogoShape', 'Forma', LOGO_SHAPES), n('header.institutionLogoPadding', 'Margen interior (px)', 'number', 24, 0)]), g('Apariencia', [c('header.background', 'Fondo'), c('header.textColor', 'Texto'), s('header.border.style', 'Borde inferior', ['none', 'solid', 'dashed']), n('header.border.width', 'Ancho borde', 'number', 20), c('header.border.color', 'Color borde'), s('header.shadow', 'Sombra', SHADOWS, 'shadow')])],
+  hero: [g('Etiqueta promocional (Editorial)', [t('hero.promoVisible', 'Mostrar etiqueta'), txt('hero.promoText', 'Mensaje de la etiqueta'), a('hero.promoAlign', 'Posición'), c('hero.promoBackground', 'Color de fondo'), c('hero.promoTextColor', 'Color del texto'), n('hero.promoTextSize', 'Tamaño del texto (px)', 'number', 40, 8), n('hero.promoRadius', 'Bordes redondeados (px)', 'radius', 999), n('hero.promoBorderWidth', 'Grosor del borde (px)', 'number', 12), c('hero.promoBorderColor', 'Color del borde')]), g('Distribución', [s('hero.imagePosition', 'Encuadre de la imagen', ['top','center','bottom'], 'segmented'), n('hero.contentWidth', 'Ancho máximo del área (px)', 'size', 3000, 320), a('hero.horizontalAlign', 'Alineación horizontal'), s('hero.verticalAlign', 'Alineación vertical', ['top', 'center', 'bottom'], 'segmented')]), g('Texto', [n('hero.titleSize', 'Tamaño título', 'size', 200, 1), n('hero.subtitleSize', 'Tamaño subtítulo', 'size', 100, 1), n('hero.textMaxWidth', 'Ancho máximo texto', 'size', 2000)]), g('Fondo', [t('hero.overlay', 'Oscurecer imagen'), c('hero.overlayColor', 'Color del oscurecimiento'), n('hero.overlayOpacity', 'Intensidad del oscurecimiento', 'slider', 1, 0, .01)]), g('Espaciado de portada', []), g('Botón principal', [s('hero.ctaPosition', 'Posición del botón', ['inline', 'below'])])],
   heroCta: [g('Distribución', [a('heroCta.align', 'Alineación'), s('heroCta.width', 'Ancho', ['auto', 'full', 'custom'], 'segmented'), n('heroCta.customWidth', 'Ancho personalizado', 'size', 2000), n('heroCta.paddingX', 'Espacio a los lados', 'spacing'), n('heroCta.paddingY', 'Espacio arriba y abajo', 'spacing')]), g('Forma y estilo', [n('heroCta.radius', 'Bordes redondeados', 'radius'), s('heroCta.shape', 'Forma', SHAPES, 'segmented'), s('heroCta.variant', 'Variante', ['solid', 'outline', 'ghost'], 'segmented'), s('heroCta.border.style', 'Borde', ['none', 'solid', 'dashed']), n('heroCta.border.width', 'Ancho borde', 'number', 20), c('heroCta.border.color', 'Color borde')]), g('Texto y colores', [n('heroCta.fontSize', 'Tamaño fuente', 'size', 100, 1), n('heroCta.fontWeight', 'Grosor de letra', 'number', 1000, 1), c('heroCta.background', 'Fondo'), c('heroCta.textColor', 'Texto')])],
   categories: [g('Categorías', categories)],
   productGrid: [g('Productos por pantalla', grid('productGrid'))],
@@ -52,7 +54,7 @@ export const INSPECTOR_GROUPS: Record<VisualSectionId, Group[]> = {
   footer: [g('Distribución', [s('footer.layout', 'Distribución', ['columns', 'stack', 'centered']), n('footer.columns', 'Columnas', 'number', 12, 1), a('footer.align', 'Alineación'), n('footer.maxWidth', 'Ancho máximo', 'size', 3000)]), g('Colores', [c('footer.background', 'Fondo'), c('footer.textColor', 'Texto')]), g('Tipografía', [n('footer.titleSize', 'Tamaño títulos', 'size', 100, 1), t('footer.showTitles', 'Mostrar títulos')]), g('Espaciado', [n('footer.paddingTop', 'Espacio superior', 'spacing'), n('footer.paddingBottom', 'Espacio inferior', 'spacing'), n('footer.gap', 'Separación', 'spacing')])],
   catalog: [g('Título y distribución', [a('catalog.titleAlign', 'Alineación título'), n('catalog.titleSize', 'Tamaño título', 'size', 160, 1), n('catalog.spacing', 'Espaciado', 'spacing'), n('catalog.contentWidth', 'Ancho contenido', 'size', 3000), s('catalog.filtersPosition', 'Posición filtros', ['left', 'top', 'drawer'])]), g('Distribución de productos', grid('catalog.grid')), ...card('catalog.card'), g('Categorías', categories)],
 };
-const controlMap = { color: Controls.ColorPickerControl, select: Controls.SelectControl, slider: Controls.SliderControl, number: Controls.NumberControl, toggle: Controls.ToggleControl, alignment: Controls.AlignmentControl, segmented: Controls.SegmentedControl, spacing: Controls.SpacingControl, radius: Controls.RadiusControl, shadow: Controls.ShadowControl, size: Controls.SizeControl };
+const controlMap = { text: Controls.SelectControl, color: Controls.ColorPickerControl, select: Controls.SelectControl, slider: Controls.SliderControl, number: Controls.NumberControl, toggle: Controls.ToggleControl, alignment: Controls.AlignmentControl, segmented: Controls.SegmentedControl, spacing: Controls.SpacingControl, radius: Controls.RadiusControl, shadow: Controls.ShadowControl, size: Controls.SizeControl };
 export function getInspectorGroups(section: VisualSectionId, catalogPage: boolean, page: StorePageId = 'login'): Group[] {
   if (section === 'pageLayout') {
     const common = INSPECTOR_GROUPS.pageLayout[0];
@@ -73,8 +75,117 @@ export function getInspectorGroups(section: VisualSectionId, catalogPage: boolea
     return groups.map(group => ({...group,fields:group.fields.map(field => ({...field,path:field.path.replace('pages.login.', 'pages.'+page+'.') as VisualPropertyPath}))}));
   }
   if (section.startsWith('page')) return INSPECTOR_GROUPS[section].map(group => ({ ...group, fields: group.fields.map(field => ({ ...field, path: field.path.replace('pages.login.', `pages.${page}.`) as VisualPropertyPath })) }));
+  // OPENMIND_PORTADA_UI_UNIFICADA_V1: incluir todos los ajustes del boton dentro de Portada.
+  if (section === 'hero') return INSPECTOR_GROUPS.hero; // OPENMIND_PORTADA_PULIDO_V2: un solo apartado del botón.
   return catalogPage && section === 'productCard' ? card('catalog.card') : catalogPage && section === 'productGrid' ? [g('Distribución del catálogo', grid('catalog.grid'))] : INSPECTOR_GROUPS[section];
 }
+// OPENMIND_PORTADA_AJUSTES_V4: edición cómoda del ancho de la zona de contenido.
+// OPENMIND_PROMO_TEXTSIZE_INPUT_V1
+// Permite escribir el tamaño completo antes de validar el rango (8..40 px).
+function PromotionalTextSizeControl({ value, overridden, disabled, onChange, onReset }: {
+  value: number;
+  overridden: boolean;
+  disabled?: boolean;
+  onChange: (value: number) => void;
+  onReset: () => void;
+}) {
+  const [draft, setDraft] = useState<string | null>(null);
+  const current = Math.round(value);
+  const min = 8, max = 40;
+  const commit = () => {
+    if (draft !== null && draft.trim() !== '') {
+      const next = Number(draft);
+      if (Number.isFinite(next)) {
+        const bounded = Math.min(max, Math.max(min, Math.round(next)));
+        if (bounded !== current) onChange(bounded);
+      }
+    }
+    setDraft(null);
+  };
+  const adjust = (delta: number) => {
+    const next = Math.min(max, Math.max(min, current + delta));
+    setDraft(null);
+    if (next !== current) onChange(next);
+  };
+  return <div className="ve-control">
+    <div className="ve-control-label">
+      <span>Tamaño del texto (px)</span>
+      <button type="button" disabled={disabled} onClick={onReset} aria-label="Restablecer tamaño de etiqueta">↺</button>
+    </div>
+    <div style={{ display: 'flex', gap: 6, alignItems: 'stretch' }}>
+      <button type="button" disabled={disabled || current <= min} aria-label="Disminuir tamaño de etiqueta"
+        onClick={() => adjust(-1)} style={{ minWidth: 36, border: '1px solid #cbd5e1', borderRadius: 7 }}>−</button>
+      <input type="text" inputMode="numeric" aria-label="Tamaño del texto promocional"
+        disabled={disabled} value={draft ?? String(current)}
+        onFocus={() => { if (draft === null) setDraft(String(current)); }}
+        onChange={event => { if (/^\d*$/.test(event.target.value)) setDraft(event.target.value); }}
+        onBlur={commit}
+        onKeyDown={event => {
+          if (event.key === 'Enter') event.currentTarget.blur();
+          if (event.key === 'Escape') { setDraft(null); event.currentTarget.blur(); }
+          if (event.key === 'ArrowUp') { event.preventDefault(); adjust(1); }
+          if (event.key === 'ArrowDown') { event.preventDefault(); adjust(-1); }
+        }} style={{ minWidth: 0, flex: 1 }} />
+      <button type="button" disabled={disabled || current >= max} aria-label="Aumentar tamaño de etiqueta"
+        onClick={() => adjust(1)} style={{ minWidth: 36, border: '1px solid #cbd5e1', borderRadius: 7 }}>+</button>
+    </div>
+    <small>{overridden ? 'Personalizado' : 'Del diseño original'} · 8 a 40 px. Confirma con Enter o al salir del campo.</small>
+  </div>;
+}
+
+function PortadaWidthControl({ value, disabled, overridden, onChange, onReset }: {
+  value: number;
+  disabled?: boolean;
+  overridden: boolean;
+  onChange: (value: number) => void;
+  onReset: () => void;
+}) {
+  const [draft, setDraft] = useState<string | null>(null);
+  const current = Math.round(value);
+  const minimum = 320;
+  const maximum = 3000;
+  const commit = () => {
+    if (draft !== null && draft.trim() !== '') {
+      const candidate = Number(draft);
+      if (Number.isFinite(candidate)) {
+        const next = Math.max(minimum, Math.min(maximum, Math.round(candidate)));
+        if (next !== current) onChange(next);
+      }
+    }
+    setDraft(null);
+  };
+  return <div className="ve-control">
+    <div className="ve-control-label"><span>Ancho de la zona de contenido</span>
+      <button type="button" disabled={disabled} onClick={onReset} aria-label="Restablecer ancho de portada">↺</button>
+    </div>
+    <input type="text" inputMode="numeric" aria-label="Ancho de la zona de contenido en píxeles"
+      disabled={disabled} value={draft ?? String(current)}
+      onChange={event => { if (/^\d*$/.test(event.target.value)) setDraft(event.target.value); }}
+      onBlur={commit}
+      onKeyDown={event => {
+        if (event.key === 'Enter') event.currentTarget.blur();
+        if (event.key === 'Escape') { setDraft(null); event.currentTarget.blur(); }
+      }}/>
+    <div className="ve-carousel-panel__spacing">
+      <input type="range" min={minimum} max={1400} step={20}
+        value={Math.min(1400, Math.max(minimum, current))} disabled={disabled}
+        aria-label="Ajustar ancho de la zona de contenido"
+        onChange={event => { setDraft(null); onChange(Number(event.target.value)); }}/>
+      <div className="ve-carousel-panel__range-labels"><span>Estrecho</span><span>Amplio</span></div>
+    </div>
+    <small>{overridden ? 'Personalizado' : 'Del diseño original'} · Ajusta el área del texto, no la fotografía. Usa 320–700 px para apreciar mejor el efecto.</small>
+  </div>;
+}
+
+// OPENMIND_PORTADA_PULIDO_V2: todos los ajustes del CTA viven dentro de Botón principal.
+const HERO_BUTTON_SUBGROUPS: Group[] = [
+  g('Distribución', [
+    ...INSPECTOR_GROUPS.hero.find(group => group.label === 'Botón principal')!.fields,
+    ...INSPECTOR_GROUPS.heroCta[0].fields.filter(field => field.path !== 'heroCta.paddingX'),
+  ]),
+  g('Forma y estilo', INSPECTOR_GROUPS.heroCta[1].fields.filter(field => field.path !== 'heroCta.radius')),
+  g('Texto y colores', INSPECTOR_GROUPS.heroCta[2].fields),
+];
 export function VisualInspector({ section, effective, document, viewport = 'desktop', editScope = 'all', catalogPage = false, filterLayoutAvailable = true, page = 'login', groupLabel, onPaletteSelect, onEditMany, onEdit, onReset }: { section: VisualSectionId; effective: VisualConfig; document: EditorDocument; viewport?: Viewport; editScope?: 'all' | 'device'; catalogPage?: boolean; filterLayoutAvailable?: boolean; page?: StorePageId; groupLabel?: string; onPaletteSelect?: (id:string|null)=>void; onEditMany?: (edits: Record<string, string | number | boolean>) => void; onEdit: (path: string, value: string | number | boolean) => void; onReset: (path: string) => void }) {
   const [opened, setOpened] = useState<Record<string, boolean>>({});
   const [advanced, setAdvanced] = useState(false);
@@ -88,13 +199,72 @@ export function VisualInspector({ section, effective, document, viewport = 'desk
   const structureText = institutionalTextColor(structural, palette.background);
   const pairs = [['Texto y fondo', palette.text, palette.background, 'global'], ['Color de acento y fondo', palette.accent, palette.background, 'global'], ['Texto de botones', palette.buttonText, own(palette.button, palette.primary), 'global'], ['Texto de la barra superior', own(viewportConfig.topBar.textColor, institutionalTextColor(own(viewportConfig.topBar.background, palette.primary), palette.background)), own(viewportConfig.topBar.background, palette.primary), 'topBar'], ['Texto del encabezado', linkedStructure ? structureText : own(viewportConfig.header.textColor, palette.text), linkedStructure ? structural : own(viewportConfig.header.background, palette.primary), 'header'], ['Texto del pie', linkedStructure ? structureText : own(viewportConfig.footer.textColor, institutionalTextColor(own(viewportConfig.footer.background, palette.primary), palette.background)), linkedStructure ? structural : own(viewportConfig.footer.background, palette.primary), 'footer']];
   const warnings = pairs.filter(([,fg,bg,target]) => { if (section !== 'global' && section !== target) return false; const ratio = contrastRatio(fg,bg); return ratio !== null && ratio < 4.5; });
-  return <div className="ve-inspector">{warnings.length > 0 && <p className="ve-contrast-warning" role="status">Contraste bajo para texto pequeño: {warnings.map(([label]) => label).join(', ')}. Revisa los colores antes de publicar.</p>}{section === 'hero' && <BannerSizeControl config={effective} viewport={editViewport} editScope={editScope} onEditMany={onEditMany} onEdit={onEdit} onReset={onReset} />}{(section === 'footer' || section === 'topBar') && <InstitutionalNotice />}{['header','footer'].includes(section) && <p className="ve-hint">Encabezado y pie comparten el Color estructural de Estilo general. Desvincula solo si necesitas fondos independientes.</p>}{section === 'global' && <p className="ve-hint">Fondo general: páginas. Alternativo: destacados, contacto y ubicación. Tarjetas: productos y paneles. Bordes generales: botones y cajas de página; cada tarjeta, imagen y sección conserva su control específico.</p>}<p className="ve-hint">{editScope === 'all' ? 'Apariencia general' : `Solo ${Controls.optionLabel(viewport).toLowerCase()}`}{catalogPage ? ' · Catálogo' : ''}.</p>{section === 'catalog' && !filterLayoutAvailable && <p className="ve-hint">Esta plantilla conserva su panel desplegable de filtros. Su posición y las categorías quedan pendientes de integración.</p>}{getInspectorGroups(section, catalogPage, page).filter(group => !groupLabel || group.label === groupLabel).map((group, index) => <details key={`${section}:${page}:${group.label}`} open={opened[section + ':' + page + ':' + group.label] ?? (section === 'global' || index === 0)} onToggle={event => { const open = event.currentTarget.open; const key = section + ':' + page + ':' + group.label; setOpened(current => current[key] === open ? current : {...current, [key]:open}); }}><summary>{group.label}</summary>{section === 'global' && group.label === 'Colores' && <PaletteLibrary colors={viewportConfig.global.colors} selectedId={document.paletteId} onApply={palette => {onPaletteSelect?.(palette.id.startsWith('system-')?null:palette.id);const edits=Object.fromEntries(Object.entries(palette.colores).map(([key,value])=>[targetPath('global.colors.'+key),value]));if(onEditMany)onEditMany(edits);else for(const [path,value] of Object.entries(edits))onEdit(path,value);}} onOriginal={() => {onPaletteSelect?.(null);for(const path of PALETTE_PATHS)onReset(targetPath(path));}} />}{group.fields.filter(field => !field.path.includes('.columns.') || field.path.endsWith('.' + editViewport)).filter(field => advanced || field.path === 'global.colors.structural' || /.columns(?:.|$)/.test(field.path) || (section !== 'global' || field.kind !== 'color' && field.path !== 'global.unlinkStructural') && (!['number','spacing'].includes(field.kind) && !/Width|gap|padding|fontWeight/i.test(field.path))).map(field => {
+
+  const renderFields = (fields: InspectorField[]) => fields.filter(field => !field.path.includes('.columns.') || field.path.endsWith('.' + editViewport)).filter(field => section === 'hero' || advanced || field.path === 'global.colors.structural' || /.columns(?:.|$)/.test(field.path) || (section !== 'global' || field.kind !== 'color' && field.path !== 'global.unlinkStructural') && (!['number','spacing'].includes(field.kind) && !/Width|gap|padding|fontWeight/i.test(field.path))).map(field => {
     const explicitColumns = field.path.includes('.columns.');
     const path = editViewport === 'desktop' || explicitColumns ? field.path : `responsive.${editViewport}.${field.path}`;
     const Control = /.columns(?:.|$)/.test(field.path) ? Controls.ProductCountControl : field.kind === 'radius' ? Controls.FriendlyRadiusControl : field.kind === 'size' && !/Width|maxWidth/i.test(field.path) ? Controls.FriendlySizeControl : controlMap[field.kind]; let value = readPath(explicitColumns ? effective : viewportConfig, field.path);
-    if(value==='currentColor'&&field.kind==='color')value=field.path.includes('border')?viewportConfig.global.colors.border:viewportConfig.global.colors.button==='currentColor'?viewportConfig.global.colors.primary:viewportConfig.global.colors.button;
+    if (value === 'currentColor' && field.kind === 'color') {
+      const promoBackground = viewportConfig.hero.promoBackground === 'currentColor'
+        ? palette.accent : viewportConfig.hero.promoBackground;
+      if (field.path === 'hero.promoBackground') value = palette.accent;
+      else if (field.path === 'hero.promoTextColor') value = institutionalTextColor(promoBackground, palette.background);
+      else if (field.path === 'hero.promoBorderColor') value = palette.accent;
+      else if (field.path === 'heroCta.textColor') {
+        const background = viewportConfig.heroCta.background === 'currentColor'
+          ? (palette.button === 'currentColor' ? palette.primary : palette.button)
+          : viewportConfig.heroCta.background;
+        value = institutionalTextColor(background, palette.background);
+      } else if (field.path === 'heroCta.background') {
+        value = palette.button === 'currentColor' ? palette.primary : palette.button;
+      } else value = field.path.includes('border') ? palette.border
+        : palette.button === 'currentColor' ? palette.primary : palette.button;
+    }
     if (typeof value !== 'string' && typeof value !== 'number' && typeof value !== 'boolean') return null;
     const disabled = (!viewportConfig.global.unlinkStructural && ['header.background','header.textColor','footer.background','footer.textColor'].includes(field.path)) || (field.path === 'heroCta.customWidth' && viewportConfig.heroCta.width !== 'custom') || (field.path === 'heroCta.radius' && viewportConfig.heroCta.shape !== 'rounded') || (field.path === 'heroCta.background' && viewportConfig.heroCta.variant !== 'solid') || (field.path.startsWith('heroCta.border.') && viewportConfig.heroCta.variant === 'ghost') || (field.path === 'categories.radius' && viewportConfig.categories.presentation !== 'cards') || (['categories.padding','categories.shadow','categories.background'].includes(field.path) && viewportConfig.categories.presentation === 'links') || (field.path.startsWith('categories.border.') && viewportConfig.categories.presentation === 'links');
+    if (field.path === 'hero.promoTextSize') {
+      return <PromotionalTextSizeControl key={field.path} value={Number(value)} disabled={disabled}
+        overridden={readPath(document.overrides, path) !== undefined || readPath(document.storeOverrides, path) !== undefined}
+        onChange={next => onEdit(path, next)} onReset={() => onReset(path)} />;
+    }
+    if (field.path === 'hero.contentWidth') {
+      return <PortadaWidthControl key={field.path} value={Number(value)} disabled={disabled}
+        overridden={readPath(document.overrides, path) !== undefined || readPath(document.storeOverrides, path) !== undefined}
+        onChange={next => onEdit(path, next)} onReset={() => onReset(path)} />;
+    }
+    // Ancho del botón ajustable visualmente, sin duplicar padding horizontal.
+    if (field.path === 'heroCta.customWidth') {
+      const maxWidth = Math.max(240, Math.min(2000, Math.round(viewportConfig.hero.textMaxWidth)));
+      const width = Math.min(maxWidth, Math.max(80, Number(value)));
+      return <div key={field.path} className="ve-carousel-panel__spacing" aria-label="Ancho personalizado del botón">
+        <div className="ve-carousel-panel__spacing-heading">
+          <div><p>Ancho personalizado</p></div>
+          <output>{Math.round(Number(value))} px</output>
+        </div>
+        <input type="range" min={80} max={maxWidth} step={4} value={width}
+          disabled={disabled}
+          onChange={event => onEdit(path, Number(event.target.value))}
+          aria-label="Ajustar el ancho personalizado del botón" />
+        <div className="ve-carousel-panel__range-labels"><span>Compacto</span><span>Todo el ancho disponible</span></div>
+        {disabled && <small>Selecciona «Personalizado» en Ancho para activar el deslizador.</small>}
+        <button type="button" onClick={() => onReset(path)} aria-label="Restablecer ancho personalizado">Restablecer ancho ↺</button>
+      </div>;
+    }
+    if (field.kind === 'text') return <label key={field.path} className="ve-field" style={{display:'flex', flexDirection:'column', gap:6}}><span>{field.label}</span><input type="text" maxLength={100} value={String(value)} onChange={event => onEdit(path, event.target.value)} aria-label={field.label} style={{width:'100%', minHeight:38, padding:'7px 10px', border:'1px solid #cbd5e1', borderRadius:8}}/><small>{String(value).length}/100 caracteres</small></label>; // OPENMIND_EDITORIAL_PROMO_V1
     return <Control key={field.path} {...field} label={explicitColumns ? 'Productos por fila' : field.label} disabled={disabled || (!filterLayoutAvailable && section === 'catalog' && (field.path === 'catalog.filtersPosition' || field.path.startsWith('categories.')))} value={value} overridden={readPath(document.overrides, path) !== undefined || readPath(document.storeOverrides, path) !== undefined} onChange={next => onEdit(path, next)} onReset={() => onReset(path)} />;
-  })}</details>)}<button type="button" className="ve-advanced-toggle" aria-expanded={advanced} onClick={() => setAdvanced(!advanced)}>{advanced ? 'Ocultar opciones avanzadas' : section === 'global' ? 'Personalizar colores y opciones avanzadas' : 'Opciones avanzadas'}</button>{advanced && <p className="ve-hint">Ajusta medidas exactas en píxeles. Puedes restablecer cada opción con ↺.</p>}</div>;
+  });
+  return <div className="ve-inspector">{warnings.length > 0 && <p className="ve-contrast-warning" role="status">Contraste bajo para texto pequeño: {warnings.map(([label]) => label).join(', ')}. Revisa los colores antes de publicar.</p>}{section === 'hero' && <BannerSizeControl config={effective} viewport={editViewport} editScope={editScope} onEditMany={onEditMany} onEdit={onEdit} onReset={onReset} />}{(section === 'footer' || section === 'topBar') && <InstitutionalNotice />}{['header','footer'].includes(section) && <p className="ve-hint">Encabezado y pie comparten el Color estructural de Estilo general. Desvincula solo si necesitas fondos independientes.</p>}{section === 'global' && <p className="ve-hint">Fondo general: páginas. Alternativo: destacados, contacto y ubicación. Tarjetas: productos y paneles. Bordes generales: botones y cajas de página; cada tarjeta, imagen y sección conserva su control específico.</p>}<p className="ve-hint">{editScope === 'all' ? 'Apariencia general' : `Solo ${Controls.optionLabel(viewport).toLowerCase()}`}{catalogPage ? ' · Catálogo' : ''}.</p>{section === 'catalog' && !filterLayoutAvailable && <p className="ve-hint">Esta plantilla conserva su panel desplegable de filtros. Su posición y las categorías quedan pendientes de integración.</p>}{getInspectorGroups(section, catalogPage, page).filter(group => !groupLabel || group.label === groupLabel).map((group, index) => <details key={`${section}:${page}:${group.label}`} open={opened[section + ':' + page + ':' + group.label] ?? (section === 'global' || index === 0 || false)} onToggle={event => { const open = event.currentTarget.open; const key = section + ':' + page + ':' + group.label; setOpened(current => current[key] === open ? current : {...current, [key]:open}); }}><summary>{group.label}</summary>{section === 'hero' && group.label === 'Distribución' &&
+  <p className="ve-hint">El ancho máximo limita el área que contiene la portada. Si el contenido ya es más angosto, el cambio puede no notarse. Para el ancho del texto utiliza «Ancho máximo texto».</p>}
+{section === 'hero' && group.label === 'Espaciado de portada'  && (
+  <HeroSpacingControl value={viewportConfig.hero.gap} onChange={value => onEdit(targetPath('hero.gap'), value)} />
+)}{section === 'global' && group.label === 'Colores' && <PaletteLibrary colors={viewportConfig.global.colors} selectedId={document.paletteId} onApply={palette => {onPaletteSelect?.(palette.id.startsWith('system-')?null:palette.id);const edits=Object.fromEntries(Object.entries(palette.colores).map(([key,value])=>[targetPath('global.colors.'+key),value]));if(onEditMany)onEditMany(edits);else for(const [path,value] of Object.entries(edits))onEdit(path,value);}} onOriginal={() => {onPaletteSelect?.(null);for(const path of PALETTE_PATHS)onReset(targetPath(path));}} />}{section === 'hero' && group.label === 'Botón principal' ? (
+  <div className="ve-hero-button-subgroups" style={{ display: 'grid', gap: 10, marginTop: 10 }}>
+    {HERO_BUTTON_SUBGROUPS.map((subgroup, i) => (
+      <details key={subgroup.label} open={i === 0} style={{ border: '1px solid #dce3ef', borderRadius: 10, padding: '8px 10px' }}>
+        <summary style={{ cursor: 'pointer', fontWeight: 600 }}>{subgroup.label}</summary>
+        {renderFields(subgroup.fields)}
+      </details>
+    ))}
+  </div>
+) : renderFields(group.fields)}</details>)}{section !== 'hero' && <><button type="button" className="ve-advanced-toggle" aria-expanded={advanced} onClick={() => setAdvanced(!advanced)}>{advanced ? 'Ocultar opciones avanzadas' : section === 'global' ? 'Personalizar colores y opciones avanzadas' : 'Opciones avanzadas'}</button>{advanced && <p className="ve-hint">Ajusta medidas exactas en píxeles. Puedes restablecer cada opción con ↺.</p>}</>}</div>;
 }

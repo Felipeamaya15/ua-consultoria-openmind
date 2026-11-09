@@ -1,3 +1,4 @@
+/* OPENMIND_EDITORIAL_PROMO_V1: alias responsivos de la etiqueta. */
 /* Responsive aliases generated from the visual variable contract. */
 [data-storefront-visual] {
   --primary: var(--primary-desktop);
@@ -529,6 +530,17 @@
   --visual-header-color: var(--visual-header-color-desktop);
   --visual-header-height: var(--visual-header-height-desktop);
   --visual-header-logo-size: var(--visual-header-logo-size-desktop);
+  --visual-header-store-logo-radius: var(--visual-header-store-logo-radius-desktop);
+  --visual-header-institution-logo-radius: var(--visual-header-institution-logo-radius-desktop);
+  --visual-header-store-logo-safe-padding: var(--visual-header-store-logo-safe-padding-desktop);
+  --visual-header-institution-logo-safe-padding: var(--visual-header-institution-logo-safe-padding-desktop);
+  --visual-header-store-logo-width: var(--visual-header-store-logo-width-desktop);
+  --visual-header-institution-logo-width: var(--visual-header-institution-logo-width-desktop);
+  --visual-header-institution-logo-size: var(--visual-header-institution-logo-size-desktop);
+  --visual-header-institution-logo-order: var(--visual-header-institution-logo-order-desktop);
+  --visual-header-institution-logo-gap: var(--visual-header-institution-logo-gap-desktop);
+  --visual-header-store-logo-background: var(--visual-header-store-logo-background-desktop);
+  --visual-header-store-logo-footer-height: var(--visual-header-store-logo-footer-height-desktop);
   --visual-header-logo-order: var(--visual-header-logo-order-desktop);
   --visual-header-nav-align: var(--visual-header-nav-align-desktop);
   --visual-header-gap: var(--visual-header-gap-desktop);
@@ -544,12 +556,20 @@
   --visual-hero-align: var(--visual-hero-align-desktop);
   --visual-hero-overlay: var(--visual-hero-overlay-desktop);
   --visual-hero-overlay-color: var(--visual-hero-overlay-color-desktop);
+  --visual-hero-promo-background: var(--visual-hero-promo-background-desktop);
+  --visual-hero-promo-color: var(--visual-hero-promo-color-desktop);
+  --visual-hero-promo-border-color: var(--visual-hero-promo-border-color-desktop);
+  --visual-hero-promo-font-size: var(--visual-hero-promo-font-size-desktop);
+  --visual-hero-promo-radius: var(--visual-hero-promo-radius-desktop);
+  --visual-hero-promo-border-width: var(--visual-hero-promo-border-width-desktop);
+  --visual-hero-promo-align: var(--visual-hero-promo-align-desktop);
   --visual-hero-title-size: var(--visual-hero-title-size-desktop);
   --visual-hero-subtitle-size: var(--visual-hero-subtitle-size-desktop);
   --visual-hero-text-width: var(--visual-hero-text-width-desktop);
   --visual-hero-gap: var(--visual-hero-gap-desktop);
   --visual-hero-cta-display: var(--visual-hero-cta-display-desktop);
   --visual-hero-cta-layout-width: var(--visual-hero-cta-layout-width-desktop);
+  --visual-hero-cta-area-width: var(--visual-hero-cta-area-width-desktop);
   --visual-cta-width: var(--visual-cta-width-desktop);
   --visual-cta-align: var(--visual-cta-align-desktop);
   --visual-cta-padding-x: var(--visual-cta-padding-x-desktop);
@@ -1160,6 +1180,17 @@
   --visual-header-color: var(--visual-header-color-tablet);
   --visual-header-height: var(--visual-header-height-tablet);
   --visual-header-logo-size: var(--visual-header-logo-size-tablet);
+  --visual-header-store-logo-radius: var(--visual-header-store-logo-radius-tablet);
+  --visual-header-institution-logo-radius: var(--visual-header-institution-logo-radius-tablet);
+  --visual-header-store-logo-safe-padding: var(--visual-header-store-logo-safe-padding-tablet);
+  --visual-header-institution-logo-safe-padding: var(--visual-header-institution-logo-safe-padding-tablet);
+  --visual-header-store-logo-width: var(--visual-header-store-logo-width-tablet);
+  --visual-header-institution-logo-width: var(--visual-header-institution-logo-width-tablet);
+  --visual-header-institution-logo-size: var(--visual-header-institution-logo-size-tablet);
+  --visual-header-institution-logo-order: var(--visual-header-institution-logo-order-tablet);
+  --visual-header-institution-logo-gap: var(--visual-header-institution-logo-gap-tablet);
+  --visual-header-store-logo-background: var(--visual-header-store-logo-background-tablet);
+  --visual-header-store-logo-footer-height: var(--visual-header-store-logo-footer-height-tablet);
   --visual-header-logo-order: var(--visual-header-logo-order-tablet);
   --visual-header-nav-align: var(--visual-header-nav-align-tablet);
   --visual-header-gap: var(--visual-header-gap-tablet);
@@ -1175,12 +1206,20 @@
   --visual-hero-align: var(--visual-hero-align-tablet);
   --visual-hero-overlay: var(--visual-hero-overlay-tablet);
   --visual-hero-overlay-color: var(--visual-hero-overlay-color-tablet);
+  --visual-hero-promo-background: var(--visual-hero-promo-background-tablet);
+  --visual-hero-promo-color: var(--visual-hero-promo-color-tablet);
+  --visual-hero-promo-border-color: var(--visual-hero-promo-border-color-tablet);
+  --visual-hero-promo-font-size: var(--visual-hero-promo-font-size-tablet);
+  --visual-hero-promo-radius: var(--visual-hero-promo-radius-tablet);
+  --visual-hero-promo-border-width: var(--visual-hero-promo-border-width-tablet);
+  --visual-hero-promo-align: var(--visual-hero-promo-align-tablet);
   --visual-hero-title-size: var(--visual-hero-title-size-tablet);
   --visual-hero-subtitle-size: var(--visual-hero-subtitle-size-tablet);
   --visual-hero-text-width: var(--visual-hero-text-width-tablet);
   --visual-hero-gap: var(--visual-hero-gap-tablet);
   --visual-hero-cta-display: var(--visual-hero-cta-display-tablet);
   --visual-hero-cta-layout-width: var(--visual-hero-cta-layout-width-tablet);
+  --visual-hero-cta-area-width: var(--visual-hero-cta-area-width-tablet);
   --visual-cta-width: var(--visual-cta-width-tablet);
   --visual-cta-align: var(--visual-cta-align-tablet);
   --visual-cta-padding-x: var(--visual-cta-padding-x-tablet);
@@ -1792,6 +1831,17 @@
   --visual-header-color: var(--visual-header-color-mobile);
   --visual-header-height: var(--visual-header-height-mobile);
   --visual-header-logo-size: var(--visual-header-logo-size-mobile);
+  --visual-header-store-logo-radius: var(--visual-header-store-logo-radius-mobile);
+  --visual-header-institution-logo-radius: var(--visual-header-institution-logo-radius-mobile);
+  --visual-header-store-logo-safe-padding: var(--visual-header-store-logo-safe-padding-mobile);
+  --visual-header-institution-logo-safe-padding: var(--visual-header-institution-logo-safe-padding-mobile);
+  --visual-header-store-logo-width: var(--visual-header-store-logo-width-mobile);
+  --visual-header-institution-logo-width: var(--visual-header-institution-logo-width-mobile);
+  --visual-header-institution-logo-size: var(--visual-header-institution-logo-size-mobile);
+  --visual-header-institution-logo-order: var(--visual-header-institution-logo-order-mobile);
+  --visual-header-institution-logo-gap: var(--visual-header-institution-logo-gap-mobile);
+  --visual-header-store-logo-background: var(--visual-header-store-logo-background-mobile);
+  --visual-header-store-logo-footer-height: var(--visual-header-store-logo-footer-height-mobile);
   --visual-header-logo-order: var(--visual-header-logo-order-mobile);
   --visual-header-nav-align: var(--visual-header-nav-align-mobile);
   --visual-header-gap: var(--visual-header-gap-mobile);
@@ -1807,12 +1857,20 @@
   --visual-hero-align: var(--visual-hero-align-mobile);
   --visual-hero-overlay: var(--visual-hero-overlay-mobile);
   --visual-hero-overlay-color: var(--visual-hero-overlay-color-mobile);
+  --visual-hero-promo-background: var(--visual-hero-promo-background-mobile);
+  --visual-hero-promo-color: var(--visual-hero-promo-color-mobile);
+  --visual-hero-promo-border-color: var(--visual-hero-promo-border-color-mobile);
+  --visual-hero-promo-font-size: var(--visual-hero-promo-font-size-mobile);
+  --visual-hero-promo-radius: var(--visual-hero-promo-radius-mobile);
+  --visual-hero-promo-border-width: var(--visual-hero-promo-border-width-mobile);
+  --visual-hero-promo-align: var(--visual-hero-promo-align-mobile);
   --visual-hero-title-size: var(--visual-hero-title-size-mobile);
   --visual-hero-subtitle-size: var(--visual-hero-subtitle-size-mobile);
   --visual-hero-text-width: var(--visual-hero-text-width-mobile);
   --visual-hero-gap: var(--visual-hero-gap-mobile);
   --visual-hero-cta-display: var(--visual-hero-cta-display-mobile);
   --visual-hero-cta-layout-width: var(--visual-hero-cta-layout-width-mobile);
+  --visual-hero-cta-area-width: var(--visual-hero-cta-area-width-mobile);
   --visual-cta-width: var(--visual-cta-width-mobile);
   --visual-cta-align: var(--visual-cta-align-mobile);
   --visual-cta-padding-x: var(--visual-cta-padding-x-mobile);
@@ -2781,4 +2839,150 @@
 [data-storefront-visual] [data-landing-page="minimal"] [data-visual-layout="stack"] > :is([data-visual-part="heroDecorations"], [data-visual-part="heroSubtitle"], [data-visual-part="heroCtaLayout"]) {
   margin-top: 0 !important;
   margin-bottom: 0 !important;
+}
+
+
+/* OPENMIND_LOGO_SHAPES_RENDER_V2
+   Configuración independiente de la identidad comercial e institucional.
+   El contenedor cambia de forma, pero el archivo original nunca se recorta. */
+[data-storefront-visual] [data-visual-section="header"] [data-visual-part="logo"] img[data-landing-image] {
+  box-sizing: border-box;
+  width: var(--visual-header-store-logo-width, auto) !important;
+  height: var(--visual-header-logo-size);
+  max-height: none;
+  max-width: min(160px, 100%);
+  border-radius: var(--visual-header-store-logo-radius, 0px);
+  padding: var(--visual-header-store-logo-safe-padding, 0px);
+  object-fit: contain;
+  object-position: center;
+  background-color: var(--visual-header-store-logo-background, transparent);
+  flex-shrink: 0;
+}
+
+/* También en los pies de página; el tamaño propio del pie sigue siendo independiente. */
+[data-storefront-visual] [data-visual-section="footer"] img.store-footer-logo {
+  box-sizing: border-box;
+  width: var(--visual-header-store-logo-width, auto);
+  height: var(--visual-header-store-logo-footer-height, auto);
+  max-width: 140px;
+  max-height: 52px;
+  border-radius: var(--visual-header-store-logo-radius, 0px);
+  padding: var(--visual-header-store-logo-safe-padding, 0px);
+  object-fit: contain;
+  object-position: center;
+  background: var(--visual-header-store-logo-background, transparent);
+}
+
+/* Aplica solo en la tienda pública: no cambia los logos de panel admin ni login. */
+[data-storefront-visual] [data-visual-section="header"] .ua-institutional-badge--compact,
+[data-storefront-visual] [data-visual-section="footer"] .ua-institutional-badge--compact {
+  --ua-logo-base-size: 24px;
+}
+[data-storefront-visual] [data-visual-section="header"] .ua-institutional-badge:not(.ua-institutional-badge--compact),
+[data-storefront-visual] [data-visual-section="footer"] .ua-institutional-badge:not(.ua-institutional-badge--compact) {
+  --ua-logo-base-size: 32px;
+}
+[data-storefront-visual] [data-visual-section="header"] .ua-institutional-badge img,
+[data-storefront-visual] [data-visual-section="footer"] .ua-institutional-badge img {
+  box-sizing: border-box;
+  width: var(--visual-header-institution-logo-width, var(--ua-logo-base-size, 24px)) !important;
+  height: var(--ua-logo-base-size, 24px) !important;
+  min-width: var(--ua-logo-base-size, 24px);
+  max-width: none;
+  max-height: none;
+  border-radius: var(--visual-header-institution-logo-radius, 6px) !important;
+  padding: var(--visual-header-institution-logo-safe-padding, 3px) !important;
+  object-fit: contain !important;
+  object-position: center;
+  background-color: #ffffff;
+  flex-shrink: 0;
+}
+
+/* OPENMIND_INSTITUTION_LOGO_SIZE_V3
+   Tamaño independiente, preservando TODO el escudo y el texto del PNG original.
+   Afecta solo al encabezado/pie de las tiendas, no al panel de administración. */
+[data-storefront-visual] [data-visual-section="header"] .ua-institutional-badge,
+[data-storefront-visual] [data-visual-section="footer"] .ua-institutional-badge {
+  --ua-logo-base-size: var(--visual-header-institution-logo-size, 48px);
+}
+[data-storefront-visual] [data-visual-section="header"] .ua-institutional-badge img,
+[data-storefront-visual] [data-visual-section="footer"] .ua-institutional-badge img {
+  width: var(--visual-header-institution-logo-width, 62.4px) !important;
+  height: var(--visual-header-institution-logo-size, 48px) !important;
+  min-width: 0;
+  max-width: min(100%, 160px);
+  max-height: none;
+  object-fit: contain !important;
+  object-position: center;
+}
+
+/* OPENMIND_INSTITUTIONAL_LOGO_CONTROLS_V4
+   La marca institucional NO se puede ocultar ni sustituir.
+   El ancho no queda bloqueado por los limites anteriores de 26/32/56px.
+   Siempre se contiene el escudo + texto completo en su contenedor. */
+[data-storefront-visual] [data-visual-section="header"] .ua-institutional-badge,
+[data-storefront-visual] [data-visual-section="footer"] .ua-institutional-badge {
+  width: max-content;
+  max-width: none;
+  flex-shrink: 0;
+}
+[data-storefront-visual] [data-visual-section="header"] .ua-institutional-badge {
+  order: var(--visual-header-institution-logo-order, -1) !important;
+  margin-right: var(--visual-header-institution-logo-gap, 8px) !important;
+  margin-left: 0;
+}
+[data-storefront-visual] [data-visual-section="header"] .ua-institutional-badge img,
+[data-storefront-visual] [data-visual-section="footer"] .ua-institutional-badge img {
+  box-sizing: border-box;
+  display: block;
+  width: var(--visual-header-institution-logo-width, 62px) !important;
+  height: var(--visual-header-institution-logo-size, 48px) !important;
+  min-width: 0 !important;
+  max-width: none !important;
+  min-height: 0;
+  max-height: none !important;
+  object-fit: contain !important;
+  object-position: center !important;
+  border-radius: var(--visual-header-institution-logo-radius, 6px) !important;
+  padding: var(--visual-header-institution-logo-safe-padding, 3px) !important;
+  background: #fff;
+  flex: none;
+}
+
+/* OPENMIND_PORTADA_PULIDO_V2
+   En el modo «En línea» el grupo del botón se ajusta a su contenido;
+   justify-content no lo desplaza. align-self permite izquierda/centro/derecha.
+   En «Debajo del texto», el contenedor sigue ocupando el ancho completo. */
+[data-storefront-visual] [data-visual-section="hero"] [data-visual-part="heroCtaLayout"] {
+  align-self: var(--visual-cta-align, flex-start);
+}
+
+/* OPENMIND_PORTADA_V3: el ancho del CTA se mide contra el área disponible del hero. */
+[data-storefront-visual] [data-visual-section="hero"] [data-visual-part="heroCtaLayout"] {
+  width: 100%;
+  max-width: 100%;
+  align-self: stretch;
+  justify-content: var(--visual-cta-align, flex-start);
+}
+[data-storefront-visual] [data-visual-section="hero"] [data-visual-section="heroCta"] {
+  margin-inline: 0;
+}
+[data-storefront-visual] [data-visual-section="hero"] [data-visual-part="heroCtaLayout"]:has([data-visual-section="heroCta"]) {
+  min-width: 0;
+}
+
+/* OPENMIND_PORTADA_AJUSTES_V4: En línea usa el ancho de la portada,
+   mientras que Debajo del texto sólo alcanza la columna de contenido. */
+[data-storefront-visual] [data-landing-page="editorial"] [data-visual-section="hero"] [data-visual-part="heroCtaLayout"] {
+  width: var(--visual-hero-cta-area-width, 100%);
+  max-width: none;
+}
+
+/* OPENMIND_PORTADA_AJUSTES_V4: tipografía regulable en el CTA.
+   Editorial usa una fuente serif de peso limitado; el texto del botón adopta
+   la fuente de cuerpo, que admite cambios visibles de grosor. */
+[data-storefront-visual] [data-visual-section="hero"] [data-visual-section="heroCta"] {
+  font-family: var(--visual-body-font, system-ui, sans-serif);
+  font-weight: var(--visual-cta-font-weight, 600) !important;
+  font-synthesis: weight;
 }

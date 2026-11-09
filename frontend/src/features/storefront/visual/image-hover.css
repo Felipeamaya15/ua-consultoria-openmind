@@ -130,3 +130,29 @@
     opacity: 0 !important;
   }
 }
+
+/* OPENMIND_ONLINE_EFFECTS_V1: animación de la fotografía desde fuente validada. */
+[data-storefront-visual] [data-visual-section="productCard"] {
+ --om-online-product-motion:var(--om-hover-catalog-online-motion,none);
+}
+[data-storefront-visual] [data-landing-page] [data-visual-section="productCard"],
+[data-storefront-visual] [data-visual-kind="featured"] {
+ --om-online-product-motion:var(--om-hover-featured-online-motion,none);
+}
+[data-storefront-visual] [data-visual-part="categoryItem"] {
+ --om-online-product-motion:var(--om-hover-category-online-motion,none);
+}
+@media (hover:hover) and (pointer:fine) {
+ [data-storefront-visual] [data-visual-section="productCard"]:is(:hover,:focus-within) img,
+ [data-storefront-visual] [data-visual-kind="featured"] a:has(>img):is(:hover,:focus-within)>img,
+ [data-storefront-visual] [data-visual-part="categoryItem"]:is(:hover,:focus-within) img {
+  animation:var(--om-online-product-motion,none);
+ }
+}
+@media (prefers-reduced-motion:reduce){
+ [data-storefront-visual] [data-visual-section="productCard"] img,
+ [data-storefront-visual] [data-visual-kind="featured"] img,
+ [data-storefront-visual] [data-visual-part="categoryItem"] img{
+  animation:none !important;
+ }
+}

@@ -4,6 +4,8 @@ import type { TemplateId } from '../data/mockData';
 export const ALIGNMENTS = ['left', 'center', 'right'] as const;
 export const DENSITIES = ['compact', 'normal', 'spacious'] as const;
 export const SHAPES = ['square', 'rounded', 'pill'] as const;
+export const LOGO_SHAPES = ['original', 'square', 'rounded', 'circle', 'pill'] as const;
+export type LogoShape = typeof LOGO_SHAPES[number];
 export const SHADOWS = ['none', 'soft', 'medium', 'strong'] as const;
 export const VIEWPORTS = ['desktop', 'tablet', 'mobile'] as const;
 export const FONT_FAMILIES = ['sans', 'serif', 'system', 'arial', 'calibri', 'cambria', 'georgia', 'times', 'verdana', 'tahoma', 'trebuchet', 'courier', 'garamond', 'palatino', 'comic', ...Object.keys(WEB_FONTS) as (keyof typeof WEB_FONTS)[]] as const;
@@ -84,6 +86,16 @@ export interface VisualSections {
     height: number;
     logoPosition: Alignment;
     logoSize: number;
+    storeLogoShape: LogoShape;
+    institutionLogoShape: LogoShape;
+    /** Tamaño base de la identidad universitaria en píxeles. */
+    institutionLogoSize: number;
+    /** Ubicación de la marca institucional respecto a los elementos del encabezado. */
+    institutionLogoPosition: Alignment;
+    /** Separación horizontal del logo institucional (px). */
+    institutionLogoGap: number;
+    storeLogoPadding: number;
+    institutionLogoPadding: number;
     navAlign: Alignment;
     gap: number;
     linkStyle: 'plain' | 'underline' | 'pill';
@@ -94,6 +106,16 @@ export interface VisualSections {
     sticky: boolean;
   };
   hero: {
+    /** OPENMIND_EDITORIAL_PROMO_V1 - etiqueta opcional, por plantilla. */
+    promoText: string;
+    promoVisible: boolean;
+    promoAlign: Alignment;
+    promoBackground: string;
+    promoTextColor: string;
+    promoTextSize: number;
+    promoRadius: number;
+    promoBorderWidth: number;
+    promoBorderColor: string;
     height: number;
     imagePosition: 'top' | 'center' | 'bottom';
     contentWidth: number;
@@ -109,17 +131,20 @@ export interface VisualSections {
     ctaPosition: 'inline' | 'below';
     /** Personalización de portada por plantilla; los valores omitidos usan defaults. */
     carouselMode?: 'static' | 'manual' | 'automatic';
-    carouselInterval?: 5 | 10 | 20;
-    carouselTransition?: import('./carouselTransitionLibrary').CarouselTransitionId;
+    carouselInterval?: number;
+    // OPENMIND_ONLINE_EFFECTS_V1: valores comprobados en el proveedor Magic CSS.
+    carouselTransition?: import('./onlineEffects').CarouselChoice;
     carouselIndicators?: boolean;
+    /** Recetas JSON seguras importadas por la tienda y compartidas por sus plantillas. */
+    importedEffectPresets?: string;
     // OPENMIND_PRODUCT_HOVER_V1
     /** Efectos de fotografías; opcionales y compartidos por las cuatro plantillas. */
-    hoverFeaturedMotion?: 'none' | 'zoom' | 'lift' | 'tilt' | 'rotate' | 'pop' | 'slide' | 'lean' | 'shrink';
-    hoverFeaturedLight?: 'none' | 'shine' | 'flash' | 'glow' | 'sparkle' | 'beam' | 'pulse' | 'border' | 'twinkle';
-    hoverCatalogMotion?: 'none' | 'zoom' | 'lift' | 'tilt' | 'rotate' | 'pop' | 'slide' | 'lean' | 'shrink';
-    hoverCatalogLight?: 'none' | 'shine' | 'flash' | 'glow' | 'sparkle' | 'beam' | 'pulse' | 'border' | 'twinkle';
-    hoverCategoryMotion?: 'none' | 'zoom' | 'lift' | 'tilt' | 'rotate' | 'pop' | 'slide' | 'lean' | 'shrink';
-    hoverCategoryLight?: 'none' | 'shine' | 'flash' | 'glow' | 'sparkle' | 'beam' | 'pulse' | 'border' | 'twinkle';
+    hoverFeaturedMotion?: import('./onlineEffects').ProductMotionChoice;
+    hoverFeaturedLight?: import('./onlineEffects').ProductLightChoice;
+    hoverCatalogMotion?: import('./onlineEffects').ProductMotionChoice;
+    hoverCatalogLight?: import('./onlineEffects').ProductLightChoice;
+    hoverCategoryMotion?: import('./onlineEffects').ProductMotionChoice;
+    hoverCategoryLight?: import('./onlineEffects').ProductLightChoice;
   };
   heroCta: {
     size: 'small' | 'medium' | 'large';

@@ -14,7 +14,7 @@ export function CookieConsentBanner() {
   const { pathname, search } = useLocation();
   const session = useVerifiedLegalScope();
   const { route } = useStorefrontTemplate();
-  const { config, legalPages, legalLoading, legalError, legalVerified, legalScopeKey } = useStore();
+  const { config, visualConfig, legalPages, legalLoading, legalError, legalVerified, legalScopeKey } = useStore();
   const bannerConfig = legalPages.cookies.banner;
   const isEnabled = bannerConfig?.enabled !== false;
   const page = legalPages.cookies;
@@ -74,6 +74,16 @@ export function CookieConsentBanner() {
   const acceptText = bannerConfig?.acceptText || 'Aceptar cookies';
   const declineText = bannerConfig?.declineText || 'Solo necesarias';
 
+  // COOKIE_PALETTE_V1: el banner esta fuera de StoreVisualRoot,
+  // por eso toma directamente la paleta efectiva de la plantilla.
+  const colors = visualConfig.global.colors;
+  const surface = `color-mix(in srgb, ${colors.primary} 8%, ${colors.background})`;
+  const mutedSurface = `color-mix(in srgb, ${colors.primary} 16%, ${colors.background})`;
+  const borderColor = `color-mix(in srgb, ${colors.primary} 28%, ${colors.background})`;
+  // Respetar el color de texto de los botones definido por la paleta.
+  const actionBackground = colors.button || colors.primary;
+  const actionText = colors.buttonText;
+
   return (
     <aside
       role="dialog"
@@ -82,11 +92,12 @@ export function CookieConsentBanner() {
       className="fixed bottom-0 inset-x-0 z-[9999] p-3 sm:p-4 md:p-6 pointer-events-none"
     >
       {state.message && <p role="alert">{state.message}</p>}
-      <div className="max-w-4xl mx-auto bg-white/95 text-neutral-900 backdrop-blur-md border border-neutral-200/90 rounded-2xl shadow-[0_12px_36px_-6px_rgba(0,0,0,0.14),0_2px_8px_-2px_rgba(0,0,0,0.06)] p-4 sm:p-5 pointer-events-auto flex flex-col md:flex-row items-start md:items-center justify-between gap-4 transition-all">
+      <div className="max-w-4xl mx-auto backdrop-blur-md border rounded-2xl shadow-[0_12px_36px_-6px_rgba(0,0,0,0.14),0_2px_8px_-2px_rgba(0,0,0,0.06)] p-4 sm:p-5 pointer-events-auto flex flex-col md:flex-row items-start md:items-center justify-between gap-4 transition-all"
+        style={{ backgroundColor: surface, color: colors.text, borderColor }}>
         <div className="flex items-start gap-3.5 flex-1 min-w-0">
-          <div className="w-9 h-9 rounded-xl bg-neutral-100 border border-neutral-200/70 flex items-center justify-center text-neutral-700 shrink-0 mt-0.5 select-none" aria-hidden="true">
+          <div className="w-9 h-9 rounded-xl border flex items-center justify-center shrink-0 mt-0.5 select-none" style={{ backgroundColor: mutedSurface, borderColor, color: colors.text }} aria-hidden="true">
             <svg
-              className="w-5 h-5 text-neutral-700"
+              className="w-5 h-5"
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
@@ -102,13 +113,13 @@ export function CookieConsentBanner() {
               <path d="M16 16v.01" />
             </svg>
           </div>
-          <div className="space-y-1 text-xs sm:text-sm text-neutral-600 leading-relaxed">
-            <p className="font-semibold text-neutral-900 tracking-tight">{title}</p>
+          <div className="space-y-1 text-xs sm:text-sm leading-relaxed">
+            <p className="font-semibold tracking-tight">{title}</p>
             <p>
               {message}{' '}
               <Link
                 to={cookieUrl}
-                className="text-neutral-900 font-medium underline underline-offset-4 hover:text-neutral-600 transition-colors"
+                className="font-medium underline underline-offset-4 hover:opacity-75 transition-opacity"
               >
                 Política de Cookies
               </Link>
@@ -121,14 +132,16 @@ export function CookieConsentBanner() {
           <button
             type="button"
             onClick={handleDecline}
-            className="flex-1 md:flex-initial px-3.5 py-2 text-xs sm:text-sm font-medium text-neutral-700 hover:text-neutral-900 bg-neutral-100 hover:bg-neutral-200/80 rounded-xl border border-neutral-200/80 transition-colors"
+            className="flex-1 md:flex-initial px-3.5 py-2 text-xs sm:text-sm font-medium hover:brightness-95 rounded-xl border transition-[filter]"
+            style={{ backgroundColor: mutedSurface, color: colors.text, borderColor }}
           >
             {declineText}
           </button>
           <button
             type="button"
             onClick={handleAccept}
-            className="flex-1 md:flex-initial px-4 py-2 text-xs sm:text-sm font-semibold text-white bg-neutral-900 hover:bg-neutral-800 rounded-xl shadow-sm transition-colors"
+            className="flex-1 md:flex-initial px-4 py-2 text-xs sm:text-sm font-semibold hover:brightness-95 rounded-xl shadow-sm transition-[filter]"
+            style={{ backgroundColor: actionBackground, color: actionText }}
           >
             {acceptText}
           </button>

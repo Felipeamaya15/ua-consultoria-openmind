@@ -64,6 +64,7 @@ function carouselFields(hero?: VisualConfigOverrides['hero']) {
     ...(hero?.carouselInterval !== undefined ? {carouselInterval: hero.carouselInterval} : {}),
     ...(hero?.carouselTransition !== undefined ? {carouselTransition: hero.carouselTransition} : {}),
     ...(hero?.carouselIndicators !== undefined ? {carouselIndicators: hero.carouselIndicators} : {}),
+    ...(hero?.importedEffectPresets !== undefined ? {importedEffectPresets: hero.importedEffectPresets} : {}),
     ...(hero?.hoverFeaturedMotion !== undefined ? {hoverFeaturedMotion: hero.hoverFeaturedMotion} : {}),
     ...(hero?.hoverFeaturedLight !== undefined ? {hoverFeaturedLight: hero.hoverFeaturedLight} : {}),
     ...(hero?.hoverCatalogMotion !== undefined ? {hoverCatalogMotion: hero.hoverCatalogMotion} : {}),
@@ -92,7 +93,7 @@ export function readPath(value: unknown, path: string): unknown {
 }
 export function editProperty(document: EditorDocument, path: string, value: string | number | boolean): EditorDocument {
   // Preserva las propiedades del carrusel sin pasar por filtros de claves del resolvedor.
-  if (/^hero\.(carouselMode|carouselInterval|carouselTransition|carouselIndicators|hoverFeaturedMotion|hoverFeaturedLight|hoverCatalogMotion|hoverCatalogLight|hoverCategoryMotion|hoverCategoryLight)$/.test(path)) {
+  if (/^hero\.(carouselMode|carouselInterval|carouselTransition|carouselIndicators|importedEffectPresets|hoverFeaturedMotion|hoverFeaturedLight|hoverCatalogMotion|hoverCatalogLight|hoverCategoryMotion|hoverCategoryLight)$/.test(path)) {
     const field = path.slice('hero.'.length);
     return {...document, overrides: {...document.overrides, hero: {...document.overrides.hero, [field]: value}} as VisualConfigOverrides};
   }

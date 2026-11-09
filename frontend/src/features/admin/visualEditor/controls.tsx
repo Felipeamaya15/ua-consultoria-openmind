@@ -2,7 +2,7 @@ import { FontControl } from './fonts';
 import { fonts } from '../../storefront/visual/cssVariables';
 import type { FontFamily } from '../../storefront/visual/types';
 import { useEffect, useState, type ReactNode } from 'react';
-const OPTION_LABELS: Record<string, string> = { cover: 'Rellenar', contain: 'Contener', small: 'Pequeño', large: 'Grande', left: 'Izquierda', center: 'Centro', right: 'Derecha', top: 'Arriba', bottom: 'Abajo', desktop: 'Computadora', tablet: 'Tablet', mobile: 'Móvil', compact: 'Compacto', normal: 'Normal', spacious: 'Amplio', square: 'Recto', rounded: 'Redondeado', pill: 'Cápsula', auto: 'Automático', full: 'Todo el ancho', custom: 'Personalizado', solid: 'Relleno', outline: 'Con borde', ghost: 'Solo texto', none: 'Sin efecto', dashed: 'Discontinuo', soft: 'Suave', medium: 'Media', strong: 'Marcada', grid: 'En columnas', row: 'En fila', wrap: 'En varias filas', stack: 'Uno debajo de otro', split: 'En dos zonas', inline: 'En línea', centered: 'Centrado', columns: 'En columnas', below: 'Debajo del texto', pills: 'Cápsulas', cards: 'Cajas', links: 'Enlaces', drawer: 'Panel desplegable', sans: 'Plus Jakarta Sans', serif: 'DM Serif Display', system: 'Fuente del sistema' };
+const OPTION_LABELS: Record<string, string> = { cover: 'Rellenar', contain: 'Contener', original: 'Original', circle: 'Circular', small: 'Pequeño', large: 'Grande', left: 'Izquierda', center: 'Centro', right: 'Derecha', top: 'Arriba', bottom: 'Abajo', desktop: 'Computadora', tablet: 'Tablet', mobile: 'Móvil', compact: 'Compacto', normal: 'Normal', spacious: 'Amplio', square: 'Recto', rounded: 'Redondeado', pill: 'Cápsula', auto: 'Automático', full: 'Todo el ancho', custom: 'Personalizado', solid: 'Relleno', outline: 'Con borde', ghost: 'Solo texto', none: 'Sin efecto', dashed: 'Discontinuo', soft: 'Suave', medium: 'Media', strong: 'Marcada', grid: 'En columnas', row: 'En fila', wrap: 'En varias filas', stack: 'Uno debajo de otro', split: 'En dos zonas', inline: 'En línea', centered: 'Centrado', columns: 'En columnas', below: 'Debajo del texto', pills: 'Cápsulas', cards: 'Cajas', links: 'Enlaces', drawer: 'Panel desplegable', sans: 'Plus Jakarta Sans', serif: 'DM Serif Display', system: 'Fuente del sistema' };
 Object.assign(OPTION_LABELS, { arial: 'Arial', calibri: 'Calibri', cambria: 'Cambria', georgia: 'Georgia', times: 'Times New Roman', verdana: 'Verdana', tahoma: 'Tahoma', trebuchet: 'Trebuchet MS', courier: 'Courier New', garamond: 'Garamond', palatino: 'Palatino', comic: 'Comic Sans MS' });
 export function optionLabel(value: string, label = '') { return value === 'solid' && label.includes('Borde') ? 'Continuo' : OPTION_LABELS[value] ?? value; }
 export interface ControlProps {
@@ -27,12 +27,106 @@ export function NumberControl(props: ControlProps) {
   return <Field {...props}><input disabled={props.disabled} aria-label={props.label} type="number" value={Number(props.value)} min={props.min ?? 0} max={props.max ?? 10000} step={props.step ?? 1} onChange={e => { const value = e.target.valueAsNumber; if (Number.isFinite(value) && value >= (props.min ?? 0) && value <= (props.max ?? 10000)) props.onChange(value); }} /></Field>;
 }
 /** Keep exact values available while offering a useful first choice. */
+/** OPENMIND_LOGO_SIZE_PRESETS_FIX_V5
+ * Controles reales y distintos para cada logo; la entrada Personalizado es editable.
+ * El mínimo se aplica a los rangos definidos para evitar tres valores iguales.
+ */
+/** OPENMIND_LOGO_CUSTOM_INPUT_V6
+ * El usuario puede borrar el valor completo y escribir otro sin que el min/max
+ * bloqueen caracteres intermedios. Se confirma al salir o pulsar Enter.
+ * Botones +/- siempre disponibles aunque el navegador o CSS oculten flechas.
+ */
 export function FriendlySizeControl(props: ControlProps) {
   const [custom, setCustom] = useState(false);
-  const range = props.path === 'image.scale' ? [80,100,140] : props.path === 'hero.titleSize' ? [40,64,88] : /\.logoSize/.test(props.path ?? '') ? [32,64,96] : /imageSize/.test(props.path ?? '') ? [160,320,480] : /\.height$/.test(props.path ?? '') ? [48,72,96] : /^pages\..*titleSize$/.test(props.path ?? '') ? [24,32,44] : [14,18,24];
-  const choices = range.map(value => Math.max(props.min ?? 0, Math.min(props.max ?? 2000, value)));
-  return <Field {...props}><div className="ve-segmented" role="group" aria-label={props.label}>{choices.map((value,index) => <button type="button" key={index} disabled={props.disabled} aria-pressed={!custom && props.value === value} onClick={() => { setCustom(false); props.onChange(value); }}>{['Pequeño','Mediano','Grande'][index]}</button>)}</div><button type="button" className="ve-custom-choice" aria-expanded={custom} onClick={() => setCustom(!custom)}>Personalizado{!choices.includes(Number(props.value)) ? ' · ' + props.value : ''}</button>{custom && <input aria-label={`${props.label} personalizado`} disabled={props.disabled} type="number" value={Number(props.value)} min={props.min ?? 0} max={props.max ?? 2000} step={props.step ?? 1} onChange={event => { const value=event.target.valueAsNumber; if(Number.isFinite(value) && value >= (props.min ?? 0) && value <= (props.max ?? 2000)) props.onChange(value); }} />}</Field>;
+  const [draft, setDraft] = useState<string | null>(null);
+  const path = props.path ?? '';
+  const isLogo = /(?:^|\.)(?:logoSize|institutionLogoSize)$/.test(path);
+  const range = /institutionLogoSize$/.test(path) ? [32, 48, 72]
+    : /(?:^|\.)logoSize$/.test(path) ? [32, 64, 96]
+    : path === 'image.scale' ? [80, 100, 140]
+    : path === 'hero.titleSize' ? [40, 64, 88]
+    : /imageSize/.test(path) ? [160, 320, 480]
+    : /\.height$/.test(path) ? [48, 72, 96]
+    : /^pages\..*titleSize$/.test(path) ? [24, 32, 44]
+    : [14, 18, 24];
+  const min = props.min ?? 0;
+  const max = props.max ?? 2000;
+  const step = props.step ?? 1;
+  const choices = [...new Set(range.map(value => Math.max(min, Math.min(max, value))))];
+  const current = Number(props.value);
+  const showInput = custom || !choices.includes(current);
+  const inputValue = draft ?? String(current);
+
+  const commit = () => {
+    if (draft === null) return;
+    const parsed = Number(draft.trim());
+    if (draft.trim() !== '' && Number.isFinite(parsed)) {
+      const next = Math.max(min, Math.min(max, Math.round(parsed / step) * step));
+      if (next !== current) props.onChange(next);
+    }
+    setDraft(null);
+  };
+  const adjust = (delta: number) => {
+    const parsed = Number(inputValue);
+    const base = inputValue.trim() !== '' && Number.isFinite(parsed) ? parsed : current;
+    const next = Math.max(min, Math.min(max, base + delta * step));
+    setDraft(null);
+    setCustom(true);
+    props.onChange(next);
+  };
+
+  return <Field {...props}>
+    <div className="ve-segmented" role="group" aria-label={props.label}>
+      {choices.map((value, index) => <button
+        type="button" key={value} disabled={props.disabled}
+        aria-pressed={!showInput && current === value}
+        onClick={() => { setCustom(false); setDraft(null); props.onChange(value); }}
+      >{['Pequeño', 'Mediano', 'Grande'][index] ?? `${value} px`}</button>)}
+    </div>
+    <button type="button" className="ve-custom-choice"
+      disabled={props.disabled} aria-expanded={showInput}
+      onClick={() => { setDraft(String(current)); setCustom(true); }}
+    >Personalizado{!choices.includes(current) ? ' · ' + current + ' px' : ''}</button>
+    {showInput && (isLogo ?
+      <div style={{ display: 'flex', alignItems: 'stretch', gap: 6 }}>
+        <button type="button" disabled={props.disabled || current <= min}
+          aria-label={`Reducir ${props.label.toLowerCase()}`} onClick={() => adjust(-1)}
+          style={{ minWidth: 38, border: '1px solid #cbd5e1', borderRadius: 6 }}>−</button>
+        <input
+          aria-label={`${props.label} personalizado`}
+          type="text" inputMode="numeric" pattern="[0-9]*"
+          disabled={props.disabled} value={inputValue}
+          onFocus={() => { if (draft === null) setDraft(String(current)); }}
+          onChange={event => {
+            const value = event.target.value;
+            if (/^\d*$/.test(value)) setDraft(value);
+          }}
+          onBlur={commit}
+          onKeyDown={event => {
+            if (event.key === 'Enter') { commit(); event.currentTarget.blur(); }
+            if (event.key === 'Escape') { setDraft(null); event.currentTarget.blur(); }
+            if (event.key === 'ArrowUp') { event.preventDefault(); adjust(1); }
+            if (event.key === 'ArrowDown') { event.preventDefault(); adjust(-1); }
+          }}
+          style={{ minWidth: 0, flex: 1 }}
+        />
+        <button type="button" disabled={props.disabled || current >= max}
+          aria-label={`Aumentar ${props.label.toLowerCase()}`} onClick={() => adjust(1)}
+          style={{ minWidth: 38, border: '1px solid #cbd5e1', borderRadius: 6 }}>+</button>
+      </div> :
+      <input
+        aria-label={`${props.label} personalizado`} disabled={props.disabled}
+        type="number" value={current} min={min} max={max} step={step}
+        onChange={event => {
+          const value = event.target.valueAsNumber;
+          if (Number.isFinite(value) && value >= min && value <= max) props.onChange(value);
+        }}
+      />
+    )}
+    {isLogo && showInput && <span style={{ fontSize: 11, opacity: .7 }}>Rango: {min}–{max} px. Se aplica al salir del campo o pulsar Enter.</span>}
+  </Field>;
 }
+
 export function ProductCountControl(props: ControlProps) {
   const [custom, setCustom] = useState(false);
   return <Field {...props}><div className="ve-segmented" role="group" aria-label={props.label}>{[1,2,3,4].map(value => <button type="button" key={value} disabled={props.disabled} aria-pressed={props.value === value} onClick={() => props.onChange(value)}>{value}</button>)}</div><button type="button" className="ve-custom-choice" aria-expanded={custom} onClick={() => setCustom(!custom)}>Personalizado</button>{custom && <input aria-label={`${props.label} personalizado`} type="number" value={Number(props.value)} min={props.min ?? 1} max={props.max ?? 12} onChange={event => { const value=event.target.valueAsNumber; if(Number.isInteger(value) && value >= (props.min ?? 1) && value <= (props.max ?? 12)) props.onChange(value); }} />}</Field>;

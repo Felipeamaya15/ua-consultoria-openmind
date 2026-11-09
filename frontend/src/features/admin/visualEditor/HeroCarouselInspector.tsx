@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { VisualConfig } from '../../storefront/visual/types';
 import { carouselTransitionById } from '../../storefront/visual/carouselTransitionLibrary';
 import { CarouselTransitionLibrary } from './CarouselTransitionLibrary';
@@ -8,8 +8,7 @@ type CarouselField =
   | 'carouselMode'
   | 'carouselInterval'
   | 'carouselTransition'
-  | 'carouselIndicators'
-  | 'gap';
+  | 'carouselIndicators';
 
 type CarouselValue = string | number | boolean;
 
@@ -37,11 +36,20 @@ const transitions = [
 /** Los archivos viven en Página principal. Aquí solo se configura el comportamiento visual. */
 export function HeroCarouselInspector({ hero, imageCount, onEdit }: Props) {
   const mode = hero.carouselMode ?? 'automatic';
-  const interval = hero.carouselInterval ?? 10;
+  const interval = hero.carouselInterval ?? 5;
+  const [intervalDraft, setIntervalDraft] = useState(String(interval));
+  useEffect(() => setIntervalDraft(String(interval)), [interval]);
+  const commitInterval = (raw: string) => {
+    const number = Number(raw);
+    const normalized = Number.isInteger(number) && raw.trim() !== ''
+      ? Math.max(2, Math.min(20, number))
+      : interval;
+    setIntervalDraft(String(normalized));
+    if (normalized !== interval) onEdit('carouselInterval', normalized);
+  };
   const transition = hero.carouselTransition ?? 'fade';
   const [libraryOpen, setLibraryOpen] = useState(false);
   const indicators = hero.carouselIndicators ?? true;
-  const gap = Math.min(72, Math.max(0, Math.round(hero.gap ?? 24)));
 
   return (
     <section className="ve-carousel-panel" aria-labelledby="ve-carousel-heading">
@@ -82,19 +90,32 @@ export function HeroCarouselInspector({ hero, imageCount, onEdit }: Props) {
         <fieldset className="ve-carousel-panel__fieldset">
           <legend>Intervalo automático</legend>
           <p className="ve-carousel-panel__subhint">Tiempo de espera entre fotografías.</p>
-          <div className="ve-carousel-panel__segments" role="group" aria-label="Velocidad del carrusel">
-            {([5, 10, 20] as const).map(seconds => (
-              <button
-                key={seconds}
-                type="button"
-                className={interval === seconds ? 'is-active' : ''}
-                aria-pressed={interval === seconds}
-                onClick={() => onEdit('carouselInterval', seconds)}
-              >
-                {seconds} s
-              </button>
-            ))}
+          <div className="ve-carousel-panel__interval-row" style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+            <label htmlFor="ve-carousel-interval-seconds">Segundos entre fotografías</label>
+            <input
+              id="ve-carousel-interval-seconds"
+              type="number"
+              min={2}
+              max={20}
+              step={1}
+              inputMode="numeric"
+              value={intervalDraft}
+              onChange={event => {
+                const value = event.target.value;
+                setIntervalDraft(value);
+                const number = Number(value);
+                if (value.trim() !== '' && Number.isInteger(number) && number >= 2 && number <= 20) {
+                  onEdit('carouselInterval', number);
+                }
+              }}
+              onBlur={() => commitInterval(intervalDraft)}
+              onKeyDown={event => { if (event.key === 'Enter') event.currentTarget.blur(); }}
+              aria-describedby="ve-carousel-interval-hint"
+              style={{ width: 78, minHeight: 38, borderRadius: 8, border: '1px solid var(--border, #a7a7a7)', background: 'var(--background, white)', color: 'inherit', padding: '6px 10px' }}
+            />
+            <span aria-hidden="true">s</span>
           </div>
+          <p id="ve-carousel-interval-hint" className="ve-carousel-panel__subhint">Entre 2 y 20 segundos. Ejemplo: 3, 7 o 12. Para una foto fija utiliza «Estático».</p>
         </fieldset>
       )}
 
@@ -154,30 +175,34 @@ export function HeroCarouselInspector({ hero, imageCount, onEdit }: Props) {
         </label>
       )}
 
-      <section className="ve-carousel-panel__spacing" aria-label="Espaciado de la portada">
-        <div className="ve-carousel-panel__spacing-heading">
-          <div>
-            <strong>Espaciado de portada</strong>
-            <p>Separa el título, la descripción y el botón.</p>
-          </div>
-          <output htmlFor="ve-carousel-gap">{gap} px</output>
-        </div>
-        <input
-          id="ve-carousel-gap"
-          type="range"
-          min={0}
-          max={72}
-          step={4}
-          value={gap}
-          onChange={event => onEdit('gap', Number(event.target.value))}
-          aria-label="Separación de elementos de portada"
-        />
-        <div className="ve-carousel-panel__range-labels"><span>Compacto</span><span>Amplio</span></div>
-      </section>
 
       <p className="ve-carousel-panel__footer">
-        El carrusel se configura una vez para las cuatro plantillas. Solo el espaciado de portada es particular de cada diseño. Las fotografías se administran desde Página principal → Portada.
+        El modo, intervalo, transición e indicadores se comparten entre las cuatro plantillas. Las fotografías se administran desde Página principal → Portada.
       </p>
     </section>
+  );
+}
+
+// OPENMIND_PORTADA_UI_UNIFICADA_V1: control unico de espaciado dentro de Portada.
+export function HeroSpacingControl({ value, onChange }: { value: number; onChange: (value: number) => void }) {
+  const gap = Math.min(72, Math.max(0, Math.round(value ?? 24)));
+  return (
+    <div className="ve-carousel-panel__spacing" aria-label="Espaciado de portada">
+      <div className="ve-carousel-panel__spacing-heading">
+        <div><p>Separa el título, la descripción y el botón.</p></div>
+        <output htmlFor="ve-hero-gap">{gap} px</output>
+      </div>
+      <input
+        id="ve-hero-gap"
+        type="range"
+        min={0}
+        max={72}
+        step={4}
+        value={gap}
+        onChange={event => onChange(Number(event.target.value))}
+        aria-label="Separación de elementos de portada"
+      />
+      <div className="ve-carousel-panel__range-labels"><span>Compacto</span><span>Amplio</span></div>
+    </div>
   );
 }

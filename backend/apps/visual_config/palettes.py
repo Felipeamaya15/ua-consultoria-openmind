@@ -116,16 +116,89 @@ class AppearanceAPIView(APIView):
         templates = request.data.get('plantillas')
         if not isinstance(templates, dict) or set(templates) - set(TEMPLATES) or len(json.dumps(templates)) > 200000:
             raise serializers.ValidationError('Envía ajustes de las cuatro plantillas compatibles.')
-        def validate_tree(value, depth=0):
+        # OPENMIND_SAFE_ONLINE_EFFECTS_V1: compatibilidad con Magic CSS y presets previos.
+        # No habilita CSS o JavaScript arbitrarios en ninguna propiedad.
+        effect_fields = frozenset((
+            'carouselTransition',
+            'hoverFeaturedMotion', 'hoverFeaturedLight',
+            'hoverCatalogMotion', 'hoverCatalogLight',
+            'hoverCategoryMotion', 'hoverCategoryLight',
+        ))
+        magic_id = re.compile(r'magic:[a-zA-Z][a-zA-Z0-9]{1,47}\Z')
+
+        def valid_legacy_presets(serialized):
+            # Compatibilidad con un dato existente de una versión anterior del editor.
+            # Solo se aceptan recetas declarativas en el formato que ya generaba OpenMind.
+            if len(serialized) > 24000:
+                return False
+            try:
+                presets = json.loads(serialized)
+            except (ValueError, TypeError):
+                return False
+            if not isinstance(presets, list) or len(presets) > 16:
+                return False
+            for preset in presets:
+                if not isinstance(preset, dict) or set(preset) != {'id', 'name', 'kind', 'settings'}:
+                    return False
+                if not isinstance(preset['id'], str) or not re.fullmatch(r'[0-9a-fA-F-]{36}', preset['id']):
+                    return False
+                name = preset['name']
+                if not isinstance(name, str) or not (3 <= len(name) <= 60) or any(ord(ch) < 32 or ch in '<>' for ch in name):
+                    return False
+                settings = preset['settings']
+                if not isinstance(settings, dict):
+                    return False
+                if preset['kind'] == 'product':
+                    if set(settings) != {'motion', 'light'} or any(
+                        not isinstance(v, str) or not (
+                            re.fullmatch(r'[a-zA-Z][a-zA-Z0-9]*', v) or magic_id.fullmatch(v)
+                        ) for v in settings.values()
+                    ):
+                        return False
+                elif preset['kind'] == 'carousel':
+                    if set(settings) != {'mode', 'interval', 'transition', 'indicators'}:
+                        return False
+                    transition = settings['transition']
+                    if settings['mode'] not in ('static', 'manual', 'automatic') or type(settings['interval']) is not int or settings['interval'] not in (5, 10, 20) or type(settings['indicators']) is not bool or not isinstance(transition, str) or not (re.fullmatch(r'[a-zA-Z][a-zA-Z0-9]*', transition) or magic_id.fullmatch(transition)):
+                        return False
+                else:
+                    return False
+            return True
+
+        def validate_tree(value, depth=0, field=None, path=()):
             if depth > 12:
                 return False
             if isinstance(value, dict):
-                return len(value) <= 100 and all(isinstance(key, str) and re.fullmatch(r'[a-zA-Z][a-zA-Z0-9]*', key) and key not in ('constructor', 'prototype') and validate_tree(child, depth+1) for key, child in value.items())
+                return len(value) <= 100 and all(
+                    isinstance(key, str)
+                    and re.fullmatch(r'[a-zA-Z][a-zA-Z0-9]*', key)
+                    and key not in ('constructor', 'prototype')
+                    and validate_tree(child, depth+1, key, (*path, key))
+                    for key, child in value.items()
+                )
             if isinstance(value, bool):
                 return True
             if isinstance(value, (int, float)):
                 return 0 <= value <= 10000
-            return isinstance(value, str) and bool(re.fullmatch(r'#[0-9a-fA-F]{3,8}|[a-zA-Z][a-zA-Z0-9]*', value)) and len(value) <= 60
+            if not isinstance(value, str):
+                return False
+            # OPENMIND_PROMO_TEXT_PERSISTENCE_FIX_V1
+            # Texto de la etiqueta: el frontend permite hasta 100 caracteres,
+            # incluidos espacios, tildes y signos. Es texto plano, NO CSS.
+            # Solo se acepta en la propiedad de etiqueta del hero.
+            if path in (
+                ('hero', 'promoText'),
+                ('responsive', 'tablet', 'hero', 'promoText'),
+                ('responsive', 'mobile', 'hero', 'promoText'),
+            ):
+                return len(value) <= 100 and all(
+                    char.isprintable() and char not in '<>' for char in value
+                )
+            if field in effect_fields and magic_id.fullmatch(value):
+                return True
+            if field == 'importedEffectPresets':
+                return valid_legacy_presets(value)
+            return len(value) <= 60 and bool(re.fullmatch(r'#[0-9a-fA-F]{3,8}|[a-zA-Z][a-zA-Z0-9]*', value))
         with transaction.atomic():
             Tienda.objects.select_for_update().get(pk=store.pk)
             config, _ = ConfiguracionVisual.objects.get_or_create(tienda=store)

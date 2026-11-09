@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'; // OPENMIND_EDITORIAL_PROMO_V1
 import { HomeSections } from '../../landing/components/HomeSections';
 import { VISUAL_SECTION } from '../visual/sectionIds';
 import { useLandingContent } from '../../landing/hooks/useLandingContent';
@@ -8,13 +9,24 @@ import { LandingStatus } from '../../landing/components/LandingStatus';
 import { Link } from 'react-router-dom';
 import { useStore } from '../context/StoreContext';
 import { ProductCard } from '../components/store/ProductCard';
-import { Badge, Icon } from '../components/ui';
+import { Icon } from '../components/ui';
 import { HeroCarousel } from '../components/HeroCarousel';
 
 export default function EditorialHome() {
   const { featured, categories, content } = useLandingContent();
   const isSectionVisible = useLandingSectionVisibility();
-  const { landing, landingProducts } = useStore();
+  const { landing, landingProducts, visualConfig } = useStore();
+  const [promoPreview, setPromoPreview] = useState<{text:string;visible:boolean}|null>(null);
+  useEffect(() => {
+    const listener = (event: Event) => {
+      const detail = (event as CustomEvent<{text:string;visible:boolean}>).detail;
+      if (detail && typeof detail.text === 'string' && typeof detail.visible === 'boolean') setPromoPreview(detail);
+    };
+    window.addEventListener('openmind:editor-promo-preview', listener);
+    return () => window.removeEventListener('openmind:editor-promo-preview', listener);
+  }, []);
+  const promoText = promoPreview?.text ?? visualConfig.hero.promoText;
+  const promoVisible = promoPreview?.visible ?? visualConfig.hero.promoVisible;
   const { route } = useStorefrontTemplate();
 
   return (
@@ -35,7 +47,20 @@ export default function EditorialHome() {
         >
           <div data-visual-part="heroContent" className="w-full min-w-0 max-w-xl animate-fade-in">
             <LandingStatus />
-            <Badge variant="accent" className="mb-3 sm:mb-4">Temporada 2025</Badge>
+            {/* OPENMIND_EDITORIAL_PROMO_V1: solo etiqueta, no cambia portada ni carrusel. */}
+            {promoVisible && promoText.trim() && (
+              <div data-promotional-badge className="flex" style={{ justifyContent: 'var(--visual-hero-promo-align)' }}>
+                <span className="inline-block max-w-full break-words px-3 py-1 font-semibold leading-snug" style={{
+                  backgroundColor: 'var(--visual-hero-promo-background)',
+                  color: 'var(--visual-hero-promo-color)',
+                  fontSize: 'var(--visual-hero-promo-font-size)',
+                  borderRadius: 'var(--visual-hero-promo-radius)',
+                  borderWidth: 'var(--visual-hero-promo-border-width)',
+                  borderColor: 'var(--visual-hero-promo-border-color)',
+                  borderStyle: 'solid',
+                }}>{promoText}</span>
+              </div>
+            )}
             <h1 className="font-display text-3xl sm:text-5xl md:text-7xl text-white leading-tight mb-3 sm:mb-4 break-words">
               {landing?.titulo}
             </h1>
