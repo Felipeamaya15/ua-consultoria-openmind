@@ -17,6 +17,12 @@ def validar_password_segura(password: str) -> None:
     if len(password) < 8:
         raise ValueError("La contraseña debe tener al menos 8 caracteres.")
 
+    if len(password) > 128:
+        raise ValueError("La contraseña no puede superar los 128 caracteres.")
+
+    if "\x00" in password:
+        raise ValueError("La contraseña contiene caracteres no permitidos.")
+
     if not re.search(r"[A-Z]", password):
         raise ValueError("La contraseña debe contener al menos una letra mayúscula.")
 

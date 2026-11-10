@@ -4,6 +4,8 @@ import { checkoutPreviewStep } from '../visual/pages';
 import { ErrorState, LoadingState } from '../../../shared/components/states';
 import { useEffect, useMemo, useState, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { useGoogleLogin } from '@react-oauth/google';
+import { authService } from '../../auth/services/authService';
 
 import { orderService } from '../services/orderService';
 import { validatePromotion, type ValidatedPromotion } from '../services/promotionService';
@@ -56,7 +58,7 @@ const REGIONES = [
   label: region,
 }));
 
-type AuthMode = 'guest' | 'login' | 'google';
+type AuthMode = 'guest' | 'google';
 
 type ShippingOption = {
   id: string;
@@ -91,15 +93,11 @@ function getAvailableAuthModes(settings: AuthSettings): AuthMode[] {
     modes.push('guest');
   }
 
-  if (settings.emailPassword) {
-    modes.push('login');
-  }
-
   if (settings.google) {
     modes.push('google');
   }
 
-  return modes.length ? modes : ['login'];
+  return modes.length ? modes : ['guest'];
 }
 
 const defaultShippingOptions: ShippingOption[] = [
@@ -351,7 +349,6 @@ export default function Checkout() {
   );
 
   const navigate = useNavigate();
-
   const [step, setStep] = useState(() => {
     try { return checkoutPreviewStep(window.location.search, window.parent !== window, window.parent.location.pathname); }
     catch { return 'contact'; }
@@ -665,6 +662,80 @@ export default function Checkout() {
       [key]: value,
     }));
 
+  const [googleLoading, setGoogleLoading] = useState(false);
+
+  const loginConGoogle = useGoogleLogin({
+    prompt: 'select_account',
+    onSuccess: async (tokenResponse) => {
+      setGoogleLoading(true);
+      setErrors((current) => ({ ...current, auth: '', email: '', name: '' }));
+      try {
+        const data = await authService.googleLogin(tokenResponse.access_token);
+        if (data?.data?.token) {
+          authService.setSession(data.data.token);
+        }
+        const user = data?.data?.user;
+        const fullName = [user?.first_name, user?.last_name].filter(Boolean).join(' ') || user?.username || '';
+        const userEmail = user?.email || '';
+
+        setContact((current) => ({
+          ...current,
+          name: fullName || current.name,
+          email: userEmail || current.email,
+        }));
+      } catch {
+        try {
+          const res = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+            headers: { Authorization: `Bearer ${tokenResponse.access_token}` },
+          });
+          if (res.ok) {
+            const info = await res.json();
+            const fullName = info.name || [info.given_name, info.family_name].filter(Boolean).join(' ') || '';
+            setContact((current) => ({
+              ...current,
+              name: fullName || current.name,
+              email: info.email || current.email,
+            }));
+                return;
+          }
+        } catch {
+          // Silenciar
+        }
+        setErrors((current) => ({
+          ...current,
+          auth: 'No se pudo vincular la cuenta de Google. Ingresa tus datos como invitado o reintenta.',
+        }));
+      } finally {
+        setGoogleLoading(false);
+      }
+    },
+    onError: () => {
+      setErrors((current) => ({
+        ...current,
+        auth: 'La autenticación con Google fue cancelada o falló.',
+      }));
+    },
+  });
+
+  useEffect(() => {
+    let active = true;
+    if (authService.hasSession()) {
+      authService.getMe().then((data) => {
+        if (!active || !data?.data) return;
+        const user = data.data;
+        const fullName = [user.first_name, user.last_name].filter(Boolean).join(' ') || user.username || '';
+        if (user.email) {
+          setContact((current) => ({
+            name: current.name || fullName,
+            email: current.email || user.email,
+            phone: current.phone,
+          }));
+        }
+      }).catch(() => {});
+    }
+    return () => { active = false; };
+  }, []);
+
   /*
    * ==========================================================
    * VALIDACIONES
@@ -677,6 +748,10 @@ export default function Checkout() {
       if (!availableAuthModes.includes(authMode)) {
         newErrors.auth =
           'Selecciona un metodo de acceso permitido por la tienda.';
+      }
+
+      if (authMode === 'google' && !contact.email) {
+        newErrors.auth = 'Inicia sesión con tu cuenta de Google para continuar.';
       }
 
       if (!contact.name.trim()) {
@@ -1116,21 +1191,11 @@ export default function Checkout() {
                     `}
                   >
                     <Icon
-                      name={
-                        mode === 'guest'
-                          ? 'user'
-                          : mode === 'login'
-                            ? 'key'
-                            : 'globe'
-                      }
+                      name={mode === 'guest' ? 'user' : 'globe'}
                       className="w-3.5 h-3.5"
                     />
 
-                    {mode === 'guest'
-                      ? 'Invitado'
-                      : mode === 'login'
-                        ? 'Ingresar'
-                        : 'Google'}
+                    {mode === 'guest' ? 'Invitado' : 'Google'}
                   </button>
                 ))}
               </div>
@@ -1146,106 +1211,124 @@ export default function Checkout() {
               )}
 
               {authMode === 'google' && (
-                <button data-page-action="outline"
-                  type="button"
-                  onClick={() => {
-                    setContact({
-                      name: 'Cliente Demo',
-                      email:
-                        'demo@example.com',
-                      phone: '',
-                    });
-
-                    setErrors({});
-                  }}
-                  className={
-                    isMinimal
-                      ? 'flex items-center justify-center gap-3 border border-[var(--border)] rounded-full py-3 text-sm font-medium hover:bg-[var(--muted)] transition-colors'
-                      : 'flex items-center justify-center gap-3 border border-[var(--border)] rounded-xl py-3 text-sm font-medium hover:bg-[var(--muted)] transition-colors'
-                  }
-                >
-                  <svg
-                    className="w-5 h-5"
-                    viewBox="0 0 24 24"
+                <div className="flex flex-col gap-3">
+                  <button data-page-action="outline"
+                    type="button"
+                    disabled={googleLoading}
+                    onClick={() => loginConGoogle()}
+                    className={
+                      isMinimal
+                        ? 'flex items-center justify-center gap-3 border border-[var(--border)] rounded-full py-3 px-4 text-sm font-medium hover:bg-[var(--muted)] transition-colors cursor-pointer'
+                        : 'flex items-center justify-center gap-3 border border-[var(--border)] rounded-xl py-3 px-4 text-sm font-medium hover:bg-[var(--muted)] transition-colors cursor-pointer'
+                    }
                   >
-                    <path
-                      fill="#4285F4"
-                      d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                    />
-                    <path
-                      fill="#34A853"
-                      d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                    />
-                    <path
-                      fill="#FBBC05"
-                      d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
-                    />
-                    <path
-                      fill="#EA4335"
-                      d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-                    />
-                  </svg>
+                    <svg
+                      className="w-5 h-5"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        fill="#4285F4"
+                        d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                      />
+                      <path
+                        fill="#34A853"
+                        d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                      />
+                      <path
+                        fill="#FBBC05"
+                        d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+                      />
+                      <path
+                        fill="#EA4335"
+                        d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+                      />
+                    </svg>
 
-                  {contact.email ===
-                  'demo@example.com'
-                    ? 'Cuenta demo seleccionada ✓'
-                    : 'Continuar con Google'}
-                </button>
-              )}
+                    {googleLoading
+                      ? 'Conectando con Google...'
+                      : contact.email
+                        ? `Conectado como ${contact.email} ✓`
+                        : 'Continuar con Google'}
+                  </button>
 
-              {authMode !== 'google' && (
-                <div className="flex flex-col gap-4">
-                  <Input
-                    label="Nombre completo"
-                    value={contact.name}
-                    onChange={(event) =>
-                      setContact(
-                        (current) => ({
-                          ...current,
-                          name: event.target.value,
-                        }),
-                      )
-                    }
-                    error={errors.name}
-                    placeholder="María González"
-                    required
-                  />
-
-                  <Input
-                    label="Correo electrónico"
-                    type="email"
-                    value={contact.email}
-                    onChange={(event) =>
-                      setContact(
-                        (current) => ({
-                          ...current,
-                          email:
-                            event.target.value,
-                        }),
-                      )
-                    }
-                    error={errors.email}
-                    placeholder="correo@ejemplo.com"
-                    required
-                  />
-
-                  <Input
-                    label="Teléfono (opcional)"
-                    type="tel"
-                    value={contact.phone}
-                    onChange={(event) =>
-                      setContact(
-                        (current) => ({
-                          ...current,
-                          phone:
-                            event.target.value,
-                        }),
-                      )
-                    }
-                    placeholder="+56 9 1234 5678"
-                  />
+                  {contact.email && (
+                    <div className="flex items-center justify-between text-xs text-[var(--muted-foreground)] px-1">
+                      <span>Cuenta Google verificada</span>
+                      <button
+                        type="button"
+                        onClick={() => loginConGoogle({ prompt: 'select_account' })}
+                        className="text-[var(--primary)] hover:underline font-medium cursor-pointer"
+                      >
+                        Cambiar cuenta
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
+
+              <div className="flex flex-col gap-4">
+                <Input
+                  label="Nombre completo"
+                  value={contact.name}
+                  readOnly={authMode === 'google'}
+                  disabled={authMode === 'google'}
+                  onChange={
+                    authMode === 'google'
+                      ? undefined
+                      : (event) =>
+                          setContact(
+                            (current) => ({
+                              ...current,
+                              name: event.target.value,
+                            }),
+                          )
+                  }
+                  error={errors.name}
+                  placeholder="María González"
+                  required
+                  className={authMode === 'google' ? 'bg-slate-100/80 text-slate-800 cursor-not-allowed select-none' : ''}
+                />
+
+                <Input
+                  label="Correo electrónico"
+                  type="email"
+                  value={contact.email}
+                  readOnly={authMode === 'google'}
+                  disabled={authMode === 'google'}
+                  onChange={
+                    authMode === 'google'
+                      ? undefined
+                      : (event) =>
+                          setContact(
+                            (current) => ({
+                              ...current,
+                              email:
+                                event.target.value,
+                            }),
+                          )
+                  }
+                  error={errors.email}
+                  placeholder="correo@ejemplo.com"
+                  required
+                  className={authMode === 'google' ? 'bg-slate-100/80 text-slate-800 cursor-not-allowed select-none' : ''}
+                />
+
+                <Input
+                  label="Teléfono (opcional)"
+                  type="tel"
+                  value={contact.phone}
+                  onChange={(event) =>
+                    setContact(
+                      (current) => ({
+                        ...current,
+                        phone:
+                          event.target.value,
+                      }),
+                    )
+                  }
+                  placeholder="+56 9 1234 5678"
+                />
+              </div>
             </div>
           )}
 

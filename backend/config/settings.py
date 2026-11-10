@@ -69,6 +69,7 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'apps.authentication.infrastructure.cookie_auth.SessionInactivityMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
@@ -108,9 +109,11 @@ DATABASES = {
 }
 
 
-# RNF-03: preferir Argon2 para contraseñas nuevas y conservar verificación de hashes históricos PBKDF2.
+# RNF-03: preferir Argon2id (con salt aleatorio único por usuario) para contraseñas nuevas
+# y conservar verificación de hashes BCrypt y PBKDF2 históricos.
 PASSWORD_HASHERS = [
     'django.contrib.auth.hashers.Argon2PasswordHasher',
+    'django.contrib.auth.hashers.BCryptSHA256PasswordHasher',
     'django.contrib.auth.hashers.PBKDF2PasswordHasher',
     'django.contrib.auth.hashers.PBKDF2SHA1PasswordHasher',
 ]
@@ -119,9 +122,6 @@ PASSWORD_HASHERS = [
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
 
 AUTH_PASSWORD_VALIDATORS = [
-    {
-        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
-    },
     {
         'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
     },
@@ -155,15 +155,32 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 _cors_default = 'http://localhost:5173,http://127.0.0.1:5173' if DEBUG else ''
 CORS_ALLOWED_ORIGINS = [origin.strip() for origin in os.getenv('DJANGO_CORS_ALLOWED_ORIGINS', _cors_default).split(',') if origin.strip()]
+CORS_ALLOW_CREDENTIALS = True
+from corsheaders.defaults import default_headers
+CORS_ALLOW_HEADERS = list(default_headers) + [
+    'x-require-captcha',
+]
 CSRF_TRUSTED_ORIGINS = [origin.strip() for origin in os.getenv('DJANGO_CSRF_TRUSTED_ORIGINS', '').split(',') if origin.strip()]
+
+# Configuración obligatoria de cookies seguras y sesión con expiración de 30 minutos (1800s) de inactividad
+SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SECURE = not DEBUG
+SESSION_COOKIE_SAMESITE = os.getenv('DJANGO_SESSION_COOKIE_SAMESITE', 'Lax')
+SESSION_COOKIE_AGE = int(os.getenv('DJANGO_SESSION_COOKIE_AGE', '1800'))  # 30 minutos de inactividad
+SESSION_SAVE_EVERY_REQUEST = True
+SESSION_EXPIRE_AT_BROWSER_CLOSE = True
+
+CSRF_COOKIE_HTTPONLY = True
 CSRF_COOKIE_SECURE = not DEBUG
+CSRF_COOKIE_SAMESITE = os.getenv('DJANGO_CSRF_COOKIE_SAMESITE', 'Lax')
+
 SECURE_SSL_REDIRECT = os.getenv('DJANGO_SECURE_SSL_REDIRECT', '0') == '1'
 SECURE_HSTS_SECONDS = int(os.getenv('DJANGO_SECURE_HSTS_SECONDS', '0'))
 
 # Django REST Framework
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
+        'apps.authentication.infrastructure.cookie_auth.ActiveSessionTokenAuthentication',
         'rest_framework.authentication.TokenAuthentication',
         'rest_framework.authentication.SessionAuthentication',
     ],
@@ -214,7 +231,7 @@ EMAIL_TIMEOUT = 10  # Timeout en segundos para no colgar el worker si hay microc
 # Este backend está preparado para operar detrás de un proxy inverso o balanceador
 # con terminación SSL/TLS (Nginx, Traefik, AWS ALB, Cloudflare, etc.).
 #
-# REQUERIMIENTOS DE INFRAESTRUCTURA AL DESPLEGAR EN PRODUCCIÓN:
+# REQUERIMIENTOS DE INFRASTRUCTURE AL DESPLEGAR EN PRODUCCIÓN:
 # 1. Configurar la terminación HTTPS en el servidor/proxy con TLS 1.2 o superior.
 # 2. Asegurarse de que el proxy envíe la cabecera: X-Forwarded-Proto: https
 # 3. Establecer la variable de entorno DEBUG=False en el contenedor backend.

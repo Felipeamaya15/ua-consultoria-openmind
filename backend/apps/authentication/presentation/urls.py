@@ -1,12 +1,27 @@
-from .profile import ProfileAPIView, PasswordAPIView, EntrepreneurProfileAPIView, EntrepreneurPasswordAPIView
 from django.urls import path
+from .profile import (
+    EntrepreneurPasswordAPIView,
+    EntrepreneurProfileAPIView,
+    PasswordAPIView,
+    ProfileAPIView,
+)
 from .views import (
-    RegisterAPIView,
-    LoginAPIView,
-    MeAPIView,
-    GoogleLoginAPIView,
+    CaptchaAPIView,
     ConfiguracionAutenticacionAPIView,
     ConfiguracionPagosAPIView,
+    GoogleLoginAPIView,
+    LoginAPIView,
+    LogoutAPIView,
+    MeAPIView,
+    MFADisableAPIView,
+    MFAEnableAPIView,
+    MFASendEmailCodeAPIView,
+    MFASetupAPIView,
+    MFAStatusAPIView,
+    MFAVerifyAPIView,
+    PasswordResetConfirmAPIView,
+    PasswordResetRequestAPIView,
+    RegisterAPIView,
 )
 
 urlpatterns = [
@@ -14,10 +29,20 @@ urlpatterns = [
     path('emprendedor/perfil/password/', EntrepreneurPasswordAPIView.as_view(), name='api_entrepreneur_password'),
     path('perfil/', ProfileAPIView.as_view(), name='api_profile'),
     path('perfil/password/', PasswordAPIView.as_view(), name='api_profile_password'),
+    path('captcha/', CaptchaAPIView.as_view(), name='api_captcha'),
     path('register/', RegisterAPIView.as_view(), name='api_register'),
     path('login/', LoginAPIView.as_view(), name='api_login'),
+    path('logout/', LogoutAPIView.as_view(), name='api_logout'),
     path('google/', GoogleLoginAPIView.as_view(), name='api_google_login'),
     path('me/', MeAPIView.as_view(), name='api_me'),
+    path('password-reset/request/', PasswordResetRequestAPIView.as_view(), name='api_password_reset_request'),
+    path('password-reset/confirm/', PasswordResetConfirmAPIView.as_view(), name='api_password_reset_confirm'),
+    path('mfa/status/', MFAStatusAPIView.as_view(), name='api_mfa_status'),
+    path('mfa/setup/', MFASetupAPIView.as_view(), name='api_mfa_setup'),
+    path('mfa/enable/', MFAEnableAPIView.as_view(), name='api_mfa_enable'),
+    path('mfa/disable/', MFADisableAPIView.as_view(), name='api_mfa_disable'),
+    path('mfa/send-email-code/', MFASendEmailCodeAPIView.as_view(), name='api_mfa_send_email_code'),
+    path('mfa/verify/', MFAVerifyAPIView.as_view(), name='api_mfa_verify'),
     path(
         'configuracion/',
         ConfiguracionAutenticacionAPIView.as_view(),
