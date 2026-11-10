@@ -144,9 +144,8 @@ export default function Activities() {
 
   return (
     <section aria-label="Servicios y talleres" className="space-y-4">
-      <div className="flex flex-wrap justify-between gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="text-lg font-bold">Servicios y talleres</h2>
           <p>Gestiona consultas e inscripciones gratuitas de esta tienda.</p>
         </div>
         <Link className="lp-button" to="/emprendedor/landing#secciones-tienda">
@@ -178,7 +177,7 @@ export default function Activities() {
         />
       )}
 
-      <div className="activity-management-filters">
+      <div className="activity-management-filters rounded-xl border border-[var(--border)] bg-white p-4">
         <Select
           label="Estado de gestión"
           value={state}
@@ -240,7 +239,7 @@ export default function Activities() {
             <div className="activity-management-list">
               {data.resultados.map(record => (
                 <AdminCard key={record.id}>
-                  <article>
+                  <article className="space-y-3 break-words">
                     <div className="flex flex-wrap justify-between gap-3">
                       <div>
                         <h3 className="font-semibold">{record.titulo_actividad}</h3>
@@ -249,12 +248,12 @@ export default function Activities() {
                           {record.nombre} {record.apellido}
                         </p>
                       </div>
-                      <span>{formatBusinessDate(record.creado)}</span>
+                      <span className="text-xs text-[var(--muted-foreground)]">{formatBusinessDate(record.creado)}</span>
                     </div>
 
                     <p>Correo: {record.email}</p>
                     {record.telefono && <p>Teléfono: {record.telefono}</p>}
-                    {record.mensaje && <p>{record.mensaje}</p>}
+                    {record.mensaje && <p className="rounded-lg bg-[var(--muted)] p-3 whitespace-pre-wrap">{record.mensaje}</p>}
 
                     <div className="activity-management-filters">
                       <Select

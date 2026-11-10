@@ -167,7 +167,7 @@ export default function ThemeEditor() {
   const latest = useRef({ effective, draft, selectedSection, imageMode }); latest.current = { effective, draft, selectedSection, imageMode };
   const draftDirty = isEditorDirty(draft, baseline);
   const cachedDirty = Object.entries(templateDrafts.current).some(([id, item]) => id !== template && item && isEditorDirty(item.history.present, item.baseline));
-  const dirty = draftDirty || cachedDirty || template !== config.template;
+  const dirty = draftDirty || cachedDirty;
   const discarding = useRef(false);
   const blocker = useBlocker(({ currentLocation, nextLocation }) => {
     const nextTemplate = new URLSearchParams(nextLocation.search).get('plantilla');
@@ -308,7 +308,8 @@ export default function ThemeEditor() {
       await saveAppearance(appearances);
       let nextConfig=config;
       for(const item of pending)nextConfig=publishEditorDocument(nextConfig,item.id,item.document);
-      if(!setConfig({...nextConfig,template}))throw new Error('La apariencia se guardó en el servidor, pero no pudimos guardar la copia local. Conservamos el borrador para reintentar.');
+      // Guardar apariencia no activa una plantilla: esa acción se confirma en Diseño.
+      if(!setConfig({...nextConfig,template:config.template}))throw new Error('La apariencia se guardó en el servidor, pero no pudimos guardar la copia local. Conservamos el borrador para reintentar.');
       if (remote.current) {
         remote.current.appearance = { ...remote.current.appearance, ...appearances };
       }

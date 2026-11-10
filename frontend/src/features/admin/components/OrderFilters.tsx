@@ -19,6 +19,7 @@ export function OrderFilters({ params, onChange, onClear, exportBusy, exportDisa
   const [start, setStart] = useState(formatBusinessDate(from) || from);
   const [end, setEnd] = useState(formatBusinessDate(to) || to);
   const [error, setError] = useState('');
+  const [advancedOpen, setAdvancedOpen] = useState(selected === 'custom' || !!method || !!payment || !!delivery);
 
   function apply(preset?: OrderDatePreset) {
     const range = preset ? orderDateRange(preset) : { from: chileanDateInput(start), to: chileanDateInput(end) };
@@ -44,18 +45,21 @@ export function OrderFilters({ params, onChange, onClear, exportBusy, exportDisa
     <fieldset className="mt-5 min-w-0"><legend className="mb-2 text-xs font-semibold text-[var(--muted-foreground)]">Período del pedido</legend>
       <div className="orders-date-presets">
         {ORDER_DATE_PRESETS.map(preset => <button type="button" key={preset.id} aria-pressed={!custom && selected === preset.id} onClick={() => { setCustom(false); apply(preset.id); }}>{preset.label}</button>)}
-        <button type="button" aria-pressed={custom} onClick={() => { setCustom(true); setError(''); }}>Personalizado</button>
+        <button type="button" aria-pressed={custom} onClick={() => { setCustom(true); setAdvancedOpen(true); setError(''); }}>Personalizado</button>
       </div>
+    </fieldset>
+    <details className="mt-4 rounded-lg border border-[var(--border)] p-3" open={advancedOpen} onToggle={event => setAdvancedOpen(event.currentTarget.open)}>
+      <summary className="cursor-pointer font-semibold text-sm focus-visible:outline focus-visible:outline-2">Filtros avanzados{method || payment || delivery || custom ? " · Con selección" : ""}</summary>
       {custom && <div className="mt-4 grid gap-3 sm:grid-cols-2">
         <Input id="orders-from" label="Desde (DD/MM/AAAA)" inputMode="numeric" placeholder="DD/MM/AAAA" value={start} onChange={event => setStart(event.target.value)} />
         <Input id="orders-to" label="Hasta (DD/MM/AAAA)" inputMode="numeric" placeholder="DD/MM/AAAA" value={end} onChange={event => setEnd(event.target.value)} />
       </div>}
-    </fieldset>
     <div className="orders-advanced-filters">
       <Input id="orders-method" label="Método de pago" placeholder="Ej.: Transferencia" maxLength={50} value={method} onChange={event => setMethod(event.target.value)} />
       <Select label="Estado de pago" value={payment} onChange={event => setPayment(event.target.value)} options={[{ value: '', label: 'Todos los pagos' }, { value: 'confirmado', label: 'Confirmado' }, { value: 'pendiente', label: 'Pendiente' }, { value: 'cancelado', label: 'Cancelado' }]} />
       <Select label="Método de entrega" value={delivery} onChange={event => setDelivery(event.target.value)} options={[{ value: '', label: 'Todas las entregas' }, { value: 'retiro', label: 'Retiro en tienda' }, { value: 'envio', label: 'Envío' }]} />
     </div>
+    </details>
     {error && <p role="alert" className="mt-3 text-sm text-red-700">{error}</p>}
     <div className="admin-list-panel-footer">
       <div className="flex flex-wrap items-center gap-2"><Button type="submit" className="min-h-11">Aplicar filtros</Button><Button type="button" variant="ghost" className="min-h-11" onClick={clear}>Limpiar filtros</Button></div>

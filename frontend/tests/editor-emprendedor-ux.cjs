@@ -53,12 +53,14 @@ test('saving shows progress, errors keep the draft, retry clears dirty, and undo
   const saving=button(tree,'Guardar cambios').props.onClick();tree=h.render();assert(tree.some(n=>n.props?.children==='Guardando…'));assert.equal(button(tree,'Guardando…').props.disabled,true);await saving;h.flush();tree=h.render();assert(tree.some(n=>n.props?.children==='✓ Guardado'));
   tree.find(n=>n.type?.name==='VisualInspector').props.onEdit('hero.titleSize',72);tree=h.render();h.fail();await button(tree,'Guardar cambios').props.onClick();h.flush();tree=h.render();assert(tree.some(n=>n.props?.children==='No se pudo guardar'));assert.equal(button(tree,'Guardar cambios').props.disabled,false);button(tree,'Descartar cambios').props.onClick();tree=h.render();assert.equal(tree.find(n=>n.type?.name==='VisualInspector').props.effective.hero.titleSize,84);
 });
-test('template choice can be saved alone and a discarded choice returns to the saved template',async () =>{
-  const h=editorHarness();let tree=h.render();button(tree,'Plantillas').props.onClick();tree=h.render();assert.equal(tree.find(n=>n.props?.id==='ve-properties').props.hidden,false);
-  tree.find(n=>n.type?.name==='TemplateGallery').props.onSelect('minimal');tree=h.render();assert.equal(button(tree,'Guardar cambios').props.disabled,false);assert(tree.find(n=>n.type==='iframe').props.src.startsWith('/plantilla/2'));
-  await button(tree,'Guardar cambios').props.onClick();h.flush();tree=h.render();assert.equal(h.config().template,'minimal');assert.equal(button(tree,'Guardar cambios').props.disabled,true);
-  tree.find(n=>n.type?.name==='TemplateGallery').props.onSelect('catalog');tree=h.render();button(tree,'Descartar cambios').props.onClick();tree=h.render();assert(tree.find(n=>n.type==='iframe').props.src.startsWith('/plantilla/2'));assert.equal(button(tree,'Guardar cambios').props.disabled,true);
+test('saving an alternate template preserves the active template and discard restores the draft',async () =>{
+  const h=editorHarness();let tree=h.render();button(tree,'Plantillas').props.onClick();tree=h.render();
+  tree.find(n=>n.type?.name==='TemplateGallery').props.onSelect('minimal');tree=h.render();assert.equal(button(tree,'Guardar cambios').props.disabled,true);assert(tree.find(n=>n.type==='iframe').props.src.startsWith('/plantilla/2'));
+  button(tree,'Diseño y apariencia').props.onClick();tree=h.render();tree.find(n=>n.type?.name==='VisualInspector').props.onEdit('hero.titleSize',84);tree=h.render();assert.equal(button(tree,'Guardar cambios').props.disabled,false);
+  await button(tree,'Guardar cambios').props.onClick();h.flush();tree=h.render();assert.equal(h.config().template,'editorial');assert.equal(button(tree,'Guardar cambios').props.disabled,true);assert.equal(h.config().themeEditor.minimal.visualConfig.hero.titleSize,84);
+  tree.find(n=>n.type?.name==='VisualInspector').props.onEdit('hero.titleSize',72);tree=h.render();button(tree,'Descartar cambios').props.onClick();tree=h.render();assert.equal(button(tree,'Guardar cambios').props.disabled,true);assert.equal(h.config().themeEditor.minimal.visualConfig.hero.titleSize,84);
 });
+
 test('four visual templates expose their personality and a real selection action',async () =>{
   const React=require('react'),{renderToStaticMarkup}=require('react-dom/server');const {TemplateGallery}=load('src/features/admin/visualEditor/templates.tsx');
   const html=renderToStaticMarkup(React.createElement(TemplateGallery,{selected:'editorial',onSelect(){}}));for(const name of ['Studio Pop','Soft Discovery','Velta Editorial','Obsidian Showcase'])assert(html.includes(name));assert.equal((html.match(/aria-pressed="true"/g)||[]).length,1);assert(html.includes('Probar esta plantilla'));

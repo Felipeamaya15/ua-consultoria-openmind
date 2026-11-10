@@ -28,7 +28,7 @@ export const menuItems = [
   { path: '/emprendedor/pagos', label: 'Pagos', icon: 'card' },
   { path: '/emprendedor/entregas', label: 'Entregas', icon: 'truck' },
   { path: '/emprendedor/autenticacion', label: 'Acceso de clientes', icon: 'shield' },
-  { path: '/emprendedor/contactos', label: 'Contactos', icon: 'mail' },
+  { path: '/emprendedor/contactos', label: 'Contactos', icon: 'user' },
   { path: '/emprendedor/correos', label: 'Correos', icon: 'mail' },
   { path: '/emprendedor/seo', label: 'Buscadores y visitas', icon: 'search' },
 ];

@@ -5,7 +5,7 @@ import { Link, useLocation, useNavigate, useParams } from "react-router-dom"
 import { emptyKind } from "../services/emptyStates"
 import { formatPrice, Product, ProductVariant } from "../data/mockAdminData"
 import { createPublicProduct, deleteCatalogProduct, fetchAdminProducts, fetchAdminProduct, updateCatalogProduct, type AdminProduct } from "../services/productService"
-import { Alert, Badge, Button, Icon, Input, Tabs, Textarea, Toggle } from "../components/ui"
+import { Alert, Badge, Button, Icon, Input, Select, Tabs, Textarea, Toggle } from "../components/ui"
 
 function OfertaInfo({ precio, anterior }: { precio: number; anterior?: number }) {
   if (anterior === undefined || anterior === null || !precio) return null
@@ -26,6 +26,8 @@ const variantAttributes = (variant: ProductVariant) =>
 export function ProductList() {
   const [search, setSearch] = useState("")
   const [products, setProducts] = useState<AdminProduct[]>([])
+  const [statusFilter, setStatusFilter] = useState("all")
+  const [sort, setSort] = useState("active")
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
   const deactivatingRef = useRef(false)
@@ -52,8 +54,14 @@ export function ProductList() {
       .finally(() => { if (active) setLoading(false) })
     return () => { active = false }
   }, [])
-  const filtered = products.filter((product) => `${product.name} ${product.category} ${product.tags.join(" ")}`.toLowerCase().includes(search.toLowerCase()))
-  const vacio = emptyKind({ loading, error, shown: filtered.length, searching: search.trim() !== "" })
+  const filtered = products.filter(product =>
+    (statusFilter === "all" || product.status === statusFilter) &&
+    `${product.name} ${product.category} ${product.tags.join(" ")}`.toLowerCase().includes(search.toLowerCase())
+  ).sort((a, b) => {
+    const statusOrder = sort === "active" ? Number(b.status === "active") - Number(a.status === "active") : 0
+    return statusOrder || (Date.parse(b.createdAt) || 0) - (Date.parse(a.createdAt) || 0)
+  })
+  const vacio = emptyKind({ loading, error, shown: filtered.length, searching: search.trim() !== "" || statusFilter !== "all" })
 
   const handleDeleteProduct = async (productId: string) => {
     if (deactivatingRef.current || products.find(product => product.id === productId)?.status === 'archived') return;
@@ -102,9 +110,10 @@ export function ProductList() {
     </section>
     <section className="admin-list-panel" aria-label="Buscar productos">
       <div className="admin-list-panel-heading"><div><h3>Tu catálogo, en orden</h3><p>Encuentra un producto y administra sus precios y disponibilidad.</p></div><Icon name="box" className="h-5 w-5 text-[var(--muted-foreground)]" /></div>
-      <div className="catalog-search-row">
+      <div className="grid items-end gap-3 md:grid-cols-[minmax(0,1fr)_auto_auto]">
         <Input id="catalog-search" label="Buscar productos" icon={<Icon name="search" />} value={search} onChange={event => setSearch(event.target.value)} placeholder="Nombre, categoría o etiqueta" />
-        {search && <Button type="button" variant="ghost" className="min-h-11" onClick={() => setSearch('')}>Limpiar búsqueda</Button>}
+        <Select label="Estado" value={statusFilter} onChange={event => setStatusFilter(event.target.value)} options={[{ value: 'all', label: 'Todos' }, { value: 'active', label: 'Activos' }, { value: 'archived', label: 'Archivados' }]} />
+        <Select label="Orden" value={sort} onChange={event => setSort(event.target.value)} options={[{ value: 'active', label: 'Activos primero · más recientes' }, { value: 'recent', label: 'Más recientes' }]} />
       </div>
     </section>
     {loading && <LoadingState align="start" spacing="compact">Cargando productos reales…</LoadingState>}
@@ -135,7 +144,7 @@ export function ProductList() {
         </article>
       })}</div>
       {vacio === 'empty' && <EmptyListState spacing="none" className="py-12" title="Aún no tienes productos" action={<Link to="/emprendedor/productos/nuevo"><Button variant="primary">Crear tu primer producto</Button></Link>}>Agrega tu primer producto para empezar a vender.</EmptyListState>}
-      {vacio === 'no-results' && <EmptyListState spacing="none" className="py-12" action={<Button variant="outline" onClick={() => setSearch('')}>Limpiar búsqueda</Button>}>No encontramos productos con esa búsqueda.</EmptyListState>}
+      {vacio === 'no-results' && <EmptyListState spacing="none" className="py-12" action={<Button variant="outline" onClick={() => { setSearch(''); setStatusFilter('all') }}>Limpiar filtros</Button>}>No encontramos productos con esos filtros.</EmptyListState>}
     </section>
   </div>
 }

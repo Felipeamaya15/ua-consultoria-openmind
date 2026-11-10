@@ -76,6 +76,8 @@ export default function Design() {
   } = useAdmin()
 
 const [saved,setSaved]=useState(false);
+  const [editorTarget, setEditorTarget] = useState<TemplateId | null>(null);
+  const [activationTarget, setActivationTarget] = useState<TemplateId | null>(null);
   const activeTemplate=previewTemplate??config.template;
   const paletteSource=usePaletteLibrary();
   const [paletteNotice,setPaletteNotice]=useState('');
@@ -83,7 +85,7 @@ const [saved,setSaved]=useState(false);
   const [paletteBusy,setPaletteBusy]=useState(false);
   const paletteSelection=paletteDrafts[activeTemplate];
   const colors=paletteSelection?.colores??resolveStoreVisualConfig(config,activeTemplate,paletteSource.appearance?.[activeTemplate]?{visualConfig:paletteOverrides(paletteSource.appearance[activeTemplate],paletteSource.library)}:undefined).global.colors;
-  const dirty=Object.keys(paletteDrafts).length>0||!!(previewTemplate&&previewTemplate!==config.template);
+  const dirty=Object.keys(paletteDrafts).length>0;
   const blocker=useBlocker(dirty);
   useEffect(()=>{
     if(!dirty)return;
@@ -91,7 +93,7 @@ const [saved,setSaved]=useState(false);
     window.addEventListener('beforeunload',leave);return()=>window.removeEventListener('beforeunload',leave);
   },[dirty]);
   function discard(){setPaletteDrafts({});setPreviewTemplate(null);setPaletteNotice('');setSaved(false);}
-  async function handleSave():Promise<boolean>{
+  async function handleSave(template: TemplateId = config.template):Promise<boolean>{
     if(paletteBusy)return false;
     setPaletteBusy(true);setSaved(false);setPaletteNotice('');
     try{
@@ -105,18 +107,14 @@ const [saved,setSaved]=useState(false);
         nextConfig.themeEditor[id]=patchThemeCustomization(theme,{visualConfig,paletteName:palette.nombre});
       }
       if(Object.keys(appearances).length)await saveAppearance(appearances);
-      if(!setConfig({...nextConfig,template:previewTemplate??config.template}))throw new Error('No pudimos guardar la copia local. Los cambios de paleta enviados al servidor se conservan; vuelve a intentar.');
+      if(!setConfig({...nextConfig,template}))throw new Error('No pudimos guardar la copia local. Los cambios de paleta enviados al servidor se conservan; vuelve a intentar.');
       setPaletteDrafts({});setPreviewTemplate(null);setSaved(true);return true;
     }catch(error){setPaletteNotice(error instanceof Error?error.message:'No se pudieron guardar los cambios.');return false;}
     finally{setPaletteBusy(false);}
   }
 
   const handleOpenEditor = () => {
-    if (!previewTemplate) return
-
-    openAdminWindow(
-      `/emprendedor/diseno/editor?plantilla=${previewTemplate}`,
-    )
+    if (previewTemplate) setEditorTarget(previewTemplate)
   }
 
   return (
@@ -188,7 +186,7 @@ const [saved,setSaved]=useState(false);
 
           <label className="w-full sm:w-80">
             <span className="text-xs font-medium text-[var(--muted-foreground)]">
-              Plantilla activa
+              Plantilla para previsualizar
             </span>
 
             <select
@@ -295,7 +293,8 @@ const [saved,setSaved]=useState(false);
                     </button>
                   </div>
 
-                  <div className="flex gap-2 mt-4">
+                  <div className="flex flex-wrap gap-2 mt-4">
+                    <Button type="button" size="sm" className="min-h-11" onClick={() => setEditorTarget(tpl.id)}>Editar plantilla</Button>
                     <button
                       type="button"
                       onClick={() =>
@@ -303,7 +302,7 @@ const [saved,setSaved]=useState(false);
                           isPreviewing ? null : tpl.id,
                         )
                       }
-                      className="flex-1 h-8 text-xs font-medium border border-[var(--border)] rounded-lg hover:bg-[var(--muted)] transition-colors"
+                      className="flex-1 min-h-11 px-2 text-xs font-medium border border-[var(--border)] rounded-lg hover:bg-[var(--muted)] transition-colors"
                     >
                       {isPreviewing
                         ? "Cancelar preview"
@@ -313,12 +312,12 @@ const [saved,setSaved]=useState(false);
                     <button
                       type="button"
                       onClick={() => {
-                        setPreviewTemplate(tpl.id)
+                        setActivationTarget(tpl.id)
                       }}
-                      className="flex-1 h-8 text-xs font-semibold bg-[var(--primary)] text-white rounded-lg hover:bg-[#0f2a56] transition-colors disabled:opacity-50"
-                      disabled={isActive && !isPreviewing}
+                      className="flex-1 min-h-11 px-2 text-xs font-semibold border border-[var(--primary)] text-[var(--primary)] rounded-lg hover:bg-[var(--muted)] transition-colors disabled:opacity-50"
+                      disabled={isActive || paletteBusy}
                     >
-                      {isActive ? "Activa" : "Usar esta"}
+                      {isActive ? "Activa" : "Activar plantilla"}
                     </button>
                   </div>
                 </div>
@@ -343,7 +342,7 @@ const [saved,setSaved]=useState(false);
             </p>
 
             <p className="text-xs text-[var(--muted-foreground)] mt-0.5">
-              Tu tienda actual no ha cambiado. Confirma para aplicar.
+              Tu tienda actual no ha cambiado. Para activarla, usa «Activar plantilla» en su tarjeta.
             </p>
           </div>
 
@@ -381,7 +380,16 @@ const [saved,setSaved]=useState(false);
           </div>
         </div>
       )}
-      <Modal open={blocker.state==='blocked'} onClose={()=>{if(!paletteBusy)blocker.reset?.();}} title="Tienes cambios sin guardar" size="sm"><p>Guarda la elección de plantilla y paleta antes de continuar.</p><div className="flex flex-wrap justify-end gap-2 mt-4"><Button type="button" variant="outline" disabled={paletteBusy} onClick={()=>blocker.reset?.()}>Cancelar</Button><Button type="button" variant="outline" disabled={paletteBusy} onClick={()=>blocker.proceed?.()}>Continuar sin guardar</Button><Button type="button" disabled={paletteBusy} onClick={()=>void handleSave().then(ok=>{if(ok)blocker.proceed?.();})}>Guardar y continuar</Button></div></Modal>
+      <Modal open={!!editorTarget} onClose={() => setEditorTarget(null)} title="¿Quieres abrir el editor de esta plantilla?" size="sm">
+        <p>Podrás editar su diseño sin cambiar la plantilla activa de tu tienda.</p>
+        {dirty && <p className="mt-2 text-sm">Hay cambios de paleta sin guardar en esta página. Guárdalos antes si quieres usarlos en el editor.</p>}
+        <div className="mt-4 flex flex-wrap justify-end gap-2"><Button variant="outline" onClick={() => setEditorTarget(null)}>Cancelar</Button><Button onClick={() => { if (editorTarget) openAdminWindow(`/emprendedor/diseno/editor?plantilla=${editorTarget}`); setEditorTarget(null) }}>Ir al editor</Button></div>
+      </Modal>
+      <Modal open={!!activationTarget} onClose={() => { if (!paletteBusy) setActivationTarget(null) }} title="Activar plantilla" size="sm">
+        <p>¿Quieres activar {TEMPLATES.find(t => t.id === activationTarget)?.name} en tu tienda? Se conservarán el contenido y las personalizaciones. También se guardarán las paletas pendientes.</p>
+        <div className="mt-4 flex flex-wrap justify-end gap-2"><Button variant="outline" disabled={paletteBusy} onClick={() => setActivationTarget(null)}>Cancelar</Button><Button disabled={paletteBusy} onClick={() => { if (activationTarget) void handleSave(activationTarget).then(ok => { if (ok) setActivationTarget(null) }) }}>{paletteBusy ? 'Guardando…' : 'Activar plantilla'}</Button></div>
+      </Modal>
+      <Modal open={blocker.state==='blocked'} onClose={()=>{if(!paletteBusy)blocker.reset?.();}} title="Tienes cambios sin guardar" size="sm"><p>Guarda los cambios de paleta antes de continuar.</p><div className="flex flex-wrap justify-end gap-2 mt-4"><Button type="button" variant="outline" disabled={paletteBusy} onClick={()=>blocker.reset?.()}>Cancelar</Button><Button type="button" variant="outline" disabled={paletteBusy} onClick={()=>blocker.proceed?.()}>Continuar sin guardar</Button><Button type="button" disabled={paletteBusy} onClick={()=>void handleSave().then(ok=>{if(ok)blocker.proceed?.();})}>Guardar y continuar</Button></div></Modal>
     </div>
   )
 }
