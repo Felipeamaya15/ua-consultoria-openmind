@@ -1,13 +1,16 @@
+import { SocialProfiles } from '../../marketing/components/SocialProfiles';
+import { authService } from '../../auth/services/authService';
+import { safeMapsLink } from '../../landing/types/mapLocation';
 import { useAdminHelp } from '../context/AdminHelpContext';
 import { ErrorState, LoadingState } from '../../../shared/components/states';
-import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
 import { useBlocker, useLocation } from 'react-router-dom';
 import { LandingBlocksEditor } from './LandingBlocksEditor';
 import { LandingContentEditor } from './LandingContentEditor';
 import { BusinessInformationFields } from './BusinessInformation';
 import { parseWeeklyHours, validHour } from './WeeklyHoursEditor';
 import { homeSectionOrder, reconcileHomeOrder, type SystemSectionId } from '../../landing/types/homeSections';
-import { normalizeLandingContent } from '../../landing/types/landingContent';
+import { normalizeContactFields, normalizeLandingContent } from '../../landing/types/landingContent';
 import { fetchPublicProducts } from '../../storefront/services/catalogService';
 import { fetchStoreInformation, saveStoreInformation } from '../../storefront/services/storeInformationService';
 import type { Product } from '../../storefront/data/mockData';
@@ -51,6 +54,9 @@ export default function LandingPageContent() {
   const [past,setPast] = useState<Draft[]>([]);
   const [future,setFuture] = useState<Draft[]>([]);
   const [hoursPending,setHoursPending] = useState(false);
+  const [socialPending, setSocialPending] = useState(false);
+  const socialSession = useRef(authService.getToken());
+  const isSocialCurrent = useCallback(() => socialSession.current === authService.getToken(), []);
   const [hoursRevision,setHoursRevision] = useState(0);
   const [loading,setLoading] = useState(true);
   const [businessLoading,setBusinessLoading] = useState(true);
@@ -71,7 +77,7 @@ export default function LandingPageContent() {
   const editRevision = useRef(0);
   const businessDirty = JSON.stringify(form.negocio) !== JSON.stringify(baseline.negocio);
   const contentDirty = JSON.stringify(contentOf(form)) !== JSON.stringify(contentOf(baseline));
-  const dirty = businessDirty || contentDirty || hoursPending;
+  const dirty = businessDirty || contentDirty || hoursPending || socialPending;
   const dirtyRef = useRef(dirty);
   dirtyRef.current = dirty;
   const blocker = useBlocker(dirty);
@@ -129,11 +135,16 @@ export default function LandingPageContent() {
   function change(next:Draft) {if(saving)return;editRevision.current++;setPast(items => [...items,form].slice(-40));setFuture([]);setForm(next);setSavedAt('');setError('');}
   function undo() {if(!past.length)return;editRevision.current++;setHoursRevision(n=>n+1);setFuture([form,...future]);setForm(past[past.length-1]);setPast(past.slice(0,-1));setSavedAt('');setError('');}
   function redo() {if(!future.length)return;editRevision.current++;setHoursRevision(n=>n+1);setPast([...past,form]);setForm(future[0]);setFuture(future.slice(1));setSavedAt('');setError('');}
-  function discard() {editRevision.current++;setForm(baseline);setPast([]);setFuture([]);setHoursPending(false);setHoursRevision(n=>n+1);setSavedAt('');setError('');}
+  function discard() {if(socialPending){setActive('contact');setError('Guarda o descarta cada red social en su tarjeta antes de descartar la página.');return;}editRevision.current++;setForm(baseline);setPast([]);setFuture([]);setHoursPending(false);setHoursRevision(n=>n+1);setSavedAt('');setError('');}
   async function save(event:FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if(savingRef.current || saving || loadFailed || !dirty)return;
+    if(socialPending){setActive('contact');setError('Guarda o descarta los cambios de cada red social en su tarjeta antes de guardar la página.');return;}
+    const contactResult = normalizeContactFields(normalizeLandingContent(form.contenido).contacto, normalizeLandingContent(baseline.contenido).contacto);
+    if (contactResult.error) { setActive('contact'); setError(contactResult.error); return; }
     if(hoursPending){setActive('contact');setError('Agrega o guarda el día que estás editando antes de guardar la página.');return;}
+    const mapsLink = form.contenido?.ubicacion?.enlace_maps || '';
+    if (mapsLink.trim() && mapsLink !== baseline.contenido?.ubicacion?.enlace_maps && !safeMapsLink(mapsLink)) { setActive('contact'); setError('Usa un enlace HTTPS válido de Google Maps. Tu borrador se conserva.'); return; }
     const rows=parseWeeklyHours(form.contenido?.contacto?.horario || '');
     if(contentDirty && form.secciones['Horarios de atención'] !== false && rows?.some(row=>!validHour(row.open)||!validHour(row.close))){setActive('contact');setError('Completa la apertura y el cierre de los días configurados.');return;}
     const invalid=Array.from(event.currentTarget.querySelectorAll<HTMLInputElement>('input:invalid,select:invalid,textarea:invalid')).find(field => field.closest('[data-landing-panel]')?.getAttribute('data-landing-panel') === 'business' ? businessDirty : contentDirty);
@@ -143,7 +154,7 @@ export default function LandingPageContent() {
     let next=form, businessSaved=false;
     try {
       if(businessDirty){const result=await saveStoreInformation(form.negocio);const negocio={nombre:result.nombre,descripcion:result.descripcion || '',correo_negocio:result.correo_negocio||''};next={...next,negocio};setBaseline(current=>({...current,negocio}));setForm(current=>({...current,negocio}));businessSaved=true;}
-      if(contentDirty){const result=await saveLandingConfig(contentOf(form));next={...loadedContent(result),negocio:next.negocio};}
+      if(contentDirty){const result=await saveLandingConfig({...contentOf(form),contenido:{...normalizeLandingContent(form.contenido),contacto:contactResult.contact}});next={...loadedContent(result),negocio:next.negocio};}
       setForm(next);setBaseline(next);setPast([]);setFuture([]);setSavedAt(new Date().toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit'}));
       setConfirmation(businessDirty && !contentDirty ? 'Información de tu tienda guardada correctamente.' : 'Cambios de la página principal guardados correctamente.');
     } catch (err) {
@@ -201,6 +212,9 @@ export default function LandingPageContent() {
       </fieldset>
       <footer className="lp-actionbar" aria-label="Acciones de Página principal"><div className="lp-save-status" role="status" aria-live="polite"><span className={dirty?'lp-status-dot is-dirty':'lp-status-dot'} /><div>{savedAt&&!dirty?<Alert variant="success">{confirmation}<small>Guardado a las {savedAt}</small></Alert>:<>{saving?'Guardando…':dirty?'Cambios sin guardar':'Sin cambios pendientes'}</>}</div></div><div className="lp-history-actions"><button type="button" className="lp-icon-button" disabled={!past.length||saving||loadFailed} onClick={undo} title="Deshacer" aria-label="Deshacer">↶ <span>Deshacer</span></button><button type="button" className="lp-icon-button" disabled={!future.length||saving||loadFailed} onClick={redo} title="Rehacer" aria-label="Rehacer">↷ <span>Rehacer</span></button><button type="button" className="lp-button" disabled={!dirty||saving||loadFailed} onClick={discard}>Descartar cambios</button></div><button type="submit" className="lp-button lp-button-primary" disabled={!dirty||saving||loadFailed}>{saving?'Guardando…':'Guardar cambios'}</button></footer>
     </form>
+    <section hidden={active !== 'contact'} aria-label="Redes sociales en Contacto y horarios" className="mt-6">
+      <SocialProfiles active={active === 'contact'} isCurrent={isSocialCurrent} onDirty={setSocialPending} />
+    </section>
     <Modal open={blocker.state==='blocked'} onClose={()=>blocker.reset?.()} title="Cambios sin guardar" size="sm"><p>Tienes cambios pendientes en Página principal. Guarda antes de salir para conservarlos.</p><div className="lp-dialog-actions"><button type="button" className="lp-button" onClick={()=>blocker.reset?.()}>Seguir editando</button><button type="button" className="lp-button lp-button-danger" onClick={()=>blocker.proceed?.()}>Descartar y salir</button></div></Modal>
   </div>;
 }

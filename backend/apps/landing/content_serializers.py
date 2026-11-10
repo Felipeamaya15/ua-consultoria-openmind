@@ -15,7 +15,7 @@ class WebURLField(serializers.URLField):
 class BeneficioSerializer(serializers.Serializer):
     titulo = serializers.CharField(max_length=100)
     descripcion = serializers.CharField(max_length=250, allow_blank=True, required=False)
-    icono = serializers.ChoiceField(choices=['truck', 'lock', 'return', 'chat'], required=False)
+    icono = serializers.ChoiceField(choices=['truck', 'lock', 'return', 'chat', 'store', 'leaf', 'gift', 'checkCircle', 'hand', 'book', 'heart', 'clock'], required=False)
 
 
 class ContactoSerializer(serializers.Serializer):

@@ -1,7 +1,7 @@
 export interface BeneficioLanding {
   titulo: string;
   descripcion: string;
-  icono: 'truck' | 'lock' | 'return' | 'chat';
+  icono: import('./benefitIcons').BenefitIcon;
 }
 export interface ContactoLanding {
   telefono: string; whatsapp: string; correo: string; instagram: string;

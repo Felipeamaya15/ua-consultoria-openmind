@@ -164,6 +164,19 @@ export default function Activities() {
         onChange={tipo => filter({ tipo, estado: '', archivada: '' })}
       />
 
+      {kind === 'inscripcion' && <aside aria-label="Cómo gestionar inscripciones gratuitas" className="rounded-xl border border-[var(--border)] bg-white p-4 space-y-3 text-sm">
+        <h3 className="font-semibold">Participantes de talleres gratuitos</h3>
+        <p>Una inscripción registra la participación en un taller gratuito. La confirmación puede ser manual o automática, según la configuración del taller; recibir el formulario no garantiza que esté confirmada.</p>
+        <details><summary className="cursor-pointer font-semibold">¿Qué significa cada estado?</summary>
+          <dl className="mt-3 grid gap-3 sm:grid-cols-3">
+            <div><dt className="font-semibold">Pendiente de confirmación</dt><dd>La solicitud fue recibida y espera revisión de la tienda.</dd></div>
+            <div><dt className="font-semibold">Confirmada (gratuita)</dt><dd>La participación está confirmada de forma manual o automática. No acredita un pago.</dd></div>
+            <div><dt className="font-semibold">Cancelada</dt><dd>No ocupa cupo. Para reactivarla, el sistema vuelve a comprobar disponibilidad y vigencia del taller.</dd></div>
+          </dl>
+        </details>
+        <p>Si el taller tiene un límite, las pendientes y confirmadas ocupan cupo. Usa el filtro de estado o «Ver participantes de este taller» para consultar su lista. Cambiar un estado aquí no envía un correo.</p>
+      </aside>}
+
       {kind === 'consulta' && (
         <Tabs
           label="Bandeja de consultas"
@@ -189,7 +202,8 @@ export default function Activities() {
           onChange={event => filter({ estado: event.target.value })}
         />
         <Input
-          label="Identificador de sección (opcional)"
+          label="Actividad (identificador opcional)"
+          hint="Puedes filtrar desde una tarjeta sin copiar el identificador." persistentHint
           value={section}
           maxLength={36}
           disabled={!!busy}
@@ -233,7 +247,7 @@ export default function Activities() {
             <EmptyListState>
               {kind === 'consulta' && archived
                 ? 'No hay consultas archivadas con estos filtros.'
-                : 'No hay solicitudes con estos filtros.'}
+                : kind === 'inscripcion' ? state || section ? 'No hay participantes con estos filtros. Prueba con todos los estados o quita el filtro de actividad.' : 'Aún no hay inscripciones gratuitas. Comprueba que tu taller esté publicado, admita inscripciones y tenga fecha y cupos disponibles.' : 'No hay solicitudes con estos filtros.'}
             </EmptyListState>
           ) : (
             <div className="activity-management-list">
@@ -285,7 +299,7 @@ export default function Activities() {
                         disabled={!!busy}
                         onClick={() => filter({ seccion: record.seccion_id })}
                       >
-                        Ver solicitudes de esta actividad
+                        {record.tipo === 'inscripcion' ? 'Ver participantes de este taller' : 'Ver solicitudes de esta actividad'}
                       </Button>
                     </div>
                   </article>

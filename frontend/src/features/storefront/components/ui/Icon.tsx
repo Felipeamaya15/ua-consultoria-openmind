@@ -3,6 +3,11 @@ import React from 'react';
 // Shared line-icon set (stroke, currentColor) used across buyer, selector and
 // backoffice views so the whole product shares one visual language.
 const PATHS: Record<string, React.ReactNode> = {
+  leaf: <><path d="M20 3C9 2 3 8 5 15s15 7 15-12Z" /><path d="m3 21 12-12M8 16v-5M8 16h5" /></>,
+  gift: <><rect x="3" y="8" width="18" height="4" rx="1" /><path d="M5 12v9h14v-9M12 8v13" /><path d="M12 8C5 9 5 2 8 3c3 0 4 5 4 5s1-5 4-5c3-1 3 6-4 5Z" /></>,
+  hand: <><path d="m8 13-2-3c-1-2-4-1-3 1l4 8c1 2 3 3 6 3 4 0 7-3 7-7V9c0-2-3-2-3 0v3M8 13V5c0-2 3-2 3 0v6M11 10V3c0-2 3-2 3 0v8M14 10V5c0-2 3-2 3 0v7" /></>,
+  book: <><path d="M12 5C8 2 4 3 2 4v15c3-1 7-1 10 1 3-2 7-2 10-1V4c-2-1-6-2-10 1ZM12 5v15" /></>,
+  heart: <><path d="M20 5c-3-3-6-1-8 1-2-2-5-4-8-1-4 5 2 10 8 15 6-5 12-10 8-15Z" /></>,
   phone: <><path d="M7 3H4a1 1 0 0 0-1 1c0 9.4 7.6 17 17 17a1 1 0 0 0 1-1v-3l-5-2-2 2a14 14 0 0 1-7-7l2-2-2-5Z" /></>,
   mail: <><rect x="3" y="5" width="18" height="14" rx="2" /><path d="m3 6 9 7 9-7" /></>,
   instagram: <><rect x="3" y="3" width="18" height="18" rx="5" /><circle cx="12" cy="12" r="4" /><path d="M17.5 6.5h.01" /></>,
