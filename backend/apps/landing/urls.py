@@ -1,3 +1,4 @@
+from apps.landing.activity_replies import ActivityRepliesView, SendActivityReplyView
 from django.urls import path
 from apps.landing.views import ConfiguracionLandingAPIView, AparienciaBloquesAPIView, RedesSocialesAPIView
 from apps.landing.media_views import MediaLibraryView, MediaResourceView, MediaImageView
@@ -6,6 +7,8 @@ from apps.landing.activity_views import ActivitySubmissionView, ActivityEnrollme
 from apps.landing.carrusel_views import (ImagenesCarruselLandingAPIView, ImagenCarruselLandingDetalleAPIView, OrdenImagenesCarruselLandingAPIView)
 
 urlpatterns = [
+    path('solicitudes-actividades/<uuid:pk>/respuestas/', ActivityRepliesView.as_view(), name='respuestas-actividad'),
+    path('solicitudes-actividades/<uuid:pk>/respuestas/<uuid:reply_id>/enviar/', SendActivityReplyView.as_view(), name='enviar-respuesta-actividad'),
     path('actividades/<uuid:pk>/consultas/', ActivitySubmissionView.as_view(), name='consulta-actividad'),
     path('actividades/<uuid:pk>/inscripciones/', ActivityEnrollmentView.as_view(), name='inscripcion-actividad'),
     path('solicitudes-actividades/', ActivityRequestsView.as_view(), name='solicitudes-actividades'),

@@ -1,3 +1,4 @@
+from apps.landing.campaigns import CampaignAudienceView, CampaignsView
 
 from apps.core.presentation.customer_orders import CustomerOrdersAPIView
 from apps.core.presentation.pago_pedido_pendiente import PagarPedidoPendienteView
@@ -52,6 +53,9 @@ from apps.core.presentation.views import (
 )
 
 urlpatterns = [
+    path('tienda/campanas/destinatarios/', CampaignAudienceView.as_view(), name='campanas-destinatarios'),
+    path('tienda/campanas/', CampaignsView.as_view(), name='campanas'),
+    path('tienda/campanas/<uuid:pk>/', CampaignsView.as_view(), name='campana-detalle'),
     path('tienda/imagenes/procesar/', ProcessImageAPIView.as_view(), name='store-process-image'),
     path('consentimiento/solicitar/', ConsentRequestView.as_view(), name='consent-request'),
     path('consentimiento/enlace/', ConsentActionView.as_view(), name='consent-link'),

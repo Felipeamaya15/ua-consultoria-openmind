@@ -239,3 +239,6 @@ BCCH_USUARIO = (os.getenv('BCCH_USUARIO') or '').strip()
 BCCH_CLAVE = (os.getenv('BCCH_CLAVE') or '').strip()
 STOREFRONT_PUBLIC_URL = (os.getenv('STOREFRONT_PUBLIC_URL') or 'http://localhost:5173/plantilla/1').rstrip('/')
 TUU_CALLBACK_BASE_URL = (os.getenv('TUU_CALLBACK_BASE_URL') or '').rstrip('/')
+
+# Solo habilita respuestas capturadas por Mailpit; no autoriza SMTP real.
+ACTIVITY_REPLIES_MAILPIT_ENABLED = os.getenv("ACTIVITY_REPLIES_MAILPIT_ENABLED", "0") == "1"

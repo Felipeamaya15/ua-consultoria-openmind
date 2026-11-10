@@ -1,3 +1,4 @@
+import { ActivityConversation } from '../components/ActivityConversation';
 import { useEffect, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { AdminCard, Button, Input, Select, Tabs } from '../components/ui';
@@ -31,6 +32,7 @@ export default function Activities() {
   const [notice, setNotice] = useState('');
   const [attempt, setAttempt] = useState(0);
   const [busy, setBusy] = useState('');
+  const [conversationId, setConversationId] = useState<string | null>(null);
 
   const changing = useRef(false);
   const revision = useRef(0);
@@ -270,13 +272,14 @@ export default function Activities() {
                     {record.mensaje && <p className="rounded-lg bg-[var(--muted)] p-3 whitespace-pre-wrap">{record.mensaje}</p>}
 
                     <div className="activity-management-filters">
+                      {record.tipo === 'consulta' && <Button variant="primary" disabled={!!busy} onClick={() => setConversationId(record.id)}>Abrir consulta y responder</Button>}
                       <Select
                         label={`Estado de ${record.nombre} (${record.id.slice(0, 8)})`}
                         value={record.estado}
                         disabled={!!busy}
                         options={Object.entries(
                           record.tipo === 'consulta' ? CONSULT_STATES : ENROLL_STATES
-                        ).map(([value, label]) => ({ value, label }))}
+                        ).filter(([value]) => record.tipo !== 'consulta' || value !== 'respondida' || record.estado === 'respondida').map(([value, label]) => ({ value, label }))}
                         onChange={event => void changeState(
                           record.id,
                           event.target.value as ActivityRequestState
@@ -335,6 +338,7 @@ export default function Activities() {
           </nav>
         </>
       )}
+      {conversationId && <ActivityConversation key={conversationId} id={conversationId} onClose={() => setConversationId(null)} onUpdated={() => setAttempt(n => n + 1)} />}
     </section>
   );
 }
