@@ -62,9 +62,36 @@ interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   iconRight?: ReactNode;
 }
 
-export function Input({ label, error, hint, icon, iconRight, className = '', id, ...props }: InputProps) {
+export function Input({ label, error, hint, icon, iconRight, className = '', id, type, ...props }: InputProps) {
   const generatedId = useId();
+  const [showPassword, setShowPassword] = useState(false);
   const inputId = id ?? generatedId;
+  const isPasswordField = type === 'password' && !props.readOnly;
+  const effectiveType = isPasswordField ? (showPassword ? 'text' : 'password') : type;
+  const passwordToggle = isPasswordField ? (
+    <button
+      type="button"
+      data-password-toggle="true"
+      onClick={() => setShowPassword(prev => !prev)}
+      aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+      title={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+      className="flex items-center justify-center text-[var(--muted-foreground)] hover:text-[var(--foreground)] focus:outline-none p-1 rounded transition-colors cursor-pointer"
+    >
+      {showPassword ? (
+        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94" />
+          <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19" />
+          <line x1="1" y1="1" x2="23" y2="23" />
+        </svg>
+      ) : (
+        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+          <circle cx="12" cy="12" r="3" />
+        </svg>
+      )}
+    </button>
+  ) : null;
+  const effectiveIconRight = iconRight ?? passwordToggle;
   return (
     <div data-visual-section={VISUAL_SECTION.pageField} className="flex flex-col gap-1">
       {label && <label htmlFor={inputId} className="text-sm font-medium text-[var(--foreground)]">{label}</label>}
@@ -72,16 +99,17 @@ export function Input({ label, error, hint, icon, iconRight, className = '', id,
         {icon && <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted-foreground)]">{icon}</span>}
         <input
           id={inputId}
+          type={effectiveType}
           className={`w-full h-9 text-sm border rounded-lg px-3 bg-white text-[var(--foreground)] placeholder-[var(--muted-foreground)] transition-colors
             focus:outline-none focus:ring-2 focus:ring-[var(--ring)] focus:border-[var(--primary)]
             disabled:bg-[var(--muted)] disabled:text-[var(--muted-foreground)] disabled:cursor-not-allowed
             ${error ? 'border-[var(--error)]' : 'border-[var(--border)]'}
-            ${icon ? 'pl-9' : ''} ${iconRight ? 'pr-9' : ''} ${className}`}
+            ${icon ? 'pl-9' : ''} ${effectiveIconRight ? 'pr-9' : ''} ${className}`}
           aria-invalid={!!error}
           aria-describedby={error ? `${inputId}-error` : hint ? `${inputId}-hint` : undefined}
           {...props}
         />
-        {iconRight && <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--muted-foreground)]">{iconRight}</span>}
+        {effectiveIconRight && <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--muted-foreground)] flex items-center">{effectiveIconRight}</span>}
       </div>
       {error && <p id={`${inputId}-error`} className="text-xs text-[var(--error)]" role="alert">{error}</p>}
       {hint && !error && <p id={`${inputId}-hint`} className="text-xs text-[var(--muted-foreground)]">{hint}</p>}

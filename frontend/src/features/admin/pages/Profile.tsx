@@ -6,7 +6,7 @@ import {
 import { LoadingState } from '../../../shared/components/states';
 import { useNavigate } from 'react-router-dom';
 
-import { authService } from '../../auth/services/authService';
+import { authService, type MfaSetupData } from '../../auth/services/authService';
 import { useAdmin } from '../context/AdminContext';
 import { templatePaths } from '../config/navigation';
 import { Alert, Button, Input } from '../components/ui';
@@ -22,6 +22,10 @@ export default function EntrepreneurProfile() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [mfaEnabled, setMfaEnabled] = useState(false);
+  const [mfaSetup, setMfaSetup] = useState<MfaSetupData | null>(null);
+  const [mfaCode, setMfaCode] = useState('');
+  const [mfaDisablePassword, setMfaDisablePassword] = useState('');
 
   useEffect(() => {
     let active = true;
@@ -31,6 +35,14 @@ export default function EntrepreneurProfile() {
       .getEntrepreneurProfile()
       .then((data) => {
         if (active) setEmail(data.email);
+        if (active && typeof authService.getMfaStatus === 'function') {
+          authService
+            .getMfaStatus()
+            .then((st) => {
+              if (active) setMfaEnabled(!!st?.mfa_enabled);
+            })
+            .catch(() => {});
+        }
       })
       .catch((err) => {
         if (active) {
@@ -75,6 +87,65 @@ export default function EntrepreneurProfile() {
     }
   }
 
+  async function handleStartMfaSetup() {
+    if (busy || typeof authService.setupMfa !== 'function') return;
+    setBusy(true);
+    setError('');
+    setSuccess('');
+    try {
+      const setup = await authService.setupMfa();
+      setMfaSetup(setup);
+      setMfaCode('');
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : 'No se pudo iniciar la configuracion MFA.',
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleConfirmMfa(event: FormEvent) {
+    event.preventDefault();
+    if (busy || typeof authService.enableMfa !== 'function') return;
+    setBusy(true);
+    setError('');
+    setSuccess('');
+    try {
+      await authService.enableMfa(mfaCode.trim());
+      setMfaEnabled(true);
+      setMfaSetup(null);
+      setMfaCode('');
+      setSuccess('Autenticacion Multifactor (MFA) activada.');
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : 'Codigo TOTP invalido.',
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleDisableMfa(event: FormEvent) {
+    event.preventDefault();
+    if (busy || typeof authService.disableMfa !== 'function') return;
+    setBusy(true);
+    setError('');
+    setSuccess('');
+    try {
+      await authService.disableMfa(mfaDisablePassword);
+      setMfaEnabled(false);
+      setMfaDisablePassword('');
+      setSuccess('Autenticacion Multifactor (MFA) desactivada.');
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : 'No se pudo desactivar MFA.',
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+
   function logout() {
     authService.logout();
     navigate(`${templatePaths[config.template]}/ingresar`, {
@@ -107,7 +178,7 @@ export default function EntrepreneurProfile() {
                 {sessionStartedAt
                   ? `Inicio: ${new Date(
                       sessionStartedAt,
-                    ).toLocaleString()}`
+                    ).toLocaleString()} (expira tras 30 min de inactividad)`
                   : 'Inicio no registrado para esta sesion.'}
               </p>
             </div>
@@ -176,6 +247,71 @@ export default function EntrepreneurProfile() {
               Cambiar contrasena
             </Button>
           </form>
+
+          <section className="bg-white border rounded-xl p-5 space-y-3">
+            <h3 className="font-semibold">Autenticacion Multifactor (MFA · TOTP)</h3>
+            <p className="text-xs text-[var(--muted-foreground)]">
+              Segunda capa de verificacion con codigos temporales de 30-60 segundos compatibles con Google Authenticator o Authy.
+            </p>
+            {!mfaEnabled && !mfaSetup && (
+              <Button
+                type="button"
+                variant="outline"
+                disabled={busy}
+                onClick={() => void handleStartMfaSetup()}
+              >
+                Configurar MFA
+              </Button>
+            )}
+            {mfaSetup && (
+              <form onSubmit={handleConfirmMfa} className="space-y-3">
+                <p className="text-xs">
+                  Ingresa esta clave secreta en Google Authenticator o Authy:
+                </p>
+                <code className="block p-2 bg-neutral-100 rounded text-xs font-mono select-all break-all">
+                  {mfaSetup.secret}
+                </code>
+                <label className="block text-xs font-medium">
+                  Codigo de 6 digitos
+                  <input
+                    className="block w-full border rounded-lg p-2 mt-1 text-sm"
+                    type="text"
+                    inputMode="numeric"
+                    maxLength={6}
+                    placeholder="123456"
+                    required
+                    value={mfaCode}
+                    onChange={(e) =>
+                      setMfaCode(e.target.value.replace(/\D/g, '').slice(0, 6))
+                    }
+                  />
+                </label>
+                <Button type="submit" disabled={busy}>
+                  Activar MFA
+                </Button>
+              </form>
+            )}
+            {mfaEnabled && (
+              <form onSubmit={handleDisableMfa} className="space-y-3">
+                <p className="text-xs text-green-700 font-medium">
+                  ✓ MFA activo en esta cuenta.
+                </p>
+                <label className="block text-xs font-medium">
+                  Contrasena actual para desactivar MFA
+                  <input
+                    className="block w-full border rounded-lg p-2 mt-1 text-sm"
+                    type="password"
+                    required
+                    value={mfaDisablePassword}
+                    onChange={(e) => setMfaDisablePassword(e.target.value)}
+                  />
+                </label>
+                <Button type="submit" variant="outline" disabled={busy}>
+                  Desactivar MFA
+                </Button>
+              </form>
+            )}
+          </section>
         </>
       )}
     </div>
