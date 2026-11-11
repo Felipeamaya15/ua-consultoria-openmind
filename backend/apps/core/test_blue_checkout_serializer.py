@@ -75,14 +75,13 @@ class BlueCheckoutSerializerTests(SimpleTestCase):
         self.assertFalse(serializer.is_valid())
         self.assertIn("direccion", serializer.errors)
 
-    def test_rechaza_mas_de_una_unidad(self):
+    def test_acepta_mas_de_una_unidad(self):
         payload = checkout_payload()
         payload["items"][0]["cantidad"] = 2
 
         serializer = CheckoutSerializer(data=payload)
 
-        self.assertFalse(serializer.is_valid())
-        self.assertIn("items", serializer.errors)
+        self.assertTrue(serializer.is_valid(), serializer.errors)
 
     def test_rechaza_multiples_lineas_incluso_del_mismo_sku(self):
         payload = checkout_payload()

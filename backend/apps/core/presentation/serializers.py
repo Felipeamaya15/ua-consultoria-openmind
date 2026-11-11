@@ -327,12 +327,16 @@ class BlueExpressConfigurationSerializer(StrictSerializer):
     status = serializers.CharField(read_only=True)
 
     def validate_enabled(self, value):
-        # La habilitación comercial se incorporará cuando el checkout
-        # y la cotización real estén validados.
         if value:
-            raise serializers.ValidationError(
-                "Blue Express todavía está en integración y debe permanecer deshabilitado."
-            )
+            from django.conf import settings
+            from apps.shipping.infrastructure.blue_express.config import get_service_config, BlueExpressConfigurationError
+            if not getattr(settings, 'BLUE_EXPRESS_CHECKOUT_TOTAL_CONFIRMED', False):
+                raise serializers.ValidationError('Primero valida el importe comercial de Blue y habilita el checkout en el servidor.')
+            try:
+                get_service_config('geo')
+                get_service_config('pricing')
+            except BlueExpressConfigurationError as error:
+                raise serializers.ValidationError(str(error)) from None
         return value
 
 

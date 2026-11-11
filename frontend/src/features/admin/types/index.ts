@@ -59,6 +59,7 @@ export interface AdminConfig extends StoreConfig {
   };
 
   shippingConfiguration: {
+    blue_express?: { enabled: boolean; status?: string };
     chilexpress: CarrierConnection;
     starken: CarrierConnection;
     pickup: import('../services/pickupConfiguration').PickupConfiguration;

@@ -25,10 +25,14 @@ export interface BlueDestination {
   district_code: string;
 }
 
-export interface BlueQuoteRequest {
+export interface BlueCartItem {
   producto_id: string;
   sku: string;
-  cantidad: 1;
+  cantidad: number;
+}
+
+export interface BlueQuoteRequest {
+  items: BlueCartItem[];
   destino: BlueDestination;
 }
 
@@ -37,10 +41,19 @@ export interface BlueQuote {
   servicio: 'EX';
   total: string;
   cotizacion: string;
-  producto_mongo_id: string;
-  sku: string;
-  cantidad: 1;
+  items: BlueCartItem[];
+  vence_en: number;
   fecha_estimada_entrega: string | null;
+}
+
+function isCartItem(value: unknown): value is BlueCartItem {
+  return isObject(value) && isText(value.producto_id) && isText(value.sku)
+    && isPositiveInteger(value.cantidad) && value.cantidad <= 100000;
+}
+
+function cartSignature(items: BlueCartItem[]): string {
+  return JSON.stringify(items.map(item => [item.producto_id.trim(), item.sku.trim(), item.cantidad])
+    .sort((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b))));
 }
 
 export class BlueExpressError extends Error {
@@ -108,9 +121,9 @@ function isQuote(value: unknown): value is BlueQuote {
     && value.servicio === 'EX'
     && isValidTotal(value.total)
     && isText(value.cotizacion)
-    && isText(value.producto_mongo_id)
-    && isText(value.sku)
-    && value.cantidad === 1
+    && Array.isArray(value.items) && value.items.length > 0 && value.items.length <= 100
+    && value.items.every(isCartItem)
+    && isPositiveInteger(value.vence_en) && value.vence_en > Date.now() / 1000
     && (
       value.fecha_estimada_entrega === null
       || (
@@ -227,8 +240,7 @@ export async function fetchBlueQuote(
 
   if (
     !isQuote(data)
-    || data.sku !== payload.sku
-    || data.cantidad !== payload.cantidad
+    || cartSignature(data.items) !== cartSignature(payload.items)
   ) {
     throw new BlueExpressError(
       'La cotización recibida es inválida.',

@@ -47,7 +47,7 @@ export default function Shipping() {
     return () => { mountedRef.current = false; controller.abort(); };
   }, [setForm, loadAttempt]);
 
-  const update = (carrier: 'chilexpress' | 'starken', enabled: boolean) => {
+  const update = (carrier: 'chilexpress' | 'starken' | 'blue_express', enabled: boolean) => {
     setMessage('');
     setForm({ ...form, [carrier]: { ...(form[carrier] || {}), enabled } });
   };
@@ -153,6 +153,12 @@ export default function Shipping() {
             </AdminCard>
           );
         })}
+        <AdminCard>
+          <h2 className="text-sm font-semibold mb-2">Blue Express</h2>
+          <p className="text-sm mb-3">Cotización según el carrito y el destino. Configura el origen y las medidas de los productos antes de ofrecer este envío.</p>
+          <Toggle checked={loaded && !!form.blue_express?.enabled} ariaLabel="Ofrecer envío Blue Express"
+            label="Ofrecer Blue Express a clientes" onChange={enabled => update('blue_express', enabled)} />
+        </AdminCard>
         <PickupEditor value={form.pickup} errors={pickupErrors} onProviderStatus={setPickupProviderConfigured} onChange={pickup => {
           setMessage(''); setPickupErrors({});
           setForm({ ...form, pickup });

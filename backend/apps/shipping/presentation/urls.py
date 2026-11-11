@@ -1,7 +1,10 @@
 from django.urls import path
+from .blue_dispatch import BlueDispatchView, BlueLabelView
 from .views import CotizacionEnvioView, SeguimientoLogisticoView
 
 urlpatterns = [
+    path("blue/pedidos/<int:order_id>/", BlueDispatchView.as_view(), name="blue-dispatch"),
+    path("blue/pedidos/<int:order_id>/etiquetas/<int:index>/", BlueLabelView.as_view(), name="blue-label"),
     path("cotizar/", CotizacionEnvioView.as_view(), name="shipping-cotizar"),
     path("cotizar/chilexpress/", CotizacionEnvioView.as_view(proveedor_fijo="chilexpress"), name="shipping-cotizar-chilexpress"),
     path("cotizar/chilexpress", CotizacionEnvioView.as_view(proveedor_fijo="chilexpress")),

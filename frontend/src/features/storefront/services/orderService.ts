@@ -35,7 +35,7 @@ export type TrackedOrder = Omit<CustomerOrder, 'items'>
   & Pick<CreatedOrder, 'identificador' | 'costo_envio' | 'descuento'> & {
     nombre_contacto: string;
     medio_pago: string;
-    entrega: {metodo?: string};
+    entrega: {metodo?: string; blue_express?: {tracking?: string; seguimiento?: {estado?: string; eventos?: {fecha_hora: string; descripcion: string; codigo?: string}[]; fecha_entrega?: string | null}}};
     items: CustomerOrderItem[];
     estado_label: string;
     linea_tiempo: LineaTiempoPaso[];

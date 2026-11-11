@@ -179,12 +179,13 @@ class BlueCheckoutTests(SimpleTestCase):
         )
         self.assertNotIn("ORA-", str(caught.exception))
 
-    def test_rechaza_multiples_unidades_antes_de_consultar(self):
+    def test_valida_carrito_completo_y_conserva_items(self):
         data = checkout_data()
         data["items"][0]["cantidad"] = 2
-
-        with self.assertRaises(ErrorCotizacion):
-            self.calculate(data)
-
+        with patch(MODULE + ".validate_catalog_cart", return_value={"servicio": "EX", "total": "4000"}) as validate:
+            result = self.calculate(data)
+        validate.assert_called_once_with(token=data["cotizacion"], store_id=self.store.pk,
+            items=data["items"], destination=data["destino_blue"])
+        self.assertEqual(result["monto"], "4000")
+        self.assertEqual(result["items"], data["items"])
         self.validation.assert_not_called()
-        self.geography.assert_not_called()

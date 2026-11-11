@@ -2,6 +2,10 @@
 
 from django.conf import settings
 
+from rest_framework import serializers
+from apps.authentication.presentation.profile import StrictSerializer
+from apps.core.presentation.blue_shipping import BlueDestinationSerializer
+from apps.shipping.infrastructure.blue_express.cart import normalize_items, BlueExpressCartError as CartValidationError
 from rest_framework.permissions import AllowAny
 from rest_framework.throttling import SimpleRateThrottle
 from rest_framework.views import APIView
@@ -36,7 +40,19 @@ from apps.shipping.infrastructure.blue_express.quote_tokens import (
 from apps.shipping.infrastructure.blue_express.service import (
     BlueExpressCartError,
     quote_catalog_product,
+    quote_catalog_cart,
 )
+
+
+class BlueCartQuoteSerializer(StrictSerializer):
+    items = serializers.JSONField()
+    destino = BlueDestinationSerializer()
+
+    def validate_items(self, value):
+        try:
+            return normalize_items(value)
+        except CartValidationError as error:
+            raise serializers.ValidationError(str(error)) from None
 
 
 class BluePublicQuoteThrottle(SimpleRateThrottle):
@@ -75,18 +91,19 @@ class BluePublicShippingQuoteAPIView(APIView):
                 status=503,
             )
 
-        serializer = BlueQuoteSerializer(data=request.data)
+        serializer_class = BlueCartQuoteSerializer if "items" in request.data else BlueQuoteSerializer
+        serializer = serializer_class(data=request.data)
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
 
         try:
-            quote = quote_catalog_product(
-                store_id=tienda.pk,
-                product_id=data["producto_id"],
-                sku=data["sku"],
-                quantity=data["cantidad"],
-                destination=data["destino"],
-            )
+            if "items" in data:
+                quote = quote_catalog_cart(store_id=tienda.pk, items=data["items"], destination=data["destino"])
+            else:
+                quote = quote_catalog_product(
+                    store_id=tienda.pk, product_id=data["producto_id"], sku=data["sku"],
+                    quantity=data["cantidad"], destination=data["destino"],
+                )
         except BlueExpressConfigurationError:
             return error_response(
                 "Blue Express no está disponible.",
@@ -111,10 +128,11 @@ class BluePublicShippingQuoteAPIView(APIView):
             BlueExpressCatalogError,
             BlueExpressPackageError,
             BlueExpressCartError,
+            CartValidationError,
             BlueExpressQuoteError,
         ):
             return error_response(
-                "No se puede cotizar este producto para el destino seleccionado.",
+                "No se puede cotizar este carrito para el destino seleccionado.",
                 "BLUE_DATOS_INVALIDOS",
                 status=400,
             )

@@ -115,7 +115,7 @@ const defaultShippingOptions: ShippingOption[] = [
     id: 'Blue Express',
     label: 'Blue Express',
     icon: 'truck',
-    desc: 'Despacho a domicilio · Disponible para una unidad',
+    desc: 'Despacho a domicilio · Cotización del carrito',
     priceLabel: 'Por cotizar',
     requiresAddress: true,
   },
@@ -544,7 +544,9 @@ export default function Checkout() {
   const promotionRequest = useRef(0);
   const applyingPromotion = useRef(false);
 
-  const blueCartSupported = items.length === 1 && items[0].quantity === 1 && Boolean(items[0].sku);
+  const blueCartSupported = items.length > 0 && items.length <= 100 && items.every(item =>
+    Number.isSafeInteger(item.quantity) && item.quantity > 0 && item.quantity <= 100000
+    && Boolean(item.productId) && Boolean(item.sku));
   const cartKey = JSON.stringify(items);
   const destinationKey = JSON.stringify([
     shippingMethod, address.region, address.city, quoteAttempt,
@@ -638,7 +640,7 @@ export default function Checkout() {
     if (!selectedShippingOption?.requiresAddress) return;
     if (shippingMethod === 'Blue Express') {
       if (!blueCartSupported) {
-        setQuoteError('Blue Express admite un solo producto con cantidad 1. Ajusta el carrito o elige otra entrega.');
+        setQuoteError('El carrito contiene productos o cantidades inválidos para cotizar.');
         setQuoteErrorKind('no_disponible');
         return;
       }
@@ -650,14 +652,12 @@ export default function Checkout() {
     const loadQuote = async (): Promise<CheckoutShippingQuote> => {
       if (shippingMethod === 'Blue Express' && blueDestination) {
         const quote = await fetchBlueQuote({
-          producto_id: items[0].productId,
-          sku: items[0].sku,
-          cantidad: 1,
+          items: items.map(item => ({producto_id: item.productId, sku: item.sku, cantidad: item.quantity})),
           destino: blueDestination.codes,
         }, controller.signal);
         return {
           monto: Number(quote.total), cotizacion: quote.cotizacion,
-          plazo_dias: null, destino: destinationKey,
+          plazo_dias: null, destino: destinationKey, vence_en: quote.vence_en,
         };
       }
       const quotes = await getShippingQuotes(shippingMethod, address.region, address.city, controller.signal);
@@ -670,7 +670,7 @@ export default function Checkout() {
       .then((quote) => {
         if (controller.signal.aborted) return;
         setShippingQuotes({[shippingMethod]: quote});
-        // Blue no publica vence_en: el servidor valida el token al confirmar.
+        // El servidor informa el vencimiento y vuelve a validar el token al confirmar.
         if (quote.vence_en === undefined) return;
         expiry = setTimeout(() => {
           setShippingQuotes({});
@@ -853,7 +853,7 @@ export default function Checkout() {
 
       if (shippingMethod === 'Blue Express' && (!blueDestination || !blueCartSupported)) {
         newErrors.address = !blueCartSupported
-          ? 'Blue Express admite una sola unidad.'
+          ? 'Revisa los productos y cantidades del carrito.'
           : 'Selecciona región, comuna y localidad de Blue Express.';
       }
       if (shippingLoading) {

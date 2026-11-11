@@ -577,6 +577,11 @@ export default function Tracking() {
                 <p className="font-medium mt-1">
                   {order.entrega.metodo || 'Sin especificar'}
                 </p>
+                {typeof order.entrega.blue_express?.tracking === 'string' && <p className="text-sm mt-2">Tracking Blue Express: {order.entrega.blue_express.tracking}</p>}
+                {typeof order.entrega.blue_express?.seguimiento?.estado === 'string' && <p className="text-sm">Estado en Blue: {order.entrega.blue_express.seguimiento.estado}</p>}
+                {Array.isArray(order.entrega.blue_express?.seguimiento?.eventos) && <ul className="text-sm mt-2 space-y-1">
+                  {order.entrega.blue_express.seguimiento.eventos.map((event, index) => <li key={index}>{event.fecha_hora} — {event.descripcion}</li>)}
+                </ul>}
               </div>
 
               <div>

@@ -125,11 +125,25 @@ class OrderTrackingAPIView(APIView):
             linea_tiempo = pasos
         # -------------------------------------------------------------
 
+        delivery = {'metodo': order.entrega.get('metodo', '') if order.entrega else ''}
+        from apps.shipping.models import BlueShipment
+        shipment = BlueShipment.objects.filter(order=order, state='emitted').first()
+        if shipment:
+            summary = shipment.tracking or {}
+            delivery['blue_express'] = {
+                'tracking': shipment.tracking_number,
+                'seguimiento': {
+                    'estado': summary.get('estado', 'Sin estado informado'),
+                    'fecha_entrega': summary.get('fecha_entrega'),
+                    'eventos': [{key: event.get(key, '') for key in ('fecha_hora', 'codigo', 'descripcion')}
+                                for event in summary.get('eventos', [])],
+                },
+            }
         data.update(
             identificador=order.identificador,
             nombre_contacto=order.nombre_contacto,
             medio_pago=order.medio_pago or getattr(order, 'metodo_pago', ''),
-            entrega={'metodo': order.entrega.get('metodo', '') if order.entrega else ''},
+            entrega=delivery,
             costo_envio=format(order.costo_envio, '.2f') if order.costo_envio else '0.00',
             descuento=format(order.descuento, '.2f') if order.descuento else '0.00',
             estado_label=estados_map.get(estado_actual, str(estado_actual).capitalize()),

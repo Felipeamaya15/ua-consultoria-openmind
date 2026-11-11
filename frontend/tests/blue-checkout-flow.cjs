@@ -40,7 +40,7 @@ function harness({enabled = true} = {}) {
     if(name.includes('comunasChile'))return {comunasDeRegion:()=>['Providencia'],esComunaDeRegion:(c,r)=>c==='Providencia'&&!!r};
     if(name.includes('blueExpressService'))return {fetchBlueQuote:async(payload,signal)=>{
       calls.push({payload,signal});if(request)return request(payload,signal);
-      return {total:'2646',cotizacion:'signed-test',fecha_estimada_entrega:null};}};
+      return {total:String(2646+(payload.items.reduce((sum,item)=>sum+item.cantidad,0)-1)*1000),cotizacion:'signed-test',items:payload.items,vence_en:Math.floor(Date.now()/1000)+900,fecha_estimada_entrega:null};}};
     if(name.includes('shippingService'))return {getDeliveryAlternatives:async()=>config,getShippingQuotes:async()=>{
       throw Object.assign(new Error('No hay una tarifa disponible para este destino.'),{kind:'sin_tarifa'});}};
     if(name.includes('BlueExpressDestination'))return {default:'BlueExpressDestination'};
@@ -81,9 +81,10 @@ function harness({enabled = true} = {}) {
     set request(v){request=v},set orderError(v){orderError=v}};
 }
 test('Blue deshabilitado no aparece',async()=>{const h=harness({enabled:false});await h.ready();assert.equal(nodes(h.tree).some(n=>n?.props?.type==='radio'&&n.props.value==='Blue Express'),false);assert.equal(h.calls.length,0);});
-test('Destino completo cotiza y actualiza total',async()=>{const h=harness();await h.ready();h.destination();await h.quote();assert.equal(h.calls.length,1);assert.equal(h.calls[0].payload.cantidad,1);assert.match(text(h.tree),/CLP 12646/);});
+test('Destino completo cotiza y actualiza total',async()=>{const h=harness();await h.ready();h.destination();await h.quote();assert.equal(h.calls.length,1);assert.equal(h.calls[0].payload.items[0].cantidad,1);assert.match(text(h.tree),/CLP 12646/);});
 test('Cambio de localidad elimina tarifa anterior',async()=>{const h=harness();await h.ready();h.destination();await h.quote();h.destination('OTRA');assert.match(text(h.tree),/Total parcial/);await h.quote();assert.equal(h.calls[1].payload.destino.district_code,'OTRA');});
-test('Más de una unidad bloquea cotización',async()=>{const h=harness();await h.ready();h.cart.items[0].quantity=2;await h.settle();await h.quote();assert.equal(h.calls.length,0);assert.match(text(h.tree),/cantidad 1/);});
+test('Varias unidades cotizan el carrito completo',async()=>{const h=harness();await h.ready();h.cart.items[0].quantity=2;h.cart.subtotal=20000;await h.settle();h.destination();await h.quote();assert.equal(h.calls.length,1);assert.equal(h.calls[0].payload.items[0].cantidad,2);assert.match(text(h.tree),/CLP 23646/);});
+test('Cantidades inválidas bloquean la consulta',async()=>{const h=harness();await h.ready();h.cart.items[0].quantity=0;await h.settle();await h.quote();assert.equal(h.calls.length,0);assert.match(text(h.tree),/cantidades inválidos/);});
 test('Respuesta tardía cancelada no restaura el precio',async()=>{const h=harness();await h.ready();let release;h.request=()=>new Promise(r=>release=r);h.destination();await h.quote();h.destination('OTRA');await h.settle();release({total:'9999',cotizacion:'old'});await h.settle();assert.match(text(h.tree),/Total parcial/);assert.doesNotMatch(text(h.tree),/19999/);assert.equal(h.calls[0].signal.aborted,true);});
 test('Pedido simulado incluye token y códigos Blue, sin precio de envío',async()=>{const h=harness();await h.ready();await h.confirm();assert.equal(h.created.length,1);assert.equal(h.created[0].shippingQuote,'signed-test');assert.equal(h.created[0].blueDestination.district_code,'PRO');assert.equal(h.created[0].shipping,undefined);});
 test('Token rechazado devuelve a Entrega',async()=>{const h=harness();await h.ready();h.orderError=Object.assign(new Error('Cotización inválida'),{code:'BLUE_COTIZACION_INVALIDA'});await h.confirm();assert.ok(h.find('BlueExpressDestination'));assert.match(text(h.tree),/Total parcial/);});

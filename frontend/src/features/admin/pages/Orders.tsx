@@ -1,3 +1,4 @@
+import BlueDispatchPanel from '../components/BlueDispatchPanel';
 import { useState, useEffect, useRef } from "react"
 import { EmptyListState, ErrorState, LoadingState } from "../../../shared/components/states"
 import { humanizeAdminError } from "../utils/humanizeError"
@@ -356,6 +357,7 @@ export default function Orders() {
             </div>
 
             <div className="border-t border-[var(--border)] pt-3 text-sm space-y-1">
+              {selectedOrder.entrega?.metodo === 'Blue Express' && <BlueDispatchPanel key={selectedOrder.id_pedido} orderId={selectedOrder.id_pedido} paid={selectedOrder.estado === 'pagado'} />}
               <PickupSelectionSummary selection={selectedOrder.entrega?.retiro?.seleccion} />
               <p className="text-xs">Entrega: {selectedOrder.entrega?.metodo || 'Sin registro'} · Pago {selectedOrder.pago_estado}</p>
               {selectedOrder.entrega?.retiro?.address && <p className="text-xs">Retiro: {selectedOrder.entrega.retiro.address}</p>}

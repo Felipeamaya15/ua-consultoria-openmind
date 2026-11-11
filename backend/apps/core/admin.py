@@ -142,3 +142,30 @@ class PedidoAdmin(TiendaAdministradaMixin, admin.ModelAdmin):
         if db_field.name == 'tienda':
             kwargs['queryset'] = Tienda.objects.filter(pk=self.tienda_administrada(request).pk)
         return super().formfield_for_foreignkey(db_field, request, **kwargs)
+
+from .models import OrigenDespachoBlue, FichaLogisticaCatalogo
+
+
+class BlueStoreAdmin(TiendaAdministradaMixin, admin.ModelAdmin):
+    filtro_tienda = 'tienda'
+
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        if db_field.name == 'tienda':
+            kwargs['queryset'] = Tienda.objects.filter(pk=self.tienda_administrada(request).pk)
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)
+
+    def save_model(self, request, obj, form, change):
+        if obj.tienda_id != self.tienda_administrada(request).pk:
+            raise PermissionDenied('El registro no pertenece a la tienda administrada.')
+        return super().save_model(request, obj, form, change)
+
+
+@admin.register(OrigenDespachoBlue)
+class OrigenDespachoBlueAdmin(BlueStoreAdmin):
+    list_display = ('tienda', 'direccion', 'district_code')
+
+
+@admin.register(FichaLogisticaCatalogo)
+class FichaLogisticaCatalogoAdmin(BlueStoreAdmin):
+    list_display = ('sku', 'producto_mongo_id', 'peso_kg', 'largo_cm', 'ancho_cm', 'alto_cm')
+    search_fields = ('sku', 'producto_mongo_id')

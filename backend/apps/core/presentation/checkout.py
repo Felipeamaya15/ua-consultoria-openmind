@@ -93,7 +93,7 @@ class CheckoutSerializer(StrictSerializer):
     ])
 
     direccion = AddressSerializer(required=False)
-    cotizacion = serializers.CharField(max_length=4096, required=False)
+    cotizacion = serializers.CharField(max_length=65536, required=False)
 
     destino_blue = BlueCheckoutDestinationSerializer(required=False)
 
@@ -149,13 +149,11 @@ class CheckoutSerializer(StrictSerializer):
                     'direccion': 'La entrega con Blue Express requiere región.',
                 })
 
-            if len(data['items']) != 1 or data['items'][0]['cantidad'] != 1:
-                raise serializers.ValidationError({
-                    'items': (
-                        'Esta etapa de Blue Express admite un producto '
-                        'con una sola unidad.'
-                    ),
-                })
+            from apps.shipping.infrastructure.blue_express.cart import normalize_items, BlueExpressCartError
+            try:
+                normalize_items(data['items'])
+            except BlueExpressCartError as error:
+                raise serializers.ValidationError({'items': str(error)}) from None
 
         elif 'destino_blue' in data:
             raise serializers.ValidationError({

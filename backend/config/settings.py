@@ -277,4 +277,6 @@ BLUE_EXPRESS = {
 }
 
 # Mantener False hasta confirmar el importe final y validar la integración.
-BLUE_EXPRESS_CHECKOUT_TOTAL_CONFIRMED = False
+BLUE_EXPRESS_CHECKOUT_TOTAL_CONFIRMED = os.getenv("BLUE_EXPRESS_CHECKOUT_TOTAL_CONFIRMED", "0") == "1"
+# Se habilita explícitamente después de verificar QA y la cuenta de despacho.
+BLUE_EXPRESS_EMISSION_ENABLED = os.getenv("BLUE_EXPRESS_EMISSION_ENABLED", "0") == "1"

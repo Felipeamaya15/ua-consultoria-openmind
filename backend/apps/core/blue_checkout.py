@@ -16,6 +16,7 @@ from apps.shipping.infrastructure.blue_express.geography import (
 )
 from apps.shipping.infrastructure.blue_express.service import (
     validate_catalog_quote,
+    validate_catalog_cart,
 )
 
 
@@ -37,18 +38,6 @@ def blue_quote_for_checkout(tienda, data):
         )
 
     items = data.get("items", [])
-    if (
-        len(items) != 1
-        or type(items[0].get("cantidad")) is not int
-        or items[0]["cantidad"] != 1
-    ):
-        raise ErrorCotizacion(
-            "items",
-            "Blue Express admite una sola unidad en esta etapa.",
-            "BLUE_CARRITO_NO_SOPORTADO",
-        )
-
-    item = items[0]
     destination = data.get("destino_blue")
     address = data.get("direccion", {})
 
@@ -60,14 +49,13 @@ def blue_quote_for_checkout(tienda, data):
         )
 
     try:
-        quote = validate_catalog_quote(
-            token=data.get("cotizacion"),
-            store_id=tienda.pk,
-            product_id=item["producto_id"],
-            sku=item["sku"],
-            quantity=item["cantidad"],
-            destination=destination,
-        )
+        if len(items) == 1 and items[0].get("cantidad") == 1:
+            item = items[0]
+            quote = validate_catalog_quote(token=data.get("cotizacion"), store_id=tienda.pk,
+                product_id=item["producto_id"], sku=item["sku"], quantity=1, destination=destination)
+        else:
+            quote = validate_catalog_cart(token=data.get("cotizacion"), store_id=tienda.pk,
+                items=items, destination=destination)
 
         resolved = resolve_destination(
             fetch_geography(),
@@ -139,8 +127,8 @@ def blue_quote_for_checkout(tienda, data):
             "commune_code": resolved["commune_code"],
             "district_code": resolved["district_code"],
         },
-        "producto_mongo_id": quote["producto_mongo_id"],
-        "sku": quote["sku"],
-        "cantidad": quote["cantidad"],
+        "items": [{"producto_id": row["producto_id"], "sku": row["sku"], "cantidad": row["cantidad"]} for row in items],
+        **({"producto_mongo_id": quote["producto_mongo_id"], "sku": quote["sku"], "cantidad": quote["cantidad"]}
+           if "producto_mongo_id" in quote else {}),
         "origen": "blue_express_api",
     }
