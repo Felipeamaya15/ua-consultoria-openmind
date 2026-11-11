@@ -320,11 +320,27 @@ class CarrierConfigurationSerializer(StrictSerializer):
         return data
 
 
+class BlueExpressConfigurationSerializer(StrictSerializer):
+    enabled = DeliveryBooleanField()
+
+    # El estado lo calcula el backend; no se acepta como configuración editable.
+    status = serializers.CharField(read_only=True)
+
+    def validate_enabled(self, value):
+        # La habilitación comercial se incorporará cuando el checkout
+        # y la cotización real estén validados.
+        if value:
+            raise serializers.ValidationError(
+                "Blue Express todavía está en integración y debe permanecer deshabilitado."
+            )
+        return value
+
+
 class ShippingConfigurationSerializer(StrictSerializer):
     chilexpress = CarrierConfigurationSerializer()
     starken = CarrierConfigurationSerializer()
+    blue_express = BlueExpressConfigurationSerializer(required=False)
     pickup = PickupConfigurationSerializer()
-
 
 class ConfiguracionPagoSerializer(serializers.Serializer):
     """ Valida que no se habiliten medios de pago sin sus campos obligatorios (SCRUM-306) """

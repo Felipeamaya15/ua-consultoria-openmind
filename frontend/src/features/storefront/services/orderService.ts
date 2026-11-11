@@ -1,4 +1,5 @@
 import type { CartItem } from '../context/CartContext';
+import type { BlueDestination } from './blueExpressService';
 import { authService, type CustomerOrder, type CustomerOrderItem } from '../../auth/services/authService';
 
 const API_BASE = (import.meta.env.VITE_API_URL || 'http://localhost:8000').replace(/\/+$/, '');
@@ -17,6 +18,7 @@ export type CheckoutInput = {
   paymentMethod: string; shippingMethod: string; promoCode: string;
   address: {street: string; number: string; apt: string; city: string; region: string};
   shippingQuote?: string;
+  blueDestination?: BlueDestination;
   pickupSelection?: { fecha: string; hora: string };
 };
 
@@ -158,6 +160,7 @@ export const orderService = {
           medio_pago: input.paymentMethod, metodo_entrega: input.shippingMethod,
           direccion: input.address, codigo_promocional: input.promoCode,
           ...(input.shippingMethod !== 'Retiro' && input.shippingQuote ? {cotizacion: input.shippingQuote} : {}),
+          ...(input.shippingMethod === 'Blue Express' && input.blueDestination ? {destino_blue: input.blueDestination} : {}),
           ...(input.shippingMethod === 'Retiro' && input.pickupSelection ? {retiro_seleccion: input.pickupSelection} : {}),
         }),
       });

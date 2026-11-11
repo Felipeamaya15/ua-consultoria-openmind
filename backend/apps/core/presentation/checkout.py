@@ -30,6 +30,7 @@ from apps.core.presentation.shipping import ErroresDeCotizacionMixin
 from apps.core.shipping import validate_quote
 from apps.core.pickup import validate_pickup_selection
 from apps.core.payments import PAYMENT_METHODS, payment_methods_for_store
+from apps.core.blue_checkout import blue_quote_for_checkout
 
 logger = logging.getLogger(__name__)
 PICKUP_SHIPPING_COST = Decimal('0.00')
@@ -61,26 +62,109 @@ class AddressSerializer(StrictSerializer):
     region = serializers.CharField(max_length=100, allow_blank=True)
 
 
+class BlueCheckoutDestinationSerializer(StrictSerializer):
+    region_code = serializers.IntegerField(min_value=1)
+    commune_code = serializers.IntegerField(min_value=1)
+    district_code = serializers.CharField(max_length=3)
+
+
 class CheckoutSerializer(StrictSerializer):
     clave_checkout = serializers.UUIDField()
-    items = CheckoutItemSerializer(many=True, allow_empty=False, max_length=100)
+    items = CheckoutItemSerializer(
+        many=True,
+        allow_empty=False,
+        max_length=100,
+    )
     contacto = ContactSerializer()
-    medio_pago = serializers.ChoiceField(choices=['Transbank', 'PayPal', 'MercadoPago', 'Linkify', 'Transferencia', 'TUU'])
-    metodo_entrega = serializers.ChoiceField(choices=['Chilexpress', 'Starken', 'Retiro'])
+
+    medio_pago = serializers.ChoiceField(choices=[
+        'Transbank',
+        'PayPal',
+        'MercadoPago',
+        'Linkify',
+        'Transferencia',
+        'TUU',
+    ])
+    metodo_entrega = serializers.ChoiceField(choices=[
+        'Chilexpress',
+        'Starken',
+        'Blue Express',
+        'Retiro',
+    ])
+
     direccion = AddressSerializer(required=False)
     cotizacion = serializers.CharField(max_length=4096, required=False)
-    codigo_promocional = serializers.CharField(max_length=40, default='', allow_blank=True, trim_whitespace=True)
-    retiro_seleccion = serializers.DictField(child=serializers.CharField(max_length=10), required=False)
+
+    destino_blue = BlueCheckoutDestinationSerializer(required=False)
+
+    codigo_promocional = serializers.CharField(
+        max_length=40,
+        default='',
+        allow_blank=True,
+        trim_whitespace=True,
+    )
+    retiro_seleccion = serializers.DictField(
+        child=serializers.CharField(max_length=10),
+        required=False,
+    )
 
     def validate(self, data):
-        if 'retiro_seleccion' in data and (data['metodo_entrega'] != 'Retiro' or set(data['retiro_seleccion']) != {'fecha', 'hora'}):
-            raise serializers.ValidationError({'retiro_seleccion': 'Indica fecha y hora únicamente para retiro en local.'})
-        if data['metodo_entrega'] != 'Retiro':
-            address = data.get('direccion', {})
-            if not all(address.get(key, '').strip() for key in ('street', 'number', 'city')):
-                raise serializers.ValidationError({'direccion': 'La entrega requiere calle, numero y ciudad.'})
-        return data
+        method = data['metodo_entrega']
 
+        if 'retiro_seleccion' in data and (
+            method != 'Retiro'
+            or set(data['retiro_seleccion']) != {'fecha', 'hora'}
+        ):
+            raise serializers.ValidationError({
+                'retiro_seleccion': (
+                    'Indica fecha y hora únicamente para retiro en local.'
+                ),
+            })
+
+        if method != 'Retiro':
+            address = data.get('direccion', {})
+            if not all(
+                address.get(key, '').strip()
+                for key in ('street', 'number', 'city')
+            ):
+                raise serializers.ValidationError({
+                    'direccion': 'La entrega requiere calle, numero y ciudad.',
+                })
+
+        if method == 'Blue Express':
+            if 'destino_blue' not in data:
+                raise serializers.ValidationError({
+                    'destino_blue': (
+                        'Selecciona región, comuna y localidad de Blue Express.'
+                    ),
+                })
+
+            if not data.get('cotizacion'):
+                raise serializers.ValidationError({
+                    'cotizacion': 'Cotiza el envío antes de confirmar el pedido.',
+                })
+
+            if not data.get('direccion', {}).get('region', '').strip():
+                raise serializers.ValidationError({
+                    'direccion': 'La entrega con Blue Express requiere región.',
+                })
+
+            if len(data['items']) != 1 or data['items'][0]['cantidad'] != 1:
+                raise serializers.ValidationError({
+                    'items': (
+                        'Esta etapa de Blue Express admite un producto '
+                        'con una sola unidad.'
+                    ),
+                })
+
+        elif 'destino_blue' in data:
+            raise serializers.ValidationError({
+                'destino_blue': (
+                    'Este campo solo corresponde a entregas con Blue Express.'
+                ),
+            })
+
+        return data
 
 class CheckoutOrderAPIView(ErroresDeCotizacionMixin, APIView):
     authentication_classes = [TokenAuthentication]
@@ -117,8 +201,17 @@ class CheckoutOrderAPIView(ErroresDeCotizacionMixin, APIView):
             delivery = delivery_for_store(tienda)
             if not delivery[method]['enabled']:
                 raise ValidationError({'metodo_entrega': 'El método de entrega no está habilitado en esta tienda.'})
-            quote = (validate_quote(tienda, data['metodo_entrega'], data.get('direccion', {}), data.get('cotizacion'))
-                     if method != 'pickup' else None)
+            if method == 'pickup':
+                quote = None
+            elif method == 'blue_express':
+                quote = blue_quote_for_checkout(tienda, data)
+            else:
+                quote = validate_quote(
+                    tienda,
+                    data['metodo_entrega'],
+                    data.get('direccion', {}),
+                    data.get('cotizacion'),
+                )
             
 
             # El retiro nunca hereda cotizaciones ni costos enviados por el cliente.

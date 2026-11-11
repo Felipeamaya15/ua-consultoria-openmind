@@ -6,6 +6,9 @@ from apps.core.presentation.checkout import CheckoutOrderAPIView
 from apps.core.presentation.shipping import ShippingQuoteAPIView
 from apps.core.presentation.linkify_notificacion import LinkifyNotificacionView
 from apps.core.presentation.tuu_callback import TuuCallbackView
+from apps.core.presentation.blue_shipping import BlueShippingQuoteAPIView
+from apps.core.presentation.blue_public_shipping import BluePublicShippingQuoteAPIView
+from apps.core.presentation.blue_territory import BlueTerritoryAPIView
 from apps.core.presentation.pagos_externos import (
     CapturarPagoPayPalView, ConfirmarPagoMercadoPagoView, IniciarPagoMercadoPagoView, IniciarPagoPayPalView,
 )
@@ -120,4 +123,8 @@ urlpatterns = [
     path('version/', SoftwareVersionAPIView.as_view(), name='version-raiz'),
     path('sistema/version-vigente/', SoftwareVersionAPIView.as_view(), name='sistema-version-vigente'),
     path('sistema/version/', SoftwareVersionAPIView.as_view(), name='sistema-version'),
+    path('entregas/blue-express/cotizacion/', BlueShippingQuoteAPIView.as_view(), name='blue-express-cotizacion'),
+    path('checkout/blue-express/cotizacion/', BluePublicShippingQuoteAPIView.as_view(), name='checkout-blue-express-cotizacion'),
+    path('checkout/blue-express/territorio/', BlueTerritoryAPIView.as_view(), name='checkout-blue-express-territorio',
+    ),
 ]

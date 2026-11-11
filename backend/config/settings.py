@@ -275,3 +275,6 @@ BLUE_EXPRESS = {
     "CONNECT_TIMEOUT": os.getenv("BLUE_EXPRESS_CONNECT_TIMEOUT", "5").strip(),
     "READ_TIMEOUT": os.getenv("BLUE_EXPRESS_READ_TIMEOUT", "20").strip(),
 }
+
+# Mantener False hasta confirmar el importe final y validar la integración.
+BLUE_EXPRESS_CHECKOUT_TOTAL_CONFIRMED = False
