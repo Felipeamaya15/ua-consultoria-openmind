@@ -256,3 +256,22 @@ BCCH_USUARIO = (os.getenv('BCCH_USUARIO') or '').strip()
 BCCH_CLAVE = (os.getenv('BCCH_CLAVE') or '').strip()
 STOREFRONT_PUBLIC_URL = (os.getenv('STOREFRONT_PUBLIC_URL') or 'http://localhost:5173/plantilla/1').rstrip('/')
 TUU_CALLBACK_BASE_URL = (os.getenv('TUU_CALLBACK_BASE_URL') or '').rstrip('/')
+
+
+# Blue Express: configuración de integración del backend.
+# Las URLs se mantienen separadas porque los servicios pueden usar hosts distintos.
+BLUE_EXPRESS = {
+    "ENABLED": os.getenv("BLUE_EXPRESS_ENABLED", "0") == "1",
+    "ENVIRONMENT": os.getenv("BLUE_EXPRESS_ENVIRONMENT", "qa").strip(),
+    "TOKEN": os.getenv("BLUE_EXPRESS_TOKEN", "").strip(),
+    "USERCODE": os.getenv("BLUE_EXPRESS_USERCODE", "").strip(),
+    "CLIENT_ACCOUNT": os.getenv("BLUE_EXPRESS_CLIENT_ACCOUNT", "").strip(),
+    "USERNAME": os.getenv("BLUE_EXPRESS_USERNAME", "").strip(),
+    "GEO_URL": os.getenv("BLUE_EXPRESS_GEO_URL", "").strip(),
+    "PRICING_URL": os.getenv("BLUE_EXPRESS_PRICING_URL", "").strip(),
+    "EMISSION_URL": os.getenv("BLUE_EXPRESS_EMISSION_URL", "").strip(),
+    "LABEL_URL": os.getenv("BLUE_EXPRESS_LABEL_URL", "").strip(),
+    "TRACKING_URL": os.getenv("BLUE_EXPRESS_TRACKING_URL", "").strip(),
+    "CONNECT_TIMEOUT": os.getenv("BLUE_EXPRESS_CONNECT_TIMEOUT", "5").strip(),
+    "READ_TIMEOUT": os.getenv("BLUE_EXPRESS_READ_TIMEOUT", "20").strip(),
+}

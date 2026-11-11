@@ -570,3 +570,164 @@ class ConfiguracionCorreo(models.Model):
         db_table = 'configuracion_correo'
         verbose_name = 'Configuración de correo'
         verbose_name_plural = 'Configuraciones de correo'
+
+class FichaLogistica(models.Model):
+    """Medidas de una unidad embalada de un producto o variante."""
+
+    producto = models.OneToOneField(
+        'core.Producto',
+        on_delete=models.CASCADE,
+        related_name='ficha_logistica',
+        null=True,
+        blank=True,
+    )
+    variante = models.OneToOneField(
+        'core.VarianteProducto',
+        on_delete=models.CASCADE,
+        related_name='ficha_logistica',
+        null=True,
+        blank=True,
+    )
+
+    peso_kg = models.DecimalField(
+        max_digits=10,
+        decimal_places=3,
+        help_text='Peso de una unidad embalada, en kilogramos.',
+    )
+    largo_cm = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        help_text='Largo de una unidad embalada, en centímetros.',
+    )
+    ancho_cm = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        help_text='Ancho de una unidad embalada, en centímetros.',
+    )
+    alto_cm = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        help_text='Alto de una unidad embalada, en centímetros.',
+    )
+
+    fecha_actualizacion = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'ficha_logistica'
+        constraints = [
+            models.CheckConstraint(
+                condition=(
+                    models.Q(
+                        producto__isnull=False,
+                        variante__isnull=True,
+                    )
+                    | models.Q(
+                        producto__isnull=True,
+                        variante__isnull=False,
+                    )
+                ),
+                name='chk_ficha_un_solo_objetivo',
+            ),
+            models.CheckConstraint(
+                condition=models.Q(peso_kg__gt=0),
+                name='chk_ficha_peso_positivo',
+            ),
+            models.CheckConstraint(
+                condition=models.Q(largo_cm__gt=0),
+                name='chk_ficha_largo_positivo',
+            ),
+            models.CheckConstraint(
+                condition=models.Q(ancho_cm__gt=0),
+                name='chk_ficha_ancho_positivo',
+            ),
+            models.CheckConstraint(
+                condition=models.Q(alto_cm__gt=0),
+                name='chk_ficha_alto_positivo',
+            ),
+        ]
+
+    def __str__(self):
+        if self.variante_id:
+            return f'Ficha logística de variante {self.variante_id}'
+        return f'Ficha logística de producto {self.producto_id}'
+
+class OrigenDespachoBlue(models.Model):
+    """Origen de despacho de una tienda, con códigos territoriales de Blue."""
+
+    tienda = models.OneToOneField(
+        'core.Tienda',
+        on_delete=models.CASCADE,
+        related_name='origen_despacho_blue',
+    )
+
+    region_code = models.PositiveIntegerField()
+    commune_code = models.PositiveIntegerField()
+    district_code = models.CharField(max_length=3)
+
+    direccion = models.CharField(max_length=80)
+    nombre_remitente = models.CharField(max_length=50)
+    telefono = models.CharField(max_length=20)
+
+    fecha_actualizacion = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'origen_despacho_blue'
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(region_code__gt=0),
+                name='chk_blue_origen_region_positiva',
+            ),
+            models.CheckConstraint(
+                condition=models.Q(commune_code__gt=0),
+                name='chk_blue_origen_comuna_positiva',
+            ),
+        ]
+
+    def __str__(self):
+        return f'Origen Blue de tienda {self.tienda_id}'
+
+class FichaLogisticaCatalogo(models.Model):
+    """Medidas de una unidad embalada del catálogo MongoDB."""
+
+    tienda = models.ForeignKey(
+        'core.Tienda',
+        on_delete=models.CASCADE,
+        related_name='fichas_logisticas_catalogo',
+    )
+    producto_mongo_id = models.CharField(max_length=100)
+    sku = models.CharField(max_length=100)
+
+    peso_kg = models.DecimalField(max_digits=10, decimal_places=3)
+    largo_cm = models.DecimalField(max_digits=10, decimal_places=2)
+    ancho_cm = models.DecimalField(max_digits=10, decimal_places=2)
+    alto_cm = models.DecimalField(max_digits=10, decimal_places=2)
+
+    fecha_actualizacion = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'ficha_logistica_catalogo'
+        constraints = [
+            models.UniqueConstraint(
+                fields=['tienda', 'producto_mongo_id', 'sku'],
+                name='uq_ficha_catalogo_tienda_prod_sku',
+            ),
+            models.CheckConstraint(
+                condition=models.Q(peso_kg__gt=0),
+                name='chk_ficha_catalogo_peso',
+            ),
+            models.CheckConstraint(
+                condition=models.Q(largo_cm__gt=0),
+                name='chk_ficha_catalogo_largo',
+            ),
+            models.CheckConstraint(
+                condition=models.Q(ancho_cm__gt=0),
+                name='chk_ficha_catalogo_ancho',
+            ),
+            models.CheckConstraint(
+                condition=models.Q(alto_cm__gt=0),
+                name='chk_ficha_catalogo_alto',
+            ),
+        ]
+
+    def __str__(self):
+        return f'Tienda {self.tienda_id} - SKU {self.sku}'
