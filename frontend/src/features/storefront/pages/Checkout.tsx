@@ -9,8 +9,18 @@ import { authService } from '../../auth/services/authService';
 
 import { orderService } from '../services/orderService';
 import { validatePromotion, type ValidatedPromotion } from '../services/promotionService';
-import { getDeliveryAlternatives, getShippingQuotes, type ShippingQuote, type ShippingConfiguration } from '../services/shippingService';
+import { getDeliveryAlternatives, getShippingQuotes, type ShippingConfiguration } from '../services/shippingService';
 import PickupDetails from '../components/checkout/PickupDetails';
+import BlueExpressDestination, { type BlueDestinationSelection } from '../components/checkout/BlueExpressDestination';
+import { fetchBlueQuote } from '../services/blueExpressService';
+
+type CheckoutShippingQuote = {
+  monto: number;
+  cotizacion: string;
+  plazo_dias: number | null;
+  vence_en?: number;
+  destino: string;
+};
 import { useCart } from '../context/CartContext';
 import { formatPrice } from '../data/mockData';
 import { comunasDeRegion, esComunaDeRegion } from '../data/comunasChile';
@@ -101,6 +111,14 @@ function getAvailableAuthModes(settings: AuthSettings): AuthMode[] {
 }
 
 const defaultShippingOptions: ShippingOption[] = [
+  {
+    id: 'Blue Express',
+    label: 'Blue Express',
+    icon: 'truck',
+    desc: 'Despacho a domicilio · Disponible para una unidad',
+    priceLabel: 'Por cotizar',
+    requiresAddress: true,
+  },
   {
     id: 'Chilexpress',
     label: 'Chilexpress',
@@ -323,6 +341,7 @@ export default function Checkout() {
     getDeliveryAlternatives(controller.signal).then(configuration => {
       if (controller.signal.aborted) return;
       const enabled = defaultShippingOptions.filter(option => {
+        if (option.id === 'Blue Express') return configuration.blue_express?.enabled === true;
         if (option.id === 'Chilexpress') return configuration.chilexpress.enabled;
         if (option.id === 'Starken') return configuration.starken.enabled;
         return configuration.pickup.enabled;
@@ -507,7 +526,8 @@ export default function Checkout() {
    * LÓGICA DE ACTUALIZACIÓN DEL TOTAL Y DESPACHO
    * ==========================================================
    */
-  const [shippingQuotes, setShippingQuotes] = useState<Record<string, ShippingQuote & {destino: string}>>({});
+  const [shippingQuotes, setShippingQuotes] = useState<Record<string, CheckoutShippingQuote>>({});
+  const [blueDestination, setBlueDestination] = useState<BlueDestinationSelection | null>(null);
   const [quoteLoading, setQuoteLoading] = useState(false);
   const [quoteError, setQuoteError] = useState('');
   const [quoteAttempt, setQuoteAttempt] = useState(0);
@@ -523,13 +543,28 @@ export default function Checkout() {
   const [consentMessage, setConsentMessage] = useState('');
   const promotionRequest = useRef(0);
   const applyingPromotion = useRef(false);
-  
-  const destinationKey = JSON.stringify([shippingMethod, address.region, address.city]);
+
+  const blueCartSupported = items.length === 1 && items[0].quantity === 1 && Boolean(items[0].sku);
+  const cartKey = JSON.stringify(items);
+  const destinationKey = JSON.stringify([
+    shippingMethod, address.region, address.city, quoteAttempt,
+    ...(shippingMethod === 'Blue Express'
+      ? [cartKey, blueDestination?.codes ?? null, address.street, address.number, address.apt]
+      : []),
+  ]);
   const selectedShippingOption = shippingOptions.find(option => option.id === shippingMethod);
+  useEffect(() => {
+    setBlueDestination(null);
+  }, [shippingMethod]);
+  // Descarta mensajes de validación correspondientes al destino anterior.
+  useEffect(() => {
+    setErrors(current => ({...current, shipping: '', address: ''}));
+  }, [destinationKey]);
   const candidateQuote = shippingQuotes[shippingMethod];
-  const selectedQuote = candidateQuote?.destino === destinationKey && candidateQuote.vence_en > Date.now() / 1000
+  const selectedQuote = candidateQuote?.destino === destinationKey
+    && (candidateQuote.vence_en === undefined || candidateQuote.vence_en > Date.now() / 1000)
     ? candidateQuote : undefined;
-    
+
   // => CÁLCULO DEL TOTAL DEL PEDIDO SUMANDO EL COSTO DE DESPACHO <=
   const quotedShipping = shippingMethod === 'Retiro' ? 0 : selectedQuote?.monto ?? null;
   const currentPromotionBasis = JSON.stringify([subtotal, quotedShipping, checkoutPromoCode]);
@@ -583,10 +618,12 @@ export default function Checkout() {
       if (requestId === promotionRequest.current) { setPromoLoading(false); applyingPromotion.current = false; }
     }
   };
-  
+
   // Validamos que exista un costo real de despacho, o sea retiro en tienda.
   const deliveryReady = !shippingLoading && !shippingError && !!selectedShippingOption
-    && (shippingMethod === 'Retiro' ? true : (!!selectedQuote && !quoteLoading && !quoteError));
+    && (shippingMethod === 'Retiro' ? true : (!!selectedQuote && !quoteLoading && !quoteError))
+    && (shippingMethod !== 'Blue Express' || (blueCartSupported && !!blueDestination
+      && address.region === blueDestination.regionName && address.city === blueDestination.communeName));
 
   // Si no hay tarifa para el destino, reintentar no sirve: se ofrece cambiar de alternativa o de comuna.
   const quoteNeedsOtherOption = ['sin_tarifa', 'no_disponible', 'destino'].includes(quoteErrorKind);
@@ -598,16 +635,43 @@ export default function Checkout() {
     setQuoteError('');
     setQuoteErrorKind('');
     setQuoteLoading(false);
-    if (!selectedShippingOption?.requiresAddress || !esComunaDeRegion(address.city, address.region)) return;
+    if (!selectedShippingOption?.requiresAddress) return;
+    if (shippingMethod === 'Blue Express') {
+      if (!blueCartSupported) {
+        setQuoteError('Blue Express admite un solo producto con cantidad 1. Ajusta el carrito o elige otra entrega.');
+        setQuoteErrorKind('no_disponible');
+        return;
+      }
+      if (!blueDestination) return;
+    } else if (!esComunaDeRegion(address.city, address.region)) return;
     const controller = new AbortController();
     let expiry: ReturnType<typeof setTimeout>;
     setQuoteLoading(true);
-    getShippingQuotes(shippingMethod, address.region, address.city, controller.signal)
-      .then((quotes) => {
+    const loadQuote = async (): Promise<CheckoutShippingQuote> => {
+      if (shippingMethod === 'Blue Express' && blueDestination) {
+        const quote = await fetchBlueQuote({
+          producto_id: items[0].productId,
+          sku: items[0].sku,
+          cantidad: 1,
+          destino: blueDestination.codes,
+        }, controller.signal);
+        return {
+          monto: Number(quote.total), cotizacion: quote.cotizacion,
+          plazo_dias: null, destino: destinationKey,
+        };
+      }
+      const quotes = await getShippingQuotes(shippingMethod, address.region, address.city, controller.signal);
+      const quote = quotes.find(item => item.operador === shippingMethod);
+      if (!quote) throw new Error('No hay una tarifa disponible para este envío.');
+      return {...quote, destino: destinationKey};
+    };
+    // Debounce: al editar la dirección cancelamos la consulta anterior.
+    const pending = setTimeout(() => { void loadQuote()
+      .then((quote) => {
         if (controller.signal.aborted) return;
-        const quote = quotes.find(item => item.operador === shippingMethod);
-        if (!quote) throw new Error('No hay una tarifa disponible para este envío.');
-        setShippingQuotes({[shippingMethod]: {...quote, destino: destinationKey}});
+        setShippingQuotes({[shippingMethod]: quote});
+        // Blue no publica vence_en: el servidor valida el token al confirmar.
+        if (quote.vence_en === undefined) return;
         expiry = setTimeout(() => {
           setShippingQuotes({});
           setQuoteError('La cotización venció. Vuelve a cotizar el envío.');
@@ -619,8 +683,9 @@ export default function Checkout() {
         setQuoteError(cause instanceof Error ? cause.message : 'No se pudo cotizar el envío.');
         setQuoteErrorKind((cause as {kind?: string} | null)?.kind ?? 'temporal');
       }).finally(() => { if (!controller.signal.aborted) setQuoteLoading(false); });
-    return () => { controller.abort(); clearTimeout(expiry); };
-  }, [address.city, address.region, shippingMethod, selectedShippingOption, quoteAttempt, destinationKey]);
+    }, 350);
+    return () => { controller.abort(); clearTimeout(pending); clearTimeout(expiry); };
+  }, [address.city, address.region, shippingMethod, selectedShippingOption, quoteAttempt, destinationKey, blueDestination, blueCartSupported]);
 
   useEffect(() => {
     if (
@@ -779,15 +844,24 @@ export default function Checkout() {
           'Dirección requerida';
       } else if (
         selectedShippingOption?.requiresAddress &&
+        shippingMethod !== 'Blue Express' &&
         !esComunaDeRegion(address.city, address.region)
       ) {
         newErrors.address =
           'Selecciona una comuna de la región elegida';
       }
 
-      if (shippingLoading || shippingError || !selectedShippingOption) {
-        newErrors.shipping =
-          'Selecciona un método de entrega';
+      if (shippingMethod === 'Blue Express' && (!blueDestination || !blueCartSupported)) {
+        newErrors.address = !blueCartSupported
+          ? 'Blue Express admite una sola unidad.'
+          : 'Selecciona región, comuna y localidad de Blue Express.';
+      }
+      if (shippingLoading) {
+        newErrors.shipping = 'Espera mientras cargamos los métodos de entrega.';
+      } else if (shippingError) {
+        newErrors.shipping = shippingError;
+      } else if (!selectedShippingOption) {
+        newErrors.shipping = 'Selecciona un método de entrega';
       } else if (selectedShippingOption.requiresAddress && !deliveryReady) {
         newErrors.shipping = quoteError || 'Espera una cotización válida para continuar.';
       }
@@ -852,7 +926,7 @@ export default function Checkout() {
     submitting.current = true;
     setLoading(true);
     setErrors({});
-    const signature = JSON.stringify({items, contact, paymentMethod, shippingMethod, address, promoCode: checkoutPromoCode});
+    const signature = JSON.stringify({items, contact, paymentMethod, shippingMethod, address, blueDestination: shippingMethod === 'Blue Express' ? blueDestination?.codes : null, promoCode: checkoutPromoCode});
     if (checkoutAttempt.current.signature !== signature) {
       checkoutAttempt.current = {signature, key: crypto.randomUUID()};
     }
@@ -863,6 +937,7 @@ export default function Checkout() {
       const order = await orderService.create({
         key: checkoutAttempt.current.key, items, contact, paymentMethod, shippingMethod, address, promoCode: checkoutPromoCode,
         shippingQuote: selectedQuote?.cotizacion,
+        ...(shippingMethod === 'Blue Express' && blueDestination ? {blueDestination: blueDestination.codes} : {}),
       });
 
       const orderNumber = String(order.identificador || order.id_pedido);
@@ -899,7 +974,7 @@ export default function Checkout() {
       if (paymentMethod === 'PayPal') {
         const returnUrl = `${window.location.origin}${route('pedido-confirmado')}?orderNumber=${orderNumber}&tienda=${order.tienda_id}&gateway=paypal`;
         const cancelUrl = `${returnUrl}&cancelado=1`; // PayPal agrega ?token= tambien al cancelar: 'cancelado' evita capturar
-        
+
         const result = await paypalPaymentService.iniciarPago(
           order.tienda_id, orderNumber, Number(order.monto_total), returnUrl, cancelUrl
         );
@@ -940,14 +1015,14 @@ export default function Checkout() {
         window.location.href = order.url_pago;
         return;
       }
-      
+
       await clearCart();
       navigate(route('pedido-confirmado'), {
         state: {orderNumber, identificador: order.identificador, email: contact.email.trim()}, replace: true,
       });
     } catch (error) {
       const code = (error as {code?: string} | null)?.code;
-      if (typeof code === 'string' && code.startsWith('COTIZACION_')) {
+      if (typeof code === 'string' && (code.startsWith('COTIZACION_') || code === 'BLUE_COTIZACION_INVALIDA')) {
         // La tarifa venció o cambió: se vuelve a cotizar y se devuelve al comprador a Entrega.
         setQuoteAttempt(value => value + 1);
         setStep('delivery');
@@ -1560,6 +1635,21 @@ export default function Checkout() {
                       />
                     </div>
 
+                    {shippingMethod === 'Blue Express' ? (
+                      <BlueExpressDestination
+                        value={blueDestination}
+                        disabled={loading || !blueCartSupported}
+                        onChange={(selection) => {
+                          setBlueDestination(selection);
+                          setAddress(current => ({
+                            ...current,
+                            region: selection?.regionName ?? '',
+                            city: selection?.communeName ?? '',
+                          }));
+                          setErrors(current => ({...current, address: '', shipping: ''}));
+                        }}
+                      />
+                    ) : (
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <Select
                         label="Región"
@@ -1602,6 +1692,7 @@ export default function Checkout() {
                         ]}
                       />
                     </div>
+                    )}
                   </div>
                 )}
             </div>

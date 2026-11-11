@@ -268,7 +268,9 @@ export const shippingService = {
 
 // ── Métodos de develop para configuración y cotizaciones en tienda ─────────
 
-export type ShippingConfiguration = AdminConfig['shippingConfiguration'];
+export type ShippingConfiguration = AdminConfig['shippingConfiguration'] & {
+  blue_express?: { enabled: boolean };
+};
 export class ShippingConfigurationError extends Error {
   constructor(message: string, public fields: Record<string, string>) { super(message); }
 }
@@ -276,6 +278,11 @@ export class ShippingConfigurationError extends Error {
 function isConfiguration(value: unknown): value is ShippingConfiguration {
   if (!value || typeof value !== 'object') return false;
   const data = value as Record<string, unknown>;
+  if (data.blue_express !== undefined) {
+    const blue = data.blue_express;
+    if (!blue || typeof blue !== 'object' || Array.isArray(blue)
+      || typeof (blue as Record<string, unknown>).enabled !== 'boolean') return false;
+  }
   return ['chilexpress', 'starken', 'pickup'].every(key => {
     const section = data[key];
     if (!section || typeof section !== 'object') return false;
