@@ -103,22 +103,6 @@ export default function VisualHome() {
               >
                 {landing?.texto_boton}
               </Link>
-
-              {landing?.contenido?.bloques?.some(block=>block.visible&&block.tipo==='historia') && <Link
-                to="nuestra-historia"
-                className="
-                  inline-flex items-center justify-center min-h-11
-                  border border-white/70
-                  text-white
-                  px-7 py-3.5
-                  text-[11px] font-semibold
-                  uppercase tracking-[0.12em]
-                  hover:bg-white hover:text-black
-                  transition-colors
-                "
-              >
-                Nuestra historia
-              </Link>}
             </div>
 
             <p

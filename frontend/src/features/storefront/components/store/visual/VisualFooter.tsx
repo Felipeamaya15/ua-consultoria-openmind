@@ -8,7 +8,7 @@ import { useStore } from '../../../context/StoreContext';
 import { useStorefrontTemplate } from '../../../hooks/useStorefrontTemplate';
 
 export function VisualFooter() {
-  const { config, landing } = useStore();
+  const { config } = useStore();
   const { route } = useStorefrontTemplate();
 
   return (
@@ -37,13 +37,6 @@ export function VisualFooter() {
               >
                 Catálogo
               </Link>
-
-              {landing?.contenido?.bloques?.some(block=>block.visible&&block.tipo==='historia') && <Link
-                to={route('nuestra-historia')}
-                className="hover:text-inherit transition-colors"
-              >
-                Nuestra historia
-              </Link>}
 
               <Link
                 to={route('seguimiento')}

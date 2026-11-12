@@ -23,6 +23,17 @@ type Result =
 // Webpay solo permite confirmar un token una vez. Guardamos el resultado
 // para que recargar la página no repita la confirmación (y falle).
 const cacheKey = (token: string) => `tbk-result:${token}`;
+const PENDING_CART_SNAPSHOT_KEY = 'openmind-pending-payment-cart';
+const RESTORE_CART_FLAG_KEY = 'openmind-restore-cart';
+
+function triggerCartRestore() {
+  try {
+    sessionStorage.setItem(RESTORE_CART_FLAG_KEY, '1');
+    if (typeof window !== 'undefined' && typeof Event !== 'undefined') {
+      window.dispatchEvent(new Event('openmind_restore_cart'));
+    }
+  } catch {}
+}
 
 export default function TransbankReturnResult({
   orderNumber,
@@ -52,6 +63,7 @@ export default function TransbankReturnResult({
         } catch {
           transbankPaymentService.pagoAbortado(tiendaId, tbkToken).catch(() => undefined);
         }
+        triggerCartRestore();
         setResult({ status: 'cancelled' });
       } else {
         setResult({ status: 'error', message: 'No recibimos la información del pago.' });
@@ -62,7 +74,11 @@ export default function TransbankReturnResult({
     try {
       const cached = sessionStorage.getItem(cacheKey(tokenWs));
       if (cached) {
-        setResult(JSON.parse(cached) as Result);
+        const parsed = JSON.parse(cached) as Result;
+        if (parsed.status === 'rejected' || parsed.status === 'cancelled') {
+          triggerCartRestore();
+        }
+        setResult(parsed);
         return;
       }
     } catch {
@@ -75,8 +91,13 @@ export default function TransbankReturnResult({
         let next: Result;
         if (res?.exito) {
           next = { status: 'approved', data: res.data ?? {} };
+          try {
+            sessionStorage.setItem(PENDING_CART_SNAPSHOT_KEY, '');
+            sessionStorage.setItem(RESTORE_CART_FLAG_KEY, '');
+          } catch {}
         } else if (res?.error?.codigo === 'PAGO_RECHAZADO') {
           next = { status: 'rejected', message: res.mensaje || 'El pago fue rechazado.' };
+          triggerCartRestore();
         } else {
           next = { status: 'error', message: res?.mensaje || 'No pudimos confirmar tu pago.' };
         }
@@ -140,12 +161,12 @@ export default function TransbankReturnResult({
     loading: { glyph: '…', tone: 'bg-gray-100 text-gray-600', title: 'Confirmando tu pago…' },
     approved: { glyph: '✓', tone: 'bg-[var(--success-bg)] text-[var(--success)]', title: '¡Pago aprobado!' },
     rejected: { glyph: '✕', tone: 'bg-red-50 text-red-600', title: 'Pago rechazado' },
-    cancelled: { glyph: '!', tone: 'bg-amber-50 text-amber-600', title: 'Pago cancelado' },
+    cancelled: { glyph: '↩', tone: 'bg-amber-50 text-amber-600', title: 'Pago cancelado · Tu carrito sigue disponible' },
     error: { glyph: '!', tone: 'bg-red-50 text-red-600', title: 'No pudimos confirmar tu pago' },
   }[result.status];
 
   return (
-    <div className="w-full max-w-7xl mx-auto px-4 py-12 text-center flex flex-col items-center gap-6">
+    <div className="w-full max-w-3xl mx-auto px-4 py-12 text-center flex flex-col items-center gap-6">
       <div
         className={`w-20 h-20 rounded-full flex items-center justify-center text-3xl font-bold ${view.tone}`}
         aria-hidden="true"
@@ -170,14 +191,13 @@ export default function TransbankReturnResult({
 
         {result.status === 'rejected' && (
           <p className="text-[var(--muted-foreground)]">
-            {result.message} Tu pedido sigue pendiente de pago.
+            {result.message} Tus productos fueron conservados en el carrito para que puedas volver a intentarlo o elegir otro medio de pago.
           </p>
         )}
 
         {result.status === 'cancelled' && (
           <p className="text-[var(--muted-foreground)]">
-            El pago fue cancelado o el tiempo para pagar expiró. No se realizó ningún cobro
-            {orderLabel ? ` y el pedido ${orderLabel} sigue pendiente de pago` : ''}.
+            Cancelaste el proceso en Webpay y no se realizó ningún cobro. Tus productos siguen en tu carrito para que puedas revisar tu compra o elegir otro método de pago{orderLabel ? ` (pedido ${orderLabel} pendiente)` : ''}.
           </p>
         )}
 
@@ -220,45 +240,55 @@ export default function TransbankReturnResult({
       {retryError && <p role="alert" className="text-sm text-red-600">{retryError}</p>}
 
       {result.status !== 'loading' && (
-        <div className="flex flex-col sm:flex-row gap-3 w-full">
+        <div className="flex flex-col sm:flex-row flex-wrap gap-3 w-full">
           {result.status === 'approved' ? (
-            <Link data-page-action="ghost"
-              to={trackingRoute}
-              state={{ email }}
-              className="flex-1"
-            >
-              <Button variant="primary" fullWidth>
-                Ver mi pedido
-              </Button>
-            </Link>
-          ) : canRetry ? (
-            <Button variant="primary" fullWidth className="flex-1" onClick={retryPayment} disabled={retrying}>
-              {retrying ? 'Redirigiendo a Webpay…' : 'Reintentar pago'}
-            </Button>
-          ) : (result.status === 'rejected' || result.status === 'cancelled') && orderLabel ? (
-            <Link data-page-action="ghost" to={trackingRoute} state={{ orderNumber: orderLabel, email }} className="flex-1">
-              <Button variant="primary" fullWidth>
-                Ver mi pedido y pagar
-              </Button>
-            </Link>
-          ) : (
-            <Link
-              data-page-action="ghost"
-              to={`${route('compra')}?orderNumber=${encodeURIComponent(orderLabel)}`}
-              state={{ orderNumber: orderLabel }}
-              className="flex-1"
-            >
-              <Button variant="primary" fullWidth>
-                Volver al checkout
-              </Button>
-            </Link>
-          )}
+            <>
+              <Link data-page-action="ghost"
+                to={trackingRoute}
+                state={{ email }}
+                className="flex-1"
+              >
+                <Button variant="primary" fullWidth>
+                  Ver mi pedido
+                </Button>
+              </Link>
 
-          <Link data-page-action="ghost" to={route('catalogo')} className="flex-1">
-            <Button variant="outline" fullWidth>
-              Seguir comprando
-            </Button>
-          </Link>
+              <Link data-page-action="ghost" to={route('catalogo')} className="flex-1">
+                <Button variant="outline" fullWidth>
+                  Seguir comprando
+                </Button>
+              </Link>
+            </>
+          ) : (
+            <>
+              <Link
+                data-page-action="ghost"
+                to={route('carrito')}
+                className="flex-1"
+              >
+                <Button variant="primary" fullWidth>
+                  Volver al carrito
+                </Button>
+              </Link>
+
+              <Link
+                data-page-action="ghost"
+                to={orderLabel ? `${route('compra')}?orderNumber=${encodeURIComponent(orderLabel)}` : route('compra')}
+                state={orderLabel ? { orderNumber: orderLabel } : undefined}
+                className="flex-1"
+              >
+                <Button variant="outline" fullWidth>
+                  Volver al checkout
+                </Button>
+              </Link>
+
+              {canRetry && (
+                <Button variant="outline" fullWidth className="flex-1" onClick={retryPayment} disabled={retrying}>
+                  {retrying ? 'Redirigiendo a Webpay…' : 'Reintentar pago'}
+                </Button>
+              )}
+            </>
+          )}
         </div>
       )}
     </div>

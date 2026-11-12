@@ -1,4 +1,3 @@
-import { useStore } from '../../context/StoreContext';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useEffect, useRef } from 'react';
 import { useStorefrontTemplate } from '../../hooks/useStorefrontTemplate';
@@ -6,8 +5,7 @@ import { AccountNavigation, notifyStorefrontAuthChange, useStorefrontIdentity } 
 import { authService } from '../../../auth/services/authService';
 
 export function CompactMobileNavigation() {
-  const {landing} = useStore();
-  const {route,template} = useStorefrontTemplate();
+  const {route} = useStorefrontTemplate();
   const {pathname} = useLocation();
   const {user} = useStorefrontIdentity();
   const navigate = useNavigate();
@@ -38,7 +36,6 @@ export function CompactMobileNavigation() {
         <Link to={route()}>Inicio</Link>
         <Link to={route('catalogo')}>Catálogo</Link>
         <Link to={route('seguimiento')}>Seguimiento</Link>
-        {template === 'visual' && landing?.contenido?.bloques?.some(block=>block.visible&&block.tipo==='historia') && <Link to={route('nuestra-historia')}>Nuestra historia</Link>}
         <AccountNavigation />
         {user && (
           <button type="button" onClick={handleLogout} className="text-left text-sm font-medium px-2.5 py-1.5 rounded-lg">

@@ -9,7 +9,7 @@ import { useStorefrontTemplate } from '../../../hooks/useStorefrontTemplate';
 import { authService } from '../../../../auth/services/authService';
 
 export function VisualHeader() {
-  const { config, landing } = useStore();
+  const { config } = useStore();
   const { count } = useCart();
   const { route } = useStorefrontTemplate();
   const { user } = useStorefrontIdentity();
@@ -37,12 +37,6 @@ export function VisualHeader() {
             <span className="font-serif text-xl sm:text-2xl truncate whitespace-nowrap">
               {config.name}
             </span>
-
-            <span className="hidden sm:block h-5 w-px bg-black/15" />
-
-            <span className="hidden sm:block text-[10px] tracking-[0.25em] text-black/60 uppercase">
-              TIENDA
-            </span>
           </Link>
         </div>
 
@@ -55,13 +49,6 @@ export function VisualHeader() {
             >
               Catálogo
             </Link>
-
-            {landing?.contenido?.bloques?.some(block=>block.visible&&block.tipo==='historia') && <Link
-              to={route('nuestra-historia')}
-              className="hidden sm:inline-block hover:opacity-50 transition-opacity"
-            >
-              Nuestra historia
-            </Link>}
 
             <Link
               to={route('seguimiento')}
