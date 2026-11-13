@@ -153,6 +153,39 @@ class MediaLibraryTests(TestCase):
                 self.assertEqual(self.create(tipo=kind, url=url).status_code, 400)
         self.assertFalse(RecursoMultimedia.objects.exists())
 
+    def video_file(self, seconds=2, kind='mp4'):
+        import av
+        data = BytesIO()
+        with av.open(data, mode='w', format=kind) as container:
+            stream = container.add_stream('libx264' if kind == 'mp4' else 'libvpx-vp9', rate=2)
+            stream.width, stream.height, stream.pix_fmt = 64, 48, 'yuv420p'
+            for number in range(seconds * 2):
+                frame = av.VideoFrame.from_image(Image.new('RGB', (64, 48), '#243e75'))
+                for packet in stream.encode(frame): container.mux(packet)
+            for packet in stream.encode(): container.mux(packet)
+        return SimpleUploadedFile('clip.' + kind, data.getvalue(), content_type='video/' + kind)
+
+    def test_short_mp4_and_webm_decode_upload_reload_and_remain_private(self):
+        for kind in ('mp4', 'webm'):
+            response = self.client.post(self.url, {'titulo': 'Clip QA', 'tipo': 'video', 'video': self.video_file(kind=kind)}, format='multipart')
+            self.assertEqual(response.status_code, 201, response.data)
+            row = response.data['data']
+            self.assertEqual(row['archivo']['mime'], 'video/' + kind)
+            self.assertEqual(row['archivo']['ancho'], 64)
+            self.assertEqual(self.client.get(self.url).data['data']['resultados'][0]['id'], row['id'])
+            endpoint = self.url + row['id'] + '/imagen/'
+            self.assertEqual(self.client.get(endpoint)['Content-Type'], 'video/' + kind)
+            self.assertIn(APIClient().get(endpoint).status_code, (401, 403))
+        self.assertEqual(ArchivoMultimedia.objects.count(), 2)
+
+    def test_long_oversized_and_disguised_videos_never_save(self):
+        files = [self.video_file(seconds=21), SimpleUploadedFile('large.mp4', b'x' * (8 * 1024 * 1024 + 1), content_type='video/mp4'), SimpleUploadedFile('fake.mp4', b'not a movie', content_type='video/mp4')]
+        for video in files:
+            result = self.client.post(self.url, {'titulo': 'No guardar', 'tipo': 'video', 'video': video}, format='multipart')
+            self.assertEqual(result.status_code, 400, result.data)
+        self.assertEqual(ArchivoMultimedia.objects.count(), 0)
+        self.assertEqual(RecursoMultimedia.objects.count(), 0)
+
     def test_upload_is_real_private_and_deduplicated_with_metadata(self):
         first = self.upload()
         self.assertEqual(first.status_code, 201, first.data)

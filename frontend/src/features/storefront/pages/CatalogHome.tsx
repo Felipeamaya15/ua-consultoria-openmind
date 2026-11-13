@@ -1,3 +1,5 @@
+import { ProductImageGallery } from '../components/store/ProductImageGallery';
+import { useHeroContent } from '../hooks/useHeroContent';
 import { HomeSections } from '../../landing/components/HomeSections';
 import { HomeCategories } from '../../landing/components/HomeCategories';
 import { VISUAL_SECTION } from '../visual/sectionIds';
@@ -22,6 +24,7 @@ export default function CatalogHome() {
   const mochila = featured[0];
   const discover = featured.slice(1);
 
+  const hero = useHeroContent(landing, route);
   return (
     <div data-landing-page="catalog" className="bg-[var(--visual-background)] text-[var(--visual-text)] overflow-hidden min-w-0">
       {/* HERO EDITORIAL */}
@@ -33,7 +36,7 @@ export default function CatalogHome() {
           data-visual-part="heroFrame"
           className={`relative min-h-[460px] sm:min-h-[620px] md:min-h-[720px] overflow-hidden rounded-[22px] sm:rounded-[28px] ${heroHasPhoto ? 'text-white' : 'bg-[var(--primary)] text-[var(--on-primary)]'}`}
         >
-          <HeroCarousel landing={landing} />
+          <HeroCarousel landing={landing} onContentChange={hero.onChange} />
 
           <div
             data-visual-part="heroOverlay"
@@ -59,15 +62,15 @@ export default function CatalogHome() {
 
               <LandingStatus />
 
-              <h1 className="mt-4 sm:mt-6 text-[clamp(2.15rem,6vw,5.125rem)] leading-[0.98] tracking-[-0.045em] font-black break-words text-inherit">
-                {landing?.titulo}
+              <h1 hidden={!hero.showTitle} className="mt-4 sm:mt-6 text-[clamp(2.15rem,6vw,5.125rem)] leading-[0.98] tracking-[-0.045em] font-black break-words text-inherit">
+                {hero.title}
               </h1>
 
-              <p
+              <p hidden={!hero.showDescription}
                 data-visual-part="heroSubtitle"
                 className="mt-5 sm:mt-7 max-w-xl text-sm md:text-base leading-7 text-inherit opacity-90 break-words"
               >
-                {landing?.descripcion}
+                {hero.description}
               </p>
 
               <div
@@ -76,10 +79,10 @@ export default function CatalogHome() {
               >
                 <Link
                   data-visual-section={VISUAL_SECTION.heroCta}
-                  to={route('catalogo')}
+                  hidden={!hero.showButton} to={hero.href} target={hero.external ? "_blank" : undefined} rel={hero.external ? "noopener noreferrer" : undefined}
                   className="inline-flex min-h-11 w-full sm:w-auto items-center justify-center rounded-full bg-[var(--accent)] px-7 py-3 text-sm font-semibold text-[var(--on-accent)] hover:opacity-90 transition-opacity"
                 >
-                  {landing?.texto_boton}
+                  {hero.buttonText}
                 </Link>
               </div>
             </div>
@@ -246,16 +249,12 @@ export default function CatalogHome() {
                 key={product.id}
                 className="group min-w-0"
               >
-                <Link
-                  to={route(`producto/${product.id}`)}
-                  className="block aspect-[1.15/1] rounded-[20px] sm:rounded-[24px] overflow-hidden bg-[var(--visual-surface)]"
+                <div
+
+                  className="relative relative block aspect-[1.15/1] rounded-[20px] sm:rounded-[24px] overflow-hidden bg-[var(--visual-surface)]"
                 >
-                  <img
-                    src={product.images[0]}
-                    alt={product.name}
-                    className="w-full h-full object-cover group-hover:scale-[1.035] transition-transform duration-500"
-                  />
-                </Link>
+                  <ProductImageGallery images={product.images} alt={product.name} href={route(`producto/${product.id}`)} imageClassName="w-full h-full object-cover group-hover:scale-[1.035] transition-transform duration-500" />
+                </div>
 
                 <p className="mt-4 sm:mt-5 text-[var(--primary)] text-xs font-bold">
                   {product.category}

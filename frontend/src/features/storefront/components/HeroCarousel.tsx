@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import type { LandingConfig } from '../../landing/types/landing.types';
+import type { CarouselSlideContent, LandingConfig } from '../../landing/types/landing.types';
 import './hero-carousel.css';
 // Animaciones oficiales disponibles también en la tienda pública, sin fetch en cada visita.
 
@@ -8,8 +8,8 @@ import { isOnlineEffectId, type OnlineEffectId } from '../visual/onlineEffects';
 // OPENMIND_PUBLIC_CAROUSEL_PLAYBACK_FIX_V1
 // OPENMIND_ONLINE_EFFECTS_V1
 
-type HeroSlide = { id: string; src: string; alt: string };
-type HeroCarouselProps = { landing?: LandingConfig | null; intervalMs?: number };
+type HeroSlide = { id: string; src: string; alt: string; tipo?: 'imagen' | 'video'; content?: CarouselSlideContent };
+type HeroCarouselProps = { landing?: LandingConfig | null; intervalMs?: number; onContentChange?: (content: CarouselSlideContent) => void };
 type CarouselMode = 'static' | 'manual' | 'automatic';
 type CarouselTransition = CarouselTransitionId | OnlineEffectId;
 
@@ -37,6 +37,7 @@ function getHeroSlides(landing?: LandingConfig | null): HeroSlide[] {
   if (images.length > 0) {
     return images.map(image => ({
       id: image.id,
+      tipo: image.tipo, content: image.contenido,
       src: image.archivo,
       alt: image.texto_alternativo || '',
     }));
@@ -82,8 +83,10 @@ function getSettings(element: HTMLElement, fallbackMs?: number): CarouselSetting
   };
 }
 
-export function HeroCarousel({ landing, intervalMs }: HeroCarouselProps) {
+export function HeroCarousel({ landing, intervalMs, onContentChange }: HeroCarouselProps) {
   const hostRef = useRef<HTMLDivElement>(null);
+  const [videoPlaying, setVideoPlaying] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
   const previousSlide = useRef<HeroSlide | null>(null);
   const [outgoing, setOutgoing] = useState<HeroSlide | null>(null);
   const [settings, setSettings] = useState<CarouselSettings>(DEFAULT_SETTINGS);
@@ -99,9 +102,17 @@ export function HeroCarousel({ landing, intervalMs }: HeroCarouselProps) {
     : 0;
   const active = slides[currentIndex];
   const nextImageSource = count > 1 && settings.mode === 'automatic'
-    ? slides[(currentIndex + 1) % count]?.src
+    ? (slides[(currentIndex + 1) % count]?.tipo === 'video' ? undefined : slides[(currentIndex + 1) % count]?.src)
     : undefined;
 
+  const contentKey = JSON.stringify(active?.content ?? {});
+  useEffect(() => { onContentChange?.(active?.content ?? {}); }, [active?.id, contentKey, onContentChange]);
+  useEffect(() => {
+    const video = videoRef.current; if (!video) return;
+    if (settings.mode === 'automatic' && !manualPaused && !reducedMotion && pageVisible) void video.play().catch(() => undefined);
+    else video.pause();
+    return () => video.pause();
+  }, [active?.id, settings.mode, manualPaused, reducedMotion, pageVisible]);
   useEffect(() => {
     if (!nextImageSource) return;
     const preload = new Image();
@@ -198,7 +209,7 @@ export function HeroCarousel({ landing, intervalMs }: HeroCarouselProps) {
       aria-roledescription="carrusel"
       aria-label="Fotografías de portada"
     >
-      {outgoing && (
+      {outgoing && outgoing.tipo !== 'video' && (
         <img
           key={`anterior:${outgoing.id}`}
           src={outgoing.src}
@@ -208,7 +219,7 @@ export function HeroCarousel({ landing, intervalMs }: HeroCarouselProps) {
         />
       )}
 
-      {active && (
+      {active && active.tipo === 'video' ? <video ref={videoRef} key={active.id} data-visual-part="heroImage" src={active.src} className="hero-carousel__image" controls muted playsInline preload="metadata" onPlay={event => { setVideoPlaying(true); document.querySelectorAll('video').forEach(video=>{if(video!==event.currentTarget)video.pause();}); }} onPause={()=>setVideoPlaying(false)} aria-label={active.alt || 'Video de portada'} /> : active && (
         <img
           key={`${active.id}:${active.src}:${settings.transition}`}
           data-visual-part="heroImage"
@@ -222,6 +233,7 @@ export function HeroCarousel({ landing, intervalMs }: HeroCarouselProps) {
         />
       )}
 
+      {active?.tipo === 'video' && <button type="button" className="hero-carousel__video-toggle" aria-label={videoPlaying ? 'Pausar video de portada' : 'Reproducir video de portada'} onClick={()=>{const video=videoRef.current;if(!video)return;if(video.paused)void video.play().catch(()=>undefined);else video.pause();}}>{videoPlaying?'Pausar video':'Reproducir video'}</button>}
       <div
         className="hero-carousel__dots"
         role="group"

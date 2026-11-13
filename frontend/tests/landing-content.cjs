@@ -17,11 +17,16 @@ function load(file) {
 }
 function req(id) {
   if (id === 'react/jsx-runtime') return { jsx, jsxs: jsx };
-  if (id === 'react') return { useMemo: f => f(), useState: x => [x, () => {}] };
+  if (id === 'react') return { useMemo: f => f(), useEffect: () => {}, useId: () => 'qa-map', useState: x => [x, () => {}] };
   if (id === 'react-router-dom') return { Link: 'Link', useNavigate: () => () => {} };
   if (id.includes('StoreContext')) return { useStore: () => state };
+  if (id.includes('useHeroContent')) return load('src/features/storefront/hooks/useHeroContent.ts');
   if (id.includes('useLandingContent')) return load('src/features/landing/hooks/useLandingContent.ts');
   if (id.includes('useLandingSectionVisibility')) return load('src/features/landing/hooks/useLandingSectionVisibility.ts');
+  if (id.includes('HeroCarousel')) return require('./source-loader.cjs').load('src/features/storefront/components/HeroCarousel.tsx');
+  if (id.includes('benefitIcons')) return load('src/features/landing/types/benefitIcons.ts');
+  if (id.includes('LocationPreview')) return load('src/features/landing/components/LocationPreview.tsx');
+  if (id.includes('mapLocation')) return require('./source-loader.cjs').load('src/features/landing/types/mapLocation.ts');
   if (id.includes('weeklyHours')) return load('src/features/landing/types/weeklyHours.ts');
   if (id.includes('socialProfiles')) return load('src/features/landing/types/socialProfiles.ts');
   if (id.endsWith('.css')) return {};
@@ -32,13 +37,13 @@ function req(id) {
 }
 function nodes(tree, result = []) {
   if (Array.isArray(tree)) tree.forEach(x => nodes(x, result));
-  else if (tree && typeof tree === 'object') { result.push(tree); nodes(tree.props?.children, result); }
+  else if (tree && typeof tree === 'object') { result.push(tree); if (tree.type?.name === 'LocationPreview') nodes(tree.type(tree.props), result); else nodes(tree.props?.children, result); }
   else if (typeof tree === 'string') result.push(tree);
   return result;
 }
 const empty = load('src/features/landing/types/landingContent.ts').normalizeLandingContent();
 function reset(count = 3) {
-  state = { config: {}, landingProducts: products, landingCatalogError: '', landing: {
+  state = { config: {}, visualConfig: require('./source-loader.cjs').load('src/features/storefront/visual/resolveVisualConfig.ts').resolveVisualConfig({template}), landingProducts: products, landingCatalogError: '', landing: {
     titulo: 'QA SCRUM-58', descripcion: 'Configuración persistida correctamente', texto_boton: 'Ver productos', imagen_principal: '/media/hero.png',
     secciones: { 'Productos destacados': true, 'Categorías': true, 'Beneficios': true, 'Información de contacto': true, 'Mapa / ubicación': true },
     contenido: { ...empty, productos_destacados: products.slice(0, count).map(p => p.catalogId), categorias: ['Categoría 0', 'Categoría 1'], beneficios: [{ titulo: 'Mi beneficio', descripcion: 'Mi descripción', icono: 'truck' }] },
@@ -86,8 +91,8 @@ const rendered = nodes(Details({ includeBenefits: true }));
 assert.equal(rendered.filter(n => n.type === 'section').length, 3);
 assert(rendered.some(n => n.props?.href === 'https://wa.me/56912345678'));
 assert(rendered.some(n => n.props?.href === 'mailto:qa@example.test'));
-assert(rendered.includes('Dirección persistida'));
-assert(rendered.includes('Ciudad'));
+assert(rendered.some(n => typeof n === 'string' && n.includes('Dirección persistida')));
+assert(rendered.some(n => typeof n === 'string' && n.includes('Ciudad')));
 const schedule = load('src/features/landing/types/weeklyHours.ts').weeklyHours;
 const week = schedule('Sábado: 10:00–14:00; Lunes: 09:00–20:00');
 assert.equal(week.length, 7);
@@ -106,7 +111,7 @@ for (template of ['editorial', 'minimal', 'visual', 'catalog']) {
   assert.equal(details.filter(n => n.type === 'section' && n.props['data-template'] === template).length, 2);
   assert.equal(details.filter(n => n.type === 'li').length, 7);
   assert(details.includes('Cerrado'));
-  assert(details.includes('Comuna / Ciudad'));
+  assert(details.some(n => typeof n === 'string' && /Comuna.*Ciudad/.test(n)));
   for (const [flag, label, other] of [['Información de contacto', 'Información de contacto', 'Ubicación'], ['Mapa / ubicación', 'Ubicación', 'Información de contacto']]) {
     state.landing.secciones[flag] = false;
     details = nodes(Details({}));

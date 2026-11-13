@@ -12,3 +12,25 @@
 .store-content-block[data-block-type=personalizada]{grid-template-columns:minmax(0,1fr)}
 @media(max-width:767px){.section-element-gallery{grid-template-columns:repeat(2,minmax(0,1fr))}.section-element-link{width:100%}}
 @media(max-width:420px){.section-element-gallery{grid-template-columns:minmax(0,1fr)}}
+
+.section-media-video {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  max-height: 75vh;
+  object-fit: contain;
+  background: #111;
+  border-radius: 12px;
+}
+.section-element-image,
+.section-element-image figure {
+  width: 100%;
+  min-width: 0;
+}
+.section-media-loading {
+  display: grid;
+  place-items: center;
+  min-height: 220px;
+  background: #f1f5f9;
+  border-radius: 12px;
+}

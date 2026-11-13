@@ -2,8 +2,8 @@
 export type OrderBadgeVariant = 'default' | 'info' | 'warning' | 'success' | 'error';
 
 /** Equivalentes a Pedido.ESTADOS_PAGADOS y al conteo por_despachar del dashboard. */
-export const CONFIRMED_ORDER_STATES = ['pagado', 'en_camino', 'entregado'] as const;
-export const DISPATCH_ORDER_STATES = ['pendiente', 'pagado'] as const;
+export const CONFIRMED_ORDER_STATES = ['pagado', 'en_camino', 'entregado', 'preparando', 'en_origen', 'enviado', 'en_reparto'] as const;
+export const DISPATCH_ORDER_STATES = ['pendiente', 'pagado', 'preparando', 'en_origen'] as const;
 
 export interface OrderStatusBadge {
   label: string;

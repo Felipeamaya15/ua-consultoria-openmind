@@ -1,3 +1,4 @@
+import { ActivityConversation } from '../components/ActivityConversation';
 import { useEffect, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { AdminCard, Button, Input, Select, Tabs } from '../components/ui';
@@ -31,6 +32,7 @@ export default function Activities() {
   const [notice, setNotice] = useState('');
   const [attempt, setAttempt] = useState(0);
   const [busy, setBusy] = useState('');
+  const [conversationId, setConversationId] = useState<string | null>(null);
 
   const changing = useRef(false);
   const revision = useRef(0);
@@ -144,9 +146,8 @@ export default function Activities() {
 
   return (
     <section aria-label="Servicios y talleres" className="space-y-4">
-      <div className="flex flex-wrap justify-between gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="text-lg font-bold">Servicios y talleres</h2>
           <p>Gestiona consultas e inscripciones gratuitas de esta tienda.</p>
         </div>
         <Link className="lp-button" to="/emprendedor/landing#secciones-tienda">
@@ -165,6 +166,19 @@ export default function Activities() {
         onChange={tipo => filter({ tipo, estado: '', archivada: '' })}
       />
 
+      {kind === 'inscripcion' && <aside aria-label="Cómo gestionar inscripciones gratuitas" className="rounded-xl border border-[var(--border)] bg-white p-4 space-y-3 text-sm">
+        <h3 className="font-semibold">Participantes de talleres gratuitos</h3>
+        <p>Una inscripción registra la participación en un taller gratuito. La confirmación puede ser manual o automática, según la configuración del taller; recibir el formulario no garantiza que esté confirmada.</p>
+        <details><summary className="cursor-pointer font-semibold">¿Qué significa cada estado?</summary>
+          <dl className="mt-3 grid gap-3 sm:grid-cols-3">
+            <div><dt className="font-semibold">Pendiente de confirmación</dt><dd>La solicitud fue recibida y espera revisión de la tienda.</dd></div>
+            <div><dt className="font-semibold">Confirmada (gratuita)</dt><dd>La participación está confirmada de forma manual o automática. No acredita un pago.</dd></div>
+            <div><dt className="font-semibold">Cancelada</dt><dd>No ocupa cupo. Para reactivarla, el sistema vuelve a comprobar disponibilidad y vigencia del taller.</dd></div>
+          </dl>
+        </details>
+        <p>Si el taller tiene un límite, las pendientes y confirmadas ocupan cupo. Usa el filtro de estado o «Ver participantes de este taller» para consultar su lista. Cambiar un estado aquí no envía un correo.</p>
+      </aside>}
+
       {kind === 'consulta' && (
         <Tabs
           label="Bandeja de consultas"
@@ -178,7 +192,7 @@ export default function Activities() {
         />
       )}
 
-      <div className="activity-management-filters">
+      <div className="activity-management-filters rounded-xl border border-[var(--border)] bg-white p-4">
         <Select
           label="Estado de gestión"
           value={state}
@@ -190,7 +204,8 @@ export default function Activities() {
           onChange={event => filter({ estado: event.target.value })}
         />
         <Input
-          label="Identificador de sección (opcional)"
+          label="Actividad (identificador opcional)"
+          hint="Puedes filtrar desde una tarjeta sin copiar el identificador." persistentHint
           value={section}
           maxLength={36}
           disabled={!!busy}
@@ -234,13 +249,13 @@ export default function Activities() {
             <EmptyListState>
               {kind === 'consulta' && archived
                 ? 'No hay consultas archivadas con estos filtros.'
-                : 'No hay solicitudes con estos filtros.'}
+                : kind === 'inscripcion' ? state || section ? 'No hay participantes con estos filtros. Prueba con todos los estados o quita el filtro de actividad.' : 'Aún no hay inscripciones gratuitas. Comprueba que tu taller esté publicado, admita inscripciones y tenga fecha y cupos disponibles.' : 'No hay solicitudes con estos filtros.'}
             </EmptyListState>
           ) : (
             <div className="activity-management-list">
               {data.resultados.map(record => (
                 <AdminCard key={record.id}>
-                  <article>
+                  <article className="space-y-3 break-words">
                     <div className="flex flex-wrap justify-between gap-3">
                       <div>
                         <h3 className="font-semibold">{record.titulo_actividad}</h3>
@@ -249,21 +264,22 @@ export default function Activities() {
                           {record.nombre} {record.apellido}
                         </p>
                       </div>
-                      <span>{formatBusinessDate(record.creado)}</span>
+                      <span className="text-xs text-[var(--muted-foreground)]">{formatBusinessDate(record.creado)}</span>
                     </div>
 
                     <p>Correo: {record.email}</p>
                     {record.telefono && <p>Teléfono: {record.telefono}</p>}
-                    {record.mensaje && <p>{record.mensaje}</p>}
+                    {record.mensaje && <p className="rounded-lg bg-[var(--muted)] p-3 whitespace-pre-wrap">{record.mensaje}</p>}
 
                     <div className="activity-management-filters">
+                      {record.tipo === 'consulta' && <Button variant="primary" disabled={!!busy} onClick={() => setConversationId(record.id)}>Abrir consulta y responder</Button>}
                       <Select
                         label={`Estado de ${record.nombre} (${record.id.slice(0, 8)})`}
                         value={record.estado}
                         disabled={!!busy}
                         options={Object.entries(
                           record.tipo === 'consulta' ? CONSULT_STATES : ENROLL_STATES
-                        ).map(([value, label]) => ({ value, label }))}
+                        ).filter(([value]) => record.tipo !== 'consulta' || value !== 'respondida' || record.estado === 'respondida').map(([value, label]) => ({ value, label }))}
                         onChange={event => void changeState(
                           record.id,
                           event.target.value as ActivityRequestState
@@ -286,7 +302,7 @@ export default function Activities() {
                         disabled={!!busy}
                         onClick={() => filter({ seccion: record.seccion_id })}
                       >
-                        Ver solicitudes de esta actividad
+                        {record.tipo === 'inscripcion' ? 'Ver participantes de este taller' : 'Ver solicitudes de esta actividad'}
                       </Button>
                     </div>
                   </article>
@@ -322,6 +338,7 @@ export default function Activities() {
           </nav>
         </>
       )}
+      {conversationId && <ActivityConversation key={conversationId} id={conversationId} onClose={() => setConversationId(null)} onUpdated={() => setAttempt(n => n + 1)} />}
     </section>
   );
 }

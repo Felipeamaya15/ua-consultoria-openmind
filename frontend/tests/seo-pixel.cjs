@@ -148,7 +148,9 @@ async function testSeoAnalyticsComponent() {
   const formComponent = loadModule('src/features/admin/pages/SeoAnalytics.tsx', {
     require: (id) => {
       if (id === 'react/jsx-runtime') return { jsx, jsxs: jsx };
+      if (id.includes('storeInformationService')) return { fetchStoreInformation: async () => ({ nombre: 'Negocio', descripcion: 'Descripción del negocio' }) };
       if (id === 'react') return {
+        useEffect() {},
         useState: (initial) => {
           const index = state.length;
           state.push(initial);

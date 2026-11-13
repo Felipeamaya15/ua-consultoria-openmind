@@ -26,7 +26,8 @@ test('individual system visibility inherits historical flags without changing se
 function renderHome(template, content, flags={}) {
   const product={id:'real-slug',catalogId:'000000000000000000000001',name:'Producto real QA',category:'Categoría real',images:['https://example.test/producto.webp'],basePrice:12345,description:'Vigente'};
   const landing={titulo:'Portada QA',descripcion:'Descripción',texto_boton:'Comprar',contenido:content,secciones:flags};
-  const useStore=()=>({landing,landingProducts:[product],blockStyles:{},config:{name:'Negocio'}});
+  const visualConfig=load('src/features/storefront/visual/resolveVisualConfig.ts').resolveVisualConfig({template});
+  const useStore=()=>({landing,landingProducts:[product],visualConfig,blockStyles:{},config:{name:'Negocio'}});
   const useContent=()=>({content,featured:content.productos_destacados?.length?[product]:[],categories:content.categorias||[]});
   const templ=()=>({template,route:(path='')=>'/plantilla/'+({editorial:1,minimal:2,visual:3,catalog:4}[template])+'/'+path});
   const Home=load(`src/features/storefront/pages/${({editorial:'Editorial',minimal:'Minimal',visual:'Visual',catalog:'Catalog'}[template])}Home.tsx`,{

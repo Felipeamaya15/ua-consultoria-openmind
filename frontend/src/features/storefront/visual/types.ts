@@ -26,6 +26,7 @@ export interface ProductGridConfig {
   maxWidth: number;
 }
 export interface ProductCardConfig {
+
   radius: number;
   border: BorderConfig;
   shadow: Shadow;
@@ -63,7 +64,7 @@ export interface InfoConfig {
   titleSize: number;
 }
 export interface PageAppearance {
-  content: { imageRatio: number; optionSize: number; quantityWidth: number; align: Alignment; layout: 'split' | 'stack'; imageWidth: number; imageSize: number; imageRadius: number; gallerySize: number; infoSize: number; priceSize: number; formWidth: number };
+  content: { imageRatio: number; optionSize: number; quantityWidth: number; align: Alignment; layout: 'split' | 'stack'; imageWidth: number; imageSize: number; imageRadius: number; gallerySize: number; galleryArrowStyle?: 'circulares' | 'redondeadas' | 'solo-flechas'; infoSize: number; priceSize: number; formWidth: number };
   layout: { maxWidth: number; padding: number; gap: number; background: string; textColor: string; titleSize: number; titleAlign: Alignment };
   panel: { background: string; radius: number; padding: number; border: BorderConfig; shadow: Shadow };
   field: { background: string; textColor: string; radius: number; padding: number; border: BorderConfig };
@@ -135,6 +136,9 @@ export interface VisualSections {
     // OPENMIND_ONLINE_EFFECTS_V1: valores comprobados en el proveedor Magic CSS.
     carouselTransition?: import('./onlineEffects').CarouselChoice;
     carouselIndicators?: boolean;
+    productImageMode?: 'static' | 'hover' | 'automatic';
+    productImageInterval?: number;
+    productImageTransition?: 'fade' | 'slide' | 'zoom';
     /** Recetas JSON seguras importadas por la tienda y compartidas por sus plantillas. */
     importedEffectPresets?: string;
     // OPENMIND_PRODUCT_HOVER_V1
