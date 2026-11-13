@@ -38,7 +38,8 @@ test('Velta renders no unmanageable demo stories when there are no saved blocks'
     '../../landing/hooks/useLandingSectionVisibility':{useLandingSectionVisibility:()=>()=>false},
     '../context/StoreContext':{useStore:()=>({visualConfig:load('src/features/storefront/visual/resolveVisualConfig.ts').resolveVisualConfig(),landing:{titulo:'Mi tienda',descripcion:'Real',texto_boton:'Ver'},config:{name:'Mi tienda'}})},
     '../../storefront/context/StoreContext':{useStore:()=>({visualConfig:load('src/features/storefront/visual/resolveVisualConfig.ts').resolveVisualConfig(),landing:{titulo:'Mi tienda',descripcion:'Real',texto_boton:'Ver'},landingProducts:[],config:{name:'Mi tienda'}})},
-    '../../storefront/hooks/useStorefrontTemplate':{useStorefrontTemplate:()=>({template:'visual',route:path=>'/plantilla/3/'+path})},
+    '../hooks/useStorefrontTemplate': {useStorefrontTemplate: () => ({template: 'visual', route: path => '/plantilla/3/' + path})},
+    '../../storefront/hooks/useStorefrontTemplate': {useStorefrontTemplate: () => ({template: 'visual', route: path => '/plantilla/3/' + path})},
     'react-router-dom':{Link:({children})=>React.createElement('a',null,children)},
     '../components/ui':{Icon:()=>null},
   });

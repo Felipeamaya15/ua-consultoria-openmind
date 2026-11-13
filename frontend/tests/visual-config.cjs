@@ -17,6 +17,7 @@ function load(file) {
   cache.set(file, module.exports);
   const code = ts.transpileModule(fs.readFileSync(file, 'utf8'), { compilerOptions: { target: ts.ScriptTarget.ES2020, module: ts.ModuleKind.CommonJS } }).outputText;
   const req = id => {
+    if (id.endsWith('.css')) return {};
     if(id.endsWith('/fontLibrary')){const library=load(path.resolve(path.dirname(file),id)+'.ts');return {...library,loadVisualFonts(){}};}
 
     if (!id.startsWith('.')) throw Error(`Unexpected dependency: ${id}`);
@@ -355,11 +356,49 @@ test('SSR and denied storage safely return defaults without touching window', ()
 });
 test('CSS variables are valid strings, consistently named and preserve line clamp', () => {
   const stylesheet = fs.readFileSync(path.join(root, 'src/styles/visual-config.css'), 'utf8');
+  const galleryStylesheet = fs.readFileSync(
+    path.join(root, 'src/features/storefront/components/store/productImageGallery.css'),
+    'utf8'
+  );
+  // Acepta tanto var(--clave) como var(--clave, valor-alternativo).
+  const references = (source, key) =>
+    source.includes(`var(${key})`) || source.includes(`var(${key},`);
+
+  // Estas páginas comparten el esquema de configuración, pero no utilizan
+  // controles de flechas de galería. Si se incorpora una nueva página,
+  // la prueba exigirá revisar expresamente su conexión con el CSS.
+  const pagesWithoutGalleryArrows = [
+    'catalog', 'login', 'cart', 'checkout', 'confirmation', 'tracking',
+    'profile', 'orders', 'terms', 'privacy', 'refund', 'story'
+  ];
+  const unusedPageArrows = new RegExp(
+    `^--visual-page-(?:${pagesWithoutGalleryArrows.join('|')})-gallery-arrow-` +
+    '(?:radius|background|color|border|shadow)-(?:desktop|tablet|mobile)$'
+  );
+  // Los metadatos de forma y margen se transforman en radius/safe-padding.
+  const logoMetadata =
+    /^--visual-header-(store|institution)-logo-(padding|shape)-(desktop|tablet|mobile)$/;
+  const productArrows =
+    /^--visual-page-product-gallery-arrow-(radius|background|color|border|shadow)-(desktop|tablet|mobile)$/;
+
   for (const template of Object.keys(VISUAL_PRESETS)) {
     const vars = css(resolve({ template }));
     for (const [key, value] of Object.entries(vars)) {
-      assert(/^--[a-z-]+-(desktop|tablet|mobile)$/.test(key)); assert.equal(typeof value, 'string');
-      assert(value.length); assert(!/undefined|NaN|Infinity/.test(value)); assert(stylesheet.includes(`var(${key})`));
+      assert(/^--[a-z-]+-(desktop|tablet|mobile)$/.test(key), `Nombre CSS inválido: ${key}`);
+      assert.equal(typeof value, 'string', `Valor CSS no textual: ${key}`);
+      assert(value.length, `Valor CSS vacío: ${key}`);
+      assert(!/undefined|NaN|Infinity/.test(value), `Valor CSS inválido: ${key}`);
+
+      if (productArrows.test(key)) {
+        assert(references(galleryStylesheet, key), `Falta referencia de galería: ${key}`);
+      } else if (logoMetadata.test(key)) {
+        const [, owner, property, viewportName] = key.match(logoMetadata);
+        const derived = `--visual-header-${owner}-logo-${property === 'shape' ? 'radius' : 'safe-padding'}-${viewportName}`;
+        assert(Object.hasOwn(vars, derived), `Falta variable derivada del logo: ${derived}`);
+        assert(references(stylesheet, derived), `Falta uso de la variable derivada: ${derived}`);
+      } else if (!unusedPageArrows.test(key)) {
+        assert(references(stylesheet, key), `Falta referencia CSS: ${key}`);
+      }
     }
   }
   assert.equal(css(resolve({ template: 'visual' }))['--visual-card-description-display-mobile'], '-webkit-box');
@@ -373,7 +412,32 @@ test('legacy image normalization rejects invalid values and preserves valid zero
 test('preview variables survive asynchronous updates and observers disconnect', () => {
   const { connectVisualPreview } = load('src/features/admin/visualEditor/preview.ts');
   const styles = new Map(); let callback, disconnected = 0;
-  const doc = { body: {}, head: { appendChild: node => styles.set(node.id, node) }, createElement: () => ({ textContent: '', remove() { styles.delete(this.id); } }), querySelectorAll: () => [], querySelector: () => null, addEventListener() {}, removeEventListener() {}, defaultView: { MutationObserver: class { constructor(fn) { callback = fn; } observe() {} disconnect() { disconnected++; } } } };
+  const doc = {
+    body: {},
+    head: { appendChild: node => styles.set(node.id, node) },
+    createElement: () => ({ textContent: '', remove() { styles.delete(this.id); } }),
+    createEvent: type => ({
+      initCustomEvent(name, bubbles, cancelable, detail) {
+        this.type = name;
+        this.detail = detail;
+      },
+      initEvent(name, bubbles, cancelable) {
+        this.type = name;
+      },
+    }),
+    querySelectorAll: () => [],
+    querySelector: () => null,
+    addEventListener() {},
+    removeEventListener() {},
+    defaultView: {
+      dispatchEvent() {},
+      MutationObserver: class {
+        constructor(fn) { callback = fn; }
+        observe() {}
+        disconnect() { disconnected++; }
+      },
+    },
+  };
   const connection = connectVisualPreview(doc, () => {}, () => {});
   connection.update(resolve({ customization: { global: { colors: { primary: '#123456' } } } }), {});
   callback();
@@ -400,8 +464,9 @@ test('StoreProvider and StoreVisualRoot render in SSR without browser globals', 
     const module = { exports: {} };
     const req = id => {
       if (id === 'react') return React;
+      if (id.endsWith('.css')) return {};
       if (id.endsWith('/palettes')) return {usePaletteLibrary:()=>({library:{}}),paletteOverrides:()=>undefined};
-    if (id === 'react/jsx-runtime') return require(id);
+      if (id === 'react/jsx-runtime') return require(id);
       if (id === 'react-router-dom') return { useLocation: () => ({ pathname: '/plantilla/2' }) };
       if (id.includes('StoreIdentityContext')) return { useStoreIdentity: () => ({ identity: null }) };
       if (id.includes('catalogService')) return { fetchPublicProducts: () => { throw Error('SSR must not fetch catalog'); } };
