@@ -595,3 +595,14 @@ class ConexionGmailTienda(models.Model):
 
     def __str__(self):
         return f"Conexion Gmail de tienda {self.tienda_id}"
+
+
+class TipoCambioGuardado(models.Model):
+    """Ultimo dolar observado obtenido (fila unica, pk=1) usado para cobrar con PayPal."""
+    observado = models.DecimalField(max_digits=12, decimal_places=4)
+    fecha_dato = models.DateField()
+    fuente = models.CharField(max_length=60)
+    obtenido_en = models.DateTimeField()
+
+    def __str__(self):
+        return f"{self.observado} ({self.fuente}, {self.fecha_dato})"
