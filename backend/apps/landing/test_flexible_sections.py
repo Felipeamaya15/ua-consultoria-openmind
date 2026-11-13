@@ -34,6 +34,16 @@ class FlexibleSectionsTests(TestCase):
     def element(self, kind, **fields):
         return {'id': str(uuid.uuid4()), 'tipo': kind, 'visible': True, **fields}
 
+    def test_keep_preview_open_is_an_optional_persisted_boolean(self):
+        resource = self.resource()
+        element = self.element('biblioteca', recurso_id=str(resource.pk), vista_abierta=True)
+        self.section['componentes'] = [element]
+        self.assertEqual(self.save().status_code, 201)
+        self.assertTrue(APIClient().get(self.url).data['data']['contenido']['bloques'][0]['componentes'][0]['vista_abierta'])
+        element['vista_abierta'] = False
+        self.assertEqual(self.save().status_code, 200)
+        self.assertFalse(APIClient().get(self.url).data['data']['contenido']['bloques'][0]['componentes'][0]['vista_abierta'])
+
     def save(self, blocks=None):
         return self.client.put(self.url, {'titulo': 'Mi tienda', 'texto_boton': 'Ver catálogo',
             'contenido': {'bloques': blocks if blocks is not None else [self.section]}}, format='json')

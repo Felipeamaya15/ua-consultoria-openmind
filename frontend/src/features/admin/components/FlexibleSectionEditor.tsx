@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { AdminCard, Button, Input, Modal, Select, Textarea, Toggle } from './ui';
 import { ImageUpload } from './ui/ImageUpload';
+import { SectionMediaField } from './SectionMediaField';
 import { ErrorState, LoadingState } from '../../../shared/components/states';
 import { humanizeAdminError } from '../utils/humanizeError';
 import { MediaPreview } from '../../marketing/components/MediaPreview';
@@ -14,7 +15,29 @@ import './flexible-sections.css';
 
 export function FlexibleSectionEditor({ section, onChange }: { section: BloqueLanding; onChange: (section: BloqueLanding) => void }) {
   const elements = section.componentes || [];
-  const [kind, setKind] = useState<ElementKind>('titulo'), [picker, setPicker] = useState<string | null>(null), [preview, setPreview] = useState(false);
+  // OPENMIND_PERSIST_PREVIEW_V1
+  const [kind, setKind] = useState<ElementKind>('titulo');
+  const [picker, setPicker] = useState<string | null>(null);
+
+  const previewKey = `openmind:section-preview:${section.id}`;
+
+  const [preview, setPreview] = useState(() => {
+    try {
+      return localStorage.getItem(previewKey) === 'visible';
+    } catch {
+      return false;
+    }
+  });
+
+  function togglePreview() {
+    const next = !preview;
+    setPreview(next);
+    try {
+      localStorage.setItem(previewKey, next ? 'visible' : 'hidden');
+    } catch {
+      // La vista previa sigue funcionando sin almacenamiento.
+    }
+  }
   const [resources, setResources] = useState<MediaResource[] | null>(null), [loading, setLoading] = useState(false), [error, setError] = useState(''), [attempt, setAttempt] = useState(0);
   const [search, setSearch] = useState(''), [filter, setFilter] = useState('');
   const needLibrary = elements.some(element => element.tipo === 'biblioteca');
@@ -31,8 +54,16 @@ export function FlexibleSectionEditor({ section, onChange }: { section: BloqueLa
   function fields(element: SectionElement) {
     const change = (patch: Partial<SectionElement>) => edit(element.id, patch);
     if (TEXT_ELEMENTS.includes(element.tipo)) return <Textarea label={`Contenido de ${SECTION_ELEMENTS[element.tipo]}`} value={element.texto || ''} rows={element.tipo === 'titulo' || element.tipo === 'subtitulo' ? 2 : 4} maxLength={5000} hint={element.tipo === 'caracteristicas' ? 'Escribe una característica o beneficio por línea.' : undefined} onChange={event => change({ texto: event.target.value })} />;
-    if (element.tipo === 'imagen' || element.tipo === 'galeria') return <div className="flexible-image-list">{element.imagenes?.map((image, index) => <div key={image.id}><ImageUpload label={`Imagen ${index + 1}`} value={image.src} maxMB={2} allowSVG={false} onChange={src => change({ imagenes: src ? element.imagenes?.map(old => old.id === image.id ? { ...old, src } : old) : element.imagenes?.filter(old => old.id !== image.id) })} /><Input label={`Descripción de imagen ${index + 1}`} value={image.alt} maxLength={250} onChange={event => change({ imagenes: element.imagenes?.map(old => old.id === image.id ? { ...old, alt: event.target.value } : old) })} /></div>)}{(element.imagenes?.length || 0) < (element.tipo === 'imagen' ? 1 : 8) && <ImageUpload label="Agregar imagen al bloque" value="" maxMB={2} allowSVG={false} onChange={src => { if (src) change({ imagenes: [...(element.imagenes || []), { id: crypto.randomUUID(), src, alt: '' }] }); }} />}</div>;
-    if (element.tipo === 'biblioteca') return <><p>{resourceMap[element.recurso_id || '']?.titulo || (element.recurso_id ? 'Recurso guardado: ' + element.recurso_id : 'Aún no seleccionaste un recurso.')}</p>{element.recurso_id && !resourceMap[element.recurso_id]?.activo && !loading && <p>El recurso no está disponible. Elige otro u oculta este bloque.</p>}<Button type="button" variant="outline" onClick={() => { setAttempt(old => old + 1); setPicker(element.id); }}>Seleccionar desde biblioteca</Button></>;
+    if (element.tipo === 'imagen') return (
+      <SectionMediaField
+        value={element.imagenes?.[0]}
+        onChange={media => change({
+          imagenes: media ? [media] : []
+        })}
+      />
+    );
+    if (element.tipo === 'galeria') return <div className="flexible-image-list">{element.imagenes?.map((image, index) => <div key={image.id}><ImageUpload label={`Imagen ${index + 1}`} value={image.src} maxMB={2} allowSVG={false} onChange={src => change({ imagenes: src ? element.imagenes?.map(old => old.id === image.id ? { ...old, src } : old) : element.imagenes?.filter(old => old.id !== image.id) })} /><Input label={`Descripción de imagen ${index + 1}`} value={image.alt} maxLength={250} onChange={event => change({ imagenes: element.imagenes?.map(old => old.id === image.id ? { ...old, alt: event.target.value } : old) })} /></div>)}{(element.imagenes?.length || 0) < (8) && <ImageUpload label="Agregar imagen al bloque" value="" maxMB={2} allowSVG={false} onChange={src => { if (src) change({ imagenes: [...(element.imagenes || []), { id: crypto.randomUUID(), src, alt: '' }] }); }} />}</div>;
+    if (element.tipo === 'biblioteca') return <><Toggle label="Mantener la vista previa abierta en la tienda" disabled={resourceMap[element.recurso_id || '']?.tipo === 'enlace'} checked={resourceMap[element.recurso_id || '']?.tipo !== 'enlace' && (element.vista_abierta ?? resourceMap[element.recurso_id || '']?.tipo === 'imagen')} onChange={vista_abierta => change({vista_abierta})} /><p className="text-xs">Expande el contenido al entrar; no abre pestañas ni reproduce sonido automáticamente. Un enlace externo sigue siendo un enlace.</p><p>{resourceMap[element.recurso_id || '']?.titulo || (element.recurso_id ? 'Recurso guardado: ' + element.recurso_id : 'Aún no seleccionaste un recurso.')}</p>{element.recurso_id && !resourceMap[element.recurso_id]?.activo && !loading && <p>El recurso no está disponible. Elige otro u oculta este bloque.</p>}<Button type="button" variant="outline" onClick={() => { setAttempt(old => old + 1); setPicker(element.id); }}>Seleccionar desde biblioteca</Button></>;
     if (element.tipo === 'youtube' || element.tipo === 'social') return <>{element.tipo === 'social' && <Select label="Red de la publicación" value={element.proveedor || 'instagram'} options={[{ value: 'instagram', label: 'Instagram' }, { value: 'facebook', label: 'Facebook' }]} onChange={event => change({ proveedor: event.target.value as 'instagram' | 'facebook', url: '' })} />}<Input label="URL pública del contenido" type="url" value={element.url || ''} maxLength={2000} onChange={event => change({ url: event.target.value })} /></>;
     if (element.tipo === 'consulta' || element.tipo === 'inscripcion') return <><Input label="Texto del botón del formulario" value={element.etiqueta||''} required maxLength={100} onChange={event=>change({etiqueta:event.target.value})} /><p>Asociado a esta sección. {section.actividad ? element.tipo==='inscripcion'?'Solo aparece si es un taller con inscripciones gratuitas habilitadas.':'Recibe consultas sin inscribir al interesado.' : 'Configura esta sección como Servicio o Taller para habilitar el formulario.'}</p></>;
     if (element.tipo === 'boton') return <><Input label="Texto del botón" value={element.etiqueta || ''} maxLength={100} onChange={event => change({ etiqueta: event.target.value })} /><Input label="Enlace HTTPS del botón" type="url" value={element.url || ''} maxLength={2000} onChange={event => change({ url: event.target.value })} /><p className="flexible-help">Abre información o un canal de contacto. No confirma compras ni inscripciones.</p></>;
@@ -52,7 +83,7 @@ export function FlexibleSectionEditor({ section, onChange }: { section: BloqueLa
     <p>{elements.length} de 30 bloques</p>
     {loading && <LoadingState>Cargando recursos de biblioteca…</LoadingState>}{error && <ErrorState onRetry={() => setAttempt(old => old + 1)}>{humanizeAdminError(error)}</ErrorState>}
     <ol className="flexible-elements-list">{elements.map((element, index) => <li key={element.id}><AdminCard><div className="flexible-element-heading"><h3>{index + 1}. {SECTION_ELEMENTS[element.tipo]}</h3><Toggle checked={element.visible} ariaLabel={`Mostrar bloque ${index + 1}`} onChange={visible => edit(element.id, { visible })} /></div><div className="flexible-element-fields">{fields(element)}</div><div className="flexible-element-actions"><Button type="button" variant="ghost" disabled={index === 0} aria-label={`Subir bloque ${index + 1}`} onClick={() => set(moveElement(elements, index, -1))}>↑ Subir</Button><Button type="button" variant="ghost" disabled={index === elements.length - 1} aria-label={`Bajar bloque ${index + 1}`} onClick={() => set(moveElement(elements, index, 1))}>↓ Bajar</Button><Button type="button" variant="ghost" aria-label={`Eliminar bloque ${index + 1}`} onClick={() => set(elements.filter(old => old.id !== element.id))}>Eliminar bloque</Button></div></AdminCard></li>)}</ol>
-    <Button type="button" variant="outline" onClick={() => setPreview(old => !old)}>{preview ? 'Cerrar vista previa de sección' : 'Vista previa de sección'}</Button>
+    <Button type="button" variant="outline" onClick={togglePreview}>{preview ? 'Ocultar vista previa' : 'Ver vista previa'}</Button>
     {preview && <div className="flexible-section-preview" aria-label="Vista previa de sección"><SectionElements activity={section.actividad} elements={elements} ownerResources={resourceMap} /></div>}
     <Modal open={!!picker} onClose={() => setPicker(null)} title="Seleccionar recurso de biblioteca" size="xl" portal><Input label="Buscar recurso por título" value={search} onChange={event => setSearch(event.target.value)} /><Select label="Filtrar recursos por tipo" value={filter} options={[{ value: '', label: 'Todos los tipos' }, ...Object.entries(MEDIA_TYPES).map(([value, label]) => ({ value, label }))]} onChange={event => setFilter(event.target.value)} />
       {loading && <LoadingState>Cargando recursos disponibles…</LoadingState>}{error && <ErrorState onRetry={() => setAttempt(old => old + 1)}>{humanizeAdminError(error)}</ErrorState>}

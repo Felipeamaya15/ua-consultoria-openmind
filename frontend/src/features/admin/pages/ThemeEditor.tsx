@@ -23,6 +23,7 @@ import { STORE_PAGES, previewPath, CHECKOUT_PREVIEW_STEPS, type PreviewPageId } 
 import { connectVisualPreview } from '../visualEditor/preview';
 import { TemplateGallery } from '../visualEditor/templates';
 import { ContentInspector } from '../visualEditor/content';
+import { Icon } from '../../storefront/components/ui/Icon';
 import { ProductHoverInspector } from '../visualEditor/ProductHoverInspector';
 import { HeroCarouselInspector } from '../visualEditor/HeroCarouselInspector';
 import { fetchPrivateLandingConfig as fetchLandingConfig, saveLandingConfig, saveBlockStyles } from '../../landing/services/landingService';
@@ -38,6 +39,9 @@ type SharedCarouselSettings = {
   carouselInterval: NonNullable<VisualConfig['hero']['carouselInterval']>;
   carouselTransition: NonNullable<VisualConfig['hero']['carouselTransition']>;
   carouselIndicators: boolean;
+  productImageMode: NonNullable<VisualConfig['hero']['productImageMode']>;
+  productImageInterval: number;
+  productImageTransition: NonNullable<VisualConfig['hero']['productImageTransition']>;
   importedEffectPresets: string;
   hoverFeaturedMotion: NonNullable<VisualConfig['hero']['hoverFeaturedMotion']>;
   hoverFeaturedLight: NonNullable<VisualConfig['hero']['hoverFeaturedLight']>;
@@ -52,6 +56,9 @@ function readSharedCarousel(hero: VisualConfig['hero']): SharedCarouselSettings 
     carouselInterval: hero.carouselInterval ?? 5,
     carouselTransition: hero.carouselTransition ?? 'fade',
     carouselIndicators: hero.carouselIndicators ?? true,
+    productImageMode: hero.productImageMode ?? 'hover',
+    productImageInterval: hero.productImageInterval ?? 5,
+    productImageTransition: hero.productImageTransition ?? 'slide',
     importedEffectPresets: hero.importedEffectPresets ?? '[]',
     hoverFeaturedMotion: hero.hoverFeaturedMotion ?? 'none',
     hoverFeaturedLight: hero.hoverFeaturedLight ?? 'none',
@@ -132,6 +139,7 @@ export default function ThemeEditor() {
   const [saveError, setSaveError] = useState(false);
   const [inspectorOpen, setInspectorOpen] = useState(true);
   const [selectedSection, setSelectedSection] = useState<VisualSectionId>('hero');
+  const heroAdvancedToggle = useRef<HTMLButtonElement>(null);
   const [heroAdvancedOpen, setHeroAdvancedOpen] = useState(false); // OPENMIND_PORTADA_UI_UNIFICADA_V1
   const [viewport, setViewport] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
   const [previewPage, setPreviewPage] = useState<PreviewPageId>('home');
@@ -381,15 +389,23 @@ export default function ThemeEditor() {
       <aside className="ve-properties" id="ve-properties" aria-label="Opciones del elemento seleccionado" hidden={!inspectorOpen}>
         <div className="ve-property-tabs" role="group" aria-label="Edición contextual"><button type="button" aria-pressed={tool === 'style'} onClick={() => chooseTool('style')}>Apariencia</button><button type="button" aria-pressed={tool === 'content'} onClick={() => chooseTool('content')}>Contenido</button><button type="button" aria-label="Ocultar propiedades" onClick={() => setInspectorOpen(false)}>×</button></div>
         <div className="ve-inspector-heading"><div><small>{tool === 'templates' ? 'ELIGE TU ESTILO' : imageMode ? 'IMAGEN SELECCIONADA' : 'EDICIÓN CONTEXTUAL'}</small><h1 aria-live="polite">{tool === 'templates' ? 'Plantillas de tienda' : imageMode ? 'Imágenes' : currentLabel}</h1></div>{!imageMode && !selectedBlock && SECTION_HELP[selectedSection] && <FieldHelp label={currentLabel || ''}>{SECTION_HELP[selectedSection]!}</FieldHelp>}</div>
-        {tool === 'templates' ? <TemplateGallery selected={template} onSelect={id => { if (id !== template) setParams({plantilla:id}); }} /> : tool === 'content' ? <ContentInspector section={selectedSection} home={previewPage === 'home'} error={contentError} landing={draft.landing} onChange={landing=>setDraft(current=>({...current,landing}))} /> : selectedBlock && tool === 'style' ? <><p className="ve-hint ve-scope-hint">{editScope === 'all' ? 'Diseño general · Se adapta a todas las pantallas.' : `Solo ${optionLabel(viewport).toLowerCase()}.`}</p><BlockAppearanceInspector key={selectedBlock.id} block={selectedBlock} styles={draft.blockStyles ?? {}} device={viewport} onEdit={(key,value) => setDraft(current => ({...current,blockStyles:editBlockAppearance(current.blockStyles ?? {},selectedBlock.id,key,value,editScope,viewport)}))} onReset={() => setDraft(current => { const next={...current.blockStyles};delete next[selectedBlock.id];return {...current,blockStyles:next};})} /></> : imageMode && !selectedImage ? <ContentInspector section={selectedSection} home={previewPage==='home'} error={contentError} landing={draft.landing} imagesOnly onChange={landing=>setDraft(current=>({...current,landing}))} /> : imageMode && selectedImage ? <><p className="ve-hint">Reemplazar la imagen se aplica a todos los dispositivos.</p><LegacyImageInspector key={selectedImage.key} selected={selectedImage} document={draft} onChange={setDraft} /></> : <><p className="ve-hint ve-scope-hint">{editScope === 'all' ? 'Diseño general · Cada ajuste se aplica a todas las pantallas. Reemplaza la variante de esa propiedad.' : `Apariencia exclusiva de ${optionLabel(viewport).toLowerCase()}.`}</p><VisualInspector key={`${selectedSection}:${activePage}:${inspectorGroup ?? ''}`} section={selectedSection} effective={effective} document={draft} viewport={viewport} editScope={editScope} catalogPage={previewPage === 'catalog'} page={activePage} groupLabel={inspectorGroup} onPaletteSelect={paletteId=>setDraft(current=>({...current,paletteId}))} onEditMany={edits => setDraft(current => Object.entries(edits).reduce((document, [path,value]) => editScopedProperty(document,template,path,value,editScope,viewport), current))} onEdit={(path, value) => setDraft(current => editScopedProperty(current, template, path, value, editScope, viewport))} onReset={path => setDraft(current => resetProperty(current, path))} />{selectedSection === 'hero' && previewPage === 'home' && (<>
-          <button type="button" className="ve-advanced-toggle" aria-expanded={heroAdvancedOpen} aria-controls="ve-hero-carousel-advanced" onClick={() => setHeroAdvancedOpen(open => !open)}>{heroAdvancedOpen ? 'Ocultar opciones avanzadas' : 'Opciones avanzadas'}</button>
+        {tool === 'templates' ? <TemplateGallery selected={template} onSelect={id => { if (id !== template) setParams({plantilla:id}); }} /> : tool === 'content' ? <ContentInspector section={selectedSection} home={previewPage === 'home'} error={contentError} landing={draft.landing} onChange={landing=>setDraft(current=>({...current,landing}))} /> : selectedBlock && tool === 'style' ? <><p className="ve-hint ve-scope-hint">{editScope === 'all' ? 'Diseño general · Se adapta a todas las pantallas.' : `Solo ${optionLabel(viewport).toLowerCase()}.`}</p><BlockAppearanceInspector key={selectedBlock.id} block={selectedBlock} styles={draft.blockStyles ?? {}} device={viewport} onEdit={(key,value) => setDraft(current => ({...current,blockStyles:editBlockAppearance(current.blockStyles ?? {},selectedBlock.id,key,value,editScope,viewport)}))} onReset={() => setDraft(current => { const next={...current.blockStyles};delete next[selectedBlock.id];return {...current,blockStyles:next};})} /></> : imageMode && !selectedImage ? <ContentInspector section={selectedSection} home={previewPage==='home'} error={contentError} landing={draft.landing} imagesOnly onChange={landing=>setDraft(current=>({...current,landing}))} /> : imageMode && selectedImage ? <><p className="ve-hint">Reemplazar la imagen se aplica a todos los dispositivos.</p><LegacyImageInspector key={selectedImage.key} selected={selectedImage} document={draft} onChange={setDraft} /></> : <><p className="ve-hint ve-scope-hint">{editScope === 'all' ? 'Diseño general · Cada ajuste se aplica a todas las pantallas. Reemplaza la variante de esa propiedad.' : `Apariencia exclusiva de ${optionLabel(viewport).toLowerCase()}.`}</p><VisualInspector key={`${selectedSection}:${activePage}:${inspectorGroup ?? ''}`} section={selectedSection} effective={effective} document={draft} viewport={viewport} editScope={editScope} catalogPage={previewPage === 'catalog'} page={activePage} groupLabel={inspectorGroup} onPaletteSelect={paletteId=>setDraft(current=>({...current,paletteId}))} onEditMany={edits => setDraft(current => Object.entries(edits).reduce((document, [path,value]) => editScopedProperty(document,template,path,value,editScope,viewport), current))} onEdit={(path, value) => setDraft(current => editScopedProperty(current, template, path, value, editScope, viewport))} onReset={path => setDraft(current => resetProperty(current, path))} />{selectedSection === 'hero' && previewPage === 'home' && (<div className="ve-hero-advanced-actions" onKeyDown={event => {
+          if (event.key === 'Escape' && !event.defaultPrevented && heroAdvancedOpen) {
+            event.preventDefault(); event.stopPropagation(); setHeroAdvancedOpen(false); heroAdvancedToggle.current?.focus();
+          }
+        }}>
+          <button ref={heroAdvancedToggle} type="button" className="ve-advanced-toggle ve-hero-advanced-toggle" aria-label={heroAdvancedOpen ? 'Ocultar opciones avanzadas' : 'Opciones avanzadas'} aria-expanded={heroAdvancedOpen} aria-controls="ve-hero-carousel-advanced" title="Más acciones: carrusel, movimientos y animaciones" onClick={() => setHeroAdvancedOpen(open => !open)}>
+            <Icon name="settings" className="ve-hero-advanced-icon" />
+            <span><strong>{heroAdvancedOpen ? 'Ocultar opciones avanzadas' : 'Opciones avanzadas'}</strong><small>Carrusel y animaciones</small></span>
+            <Icon name="chevron" className="ve-hero-advanced-chevron" />
+          </button>
           {heroAdvancedOpen && (<div id="ve-hero-carousel-advanced"><HeroCarouselInspector hero={effective.hero} imageCount={draft.landing?.imagenes_carrusel?.length ?? 0} onEdit={(field, value) => {
           setSharedCarousel(current => ({ ...(
             current ?? readSharedCarousel(effective.hero)
           ), [field]: value } as SharedCarouselSettings));
           setDraft(current => editScopedProperty(current, template, `hero.${field}`, value, 'all', 'desktop'));
         }} /></div>)}
-        </>)}
+        </div>)}
           {/* OPENMIND_IMPORTED_PRESETS_V1: panel duplicado retirado en V1 online. */}
           {/* OPENMIND_PRODUCT_HOVER_V1 */}
           {(previewPage === 'home' || previewPage === 'catalog') &&
@@ -407,6 +423,7 @@ export default function ThemeEditor() {
               />
           )}
                     {/* OPENMIND_UNIFIED_HOVER_LIBRARY_V3: catálogo de productos integrado arriba; no duplicar. */}
+
           <button className="ve-reset-section ve-danger" type="button" onClick={resetVisibleSection}>Restablecer sección ↺</button></>}
         <details className="ve-restore"><summary>Opciones del diseño</summary><button type="button" className="ve-danger" onClick={() => setRestoreRequested(true)}>Volver al diseño original</button><Link to="/emprendedor/diseno">Volver a Mi tienda</Link></details>
       </aside>

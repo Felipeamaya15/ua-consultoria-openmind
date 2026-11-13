@@ -1,3 +1,6 @@
+import { ProductImageGallery } from '../components/store/ProductImageGallery';
+import { useStorefrontTemplate } from '../hooks/useStorefrontTemplate';
+import { useHeroContent } from '../hooks/useHeroContent';
 import { HomeSections } from '../../landing/components/HomeSections';
 import { HomeCategories } from '../../landing/components/HomeCategories';
 import { VISUAL_SECTION } from '../visual/sectionIds';
@@ -15,8 +18,10 @@ import { formatPrice } from '../data/mockData';
 export default function VisualHome() {
   const { featured, content } = useLandingContent();
   const isSectionVisible = useLandingSectionVisibility();
+  const { route } = useStorefrontTemplate();
   const { landing, config } = useStore();
-  const visualProducts = featured.map(p => ({ id: p.id, name: p.name, category: p.category, description: p.description, price: p.basePrice, image: p.images[0] }));
+  const visualProducts = featured.map(p => ({ id: p.id, name: p.name, category: p.category, description: p.description, price: p.basePrice, image: p.images[0], images: p.images }));
+  const hero = useHeroContent(landing, route);
   return (
     <div data-landing-page="visual" className="min-w-0 overflow-x-hidden">
       {/* ======================================================
@@ -30,7 +35,7 @@ export default function VisualHome() {
             flex items-end
           "
         >
-          <HeroCarousel landing={landing} />
+          <HeroCarousel landing={landing} onContentChange={hero.onChange} />
 
           <div data-visual-part="heroOverlay"
             className="
@@ -63,7 +68,7 @@ export default function VisualHome() {
             </p>
 
             <LandingStatus />
-            <h1
+            <h1 hidden={!hero.showTitle}
               className="
                 font-serif
                 text-4xl sm:text-5xl md:text-7xl
@@ -72,10 +77,10 @@ export default function VisualHome() {
                 break-words
               "
             >
-              {landing?.titulo}
+              {hero.title}
             </h1>
 
-            <p data-visual-part="heroSubtitle"
+            <p hidden={!hero.showDescription} data-visual-part="heroSubtitle"
               className="
                 mt-5 sm:mt-7
                 text-sm md:text-base
@@ -85,12 +90,12 @@ export default function VisualHome() {
                 break-words
               "
             >
-              {landing?.descripcion}
+              {hero.description}
             </p>
 
             <div data-visual-part="heroCtaLayout" className="flex flex-col sm:flex-row flex-wrap gap-3 mt-6 sm:mt-8">
               <Link data-visual-section={VISUAL_SECTION.heroCta}
-                to="catalogo"
+                hidden={!hero.showButton} to={hero.href} target={hero.external ? "_blank" : undefined} rel={hero.external ? "noopener noreferrer" : undefined}
                 className="
                   inline-flex items-center justify-center min-h-11
                   bg-[var(--primary)] text-[var(--on-primary)]
@@ -101,7 +106,7 @@ export default function VisualHome() {
                   transition-colors
                 "
               >
-                {landing?.texto_boton}
+                {hero.buttonText}
               </Link>
 
               {landing?.contenido?.bloques?.some(block=>block.visible&&block.tipo==='historia') && <Link
@@ -237,6 +242,7 @@ interface VisualHomeProductProps {
     description: string;
     price: number;
     image: string;
+    images: string[];
   };
   large?: boolean;
   wide?: boolean;
@@ -255,9 +261,9 @@ function VisualHomeProduct({
         ${large ? 'h-full' : ''}
       `}
     >
-      <Link
-        to={`producto/${product.id}`}
-        className={`
+      <div
+
+        className={`relative relative
           block overflow-hidden bg-gray-200
           ${
             large
@@ -268,16 +274,12 @@ function VisualHomeProduct({
           }
         `}
       >
-        <img
-          src={product.image}
-          alt={product.name}
-          className="
+        <ProductImageGallery images={product.images} alt={product.name} href={`producto/${product.id}`} imageClassName="
             w-full h-full object-cover
             hover:scale-[1.02]
             transition-transform duration-700
-          "
-        />
-      </Link>
+          " />
+      </div>
 
       <div data-visual-part="body" className="p-4 sm:p-6">
         <p

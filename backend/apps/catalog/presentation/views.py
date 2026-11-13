@@ -712,7 +712,7 @@ class ProductoCreateView(APIView):
     def post(self, request):
         tienda = resolver_tienda(request, exigir_propietario=True)
 
-        serializer = ProductCreateSerializer(data=request.data)
+        serializer = ProductCreateSerializer(data=request.data, context={"tienda_id": str(tienda.pk)})
         serializer.is_valid(raise_exception=True)
         try:
             product_id = CreateProductUseCase(ProductRepository()).execute(
@@ -826,7 +826,7 @@ class ProductoUpdateView(APIView):
             if not isinstance(revision, str) or not revision:
                 return error_response("Recarga el producto antes de editar: falta revision.", "ERROR_VALIDACION")
             # Validar el documento completo también para PATCH; no perder campos omitidos.
-            serializer = ProductCreateSerializer(data={**original, **request.data})
+            serializer = ProductCreateSerializer(data={**original, **request.data}, context={"tienda_id": tienda_id})
             serializer.is_valid(raise_exception=True)
             fields = {key: value for key, value in serializer.validated_data.items()
                       if request.method == 'PUT' or key in request.data}

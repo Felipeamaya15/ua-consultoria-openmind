@@ -13,7 +13,7 @@ export interface UbicacionLanding {
   direccion: string; comuna: string; ciudad: string; region: string; enlace_maps: string;
 }
 export type TipoBloqueLanding = 'historia' | 'imagen_texto' | 'texto' | 'galeria' | 'cita' | 'personalizada';
-export interface ImagenBloqueLanding { id: string; src: string; alt: string }
+export interface ImagenBloqueLanding { id: string; src: string; alt: string; video_recurso_id?: string }
 export interface BloqueLanding {
   id: string; tipo: TipoBloqueLanding; visible: boolean;
   titulo: string; subtitulo: string; texto: string; imagenes: ImagenBloqueLanding[];
@@ -34,7 +34,12 @@ export interface ContenidoLanding {
   ubicacion: UbicacionLanding;
 }
 
+export interface CarouselSlideContent {
+  titulo?: string; descripcion?: string; texto_boton?: string; enlace?: string;
+  mostrar_titulo?: boolean; mostrar_descripcion?: boolean; mostrar_boton?: boolean;
+}
 export interface ImagenCarruselLanding {
+  tipo?: 'imagen' | 'video'; contenido?: CarouselSlideContent; recurso_id?: string;
   id: string;
   archivo: string;
   orden: number;

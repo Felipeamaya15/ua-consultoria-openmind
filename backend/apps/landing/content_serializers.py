@@ -46,7 +46,8 @@ class UbicacionSerializer(serializers.Serializer):
 
 class ImagenBloqueSerializer(serializers.Serializer):
     id = serializers.UUIDField(format='hex_verbose')
-    src = serializers.CharField(max_length=2800000)
+    src = serializers.CharField(max_length=2800000, allow_blank=True)
+    video_recurso_id = serializers.UUIDField(format='hex_verbose', required=False)
     alt = serializers.CharField(max_length=250, allow_blank=True, default='')
 
     def validate_id(self, value):
@@ -54,7 +55,22 @@ class ImagenBloqueSerializer(serializers.Serializer):
 
     def validate_src(self, value):
         from apps.landing.block_images import validate_block_image
-        return validate_block_image(value)
+        return validate_block_image(value) if value else value
+
+
+    def validate_video_recurso_id(self, value):
+        return str(value)
+
+    def validate(self, value):
+        has_image = bool(value.get('src'))
+        has_video = bool(value.get('video_recurso_id'))
+
+        if has_image == has_video:
+            raise serializers.ValidationError(
+                'Selecciona una imagen o un video, no ambos.'
+            )
+
+        return value
 
 
 class BloqueLandingSerializer(serializers.Serializer):

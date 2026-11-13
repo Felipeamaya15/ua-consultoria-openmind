@@ -28,7 +28,62 @@ function InstagramEmbed({ url }: { url: string }) {
 }
 
 export function MediaPreview({ resource, publicImageUrl, initiallyOpen = false }: { resource: MediaResource; publicImageUrl?: string; initiallyOpen?: boolean }) {
-  const [opened, setOpened] = useState(initiallyOpen), [imageUrl, setImageUrl] = useState(''), [error, setError] = useState('');
+  // OPENMIND_PUBLIC_MEDIA_PREVIEW_V1
+  const isPublicStorefront = /^\/plantilla\/[1-4](?:\/|$)/.test(window.location.pathname);
+  // OPENMIND_PUBLIC_MEDIA_PREVIEW_V2
+  // Identificar el recurso por su enlace, no solamente por su ID.
+  const normalizedUrl = (resource.url || '')
+    .trim()
+    .split(/[?#]/)[0]
+    .replace(/\/+$/, '');
+
+  const storePath =
+    window.location.pathname.match(/^\/plantilla\/[1-4]/)?.[0] || '';
+
+  const previewKey =
+    `openmind:public-media-preview:v2:${storePath}:${resource.tipo}:${normalizedUrl || resource.id}`;
+
+  // Compatibilidad con preferencias guardadas anteriormente.
+  const legacyPreviewKey =
+    `openmind:public-media-preview:${resource.id}`;
+
+  const [opened, setOpened] = useState(() => {
+    if (!isPublicStorefront) return initiallyOpen;
+    try {
+      const saved = localStorage.getItem(previewKey) ?? localStorage.getItem(legacyPreviewKey);
+      return saved === null ? initiallyOpen : saved === 'open';
+    } catch {
+      return initiallyOpen;
+    }
+  });
+
+  const [imageUrl, setImageUrl] = useState('');
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (!isPublicStorefront) return;
+    try {
+      const saved = localStorage.getItem(previewKey) ?? localStorage.getItem(legacyPreviewKey);
+      setOpened(saved === null ? initiallyOpen : saved === 'open');
+    } catch {
+      setOpened(initiallyOpen);
+    }
+  }, [previewKey, initiallyOpen, isPublicStorefront]);
+
+  function togglePreview() {
+    const next = !opened;
+    setOpened(next);
+    setError('');
+    setImageUrl('');
+
+    if (isPublicStorefront) {
+      try {
+        localStorage.setItem(previewKey, next ? 'open' : 'closed');
+      } catch {
+        // La vista previa sigue funcionando.
+      }
+    }
+  }
   const info = resource.url ? inspectMediaUrl(resource.tipo, resource.url) : { url: '', embed: '', error: '' };
   useEffect(() => {
     if (!opened || !resource.archivo || publicImageUrl) return;
@@ -36,11 +91,12 @@ export function MediaPreview({ resource, publicImageUrl, initiallyOpen = false }
     fetchMediaImage(resource.id, controller.signal).then(blob => { if (controller.signal.aborted) return; objectUrl = URL.createObjectURL(blob); setImageUrl(objectUrl); }).catch(cause => { if (!controller.signal.aborted) setError(humanizeAdminError(cause instanceof Error ? cause.message : 'No pudimos cargar la imagen.')); });
     return () => { controller.abort(); if (objectUrl) URL.revokeObjectURL(objectUrl); };
   }, [opened, resource.id, resource.archivo, publicImageUrl]);
+
   const canPreview = resource.tipo !== 'enlace';
   return <div className="media-preview">
-    {canPreview && <Button type="button" variant="outline" onClick={() => { setOpened(value => !value); setError(''); setImageUrl(''); }}>{opened ? 'Cerrar vista previa' : 'Ver vista previa'}</Button>}
-    {opened && <div className={`media-preview-content media-preview-content--${resource.tipo}`}>
-      {error ? <ErrorState>{error}</ErrorState> : publicImageUrl ? <img src={publicImageUrl} alt={resource.titulo} loading="lazy" onError={() => setError('La imagen ya no está publicada o disponible.')} /> : resource.archivo ? imageUrl ? <img src={imageUrl} alt={resource.titulo} /> : <LoadingState>Cargando imagen…</LoadingState>
+    {canPreview && <Button type="button" variant="outline" onClick={togglePreview}>{opened ? 'Ocultar vista previa' : 'Ver vista previa'}</Button>}
+    {opened && canPreview && <div className={`media-preview-content media-preview-content--${resource.tipo}`}>
+      {error ? <ErrorState>{error}</ErrorState> : resource.tipo === 'video' ? (publicImageUrl || imageUrl ? <video controls muted playsInline preload="none" src={publicImageUrl || imageUrl} aria-label={resource.titulo} onPlay={event => { document.querySelectorAll('video').forEach(video => { if (video !== event.currentTarget) video.pause(); }); }} /> : <LoadingState>Cargando video…</LoadingState>) : publicImageUrl ? <img src={publicImageUrl} alt={resource.titulo} loading="lazy" onError={() => setError('La imagen ya no está publicada o disponible.')} /> : resource.archivo ? imageUrl ? <img src={imageUrl} alt={resource.titulo} /> : <LoadingState>Cargando imagen…</LoadingState>
         : info.error ? <p>La vista previa no está disponible. Edita el enlace.</p>
         : resource.tipo === 'imagen' ? <img src={info.url} alt={resource.titulo} loading="lazy" referrerPolicy="no-referrer" onError={() => setError('No pudimos cargar la imagen externa. Usa el enlace al original.')} />
         : resource.tipo === 'instagram' ? <InstagramEmbed url={info.url} />

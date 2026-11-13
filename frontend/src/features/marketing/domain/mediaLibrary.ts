@@ -1,6 +1,7 @@
 
 export const MEDIA_TYPES = {
   imagen: 'Imagen',
+  video: 'Video del dispositivo',
   youtube: 'Video de YouTube',
   instagram: 'Publicación de Instagram',
   facebook: 'Publicación de Facebook',
@@ -262,15 +263,15 @@ export function mediaProblem(
   }
 
   if (file) {
-    if (draft.tipo !== 'imagen') {
+    if (!['imagen', 'video'].includes(draft.tipo)) {
       return 'Solo se permite subir imágenes; no videos propios.';
     }
 
     if (
-      !/\.(jpe?g|png|webp|heic|heif)$/i.test(file.name) ||
-      file.size > 2 * 1024 * 1024
+      !(draft.tipo === 'video' ? /\.(mp4|webm)$/i : /\.(jpe?g|png|webp|heic|heif)$/i).test(file.name) ||
+      file.size > (draft.tipo === 'video' ? 8 : 2) * 1024 * 1024
     ) {
-      return 'Selecciona una imagen JPG, PNG, WebP, HEIC o HEIF de hasta 2 MB.';
+      return draft.tipo === 'video' ? 'Selecciona un video MP4 o WebM de hasta 8 MB y 20 segundos.' : 'Selecciona una imagen JPG, PNG, WebP, HEIC o HEIF de hasta 2 MB.';
     }
 
     return '';
@@ -278,12 +279,13 @@ export function mediaProblem(
 
   if (
     hasStoredImage &&
-    draft.tipo === 'imagen' &&
+    ['imagen', 'video'].includes(draft.tipo) &&
     !draft.url
   ) {
     return '';
   }
 
+  if (draft.tipo === 'video') return 'Selecciona un video de tu dispositivo.';
   return inspectMediaUrl(
     draft.tipo,
     draft.url.trim()

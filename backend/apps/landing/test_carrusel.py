@@ -97,6 +97,51 @@ class CarruselLandingTests(TestCase):
     # 1. SUBIR IMÁGENES
     # ---------------------------------------------------------
 
+    def test_slide_content_is_stable_after_reorder_reload_and_stale_landing_save(self):
+        first, second = str(self.uploaded_id()), str(self.uploaded_id('otra.png'))
+        payload = {'titulo': 'Título de imagen uno', 'descripcion': 'Subtítulo propio', 'texto_boton': 'Explorar', 'enlace': 'catalogo?categoria=Pruebas', 'mostrar_descripcion': False}
+        response = self.client.patch(self.url + first + '/', {'contenido': payload}, format='json')
+        self.assertEqual(response.status_code, 200, response.data)
+        ordered = self.client.patch(self.url + 'orden/', {'ids': [second, first]}, format='json')
+        self.assertEqual(ordered.status_code, 200, ordered.data)
+        rows = self.client.get(self.url).data['data']
+        self.assertEqual([row['id'] for row in rows], [second, first])
+        self.assertEqual(rows[1]['contenido'], payload)
+        stale = self.client.put('/api/landing/configuracion/', {'titulo': 'Otro título general', 'texto_boton': 'Ver', 'contenido': {'carrusel_contenido': {first: {'titulo': 'No sobrescribir'}}}}, format='json')
+        self.assertEqual(stale.status_code, 200, stale.data)
+        self.assertEqual(stale.data['data']['imagenes_carrusel'][1]['contenido'], payload)
+        for link in ('javascript:alert(1)', '//evil.example/path', 'data:text/html,bad'):
+            self.assertEqual(self.client.patch(self.url + first + '/', {'contenido': {'enlace': link}}, format='json').status_code, 400)
+        self.assertEqual(self.client.get(self.url).data['data'][1]['contenido'], payload)
+
+    def test_uploaded_library_video_is_reused_and_only_public_while_referenced_and_active(self):
+        from apps.landing.test_media_library import MediaLibraryTests
+        from apps.landing.models import RecursoMultimedia
+        video = MediaLibraryTests.video_file(self)
+        saved = self.client.post('/api/landing/biblioteca/', {'titulo': 'Clip', 'tipo': 'video', 'video': video}, format='multipart')
+        self.assertEqual(saved.status_code, 201, saved.data)
+        resource_id = saved.data['data']['id']
+        public = APIClient()
+        file_url = f'/api/landing/multimedia-publica/{resource_id}/imagen/'
+        self.assertEqual(public.get(file_url).status_code, 404)
+        added = self.client.post(self.url, {'recurso_id': resource_id}, format='json')
+        self.assertEqual(added.status_code, 201, added.data)
+        self.assertEqual(added.data['data']['tipo'], 'video')
+        self.assertEqual(public.get(file_url).status_code, 200)
+        pk = added.data['data']['id']
+        self.assertEqual(self.client.patch(self.url + pk + '/', {'contenido': {'titulo': 'Video propio'}}, format='json').status_code, 200)
+        resource = RecursoMultimedia.objects.get(pk=resource_id)
+        resource.activo = False
+        resource.save(update_fields=['activo'])
+        self.assertEqual(public.get(file_url).status_code, 404)
+        self.assertFalse(public.get('/api/landing/configuracion/').data['data']['imagenes_carrusel'])
+        resource.activo = True
+        resource.save(update_fields=['activo'])
+        self.assertEqual(public.get('/api/landing/configuracion/').data['data']['imagenes_carrusel'][0]['contenido']['titulo'], 'Video propio')
+        self.assertEqual(self.client.delete(self.url + pk + '/').status_code, 200)
+        self.assertTrue(resource.archivo.archivo.storage.exists(resource.archivo.archivo.name))
+        self.assertEqual(public.get(file_url).status_code, 404)
+
     def test_propietario_puede_subir_imagen(self):
         imagen_id = self.uploaded_id(
             texto_alternativo='Productos artesanales'

@@ -272,3 +272,66 @@ class LegalRestoreSafetyTests(TestCase):
                 self.assertEqual(page['version'],3)
                 self.assertEqual(page['historial'],history)
                 self.assertEqual(page['lastPublished'],'2026-01-01T00:00:00Z')
+
+
+@override_settings(EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend')
+class RegisteredCustomerConversationTests(TestCase):
+    """Recorrido API con usuarios sintéticos y tokens reales en la base de prueba."""
+    def test_registration_login_consultation_reply_reload_and_customer_privacy(self):
+        from django.core.cache import cache
+        from apps.landing.test_activities import activity_block, submission
+        cache.clear()
+        password = 'Qa!' + uuid.uuid4().hex
+        owner = get_user_model().objects.create_user(username='conversation-owner', password=password)
+        store = Tienda.objects.create(nombre='Conversación QA', correo_negocio='negocio@example.test', id_usuario_propietario=owner)
+        admin = APIClient()
+        login = admin.post('/api/auth/login/', {'username': owner.username, 'password': password}, format='json')
+        self.assertEqual(login.status_code, 200)
+        admin.credentials(HTTP_AUTHORIZATION='Token ' + login.data['data']['token'])
+        block = activity_block()
+        saved = admin.put('/api/landing/configuracion/', {'titulo': 'QA', 'texto_boton': 'Ver', 'contenido': {'bloques': [block]}}, format='json')
+        self.assertEqual(saved.status_code, 201)
+        clients = []
+        for name in ('client-b', 'client-c'):
+            api = APIClient()
+            registered = api.post('/api/auth/register/', {'username': name, 'email': name + '@example.test', 'password': password, 'first_name': 'Persona', 'last_name': 'QA'}, format='json')
+            self.assertEqual(registered.status_code, 201)
+            self.assertFalse(registered.data['data']['user']['is_store_owner'])
+            login = api.post('/api/auth/login/', {'username': name + '@example.test', 'password': password}, format='json')
+            self.assertEqual(login.status_code, 200)
+            self.assertEqual(login.data['data']['user']['id'], registered.data['data']['user']['id'])
+            api.credentials(HTTP_AUTHORIZATION='Token ' + login.data['data']['token'])
+            clients.append(api)
+        buyer, other = clients
+        submitted = buyer.post(f'/api/landing/actividades/{block["id"]}/consultas/', submission(email='client-b@example.test'), format='json')
+        self.assertEqual(submitted.status_code, 202)
+        record = SolicitudActividad.objects.get(tienda=store)
+        self.assertEqual(record.usuario.email, 'client-b@example.test')
+        url = f'/api/landing/solicitudes-actividades/{record.pk}/respuestas/'
+        for api in clients:
+            for path in (url, '/api/landing/solicitudes-actividades/', '/api/tienda/campanas/'):
+                self.assertIn(api.get(path).status_code, (401, 403))
+        payload = {'clave': str(uuid.uuid4()), 'asunto': 'Respuesta de prueba', 'cuerpo': 'Estos son los materiales del taller.'}
+        first = admin.post(url, payload, format='json')
+        self.assertEqual(first.status_code, 201)
+        repeated = admin.post(url, payload, format='json')
+        self.assertEqual(first.data['data']['id'], repeated.data['data']['id'])
+        self.assertEqual(RespuestaActividad.objects.count(), 1)
+        reloaded = admin.get(url).data['data']
+        self.assertEqual(reloaded['total'], 1)
+        self.assertEqual(reloaded['respuestas'][0]['cuerpo'], payload['cuerpo'])
+        sent_url = url + first.data['data']['id'] + '/enviar/'
+        self.assertEqual(admin.post(sent_url, {}, format='json').status_code, 200)
+        self.assertEqual(admin.post(sent_url, {}, format='json').status_code, 200)
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertEqual(mail.outbox[0].to, ['client-b@example.test'])
+        self.assertEqual(mail.outbox[0].subject, payload['asunto'])
+        self.assertIn(payload['cuerpo'], mail.outbox[0].body)
+        self.assertEqual(mail.outbox[0].reply_to, ['negocio@example.test'])
+        from email.utils import parseaddr
+        from django.conf import settings
+        self.assertEqual(parseaddr(mail.outbox[0].from_email)[1], parseaddr(settings.DEFAULT_FROM_EMAIL)[1])
+        self.assertEqual(IntentoRespuestaActividad.objects.count(), 1)
+        buyer.credentials()  # Equivalente HTTP a retirar el token al cerrar sesión.
+        self.assertEqual(buyer.get('/api/auth/me/').status_code, 401)
+        self.assertEqual(other.get('/api/auth/me/').data['data']['email'], 'client-c@example.test')

@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 
 import { Product, formatPrice } from '../../data/mockData';
+import { ProductImageGallery } from './ProductImageGallery';
 import { StockFeedback } from './StockFeedback';
 import { Badge } from '../ui';
 import { useCart } from '../../context/CartContext';
@@ -144,18 +145,12 @@ export function ProductCard({
   if (isCatalog && layout === 'grid') {
     return (
       <article data-visual-section={VISUAL_SECTION.productCard} data-visual-card="grid" className="group flex h-full min-w-0 flex-col overflow-hidden rounded-[14px] bg-white text-[#151515]">
-        <Link
-          to={productPath}
+        <div
+
           aria-label={`Ver ${product.name}`}
-          className="relative block aspect-[1.08/1] overflow-hidden bg-[#ececea]"
+          className="relative relative block aspect-[1.08/1] overflow-hidden bg-[#ececea]"
         >
-          <img
-            src={product.images[0]}
-            alt={product.name}
-            loading="lazy"
-            decoding="async"
-            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.035]"
-          />
+          <ProductImageGallery images={product.images} alt={product.name} href={productPath} imageClassName="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.035]" />
 
           {hasDiscount && (
             <span className="absolute left-3 top-3 rounded-full bg-[var(--accent)] px-3 py-1.5 text-[9px] font-black text-[var(--on-accent)]">
@@ -176,7 +171,7 @@ export function ProductCard({
               </span>
             </div>
           )}
-        </Link>
+        </div>
 
         <div data-visual-part="body" className="flex flex-1 min-w-0 flex-col p-4">
           <p className="text-[9px] font-black uppercase tracking-[0.14em] text-[var(--accent)]">
@@ -239,24 +234,18 @@ export function ProductCard({
   if (isCatalog && layout === 'list') {
     return (
       <article data-visual-section={VISUAL_SECTION.productCard} data-visual-card="list" className="group flex flex-col sm:flex-row overflow-hidden rounded-[14px] bg-white text-[#151515] min-w-0">
-        <Link
-          to={productPath}
-          className="relative w-full sm:w-40 h-44 sm:h-auto flex-shrink-0 overflow-hidden bg-[#ececea]"
+        <div
+
+          className="relative relative w-full sm:w-40 h-44 sm:h-auto flex-shrink-0 overflow-hidden bg-[#ececea]"
         >
-          <img
-            src={product.images[0]}
-            alt={product.name}
-            loading="lazy"
-            decoding="async"
-            className="h-full min-h-[150px] w-full object-cover transition-transform duration-500 group-hover:scale-[1.035]"
-          />
+          <ProductImageGallery images={product.images} alt={product.name} href={productPath} imageClassName="h-full min-h-[150px] w-full object-cover transition-transform duration-500 group-hover:scale-[1.035]" />
 
           {hasDiscount && (
             <span className="absolute left-2 top-2 rounded-full bg-[var(--accent)] px-2.5 py-1 text-[8px] font-black text-[var(--on-accent)]">
               -{discountPct}%
             </span>
           )}
-        </Link>
+        </div>
 
         <div data-visual-part="body" className="flex min-w-0 flex-1 flex-col p-4 sm:p-5">
           <p className="text-[9px] font-black uppercase tracking-[0.14em] text-[var(--accent)]">
@@ -320,18 +309,12 @@ export function ProductCard({
   if (isVisual && layout === 'grid') {
     return (
       <article data-visual-section={VISUAL_SECTION.productCard} data-visual-card="grid" className="group flex h-full min-w-0 flex-col overflow-hidden rounded-[10px] bg-[#f1f1f0]">
-        <Link
-          to={productPath}
+        <div
+
           aria-label={`Ver ${product.name}`}
-          className="relative block aspect-[1.08/1] overflow-hidden bg-[#e8e8e6]"
+          className="relative relative block aspect-[1.08/1] overflow-hidden bg-[#e8e8e6]"
         >
-          <img
-            src={product.images[0]}
-            alt={product.name}
-            loading="lazy"
-            decoding="async"
-            className="h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.025]"
-          />
+          <ProductImageGallery images={product.images} alt={product.name} href={productPath} imageClassName="h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.025]" />
 
           {!inStock && (
             <div className="absolute inset-0 flex items-center justify-center bg-white/70">
@@ -340,7 +323,7 @@ export function ProductCard({
               </span>
             </div>
           )}
-        </Link>
+        </div>
 
         <div data-visual-part="body" className="flex flex-1 min-w-0 flex-col px-4 pb-4 pt-4">
           <p className="mb-2 text-[9px] font-medium uppercase tracking-[0.16em] text-[#303030]">
@@ -423,9 +406,9 @@ export function ProductCard({
           }
         `}
       >
-        <Link
-          to={productPath}
-          className={`
+        <div
+
+          className={`relative
             w-full sm:w-20 h-40 sm:h-20
             overflow-hidden
             bg-[var(--muted)]
@@ -437,19 +420,13 @@ export function ProductCard({
             }
           `}
         >
-          <img
-            src={product.images[0]}
-            alt={product.name}
-            loading="lazy"
-            decoding="async"
-            className="
+          <ProductImageGallery images={product.images} alt={product.name} href={productPath} imageClassName="
               w-full h-full
               object-cover
               group-hover:scale-105
               transition-transform
-            "
-          />
-        </Link>
+            " />
+        </div>
 
         <div className="flex-1 min-w-0">
           <p className="text-xs text-[var(--muted-foreground)]">
@@ -514,9 +491,9 @@ export function ProductCard({
 
   if (layout === 'compact') {
     return (
-      <Link
-        to={productPath}
-        className="
+      <div
+
+        className="relative
           flex flex-col
           bg-white
           border border-[var(--border)]
@@ -527,19 +504,13 @@ export function ProductCard({
           group
         "
       >
-        <div className="aspect-square overflow-hidden bg-[var(--muted)]">
-          <img
-            src={product.images[0]}
-            alt={product.name}
-            loading="lazy"
-            decoding="async"
-            className="
+        <div className="relative aspect-square overflow-hidden bg-[var(--muted)]">
+          <ProductImageGallery images={product.images} alt={product.name} href={productPath} imageClassName="
               w-full h-full
               object-cover
               group-hover:scale-105
               transition-transform
-            "
-          />
+            " />
         </div>
 
         <div className="p-2">
@@ -551,7 +522,7 @@ export function ProductCard({
             {formatPrice(price)}
           </p>
         </div>
-      </Link>
+      </div>
     );
   }
 
@@ -579,10 +550,10 @@ export function ProductCard({
         }
       `}
     >
-      <Link
-        to={productPath}
+      <div
+
         aria-label={`Ver ${product.name}`}
-        className="
+        className="relative
           block
           relative
           overflow-hidden
@@ -590,19 +561,13 @@ export function ProductCard({
           aspect-[4/3]
         "
       >
-        <img
-          src={product.images[0]}
-          alt={product.name}
-          loading="lazy"
-          decoding="async"
-          className="
+        <ProductImageGallery images={product.images} alt={product.name} href={productPath} imageClassName="
             w-full h-full
             object-cover
             group-hover:scale-105
             transition-transform
             duration-300
-          "
-        />
+          " />
 
         {hasDiscount && (
           <div
@@ -642,7 +607,7 @@ export function ProductCard({
             </Badge>
           </div>
         )}
-      </Link>
+      </div>
 
       <div
         data-visual-part="body"

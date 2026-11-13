@@ -242,3 +242,6 @@ TUU_CALLBACK_BASE_URL = (os.getenv('TUU_CALLBACK_BASE_URL') or '').rstrip('/')
 
 # Solo habilita respuestas capturadas por Mailpit; no autoriza SMTP real.
 ACTIVITY_REPLIES_MAILPIT_ENABLED = os.getenv("ACTIVITY_REPLIES_MAILPIT_ENABLED", "0") == "1"
+GOOGLE_OAUTH_CLIENT_ID = os.getenv('GOOGLE_OAUTH_CLIENT_ID', '').strip()
+GOOGLE_OAUTH_CLIENT_SECRET = os.getenv('GOOGLE_OAUTH_CLIENT_SECRET', '').strip()
+GOOGLE_OAUTH_REDIRECT_URI = os.getenv('GOOGLE_OAUTH_REDIRECT_URI', '').strip()

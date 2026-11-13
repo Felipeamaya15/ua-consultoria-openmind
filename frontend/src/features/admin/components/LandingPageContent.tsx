@@ -48,7 +48,18 @@ export default function LandingPageContent() {
   const { config } = useAdmin();
   const {showHelp,toggleHelp} = useAdminHelp();
   const {hash} = useLocation();
-  const [active,setActive] = useState<Panel>(() => panelFromHash(hash));
+  const [active,setActive] = useState<Panel>(() => {
+    try {
+      const saved = localStorage.getItem('openmind:landing:active-panel');
+      return panels.some(panel => panel.id === saved)
+        ? saved as Panel
+        : panelFromHash(hash);
+    } catch {
+      return panelFromHash(hash);
+    }
+  });
+
+  const previousHash = useRef(hash);
   const [form,setForm] = useState<Draft>(emptyForm);
   const [baseline,setBaseline] = useState<Draft>(emptyForm);
   const [past,setPast] = useState<Draft[]>([]);
@@ -81,7 +92,20 @@ export default function LandingPageContent() {
   const dirtyRef = useRef(dirty);
   dirtyRef.current = dirty;
   const blocker = useBlocker(dirty);
-  useEffect(() => {setActive(panelFromHash(hash));}, [hash]);
+  useEffect(() => {
+    if (previousHash.current !== hash) {
+      previousHash.current = hash;
+      setActive(panelFromHash(hash));
+    }
+  }, [hash]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('openmind:landing:active-panel', active);
+    } catch {
+      // La navegacion sigue funcionando sin almacenamiento.
+    }
+  }, [active]);
   useEffect(() => {
     if (!dirty) return;
     const leave = (event:BeforeUnloadEvent) => {event.preventDefault();event.returnValue='';};

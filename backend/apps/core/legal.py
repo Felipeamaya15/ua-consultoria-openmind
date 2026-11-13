@@ -146,16 +146,19 @@ def normalize_legal_type(tipo: str) -> str | None:
     return TYPE_ALIASES.get(cleaned)
 
 
+# Fecha editorial de la base compartida con legalContent.ts, no de cada lectura.
+DEFAULT_LEGAL_PUBLICATION_DATE = '2025-08-01'
+
+
 def get_default_legal_pages() -> dict:
-    now_iso = timezone.now().isoformat()
     return {
         key: {
             'title': meta['title'],
             'draft': meta['content'],
             'published': meta['content'],
-            'lastPublished': now_iso,
+            'lastPublished': DEFAULT_LEGAL_PUBLICATION_DATE,
             'version': 1,
-            'fecha_vigencia': now_iso,
+            'fecha_vigencia': DEFAULT_LEGAL_PUBLICATION_DATE,
             'vigente': True,
             'estado': 'vigente',
         }

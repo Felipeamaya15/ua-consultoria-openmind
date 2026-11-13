@@ -6,6 +6,7 @@ const { profileLink, publicSocialLinks } = load('src/features/landing/types/soci
 test('normalizes handles, official profile URLs and WhatsApp with an encoded message', () => {
   for (const [network, input, expected] of [
     ['instagram', '@mi.tienda', 'https://instagram.com/mi.tienda'],
+    ['instagram', 'https://www.instagram.com/la_magia_de_tijax/', 'https://instagram.com/la_magia_de_tijax'],
     ['instagram', 'instagram.comercio', 'https://instagram.com/instagram.comercio'],
     ['instagram', 'https://instagram.com/mi%2Etienda', 'https://instagram.com/mi.tienda'],
     ['instagram', 'www.instagram.com/mi.tienda/?igsh=tracking', 'https://instagram.com/mi.tienda'],
@@ -148,4 +149,24 @@ test('card preserves unsaved edits after server error and aborts pending request
   pendingCard.render().find(n => n.type === 'Input').props.onChange({ target: { value: '@mi.tienda' } });
   pendingCard.render().find(n => n.type === 'form').props.onSubmit({ preventDefault() {} });
   pendingCard.unmount(); assert(pending.writes[0].signal.aborted); pending.parent.unmount();
+});
+
+
+test('reported Instagram URL renders as an absolute protected external link in all four templates', () => {
+  const React = require('react');
+  const { renderToStaticMarkup } = require('react-dom/server');
+  const content = load('src/features/landing/types/landingContent.ts').normalizeLandingContent({
+    contacto: { instagram: 'https://www.instagram.com/la_magia_de_tijax/', redes_sociales: { instagram: { activo: true } } },
+  });
+  for (const template of ['editorial', 'minimal', 'visual', 'catalog']) {
+    const { LandingDetails } = load('src/features/landing/components/LandingDetails.tsx', {
+      '../hooks/useLandingContent': { useLandingContent: () => ({ content }) },
+      '../hooks/useLandingSectionVisibility': { useLandingSectionVisibility: () => name => name === 'Información de contacto' },
+      '../../storefront/hooks/useStorefrontTemplate': { useStorefrontTemplate: () => ({ template, isCatalog: template === 'catalog' }) },
+    });
+    const html = renderToStaticMarkup(React.createElement(LandingDetails));
+    assert.match(html, /href="https:\/\/instagram\.com\/la_magia_de_tijax" target="_blank" rel="noopener noreferrer"/);
+    assert.equal((html.match(/href="https:\/\/instagram\.com\/la_magia_de_tijax"/g) || []).length, 1);
+    assert(!html.includes('https://instagram.com/https'));
+  }
 });

@@ -14,6 +14,7 @@ class SectionElementSerializer(StrictSerializer):
     id = serializers.UUIDField(format='hex_verbose')
     tipo = serializers.ChoiceField(choices=ELEMENT_TYPES)
     visible = serializers.BooleanField(default=True)
+    vista_abierta = serializers.BooleanField(required=False)
     texto = serializers.CharField(max_length=5000, allow_blank=True, required=False)
     url = serializers.CharField(max_length=2000, required=False)
     recurso_id = serializers.UUIDField(format='hex_verbose', required=False)
@@ -38,6 +39,8 @@ class SectionElementSerializer(StrictSerializer):
     def validate(self, data):
         kind = data['tipo']
         fields = {'id', 'tipo', 'visible'}
+        if kind in ('biblioteca', 'youtube', 'social'):
+            fields.add('vista_abierta')
         allowed = {**{kind: {'texto'} for kind in TEXT_ELEMENTS},
                    'imagen': {'imagenes'}, 'galeria': {'imagenes'}, 'youtube': {'url'},
                    'biblioteca': {'recurso_id'}, 'social': {'proveedor', 'url'}, 'separador': set(),
@@ -83,21 +86,124 @@ class SectionElementSerializer(StrictSerializer):
         return data
 
 
+
+def section_video_ids(blocks, *, published_only=False):
+    ids = set()
+
+    for section in blocks:
+        if published_only and not section.get('visible'):
+            continue
+
+        containers = [section]
+
+        if section.get('tipo') == 'personalizada':
+            containers.extend(
+                element
+                for element in section.get('componentes', [])
+                if not published_only or element.get('visible')
+            )
+
+        for container in containers:
+            for item in container.get('imagenes', []):
+                resource_id = item.get('video_recurso_id')
+                if resource_id:
+                    ids.add(str(resource_id))
+
+    return ids
+
+
 def referenced_media(blocks, *, published_only=False):
-    return {str(element.get('recurso_id')) for section in blocks
-            if section.get('tipo') == 'personalizada' and (not published_only or section.get('visible'))
-            for element in section.get('componentes', [])
-            if element.get('tipo') == 'biblioteca' and (not published_only or element.get('visible'))}
+    ids = section_video_ids(
+        blocks, published_only=published_only
+    )
+
+    for section in blocks:
+        if section.get('tipo') != 'personalizada':
+            continue
+
+        if published_only and not section.get('visible'):
+            continue
+
+        for element in section.get('componentes', []):
+            if published_only and not element.get('visible'):
+                continue
+
+            if element.get('tipo') == 'biblioteca':
+                resource_id = element.get('recurso_id')
+                if resource_id:
+                    ids.add(str(resource_id))
+
+    return ids
 
 
 def validate_media_references(blocks, store, previous=()):
     from apps.landing.models import RecursoMultimedia
+    video_ids = section_video_ids(blocks)
     ids = referenced_media(blocks)
     if not ids:
         return
     if store is None:
         raise serializers.ValidationError('No se pudo identificar la tienda de los recursos.')
     resources = {str(item.pk): item for item in RecursoMultimedia.objects.filter(tienda=store, pk__in=ids)}
+
+    def contar_videos(seccion):
+        componentes = seccion.get('componentes', [])
+
+        contenedores = [seccion, *componentes]
+
+        subidos = sum(
+            1
+            for contenedor in contenedores
+            for imagen in contenedor.get('imagenes', [])
+            if imagen.get('video_recurso_id')
+        )
+
+        biblioteca = sum(
+            1
+            for componente in componentes
+            if componente.get('tipo') == 'biblioteca'
+            and (
+                recurso := resources.get(
+                    str(componente.get('recurso_id') or '')
+                )
+            ) is not None
+            and recurso.tipo == 'video'
+        )
+
+        return subidos + biblioteca
+
+    anteriores = {
+        seccion['id']: seccion
+        for seccion in previous
+    }
+
+    for seccion in blocks:
+        cantidad = contar_videos(seccion)
+
+        anterior = anteriores.get(seccion['id'])
+        cantidad_anterior = (
+            contar_videos(anterior) if anterior else 0
+        )
+
+        if cantidad > 1 and cantidad > cantidad_anterior:
+            raise serializers.ValidationError(
+                'Cada seccion permite como maximo un video. '
+                'Quita el otro video antes de guardar.'
+            )
+
+    for key in video_ids:
+        resource = resources.get(key)
+
+        if (
+            resource is None
+            or resource.tipo != 'video'
+            or resource.archivo is None
+            or resource.archivo.mime not in ('video/mp4', 'video/webm')
+        ):
+            raise serializers.ValidationError(
+                'Selecciona un video valido de la biblioteca de esta tienda.'
+            )
+
     previous_ids = referenced_media(previous)
     if any(key not in resources or (key not in previous_ids and (not resources[key].activo or resources[key].eliminado)) for key in ids):
         raise serializers.ValidationError('Selecciona recursos activos de la biblioteca de esta tienda. Las referencias anteriores no disponibles pueden ocultarse o eliminarse.')

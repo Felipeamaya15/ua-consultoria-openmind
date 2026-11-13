@@ -91,7 +91,7 @@ class ArchivoMultimedia(models.Model):
 
 
 class RecursoMultimedia(models.Model):
-    TIPOS = [(name, name) for name in ('imagen', 'youtube', 'instagram', 'facebook', 'enlace')]
+    TIPOS = [(name, name) for name in ('imagen', 'video', 'youtube', 'instagram', 'facebook', 'enlace')]
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     tienda = models.ForeignKey('core.Tienda', on_delete=models.CASCADE)
     titulo = models.CharField(max_length=180)
