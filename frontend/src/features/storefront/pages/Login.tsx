@@ -1,12 +1,14 @@
 import { CommercialOptIn } from '../components/store/CommercialOptIn';
 import { requestConsent } from '../services/commercialConsent';
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useGoogleLogin } from '@react-oauth/google';
 import { authService } from '../../auth/services/authService';
 import { CaptchaWidget } from '../../auth/components/CaptchaWidget';
 import { Button, Input, Alert, InstitutionalBadge } from '../components/ui';
 import { useStore } from '../context/StoreContext';
+import { useStoreIdentity } from '../context/StoreIdentityContext';
+import { readCheckoutAuthSettings } from '../services/storePreferences';
 import { useStorefrontTemplate } from '../hooks/useStorefrontTemplate';
 import {
   MAX_EMAIL_LENGTH,
@@ -24,6 +26,8 @@ type AuthViewMode = 'login' | 'register' | 'forgot' | 'reset' | 'mfa';
 
 export default function Login() {
   const { config } = useStore();
+  const { identity } = useStoreIdentity();
+  const authSettings = useMemo(() => readCheckoutAuthSettings(identity), [identity]);
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const { route, templateNumber, isMinimal, isVisual, isCatalog } =
@@ -376,6 +380,17 @@ export default function Login() {
             ? 'Nueva contraseña'
             : 'Verificación MFA';
 
+  const showGoogle = authSettings.google && (mode === 'login' || mode === 'register');
+  const hasAnyLoginMethod = authSettings.emailPassword || authSettings.google;
+  const showEmailForm =
+    mode === 'forgot' ||
+    mode === 'reset' ||
+    mode === 'mfa' ||
+    authSettings.emailPassword ||
+    !hasAnyLoginMethod;
+  const showDivider = showGoogle && showEmailForm;
+  const showGuest = authSettings.guestCheckout && authSettings.requiresAuth !== 'required';
+
   const renderFormFields = (helperTextClass: string, forgotLinkClass: string) => {
     if (mode === 'forgot') {
       return (
@@ -628,7 +643,7 @@ export default function Login() {
               {headerTitle}
             </h1>
 
-            {(mode === 'login' || mode === 'register') && (
+            {(authSettings.emailPassword || !hasAnyLoginMethod) && (mode === 'login' || mode === 'register') && (
               <p className="mt-4 text-[13px] text-[var(--visual-page-color)]/60 text-center">
                 {mode === 'login' ? '¿No tienes cuenta?' : '¿Ya tienes cuenta?'}{' '}
                 <button
@@ -650,7 +665,7 @@ export default function Login() {
               </Alert>
             )}
 
-            {(mode === 'login' || mode === 'register') && (
+            {showGoogle && (
               <>
                 <button
                   data-page-action="outline"
@@ -667,15 +682,18 @@ export default function Login() {
                   Continuar con Google
                 </button>
 
-                <div className="flex items-center gap-3">
-                  <div className="flex-1 h-px bg-[var(--visual-global-border)]/20" />
-                  <span className="text-[11px] text-[var(--visual-page-color)]/50">o</span>
-                  <div className="flex-1 h-px bg-[var(--visual-global-border)]/20" />
-                </div>
+                {showDivider && (
+                  <div className="flex items-center gap-3">
+                    <div className="flex-1 h-px bg-[var(--visual-global-border)]/20" />
+                    <span className="text-[11px] text-[var(--visual-page-color)]/50">o</span>
+                    <div className="flex-1 h-px bg-[var(--visual-global-border)]/20" />
+                  </div>
+                )}
               </>
             )}
 
-            <form data-page-form onSubmit={handleSubmit} className="flex flex-col gap-4 text-left">
+            {showEmailForm && (
+              <form data-page-form onSubmit={handleSubmit} className="flex flex-col gap-4 text-left">
               {renderFormFields(
                 'text-[var(--visual-page-color)]/75',
                 'text-xs text-[var(--primary)] hover:underline transition-colors',
@@ -691,16 +709,21 @@ export default function Login() {
                 {submitLabel(true)}
               </button>
             </form>
+            )}
 
-            <div className="text-center pt-1">
-              <Link
-                data-page-action="ghost"
-                to={route()}
-                className="text-[11px] uppercase tracking-[0.12em] text-[var(--visual-page-color)]/60 hover:text-[var(--primary)] transition-colors"
-              >
-                Continuar como invitado →
-              </Link>
-            </div>
+            {showGuest && (
+              <div className="text-center pt-1">
+                <Link
+                  data-page-action={!showGoogle && !showEmailForm ? 'primary' : 'ghost'}
+                  to={route()}
+                  className={!showGoogle && !showEmailForm
+                    ? 'w-full h-12 inline-flex items-center justify-center rounded-[9px] bg-[var(--primary)] text-[var(--visual-page-color)] text-[12px] font-bold hover:opacity-90 transition-opacity'
+                    : 'text-[11px] uppercase tracking-[0.12em] text-[var(--visual-page-color)]/60 hover:text-[var(--primary)] transition-colors'}
+                >
+                  Continuar como invitado →
+                </Link>
+              </div>
+            )}
           </div>
 
           <p className="text-center text-[11px] text-[var(--visual-page-color)]/45 mt-5">
@@ -724,7 +747,7 @@ export default function Login() {
               {headerTitle}
             </h1>
 
-            {(mode === 'login' || mode === 'register') && (
+            {(authSettings.emailPassword || !hasAnyLoginMethod) && (mode === 'login' || mode === 'register') && (
               <p className="mt-4 text-[13px] text-[var(--visual-page-color)] text-center">
                 {mode === 'login' ? '¿No tienes cuenta?' : '¿Ya tienes cuenta?'}{' '}
                 <button
@@ -746,7 +769,7 @@ export default function Login() {
               </Alert>
             )}
 
-            {(mode === 'login' || mode === 'register') && (
+            {showGoogle && (
               <>
                 <button
                   data-page-action="outline"
@@ -763,15 +786,18 @@ export default function Login() {
                   Continuar con Google
                 </button>
 
-                <div className="flex items-center gap-3">
-                  <div className="flex-1 h-px bg-[var(--visual-global-border)]/15" />
-                  <span className="text-[10px] text-[var(--visual-page-color)]">o</span>
-                  <div className="flex-1 h-px bg-[var(--visual-global-border)]/15" />
-                </div>
+                {showDivider && (
+                  <div className="flex items-center gap-3">
+                    <div className="flex-1 h-px bg-[var(--visual-global-border)]/15" />
+                    <span className="text-[10px] text-[var(--visual-page-color)]">o</span>
+                    <div className="flex-1 h-px bg-[var(--visual-global-border)]/15" />
+                  </div>
+                )}
               </>
             )}
 
-            <form data-page-form onSubmit={handleSubmit} className="flex flex-col gap-4 text-left">
+            {showEmailForm && (
+              <form data-page-form onSubmit={handleSubmit} className="flex flex-col gap-4 text-left">
               {renderFormFields(
                 'text-[#77716e]',
                 'text-[11px] text-[var(--visual-page-color)] hover:underline transition-colors',
@@ -787,16 +813,21 @@ export default function Login() {
                 {submitLabel(true)}
               </button>
             </form>
+            )}
 
-            <div className="text-center pt-1">
-              <Link
-                data-page-action="ghost"
-                to={route()}
-                className="text-[10px] uppercase tracking-[0.12em] text-[var(--visual-page-color)] hover:underline transition-colors"
-              >
-                Continuar como invitado →
-              </Link>
-            </div>
+            {showGuest && (
+              <div className="text-center pt-1">
+                <Link
+                  data-page-action={!showGoogle && !showEmailForm ? 'primary' : 'ghost'}
+                  to={route()}
+                  className={!showGoogle && !showEmailForm
+                    ? 'w-full h-12 inline-flex items-center justify-center rounded-[8px] bg-[var(--primary)] text-[var(--visual-page-color)] text-[11px] font-medium uppercase tracking-[0.16em] hover:opacity-90 transition-opacity'
+                    : 'text-[10px] uppercase tracking-[0.12em] text-[var(--visual-page-color)] hover:underline transition-colors'}
+                >
+                  Continuar como invitado →
+                </Link>
+              </div>
+            )}
           </div>
 
           <p className="text-center text-[10px] text-[var(--visual-page-color)] mt-5">
@@ -846,7 +877,7 @@ export default function Login() {
             {headerTitle}
           </h1>
 
-          {(mode === 'login' || mode === 'register') && (
+          {(authSettings.emailPassword || !hasAnyLoginMethod) && (mode === 'login' || mode === 'register') && (
             <p className="text-sm text-[var(--muted-foreground)] mt-2 text-center">
               {mode === 'login' ? '¿No tienes cuenta?' : '¿Ya tienes cuenta?'}{' '}
               <button
@@ -880,7 +911,7 @@ export default function Login() {
             </Alert>
           )}
 
-          {(mode === 'login' || mode === 'register') && (
+          {showGoogle && (
             <>
               <button
                 data-page-action="outline"
@@ -901,15 +932,18 @@ export default function Login() {
                 Continuar con Google
               </button>
 
-              <div className="flex items-center gap-3">
-                <div className="flex-1 h-px bg-[var(--border)]" />
-                <span className="text-xs text-[var(--muted-foreground)]">o</span>
-                <div className="flex-1 h-px bg-[var(--border)]" />
-              </div>
+              {showDivider && (
+                <div className="flex items-center gap-3">
+                  <div className="flex-1 h-px bg-[var(--border)]" />
+                  <span className="text-xs text-[var(--muted-foreground)]">o</span>
+                  <div className="flex-1 h-px bg-[var(--border)]" />
+                </div>
+              )}
             </>
           )}
 
-          <form data-page-form onSubmit={handleSubmit} className="flex flex-col gap-4 text-left">
+          {showEmailForm && (
+            <form data-page-form onSubmit={handleSubmit} className="flex flex-col gap-4 text-left">
             {renderFormFields(
               'text-[var(--muted-foreground)]',
               isMinimal
@@ -939,20 +973,25 @@ export default function Login() {
               </Button>
             )}
           </form>
+          )}
 
-          <div className="text-center pt-1">
-            <Link
-              data-page-action="ghost"
-              to={route()}
-              className={
-                isMinimal
-                  ? 'text-xs text-[var(--visual-page-color)] hover:text-[var(--primary)] transition-colors'
-                  : 'text-xs text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition-colors'
-              }
-            >
-              Continuar como invitado →
-            </Link>
-          </div>
+          {showGuest && (
+            <div className="text-center pt-1">
+              <Link
+                data-page-action={!showGoogle && !showEmailForm ? 'primary' : 'ghost'}
+                to={route()}
+                className={
+                  !showGoogle && !showEmailForm
+                    ? 'w-full h-12 inline-flex items-center justify-center rounded-xl bg-[var(--primary)] text-white text-sm font-semibold hover:opacity-90 transition-opacity'
+                    : isMinimal
+                      ? 'text-xs text-[var(--visual-page-color)] hover:text-[var(--primary)] transition-colors'
+                      : 'text-xs text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition-colors'
+                }
+              >
+                Continuar como invitado →
+              </Link>
+            </div>
+          )}
         </div>
 
         <p className="text-center text-xs text-[var(--muted-foreground)] mt-5">
