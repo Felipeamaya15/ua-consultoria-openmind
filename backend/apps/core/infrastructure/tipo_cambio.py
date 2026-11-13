@@ -4,7 +4,7 @@ PayPal no admite pesos chilenos de forma estandar, asi que el pedido (en CLP) se
 equivalente en USD. El valor sale del dolar observado, se refresca solo y nunca se usa si esta
 desactualizado.
 
-Banco Central de Chile (API SIETE), solo si hay BCCH_USUARIO y BCCH_CLAVE configurados.
+Banco Central de Chile (API SIETE), solo si hay BCCH_TOKEN configurado (API Key Token de la BDE).
 
 
 Todo es configurable por entorno (ver settings.py): margen, vigencia maxima y frecuencia de refresco.
@@ -69,13 +69,12 @@ def _leer_json(url):
 
 
 def _desde_bcch():
-    usuario = (getattr(settings, 'BCCH_USUARIO', '') or '').strip()
-    clave = (getattr(settings, 'BCCH_CLAVE', '') or '').strip()
-    if not usuario or not clave:
+    token = (getattr(settings, 'BCCH_TOKEN', '') or '').strip()
+    if not token:
         return None
     hoy = date.today()
     query = urllib.parse.urlencode({
-        'user': usuario, 'pass': clave, 'timeseries': SERIE_BCCH,
+        'token': token, 'function': 'GetSeries', 'timeseries': SERIE_BCCH,
         'firstdate': (hoy - timedelta(days=10)).isoformat(), 'lastdate': hoy.isoformat(),
     })
     datos = _leer_json(f'{URL_BCCH}?{query}')
