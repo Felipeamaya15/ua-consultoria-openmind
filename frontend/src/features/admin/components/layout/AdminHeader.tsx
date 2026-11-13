@@ -99,7 +99,7 @@ export function AdminHeader({
       <div className="flex items-center gap-3">
         <button
           type="button"
-          className="md:hidden p-2"
+          className="lg:hidden p-2"
           aria-label="Abrir navegación"
           aria-controls="admin-sidebar"
           aria-expanded={open}
@@ -162,6 +162,7 @@ export function AdminHeader({
               top-12
               z-50
               w-72
+              max-w-[calc(100vw-24px)]
               overflow-hidden
               rounded-xl
               border

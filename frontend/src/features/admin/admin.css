@@ -1,4 +1,4 @@
-.admin-shell{min-height:100vh;background:#f4f6fa;color:#0f1623;--primary:#1a3a6b;--foreground:#0f1623;--border:#dde3f0;--muted:#f1f3f9;--muted-foreground:#334155;--secondary:#eef1f8;--card:#fff;--ring:#1a3a6b;font-family:'Plus Jakarta Sans',system-ui,sans-serif}
+.admin-shell{min-height:100vh;overflow-x:clip;background:#f4f6fa;color:#0f1623;--primary:#1a3a6b;--foreground:#0f1623;--border:#dde3f0;--muted:#f1f3f9;--muted-foreground:#334155;--secondary:#eef1f8;--card:#fff;--ring:#1a3a6b;font-family:'Plus Jakarta Sans',system-ui,sans-serif}
 .admin-sidebar{position:fixed;inset:0 auto 0 0;width:256px;background:white;border-right:1px solid var(--border);display:flex;flex-direction:column;z-index:40}
 .admin-content{margin-left:256px;min-width:0;width:calc(100% - 256px)}
 
@@ -9,10 +9,11 @@
 .admin-header{height:64px;position:sticky;top:0;z-index:20;background:white;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:16px;padding:0 24px}
 .admin-nav-link{display:flex;align-items:center;gap:12px;padding:10px 14px;border-radius:12px;font-size:14px;font-weight:500;color:var(--muted-foreground);transition:background .15s}
 .admin-nav-link:hover{background:var(--muted)}.admin-nav-link.active{background:var(--primary);color:#fff;box-shadow:0 1px 2px #0a143219}
-.admin-dialog{margin:auto;max-height:calc(100dvh - 32px);overflow-y:auto;width:calc(100% - 32px);border:0;padding:0}.admin-dialog::backdrop{background:#0008;backdrop-filter:blur(5px)}
+.admin-dialog{margin:auto;max-height:calc(100dvh - 32px);max-width:calc(100vw - 24px);overflow-y:auto;width:calc(100% - 24px);border:0;padding:0}.admin-dialog::backdrop{background:#0008;backdrop-filter:blur(5px)}
 .admin-shell input[type=radio]{accent-color:var(--primary)}
 .admin-shell .commercial-section{--muted-foreground:#334155}
-@media(max-width:767px){.admin-sidebar{transform:translateX(-100%);transition:transform .2s}.admin-sidebar.is-open{transform:translateX(0)}.admin-content{margin-left:0;width:100%}.admin-header{padding:0 12px}.admin-shell main{padding-bottom:88px;padding-inline:16px}}
+@media(max-width:1023px){.admin-sidebar{transform:translateX(-100%);transition:transform .2s}.admin-sidebar.is-open{transform:translateX(0)}.admin-sidebar:not(.is-open){visibility:hidden}.admin-content{margin-left:0;width:100%}.admin-header{padding:0 16px}.admin-shell main{padding-inline:20px;padding-bottom:40px}.orders-advanced-filters{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:767px){.admin-header{padding:0 12px}.admin-shell main{padding-bottom:88px;padding-inline:14px}}
 
 .admin-identity-error{max-width:540px;margin:12vh auto;padding:32px;background:white;border:1px solid #e2e8f0;border-radius:16px;font:16px system-ui;color:#172033}.admin-identity-error h1{font-size:24px;margin-bottom:16px}.admin-identity-error p{line-height:1.6;margin-bottom:20px}.admin-identity-error button{padding:12px 20px;background:#4338ca;color:white;border-radius:8px}
 .admin-page-intro{margin-bottom:24px;padding-bottom:18px;border-bottom:1px solid var(--border)}
@@ -66,5 +67,4 @@
 .catalog-permanent-delete-btn:focus-visible{outline:2px solid #dc2626;outline-offset:2px;border-radius:3px}
 .catalog-permanent-delete-btn:disabled{opacity:.45;cursor:not-allowed}
 @media(max-width:639px){.admin-list-panel{padding:16px}.orders-search-row{grid-template-columns:minmax(0,1fr)}.orders-search-row>button{justify-self:start}.orders-advanced-filters{grid-template-columns:minmax(0,1fr);gap:12px}.orders-status-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));width:100%}.orders-status-list button{padding:9px 8px;font-size:12px}.orders-other-status{width:100%;justify-content:space-between}.orders-other-status select{flex:1;min-width:0}.catalog-overview{grid-template-columns:minmax(0,1fr)}.catalog-overview>div{padding:14px 12px}.catalog-overview>div+div{border-left:0;border-top:1px solid #edf0f6}.catalog-overview span{font-size:12px}.catalog-overview strong{font-size:22px}.admin-list-panel-footer>button{width:100%}.admin-page-intro-actions{gap:8px}}
-/* A closed mobile drawer must also be absent from keyboard navigation. */
-@media(max-width:767px){.admin-sidebar:not(.is-open){visibility:hidden}}
+/* Mobile drawer visibility is handled at max-width:1023px above. */
