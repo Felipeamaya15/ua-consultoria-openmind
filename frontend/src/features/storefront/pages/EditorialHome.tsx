@@ -25,8 +25,8 @@ export default function EditorialHome() {
     window.addEventListener('openmind:editor-promo-preview', listener);
     return () => window.removeEventListener('openmind:editor-promo-preview', listener);
   }, []);
-  const promoText = promoPreview?.text ?? visualConfig.hero.promoText;
-  const promoVisible = promoPreview?.visible ?? visualConfig.hero.promoVisible;
+  const promoText = promoPreview?.text ?? visualConfig?.hero?.promoText ?? '';
+  const promoVisible = promoPreview?.visible ?? visualConfig?.hero?.promoVisible ?? false;
   const { route } = useStorefrontTemplate();
 
   return (
