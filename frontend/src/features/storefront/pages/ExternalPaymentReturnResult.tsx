@@ -26,6 +26,17 @@ const NAMES = { paypal: 'PayPal', mercadopago: 'Mercado Pago' } as const;
 
 // La captura/consulta solo se hace una vez por pago; el resultado se guarda para que recargar no la repita.
 const cacheKey = (gateway: string, reference: string) => `${gateway}-result:${reference}`;
+const PENDING_CART_SNAPSHOT_KEY = 'openmind-pending-payment-cart';
+const RESTORE_CART_FLAG_KEY = 'openmind-restore-cart';
+
+function triggerCartRestore() {
+  try {
+    sessionStorage.setItem(RESTORE_CART_FLAG_KEY, '1');
+    if (typeof window !== 'undefined' && typeof Event !== 'undefined') {
+      window.dispatchEvent(new Event('openmind_restore_cart'));
+    }
+  } catch {}
+}
 
 export default function ExternalPaymentReturnResult({ gateway, orderNumber, tiendaId, reference }: Props) {
   const { route } = useStorefrontTemplate();
@@ -41,13 +52,18 @@ export default function ExternalPaymentReturnResult({ gateway, orderNumber, tien
 
     // Sin referencia el comprador volvió sin pagar (cancelado o fallo en la pasarela).
     if (!reference) {
+      triggerCartRestore();
       setResult({ status: 'cancelled' });
       return;
     }
     try {
       const cached = sessionStorage.getItem(cacheKey(gateway, reference));
       if (cached) {
-        setResult(JSON.parse(cached) as Result);
+        const parsed = JSON.parse(cached) as Result;
+        if (parsed.status === 'rejected' || parsed.status === 'cancelled') {
+          triggerCartRestore();
+        }
+        setResult(parsed);
         return;
       }
     } catch {
@@ -62,10 +78,20 @@ export default function ExternalPaymentReturnResult({ gateway, orderNumber, tien
       .then((res) => {
         const code = res?.error?.codigo;
         let next: Result;
-        if (res?.exito) next = { status: 'approved', usd: res.data?.monto_usd ?? undefined, tipoCambio: res.data?.tipo_cambio ?? undefined };
-        else if (code === 'PAGO_RECHAZADO') next = { status: 'rejected', message: res.mensaje || `${name} rechazó el pago.` };
-        else if (code === 'PAGO_PENDIENTE') next = { status: 'pending', message: res.mensaje || `El pago sigue pendiente en ${name}.` };
-        else next = { status: 'error', message: res?.mensaje || 'No pudimos confirmar tu pago.' };
+        if (res?.exito) {
+          next = { status: 'approved', usd: res.data?.monto_usd ?? undefined, tipoCambio: res.data?.tipo_cambio ?? undefined };
+          try {
+            sessionStorage.setItem(PENDING_CART_SNAPSHOT_KEY, '');
+            sessionStorage.setItem(RESTORE_CART_FLAG_KEY, '');
+          } catch {}
+        } else if (code === 'PAGO_RECHAZADO') {
+          next = { status: 'rejected', message: res.mensaje || `${name} rechazó el pago.` };
+          triggerCartRestore();
+        } else if (code === 'PAGO_PENDIENTE') {
+          next = { status: 'pending', message: res.mensaje || `El pago sigue pendiente en ${name}.` };
+        } else {
+          next = { status: 'error', message: res?.mensaje || 'No pudimos confirmar tu pago.' };
+        }
         if (next.status === 'approved' || next.status === 'rejected') {
           try { sessionStorage.setItem(cacheKey(gateway, reference), JSON.stringify(next)); } catch { /* Sin caché. */ }
         }
@@ -94,7 +120,7 @@ export default function ExternalPaymentReturnResult({ gateway, orderNumber, tien
     approved: { glyph: '✓', tone: 'bg-[var(--success-bg)] text-[var(--success)]', title: '¡Pago aprobado!' },
     rejected: { glyph: '✕', tone: 'bg-red-50 text-red-600', title: 'Pago rechazado' },
     pending: { glyph: '…', tone: 'bg-amber-50 text-amber-600', title: 'Pago pendiente' },
-    cancelled: { glyph: '!', tone: 'bg-amber-50 text-amber-600', title: 'Pago cancelado' },
+    cancelled: { glyph: '↩', tone: 'bg-amber-50 text-amber-600', title: 'Pago cancelado · Tu carrito sigue disponible' },
     error: { glyph: '!', tone: 'bg-red-50 text-red-600', title: 'No pudimos confirmar tu pago' },
   }[result.status];
 
@@ -119,7 +145,7 @@ export default function ExternalPaymentReturnResult({ gateway, orderNumber, tien
   };
 
   return (
-    <div className="w-full max-w-7xl mx-auto px-4 py-12 text-center flex flex-col items-center gap-6">
+    <div className="w-full max-w-3xl mx-auto px-4 py-12 text-center flex flex-col items-center gap-6">
       <div className={`w-20 h-20 rounded-full flex items-center justify-center text-3xl font-bold ${view.tone}`} aria-hidden="true">
         {view.glyph}
       </div>
@@ -128,32 +154,40 @@ export default function ExternalPaymentReturnResult({ gateway, orderNumber, tien
         <p className="text-[var(--muted-foreground)]">
           {result.status === 'loading' && `Estamos verificando el resultado con ${name}. No cierres esta página.`}
           {result.status === 'approved' && `Tu pedido${orderNumber ? ` ${orderNumber}` : ''} quedó pagado.${result.usd ? ` Se cobró US$ ${result.usd} (tipo de cambio $${Number(result.tipoCambio).toLocaleString('es-CL', {maximumFractionDigits: 2})} por US$ 1).` : ''}`}
-          {result.status === 'rejected' && `${result.message} Tu pedido sigue pendiente de pago.`}
+          {result.status === 'rejected' && `${result.message} Tus productos fueron conservados en el carrito para que puedas volver a intentarlo.`}
           {result.status === 'pending' && `${result.message} Te avisaremos cuando se confirme.`}
-          {result.status === 'cancelled' && `No se realizó ningún cobro${orderNumber ? ` y el pedido ${orderNumber} sigue pendiente de pago` : ''}.`}
+          {result.status === 'cancelled' && `Cancelaste el pago en ${name} y no se realizó ningún cobro. Tus productos siguen en tu carrito para que puedas retomar tu compra.`}
           {result.status === 'error' && result.message}
         </p>
       </div>
       {retryError && <p role="alert" className="text-sm text-red-600">{retryError}</p>}
 
       {result.status !== 'loading' && (
-        <div className="flex flex-col sm:flex-row gap-3 w-full">
+        <div className="flex flex-col sm:flex-row flex-wrap gap-3 w-full">
           {result.status === 'approved' || result.status === 'pending' ? (
-            <Link data-page-action="ghost" to={trackingRoute} state={{ email }} className="flex-1">
-              <Button variant="primary" fullWidth>Ver mi pedido</Button>
-            </Link>
-          ) : canRetry ? (
-            <Button variant="primary" fullWidth className="flex-1" onClick={retryPayment} disabled={retrying}>
-              {retrying ? `Redirigiendo a ${name}…` : 'Reintentar pago'}
-            </Button>
+            <>
+              <Link data-page-action="ghost" to={trackingRoute} state={{ email }} className="flex-1">
+                <Button variant="primary" fullWidth>Ver mi pedido</Button>
+              </Link>
+              <Link data-page-action="ghost" to={route('catalogo')} className="flex-1">
+                <Button variant="outline" fullWidth>Seguir comprando</Button>
+              </Link>
+            </>
           ) : (
-            <Link data-page-action="ghost" to={route('compra')} className="flex-1">
-              <Button variant="primary" fullWidth>Volver al checkout</Button>
-            </Link>
+            <>
+              <Link data-page-action="ghost" to={route('carrito')} className="flex-1">
+                <Button variant="primary" fullWidth>Volver al carrito</Button>
+              </Link>
+              <Link data-page-action="ghost" to={route('compra')} className="flex-1">
+                <Button variant="outline" fullWidth>Volver al checkout</Button>
+              </Link>
+              {canRetry && (
+                <Button variant="outline" fullWidth className="flex-1" onClick={retryPayment} disabled={retrying}>
+                  {retrying ? `Redirigiendo a ${name}…` : 'Reintentar pago'}
+                </Button>
+              )}
+            </>
           )}
-          <Link data-page-action="ghost" to={route('catalogo')} className="flex-1">
-            <Button variant="outline" fullWidth>Seguir comprando</Button>
-          </Link>
         </div>
       )}
     </div>

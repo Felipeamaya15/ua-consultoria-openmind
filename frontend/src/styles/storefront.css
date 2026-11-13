@@ -154,7 +154,8 @@ body {
 
 .template-minimal {
   --t-hero-height: 100vh;
-  --t-card-radius: 12px;
+  --t-card-radius: 26px;
+  --radius: 20px;
   --t-nav-style: top;
   --t-heading-font: 'Plus Jakarta Sans', sans-serif;
 }
@@ -333,19 +334,56 @@ body {
 
 /* Plantilla 3 (Visual) Catálogo: cuando se despliega el panel superior de filtros, ocupa el 100% del ancho */
 [data-catalog-page="visual"] [data-visual-part="catalogFilters"] {
-  width: 100% !important;
+  width: 100%;
 }
 
 /* Plantilla 4 (Catalog) Catálogo: en escritorio mantiene la barra lateral de filtros a la izquierda y resultados a la derecha */
 @media (min-width: 768px) {
+  [data-catalog-page="visual"] [data-visual-part="catalogLayout"],
   [data-catalog-page="catalog"] [data-visual-part="catalogLayout"] {
     flex-direction: row !important;
     align-items: flex-start;
   }
 
+  [data-catalog-page="visual"] [data-visual-part="catalogFilters"],
   [data-catalog-page="catalog"] [data-visual-part="catalogFilters"] {
+    display: block !important;
     width: 270px !important;
   }
+
+  [data-catalog-page="visual"] [data-visual-part="catalogFiltersToggle"] {
+    display: none !important;
+  }
+}
+
+@media (max-width: 767px) {
+  [data-catalog-page="visual"] [data-visual-part="catalogFilters"][data-visual-open="false"] {
+    display: none !important;
+  }
+
+  [data-catalog-page="visual"] [data-visual-part="catalogFilters"][data-visual-open="true"] {
+    display: block !important;
+    width: 100% !important;
+  }
+}
+
+[data-storefront-visual] [data-visual-part="catalogFilters"] [data-visual-part="categoryList"] {
+  display: flex !important;
+  flex-direction: column !important;
+  flex-wrap: nowrap !important;
+  gap: 0.25rem !important;
+}
+
+[data-storefront-visual] [data-visual-part="catalogFilters"] [data-visual-part="categoryItem"] {
+  width: 100% !important;
+  padding: 0.5rem 0.75rem !important;
+  font-size: 0.8125rem !important;
+  text-align: left !important;
+  justify-content: flex-start !important;
+}
+
+[data-storefront-visual] [data-visual-part="catalogFilters"] .grid.grid-cols-2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
 }
 
 /* ==========================================================================
@@ -889,4 +927,87 @@ button:disabled { cursor: not-allowed; opacity: .65; }
     white-space: normal;
     overflow-wrap: anywhere;
   }
+}
+
+[data-storefront-visual] :is(
+  button:not(:disabled),
+  [data-visual-section="heroCta"],
+  [data-visual-part="buyButton"],
+  [data-visual-part="productButton"],
+  [data-page-action],
+  [data-visual-part="categoryItem"]
+) {
+  transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1),
+              box-shadow 0.2s cubic-bezier(0.22, 1, 0.36, 1),
+              background-color 0.2s ease,
+              border-color 0.2s ease,
+              color 0.2s ease,
+              filter 0.2s ease !important;
+}
+
+[data-storefront-visual] :is(
+  button:not(:disabled),
+  [data-visual-section="heroCta"],
+  [data-visual-part="buyButton"],
+  [data-visual-part="productButton"],
+  [data-page-action],
+  [data-visual-part="categoryItem"]
+):hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px -3px rgba(15, 22, 35, 0.16), 0 2px 6px -2px rgba(15, 22, 35, 0.08);
+  filter: brightness(1.03);
+}
+
+[data-storefront-visual] :is(
+  button:not(:disabled),
+  [data-visual-section="heroCta"],
+  [data-visual-part="buyButton"],
+  [data-visual-part="productButton"],
+  [data-page-action],
+  [data-visual-part="categoryItem"]
+):active {
+  transform: translateY(0);
+}
+
+[data-storefront-visual].template-minimal :is(
+  [data-visual-section="productCard"],
+  [data-visual-card],
+  [data-page-panel],
+  [data-visual-part="catalogFilters"] > div
+) {
+  border-radius: 26px !important;
+  overflow: hidden;
+}
+
+[data-storefront-visual].template-minimal :is(
+  [data-visual-section="productCard"] img,
+  [data-visual-card] img,
+  [data-visual-part="cardImage"],
+  [data-visual-page="product"] [data-page-columns] img,
+  [data-visual-page="product"] .aspect-square,
+  [data-checkout-page] img
+) {
+  border-radius: 22px !important;
+}
+
+[data-storefront-visual].template-minimal :is(
+  button,
+  [data-visual-section="heroCta"],
+  [data-visual-part="buyButton"],
+  [data-visual-part="productButton"],
+  [data-visual-part="categoryItem"],
+  [data-page-action]
+) {
+  border-radius: 9999px !important;
+}
+
+[data-storefront-visual].template-minimal :is(
+  input:not([type="checkbox"]):not([type="radio"]),
+  select
+) {
+  border-radius: 9999px !important;
+}
+
+[data-storefront-visual].template-minimal textarea {
+  border-radius: 20px !important;
 }

@@ -525,12 +525,23 @@ export default function Catalog() {
     return (
       <div data-catalog-page="visual" data-visual-section={VISUAL_SECTION.catalog} data-visual-catalog className="bg-white text-[#111111] min-w-0">
         <section className="max-w-[1180px] mx-auto px-4 sm:px-5 md:px-8 pt-8 md:pt-10 pb-16 sm:pb-20">
-          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-8 md:mb-10">
-            <h1 className="font-serif text-[34px] sm:text-[48px] md:text-[52px] leading-none tracking-[-0.025em] text-[#111111] break-words">
-              Nuestra colección
-            </h1>
+          <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4 sm:gap-6 mb-6 md:mb-8">
+            <div className="min-w-0">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-black/55 mb-2">
+                Catálogo completo
+              </p>
 
-            <div data-catalog-toolbar className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+              <h1 className="font-serif text-[34px] sm:text-[48px] md:text-[52px] leading-none tracking-[-0.025em] text-[#111111] break-words">
+                {category !== 'Todos' ? category : 'Nuestra colección'}
+              </h1>
+
+              <p className="mt-2.5 text-xs text-black/60">
+                {filtered.length}{' '}
+                {filtered.length === 1 ? 'producto disponible' : 'productos disponibles'}
+              </p>
+            </div>
+
+            <div data-catalog-toolbar className="flex flex-wrap items-center gap-2 w-full lg:w-auto">
               <div data-catalog-search className="relative w-full sm:w-auto">
                 <Icon
                   name="search"
@@ -544,7 +555,7 @@ export default function Catalog() {
                   }}
                   aria-label="Buscar productos"
                   placeholder="Buscar..."
-                  className="h-11 w-full sm:w-48 border border-black/15 px-3 pl-10 text-xs text-[#111111] bg-white outline-none focus:border-black"
+                  className="h-11 w-full sm:w-52 border border-black/15 px-3 pl-10 text-xs text-[#111111] bg-white outline-none focus:border-black"
                 />
               </div>
 
@@ -560,63 +571,190 @@ export default function Catalog() {
                   </option>
                 ))}
               </select>
+
+              <div className="flex h-11 shrink-0 overflow-hidden border border-black/15 bg-white">
+                {(['grid', 'list'] as const).map((view) => (
+                  <button
+                    type="button"
+                    key={view}
+                    onClick={() => setViewMode(view)}
+                    aria-label={view === 'grid' ? 'Vista en grilla' : 'Vista en lista'}
+                    className={`w-11 flex items-center justify-center transition-colors ${
+                      viewMode === view
+                        ? 'bg-[var(--primary)] text-[var(--on-primary)]'
+                        : 'bg-white text-black/60 hover:bg-black/5'
+                    }`}
+                  >
+                    <Icon
+                      name={view === 'grid' ? 'grid' : 'list'}
+                      className="w-3.5 h-3.5"
+                    />
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
 
+          <div className="md:hidden mb-3 flex flex-wrap gap-1.5">
+            {categories.map((cat) => (
+              <button
+                key={cat}
+                type="button"
+                aria-pressed={category === cat}
+                onClick={() => {
+                  setCategory(cat);
+                  setPage(1);
+                }}
+                className={`min-h-9 px-3.5 py-1.5 text-xs font-semibold border transition-colors ${
+                  category === cat
+                    ? 'bg-[var(--primary)] text-[var(--on-primary)] border-[var(--primary)]'
+                    : 'bg-[#f6f5f2] text-[#171717] border-black/10'
+                }`}
+              >
+                {cat}
+              </button>
+            ))}
+          </div>
+
+          <button
+            type="button"
+            data-visual-part="catalogFiltersToggle"
+            aria-expanded={filtersOpen}
+            onClick={() => setFiltersOpen(!filtersOpen)}
+            className="md:hidden mb-5 min-h-11 w-full sm:w-auto flex justify-center items-center gap-2 border border-black/20 bg-white px-5 py-2.5 text-xs font-semibold uppercase tracking-[0.12em] text-[#111111]"
+          >
+            <span>Filtros{activeFiltersCount > 0 && ` (${activeFiltersCount})`}</span>
+            <span aria-hidden="true">{filtersOpen ? '−' : '+'}</span>
+          </button>
+
           {/* FILTROS */}
-          <div data-visual-part="catalogLayout">
-            <aside data-visual-part="catalogFilters" data-visual-open={filtersOpen} className={`${filtersOpen ? 'block' : 'hidden'} mb-6 border-b border-[var(--border)] pb-6 min-w-0`}>
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <button
-                  data-visual-part="catalogFiltersToggle"
-                  type="button"
-                  aria-expanded={filtersOpen}
-                  onClick={() => setFiltersOpen(!filtersOpen)}
-                  className="inline-flex min-h-11 items-center gap-2 rounded-full border border-black/15 px-5 py-2.5 text-[11px] font-semibold uppercase tracking-[0.12em] transition-colors hover:border-black"
-                >
-                  Filtros{activeFiltersCount > 0 && ` (${activeFiltersCount})`}{' '}
-                  <span aria-hidden="true">{filtersOpen ? '−' : '+'}</span>
-                </button>
-
-                {activeFiltersCount > 0 && (
-                  <button
-                    type="button"
-                    onClick={clearFilters}
-                    className="text-[11px] font-semibold underline underline-offset-4 hover:opacity-60"
-                  >
-                    Limpiar filtros ({activeFiltersCount})
-                  </button>
-                )}
-              </div>
-
-              <div data-visual-section={VISUAL_SECTION.categories} data-visual-part="categoryList" className="mt-5 flex flex-wrap gap-2">
-                {categories.map(cat => <button key={cat} type="button" data-visual-part="categoryItem" aria-pressed={category === cat} onClick={() => { setCategory(cat); setPage(1); }}>{cat}</button>)}
-              </div>
-              <div className="mt-6">
-                {attrFilters.groups.length === 0 ? (
-                  <p className="text-[13px] text-[var(--muted-foreground)]">
-                    No hay filtros disponibles.
+          <div data-visual-part="catalogLayout" className="grid grid-cols-12 gap-5 md:gap-7 items-start">
+            <aside
+              data-visual-part="catalogFilters"
+              data-visual-open={filtersOpen}
+              className={`col-span-12 md:col-span-3 min-w-0 ${
+                filtersOpen ? 'block' : 'hidden'
+              } md:block`}
+            >
+              <div className="md:sticky md:top-24 md:max-h-[calc(100vh-7rem)] flex flex-col border border-black/10 bg-[#faf9f6] text-[#111111]">
+                <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-black/10">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-black/65">
+                    Filtros
                   </p>
-                ) : (
-                  <div className="max-h-[280px] overflow-y-auto pr-2 grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-4 gap-x-8 gap-y-6 content-start">
-                    <AttributeFilters
-                      groups={attrFilters.groups}
-                      selected={attrFilters.selected}
-                      onToggle={(name, value) => {
-                        attrFilters.toggle(name, value);
-                        setPage(1);
-                      }}
-                    />
+
+                  {activeFiltersCount > 0 && (
+                    <button
+                      type="button"
+                      onClick={clearFilters}
+                      className="text-[11px] font-semibold text-[var(--primary)] underline underline-offset-4 hover:opacity-70"
+                    >
+                      Limpiar ({activeFiltersCount})
+                    </button>
+                  )}
+                </div>
+
+                <div className="flex-1 overflow-y-auto p-5">
+                  <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.18em] text-black/60">
+                    Categorías
+                  </p>
+
+                  <div data-visual-section={VISUAL_SECTION.categories} data-visual-part="categoryList" className="flex flex-col gap-1">
+                    {categories.map((cat) => (
+                      <button
+                        key={cat}
+                        type="button"
+                        data-visual-part="categoryItem"
+                        aria-pressed={category === cat}
+                        onClick={() => {
+                          setCategory(cat);
+                          setPage(1);
+                        }}
+                        className={`px-3 py-2 text-left text-xs font-medium transition-colors ${
+                          category === cat
+                            ? 'bg-[var(--primary)] text-[var(--on-primary)]'
+                            : 'text-[#171717] hover:bg-black/5'
+                        }`}
+                      >
+                        {cat}
+                      </button>
+                    ))}
                   </div>
-                )}
+
+                  <div className="border-t border-black/10 mt-5 pt-5">
+                    <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.18em] text-black/60">
+                      Disponibilidad
+                    </p>
+
+                    {['En stock', 'Sin stock'].map((option) => (
+                      <label
+                        key={option}
+                        className="flex items-center gap-2.5 py-1.5 text-xs cursor-pointer"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={availability.includes(option)}
+                          onChange={(event) => {
+                            setAvailability((previous) =>
+                              event.target.checked
+                                ? [...previous, option]
+                                : previous.filter((value) => value !== option),
+                            );
+                            setPage(1);
+                          }}
+                          className="accent-[var(--primary)]"
+                        />
+                        <span>{option}</span>
+                      </label>
+                    ))}
+                  </div>
+
+                  <div className="border-t border-black/10 mt-5 pt-5">
+                    <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.18em] text-black/60">
+                      Precio
+                    </p>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      <input
+                        type="number"
+                        min="0"
+                        aria-label="Precio mínimo"
+                        value={minPrice}
+                        onChange={(event) => {
+                          setMinPrice(event.target.value);
+                          setPage(1);
+                        }}
+                        placeholder="Mín."
+                        className="h-9 min-w-0 border border-black/15 bg-white px-2.5 text-xs outline-none focus:border-[var(--primary)]"
+                      />
+
+                      <input
+                        type="number"
+                        min="0"
+                        aria-label="Precio máximo"
+                        value={maxPrice}
+                        onChange={(event) => {
+                          setMaxPrice(event.target.value);
+                          setPage(1);
+                        }}
+                        placeholder="Máx."
+                        className="h-9 min-w-0 border border-black/15 bg-white px-2.5 text-xs outline-none focus:border-[var(--primary)]"
+                      />
+                    </div>
+                  </div>
+
+                  <AttributeFilters
+                    groups={attrFilters.groups}
+                    selected={attrFilters.selected}
+                    onToggle={(name, value) => {
+                      attrFilters.toggle(name, value);
+                      setPage(1);
+                    }}
+                  />
+                </div>
               </div>
             </aside>
 
-            <div data-visual-part="catalogResults" className="min-w-0">
-              <button type="button" data-visual-part="catalogFiltersToggle" aria-expanded={filtersOpen} onClick={() => setFiltersOpen(!filtersOpen)} className="mb-5 min-h-11 w-full sm:w-auto justify-center items-center border border-[var(--border)] rounded px-4 py-2 text-xs font-semibold">
-                Filtros{activeFiltersCount > 0 && ` (${activeFiltersCount})`} {filtersOpen ? '−' : '+'}
-              </button>
-
+            <main data-visual-part="catalogResults" className="col-span-12 md:col-span-9 min-w-0">
               {appliedFilters}
 
               {paginated.length === 0 ? (
@@ -627,12 +765,20 @@ export default function Catalog() {
                 />
               ) : (
                 <>
-                  <div data-visual-section={VISUAL_SECTION.productGrid} data-visual-grid="catalog" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 md:gap-6">
+                  <div
+                    data-visual-section={VISUAL_SECTION.productGrid}
+                    data-visual-grid={viewMode === 'grid' ? 'catalog' : undefined}
+                    className={
+                      viewMode === 'grid'
+                        ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 md:gap-6'
+                        : 'flex flex-col gap-4'
+                    }
+                  >
                     {paginated.map((product) => (
                       <ProductCard
                         key={product.id}
                         product={product}
-                        layout="grid"
+                        layout={viewMode === 'list' ? 'list' : 'grid'}
                       />
                     ))}
                   </div>
@@ -649,7 +795,7 @@ export default function Catalog() {
                   )}
                 </>
               )}
-            </div>
+            </main>
           </div>
         </section>
       </div>
@@ -728,7 +874,7 @@ export default function Catalog() {
               name="search"
               className="
                 absolute
-                left-3
+                left-3.5
                 top-1/2
                 -translate-y-1/2
                 w-4
@@ -756,7 +902,7 @@ export default function Catalog() {
                 transition-all
                 ${
                   isMinimal
-                    ? 'h-11 sm:h-10 text-sm rounded-xl pl-9 pr-3 w-full sm:w-44 md:w-52'
+                    ? 'h-11 sm:h-10 text-sm rounded-full pl-10 pr-4 w-full sm:w-48 md:w-56'
                     : 'h-11 sm:h-8 text-sm rounded-lg pl-9 pr-3 w-full sm:w-40 sm:focus:w-52'
                 }
               `}
@@ -779,7 +925,7 @@ export default function Catalog() {
               focus:outline-none
               ${
                 isMinimal
-                  ? 'h-11 sm:h-10 text-xs rounded-xl px-3'
+                  ? 'h-11 sm:h-10 text-xs rounded-full px-4'
                   : 'h-11 sm:h-8 text-xs rounded-lg px-2'
               }
             `}
@@ -805,7 +951,7 @@ export default function Catalog() {
               bg-white
               ${
                 isMinimal
-                  ? 'rounded-xl h-11 sm:h-10'
+                  ? 'rounded-full h-11 sm:h-10'
                   : 'rounded-lg h-11 sm:h-auto'
               }
             `}
@@ -868,7 +1014,7 @@ export default function Catalog() {
           text-sm font-medium
           ${
             isMinimal
-              ? 'bg-white border border-[var(--border)] rounded-full px-4 py-2'
+              ? 'bg-white border border-[var(--border)] rounded-full px-5 py-2'
               : 'bg-white border border-[var(--border)] rounded-lg px-4 py-2'
           }
         `}
@@ -910,7 +1056,7 @@ export default function Catalog() {
               flex-col
               ${
                 isMinimal
-                  ? 'rounded-[20px] md:top-24 md:max-h-[calc(100vh-7rem)]'
+                  ? 'rounded-[26px] md:top-24 md:max-h-[calc(100vh-7rem)] shadow-xs'
                   : 'rounded-xl md:top-20 md:max-h-[calc(100vh-6rem)]'
               }
             `}
@@ -921,7 +1067,7 @@ export default function Catalog() {
               className={`
                 flex items-center justify-between gap-3
                 border-b border-[var(--border)]
-                ${isMinimal ? 'px-4 py-3' : 'px-4 py-3'}
+                ${isMinimal ? 'px-5 py-3.5' : 'px-4 py-3'}
               `}
             >
               <p className="text-xs font-semibold uppercase tracking-wider text-[var(--muted-foreground)]">
@@ -956,7 +1102,7 @@ export default function Catalog() {
                 Categorías
               </p>
 
-              <div data-visual-section={VISUAL_SECTION.categories} data-visual-part="categoryList" className="flex flex-col gap-1">
+              <div data-visual-section={VISUAL_SECTION.categories} data-visual-part="categoryList" className="flex flex-col gap-1.5">
                 {categories.map((cat) => (
                   <button data-visual-part="categoryItem" aria-pressed={category === cat}
                     type="button"
@@ -968,12 +1114,12 @@ export default function Catalog() {
                     className={`
                       text-left
                       text-sm
-                      px-3
+                      px-3.5
                       py-2
-                      transition-colors
+                      transition-all
                       ${
                         isMinimal
-                          ? 'rounded-xl'
+                          ? 'rounded-full'
                           : 'rounded-lg'
                       }
                       ${
@@ -1054,11 +1200,11 @@ export default function Catalog() {
                       text-xs
                       border
                       border-[var(--border)]
-                      px-2
+                      px-3
                       focus:outline-none
                       ${
                         isMinimal
-                          ? 'h-9 rounded-lg'
+                          ? 'h-9 rounded-full'
                           : 'h-9 sm:h-7 rounded'
                       }
                     `}
@@ -1079,11 +1225,11 @@ export default function Catalog() {
                       text-xs
                       border
                       border-[var(--border)]
-                      px-2
+                      px-3
                       focus:outline-none
                       ${
                         isMinimal
-                          ? 'h-9 rounded-lg'
+                          ? 'h-9 rounded-full'
                           : 'h-9 sm:h-7 rounded'
                       }
                     `}
