@@ -65,8 +65,13 @@ def margen_pct():
 def _leer_json(url):
     request = urllib.request.Request(url, headers={'Accept': 'application/json', 'User-Agent': 'openmind-ecommerce'})
     with urllib.request.urlopen(request, timeout=TIMEOUT) as response:  # noqa: S310 (URL fija de la fuente)
-        return json.loads(response.read().decode('utf-8'))
-
+        crudo = response.read()
+        charset = response.headers.get_content_charset() or 'utf-8'
+    try:
+        texto = crudo.decode(charset)
+    except (UnicodeDecodeError, LookupError):
+        texto = crudo.decode('latin-1')
+    return json.loads(texto)
 
 def _desde_bcch():
     token = (getattr(settings, 'BCCH_TOKEN', '') or '').strip()
