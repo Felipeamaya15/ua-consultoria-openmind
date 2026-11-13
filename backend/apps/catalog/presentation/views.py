@@ -868,7 +868,10 @@ class ProductoUpdateView(APIView):
             if not isinstance(revision, str) or not revision:
                 return error_response("Recarga el producto antes de editar: falta revision.", "ERROR_VALIDACION")
             # Validar el documento completo también para PATCH; no perder campos omitidos.
-            serializer = ProductCreateSerializer(data={**original, **request.data})
+            serializer = ProductCreateSerializer(
+                data={**original, **request.data},
+                context={"existing_images": set(original.get("imagenes") or [])},
+            )
             serializer.is_valid(raise_exception=True)
             fields = {key: value for key, value in serializer.validated_data.items()
                       if request.method == 'PUT' or key in request.data}
