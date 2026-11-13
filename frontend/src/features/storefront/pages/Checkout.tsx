@@ -672,7 +672,7 @@ export default function Checkout() {
       try {
         const data = await authService.googleLogin(tokenResponse.access_token);
         if (data?.data?.token) {
-          authService.setSession(data.data.token);
+          authService.setSession(data.data.token, data?.data?.user);
         }
         const user = data?.data?.user;
         const fullName = [user?.first_name, user?.last_name].filter(Boolean).join(' ') || user?.username || '';

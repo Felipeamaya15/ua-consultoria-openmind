@@ -96,7 +96,7 @@ export default function Login() {
       setLoading(true);
       try {
         const data = await authService.googleLogin(tokenResponse.access_token);
-        authService.setSession(data.data.token);
+        authService.setSession(data.data.token, data.data.user);
 
         if (data.data.user.is_store_owner === true) {
           navigate('/emprendedor');
@@ -198,7 +198,7 @@ export default function Login() {
           return;
         }
         const data = await authService.verifyMfa(mfaToken, cleanedCode);
-        authService.setSession(data.data.token);
+        authService.setSession(data.data.token, data.data.user);
         redirectAuthenticatedUser(data.data.user);
         return;
       }
@@ -288,7 +288,7 @@ export default function Login() {
         });
       }
 
-      authService.setSession(data.data.token);
+      authService.setSession(data.data.token, data.data.user);
       if (mode === 'register' && commercial) {
         let notice: string;
         try {

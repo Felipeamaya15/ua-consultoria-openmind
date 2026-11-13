@@ -56,7 +56,7 @@ test('service uses optional guest authentication and owner-only listing; writes 
   token='isolated-test-token';await service.submitActivity(id,'inscripcion',data);assert.equal(calls[1].options.headers.Authorization,'Token isolated-test-token');assert(calls[1].url.endsWith('/inscripciones/'));
   answer={recibida:false};await assert.rejects(service.submitActivity(id,'consulta',data),/confirmar/);
   answer={resultados:[],total:0,pagina:1,paginas:1};await service.fetchActivityRequests(new URLSearchParams({tipo:'consulta'}));assert.equal(calls.at(-1).options.cache,'no-store');
-  answer={id:requestId,seccion_id:id,tipo:'consulta',titulo_actividad:'Taller',nombre:'Ana',apellido:'',email:'ana@example.test',telefono:'',mensaje:'Original',estado:'respondida',creado:'2030-01-01'};
+  answer={id:requestId,seccion_id:id,tipo:'consulta',titulo_actividad:'Taller',nombre:'Ana',apellido:'',email:'ana@example.test',telefono:'',mensaje:'Original',estado:'respondida',creado:'2030-01-01',actualizado:'2030-01-01',archivada:false,archivada_en:null};
   await service.updateActivityState(requestId,'respondida');assert.deepEqual(JSON.parse(calls.at(-1).options.body),{estado:'respondida'});
   assert(!calls.some(call=>call.url.includes('isolated-test-token')));
 });

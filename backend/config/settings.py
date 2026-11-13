@@ -162,11 +162,16 @@ CORS_ALLOW_HEADERS = list(default_headers) + [
 ]
 CSRF_TRUSTED_ORIGINS = [origin.strip() for origin in os.getenv('DJANGO_CSRF_TRUSTED_ORIGINS', '').split(',') if origin.strip()]
 
-# Configuración obligatoria de cookies seguras y sesión con expiración de 30 minutos (1800s) de inactividad
+# Configuración obligatoria de cookies seguras y sesión según perfil de usuario:
+# - Cuentas administrativas (is_staff / admin): 30 minutos de inactividad (1800s).
+# - Clientes finales: expiración prolongada (7 a 30 días, default 30 días = 2592000s) sin cierre por inactividad corta.
 SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SECURE = not DEBUG
 SESSION_COOKIE_SAMESITE = os.getenv('DJANGO_SESSION_COOKIE_SAMESITE', 'Lax')
-SESSION_COOKIE_AGE = int(os.getenv('DJANGO_SESSION_COOKIE_AGE', '1800'))  # 30 minutos de inactividad
+ADMIN_SESSION_INACTIVITY_TIMEOUT_SECONDS = int(os.getenv('ADMIN_SESSION_INACTIVITY_TIMEOUT_SECONDS', '1800'))
+ADMIN_SESSION_COOKIE_AGE = int(os.getenv('DJANGO_ADMIN_SESSION_COOKIE_AGE', '1800'))  # 30 minutos
+CUSTOMER_SESSION_COOKIE_AGE = int(os.getenv('DJANGO_CUSTOMER_SESSION_COOKIE_AGE', str(30 * 86400)))  # 30 días
+SESSION_COOKIE_AGE = ADMIN_SESSION_COOKIE_AGE
 SESSION_SAVE_EVERY_REQUEST = True
 SESSION_EXPIRE_AT_BROWSER_CLOSE = True
 
