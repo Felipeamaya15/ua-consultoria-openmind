@@ -76,6 +76,7 @@ export default function Design() {
   } = useAdmin()
 
 const [saved,setSaved]=useState(false);
+  const [templateSavedMsg, setTemplateSavedMsg] = useState('');
   const [editorTarget, setEditorTarget] = useState<TemplateId | null>(null);
   const [activationTarget, setActivationTarget] = useState<TemplateId | null>(null);
   const activeTemplate=previewTemplate??config.template;
@@ -92,7 +93,7 @@ const [saved,setSaved]=useState(false);
     const leave=(event:BeforeUnloadEvent)=>{event.preventDefault();event.returnValue='';};
     window.addEventListener('beforeunload',leave);return()=>window.removeEventListener('beforeunload',leave);
   },[dirty]);
-  function discard(){setPaletteDrafts({});setPreviewTemplate(null);setPaletteNotice('');setSaved(false);}
+  function discard(){setPaletteDrafts({});setPreviewTemplate(null);setPaletteNotice('');setSaved(false);setTemplateSavedMsg('');}
   async function handleSave(template: TemplateId = config.template):Promise<boolean>{
     if(paletteBusy)return false;
     setPaletteBusy(true);setSaved(false);setPaletteNotice('');
@@ -108,14 +109,17 @@ const [saved,setSaved]=useState(false);
       }
       if(Object.keys(appearances).length)await saveAppearance(appearances);
       if(!setConfig({...nextConfig,template}))throw new Error('No pudimos guardar la copia local. Los cambios de paleta enviados al servidor se conservan; vuelve a intentar.');
-      setPaletteDrafts({});setPreviewTemplate(null);setSaved(true);return true;
+      setPaletteDrafts({});setPreviewTemplate(null);setSaved(true);
+      const tplName = TEMPLATES.find(t => t.id === template)?.name ?? template;
+      setTemplateSavedMsg(`Plantilla "${tplName}" guardada en este navegador y activa en la vista del comprador.`);
+      return true;
     }catch(error){setPaletteNotice(error instanceof Error?error.message:'No se pudieron guardar los cambios.');return false;}
     finally{setPaletteBusy(false);}
   }
 
-  const handleOpenEditor = () => {
-    if (previewTemplate) setEditorTarget(previewTemplate)
-  }
+  const handleOpenEditor = (tplId?: TemplateId) => {
+    setEditorTarget(tplId ?? activeTemplate);
+  };
 
   return (
     <div className="flex flex-col gap-6 w-full">
@@ -124,16 +128,60 @@ const [saved,setSaved]=useState(false);
         mantienen intactos. Solo cambia la presentación visual.
       </AdminHelp>
 
+      <div className="bg-white border border-[var(--border)] rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 shadow-2xs">
+        <div>
+          <div className="flex items-center gap-2 flex-wrap">
+            <h2 className="font-bold text-base text-[var(--foreground)]">
+              Plantilla activa en tu tienda:{" "}
+              <span className="text-[var(--primary)]">
+                {TEMPLATES.find((t) => t.id === config.template)?.name}
+              </span>
+            </h2>
+            <Badge variant="success">Activa</Badge>
+          </div>
+          <p className="text-xs text-[var(--muted-foreground)] mt-1">
+            Personaliza textos, bloques, banners, tipografías y colores desde el editor visual interactivo o cambia de plantilla con un clic.
+          </p>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+          <Button
+            type="button"
+            variant="primary"
+            onClick={() => handleOpenEditor(activeTemplate)}
+          >
+            Abrir editor de plantillas →
+          </Button>
+
+          <Link
+            to={templatePaths[activeTemplate]}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <Button type="button" variant="outline">
+              Ver tienda pública ↗
+            </Button>
+          </Link>
+
+          {dirty && (
+            <Button type="button" variant="outline" disabled={paletteBusy} onClick={discard}>
+              Descartar cambios
+            </Button>
+          )}
+
+          <Button type="button" variant={dirty ? "primary" : "outline"} disabled={!dirty || paletteBusy} onClick={() => void handleSave()}>
+            {paletteBusy ? 'Guardando…' : 'Guardar cambios'}
+          </Button>
+        </div>
+      </div>
+
       {saved && (
         <Alert variant="success">
-          Cambios guardados. Las paletas están disponibles para tu tienda.
+          {templateSavedMsg || 'Cambios guardados. Las paletas y la plantilla están disponibles para tu tienda.'}
         </Alert>
       )}
-      <div className="flex flex-wrap items-center justify-end gap-2">
-        {dirty&&<Button type="button" variant="outline" disabled={paletteBusy} onClick={discard}>Descartar cambios</Button>}
-        <Button type="button" disabled={!dirty||paletteBusy} onClick={()=>void handleSave()}>{paletteBusy?'Guardando…':'Guardar cambios'}</Button>
-      </div>{paletteNotice&&<p role="alert">{paletteNotice}</p>}
 
+      {paletteNotice && <p role="alert" className="text-sm text-red-600">{paletteNotice}</p>}
 
       <div className="bg-white border border-[var(--border)] rounded-2xl p-5">
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-5">
@@ -153,7 +201,7 @@ const [saved,setSaved]=useState(false);
           </div>
         </div>
 
-<PaletteLibrary
+        <PaletteLibrary
           colors={colors}
           selectedId={paletteSelection?.id ?? paletteSource.appearance?.[activeTemplate]?.paleta_id}
           onApply={palette => {
@@ -175,12 +223,12 @@ const [saved,setSaved]=useState(false);
       <div>
         <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 mb-4">
           <div>
-            <h2 className="font-semibold">
+            <h2 className="font-semibold text-base">
               Selecciona una plantilla
             </h2>
 
             <p className="text-xs text-[var(--muted-foreground)] mt-1">
-              Puedes elegir desde el selector o revisar cada propuesta visual.
+              Al pulsar «Usar esta», la plantilla se activa y guarda automáticamente en la vista del comprador.
             </p>
           </div>
 
@@ -190,7 +238,7 @@ const [saved,setSaved]=useState(false);
             </span>
 
             <select
-              value={previewTemplate ?? config.template}
+              value={activeTemplate}
               onChange={(event) =>
                 setPreviewTemplate(event.target.value as TemplateId)
               }
@@ -220,7 +268,7 @@ const [saved,setSaved]=useState(false);
                   isPreviewing
                     ? "border-[var(--primary)] shadow-lg"
                     : isActive
-                      ? "border-[var(--success)]"
+                      ? "border-[var(--success)] shadow-sm"
                       : "border-[var(--border)] hover:border-[var(--muted-foreground)]"
                 }`}
               >
@@ -304,9 +352,7 @@ const [saved,setSaved]=useState(false);
                       }
                       className="flex-1 min-h-11 px-2 text-xs font-medium border border-[var(--border)] rounded-lg hover:bg-[var(--muted)] transition-colors"
                     >
-                      {isPreviewing
-                        ? "Cancelar preview"
-                        : "Previsualizar"}
+                      {isPreviewing ? "Cancelar vista previa" : "Previsualizar"}
                     </button>
 
                     <button
@@ -363,7 +409,7 @@ const [saved,setSaved]=useState(false);
             <Button
               variant="outline"
               size="sm"
-              onClick={handleOpenEditor}
+              onClick={() => handleOpenEditor()}
             >
               Abrir editor →
             </Button>

@@ -8,7 +8,15 @@ from rest_framework import serializers
 from rest_framework.authentication import TokenAuthentication
 from rest_framework.permissions import IsAuthenticated, BasePermission
 from rest_framework.views import APIView
+from apps.authentication.infrastructure.cookie_auth import ActiveSessionTokenAuthentication
 from apps.authentication.infrastructure.models import UserProfile
+from apps.core.domain.security_validators import (
+    escape_xss,
+    validate_strict_email,
+    validate_strict_person_name,
+    validate_strict_phone,
+    validate_strict_postal_code,
+)
 from apps.core.presentation.responses import success_response, error_response
 
 
@@ -26,21 +34,45 @@ class ProfileSerializer(StrictSerializer):
     last_name = serializers.CharField(max_length=150, allow_blank=True, required=False)
     email = serializers.EmailField(max_length=254, required=False)
     phone = serializers.CharField(max_length=20, allow_blank=True, required=False)
+    postal_code = serializers.CharField(max_length=12, allow_blank=True, required=False)
+
+    def validate_first_name(self, value):
+        try:
+            return validate_strict_person_name(value, 'Nombre', allow_blank=True)
+        except ValueError as exc:
+            raise serializers.ValidationError(str(exc))
+
+    def validate_last_name(self, value):
+        try:
+            return validate_strict_person_name(value, 'Apellido', allow_blank=True)
+        except ValueError as exc:
+            raise serializers.ValidationError(str(exc))
 
     def validate_email(self, value):
-        if get_user_model().objects.filter(email__iexact=value).exclude(pk=self.context['user'].pk).exists():
+        try:
+            cleaned = validate_strict_email(value)
+        except ValueError as exc:
+            raise serializers.ValidationError(str(exc))
+        if get_user_model().objects.filter(email__iexact=cleaned).exclude(pk=self.context['user'].pk).exists():
             raise serializers.ValidationError('Este email ya está registrado.')
-        return value
+        return cleaned
 
     def validate_phone(self, value):
-        if value and (not re.fullmatch(r'\+?[0-9 ()-]+', value) or not 7 <= len(re.sub(r'\D', '', value)) <= 15):
-            raise serializers.ValidationError('Introduce un teléfono válido de 7 a 15 dígitos.')
-        return value
+        try:
+            return validate_strict_phone(value, allow_blank=True)
+        except ValueError as exc:
+            raise serializers.ValidationError(str(exc))
+
+    def validate_postal_code(self, value):
+        try:
+            return validate_strict_postal_code(value, allow_blank=True)
+        except ValueError as exc:
+            raise serializers.ValidationError(str(exc))
 
 
 class PasswordSerializer(StrictSerializer):
-    current_password = serializers.CharField(write_only=True, trim_whitespace=False)
-    new_password = serializers.CharField(write_only=True, trim_whitespace=False)
+    current_password = serializers.CharField(write_only=True, max_length=128, trim_whitespace=False)
+    new_password = serializers.CharField(write_only=True, max_length=128, trim_whitespace=False)
 
     def validate(self, data):
         user = self.context['user']
@@ -55,8 +87,15 @@ class PasswordSerializer(StrictSerializer):
 
 def profile_data(user):
     profile = UserProfile.objects.filter(user=user).first()
-    return {'first_name': user.first_name, 'last_name': user.last_name,
-            'email': user.email, 'phone': profile.phone or '' if profile else ''}
+    result = {
+        'first_name': escape_xss(user.first_name or ''),
+        'last_name': escape_xss(user.last_name or ''),
+        'email': user.email,
+        'phone': escape_xss(profile.phone or '') if profile else '',
+    }
+    if profile and profile.postal_code:
+        result['postal_code'] = escape_xss(profile.postal_code)
+    return result
 
 
 class IsCustomer(BasePermission):
@@ -71,7 +110,7 @@ class IsCustomer(BasePermission):
 
 class ProfileAPIView(APIView):
     serializer_class = ProfileSerializer
-    authentication_classes = [TokenAuthentication]
+    authentication_classes = [ActiveSessionTokenAuthentication, TokenAuthentication]
     permission_classes = [IsAuthenticated, IsCustomer]
 
     def get(self, request):
@@ -84,8 +123,13 @@ class ProfileAPIView(APIView):
         if not serializer.is_valid():
             return error_response('Datos de perfil inválidos.', 'PERFIL_INVALIDO', serializer.errors, status=400)
         data = dict(serializer.validated_data)
+        profile_defaults = {}
         if 'phone' in data:
-            UserProfile.objects.update_or_create(user=user, defaults={'phone': data.pop('phone')})
+            profile_defaults['phone'] = data.pop('phone')
+        if 'postal_code' in data:
+            profile_defaults['postal_code'] = data.pop('postal_code')
+        if profile_defaults:
+            UserProfile.objects.update_or_create(user=user, defaults=profile_defaults)
         for field, value in data.items():
             setattr(user, field, value)
         if data:
@@ -94,7 +138,7 @@ class ProfileAPIView(APIView):
 
 
 class PasswordAPIView(APIView):
-    authentication_classes = [TokenAuthentication]
+    authentication_classes = [ActiveSessionTokenAuthentication, TokenAuthentication]
     permission_classes = [IsAuthenticated, IsCustomer]
 
     @transaction.atomic

@@ -21,6 +21,12 @@ class UserProfile(models.Model):
         null=True,
         verbose_name="Teléfono",
     )
+    postal_code = models.CharField(
+        max_length=12,
+        blank=True,
+        default="",
+        verbose_name="Código Postal",
+    )
     rut = models.CharField(
         max_length=12,
         blank=True,
@@ -31,6 +37,35 @@ class UserProfile(models.Model):
 
     def __str__(self):
         return f"Perfil de {self.user.username}"
+
+
+class UserMFA(models.Model):
+    """
+    Configuración de Autenticación Multifactor (MFA) basada en TOTP (RFC 6238)
+    compatible con Google Authenticator y Authy.
+    """
+
+    user = models.OneToOneField(
+        UserModel,
+        on_delete=models.CASCADE,
+        related_name="mfa",
+    )
+    secret = models.CharField(
+        max_length=64,
+        verbose_name="Secreto TOTP Base32",
+    )
+    is_enabled = models.BooleanField(
+        default=False,
+        verbose_name="MFA Activo",
+    )
+    fecha_actualizacion = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "user_mfa"
+
+    def __str__(self):
+        estado = "activo" if self.is_enabled else "inactivo"
+        return f"MFA de {self.user.username} ({estado})"
 
 
 class ConfiguracionAutenticacion(models.Model):

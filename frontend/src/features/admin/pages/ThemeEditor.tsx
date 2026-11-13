@@ -359,7 +359,7 @@ export default function ThemeEditor() {
   const sectionOptions = VISUAL_SECTIONS.filter(([id]) => ['global', 'topBar', 'header', 'footer'].includes(id) || (previewPage === 'home' ? !id.startsWith('page') && id !== 'catalog' && id !== 'heroCta' : previewPage === 'catalog' ? ['catalog','productGrid','productCard','categories'].includes(id) : id.startsWith('page') && (id !== 'pageField' || !['confirmation','orders','terms','privacy','refund','story'].includes(activePage))));
   return <div aria-busy={saving} className={`ve-editor ve-redesign ${expanded ? 've-expanded' : ''}`}>
     <header className="ve-toolbar">
-      <Link className="ve-institution" aria-label="Volver a Mi tienda · Universidad Autónoma de Chile" to="/emprendedor/diseno"><img src="/logo-universidad-autonoma.png" alt="" /><span>Universidad Autónoma de Chile</span></Link><strong>{config.name || 'Mi tienda'}<small>Editor visual de tu tienda</small></strong>
+      <Link className="ve-institution" style={{ maxWidth: 'none' }} aria-label="Volver al panel de administración · Universidad Autónoma de Chile" to="/emprendedor/diseno"><img src="/logo-universidad-autonoma.png" alt="" /><span style={{ display: 'inline', fontWeight: 600 }}>← Volver al panel de administración</span></Link><strong>{config.name || 'Mi tienda'}<small>Editor visual de tu tienda</small></strong>
       <button type="button" disabled={!history.past.length || saving} onClick={() => stepEditorHistory('undo')}>Deshacer</button><button type="button" disabled={!history.future.length || saving} onClick={() => stepEditorHistory('redo')}>Rehacer</button>
       <button type="button" aria-pressed={expanded} onClick={() => setExpanded(!expanded)}>{expanded ? 'Volver al editor' : 'Ampliar vista'}</button><button type="button" aria-expanded={inspectorOpen} aria-controls="ve-properties" onClick={() => setInspectorOpen(!inspectorOpen)}>Opciones</button>
       <span role="status" aria-live="polite" className={saveError ? 've-save-error' : dirty ? 've-dirty' : 've-saved'}>{saving ? 'Guardando…' : saveError ? 'No se pudo guardar' : dirty ? 'Cambios sin guardar' : saved ? '✓ Guardado' : '✓ Sin cambios pendientes'}</span>
@@ -425,7 +425,7 @@ export default function ThemeEditor() {
                     {/* OPENMIND_UNIFIED_HOVER_LIBRARY_V3: catálogo de productos integrado arriba; no duplicar. */}
 
           <button className="ve-reset-section ve-danger" type="button" onClick={resetVisibleSection}>Restablecer sección ↺</button></>}
-        <details className="ve-restore"><summary>Opciones del diseño</summary><button type="button" className="ve-danger" onClick={() => setRestoreRequested(true)}>Volver al diseño original</button><Link to="/emprendedor/diseno">Volver a Mi tienda</Link></details>
+        <details className="ve-restore"><summary>Opciones del diseño</summary><button type="button" className="ve-danger" onClick={() => setRestoreRequested(true)}>Volver al diseño original</button><Link to="/emprendedor/diseno">Volver al panel de administración</Link></details>
       </aside>
     </div>
     </fieldset>

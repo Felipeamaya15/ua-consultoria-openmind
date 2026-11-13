@@ -32,6 +32,9 @@ interface CartState {
   loading: boolean;
 }
 
+const PENDING_CART_SNAPSHOT_KEY = 'openmind-pending-payment-cart';
+const RESTORE_CART_FLAG_KEY = 'openmind-restore-cart';
+
 const CartContext = createContext<CartState | null>(null);
 
 export function CartProvider({ children }: { children: ReactNode }) {
@@ -103,6 +106,11 @@ export function CartProvider({ children }: { children: ReactNode }) {
   }, [refreshCart]);
 
   const clearCart = async () => {
+    try {
+      if (items.length > 0 && typeof sessionStorage !== 'undefined') {
+        sessionStorage.setItem(PENDING_CART_SNAPSHOT_KEY, JSON.stringify(items));
+      }
+    } catch {}
     const persisted = items.filter(item => item.id_item_carrito);
     setItems([]);
     setPromoCode('');
@@ -158,6 +166,27 @@ export function CartProvider({ children }: { children: ReactNode }) {
       console.error('Error al persistir ítem en el carrito:', err.message);
     }
   };
+
+  useEffect(() => {
+    if (isActiveEditorPreview() || typeof window === 'undefined') return;
+    const checkRestore = () => {
+      try {
+        if (sessionStorage.getItem(RESTORE_CART_FLAG_KEY) !== '1') return;
+        sessionStorage.setItem(RESTORE_CART_FLAG_KEY, '');
+        const raw = sessionStorage.getItem(PENDING_CART_SNAPSHOT_KEY);
+        if (!raw) return;
+        const parsed = JSON.parse(raw) as CartItem[];
+        if (!Array.isArray(parsed) || !parsed.length) return;
+        setItems((current) => {
+          if (current.length > 0) return current;
+          return parsed;
+        });
+      } catch {}
+    };
+    checkRestore();
+    window.addEventListener('openmind_restore_cart', checkRestore);
+    return () => window.removeEventListener('openmind_restore_cart', checkRestore);
+  }, []);
 
   // Tarea: Implementar la modificación de cantidades
   const updateQuantity = async (
