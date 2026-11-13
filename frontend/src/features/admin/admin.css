@@ -4,8 +4,6 @@
 
 .admin-shell main{width:100%;max-width:100% !important;padding-inline:28px}
 .admin-shell main > div,.admin-shell main > form{max-width:100% !important;width:100%}
-.admin-shell .ua-institutional-badge{width:100%;justify-content:center}
-.admin-shell .ua-institutional-badge img{width:auto !important;height:52px !important;min-width:98px !important;max-width:140px !important;padding:4px 8px !important;background:var(--primary,#1a3a6b) !important;border:0 !important;border-radius:8px !important;object-fit:contain !important;box-shadow:0 1px 3px #0a143217 !important}
 .ve-institution img{width:auto !important;height:36px !important;min-width:68px !important;max-width:98px !important;background:transparent !important;padding:2px !important;border:0 !important;box-shadow:none !important;object-fit:contain !important;opacity:.96}
 
 .admin-header{height:64px;position:sticky;top:0;z-index:20;background:white;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:16px;padding:0 24px}
@@ -56,10 +54,17 @@
 .catalog-list-heading{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;padding:18px 20px;border-bottom:1px solid var(--border)}
 .catalog-list-heading h3{font-size:14px;font-weight:700}.catalog-list-heading>span{font-size:13px;color:#334155}
 .catalog-variants{margin-top:10px;font-size:12px;color:#334155}.catalog-variants summary{cursor:pointer;line-height:1.6}.catalog-variants summary:focus-visible{outline:2px solid var(--primary);outline-offset:3px;border-radius:3px}
-.catalog-product-actions{display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;font-size:12px;font-weight:600}
-.catalog-product-actions a,.catalog-product-actions button{display:inline-flex;align-items:center;min-height:36px}.catalog-product-actions a{color:var(--primary)}.catalog-product-actions a:hover,.catalog-product-actions button:hover{text-decoration:underline}
-.catalog-product-actions .catalog-edit-link{padding:0 12px;border:1px solid var(--border);border-radius:8px;text-decoration:none;background:white}
-@media(min-width:1024px){.catalog-product-actions{align-items:flex-start;flex-direction:column;gap:2px}.catalog-product-actions .catalog-edit-link{margin-bottom:4px}}
+.catalog-product-actions{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.catalog-action-btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:32px;height:32px;padding:0 12px;border-radius:8px;font-size:12px;font-weight:600;line-height:1;white-space:nowrap;text-decoration:none;cursor:pointer;transition:background .15s ease,border-color .15s ease,color .15s ease,box-shadow .15s ease,transform .1s ease;border:1px solid transparent;background:white}
+.catalog-action-btn:active:not(:disabled){transform:scale(.98)}
+.catalog-action-btn:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
+.catalog-action-edit,.catalog-action-marketing,.catalog-action-delete{background:#ffffff;border-color:#cbd5e1;color:#1e293b;box-shadow:0 1px 2px #0f172a0a}
+.catalog-action-edit:hover,.catalog-action-marketing:hover,.catalog-action-delete:hover:not(:disabled){background:#f8fafc;border-color:#94a3b8;color:#0f172a}
+.catalog-action-delete:disabled{background:#f8fafc;border-color:#e2e8f0;color:#94a3b8;cursor:not-allowed;opacity:.7;box-shadow:none}
+.catalog-permanent-delete-btn{display:inline-flex;align-items:center;justify-content:center;background:transparent;border:0;padding:2px;margin:0;box-shadow:none;line-height:0;color:#dc2626;cursor:pointer;transition:color .15s ease,transform .15s ease}
+.catalog-permanent-delete-btn:hover:not(:disabled){color:#991b1b;transform:scale(1.12)}
+.catalog-permanent-delete-btn:focus-visible{outline:2px solid #dc2626;outline-offset:2px;border-radius:3px}
+.catalog-permanent-delete-btn:disabled{opacity:.45;cursor:not-allowed}
 @media(max-width:639px){.admin-list-panel{padding:16px}.orders-search-row{grid-template-columns:minmax(0,1fr)}.orders-search-row>button{justify-self:start}.orders-advanced-filters{grid-template-columns:minmax(0,1fr);gap:12px}.orders-status-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));width:100%}.orders-status-list button{padding:9px 8px;font-size:12px}.orders-other-status{width:100%;justify-content:space-between}.orders-other-status select{flex:1;min-width:0}.catalog-overview{grid-template-columns:minmax(0,1fr)}.catalog-overview>div{padding:14px 12px}.catalog-overview>div+div{border-left:0;border-top:1px solid #edf0f6}.catalog-overview span{font-size:12px}.catalog-overview strong{font-size:22px}.admin-list-panel-footer>button{width:100%}.admin-page-intro-actions{gap:8px}}
 /* A closed mobile drawer must also be absent from keyboard navigation. */
 @media(max-width:767px){.admin-sidebar:not(.is-open){visibility:hidden}}

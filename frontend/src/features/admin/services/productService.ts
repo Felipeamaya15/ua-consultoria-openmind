@@ -69,6 +69,22 @@ export async function deleteCatalogProduct(productId: string): Promise<void> {
   });
 }
 
+export async function permanentDeleteCatalogProduct(
+  productId: string,
+  confirmacion: string,
+): Promise<void> {
+  const token = (localStorage.getItem("token") || sessionStorage.getItem("token"));
+  if (!token) throw new Error("Inicia sesión para eliminar productos.");
+  await requestJson(`${API_URL}/api/catalog/productos/${productId}/eliminar-definitivo/`, {
+    method: "DELETE",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Token ${token}`,
+    },
+    body: JSON.stringify({ confirmacion }),
+  });
+}
+
 function adaptAdminProduct(item: any): AdminProduct {
   if (!/^[a-f0-9]{24}$/i.test(item.id)) throw new Error("El backend devolvió un ID de producto inválido.");
   const attributes: Record<string, string[]> = {};

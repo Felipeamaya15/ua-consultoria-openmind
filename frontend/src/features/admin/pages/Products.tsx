@@ -1,11 +1,11 @@
 import { IMAGE_ACCEPT, prepareImage } from '../../../shared/services/imageUpload';
-import { useEffect, useMemo, useRef, useState } from "react"
+import { type FormEvent, useEffect, useMemo, useRef, useState } from "react"
 import { EmptyListState, LoadingState } from "../../../shared/components/states"
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom"
 import { emptyKind } from "../services/emptyStates"
 import { formatPrice, Product, ProductVariant } from "../data/mockAdminData"
-import { createPublicProduct, deleteCatalogProduct, fetchAdminProducts, fetchAdminProduct, updateCatalogProduct, type AdminProduct } from "../services/productService"
-import { Alert, Badge, Button, Icon, Input, Tabs, Textarea, Toggle } from "../components/ui"
+import { createPublicProduct, deleteCatalogProduct, fetchAdminProducts, fetchAdminProduct, permanentDeleteCatalogProduct, updateCatalogProduct, type AdminProduct } from "../services/productService"
+import { Alert, Badge, Button, Icon, Input, Modal, Tabs, Textarea, Toggle } from "../components/ui"
 
 function OfertaInfo({ precio, anterior }: { precio: number; anterior?: number }) {
   if (anterior === undefined || anterior === null || !precio) return null
@@ -30,6 +30,11 @@ export function ProductList() {
   const [error, setError] = useState("")
   const deactivatingRef = useRef(false)
   const [deactivating, setDeactivating] = useState(false)
+  const permanentDeletingRef = useRef(false)
+  const [permanentlyDeleting, setPermanentlyDeleting] = useState(false)
+  const [productToDelete, setProductToDelete] = useState<AdminProduct | null>(null)
+  const [deleteConfirmInput, setDeleteConfirmInput] = useState("")
+  const [deleteModalError, setDeleteModalError] = useState("")
   const location = useLocation()
   const navigate = useNavigate()
   const [successMessage, setSuccessMessage] = useState(
@@ -73,12 +78,86 @@ export function ProductList() {
       setDeactivating(false);
     }
   };
+  const openPermanentDeleteModal = (product: AdminProduct) => {
+    if (permanentDeletingRef.current) return;
+    setProductToDelete(product);
+    setDeleteConfirmInput("");
+    setDeleteModalError("");
+  };
+
+  const closePermanentDeleteModal = () => {
+    if (permanentDeletingRef.current) return;
+    setProductToDelete(null);
+    setDeleteConfirmInput("");
+    setDeleteModalError("");
+  };
+
+  const canConfirmPermanentDelete = deleteConfirmInput.trim().toLowerCase() === "eliminar";
+
+  const handleConfirmPermanentDelete = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!productToDelete || permanentDeletingRef.current || !canConfirmPermanentDelete) return;
+    permanentDeletingRef.current = true;
+    setPermanentlyDeleting(true);
+    setDeleteModalError("");
+    setSuccessMessage("");
+    const targetId = productToDelete.id;
+    const targetName = productToDelete.name;
+    try {
+      await permanentDeleteCatalogProduct(targetId, deleteConfirmInput.trim());
+      setProducts(current => current.filter(p => p.id !== targetId));
+      setProductToDelete(null);
+      setDeleteConfirmInput("");
+      setError("");
+      setSuccessMessage(`Producto "${targetName}" eliminado definitivamente del catálogo. La información de ventas se conserva intacta.`);
+    } catch (err) {
+      setDeleteModalError(err instanceof Error ? err.message : "No se pudo eliminar definitivamente el producto.");
+    } finally {
+      permanentDeletingRef.current = false;
+      setPermanentlyDeleting(false);
+    }
+  };
+
   const totalActive = products.filter(product => product.status === 'active').length
   const lowStock = products.filter(product => product.status === 'active' && product.variants.reduce((sum, variant) => sum + variant.stock, 0) <= 5).length
+  const renderPermanentDeleteButton = (product: AdminProduct) => (
+    <button
+      type="button"
+      onClick={() => openPermanentDeleteModal(product)}
+      disabled={permanentlyDeleting}
+      aria-label={`Eliminar definitivamente ${product.name}`}
+      title={`Eliminar definitivamente ${product.name}`}
+      className="catalog-permanent-delete-btn"
+    >
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4" aria-hidden="true">
+        <path d="M18 6 6 18" />
+        <path d="m6 6 12 12" />
+      </svg>
+    </button>
+  )
   const renderActions = (product: AdminProduct) => <div className="catalog-product-actions">
-    <Link to={`/emprendedor/productos/${product.id}`} className="catalog-edit-link">Editar</Link>
-    <Link to={`/emprendedor/marketing?producto=${encodeURIComponent(product.id)}`}>Crear publicación</Link>
-    <button type="button" onClick={() => handleDeleteProduct(product.id)} disabled={deactivating || product.status === 'archived'} className="text-[var(--error)] disabled:opacity-50 disabled:cursor-not-allowed">{product.status === 'archived' ? 'Desactivado' : 'Desactivar'}</button>
+    <Link to={`/emprendedor/productos/${product.id}`} className="catalog-action-btn catalog-action-edit catalog-edit-link">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="h-3.5 w-3.5 shrink-0" aria-hidden="true">
+        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+      </svg>
+      <span>Editar</span>
+    </Link>
+    <Link to={`/emprendedor/marketing?producto=${encodeURIComponent(product.id)}`} className="catalog-action-btn catalog-action-marketing">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="h-3.5 w-3.5 shrink-0" aria-hidden="true">
+        <path d="m11 4-6 4H2v8h3l6 4v-16Z" />
+        <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
+        <path d="M19.07 4.93a10 10 0 0 1 0 14.14" />
+      </svg>
+      <span>Crear publicación</span>
+    </Link>
+    <button type="button" onClick={() => handleDeleteProduct(product.id)} disabled={deactivating || product.status === 'archived'} className="catalog-action-btn catalog-action-delete">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="h-3.5 w-3.5 shrink-0" aria-hidden="true">
+        <path d="M18.36 6.64a9 9 0 1 1-12.73 0" />
+        <line x1="12" y1="2" x2="12" y2="12" />
+      </svg>
+      <span>{product.status === 'archived' ? 'Desactivado' : 'Desactivar'}</span>
+    </button>
   </div>
   const renderVariants = (product: AdminProduct) => <details className="catalog-variants">
     <summary>{product.variants.length} {product.variants.length === 1 ? 'variante' : 'variantes'} · Ver SKU y stock</summary>
@@ -111,8 +190,8 @@ export function ProductList() {
     <section aria-label="Listado de productos" className="catalog-list">
       <div className="catalog-list-heading"><h3>Listado de productos</h3><span>{filtered.length} {filtered.length === 1 ? 'producto' : 'productos'}{search ? ` de ${products.length}` : ''}</span></div>
       <div className="hidden overflow-x-auto lg:block">
-        <table className="w-full min-w-[740px] text-sm text-left">
-          <thead className="bg-[var(--muted)]"><tr>{['Producto', 'Precio', 'Inventario', 'Estado', 'Acciones'].map(label => <th scope="col" key={label} className="px-5 py-3 text-xs font-semibold text-[var(--muted-foreground)]">{label}</th>)}</tr></thead>
+        <table className="w-full min-w-[840px] text-sm text-left">
+          <thead className="bg-[var(--muted)]"><tr>{['Producto', 'Precio', 'Inventario', 'Estado', 'Acciones'].map(label => <th scope="col" key={label} colSpan={label === 'Acciones' ? 2 : undefined} className="px-5 py-3 text-xs font-semibold text-[var(--muted-foreground)]">{label}</th>)}</tr></thead>
           <tbody>{filtered.map(product => {
             const stock = product.variants.reduce((sum, variant) => sum + variant.stock, 0)
             const state = stockState(stock)
@@ -121,15 +200,17 @@ export function ProductList() {
               <td className="whitespace-nowrap px-5 py-5"><p className="font-semibold">{formatPrice(product.basePrice)}</p>{product.comparePrice !== undefined && product.comparePrice > product.basePrice && <><p className="mt-1 text-xs line-through text-[var(--muted-foreground)]">{formatPrice(product.comparePrice)}</p><div className="mt-2"><OfertaInfo precio={product.basePrice} anterior={product.comparePrice} /></div></>}</td>
               <td className="px-5 py-5"><p className="mb-2 font-medium">{stock} unidades</p><Badge variant={state.badge}>{state.label}</Badge></td>
               <td className="px-5 py-5">{productStatus(product.status)}</td>
-              <td className="px-5 py-4">{renderActions(product)}</td>
+              <td className="whitespace-nowrap px-5 py-4">{renderActions(product)}</td>
+              <td className="w-8 px-3 py-2.5 align-top text-right">{renderPermanentDeleteButton(product)}</td>
             </tr>
           })}</tbody>
         </table>
       </div>
       <div className="divide-y divide-[var(--border)] lg:hidden">{filtered.map(product => {
         const stock = product.variants.reduce((sum, variant) => sum + variant.stock, 0)
-        return <article key={product.id} className="p-4 sm:p-5">
-          <div className="flex items-start gap-3">{renderImage(product)}<div className="min-w-0 flex-1"><h4 className="break-words font-semibold">{product.name}</h4><p className="mt-1 text-xs text-[var(--muted-foreground)]">{product.category}</p><div className="mt-2">{productStatus(product.status)}</div></div></div>
+        return <article key={product.id} className="relative p-4 sm:p-5">
+          <div className="absolute right-3 top-3">{renderPermanentDeleteButton(product)}</div>
+          <div className="flex items-start gap-3 pr-8">{renderImage(product)}<div className="min-w-0 flex-1"><h4 className="break-words font-semibold">{product.name}</h4><p className="mt-1 text-xs text-[var(--muted-foreground)]">{product.category}</p><div className="mt-2">{productStatus(product.status)}</div></div></div>
           <div className="my-4 flex flex-wrap justify-between gap-3"><div><p className="text-xs text-[var(--muted-foreground)]">Precio</p><p className="mt-1 font-semibold">{formatPrice(product.basePrice)}</p>{product.comparePrice !== undefined && product.comparePrice > product.basePrice && <p className="text-xs line-through text-[var(--muted-foreground)]">{formatPrice(product.comparePrice)}</p>}</div><div className="text-right"><p className="mb-1 text-xs text-[var(--muted-foreground)]">{stock} unidades</p><Badge variant={stockState(stock).badge}>{stockState(stock).label}</Badge></div></div>
           {renderVariants(product)}<div className="mt-4 border-t border-[var(--border)] pt-2">{renderActions(product)}</div>
         </article>
@@ -137,6 +218,53 @@ export function ProductList() {
       {vacio === 'empty' && <EmptyListState spacing="none" className="py-12" title="Aún no tienes productos" action={<Link to="/emprendedor/productos/nuevo"><Button variant="primary">Crear tu primer producto</Button></Link>}>Agrega tu primer producto para empezar a vender.</EmptyListState>}
       {vacio === 'no-results' && <EmptyListState spacing="none" className="py-12" action={<Button variant="outline" onClick={() => setSearch('')}>Limpiar búsqueda</Button>}>No encontramos productos con esa búsqueda.</EmptyListState>}
     </section>
+    <Modal
+      open={!!productToDelete}
+      onClose={closePermanentDeleteModal}
+      title="Eliminar producto definitivamente"
+      size="md"
+    >
+      {productToDelete && (
+        <form onSubmit={handleConfirmPermanentDelete} className="space-y-4">
+          {deleteModalError && <Alert variant="error">{deleteModalError}</Alert>}
+          <div className="space-y-2 text-sm text-[var(--foreground)]">
+            <p>
+              Vas a eliminar de forma permanente <strong>{productToDelete.name}</strong> de tu catálogo. Esta acción no se puede deshacer.
+            </p>
+            <p className="rounded-lg bg-[var(--muted)] px-3 py-2.5 text-xs leading-relaxed text-[var(--muted-foreground)]">
+              La información de ventas, pedidos realizados, montos recaudados y reportes asociados a este producto se conservarán intactos.
+            </p>
+          </div>
+          <Input
+            id="confirm-permanent-delete-input"
+            label='Escribe "eliminar" para confirmar'
+            value={deleteConfirmInput}
+            onChange={(event) => setDeleteConfirmInput(event.target.value)}
+            placeholder="eliminar"
+            autoComplete="off"
+            autoFocus
+            disabled={permanentlyDeleting}
+          />
+          <div className="flex flex-wrap justify-end gap-2 pt-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={closePermanentDeleteModal}
+              disabled={permanentlyDeleting}
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="submit"
+              variant="danger"
+              disabled={!canConfirmPermanentDelete || permanentlyDeleting}
+            >
+              {permanentlyDeleting ? "Eliminando..." : "Eliminar definitivamente"}
+            </Button>
+          </div>
+        </form>
+      )}
+    </Modal>
   </div>
 }
 

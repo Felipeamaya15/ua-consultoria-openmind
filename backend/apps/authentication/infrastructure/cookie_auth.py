@@ -210,12 +210,7 @@ class ActiveSessionTokenAuthentication(TokenAuthentication):
             django_request._clear_expired_auth_cookie = True
             return None
 
-        touch_token_activity(token.key, user=user)
-        request._active_auth_token_key = token.key
-        request._active_auth_user = user
-        django_request._active_auth_token_key = token.key
-        django_request._active_auth_user = user
-        return user, token
+        return self._mark_token_active(request, django_request, user, token, refresh_cookie=True)
 
     def _validate_inactivity(self, request, user, token: Token) -> Tuple[object, Token]:
         django_request = getattr(request, "_request", request)
@@ -227,11 +222,32 @@ class ActiveSessionTokenAuthentication(TokenAuthentication):
                 "La sesión expiró por 30 minutos de inactividad. Inicia sesión nuevamente."
             )
 
+        # Only renew the sliding auth cookie when the request already carried it,
+        # keeping stateless header-only Token API calls free of unsolicited Set-Cookie headers.
+        has_matching_cookie = request.COOKIES.get(AUTH_COOKIE_NAME, "").strip() == token.key
+        return self._mark_token_active(
+            request,
+            django_request,
+            user,
+            token,
+            refresh_cookie=has_matching_cookie,
+        )
+
+    @staticmethod
+    def _mark_token_active(
+        request,
+        django_request,
+        user,
+        token: Token,
+        *,
+        refresh_cookie: bool,
+    ) -> Tuple[object, Token]:
         touch_token_activity(token.key, user=user)
-        request._active_auth_token_key = token.key
-        request._active_auth_user = user
-        django_request._active_auth_token_key = token.key
-        django_request._active_auth_user = user
+        if refresh_cookie:
+            request._active_auth_token_key = token.key
+            request._active_auth_user = user
+            django_request._active_auth_token_key = token.key
+            django_request._active_auth_user = user
         return user, token
 
 
