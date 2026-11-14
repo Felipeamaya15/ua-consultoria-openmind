@@ -57,6 +57,7 @@ from apps.catalog.application.use_cases import (
     ModificarCantidadItemUseCase,
     ObtenerConfiguracionTransbankUseCase,
     ObtenerProductoAdminUseCase,
+    HardDeleteProductUseCase,
     SoftDeleteProductUseCase,
     ValidarDisponibilidadProductoUseCase,
     # Nuevos Casos de Uso y DTOs - Adaptador Transbank
@@ -706,6 +707,47 @@ class ProductDeleteAPIView(APIView):
             )
 
 
+class ProductPermanentDeleteAPIView(APIView):
+    """Elimina definitivamente un producto del catálogo preservando las ventas históricas."""
+
+    permission_classes = [IsAuthenticated]
+
+    def delete(self, request, id_producto):
+        tienda_id = resolver_tienda_id(request, exigir_propietario=True)
+        confirmacion = (
+            request.data.get("confirmacion")
+            if isinstance(request.data, dict)
+            else None
+        ) or request.query_params.get("confirmacion")
+
+        try:
+            use_case = HardDeleteProductUseCase()
+            resultado = use_case.execute(
+                id_producto=id_producto,
+                tienda_id=tienda_id,
+                confirmacion=confirmacion,
+            )
+            return success_response(mensaje=resultado["mensaje"])
+        except LookupError as e:
+            return error_response(
+                mensaje=str(e),
+                codigo="PRODUCTO_NO_ENCONTRADO",
+                status=404,
+            )
+        except ValueError as e:
+            return error_response(
+                mensaje=str(e),
+                codigo="CONFIRMACION_INVALIDA",
+                status=400,
+            )
+        except Exception:
+            return error_response(
+                mensaje="Ocurrió un error interno al intentar eliminar definitivamente el producto",
+                codigo="ERROR_INTERNO",
+                status=500,
+            )
+
+
 class ProductoCreateView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -826,7 +868,13 @@ class ProductoUpdateView(APIView):
             if not isinstance(revision, str) or not revision:
                 return error_response("Recarga el producto antes de editar: falta revision.", "ERROR_VALIDACION")
             # Validar el documento completo también para PATCH; no perder campos omitidos.
-            serializer = ProductCreateSerializer(data={**original, **request.data}, context={"tienda_id": tienda_id})
+            serializer = ProductCreateSerializer(
+                data={**original, **request.data},
+                context={
+                    "existing_images": set(original.get("imagenes") or []),
+                    "tienda_id": tienda_id,
+                },
+            )
             serializer.is_valid(raise_exception=True)
             fields = {key: value for key, value in serializer.validated_data.items()
                       if request.method == 'PUT' or key in request.data}

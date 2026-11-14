@@ -1,4 +1,122 @@
-.activity-settings{display:grid;gap:14px;padding:16px;border:1px solid var(--border,#dce3ef);border-radius:12px;min-width:0;margin-bottom:20px}.activity-settings legend{font-weight:600;padding:0 6px}.activity-settings p,.activity-details{font-size:13px;line-height:1.6}.activity-settings-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.activity-request-dialog{max-height:90svh;overflow-y:auto}.activity-public-form,.activity-public-form fieldset{display:grid;gap:14px;min-width:0}.activity-consent{display:flex;align-items:flex-start;gap:10px;font-size:13px;line-height:1.5}.activity-consent input{margin-top:4px;flex-shrink:0}.activity-details{display:flex;flex-wrap:wrap;gap:8px 18px;margin-bottom:12px}.activity-management-list{display:grid;gap:16px}.activity-management-list article{min-width:0;overflow-wrap:anywhere}.activity-management-list p{white-space:pre-wrap}.activity-management-filters{display:flex;flex-wrap:wrap;gap:12px;align-items:end}.activity-status-message{font-weight:600}@media(max-width:600px){.activity-settings-grid{grid-template-columns:minmax(0,1fr)}.activity-request-dialog{max-height:94svh}.activity-management-filters>*{width:100%}}
+.activity-settings {
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+  border: 1px solid var(--border, #dce3ef);
+  border-radius: 12px;
+  min-width: 0;
+  margin-bottom: 20px;
+}
+.activity-settings legend {
+  font-weight: 600;
+  padding: 0 6px;
+}
+.activity-settings p,
+.activity-details {
+  font-size: 13px;
+  line-height: 1.6;
+}
+.activity-settings-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+.activity-request-dialog {
+  max-height: 90svh;
+  overflow-y: auto;
+}
+.activity-public-form,
+.activity-public-form fieldset {
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+}
+.activity-consent {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.activity-consent input {
+  margin-top: 4px;
+  flex-shrink: 0;
+}
+.activity-details {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  margin-bottom: 12px;
+}
+.activity-management-list {
+  display: grid;
+  gap: 16px;
+}
+.activity-management-list article {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.activity-management-list p {
+  white-space: pre-wrap;
+}
+.activity-management-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: end;
+}
+.activity-status-message {
+  font-weight: 600;
+}
+
+/* Mejoras visuales para tarjetas de gestión de actividades */
+.activity-message-bubble {
+  border-left: 3px solid var(--primary, #4f46e5);
+  background-color: #f8fafc;
+  padding: 12px 14px;
+  border-radius: 0 8px 8px 0;
+}
+
+.activity-badge-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  margin-right: 6px;
+}
+
+.activity-badge-dot.is-new {
+  background-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+}
+
+.activity-badge-dot.is-review {
+  background-color: #f59e0b;
+}
+
+.activity-badge-dot.is-done {
+  background-color: #10b981;
+}
+
+.activity-badge-dot.is-closed {
+  background-color: #64748b;
+}
+
+.activity-badge-dot.is-danger {
+  background-color: #ef4444;
+}
+
+@media (max-width: 600px) {
+  .activity-settings-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .activity-request-dialog {
+    max-height: 94svh;
+  }
+  .activity-management-filters > * {
+    width: 100%;
+  }
+}
 
 /* OPENMIND_THEME_ACTIVITY_MODAL_V1: la identidad visual viene de la tienda,
    no del panel admin; el diálogo nativo permanece dentro del tema. */

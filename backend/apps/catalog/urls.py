@@ -13,6 +13,7 @@ from apps.catalog.presentation.views import (
     ProductoUpdateView,
     ProductoStockUpdateView,
     ProductDeleteAPIView,
+    ProductPermanentDeleteAPIView,
     ProductoAdminListView,
     # Gestión de variantes
     ProductVariantsView,
@@ -90,6 +91,11 @@ urlpatterns = [
         "productos/<str:id_producto>/eliminar/",
         ProductDeleteAPIView.as_view(),
         name="producto-eliminar",
+    ),
+    path(
+        "productos/<str:id_producto>/eliminar-definitivo/",
+        ProductPermanentDeleteAPIView.as_view(),
+        name="producto-eliminar-definitivo",
     ),
 
     # ==========================================

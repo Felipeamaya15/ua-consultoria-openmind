@@ -1,6 +1,6 @@
 export const ADMIN_PAGE_HELP = {
   '/emprendedor/marketing': { title: 'Marketing', description: 'Crea publicaciones para promocionar tus productos y ofertas' },
-  '/emprendedor': { title: 'Resumen de tu tienda', description: 'Revisa cómo va tu tienda y accede a las principales herramientas para administrar tu negocio.' },
+  '/emprendedor': { title: 'Estadísticas y Análisis', description: 'Analiza el rendimiento comercial, métricas de ventas y logística de tu tienda.' },
   '/emprendedor/landing': { title: 'Página principal', description: 'Organiza tu negocio, portada, secciones, productos y contacto. Guarda todo desde una sola barra de acciones.' },
   '/emprendedor/actividades': { title: 'Servicios y talleres', description: 'Revisa las consultas sobre tus actividades y gestiona las inscripciones gratuitas. Los contenidos se crean y publican desde Página principal → Secciones.' },
   '/emprendedor/productos': { title: 'Productos', description: 'Agrega, edita y organiza los productos que tus clientes podrán comprar. Revisa sus precios y las unidades disponibles.' },

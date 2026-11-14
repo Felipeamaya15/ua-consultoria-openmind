@@ -1,13 +1,13 @@
 import { IMAGE_ACCEPT, prepareImage } from '../../../shared/services/imageUpload';
+import { type FormEvent, useEffect, useMemo, useRef, useState } from "react"
 import { saveProductVideoResource } from '../../marketing/services/mediaLibraryService';
 import { ProductVideoField } from '../components/ProductVideoField';
-import { useEffect, useMemo, useRef, useState } from "react"
 import { EmptyListState, LoadingState } from "../../../shared/components/states"
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom"
 import { emptyKind } from "../services/emptyStates"
 import { formatPrice, Product, ProductVariant } from "../data/mockAdminData"
-import { createPublicProduct, deleteCatalogProduct, fetchAdminProducts, fetchAdminProduct, updateCatalogProduct, type AdminProduct } from "../services/productService"
-import { Alert, Badge, Button, Icon, Input, Select, Tabs, Textarea, Toggle } from "../components/ui"
+import { createPublicProduct, deleteCatalogProduct, fetchAdminProducts, fetchAdminProduct, permanentDeleteCatalogProduct, updateCatalogProduct, type AdminProduct } from "../services/productService"
+import { Alert, Badge, Button, Icon, Input, Modal, Select, Tabs, Textarea, Toggle } from "../components/ui"
 
 function OfertaInfo({ precio, anterior }: { precio: number; anterior?: number }) {
   if (anterior === undefined || anterior === null || !precio) return null
@@ -17,7 +17,7 @@ function OfertaInfo({ precio, anterior }: { precio: number; anterior?: number })
 }
 
 const productStatus = (status: Product["status"]) => ({
-  active: <Badge variant="success">Activo</Badge>, archived: <Badge variant="default">Archivado</Badge>, draft: <Badge variant="warning">Borrador</Badge>,
+  active: <Badge variant="success">Activo</Badge>, archived: <Badge variant="default">Desactivado</Badge>, draft: <Badge variant="warning">Borrador</Badge>,
 })[status]
 const stockState = (stock: number) => stock === 0 ? { label: "Sin stock", color: "bg-red-500", badge: "error" as const } : stock <= 5 ? { label: "Stock bajo", color: "bg-amber-500", badge: "warning" as const } : { label: "Disponible", color: "bg-emerald-500", badge: "success" as const }
 const variantAttributes = (variant: ProductVariant) =>
@@ -34,6 +34,12 @@ export function ProductList() {
   const [error, setError] = useState("")
   const deactivatingRef = useRef(false)
   const [deactivating, setDeactivating] = useState(false)
+  const permanentDeletingRef = useRef(false)
+  const [permanentlyDeleting, setPermanentlyDeleting] = useState(false)
+  const [productToDelete, setProductToDelete] = useState<AdminProduct | null>(null)
+  const [deleteConfirmInput, setDeleteConfirmInput] = useState("")
+  const [deleteModalError, setDeleteModalError] = useState("")
+  const [selectedVariantByProduct, setSelectedVariantByProduct] = useState<Record<string, string>>({})
   const location = useLocation()
   const navigate = useNavigate()
   const [successMessage, setSuccessMessage] = useState(
@@ -65,38 +71,143 @@ export function ProductList() {
   })
   const vacio = emptyKind({ loading, error, shown: filtered.length, searching: search.trim() !== "" || statusFilter !== "all" })
 
-  const handleDeleteProduct = async (productId: string) => {
-    if (deactivatingRef.current || products.find(product => product.id === productId)?.status === 'archived') return;
-    if (!window.confirm("¿Estás seguro de que deseas desactivar este producto? Dejará de ser visible en el catálogo, pero se mantendrá en tu historial de ventas.")) return;
+  const handleToggleProductStatus = async (product: AdminProduct) => {
+    if (deactivatingRef.current) return;
+    const isArchived = product.status === "archived";
+    if (!isArchived && !window.confirm("¿Estás seguro de que deseas desactivar este producto? Dejará de ser visible en el catálogo, pero se mantendrá en tu historial de ventas.")) return;
     deactivatingRef.current = true;
     setDeactivating(true);
     setSuccessMessage("");
     try {
-      await deleteCatalogProduct(productId);
-      setProducts(current => current.map(p => p.id === productId ? { ...p, status: "archived" } : p));
-      setError("");
-      setSuccessMessage("Producto desactivado correctamente.");
+      if (isArchived) {
+        const updated = await updateCatalogProduct({ ...product, status: "active" });
+        setProducts(current => current.map(p => p.id === product.id ? updated : p));
+        setError("");
+        setSuccessMessage("Producto activado correctamente.");
+      } else {
+        await deleteCatalogProduct(product.id);
+        setProducts(current => current.map(p => p.id === product.id ? { ...p, status: "archived" } : p));
+        setError("");
+        setSuccessMessage("Producto desactivado correctamente.");
+      }
     } catch (error) {
-      setError(error instanceof Error ? error.message : "No se pudo desactivar el producto.");
+      setError(error instanceof Error ? error.message : `No se pudo ${isArchived ? "activar" : "desactivar"} el producto.`);
     } finally {
       deactivatingRef.current = false;
       setDeactivating(false);
     }
   };
+  const openPermanentDeleteModal = (product: AdminProduct) => {
+    if (permanentDeletingRef.current) return;
+    setProductToDelete(product);
+    setDeleteConfirmInput("");
+    setDeleteModalError("");
+  };
+
+  const closePermanentDeleteModal = () => {
+    if (permanentDeletingRef.current) return;
+    setProductToDelete(null);
+    setDeleteConfirmInput("");
+    setDeleteModalError("");
+  };
+
+  const canConfirmPermanentDelete = deleteConfirmInput.trim().toLowerCase() === "eliminar";
+
+  const handleConfirmPermanentDelete = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!productToDelete || permanentDeletingRef.current || !canConfirmPermanentDelete) return;
+    permanentDeletingRef.current = true;
+    setPermanentlyDeleting(true);
+    setDeleteModalError("");
+    setSuccessMessage("");
+    const targetId = productToDelete.id;
+    const targetName = productToDelete.name;
+    try {
+      await permanentDeleteCatalogProduct(targetId, deleteConfirmInput.trim());
+      setProducts(current => current.filter(p => p.id !== targetId));
+      setProductToDelete(null);
+      setDeleteConfirmInput("");
+      setError("");
+      setSuccessMessage(`Producto "${targetName}" eliminado definitivamente del catálogo. La información de ventas se conserva intacta.`);
+    } catch (err) {
+      setDeleteModalError(err instanceof Error ? err.message : "No se pudo eliminar definitivamente el producto.");
+    } finally {
+      permanentDeletingRef.current = false;
+      setPermanentlyDeleting(false);
+    }
+  };
+
   const totalActive = products.filter(product => product.status === 'active').length
   const lowStock = products.filter(product => product.status === 'active' && product.variants.reduce((sum, variant) => sum + variant.stock, 0) <= 5).length
+  const renderPermanentDeleteButton = (product: AdminProduct) => (
+    <button
+      type="button"
+      onClick={() => openPermanentDeleteModal(product)}
+      disabled={permanentlyDeleting}
+      aria-label={`Eliminar definitivamente ${product.name}`}
+      title={`Eliminar definitivamente ${product.name}`}
+      className="catalog-permanent-delete-btn"
+    >
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4" aria-hidden="true">
+        <path d="M18 6 6 18" />
+        <path d="m6 6 12 12" />
+      </svg>
+    </button>
+  )
   const renderActions = (product: AdminProduct) => <div className="catalog-product-actions">
-    <Link to={`/emprendedor/productos/${product.id}`} className="catalog-edit-link">Editar</Link>
-    <Link to={`/emprendedor/marketing?producto=${encodeURIComponent(product.id)}`}>Crear publicación</Link>
-    <button type="button" onClick={() => handleDeleteProduct(product.id)} disabled={deactivating || product.status === 'archived'} className="text-[var(--error)] disabled:opacity-50 disabled:cursor-not-allowed">{product.status === 'archived' ? 'Desactivado' : 'Desactivar'}</button>
+    <Link to={`/emprendedor/productos/${product.id}`} className="catalog-action-btn catalog-action-edit catalog-edit-link">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="h-3.5 w-3.5 shrink-0" aria-hidden="true">
+        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+      </svg>
+      <span>Editar</span>
+    </Link>
+    <Link to={`/emprendedor/marketing?producto=${encodeURIComponent(product.id)}`} className="catalog-action-btn catalog-action-marketing">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="h-3.5 w-3.5 shrink-0" aria-hidden="true">
+        <path d="m11 4-6 4H2v8h3l6 4v-16Z" />
+        <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
+        <path d="M19.07 4.93a10 10 0 0 1 0 14.14" />
+      </svg>
+      <span>Crear publicación</span>
+    </Link>
+    <button type="button" onClick={() => handleToggleProductStatus(product)} disabled={deactivating} className="catalog-action-btn catalog-action-delete">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="h-3.5 w-3.5 shrink-0" aria-hidden="true">
+        <path d="M18.36 6.64a9 9 0 1 1-12.73 0" />
+        <line x1="12" y1="2" x2="12" y2="12" />
+      </svg>
+      <span>{product.status === 'archived' ? 'Activar' : 'Desactivar'}</span>
+    </button>
   </div>
+  const getDisplayedPricing = (product: AdminProduct) => {
+    const selectedId = selectedVariantByProduct[product.id];
+    const selectedVariant =
+      (selectedId ? product.variants.find((variant) => variant.id === selectedId) : undefined)
+      ?? product.variants[0];
+    const variantLabel = selectedVariant
+      ? (Object.keys(selectedVariant.attributes).length > 0 ? variantAttributes(selectedVariant) : selectedVariant.sku)
+      : null;
+    return {
+      price: selectedVariant ? selectedVariant.price : product.basePrice,
+      comparePrice: selectedVariant ? selectedVariant.comparePrice : product.comparePrice,
+      variantLabel,
+    };
+  };
   const renderVariants = (product: AdminProduct) => <details className="catalog-variants">
     <summary>{product.variants.length} {product.variants.length === 1 ? 'variante' : 'variantes'} · Ver SKU y stock</summary>
-    <div className="mt-3 grid gap-2">{product.variants.map(variant => <div key={variant.id} className="rounded-lg bg-[var(--muted)] p-3">
-      <div className="flex flex-wrap items-center justify-between gap-2"><span className="break-all font-mono text-xs font-semibold">{variant.sku}</span><Badge variant={stockState(variant.stock).badge}>{variant.stock} uds</Badge></div>
-      <p className="mt-1 text-xs text-[var(--muted-foreground)]">{variantAttributes(variant)}</p>
-      <p className="mt-1 text-xs font-semibold">{formatPrice(variant.price)} {variant.comparePrice !== undefined && variant.comparePrice > variant.price && <span className="ml-1 font-normal line-through text-[var(--muted-foreground)]">{formatPrice(variant.comparePrice)}</span>}</p>
-    </div>)}</div>
+    <div className="mt-3 grid gap-2">{product.variants.map(variant => {
+      const isSelected = (selectedVariantByProduct[product.id] ?? product.variants[0]?.id) === variant.id;
+      return <button
+        key={variant.id}
+        type="button"
+        onClick={() => setSelectedVariantByProduct((current) => ({ ...current, [product.id]: variant.id }))}
+        aria-pressed={isSelected}
+        className={`w-full text-left rounded-lg border p-3 transition-colors cursor-pointer ${isSelected ? 'border-[var(--primary)] bg-white ring-1 ring-[var(--primary)]/20' : 'border-transparent bg-[var(--muted)] hover:border-slate-300'}`}
+      >
+        <div className="flex flex-wrap items-center justify-between gap-2"><span className="break-all font-mono text-xs font-semibold">{variant.sku}</span><Badge variant={stockState(variant.stock).badge}>{variant.stock} uds</Badge></div>
+        <p className="mt-1 text-xs text-[var(--muted-foreground)]">{variantAttributes(variant)}</p>
+        <p className="mt-1 text-xs font-semibold">{formatPrice(variant.price)} {variant.comparePrice !== undefined && variant.comparePrice > variant.price && <span className="ml-1 font-normal line-through text-[var(--muted-foreground)]">{formatPrice(variant.comparePrice)}</span>}</p>
+      </button>;
+    })}</div>
   </details>
   const renderImage = (product: AdminProduct) => product.images[0]
     ? <img src={product.images[0]} alt="" className="h-14 w-14 shrink-0 rounded-xl object-cover bg-[var(--muted)]" />
@@ -122,32 +233,83 @@ export function ProductList() {
     <section aria-label="Listado de productos" className="catalog-list">
       <div className="catalog-list-heading"><h3>Listado de productos</h3><span>{filtered.length} {filtered.length === 1 ? 'producto' : 'productos'}{search ? ` de ${products.length}` : ''}</span></div>
       <div className="hidden overflow-x-auto lg:block">
-        <table className="w-full min-w-[740px] text-sm text-left">
-          <thead className="bg-[var(--muted)]"><tr>{['Producto', 'Precio', 'Inventario', 'Estado', 'Acciones'].map(label => <th scope="col" key={label} className="px-5 py-3 text-xs font-semibold text-[var(--muted-foreground)]">{label}</th>)}</tr></thead>
+        <table className="w-full min-w-[840px] text-sm text-left">
+          <thead className="bg-[var(--muted)]"><tr>{['Producto', 'Precio', 'Inventario', 'Estado', 'Acciones'].map(label => <th scope="col" key={label} colSpan={label === 'Acciones' ? 2 : undefined} className="px-5 py-3 text-xs font-semibold text-[var(--muted-foreground)]">{label}</th>)}</tr></thead>
           <tbody>{filtered.map(product => {
             const stock = product.variants.reduce((sum, variant) => sum + variant.stock, 0)
             const state = stockState(stock)
+            const pricing = getDisplayedPricing(product)
             return <tr key={product.id} className="border-t border-[var(--border)] align-top hover:bg-[#fafbfe]">
               <td className="px-5 py-5"><div className="flex items-start gap-3">{renderImage(product)}<div className="min-w-0 max-w-xs"><p className="break-words font-semibold">{product.name}</p><p className="mt-1 text-xs text-[var(--muted-foreground)]">{product.category}</p>{renderVariants(product)}</div></div></td>
-              <td className="whitespace-nowrap px-5 py-5"><p className="font-semibold">{formatPrice(product.basePrice)}</p>{product.comparePrice !== undefined && product.comparePrice > product.basePrice && <><p className="mt-1 text-xs line-through text-[var(--muted-foreground)]">{formatPrice(product.comparePrice)}</p><div className="mt-2"><OfertaInfo precio={product.basePrice} anterior={product.comparePrice} /></div></>}</td>
+              <td className="whitespace-nowrap px-5 py-5">{pricing.variantLabel && <p className="mb-1 text-xs font-medium text-slate-500">{pricing.variantLabel}</p>}<p className="font-semibold">{formatPrice(pricing.price)}</p>{pricing.comparePrice !== undefined && pricing.comparePrice > pricing.price && <><p className="mt-1 text-xs line-through text-[var(--muted-foreground)]">{formatPrice(pricing.comparePrice)}</p><div className="mt-2"><OfertaInfo precio={pricing.price} anterior={pricing.comparePrice} /></div></>}</td>
               <td className="px-5 py-5"><p className="mb-2 font-medium">{stock} unidades</p><Badge variant={state.badge}>{state.label}</Badge></td>
               <td className="px-5 py-5">{productStatus(product.status)}</td>
-              <td className="px-5 py-4">{renderActions(product)}</td>
+              <td className="whitespace-nowrap px-5 py-4">{renderActions(product)}</td>
+              <td className="w-8 px-3 py-2.5 align-top text-right">{renderPermanentDeleteButton(product)}</td>
             </tr>
           })}</tbody>
         </table>
       </div>
       <div className="divide-y divide-[var(--border)] lg:hidden">{filtered.map(product => {
         const stock = product.variants.reduce((sum, variant) => sum + variant.stock, 0)
-        return <article key={product.id} className="p-4 sm:p-5">
-          <div className="flex items-start gap-3">{renderImage(product)}<div className="min-w-0 flex-1"><h4 className="break-words font-semibold">{product.name}</h4><p className="mt-1 text-xs text-[var(--muted-foreground)]">{product.category}</p><div className="mt-2">{productStatus(product.status)}</div></div></div>
-          <div className="my-4 flex flex-wrap justify-between gap-3"><div><p className="text-xs text-[var(--muted-foreground)]">Precio</p><p className="mt-1 font-semibold">{formatPrice(product.basePrice)}</p>{product.comparePrice !== undefined && product.comparePrice > product.basePrice && <p className="text-xs line-through text-[var(--muted-foreground)]">{formatPrice(product.comparePrice)}</p>}</div><div className="text-right"><p className="mb-1 text-xs text-[var(--muted-foreground)]">{stock} unidades</p><Badge variant={stockState(stock).badge}>{stockState(stock).label}</Badge></div></div>
+        const pricing = getDisplayedPricing(product)
+        return <article key={product.id} className="relative p-4 sm:p-5">
+          <div className="absolute right-3 top-3">{renderPermanentDeleteButton(product)}</div>
+          <div className="flex items-start gap-3 pr-8">{renderImage(product)}<div className="min-w-0 flex-1"><h4 className="break-words font-semibold">{product.name}</h4><p className="mt-1 text-xs text-[var(--muted-foreground)]">{product.category}</p><div className="mt-2">{productStatus(product.status)}</div></div></div>
+          <div className="my-4 flex flex-wrap justify-between gap-3"><div><p className="text-xs text-[var(--muted-foreground)]">{pricing.variantLabel ? `Precio · ${pricing.variantLabel}` : 'Precio'}</p><p className="mt-1 font-semibold">{formatPrice(pricing.price)}</p>{pricing.comparePrice !== undefined && pricing.comparePrice > pricing.price && <p className="text-xs line-through text-[var(--muted-foreground)]">{formatPrice(pricing.comparePrice)}</p>}</div><div className="text-right"><p className="mb-1 text-xs text-[var(--muted-foreground)]">{stock} unidades</p><Badge variant={stockState(stock).badge}>{stockState(stock).label}</Badge></div></div>
           {renderVariants(product)}<div className="mt-4 border-t border-[var(--border)] pt-2">{renderActions(product)}</div>
         </article>
       })}</div>
       {vacio === 'empty' && <EmptyListState spacing="none" className="py-12" title="Aún no tienes productos" action={<Link to="/emprendedor/productos/nuevo"><Button variant="primary">Crear tu primer producto</Button></Link>}>Agrega tu primer producto para empezar a vender.</EmptyListState>}
       {vacio === 'no-results' && <EmptyListState spacing="none" className="py-12" action={<Button variant="outline" onClick={() => { setSearch(''); setStatusFilter('all') }}>Limpiar filtros</Button>}>No encontramos productos con esos filtros.</EmptyListState>}
     </section>
+    <Modal
+      open={!!productToDelete}
+      onClose={closePermanentDeleteModal}
+      title="Eliminar producto definitivamente"
+      size="md"
+    >
+      {productToDelete && (
+        <form onSubmit={handleConfirmPermanentDelete} className="space-y-4">
+          {deleteModalError && <Alert variant="error">{deleteModalError}</Alert>}
+          <div className="space-y-2 text-sm text-[var(--foreground)]">
+            <p>
+              Vas a eliminar de forma permanente <strong>{productToDelete.name}</strong> de tu catálogo. Esta acción no se puede deshacer.
+            </p>
+            <p className="rounded-lg bg-[var(--muted)] px-3 py-2.5 text-xs leading-relaxed text-[var(--muted-foreground)]">
+              La información de ventas, pedidos realizados, montos recaudados y reportes asociados a este producto se conservarán intactos.
+            </p>
+          </div>
+          <Input
+            id="confirm-permanent-delete-input"
+            label='Escribe "eliminar" para confirmar'
+            value={deleteConfirmInput}
+            onChange={(event) => setDeleteConfirmInput(event.target.value)}
+            placeholder="eliminar"
+            autoComplete="off"
+            autoFocus
+            disabled={permanentlyDeleting}
+          />
+          <div className="flex flex-wrap justify-end gap-2 pt-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={closePermanentDeleteModal}
+              disabled={permanentlyDeleting}
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="submit"
+              variant="danger"
+              disabled={!canConfirmPermanentDelete || permanentlyDeleting}
+            >
+              {permanentlyDeleting ? "Eliminando..." : "Eliminar definitivamente"}
+            </Button>
+          </div>
+        </form>
+      )}
+    </Modal>
   </div>
 }
 
@@ -181,6 +343,47 @@ export function ProductEditor({ initial, editing }: { initial: AdminProduct; edi
   const [error, setError] = useState("");
   const [pendingVideoFile, setPendingVideoFile] = useState<File | null>(null);
   const uploadedVideoRef = useRef<{ file: File; id: string } | null>(null);
+  const permanentDeletingRef = useRef(false);
+  const [permanentlyDeleting, setPermanentlyDeleting] = useState(false);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [deleteConfirmInput, setDeleteConfirmInput] = useState("");
+  const [deleteModalError, setDeleteModalError] = useState("");
+
+  const openPermanentDeleteModal = () => {
+    if (permanentDeletingRef.current) return;
+    setDeleteModalOpen(true);
+    setDeleteConfirmInput("");
+    setDeleteModalError("");
+  };
+  const closePermanentDeleteModal = () => {
+    if (permanentDeletingRef.current) return;
+    setDeleteModalOpen(false);
+    setDeleteConfirmInput("");
+    setDeleteModalError("");
+  };
+  const handleConfirmPermanentDelete = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!editing || !product.id || permanentDeletingRef.current) return;
+    if (deleteConfirmInput.trim().toLowerCase() !== "eliminar") {
+      setDeleteModalError('Escribe la palabra "eliminar" para confirmar.');
+      return;
+    }
+    permanentDeletingRef.current = true;
+    setPermanentlyDeleting(true);
+    setDeleteModalError("");
+    try {
+      await permanentDeleteCatalogProduct(product.id, deleteConfirmInput.trim());
+      navigate("/emprendedor/productos", {
+        replace: true,
+        state: { successMessage: "Producto eliminado definitivamente. El historial de ventas se mantiene intacto." },
+      });
+    } catch (err) {
+      setDeleteModalError(err instanceof Error ? err.message : "No se pudo eliminar definitivamente el producto.");
+    } finally {
+      permanentDeletingRef.current = false;
+      setPermanentlyDeleting(false);
+    }
+  };
   const [products, setCatalogProducts] = useState<AdminProduct[]>([])
   useEffect(() => {
     let active = true
@@ -204,7 +407,22 @@ export function ProductEditor({ initial, editing }: { initial: AdminProduct; edi
   const findDuplicatedSku = () => { const seen = new Set<string>(); for (const variant of product.variants) { const sku = variant.sku.trim().toUpperCase(); if (!sku) continue; if (seen.has(sku)) return sku; seen.add(sku); } const currentProductId = product.id; const usedByOtherProduct = new Set(products.filter((item) => item.id !== currentProductId).flatMap((item) => item.variants.map((variant) => variant.sku.trim().toUpperCase()).filter(Boolean))); return [...seen].find((sku) => usedByOtherProduct.has(sku)); }
   const setField = <K extends keyof AdminProduct>(key: K, value: AdminProduct[K]) => setProduct((current) => ({ ...current, [key]: value }))
   const updateVariant = (variantId: string, change: Partial<ProductVariant>) => setProduct((current) => ({ ...current, variants: current.variants.map((variant) => variant.id === variantId ? { ...variant, ...change } : variant) }))
-  const updateAttribute = (name: string, values: string) => setProduct((current) => ({ ...current, attributes: { ...current.attributes, [name]: values.split(",").map((value) => value.trim()).filter(Boolean) } }))
+  const updateAttribute = (name: string, values: string) => {
+    const options = values.split(",").map((value) => value.trim()).filter(Boolean);
+    setProduct((current) => ({
+      ...current,
+      attributes: { ...current.attributes, [name]: options },
+      variants: current.variants.map((variant) => {
+        const nextAttrs = { ...variant.attributes };
+        if (options.length === 0) {
+          delete nextAttrs[name];
+        } else if (!options.includes(nextAttrs[name] ?? "")) {
+          nextAttrs[name] = options[0];
+        }
+        return { ...variant, attributes: nextAttrs };
+      }),
+    }));
+  };
   const addAttribute = () => {
     let index = attributeNames.length + 1
     while (product.attributes[`Atributo ${index}`]) index++
@@ -356,7 +574,7 @@ export function ProductEditor({ initial, editing }: { initial: AdminProduct; edi
                     </div>
                     <OfertaInfo precio={product.basePrice} anterior={product.comparePrice} />
                   </>
-                )}</div><div className="bg-white border border-[var(--border)] rounded-xl p-5"><div className="flex justify-between gap-3 mb-4"><div><p className="font-semibold text-sm">Atributos personalizados</p><p className="text-xs text-[var(--muted-foreground)]">Color, talla, material o cualquier característica.</p></div><Button variant="secondary" size="sm" onClick={addAttribute}>+ Atributo</Button></div><div className="grid gap-3">{attributeNames.map((name) => <div key={name} className="grid sm:grid-cols-2 gap-3 border-b border-[var(--border)] pb-3 last:border-0"><Input label="Nombre" defaultValue={name} onBlur={(event) => renameAttribute(name, event.target.value)} /><Input label="Opciones, separadas por coma" defaultValue={product.attributes[name].join(", ")} onBlur={(event) => updateAttribute(name, event.target.value)} /></div>)}{attributeNames.length === 0 && <p className="text-sm text-[var(--muted-foreground)]">Aún no hay atributos. Agrégalos para crear variantes combinables.</p>}</div></div></div><div className="flex flex-col gap-5"><div className="bg-white border border-[var(--border)] rounded-xl p-5 flex flex-col gap-4"><Input label="Categoría" value={product.category} onChange={(event) => setField("category", event.target.value)} /><Input label="Etiquetas" defaultValue={product.tags.join(", ")} onBlur={(event) => setField("tags", event.target.value.split(",").map((tag) => tag.trim()).filter(Boolean))} hint="Separadas por coma" /><Toggle checked={product.featured} onChange={(featured) => setField("featured", featured)} label="Producto destacado" /></div><div className="bg-white border border-[var(--border)] rounded-xl p-5"><p className="font-semibold text-sm mb-3">Estado de publicación</p>{(["active", "draft", "archived"] as const).map((status) => <label key={status} className="flex gap-2 py-1.5 text-sm capitalize"><input type="radio" checked={product.status === status} onChange={() => setField("status", status)} />{status === "active" ? "Activo" : status === "draft" ? "Borrador" : "Archivado"}</label>)}</div></div></div>}
+                )}</div><div className="bg-white border border-[var(--border)] rounded-xl p-5"><div className="flex justify-between gap-3 mb-4"><div><p className="font-semibold text-sm">Atributos personalizados</p><p className="text-xs text-[var(--muted-foreground)]">Color, talla, material o cualquier característica.</p></div><Button variant="secondary" size="sm" onClick={addAttribute}>+ Atributo</Button></div><div className="grid gap-3">{attributeNames.map((name) => <div key={name} className="grid sm:grid-cols-2 gap-3 border-b border-[var(--border)] pb-3 last:border-0"><Input label="Nombre" defaultValue={name} onBlur={(event) => renameAttribute(name, event.target.value)} /><Input label="Opciones, separadas por coma" defaultValue={product.attributes[name].join(", ")} onBlur={(event) => updateAttribute(name, event.target.value)} /></div>)}{attributeNames.length === 0 && <p className="text-sm text-[var(--muted-foreground)]">Aún no hay atributos. Agrégalos para crear variantes combinables.</p>}</div></div></div><div className="flex flex-col gap-5"><div className="bg-white border border-[var(--border)] rounded-xl p-5 flex flex-col gap-4"><Input label="Categoría" value={product.category} onChange={(event) => setField("category", event.target.value)} /><Input label="Etiquetas" defaultValue={product.tags.join(", ")} onBlur={(event) => setField("tags", event.target.value.split(",").map((tag) => tag.trim()).filter(Boolean))} hint="Separadas por coma" /><Toggle checked={product.featured} onChange={(featured) => setField("featured", featured)} label="Producto destacado" /></div><div className="bg-white border border-[var(--border)] rounded-xl p-5"><p className="font-semibold text-sm mb-3">Estado de publicación</p>{(["active", "archived"] as const).map((status) => <label key={status} className="flex gap-2 py-1.5 text-sm capitalize"><input type="radio" checked={product.status === status} onChange={() => setField("status", status)} />{status === "active" ? "Activo" : "Desactivado"}</label>)}</div>{editing && <div className="bg-white border border-[var(--border)] rounded-xl p-5"><p className="font-semibold text-sm mb-2">Eliminar producto</p><p className="text-xs text-[var(--muted-foreground)] mb-3">Elimina definitivamente este producto del catálogo. El historial de ventas se mantiene intacto.</p><Button variant="danger" size="sm" onClick={openPermanentDeleteModal} disabled={permanentlyDeleting}>Eliminar</Button></div>}</div></div>}
     {activeTab === "info" && <div className="mt-5 bg-white border border-[var(--border)] rounded-xl p-5">
       <p className="font-semibold text-sm mb-3">Características generales</p>
       {(product.generalAttributes ?? []).map((attribute, index) => <div key={index} className="flex flex-wrap gap-3 mb-3">
@@ -415,5 +633,44 @@ export function ProductEditor({ initial, editing }: { initial: AdminProduct; edi
         <Alert variant="info">Estos datos se muestran en resultados de búsqueda y no modifican el texto de tu producto.</Alert>
       </div>
     )}
+    <Modal
+      open={deleteModalOpen}
+      onClose={closePermanentDeleteModal}
+      title="Eliminar producto definitivamente"
+      size="sm"
+    >
+      <form onSubmit={handleConfirmPermanentDelete} className="grid gap-4">
+        <p className="text-sm text-[var(--muted-foreground)]">
+          Esta acción eliminará de forma permanente <strong className="text-[var(--foreground)]">{product.name || "este producto"}</strong> del catálogo.
+        </p>
+        <p className="text-xs text-[var(--muted-foreground)] rounded-lg bg-[var(--muted)] p-3">
+          Los pedidos, montos e informes de ventas históricos asociados a este producto se mantendrán intactos.
+        </p>
+        <Input
+          label='Escribe "eliminar" para confirmar'
+          value={deleteConfirmInput}
+          onChange={(event) => {
+            setDeleteConfirmInput(event.target.value);
+            if (deleteModalError) setDeleteModalError("");
+          }}
+          placeholder="eliminar"
+          autoFocus
+        />
+        {deleteModalError && <Alert variant="error">{deleteModalError}</Alert>}
+        <div className="flex justify-end gap-2">
+          <Button type="button" variant="secondary" size="sm" onClick={closePermanentDeleteModal} disabled={permanentlyDeleting}>
+            Cancelar
+          </Button>
+          <Button
+            type="submit"
+            variant="danger"
+            size="sm"
+            disabled={permanentlyDeleting || deleteConfirmInput.trim().toLowerCase() !== "eliminar"}
+          >
+            {permanentlyDeleting ? "Eliminando..." : "Eliminar definitivamente"}
+          </Button>
+        </div>
+      </form>
+    </Modal>
   </div>
 }

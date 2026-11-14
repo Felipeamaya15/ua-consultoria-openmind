@@ -24,7 +24,7 @@ export default function Dashboard() {
   return <div className="space-y-6 animate-fade-in">
     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
       <div><p className="text-xs font-semibold uppercase tracking-widest text-[var(--muted-foreground)] mb-2">Análisis comercial</p>
-        <h1 className="text-2xl sm:text-3xl font-bold text-[var(--foreground)]">Resumen de la Tienda</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold text-[var(--foreground)]">Estadísticas de la Tienda</h1>
         <p className="text-sm text-[var(--muted-foreground)] mt-2">Ventas, pedidos y actividad de tu negocio en un solo lugar.</p></div>
       <div className="w-full sm:w-52"><Select label="Período" value={period}
         onChange={event => {

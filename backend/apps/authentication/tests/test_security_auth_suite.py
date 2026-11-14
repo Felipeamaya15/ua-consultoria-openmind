@@ -241,11 +241,18 @@ class SecurityAuthenticationSuiteTests(TestCase):
         )
         self.assertEqual(verify_email_resp.status_code, 200)
 
-    # ------------------------------------------------------------------ 6. Cookies HttpOnly, Secure, SameSite y Expiración 30 min
+    # ------------------------------------------------------------------ 6. Cookies HttpOnly, Secure, SameSite y Expiración según Perfil
     def test_cookie_security_attributes_and_30_minute_inactivity_destruction(self):
+        admin_user = UserModel.objects.create_user(
+            username="adminprueba",
+            email="admin@ejemplo.cl",
+            password=self.password,
+            is_staff=True,
+        )
+
         login_resp = self.api.post(
             "/api/auth/login/",
-            {"username": self.user.email, "password": self.password},
+            {"username": admin_user.email, "password": self.password},
             format="json",
         )
         self.assertEqual(login_resp.status_code, 200)
@@ -255,7 +262,7 @@ class SecurityAuthenticationSuiteTests(TestCase):
         self.assertTrue(cookie["httponly"], "La cookie debe tener HttpOnly=True")
         self.assertTrue(cookie["secure"], "La cookie debe tener Secure=True")
         self.assertEqual(cookie["samesite"], "Lax", "La cookie debe tener SameSite=Lax")
-        self.assertEqual(int(cookie["max-age"]), 1800, "El tiempo de vida activo debe ser 30 minutos (1800s)")
+        self.assertEqual(int(cookie["max-age"]), 1800, "El tiempo de vida activo de admin debe ser 30 minutos (1800s)")
 
         token_key = login_resp.data["data"]["token"]
 
@@ -264,13 +271,53 @@ class SecurityAuthenticationSuiteTests(TestCase):
         me_ok = self.api.get("/api/auth/me/")
         self.assertEqual(me_ok.status_code, 200)
 
-        # Simular 31 minutos (1860 segundos) de inactividad
-        cache.set(f"auth_session_last_activity:{token_key}", 1000.0, timeout=3600)
+        # Ventana deslizante: petición activa renueva el temporizador (sliding window)
+        cache.set(f"auth_session_last_activity:{token_key}", 1000.0, timeout=1800)
+        with patch("apps.authentication.infrastructure.cookie_auth.time.time", return_value=1000.0 + 900.0):
+            sliding_resp = self.api.get("/api/auth/me/")
+            self.assertEqual(sliding_resp.status_code, 200)
+            self.assertIn(AUTH_COOKIE_NAME, sliding_resp.cookies, "Debe renovar la cookie con nuevo max-age")
+
+        # Simular 31 minutos (1860 segundos) de inactividad para cuenta admin
+        cache.set(f"auth_session_last_activity:{token_key}", 1000.0, timeout=1800)
         with patch("apps.authentication.infrastructure.cookie_auth.time.time", return_value=1000.0 + 1860.0):
             expired_resp = self.api.get("/api/auth/me/")
         self.assertEqual(expired_resp.status_code, 401)
-        self.assertFalse(Token.objects.filter(key=token_key).exists(), "El token debe destruirse en el servidor")
+        self.assertFalse(Token.objects.filter(key=token_key).exists(), "El token de admin debe destruirse en el servidor")
         self.assertEqual(expired_resp.cookies[AUTH_COOKIE_NAME].value, "", "La cookie debe borrarse en el cliente")
+
+    def test_customer_account_long_lived_cookie_and_no_inactivity_destruction(self):
+        # Cuenta de cliente final (is_staff=False)
+        customer_login = self.api.post(
+            "/api/auth/login/",
+            {"username": self.user.email, "password": self.password},
+            format="json",
+        )
+        self.assertEqual(customer_login.status_code, 200)
+        self.assertIn(AUTH_COOKIE_NAME, customer_login.cookies)
+
+        cookie = customer_login.cookies[AUTH_COOKIE_NAME]
+        self.assertTrue(cookie["httponly"])
+        self.assertTrue(cookie["secure"])
+        self.assertGreaterEqual(
+            int(cookie["max-age"]),
+            7 * 86400,
+            "La duración de la cookie para clientes debe ser prolongada (7 a 30 días)",
+        )
+
+        token_key = customer_login.data["data"]["token"]
+        self.api.credentials()
+
+        # Simular 31 minutos (1860 segundos) de inactividad: la cuenta de cliente NO debe cerrarse
+        cache.set(f"auth_session_last_activity:{token_key}", 1000.0, timeout=30 * 86400)
+        with patch("apps.authentication.infrastructure.cookie_auth.time.time", return_value=1000.0 + 1860.0):
+            customer_still_active = self.api.get("/api/auth/me/")
+        self.assertEqual(
+            customer_still_active.status_code,
+            200,
+            "Las cuentas de clientes NO deben cerrarse tras 30 minutos de inactividad",
+        )
+        self.assertTrue(Token.objects.filter(key=token_key).exists())
 
     # ------------------------------------------------------------------ 7. Olvidé mi contraseña por correo
     def test_forgot_password_sends_email_and_resets_password(self):
