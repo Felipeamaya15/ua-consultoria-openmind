@@ -16,7 +16,9 @@ class ProcessImageAPIView(APIView):
         fields = ImageRequestSerializer(data=request.data)
         fields.is_valid(raise_exception=True)
         try:
-            image = process_upload(fields.validated_data['imagen'], fields.validated_data['max_mb'])
+            max_mb = fields.validated_data['max_mb']
+            # max_mb=12 es el modo "reducir automaticamente": acepta hasta 12 MB y deja la foto en unos 150 KB
+            image = process_upload(fields.validated_data['imagen'], max_mb, optimize=max_mb > 3)
         except ValidationError as error:
             raise serializers.ValidationError({'imagen': error.messages}) from error
         response = success_response(data={'url': image.url, 'mime': image.mime, 'ancho': image.width, 'alto': image.height, 'convertida': image.converted})
@@ -26,4 +28,4 @@ class ProcessImageAPIView(APIView):
 
 class ImageRequestSerializer(serializers.Serializer):
     imagen = serializers.FileField()
-    max_mb = serializers.ChoiceField(choices=(1, 2, 3), default=2)
+    max_mb = serializers.ChoiceField(choices=(1, 2, 3, 12), default=2)
