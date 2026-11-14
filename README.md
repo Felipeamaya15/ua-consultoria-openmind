@@ -1,14 +1,8 @@
-# 🤝 Proyecto E-commerce
-
-**Repositorio oficial del equipo OpenMind - ua-consultoria-openmind**
-
-Este proyecto se desarrolla en el marco de la asignatura de consultoria de la Universidad Autónoma de Chile. El objetivo es proveer servicios de consultoría y desarrollo tecnológico de un **e-commerce**, trabajando bajo SCRUM.
-
 # Proyecto E-commerce
 
-> Repositorio oficial del equipo OpenMind | Asignatura de Consultoria de Software - Universidad Autonoma de Chile
+> **Repositorio oficial del equipo OpenMind** | Asignatura de Consultoría de Software - Universidad Autónoma de Chile
 
-Este proyecto consiste en el diseno, desarrollo e implementacion de una plataforma tecnologica orientada a optimizar la gestion y servicios del comercio electronico para emprendedores, trabajando bajo el marco agil de trabajo **SCRUM**.
+Este proyecto consiste en el diseño, desarrollo e implementación de una plataforma tecnológica de **e-commerce** orientada a optimizar la gestión, personalización y operación comercial de **3 emprendedores independientes**, quienes son nuestros clientes actuales, trabajando bajo el marco ágil **SCRUM**.
 
 ---
 
@@ -25,33 +19,37 @@ Este proyecto consiste en el diseno, desarrollo e implementacion de una platafor
 
 ---
 
-## Stack Tecnologico
+## Stack Tecnológico
 
 ### Frontend
-- **Framework Principal:** React / Vite
-- **Lenguaje:** TypeScript
-- **Estilos:** Tailwind CSS
+- **Framework y Enrutamiento:** React 18, Vite 5 y React Router DOM 7
+- **Lenguaje:** TypeScript 5
+- **Estilos:** Tailwind CSS 4 y `magic.css`
+- **Autenticación Cliente:** `@react-oauth/google` (Google Identity Services)
 
 ### Backend & Servicios
-- **Lenguaje:** Python 3.11+
-- **Framework:** Django & Django REST Framework (DRF)
-- **Autenticacion:** Django Rest Auth / Tokens de sesion
+- **Lenguaje:** Python 3.11
+- **Framework:** Django 5 & Django REST Framework (DRF) con `django-cors-headers`
+- **Seguridad y Autenticación:** Hashing con `argon2-cffi`, cifrado con `cryptography`, `google-auth` y autenticación por tokens / cookies
+- **Procesamiento Multimedia y Documentos:** `Pillow` y `pillow-heif` (imágenes y HEIC/HEIF), `av` / PyAV (compresión de video MP4/WebM), `reportlab` y `pypdf` (PDF), `openpyxl` (exportación a Excel)
 
 ### Base de Datos & Persistencia
-- **Motor:** PostgreSQL (datos transaccionales) y MongoDB (catalogo)
-- **ORM:** Django ORM (con soporte de migraciones versionadas)
+- **Relacional:** PostgreSQL 15 con Django ORM y `psycopg2-binary` (tiendas, usuarios, pedidos, pagos, envíos y configuraciones)
+- **NoSQL:** MongoDB con `pymongo` (catálogo de productos, variantes y atributos)
 
-### Infraestructura & Despliegue Local
-- **Virtualizacion:** Docker & Docker Compose
+### Infraestructura & Entorno Local
+- **Virtualización:** Docker & Docker Compose (`db`, `mongodb`, `backend`, `expirador_pedidos`, `frontend` y `mailpit`)
+- **Correo de Pruebas Local:** Mailpit (captura SMTP y visor web en el puerto `8025`)
 - **Control de Versiones:** Git / GitHub
 
 ### Integraciones Externas
-- **Pasarela de Pagos:** Transbank Webpay Plus (API REST), transferencia bancaria y Linkify
-- **Envios:** Chilexpress, Starken y retiro en tienda
+- **Pasarelas y Medios de Pago:** Transbank Webpay Plus, PayPal (con tipo de cambio del Banco Central de Chile), Mercado Pago, TUU, Linkify y transferencia bancaria
+- **Envíos y Logística:** Chilexpress, Starken, tarifas configurables y retiro en tienda (con geocodificación opcional)
+- **Comunicaciones y Analítica:** Google OAuth / Gmail API, Google Analytics y Meta Pixel
 
-### Herramientas de Gestion & QA
-- **Gestion Agil:** Atlassian Jira & Confluence
-- **Validacion de APIs:** Postman
+### Gestión & QA
+- **Gestión Ágil:** Atlassian Jira & Confluence
+- **Pruebas y Calidad:** `node --test` y `tsc` en frontend, `Django TestCase` en backend, y validación de APIs con Postman
 - **Entorno de Desarrollo:** Visual Studio Code
 
 > **Instalación:** requisitos en [`docs/requisitos-instalacion.md`](docs/requisitos-instalacion.md) y procedimiento en [`EJECUCION_LOCAL.md`](EJECUCION_LOCAL.md).
@@ -80,14 +78,16 @@ ua-consultoria-openmind/
 ├── docs/                         # Documentacion tecnica y evidencias de QA
 ├── EJECUCION_LOCAL.md            # Instalacion, ejecucion y actualizacion
 └── README.md                     # Documentacion general del repositorio
+```
 
 **Clonar el repositorio:**
-   ```bash
-   git clone https://github.com/Felipeamaya15/ua-consultoria-openmind.git
+```bash
+git clone https://github.com/Felipeamaya15/ua-consultoria-openmind.git
+```
 
-   ## Flujo de Trabajo en Git (Convenciones)
+## Flujo de Trabajo en Git (Convenciones)
 Para mantener el orden en el código, todos los integrantes deben seguir estas reglas gestionadas por el Responsable de Git:
 1. **La rama `main` está protegida.** Nadie puede hacer *commit* directo.
 2. Toda nueva funcionalidad o corrección debe trabajarse en una rama separada (ej: `feature/nombre-tarea` o `bugfix/descripcion`).
 3. Para integrar código a `main`, se debe abrir un **Pull Request (PR)** y contar con al menos una aprobación de QA u otro desarrollador.
-4. Los mensajes de los *commits* deben ser claros, frecuentes y, de ser posible, referenciar el número de la tarea en la herramienta de gestión[cite: 1].
+4. Los mensajes de los *commits* deben ser claros, frecuentes y, de ser posible, referenciar el número de la tarea en la herramienta de gestión.
