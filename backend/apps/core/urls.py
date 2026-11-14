@@ -1,3 +1,4 @@
+﻿from apps.landing.campaigns import CampaignAudienceView, CampaignsView
 
 from apps.core.presentation.customer_orders import CustomerOrdersAPIView
 from apps.core.presentation.pago_pedido_pendiente import PagarPedidoPendienteView
@@ -35,6 +36,13 @@ from apps.core.presentation.promotions import PromocionesAPIView, PromocionDetal
 from django.urls import path
 from apps.core.presentation.images import ProcessImageAPIView
 from apps.core.presentation.consent import ConsentRequestView, ConsentActionView
+from apps.core.presentation.gmail_oauth_views import (
+    GmailGoogleEstadoView,
+    GmailGoogleIniciarView,
+    GmailGoogleCallbackView,
+    GmailGoogleDesconectarView,
+    gmail_google_resultado,
+)
 from . import views
 from apps.core.presentation.views import (
     ConfiguracionPagoAPIView,
@@ -52,6 +60,14 @@ from apps.core.presentation.views import (
 )
 
 urlpatterns = [
+    path("tienda/correo/google/estado/", GmailGoogleEstadoView.as_view(), name="gmail-google-estado"),
+    path("tienda/correo/google/iniciar/", GmailGoogleIniciarView.as_view(), name="gmail-google-iniciar"),
+    path("tienda/correo/google/callback/", GmailGoogleCallbackView.as_view(), name="gmail-google-callback"),
+    path("tienda/correo/google/desconectar/", GmailGoogleDesconectarView.as_view(), name="gmail-google-desconectar"),
+    path("tienda/correo/google/resultado/", gmail_google_resultado, name="gmail-google-resultado"),
+    path('tienda/campanas/destinatarios/', CampaignAudienceView.as_view(), name='campanas-destinatarios'),
+    path('tienda/campanas/', CampaignsView.as_view(), name='campanas'),
+    path('tienda/campanas/<uuid:pk>/', CampaignsView.as_view(), name='campana-detalle'),
     path('tienda/imagenes/procesar/', ProcessImageAPIView.as_view(), name='store-process-image'),
     path('consentimiento/solicitar/', ConsentRequestView.as_view(), name='consent-request'),
     path('consentimiento/enlace/', ConsentActionView.as_view(), name='consent-link'),

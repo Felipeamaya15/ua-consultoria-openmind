@@ -53,6 +53,7 @@ Editar **`.env`** y sustituir los valores que comienzan con `REEMPLAZAR_` por va
 | `EMAIL_HOST_USER`, `EMAIL_HOST_PASSWORD` | Credenciales del servidor SMTP; nunca versionarlas. |
 | `EMAIL_USE_TLS`, `EMAIL_USE_SSL` | Seguridad de transporte del correo; configurar según el proveedor. |
 | `DEFAULT_FROM_EMAIL` | Dirección o nombre del remitente. |
+| `ACTIVITY_REPLIES_MAILPIT_ENABLED` | Habilitación explícita de respuestas de actividades solo en Mailpit local; deshabilitada por defecto. Requiere host local, puerto 1025, backend SMTP y ausencia de usuario SMTP. |
 | `STOREFRONT_PUBLIC_URL` | URL pública base para enlaces incluidos en los correos de pedidos. |
 
 **Correspondencia interna:** `docker-compose.yml` convierte las variables `POSTGRES_*` en `DB_NAME`, `DB_USER` y `DB_PASSWORD` para Django; asigna `DB_HOST=db`, `DB_PORT=5432` y `MONGO_HOST=mongodb`. Estos nombres son los nombres de servicios de Docker, **no `localhost`** dentro de los contenedores.
@@ -92,6 +93,15 @@ docker compose ps
 Compose levanta cuatro servicios principales: `db` (PostgreSQL), `mongodb`, `backend` (Django) y `frontend` (React/Vite). El backend ejecuta `sync_mongo_indexes` al iniciar, antes del servidor de desarrollo. Si el servicio no inicia, consultar sus logs antes de continuar.
 
 ### 3.2. Aplicar migraciones SQL
+
+**Actualización del panel (Fases 3–4):** antes de ejecutar `migrate` en una instalación existente, revisar el plan y disponer de un respaldo recuperable de PostgreSQL. Las migraciones `landing.0008_respuestas_actividad` y `landing.0009_borradores_campanas` crean respuestas/intentos y campañas/destinatarios. No migran ni envían mensajes. Las pantallas de respuestas y campañas necesitan esas tablas. Si están pendientes, su aplicación en la base habitual requiere revisión y autorización del responsable; no ejecutar automáticamente el comando siguiente durante QA.
+
+```powershell
+docker compose exec backend python manage.py showmigrations landing
+docker compose exec backend python manage.py migrate landing 0009_borradores_campanas --plan
+```
+
+La reversión elimina las tablas nuevas: después de guardar respuestas o campañas no usarla como procedimiento de recuperación sin un plan de conservación de datos. El QA de Fase 4 aplica y revierte únicamente en bases temporales.
 
 ```powershell
 docker compose exec backend python manage.py migrate
@@ -245,3 +255,31 @@ Revisar nuevamente los flujos críticos desde el navegador y registrar versión/
 ---
 
 **Trazabilidad Jira:** SCRUM-486 (variables de entorno), SCRUM-488 (procedimiento de despliegue) y SCRUM-489 (procedimiento de actualización).
+
+
+## 6. Verificación del panel sin datos reales
+
+Para construir y verificar TypeScript (Node y dependencias de `frontend/package-lock.json` instalados):
+
+```powershell
+npm ci --prefix frontend
+npm run build --prefix frontend
+node frontend/tests/panel-phase1.cjs
+node frontend/tests/panel-phase2.cjs
+node frontend/tests/communications.cjs
+node frontend/tests/legal-pages.cjs
+```
+
+Las pruebas Node usan servicios o DOM simulados según el script. No equivalen a una compra real ni a una sesión completa de producción. Algunas baterías históricas necesitan actualizar sus fixtures; conservar y revisar sus fallos, sin reducir las validaciones para obtener un resultado verde. `sprint7-catalog-load-time.cjs` genera un informe de medición versionado: conservar la evidencia en el directorio de QA y revisar ese cambio antes de incluirlo en una entrega.
+
+Para pruebas Django con migraciones reales, seleccionar un nombre único `test_*` para PostgreSQL y MongoDB **antes de inicializar Django**; el usuario SQL necesita permiso para crear bases. Ejemplo acotado a legal y comunicaciones, ejecutado dentro del contenedor (no aplica migraciones a la base comercial):
+
+```powershell
+docker compose exec backend python -c "import os,uuid;os.environ.setdefault('DJANGO_SETTINGS_MODULE','config.settings');from django.conf import settings;name='test_openmind_panel_'+uuid.uuid4().hex;settings.DATABASES['default']['TEST']={'NAME':name};settings.MONGO_DB_NAME=name;settings.EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend';import django;django.setup();from django.core.management import call_command;call_command('test','apps.core.test_legal','apps.landing.test_phase3',interactive=False)"
+```
+
+Conservar los algoritmos configurados en `PASSWORD_HASHERS` al probar autenticación. Un reemplazo global por MD5 invalida las comprobaciones de Argon2 y compatibilidad PBKDF2. Usar un directorio temporal de medios para pruebas de carga; bloquear las conexiones externas y simular proveedores al ampliar la batería a pagos, envíos o correo. Nunca apuntar pruebas de escritura al catálogo de una tienda existente.
+
+Las respuestas de consultas permiten correo en memoria para QA. Mailpit requiere habilitación explícita y confirmar que no retransmite a correos reales. Las campañas solo admiten borradores y previsualización: no existe envío masivo habilitado. Los disparadores transaccionales de pedidos pertenecen a su integración existente y requieren una validación separada con sus responsables. Antes de producción revisar dominio/remitente, baja individual, consentimiento vigente y reconciliación de intentos ambiguos; no activar proveedores desde un ensayo de QA.
+
+El Compose actual sigue siendo de desarrollo. La aceptación final requiere revisar las cuatro plantillas y el panel con una tienda de prueba, permisos, persistencia al recargar, cookies, teclado y tamaños 1440/820/375 px. Las pruebas de proveedor, HTTPS y despliegue aprobado son comprobaciones adicionales; no generar un APK como parte de este proceso.

@@ -60,6 +60,9 @@ function colors(value: unknown): LegacyThemeColors {
 /** Las nuevas propiedades del carrusel no deben perderse al fusionar apariencia. */
 function carouselFields(hero?: VisualConfigOverrides['hero']) {
   return {
+    ...(hero?.productImageMode !== undefined ? {productImageMode: hero.productImageMode} : {}),
+    ...(hero?.productImageInterval !== undefined ? {productImageInterval: hero.productImageInterval} : {}),
+    ...(hero?.productImageTransition !== undefined ? {productImageTransition: hero.productImageTransition} : {}),
     ...(hero?.carouselMode !== undefined ? {carouselMode: hero.carouselMode} : {}),
     ...(hero?.carouselInterval !== undefined ? {carouselInterval: hero.carouselInterval} : {}),
     ...(hero?.carouselTransition !== undefined ? {carouselTransition: hero.carouselTransition} : {}),
@@ -93,7 +96,7 @@ export function readPath(value: unknown, path: string): unknown {
 }
 export function editProperty(document: EditorDocument, path: string, value: string | number | boolean): EditorDocument {
   // Preserva las propiedades del carrusel sin pasar por filtros de claves del resolvedor.
-  if (/^hero\.(carouselMode|carouselInterval|carouselTransition|carouselIndicators|importedEffectPresets|hoverFeaturedMotion|hoverFeaturedLight|hoverCatalogMotion|hoverCatalogLight|hoverCategoryMotion|hoverCategoryLight)$/.test(path)) {
+  if (/^hero\.(productImageMode|productImageInterval|productImageTransition|carouselMode|carouselInterval|carouselTransition|carouselIndicators|importedEffectPresets|hoverFeaturedMotion|hoverFeaturedLight|hoverCatalogMotion|hoverCatalogLight|hoverCategoryMotion|hoverCategoryLight)$/.test(path)) {
     const field = path.slice('hero.'.length);
     return {...document, overrides: {...document.overrides, hero: {...document.overrides.hero, [field]: value}} as VisualConfigOverrides};
   }

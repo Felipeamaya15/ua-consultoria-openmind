@@ -13,9 +13,9 @@ import '../../storefront/visual/image-hover.css';
 
 type Area = 'featured' | 'catalog' | 'category';
 type Kind = 'motion' | 'light';
-type Field = 'hoverFeaturedMotion' | 'hoverFeaturedLight' | 'hoverCatalogMotion' |
+type Field = 'productImageMode' | 'productImageInterval' | 'productImageTransition' | 'hoverFeaturedMotion' | 'hoverFeaturedLight' | 'hoverCatalogMotion' |
   'hoverCatalogLight' | 'hoverCategoryMotion' | 'hoverCategoryLight';
-type Props = { hero: VisualConfig['hero']; suggestedArea: Area; onEdit: (field: Field, value: string) => void };
+type Props = { hero: VisualConfig['hero']; suggestedArea: Area; onEdit: (field: Field, value: string | number) => void };
 const groups = [
   { id: 'featured', label: 'Destacados', description: 'Fotografías de los productos destacados y banners del inicio.', motion: 'hoverFeaturedMotion', light: 'hoverFeaturedLight' },
   { id: 'catalog', label: 'Catálogo', description: 'Tarjetas de productos en el catálogo.', motion: 'hoverCatalogMotion', light: 'hoverCatalogLight' },
@@ -125,6 +125,7 @@ export function ProductHoverInspector({ hero, suggestedArea, onEdit }: Props) {
   return <section className="ve-hover-panel" aria-labelledby="ve-hover-heading">
     <div className="ve-hover-panel__heading"><span className="ve-hover-panel__eyebrow">INTERACCIÓN CON EL MOUSE</span>
       <h2 id="ve-hover-heading">Efectos de las fotografías</h2>
+      <fieldset className="ve-carousel-panel__fieldset"><legend>Fotografías del producto</legend><label>Modo de cambio<select aria-label="Cambio de fotografías de productos" value={hero.productImageMode ?? 'hover'} onChange={event => onEdit('productImageMode', event.target.value)}><option value="static">Estático (navegación manual)</option><option value="hover">Al pasar el mouse</option><option value="automatic">Automático</option></select></label><label>Transición de fotografías<select aria-label="Transición de fotografías de productos" value={hero.productImageTransition ?? 'slide'} onChange={event => onEdit('productImageTransition', event.target.value)}><option value="slide">Deslizar</option><option value="fade">Fundido</option><option value="zoom">Zoom</option></select></label>{hero.productImageMode === 'automatic' && <label>Segundos entre fotografías<input type="number" min={2} max={20} value={hero.productImageInterval ?? 5} onChange={event => { const value = Number(event.target.value); if (Number.isInteger(value) && value >= 2 && value <= 20) onEdit('productImageInterval', value); }} /></label>}<p>Las flechas permiten navegar también en celulares. Una sola foto permanece estática.</p></fieldset>
       <p>Escoge un movimiento y una iluminación por separado. También puedes buscar animaciones en internet.</p>
     </div>
     <label className="ve-hover-panel__label" htmlFor="ve-hover-area">Dónde aplicar los efectos</label>

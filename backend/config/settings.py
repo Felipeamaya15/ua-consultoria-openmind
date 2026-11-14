@@ -162,11 +162,16 @@ CORS_ALLOW_HEADERS = list(default_headers) + [
 ]
 CSRF_TRUSTED_ORIGINS = [origin.strip() for origin in os.getenv('DJANGO_CSRF_TRUSTED_ORIGINS', '').split(',') if origin.strip()]
 
-# Configuración obligatoria de cookies seguras y sesión con expiración de 30 minutos (1800s) de inactividad
+# Configuración obligatoria de cookies seguras y sesión según perfil de usuario:
+# - Cuentas administrativas (is_staff / admin): 30 minutos de inactividad (1800s).
+# - Clientes finales: expiración prolongada (7 a 30 días, default 30 días = 2592000s) sin cierre por inactividad corta.
 SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SECURE = not DEBUG
 SESSION_COOKIE_SAMESITE = os.getenv('DJANGO_SESSION_COOKIE_SAMESITE', 'Lax')
-SESSION_COOKIE_AGE = int(os.getenv('DJANGO_SESSION_COOKIE_AGE', '1800'))  # 30 minutos de inactividad
+ADMIN_SESSION_INACTIVITY_TIMEOUT_SECONDS = int(os.getenv('ADMIN_SESSION_INACTIVITY_TIMEOUT_SECONDS', '1800'))
+ADMIN_SESSION_COOKIE_AGE = int(os.getenv('DJANGO_ADMIN_SESSION_COOKIE_AGE', '1800'))  # 30 minutos
+CUSTOMER_SESSION_COOKIE_AGE = int(os.getenv('DJANGO_CUSTOMER_SESSION_COOKIE_AGE', str(30 * 86400)))  # 30 días
+SESSION_COOKIE_AGE = ADMIN_SESSION_COOKIE_AGE
 SESSION_SAVE_EVERY_REQUEST = True
 SESSION_EXPIRE_AT_BROWSER_CLOSE = True
 
@@ -252,7 +257,12 @@ CSRF_COOKIE_SECURE = not DEBUG
 PAYPAL_FX_MARGEN_PCT = os.getenv('PAYPAL_FX_MARGEN_PCT', '2').strip() or '2'
 PAYPAL_FX_MAX_EDAD_HORAS = float(os.getenv('PAYPAL_FX_MAX_EDAD_HORAS') or 96)
 PAYPAL_FX_REFRESCO_HORAS = float(os.getenv('PAYPAL_FX_REFRESCO_HORAS') or 6)
-BCCH_USUARIO = (os.getenv('BCCH_USUARIO') or '').strip()
-BCCH_CLAVE = (os.getenv('BCCH_CLAVE') or '').strip()
+BCCH_TOKEN = (os.getenv('BCCH_TOKEN') or '').strip()
 STOREFRONT_PUBLIC_URL = (os.getenv('STOREFRONT_PUBLIC_URL') or 'http://localhost:5173/plantilla/1').rstrip('/')
 TUU_CALLBACK_BASE_URL = (os.getenv('TUU_CALLBACK_BASE_URL') or '').rstrip('/')
+
+# Solo habilita respuestas capturadas por Mailpit; no autoriza SMTP real.
+ACTIVITY_REPLIES_MAILPIT_ENABLED = os.getenv("ACTIVITY_REPLIES_MAILPIT_ENABLED", "0") == "1"
+GOOGLE_OAUTH_CLIENT_ID = os.getenv('GOOGLE_OAUTH_CLIENT_ID', '').strip()
+GOOGLE_OAUTH_CLIENT_SECRET = os.getenv('GOOGLE_OAUTH_CLIENT_SECRET', '').strip()
+GOOGLE_OAUTH_REDIRECT_URI = os.getenv('GOOGLE_OAUTH_REDIRECT_URI', '').strip()

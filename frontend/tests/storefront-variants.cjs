@@ -53,6 +53,7 @@ function cardHarness(product, template = 'catalog', layout = 'grid') {
       } };
       if (name === 'react-router-dom') return { Link: 'Link' };
       if (name.includes('mockData')) return { formatPrice: value => `CLP ${value}` };
+      if (name.includes('ProductImageGallery')) return { ProductImageGallery: 'ProductImageGallery' };
       if (name.includes('StockFeedback')) return { StockFeedback: 'StockFeedback' };
       if (name.includes('visual/sectionIds')) return load('src/features/storefront/visual/sectionIds.ts', {});
       if (name.includes('CartContext')) return { useCart: () => ({ items: cart, addItem: item => cart.push(item) }) };
@@ -145,7 +146,8 @@ async function main() {
         } };
         if (name === 'react-router-dom') return { Link: 'Link', useParams: () => ({ id: raw.slug }) };
         if (name.includes('mockData')) return { formatPrice: value => `CLP ${value}` };
-        if (name.includes('StockFeedback')) return { StockFeedback: 'StockFeedback' };
+        if (name.includes('ProductImageGallery')) return { ProductImageGallery: 'ProductImageGallery' };
+      if (name.includes('StockFeedback')) return { StockFeedback: 'StockFeedback' };
         if (name.includes('QuantityControl')) return { QuantityControl: 'QuantityControl' };
       if (name.includes('CartContext')) return { useCart: () => ({ items: cart, addItem: item => cart.push(item) }) };
         if (name.includes('useStorefrontTemplate')) return { useStorefrontTemplate: () => ({ route: p => `/${p}`, isCatalog: template === 'catalog', isMinimal: template === 'minimal', isVisual: template === 'visual' }) };

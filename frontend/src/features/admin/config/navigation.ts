@@ -16,7 +16,7 @@ export const legalSlugs = {
 } as const;
 
 export const menuItems = [
-  { path: '/emprendedor', label: 'Resumen', icon: 'grid' },
+  { path: '/emprendedor', label: 'Estadísticas', icon: 'grid' },
   { path: '/emprendedor/productos', label: 'Productos', icon: 'box' },
   { path: '/emprendedor/pedidos', label: 'Pedidos', icon: 'orders' },
   { path: '/emprendedor/ventas', label: 'Ventas', icon: 'file' },
@@ -28,7 +28,7 @@ export const menuItems = [
   { path: '/emprendedor/pagos', label: 'Pagos', icon: 'card' },
   { path: '/emprendedor/entregas', label: 'Entregas', icon: 'truck' },
   { path: '/emprendedor/autenticacion', label: 'Acceso de clientes', icon: 'shield' },
-  { path: '/emprendedor/contactos', label: 'Contactos', icon: 'mail' },
+  { path: '/emprendedor/contactos', label: 'Contactos', icon: 'user' },
   { path: '/emprendedor/correos', label: 'Correos', icon: 'mail' },
   { path: '/emprendedor/seo', label: 'Buscadores y visitas', icon: 'search' },
 ];

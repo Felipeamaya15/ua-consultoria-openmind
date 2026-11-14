@@ -179,3 +179,36 @@ export async function updateActivityArchive(
   }
   return result;
 }
+
+
+export interface ActivityReply {
+  id: string; clave: string; destinatario: string; asunto: string; cuerpo: string;
+  estado: 'borrador' | 'enviando' | 'aceptada' | 'fallida' | 'indeterminada';
+  creado: string; actualizado: string;
+  intentos: { numero: number; estado: string; codigo: string; creado: string; finalizado: string | null }[];
+}
+export interface ActivityConversation {
+  solicitud: ActivityRequest; respuestas: ActivityReply[]; pagina: number; paginas: number; total: number;
+  envio_habilitado: boolean; aviso_envio: string;
+}
+function readReply(value: unknown): ActivityReply {
+  const row = value as ActivityReply;
+  if (!row || !uuid(row.id || '') || !uuid(row.clave || '') || typeof row.asunto !== 'string' || typeof row.cuerpo !== 'string'
+    || typeof row.destinatario !== 'string' || !['borrador','enviando','aceptada','fallida','indeterminada'].includes(row.estado) || !Array.isArray(row.intentos))
+    throw new Error('No pudimos confirmar la respuesta. Actualiza el historial antes de reintentar.');
+  return row;
+}
+export async function fetchActivityConversation(id: string, page = 1, signal?: AbortSignal): Promise<ActivityConversation> {
+  if (!uuid(id)) throw new Error('La solicitud no está disponible.');
+  const data = await requestJson(`${base}solicitudes-actividades/${id}/respuestas/?pagina=${page}`, { headers: headers(true), cache: 'no-store', signal }) as ActivityConversation;
+  if (!data || !validRequest(data.solicitud) || !Array.isArray(data.respuestas) || typeof data.envio_habilitado !== 'boolean'
+    || !Number.isInteger(data.pagina) || !Number.isInteger(data.paginas)) throw new Error('No pudimos cargar el detalle de la consulta.');
+  data.respuestas.forEach(readReply);
+  return data;
+}
+export async function createActivityReply(id: string, values: { clave: string; asunto: string; cuerpo: string }): Promise<ActivityReply> {
+  return readReply(await requestJson(`${base}solicitudes-actividades/${id}/respuestas/`, { method: 'POST', headers: headers(true), body: JSON.stringify(values) }));
+}
+export async function sendActivityReply(id: string, replyId: string): Promise<ActivityReply> {
+  return readReply(await requestJson(`${base}solicitudes-actividades/${id}/respuestas/${replyId}/enviar/`, { method: 'POST', headers: headers(true), body: '{}' }));
+}

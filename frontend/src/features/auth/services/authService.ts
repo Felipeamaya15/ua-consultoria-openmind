@@ -3,7 +3,21 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 const TOKEN_KEY = 'token';
 const SESSION_STARTED_AT_KEY = 'entrepreneur_session_started_at';
 const SESSION_LAST_ACTIVITY_KEY = 'session_last_activity_at';
-export const SESSION_INACTIVITY_LIMIT_MS = 30 * 60 * 1000; // 30 minutos de inactividad
+const SESSION_IS_ADMIN_KEY = 'session_is_admin';
+
+export const ADMIN_SESSION_INACTIVITY_LIMIT_MS = 30 * 60 * 1000; // 30 minutos de inactividad para administradores
+export const CUSTOMER_SESSION_INACTIVITY_LIMIT_MS = 30 * 24 * 60 * 60 * 1000; // 30 días para clientes finales (expiración prolongada: 7 a 30 días)
+export const SESSION_INACTIVITY_LIMIT_MS = ADMIN_SESSION_INACTIVITY_LIMIT_MS; // Compatibilidad con pruebas previas
+
+export type AuthUserSummary = {
+  id?: number | string;
+  email?: string;
+  username?: string;
+  is_staff?: boolean;
+  is_superuser?: boolean;
+  is_store_owner?: boolean;
+  [key: string]: unknown;
+};
 
 export type CustomerProfile = {
   first_name: string;
@@ -51,6 +65,29 @@ function safeRemoveStorage(key: string) {
   }
 }
 
+export function isSessionAdmin(): boolean {
+  try {
+    if (typeof localStorage === 'undefined' || typeof localStorage.getItem !== 'function') {
+      return true;
+    }
+    const val = localStorage.getItem(SESSION_IS_ADMIN_KEY);
+    if (val === 'false') return false;
+    if (val === 'true') return true;
+    if (typeof window !== 'undefined' && window.location?.pathname?.startsWith('/emprendedor')) {
+      return true;
+    }
+    return true;
+  } catch {
+    return true;
+  }
+}
+
+export function getSessionInactivityLimitMs(): number {
+  return isSessionAdmin()
+    ? ADMIN_SESSION_INACTIVITY_LIMIT_MS
+    : CUSTOMER_SESSION_INACTIVITY_LIMIT_MS;
+}
+
 function isInactivityExpired(): boolean {
   try {
     if (typeof localStorage === 'undefined' || typeof localStorage.getItem !== 'function') {
@@ -60,7 +97,7 @@ function isInactivityExpired(): boolean {
     if (!raw || raw.length < 10) return false;
     const ts = Date.parse(raw);
     if (Number.isNaN(ts)) return false;
-    return Date.now() - ts > SESSION_INACTIVITY_LIMIT_MS;
+    return Date.now() - ts > getSessionInactivityLimitMs();
   } catch {
     return false;
   }
@@ -69,6 +106,71 @@ function isInactivityExpired(): boolean {
 function touchActivity() {
   safeSetStorage(SESSION_LAST_ACTIVITY_KEY, new Date().toISOString());
 }
+
+let lastThrottledTouch = 0;
+function throttledTouchActivity() {
+  const now = Date.now();
+  if (now - lastThrottledTouch > 2000) {
+    lastThrottledTouch = now;
+    if (getStoredToken()) {
+      touchActivity();
+    }
+  }
+}
+
+// Inicialización de reinicio de temporizador ante clics, navegación y llamadas a la API
+let activityListenersInitialized = false;
+export function initActivityListeners(): void {
+  if (activityListenersInitialized) return;
+  if (typeof window === 'undefined' || typeof document === 'undefined') return;
+
+  activityListenersInitialized = true;
+
+  const interactionEvents = ['click', 'keydown', 'scroll', 'touchstart', 'mousedown'];
+  interactionEvents.forEach((evt) => {
+    try {
+      window.addEventListener(evt, throttledTouchActivity, { passive: true });
+    } catch {}
+  });
+
+  try {
+    window.addEventListener('popstate', () => {
+      if (getStoredToken()) touchActivity();
+    });
+    window.addEventListener('hashchange', () => {
+      if (getStoredToken()) touchActivity();
+    });
+  } catch {}
+
+  if (typeof window.history !== 'undefined') {
+    const originalPush = window.history.pushState;
+    if (typeof originalPush === 'function') {
+      window.history.pushState = function (...args) {
+        if (getStoredToken()) touchActivity();
+        return originalPush.apply(this, args);
+      };
+    }
+    const originalReplace = window.history.replaceState;
+    if (typeof originalReplace === 'function') {
+      window.history.replaceState = function (...args) {
+        if (getStoredToken()) touchActivity();
+        return originalReplace.apply(this, args);
+      };
+    }
+  }
+
+  if (typeof window.fetch === 'function') {
+    const nativeFetch = window.fetch;
+    window.fetch = function (...args) {
+      if (getStoredToken()) {
+        throttledTouchActivity();
+      }
+      return nativeFetch.apply(this, args);
+    };
+  }
+}
+
+initActivityListeners();
 
 function getStoredToken() {
   if (isInactivityExpired()) {
@@ -83,6 +185,7 @@ function clearStoredSession() {
   sessionStorage.removeItem(TOKEN_KEY);
   safeRemoveStorage(SESSION_STARTED_AT_KEY);
   safeRemoveStorage(SESSION_LAST_ACTIVITY_KEY);
+  safeRemoveStorage(SESSION_IS_ADMIN_KEY);
 }
 
 async function profileRequest<T = CustomerProfile>(path: string, method = 'GET', data?: unknown, base = 'perfil', namespace = 'auth'): Promise<{ data: T }> {
@@ -109,11 +212,26 @@ export const authService = {
   hasSession() {
     return !!getStoredToken();
   },
-  setSession(token: string) {
+  isSessionAdmin() {
+    return isSessionAdmin();
+  },
+  getInactivityLimitMs() {
+    return getSessionInactivityLimitMs();
+  },
+  setSession(token: string, user?: AuthUserSummary | null) {
     const nowIso = new Date().toISOString();
     safeSetStorage(TOKEN_KEY, token);
     safeSetStorage(SESSION_STARTED_AT_KEY, nowIso);
     safeSetStorage(SESSION_LAST_ACTIVITY_KEY, nowIso);
+    if (user !== undefined && user !== null) {
+      const isAdmin = Boolean(user.is_staff || user.is_superuser || user.is_store_owner);
+      safeSetStorage(SESSION_IS_ADMIN_KEY, isAdmin ? 'true' : 'false');
+    } else {
+      // Si no se especifica usuario, asume política de administración (30 min) por defecto seguro
+      if (typeof localStorage !== 'undefined' && localStorage.getItem(SESSION_IS_ADMIN_KEY) === null) {
+        safeSetStorage(SESSION_IS_ADMIN_KEY, 'true');
+      }
+    }
   },
   touchActivity() {
     if (getStoredToken()) {
@@ -163,7 +281,7 @@ export const authService = {
     if (!res.ok) throw await res.json();
     const json = await res.json();
     if (json?.data?.token) {
-      authService.setSession(json.data.token);
+      authService.setSession(json.data.token, json.data.user);
     }
     return json;
   },
@@ -180,7 +298,7 @@ export const authService = {
     if (!res.ok) throw await res.json();
     const json = await res.json();
     if (json?.data?.token) {
-      authService.setSession(json.data.token);
+      authService.setSession(json.data.token, json.data.user);
     }
     return json;
   },
@@ -195,7 +313,7 @@ export const authService = {
     if (!res.ok) throw await res.json();
     const json = await res.json();
     if (json?.data?.token) {
-      authService.setSession(json.data.token);
+      authService.setSession(json.data.token, json.data.user);
     }
     return json;
   },
@@ -259,7 +377,7 @@ export const authService = {
     if (!res.ok) throw await res.json();
     const json = await res.json();
     if (json?.data?.token) {
-      authService.setSession(json.data.token);
+      authService.setSession(json.data.token, json.data.user);
     }
     return json;
   },
@@ -280,8 +398,13 @@ export const authService = {
       if (res.status === 401) clearStoredSession(); // Solo invalida sesiones rechazadas por autenticación.
       return null;
     }
+    const json = await res.json();
+    if (json?.data) {
+      const isAdmin = Boolean(json.data.is_staff || json.data.is_superuser || json.data.is_store_owner);
+      safeSetStorage(SESSION_IS_ADMIN_KEY, isAdmin ? 'true' : 'false');
+    }
     touchActivity();
-    return res.json();
+    return json;
   },
 
   logout() {

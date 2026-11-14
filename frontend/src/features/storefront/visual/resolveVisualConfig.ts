@@ -1,3 +1,6 @@
+import { MOVEMENT_EFFECTS, LIGHT_EFFECTS } from './effectLibrary';
+import { CAROUSEL_TRANSITIONS } from './carouselTransitionLibrary';
+import { isOnlineEffectId } from './onlineEffects';
 import { VISUAL_DEFAULTS } from './defaults';
 import { VISUAL_PRESETS } from './presets';
 import type { TemplateId } from '../data/mockData';
@@ -9,6 +12,7 @@ export function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 const enumValues: Record<string, readonly string[]> = {
+  carouselMode: ['static', 'manual', 'automatic'], productImageMode: ['static', 'hover', 'automatic'], galleryArrowStyle: ['circulares', 'redondeadas', 'solo-flechas'], productImageTransition: ['fade', 'slide', 'zoom'],
   align: ALIGNMENTS, titleAlign: ALIGNMENTS, promoAlign: ALIGNMENTS, // OPENMIND_EDITORIAL_PROMO_V1
   horizontalAlign: ALIGNMENTS, navAlign: ALIGNMENTS,
   logoPosition: ALIGNMENTS, institutionLogoPosition: ALIGNMENTS, verticalAlign: ['top', 'center', 'bottom'], imagePosition: ['top', 'center', 'bottom'],
@@ -24,6 +28,9 @@ const enumValues: Record<string, readonly string[]> = {
 
 function validLeaf(value: unknown, baseline: unknown, path: string): boolean {
   const key = path.split('.').pop()!;
+  if (key === 'carouselTransition') return typeof value === 'string' && (CAROUSEL_TRANSITIONS.some(item => item.id === value) || isOnlineEffectId(value));
+  if (/^hover(?:Featured|Catalog|Category)(?:Motion|Light)$/.test(key)) return typeof value === 'string' && (isOnlineEffectId(value) || (key.endsWith('Motion') ? MOVEMENT_EFFECTS : LIGHT_EFFECTS).some(item => item.id === value));
+  if (key === 'carouselInterval' || key === 'productImageInterval') return typeof value === 'number' && Number.isInteger(value) && value >= 2 && value <= 20;
   if (key === 'brandingVisible') return value === true;
   if (typeof baseline === 'boolean') return typeof value === 'boolean';
   if (typeof baseline === 'number') {

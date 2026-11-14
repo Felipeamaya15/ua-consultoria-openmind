@@ -88,6 +88,16 @@ function ScopedLegalEditor({ isCurrent, storageKey }: { isCurrent: () => boolean
         Lo que publiques es lo que ven tus clientes en la tienda; el borrador no se muestra hasta que lo publiques. La publicación y su historial se confirman y guardan en el servidor de tu tienda.
       </Alert>
 
+      <details className="rounded-xl border border-[var(--border)] bg-white p-4 text-sm">
+        <summary className="cursor-pointer font-semibold">Cómo guardar, publicar y restaurar tus páginas legales</summary>
+        <div className="mt-3 space-y-3">
+          <p><strong>Guardar borrador:</strong> conserva tu trabajo sin cambiar lo que ven los clientes. <strong>Publicar:</strong> hace visible esa versión y la agrega al historial.</p>
+          <p><strong>Restaurar plantilla:</strong> recupera el contenido base completo del sistema en el borrador. No lo publica ni elimina el historial. Puedes revisarlo antes de publicar. Recuperar una versión del historial es una acción distinta.</p>
+          <p>La base corresponde a la plantilla disponible en el sistema; no garantiza recuperar una instantánea de cuando se creó tu tienda. Revisa su adecuación con la persona responsable: una plantilla no garantiza cumplimiento jurídico.</p>
+          <div className="flex flex-wrap gap-4"><a className="underline min-h-11 inline-flex items-center" href="https://www.sernac.cl/portal/617/w3-propertyvalue-8326.html" target="_blank" rel="noopener noreferrer">Guías de comercio electrónico · SERNAC</a><a className="underline min-h-11 inline-flex items-center" href="https://www.bcn.cl/leychile/" target="_blank" rel="noopener noreferrer">Consultar normativa · Biblioteca del Congreso Nacional</a></div>
+        </div>
+      </details>
+
       <nav className="flex gap-2 overflow-x-auto border-b border-[var(--border)]" aria-label="Páginas legales">
         {pageTypes.map((item) => (
           <Link

@@ -156,3 +156,10 @@
   animation:none !important;
  }
 }
+
+/* Las capas de galería no interceptan punteros; el hover pertenece a la tarjeta. */
+@media (hover:hover) and (pointer:fine) {
+ [data-storefront-visual] [data-visual-section="productCard"]:is(:hover,:focus-within) .om-product-gallery__layer:not([aria-hidden])::after {
+  animation:var(--om-product-overlay-animation,none);
+ }
+}

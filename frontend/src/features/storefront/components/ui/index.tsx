@@ -100,7 +100,7 @@ export function Input({ label, error, hint, icon, iconRight, className = '', id,
         <input
           id={inputId}
           type={effectiveType}
-          className={`w-full h-9 text-sm border rounded-lg px-3 bg-white text-[var(--foreground)] placeholder-[var(--muted-foreground)] transition-colors
+          className={`w-full min-h-10 text-sm border rounded-lg px-3 py-2 bg-white text-[var(--foreground)] placeholder-[var(--muted-foreground)] transition-colors
             focus:outline-none focus:ring-2 focus:ring-[var(--ring)] focus:border-[var(--primary)]
             disabled:bg-[var(--muted)] disabled:text-[var(--muted-foreground)] disabled:cursor-not-allowed
             ${error ? 'border-[var(--error)]' : 'border-[var(--border)]'}
@@ -160,7 +160,7 @@ export function Select({ label, error, hint, options, className = '', id, ...pro
       <select
         aria-invalid={!!error}
         id={elId}
-        className={`w-full h-9 text-sm border rounded-lg px-3 bg-white text-[var(--foreground)] transition-colors
+        className={`w-full min-h-10 h-auto text-sm leading-snug border rounded-lg px-3 py-2 bg-white text-[var(--foreground)] transition-colors
           focus:outline-none focus:ring-2 focus:ring-[var(--ring)] focus:border-[var(--primary)]
           ${error ? 'border-[var(--error)]' : 'border-[var(--border)]'} ${className}`}
         {...props}

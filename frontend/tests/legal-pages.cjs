@@ -9,7 +9,7 @@ function load(relative, mocks = {}, globals = {}) {
   const code = ts.transpileModule(fs.readFileSync(file, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020, jsx: ts.JsxEmit.ReactJSX } }).outputText;
   const req = id => {
     if (id in mocks) return mocks[id];
-    if(id.endsWith('/palettes'))return {fetchAppearance:async()=>({}),fetchPalettes:async()=>({propias:[]}),paletteOverrides:()=>undefined,usePaletteLibrary:()=>({})};
+    if(id.endsWith('/palettes'))return {fetchAppearance:async()=>({}),fetchPalettes:async()=>({propias:[]}),paletteOverrides:()=>undefined,usePaletteLibrary:()=>({library:{}})};
     if (!id.startsWith('.')) return require(id);
     const p = path.resolve(path.dirname(file), id);
     return load(['.ts', '.tsx'].map(ext => p + ext).find(fs.existsSync) || path.join(p, 'index.ts'), mocks, globals);

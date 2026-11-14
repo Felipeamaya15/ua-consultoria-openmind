@@ -33,6 +33,21 @@ class LegalPagesAPITestCase(APITestCase):
             descripcion='Tienda para pruebas legales',
         )
 
+    def test_default_dates_are_stable_and_reads_do_not_persist(self):
+        from datetime import datetime, timezone
+        from unittest.mock import patch
+        from apps.core.legal import DEFAULT_LEGAL_PUBLICATION_DATE
+
+        with patch('apps.core.legal.timezone.now', return_value=datetime(2026, 1, 1, tzinfo=timezone.utc)):
+            first = self.client.get('/api/legal/').data['data']
+        with patch('apps.core.legal.timezone.now', return_value=datetime(2027, 1, 1, tzinfo=timezone.utc)):
+            second = self.client.get('/api/legal/').data['data']
+        self.assertEqual(first, second)
+        for page in first.values():
+            self.assertEqual(page['lastPublished'], DEFAULT_LEGAL_PUBLICATION_DATE)
+            self.assertEqual(page['fecha_vigencia'], DEFAULT_LEGAL_PUBLICATION_DATE)
+        self.assertFalse(ConfiguracionLegal.objects.filter(tienda=self.tienda).exists())
+
     def test_consulta_publica_paginas_por_defecto(self):
         """Verifica que un visitante público pueda consultar las páginas legales predeterminadas."""
         response = self.client.get('/api/legal/')

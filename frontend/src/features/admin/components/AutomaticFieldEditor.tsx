@@ -75,7 +75,7 @@ export function AutomaticFieldEditor({label,value,onChange,fields,required=[],di
     onDrop={event=>event.preventDefault()}
     onCut={event=>{const selection=window.getSelection();if(selection?.rangeCount&&includesRequired(selection.getRangeAt(0))){event.preventDefault();setNotice('El número de pedido es un campo obligatorio.');}}}/>
     <button type="button" className="automatic-field-insert" disabled={disabled} aria-expanded={picker} onMouseDown={remember} onClick={()=>setPicker(!picker)}>＋ Insertar campo automático</button>
-    {picker&&<div className="automatic-field-picker" role="group" aria-label={`Campos para ${label}`}>{fields.map(field=><button type="button" key={field.key} onClick={()=>{insert(`{{${field.key}}}`);setPicker(false);}}><strong>{field.label}</strong><small>{field.description}</small></button>)}</div>}
+    {picker&&<div className="automatic-field-picker" role="group" aria-label={`Campos para ${label}`}>{fields.map(field=><button type="button" key={field.key} onClick={()=>{insert(`{{${field.key}}}`);setPicker(false);}}><strong>{field.label}</strong><small>{required.includes(field.key) ? 'Obligatorio en el correo activo. ' : 'Opcional. '}{field.description}</small></button>)}</div>}
     {notice&&<p role="status">{notice}</p>}
   </div>;
 }

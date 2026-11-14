@@ -88,6 +88,7 @@ export default function EmailTemplates() {
     fetchEmailTemplates()
       .then((remote) => {
         if (!active) return
+        if (!remote.variables?.length || !remote.obligatorias || Object.keys(remote.plantillas || {}).some(type => !Array.isArray(remote.obligatorias?.[type]) || remote.obligatorias[type].some(key => !remote.variables?.some(field => field.key === key)))) throw new Error('No pudimos confirmar los campos requeridos del servidor. Recarga antes de editar o guardar.');
         setRemoteDefaults(remote.por_defecto)
         setFields(remote.variables??[])
         setRequired(remote.obligatorias??{})
@@ -262,8 +263,9 @@ export default function EmailTemplates() {
             </div>
             <div className="border-t border-[var(--border)] pt-4">
               <h3 className="text-sm font-semibold mb-3">Campos automáticos</h3>
-              <p className="text-xs text-[var(--muted-foreground)] mb-4">Se completan con los datos del pedido. Número de pedido es obligatorio en cada correo activo. Los demás campos pueden quitarse; el texto que los rodea es totalmente personalizable.</p>
-              <div className="automatic-field-help">{fields.map(field=><div key={field.key}><strong>{field.label}{required[activeType]?.includes(field.key)?' · Obligatorio':''}</strong><p>{field.description}</p></div>)}</div>
+              <p className="text-xs text-[var(--muted-foreground)] mb-3">Los campos automáticos se completan con los datos reales de cada pedido. Puedes editar el texto que los rodea y quitar los campos opcionales. La vista previa usa ejemplos y no envía correos.</p>
+              <p className="mb-3 text-sm" role="status">{!loaded ? 'Cargando los requisitos de esta plantilla desde el servidor…' : (required[activeType] || []).length ? `Requeridos ${activeTemplate.enabled ? 'en este correo activo' : 'al activar este correo'}: ${(required[activeType] || []).map(key => fields.find(field => field.key === key)?.label || key).join(', ')}. Deben aparecer en el asunto, vista previa o contenido antes de guardar.` : 'El servidor no exige campos automáticos para esta plantilla.'}</p>
+              <div className="automatic-field-help">{fields.map(field=><div key={field.key}><strong>{field.label}{required[activeType]?.includes(field.key)?' · Obligatorio al activar':' · Opcional'}</strong><p>{field.description}</p></div>)}</div>
             </div>
           </section>
 

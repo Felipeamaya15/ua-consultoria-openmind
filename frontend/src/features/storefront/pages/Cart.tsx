@@ -33,6 +33,63 @@ export default function Cart() {
   const [promoSuccess, setPromoSuccess] = useState('');
 
   const [promoBusy, setPromoBusy] = useState(false);
+  const [pendingRemoveKey, setPendingRemoveKey] = useState<string | null>(null);
+
+  const handleRequestRemove = (item: (typeof items)[number]) => {
+    if (item.quantity <= 1) {
+      setPendingRemoveKey(null);
+      removeItem(item.productId, item.variantId);
+      return;
+    }
+    const key = `${item.productId}-${item.variantId}`;
+    setPendingRemoveKey((current) => (current === key ? null : key));
+  };
+
+  const renderRemoveConfirmBar = (item: (typeof items)[number]) => {
+    const key = `${item.productId}-${item.variantId}`;
+    if (pendingRemoveKey !== key || item.quantity <= 1) return null;
+
+    return (
+      <div
+        role="region"
+        aria-label={`Confirmar eliminación de ${item.name}`}
+        className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-[var(--visual-global-border)]/20 bg-[var(--muted)]/40 px-3 py-2 text-xs text-[var(--visual-page-color)]"
+      >
+        <span className="font-medium">
+          Tienes {item.quantity} unidades. ¿Qué deseas hacer?
+        </span>
+        <div className="flex flex-wrap items-center gap-1.5">
+          <button
+            type="button"
+            onClick={() => {
+              updateQuantity(item.productId, item.variantId, item.quantity - 1);
+              setPendingRemoveKey(null);
+            }}
+            className="rounded-md border border-[var(--visual-global-border)]/25 bg-[var(--visual-page-field-background,white)] px-2.5 py-1 font-medium text-[var(--visual-page-field-color,var(--foreground))] hover:opacity-85 transition-opacity"
+          >
+            Quitar 1
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              removeItem(item.productId, item.variantId);
+              setPendingRemoveKey(null);
+            }}
+            className="rounded-md bg-[var(--error)] px-2.5 py-1 font-semibold text-white hover:brightness-90 transition-all"
+          >
+            Eliminar todo ({item.quantity})
+          </button>
+          <button
+            type="button"
+            onClick={() => setPendingRemoveKey(null)}
+            className="rounded-md px-2 py-1 font-medium opacity-75 hover:opacity-100 transition-opacity"
+          >
+            Cancelar
+          </button>
+        </div>
+      </div>
+    );
+  };
 
   const handleApplyPromo = async () => {
     if (promoBusy) return;
@@ -223,13 +280,16 @@ export default function Cart() {
 
                           <button data-page-action="danger"
                             type="button"
-                            onClick={() => removeItem(item.productId, item.variantId)}
-                            className="w-8 h-8 flex-shrink-0 rounded-full flex items-center justify-center text-[var(--visual-page-color)]/35 hover:bg-[var(--visual-page-panel-background)]/[0.06] hover:text-[var(--visual-page-color)] transition-colors"
+                            onClick={() => handleRequestRemove(item)}
+                            className="w-8 h-8 flex-shrink-0 rounded-full flex items-center justify-center text-[var(--visual-page-color)]/45 hover:bg-red-500/10 hover:text-[var(--error)] transition-colors"
                             aria-label={`Eliminar ${item.name}`}
+                            title={item.quantity > 1 ? 'Quitar unidad o eliminar producto' : `Eliminar ${item.name}`}
                           >
                             <span aria-hidden="true">×</span>
                           </button>
                         </div>
+
+                        {renderRemoveConfirmBar(item)}
 
                         <div className="mt-auto pt-5 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
                           <div data-page-quantity className="flex h-9 w-[112px] items-center overflow-hidden rounded-[8px] border border-[var(--visual-global-border)]/10 bg-[var(--visual-page-panel-background)]">
@@ -480,13 +540,16 @@ export default function Cart() {
 
                         <button data-page-action="danger"
                           type="button"
-                          onClick={() => removeItem(item.productId, item.variantId)}
-                          className="w-8 h-8 flex-shrink-0 rounded-full flex items-center justify-center text-[var(--visual-page-color)] hover:bg-[var(--visual-page-panel-background)] hover:text-[var(--visual-page-color)] transition-colors"
+                          onClick={() => handleRequestRemove(item)}
+                          className="w-8 h-8 flex-shrink-0 rounded-full flex items-center justify-center text-[var(--visual-page-color)] hover:bg-red-500/10 hover:text-[var(--error)] transition-colors"
                           aria-label={`Eliminar ${item.name}`}
+                          title={item.quantity > 1 ? 'Quitar unidad o eliminar producto' : `Eliminar ${item.name}`}
                         >
                           <span aria-hidden="true">×</span>
                         </button>
                       </div>
+
+                      {renderRemoveConfirmBar(item)}
 
                       <div className="mt-auto pt-4 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
                         <div data-page-quantity className="flex h-9 w-[112px] items-center overflow-hidden rounded-[7px] border border-[var(--visual-global-border)]/15 bg-[var(--visual-page-panel-background)]">
@@ -702,26 +765,30 @@ export default function Cart() {
 
                   <button data-page-action="danger"
                     type="button"
-                    onClick={() => removeItem(item.productId, item.variantId)}
-                    className="text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
+                    onClick={() => handleRequestRemove(item)}
+                    className="w-8 h-8 flex-shrink-0 rounded-full flex items-center justify-center text-[var(--muted-foreground)] hover:bg-red-500/10 hover:text-[var(--error)] transition-colors"
                     aria-label={`Eliminar ${item.name}`}
+                    title={item.quantity > 1 ? 'Quitar unidad o eliminar producto' : `Eliminar ${item.name}`}
                   >
-                    ×
+                    <span aria-hidden="true">×</span>
                   </button>
                 </div>
 
+                {renderRemoveConfirmBar(item)}
+
                 <div className="flex items-end justify-between gap-4 mt-4">
-                  <div data-page-quantity className="flex items-center border border-[var(--border)] rounded-lg overflow-hidden">
+                  <div data-page-quantity className="grid grid-cols-3 h-9 w-[112px] items-center border border-[var(--border)] rounded-lg overflow-hidden">
                     <button data-page-action="ghost"
                       type="button"
                       onClick={() =>
                         updateQuantity(item.productId, item.variantId, item.quantity - 1)
                       }
-                      className="w-9 h-9"
+                      className="h-full w-full flex items-center justify-center"
+                      aria-label={`Disminuir cantidad de ${item.name}`}
                     >
                       −
                     </button>
-                    <span className="w-9 h-9 flex items-center justify-center border-x border-[var(--border)]">
+                    <span className="h-full w-full flex items-center justify-center border-x border-[var(--border)] text-sm font-medium">
                       {item.quantity}
                     </span>
                     <button data-page-action="ghost"
@@ -730,7 +797,8 @@ export default function Cart() {
                         updateQuantity(item.productId, item.variantId, item.quantity + 1)
                       }
                       disabled={item.quantity >= item.maxStock}
-                      className="w-9 h-9 disabled:opacity-30"
+                      className="h-full w-full flex items-center justify-center disabled:opacity-30"
+                      aria-label={`Aumentar cantidad de ${item.name}`}
                     >
                       +
                     </button>

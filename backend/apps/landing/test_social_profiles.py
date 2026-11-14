@@ -42,6 +42,18 @@ class SocialProfilesTests(TestCase):
         self.config.refresh_from_db()
         self.assertEqual(self.config.contenido, before)
 
+    def test_reported_instagram_profile_survives_save_reload_and_public_read(self):
+        original = 'https://www.instagram.com/la_magia_de_tijax/'
+        expected = 'https://instagram.com/la_magia_de_tijax'
+        response = self.patch({'instagram': {'perfil': original, 'activo': True}})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(self.stored()['instagram'], expected)
+        self.assertEqual(self.client.get(self.url).data['data']['instagram']['perfil'], expected)
+        self.client.force_authenticate(None)
+        public = self.client.get('/api/landing/configuracion/')
+        self.assertEqual(public.status_code, 200)
+        self.assertEqual(public.data['data']['contenido']['contacto']['instagram'], expected)
+
     def test_create_edit_disable_reload_and_delete_each_network(self):
         for network, value, canonical in [
             ('instagram', '@mi.tienda', 'https://instagram.com/mi.tienda'),

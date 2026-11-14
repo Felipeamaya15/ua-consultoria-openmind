@@ -1,3 +1,6 @@
+import { ProductImageGallery } from '../components/store/ProductImageGallery';
+import { useStorefrontTemplate } from '../hooks/useStorefrontTemplate';
+import { useHeroContent } from '../hooks/useHeroContent';
 import { HomeSections } from '../../landing/components/HomeSections';
 import { VISUAL_SECTION } from '../visual/sectionIds';
 import { useLandingContent } from '../../landing/hooks/useLandingContent';
@@ -16,6 +19,7 @@ export default function MinimalHome() {
   const { featured, categories, content } = useLandingContent();
   const isSectionVisible = useLandingSectionVisibility();
   const { landing } = useStore();
+  const { route } = useStorefrontTemplate();
   const heroHasPhoto = hasHeroSlides(landing);
   const navigate = useNavigate();
   const [search, setSearch] = useState('');
@@ -42,6 +46,7 @@ export default function MinimalHome() {
     navigate(`catalogo?cat=${encodeURIComponent(category)}`);
   };
 
+  const hero = useHeroContent(landing, route);
   return (
     <div data-landing-page="minimal" className="pb-4 min-w-0 overflow-x-hidden">
 
@@ -59,7 +64,7 @@ export default function MinimalHome() {
                 data-visual-part="heroImageFallback"
                 className="relative h-[180px] w-full max-w-[640px] overflow-hidden rounded-2xl"
               >
-                <HeroCarousel landing={landing} />
+                <HeroCarousel landing={landing} onContentChange={hero.onChange} />
               </div>
             )}
             {floatingProducts.map((product, index) => {
@@ -71,10 +76,10 @@ export default function MinimalHome() {
               ];
 
               return (
-                <Link
+                <div
                   key={product.id}
-                  to={`producto/${product.id}`}
-                  className={`
+
+                  className={`relative
                     relative
                     w-[92px] sm:w-[130px] md:w-[150px]
                     shrink-0
@@ -92,12 +97,8 @@ export default function MinimalHome() {
                     ${rotations[index] ?? ''}
                   `}
                 >
-                  <div className="aspect-[4/3] rounded-xl overflow-hidden bg-gray-100">
-                    <img
-                      src={product.images[0]}
-                      alt={product.name}
-                      className="w-full h-full object-cover"
-                    />
+                  <div className="relative relative aspect-[4/3] rounded-xl overflow-hidden bg-gray-100">
+                    <ProductImageGallery images={product.images} alt={product.name} href={`producto/${product.id}`} imageClassName="w-full h-full object-cover" />
                   </div>
 
                   <div className="px-1 pt-2 pb-1 text-left">
@@ -119,7 +120,7 @@ export default function MinimalHome() {
                       </span>
                     </div>
                   </div>
-                </Link>
+                </div>
               );
             })}
 
@@ -128,22 +129,23 @@ export default function MinimalHome() {
           {/* Carrusel independiente: conserva intactas las tarjetas de productos. */}
           {floatingProducts.length > 0 && heroHasPhoto && (
             <div className="relative mx-auto mb-5 h-[160px] sm:h-[200px] w-full max-w-[640px] overflow-hidden rounded-2xl">
-              <HeroCarousel landing={landing} />
+              <HeroCarousel landing={landing} onContentChange={hero.onChange} />
             </div>
           )}
 
           {/* Título */}
           <div data-visual-part="heroTitleBlock" className="w-full text-center min-w-0 mx-auto">
             <LandingStatus />
-            <h1 className="w-full text-center mx-auto text-[clamp(2.5rem,11vw,4.5rem)] sm:text-[92px] md:text-[118px] leading-none tracking-[-0.06em] sm:tracking-[-0.08em] font-semibold text-[#151515] break-words">
-              {landing?.titulo}
+            <h1 hidden={!hero.showTitle} className="w-full text-center mx-auto text-[clamp(2.5rem,11vw,4.5rem)] sm:text-[92px] md:text-[118px] leading-none tracking-[-0.06em] sm:tracking-[-0.08em] font-semibold text-[#151515] break-words">
+              {hero.title}
             </h1>
           </div>
 
-          <p data-visual-part="heroSubtitle" className="w-full text-center text-gray-700 mt-4 px-2 mx-auto break-words">
-            {landing?.descripcion}
+          <p hidden={!hero.showDescription} data-visual-part="heroSubtitle" className="w-full text-center text-gray-700 mt-4 px-2 mx-auto break-words">
+            {hero.description}
           </p>
 
+          {hero.customButton && hero.showButton && <div data-visual-part="heroCtaLayout" className="mt-6"><Link data-visual-section={VISUAL_SECTION.heroCta} to={hero.href} target={hero.external?'_blank':undefined} rel={hero.external?'noopener noreferrer':undefined} className="inline-flex min-h-11 items-center rounded-full bg-[var(--primary)] px-6 py-3 font-semibold text-[var(--on-primary)]">{hero.buttonText}</Link></div>}
           {/* Buscador en una sola línea (input + botón al lado tanto en móvil como en escritorio) */}
           <form data-visual-part="heroCtaLayout"
             onSubmit={handleSearch}
@@ -180,7 +182,7 @@ export default function MinimalHome() {
                 aria-label={landing?.texto_boton || 'Buscar'}
                 className="px-4 sm:px-6 min-w-11 min-h-11 w-auto shrink-0 gap-1.5 sm:gap-2 rounded-full bg-[var(--primary)] text-[var(--on-primary)] inline-flex items-center justify-center text-xs sm:text-sm font-semibold hover:scale-105 transition-transform whitespace-nowrap"
               >
-                {landing?.texto_boton}
+                {hero.customButton ? 'Buscar' : landing?.texto_boton}
                 <svg
                   className="w-4 h-4 shrink-0"
                   viewBox="0 0 24 24"
@@ -275,16 +277,12 @@ export default function MinimalHome() {
           <div data-visual-section={VISUAL_SECTION.productGrid} data-visual-grid="products" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
 
             {discoveryProducts.map((product) => (
-              <Link data-visual-section={VISUAL_SECTION.productCard} data-visual-card="custom"
+              <div data-visual-section={VISUAL_SECTION.productCard} data-visual-card="custom"
                 key={product.id}
-                to={`producto/${product.id}`}
-                className="group relative rounded-[24px] overflow-hidden bg-gray-200 aspect-[4/5]"
+
+                className="relative relative group relative rounded-[24px] overflow-hidden bg-gray-200 aspect-[4/5]"
               >
-                <img
-                  src={product.images[0]}
-                  alt={product.name}
-                  className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                />
+                <ProductImageGallery images={product.images} alt={product.name} href={`producto/${product.id}`} imageClassName="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
 
                 <div data-visual-part="body" className="absolute inset-x-3 bottom-3 bg-white/95 backdrop-blur-sm rounded-2xl p-4">
 
@@ -296,7 +294,7 @@ export default function MinimalHome() {
 
                     <div className="min-w-0">
                       <h3 className="font-semibold text-sm text-[#171717] truncate">
-                        {product.name}
+                        <Link to={`producto/${product.id}`}>{product.name}</Link>
                       </h3>
 
                       <p data-visual-part="description">{product.description}</p>
@@ -311,7 +309,7 @@ export default function MinimalHome() {
 
                   </div>
                 </div>
-              </Link>
+              </div>
             ))}
 
           </div>
@@ -391,18 +389,14 @@ export default function MinimalHome() {
             <div data-visual-section={VISUAL_SECTION.productGrid} data-visual-grid="products" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
 
               {moreProducts.map((product) => (
-                <Link data-visual-section={VISUAL_SECTION.productCard} data-visual-card="custom"
+                <div data-visual-section={VISUAL_SECTION.productCard} data-visual-card="custom"
                   key={product.id}
-                  to={`producto/${product.id}`}
-                  className="group"
-                >
-                  <div data-visual-part="cardImage" className="aspect-square rounded-[22px] overflow-hidden bg-gray-200">
 
-                    <img
-                      src={product.images[0]}
-                      alt={product.name}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                    />
+                  className="relative group"
+                >
+                  <div data-visual-part="cardImage" className="relative aspect-square rounded-[22px] overflow-hidden bg-gray-200">
+
+                    <ProductImageGallery images={product.images} alt={product.name} href={`producto/${product.id}`} imageClassName="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
 
                   </div>
 
@@ -413,7 +407,7 @@ export default function MinimalHome() {
                     </p>
 
                     <h3 className="text-sm font-semibold text-[#171717] mt-1 truncate">
-                      {product.name}
+                      <Link to={`producto/${product.id}`}>{product.name}</Link>
                     </h3>
 
                     <p data-visual-part="price" className="text-sm font-semibold text-gray-700 mt-1">
@@ -422,7 +416,7 @@ export default function MinimalHome() {
                     <p data-visual-part="description">{product.description}</p>
                     <span data-visual-part="buyButton">Ver opciones →</span>
                   </div>
-                </Link>
+                </div>
               ))}
 
             </div>

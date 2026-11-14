@@ -3,6 +3,7 @@ import { EmptyListState, ErrorState, LoadingState } from '../../../shared/compon
 import { IMAGE_ACCEPT } from '../../../shared/services/imageUpload';
 import { AdminCard, Alert, Button, Input, Select, Textarea, Toggle } from '../../admin/components/ui';
 import { humanizeAdminError } from '../../admin/utils/humanizeError';
+import { validateVideoFile } from '../domain/videoUpload';
 import { MEDIA_TYPES, emptyMediaDraft, mediaProblem, type MediaDraft, type MediaKind, type MediaPage, type MediaResource } from '../domain/mediaLibrary';
 import { deleteMediaResource, fetchMediaLibrary, saveMediaResource, setMediaActive } from '../services/mediaLibraryService';
 import { MediaPreview } from './MediaPreview';
@@ -20,12 +21,15 @@ function ResourceForm({ initial, busy, onSave, onCancel, onDirty }: {
   const dirty = !!file || JSON.stringify(draft) !== JSON.stringify(baseline) || (!!initial?.archivo && source === 'url');
   useEffect(() => { onDirty(dirty); }, [dirty, onDirty]);
   useEffect(() => () => onDirty(false), [onDirty]);
-  const preserve = !!initial?.archivo && source === 'file' && draft.tipo === 'imagen' && !file;
+  const preserve = !!initial?.archivo && source === 'file' && ['imagen', 'video'].includes(draft.tipo) && draft.tipo === initial?.tipo && !file;
   const edit = (next: Partial<MediaDraft>) => { setDraft(old => ({ ...old, ...next })); setError(''); };
-  function submit(event: FormEvent) {
+  async function submit(event: FormEvent) {
     event.preventDefault();
     const problem = mediaProblem(draft, file, preserve);
     if (problem) { setError(problem); return; }
+    if (file && draft.tipo === 'video') {
+      try { await validateVideoFile(file); } catch (cause) { setError(cause instanceof Error ? cause.message : 'Video no válido.'); return; }
+    }
     void onSave(draft, file, preserve);
   }
   return <AdminCard className="media-form-card"><form aria-label={initial ? 'Editar recurso multimedia' : 'Agregar recurso multimedia'} onSubmit={submit} noValidate>
@@ -35,7 +39,7 @@ function ResourceForm({ initial, busy, onSave, onCancel, onDirty }: {
       <Textarea label="Descripción del recurso" value={draft.descripcion} maxLength={2000} rows={3} onChange={event => edit({ descripcion: event.target.value })} />
       <Select label="Tipo de contenido" value={draft.tipo} options={Object.entries(MEDIA_TYPES).map(([value, label]) => ({ value, label }))} onChange={event => { edit({ tipo: event.target.value as MediaKind, url: '' }); setFile(null); }} />
       {draft.tipo === 'imagen' && <Select label="Origen de la imagen" value={source} options={[{ value: 'file', label: 'Subir archivo' }, { value: 'url', label: 'Usar URL de imagen' }]} onChange={event => { setSource(event.target.value as 'file' | 'url'); setFile(null); edit({ url: '' }); }} />}
-      {draft.tipo === 'imagen' && source === 'file' ? <div><Input label="Archivo de imagen" type="file" accept={IMAGE_ACCEPT} onChange={event => { setFile(event.target.files?.[0] || null); setError(''); }} hint="JPG, PNG, WebP, HEIC o HEIF. Hasta 2 MB. Se valida en el servidor al guardar." persistentHint />{preserve && <p className="media-help">Se conservará la imagen guardada si no eliges otro archivo.</p>}{file && <p className="media-help">Seleccionado: {file.name}</p>}</div>
+      {(draft.tipo === 'video' || draft.tipo === 'imagen' && source === 'file') ? <div><Input label={draft.tipo === 'video' ? 'Archivo de video' : 'Archivo de imagen'} type="file" accept={draft.tipo === 'video' ? 'video/mp4,video/webm,.mp4,.webm' : IMAGE_ACCEPT} onChange={event => { setFile(event.target.files?.[0] || null); setError(''); }} hint={draft.tipo === 'video' ? 'MP4 (H.264) o WebM, hasta 20 segundos y 8 MB. Se valida también en el servidor.' : 'JPG, PNG, WebP, HEIC o HEIF. Hasta 2 MB. Se valida en el servidor al guardar.'} persistentHint />{preserve && <p className="media-help">Se conservará la imagen guardada si no eliges otro archivo.</p>}{file && <p className="media-help">Seleccionado: {file.name}</p>}</div>
         : <Input label="URL del contenido" type="url" value={draft.url} required maxLength={2000} placeholder="https://…" onChange={event => edit({ url: event.target.value })} hint={draft.tipo === 'enlace' ? 'Se mostrará como enlace; no se incrustan páginas arbitrarias.' : 'Usa la URL completa y pública del contenido, no código HTML ni enlaces de perfil.'} persistentHint />}
       <Toggle label="Recurso activo" checked={draft.activo} onChange={activo => edit({ activo })} />
       {error && <Alert variant="error">{error}</Alert>}
@@ -78,7 +82,7 @@ export function MediaLibrary({ active, isCurrent, onDirty }: { active: boolean; 
   }
   return <div className="media-library">
     <header className="media-library-heading"><div><h2>Biblioteca multimedia</h2><p>Guarda imágenes y contenido público para reutilizarlo más adelante en las secciones de tu tienda.</p></div><Button type="button" disabled={busy} onClick={() => openEditor(null)}>Agregar recurso</Button></header>
-    <p className="media-help">Guardar aquí no publica contenido en tu tienda. Solo se permiten imágenes y enlaces; la subida de videos propios todavía no está disponible.</p>
+    <p className="media-help">Guardar aquí no publica contenido en tu tienda. Puedes reutilizar imágenes, videos propios de hasta 20 segundos y 8 MB, y enlaces públicos.</p>
     {editor && <ResourceForm key={editor.key} initial={editor.item} busy={busy} onDirty={setDirty} onCancel={() => { setEditor(null); setMutationError(''); }} onSave={(draft, file, preserve) => mutate(signal => saveMediaResource(editor.item?.id || null, draft, file, preserve, signal), 'Recurso guardado.', true)} />}
     {mutationError && <Alert variant="error">{mutationError}</Alert>}
     <p role="status">{notice}</p>

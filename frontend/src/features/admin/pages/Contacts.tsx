@@ -1,8 +1,9 @@
+import { CampaignWorkspace } from '../components/CampaignWorkspace';
 import { useEffect, useRef, useState } from 'react';
 import { EmptyListState, ErrorState, LoadingState } from '../../../shared/components/states';
 import { humanizeAdminError } from '../utils/humanizeError';
 import { useSearchParams } from 'react-router-dom';
-import { AdminCard, Button } from '../components/ui';
+import { AdminCard, Button, Tabs } from '../components/ui';
 import { HistoryPagination } from '../components/HistoryControls';
 import CommercialFilters from '../components/CommercialFilters';
 import { useCommercialHistory, useCommercialExport } from '../hooks/useCommercialHistory';
@@ -16,7 +17,7 @@ const consentLabels: Record<Contact['consentimiento'], string> = {
   sin_registro: 'Sin autorización registrada',
 };
 
-export default function Contacts() {
+function ContactsList() {
   const [params, setParams] = useSearchParams();
   const key = params.toString();
   const result = useCommercialHistory(key, getContacts);
@@ -50,14 +51,14 @@ export default function Contacts() {
   return (
     <section aria-label="Contactos de clientes" className="commercial-section space-y-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <div><h2 className="text-lg font-bold text-[#0f1623]">Contactos de clientes</h2>
+        <div className="min-w-0 flex-1">
           <p className="mt-1 text-sm text-[#52617a]">Consulta compradores y solicitudes de publicidad de tu tienda. Marketing incluye solo correos con autorización vigente y verificada.</p></div>
-        <div className="relative" ref={exportRef}>
-          <Button disabled={disabled} onClick={() => setMenuOpen(open => !open)} aria-expanded={menuOpen} aria-haspopup="true">
+        <div className="relative w-full shrink-0 sm:w-auto" ref={exportRef}>
+          <Button className="w-full sm:w-auto whitespace-normal" disabled={disabled} onClick={() => setMenuOpen(open => !open)} aria-expanded={menuOpen} aria-haspopup="true">
             Exportar contactos {menuOpen ? '▴' : '▾'}
           </Button>
           {menuOpen && !disabled && (
-            <div className="absolute right-0 top-full z-30 mt-2 w-[min(280px,calc(100vw-36px))] rounded-xl border border-[#dce3ef] bg-white p-2 shadow-lg">
+            <div className="relative z-30 mt-2 w-full max-w-full sm:absolute sm:right-0 sm:top-full sm:w-72 sm:max-w-[calc(100vw-36px)] rounded-xl border border-[#dce3ef] bg-white p-2 shadow-lg">
               <p className="px-2 pb-2 text-xs font-semibold text-[#52617a]">Selecciona un formato</p>
               <div className="flex flex-col gap-1">
                 <button type="button" onClick={() => download(false, 'xlsx')} className="min-h-10 rounded-lg px-3 text-left text-sm hover:bg-[#f1f4f9] focus-visible:outline-2 focus-visible:outline-[#1a3a6b]">Excel de contactos</button>
@@ -129,4 +130,11 @@ export default function Contacts() {
       </details>
     </section>
   );
+}
+
+
+export default function Contacts() {
+  const [params, setParams] = useSearchParams();
+  const active = params.get('vista') === 'campanas' ? 'campaigns' : 'contacts';
+  return <div className="space-y-5"><Tabs label="Contactos y campañas" active={active} tabs={[{ id: 'contacts', label: 'Contactos' }, { id: 'campaigns', label: 'Campañas' }]} onChange={value => { const next = new URLSearchParams(params); if (value === 'campaigns') next.set('vista', 'campanas'); else next.delete('vista'); setParams(next); }} />{active === 'campaigns' ? <CampaignWorkspace /> : <ContactsList />}</div>;
 }

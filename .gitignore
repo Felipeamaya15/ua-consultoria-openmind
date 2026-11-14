@@ -48,3 +48,5 @@ htmlcov/
 
 # Respaldos locales de despliegue / actualización (SCRUM-489)
 backups/
+/.env.gmail.local
+/gmail-local.compose.yml

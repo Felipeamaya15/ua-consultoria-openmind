@@ -49,3 +49,21 @@ async function settled(component, props = {}) {
   assert.equal(identityRequests, beforePreview, 'Editor no consulta identidad real');
   console.log('OK: propietario/staff, cliente, visitante, guard de perfil y cinco headers.');
 })().catch(error => {console.error(error); process.exitCode = 1;});
+
+
+(async () => {
+  const local = new Map([['token', 'qa-session-only'], ['entrepreneur_session_started_at', '2026-11-10'], ['cookie-preferences', 'preservar']]);
+  const session = new Map([['token', 'qa-tab-session-only']]);
+  const storage = map => ({ getItem: key => map.get(key) ?? null, removeItem: key => map.delete(key), setItem: (key, value) => map.set(key, value) });
+  const { authService } = require('./source-loader.cjs').load('src/features/auth/services/authService.ts', {
+    '../../../shared/services/apiRequest': {},
+  }, { localStorage: storage(local), sessionStorage: storage(session), fetch: () => { throw new Error('Logged-out identity must not make requests'); } });
+  assert.equal(authService.hasSession(), true);
+  authService.logout();
+  assert.equal(authService.hasSession(), false);
+  assert.equal(authService.getSessionStartedAt(), null);
+  assert.equal(session.has('token'), false);
+  assert.equal(local.get('cookie-preferences'), 'preservar');
+  assert.equal(await authService.getMe(), null);
+  console.log('OK cierre de sesión: limpia tokens locales y de pestaña, conserva preferencias y no consulta identidad sin sesión.');
+})().catch(error => { console.error(error); process.exitCode = 1; });

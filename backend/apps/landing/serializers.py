@@ -75,10 +75,11 @@ class ConfiguracionLandingSerializer(serializers.ModelSerializer):
     # Imágenes adicionales asociadas a esta configuración.
     # Es de solo lectura para no modificar las imágenes
     # accidentalmente al guardar otros datos de la Landing.
-    imagenes_carrusel = ImagenCarruselLandingSerializer(
-        many=True,
-        read_only=True,
-    )
+    imagenes_carrusel = serializers.SerializerMethodField()
+
+    def get_imagenes_carrusel(self, instance):
+        from apps.landing.carousel_content import carousel_items
+        return carousel_items(instance, self.context.get('request'))
 
     logo = WebImageField(
         max_mb=1,

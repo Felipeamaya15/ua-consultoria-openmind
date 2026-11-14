@@ -121,12 +121,39 @@ async function run() {
   authService.setSession('tok-activo');
   assert.equal(authService.hasSession(), true);
 
-  // Simular más de 30 minutos de inactividad
+  // Reinicio de temporizador: al haber actividad reciente se renueva la ventana de 30m
+  store.set(
+    'session_last_activity_at',
+    new Date(Date.now() - 25 * 60 * 1000).toISOString(),
+  );
+  authService.touchActivity();
+  // Al tocar actividad, el temporizador vuelve a 0 y no expira a los 31m del inicio original
+  assert.equal(authService.hasSession(), true);
+
+  // Simular más de 30 minutos de inactividad para cuenta administrativa
   store.set(
     'session_last_activity_at',
     new Date(Date.now() - 31 * 60 * 1000).toISOString(),
   );
   assert.equal(authService.hasSession(), false);
+  assert.equal(store.get('token'), undefined);
+
+  // Cuenta de cliente final: NO se cierra tras 30 minutos de inactividad
+  authService.setSession('tok-cliente', { is_staff: false, is_store_owner: false });
+  assert.equal(authService.hasSession(), true);
+  store.set(
+    'session_last_activity_at',
+    new Date(Date.now() - 31 * 60 * 1000).toISOString(),
+  );
+  assert.equal(authService.hasSession(), true, 'La sesión de cliente final NO debe expirar tras 30 min de inactividad');
+  assert.equal(authService.getToken(), 'tok-cliente');
+
+  // Solo expira tras vencer el plazo prolongado (30 días)
+  store.set(
+    'session_last_activity_at',
+    new Date(Date.now() - 31 * 24 * 60 * 60 * 1000).toISOString(),
+  );
+  assert.equal(authService.hasSession(), false, 'La sesión de cliente expira tras superar el plazo prolongado (30 días)');
   assert.equal(store.get('token'), undefined);
 
   // Verificar llamadas de recuperación de contraseña, MFA y CAPTCHA

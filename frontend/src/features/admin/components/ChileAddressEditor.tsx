@@ -1,3 +1,4 @@
+import { safeMapsLink } from '../../landing/types/mapLocation';
 import { useState } from 'react';
 import type { UbicacionLanding } from '../../landing/types/landing.types';
 import territory from '../data/chileTerritory.json';
@@ -36,6 +37,6 @@ export function ChileAddressEditor({ value, onChange }: { value: UbicacionLandin
     }} hint="Ciudades y pueblos del INE (Censo 2017). Usa Otra localidad si no está en la lista." />
     {customLocality && <Input label="Nombre de la localidad" required value={value.ciudad} maxLength={100} onChange={e => onChange({ ...value, ciudad: e.target.value })} />}
     <Input label="Dirección (calle, número y complemento)" value={value.direccion} maxLength={250} autoComplete="street-address" onChange={e => onChange({ ...value, direccion: e.target.value })} />
-    <Input label="Enlace de Google Maps (URL completa)" type="url" value={value.enlace_maps} onChange={e => onChange({ ...value, enlace_maps: e.target.value })} />
+    <Input label="Enlace de Google Maps (URL completa)" type="url" hint="Opcional. Pega un enlace HTTPS de Google Maps; también puedes usar la dirección para generar el mapa." persistentHint error={value.enlace_maps.trim() && !safeMapsLink(value.enlace_maps) ? 'Usa un enlace HTTPS de Google Maps, sin credenciales ni redirecciones.' : undefined} value={value.enlace_maps} onChange={e => onChange({ ...value, enlace_maps: e.target.value })} />
   </div>;
 }

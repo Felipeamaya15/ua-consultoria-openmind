@@ -170,6 +170,8 @@ class ActivityRequestView(NoStoreActivityView):
         state = data.validated_data['estado']
         if state not in (CONSULT_STATES if record.tipo == 'consulta' else ENROLL_STATES):
             raise ValidationError('El estado no corresponde a este tipo de solicitud.')
+        if record.tipo == 'consulta' and state == 'respondida' and state != record.estado and not record.respuestas.filter(estado='aceptada').exists():
+            raise ValidationError('Respondida se establece tras aceptar una respuesta enviada. Usa En revisión o Cerrada para la gestión manual.')
         if record.tipo == 'inscripcion' and state != 'cancelada' and state != record.estado:
             section = find_activity(config, record.seccion_id)
             require_enrollment(section)

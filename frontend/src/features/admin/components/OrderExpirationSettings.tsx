@@ -11,11 +11,6 @@ function parse(value: string, min: number): number | null {
   const number = Number(value);
   return number >= min && number <= MAX_HOURS ? number : null;
 }
-function describe(hours: number) {
-  if (hours === 0) return 'sin vencimiento';
-  if (hours % 24 === 0) { const days = hours / 24; return `${days} ${days === 1 ? 'día' : 'días'}`; }
-  return `${hours} ${hours === 1 ? 'hora' : 'horas'}`;
-}
 
 /** Cuánto espera un pedido sin pagar antes de cancelarse y devolver su stock (SCRUM-509). Guarda aparte del resto del formulario de pagos. */
 export function OrderExpirationSettings() {
@@ -62,29 +57,27 @@ export function OrderExpirationSettings() {
   return <AdminCard>
     <section aria-labelledby="order-expiration-title" className="space-y-3">
       <div>
-        <h2 id="order-expiration-title" className="font-semibold text-sm">Plazo para pagar los pedidos</h2>
+        <h2 id="order-expiration-title" className="font-semibold text-sm">Plazo de vencimiento para pedidos pendientes</h2>
         <p className="text-xs text-[var(--muted-foreground)]">
-          Un pedido sin pagar reserva sus productos. Pasado el plazo se cancela solo, el stock vuelve al inventario y el comprador
-          recibe un aviso por correo. El plazo también se le informa en el correo de confirmación del pedido.
+          Tiempo límite de espera para que el comprador realice el pago antes de liberar el inventario.
         </p>
       </div>
       {loading ? <LoadingState size="sm" align="start" spacing="compact">Cargando plazos...</LoadingState> : <>
         <fieldset disabled={saving || loadFailed} className="grid gap-3 sm:grid-cols-2">
           <Input
-            label="Pagos en línea (Webpay, PayPal, Mercado Pago y TUU), en horas" type="number" inputMode="numeric" min={1} max={MAX_HOURS} step={1}
+            label="Pagos en línea (horas)" type="number" inputMode="numeric" min={1} max={MAX_HOURS} step={1}
             value={draft.online} onChange={event => { setMessage(null); setDraft({ ...draft, online: event.target.value }); }}
             error={online === null ? `Escribe un número entero de 1 a ${MAX_HOURS}.` : undefined}
-            persistentHint hint="Normalmente el comprador paga en minutos. Recomendado: 2 horas."
+            placeholder="2"
           />
           <Input
-            label="Transferencia y Linkify, en horas" type="number" inputMode="numeric" min={0} max={MAX_HOURS} step={1}
+            label="Transferencia bancaria y Linkify (horas)" type="number" inputMode="numeric" min={0} max={MAX_HOURS} step={1}
             value={draft.manual} onChange={event => { setMessage(null); setDraft({ ...draft, manual: event.target.value }); }}
             error={manual === null ? `Escribe un número entero de 0 a ${MAX_HOURS}.` : undefined}
-            persistentHint hint="24 = 1 día, 168 = 1 semana, 720 = 30 días (máximo). Escribe 0 para que nunca venza."
+            placeholder="48"
           />
         </fieldset>
-        {manual === 0 && <Alert variant="warning">Con 0, los pedidos de transferencia y Linkify nunca vencen y mantienen reservado su stock hasta que los apruebes o los rechaces. Revisa tus transferencias pendientes con frecuencia.</Alert>}
-        {manual !== null && manual > 0 && <p className="text-xs text-[var(--muted-foreground)]">El comprador tendrá {describe(manual)} para transferir. Si paga después, el pedido ya estará cancelado y tendrás que resolverlo con él directamente.</p>}
+        {manual === 0 && <Alert variant="warning">Con 0 horas, los pedidos por transferencia no vencerán automáticamente.</Alert>}
         {message && <div role={message.type === 'error' ? 'alert' : 'status'}><Alert variant={message.type}>{message.text}</Alert></div>}
         <div className="flex justify-end gap-2">
           {loadFailed && <Button type="button" size="sm" variant="outline" onClick={() => setAttempt(n => n + 1)}>Reintentar</Button>}

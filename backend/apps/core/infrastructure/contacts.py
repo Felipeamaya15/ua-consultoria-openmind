@@ -32,6 +32,12 @@ def normalize_email(value):
     return email if len(email) <= 320 else None
 
 
+def eligible_consents(store):
+    """Criterio único para exportación comercial y preparación de campañas."""
+    return ConsentimientoComercial.objects.filter(tienda=store, estado='autorizado', verificado=True,
+        fecha_verificacion__isnull=False, fecha_autorizacion__isnull=False).exclude(version_texto='').exclude(referencia_evidencia='')
+
+
 def contact_rows(store, params, *, marketing=False):
     validate_params(params, CONTACT_FILTERS)
     text = reglas.leer_busqueda(params)
@@ -52,8 +58,7 @@ def contact_rows(store, params, *, marketing=False):
     elif state == 'retirado':
         matching = matching.filter(estado='retirado')
     if marketing:
-        matching = matching.filter(estado='autorizado', verificado=True,
-            fecha_verificacion__isnull=False, fecha_autorizacion__isnull=False).exclude(version_texto='').exclude(referencia_evidencia='')
+        matching = matching.filter(pk__in=eligible_consents(store).values('pk'))
     query = (Pedido.objects.filter(tienda=store).annotate(email_normalizado=email)
              .exclude(email_normalizado='').order_by().values('email_normalizado')
              .annotate(cantidad_pedidos=Count('pk'), ultimo_pedido=Max('fecha_creacion')))

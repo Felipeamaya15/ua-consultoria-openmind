@@ -1,0 +1,339 @@
+.om-product-gallery{position:absolute;inset:0;overflow:hidden;isolation:isolate;touch-action:pan-y}
+.om-product-gallery__link{display:block;position:absolute;inset:0}
+.om-product-gallery__layer{position:absolute;inset:0;display:block;pointer-events:none}
+.om-product-gallery__layer img{width:100%;height:100%;object-fit:cover}
+.om-product-gallery__layer--slide{animation:om-gallery-slide .4s ease both}
+.om-product-gallery__layer--fade{animation:om-gallery-fade .4s ease both}
+.om-product-gallery__layer--zoom{animation:om-gallery-zoom .4s ease both}
+.om-product-gallery__arrow,.om-product-gallery__pause{position:absolute;z-index:4;border:1px solid #ffffff99;background:var(--primary, #172338);color:var(--on-primary, #fff);min-width:44px;min-height:44px;display:grid;place-items:center;cursor:pointer;border-radius:50%;font:28px/1 system-ui;box-shadow:0 2px 8px #0003}
+.om-product-gallery__arrow{top:50%;transform:translateY(-50%)}
+.om-product-gallery__arrow--previous{left:4px}.om-product-gallery__arrow--next{right:4px}
+.om-product-gallery button:focus-visible{outline:3px solid #fff;outline-offset:-4px;box-shadow:0 0 0 3px #243e75}
+.om-product-gallery__dots{position:absolute;z-index:4;bottom:4px;left:50%;transform:translateX(-50%);display:flex;max-width:70%;overflow:auto;background:#172338bb;border-radius:20px}
+.om-product-gallery__dots button{background:transparent;border:0;min-width:24px;min-height:24px;display:grid;place-items:center;cursor:pointer;padding:0}
+.om-product-gallery__dots button::before{content:'';width:6px;height:6px;border:1px solid #fff;border-radius:50%}
+.om-product-gallery__dots button[aria-current=true]::before{background:#fff}
+.om-product-gallery__pause{bottom:3px;right:3px;min-width:32px;min-height:32px;font-size:14px}
+@keyframes om-gallery-slide{from{transform:translateX(100%)}to{transform:translateX(0)}}
+@keyframes om-gallery-fade{from{opacity:0}to{opacity:1}}
+@keyframes om-gallery-zoom{from{opacity:0;transform:scale(1.05)}to{opacity:1;transform:scale(1)}}
+@media(prefers-reduced-motion:reduce){.om-product-gallery__layer{animation:none!important}}
+
+.om-product-gallery{container-type:inline-size}
+@container(max-width:110px){.om-product-gallery__arrow--previous{top:0;left:0;transform:none}.om-product-gallery__arrow--next{top:auto;bottom:0;right:0;transform:none}.om-product-gallery__dots,.om-product-gallery__pause{display:none}}
+
+/* Galeria de ficha: mantener imagen y controles dentro de su espacio */
+.om-product-gallery--detail{
+  position:relative;
+  inset:auto;
+  display:block;
+  width:100%;
+  max-width:100%;
+  height:auto;
+  aspect-ratio:1 / 1;
+  overflow:hidden;
+  isolation:isolate;
+}
+
+.om-product-gallery--detail .om-product-gallery__layer img{
+  display:block;
+  width:100%;
+  height:100%;
+  max-width:100%;
+  max-height:100%;
+  object-fit:contain;
+}
+
+.om-product-gallery--detail .om-product-gallery__arrow{
+  z-index:5;
+}
+
+
+
+
+/* Galeria de producto: formas configurables por plantilla */
+.om-product-gallery.om-product-gallery--detail-controls .om-product-gallery__arrow {
+  --om-arrow-radius: var(--visual-page-product-gallery-arrow-radius-desktop, 999px);
+  --om-arrow-bg: var(--visual-page-product-gallery-arrow-background-desktop, var(--primary));
+  --om-arrow-color: var(--visual-page-product-gallery-arrow-color-desktop, var(--on-primary));
+  --om-arrow-border: var(--visual-page-product-gallery-arrow-border-desktop, 1px solid #ffffff99);
+  --om-arrow-shadow: var(--visual-page-product-gallery-arrow-shadow-desktop, 0 2px 8px #0003);
+
+  display: grid !important;
+  place-items: center !important;
+  width: 46px !important;
+  height: 46px !important;
+  min-width: 46px !important;
+  min-height: 46px !important;
+  padding: 0 !important;
+
+  border-radius: var(--om-arrow-radius) !important;
+  background: var(--om-arrow-bg) !important;
+  color: var(--om-arrow-color) !important;
+  border: var(--om-arrow-border) !important;
+  box-shadow: var(--om-arrow-shadow) !important;
+
+  font-family: system-ui, sans-serif;
+  font-size: 36px !important;
+  font-weight: 800 !important;
+  line-height: 1 !important;
+  text-shadow: 0 1px 2px #ffffffaa, 0 2px 4px #00000088;
+
+  opacity: 1 !important;
+  visibility: visible !important;
+  z-index: 6;
+  cursor: pointer;
+}
+
+.om-product-gallery.om-product-gallery--detail-controls .om-product-gallery__arrow:hover {
+  filter: brightness(1.08);
+}
+
+@media (min-width: 768px) and (max-width: 1023px) {
+  .om-product-gallery.om-product-gallery--detail-controls .om-product-gallery__arrow {
+    --om-arrow-radius: var(--visual-page-product-gallery-arrow-radius-tablet, 999px);
+    --om-arrow-bg: var(--visual-page-product-gallery-arrow-background-tablet, var(--primary));
+    --om-arrow-color: var(--visual-page-product-gallery-arrow-color-tablet, var(--on-primary));
+    --om-arrow-border: var(--visual-page-product-gallery-arrow-border-tablet, 1px solid #ffffff99);
+    --om-arrow-shadow: var(--visual-page-product-gallery-arrow-shadow-tablet, 0 2px 8px #0003);
+  }
+}
+
+@media (max-width: 767px) {
+  .om-product-gallery.om-product-gallery--detail-controls .om-product-gallery__arrow {
+    --om-arrow-radius: var(--visual-page-product-gallery-arrow-radius-mobile, 999px);
+    --om-arrow-bg: var(--visual-page-product-gallery-arrow-background-mobile, var(--primary));
+    --om-arrow-color: var(--visual-page-product-gallery-arrow-color-mobile, var(--on-primary));
+    --om-arrow-border: var(--visual-page-product-gallery-arrow-border-mobile, 1px solid #ffffff99);
+    --om-arrow-shadow: var(--visual-page-product-gallery-arrow-shadow-mobile, 0 2px 8px #0003);
+  }
+}
+/* OPENMIND_GALLERY_ARROWS_REFINED_V2 */
+.om-product-gallery.om-product-gallery--detail-controls .om-product-gallery__arrow {
+  box-sizing: border-box;
+  width: 42px !important;
+  height: 42px !important;
+  min-width: 42px !important;
+  min-height: 42px !important;
+  padding: 0 !important;
+
+  display: grid !important;
+  place-items: center !important;
+
+  font-size: 0 !important;
+  text-shadow: none !important;
+  line-height: 1 !important;
+
+  transition: background-color .18s ease,
+              box-shadow .18s ease,
+              border-color .18s ease;
+}
+
+.om-product-gallery.om-product-gallery--detail-controls .om-product-gallery__arrow::before {
+  content: "";
+  display: block;
+  box-sizing: border-box;
+  width: 11px;
+  height: 11px;
+  flex: none;
+  border-style: solid;
+  border-color: currentColor;
+  border-width: 0;
+}
+
+.om-product-gallery.om-product-gallery--detail-controls .om-product-gallery__arrow--previous::before {
+  border-left-width: 2.5px;
+  border-bottom-width: 2.5px;
+  transform: translateX(2px) rotate(45deg);
+}
+
+.om-product-gallery.om-product-gallery--detail-controls .om-product-gallery__arrow--next::before {
+  border-top-width: 2.5px;
+  border-right-width: 2.5px;
+  transform: translateX(-2px) rotate(45deg);
+}
+
+.om-product-gallery.om-product-gallery--detail-controls .om-product-gallery__arrow:focus-visible {
+  outline: 2px solid var(--visual-text, #333);
+  outline-offset: 2px;
+}
+/* OPENMIND_CENTERED_SVG_ARROWS_V3 */
+.om-product-gallery.om-product-gallery--detail-controls .om-product-gallery__arrow {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 0 !important;
+  text-shadow: none !important;
+}
+
+.om-product-gallery.om-product-gallery--detail-controls .om-product-gallery__arrow::before {
+  content: none !important;
+  display: none !important;
+}
+
+.om-product-gallery.om-product-gallery--detail-controls .om-product-gallery__arrow svg {
+  display: block;
+  width: 20px;
+  height: 20px;
+  min-width: 20px;
+  min-height: 20px;
+  margin: 0;
+  padding: 0;
+  flex-shrink: 0;
+  transform: none;
+  pointer-events: none;
+}
+/* OPENMIND_FEATURED_IMAGE_FALLBACK_V1 */
+.om-product-gallery--featured .om-product-gallery__fallback {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.om-product-gallery--featured .om-product-gallery__fallback img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 1 !important;
+  visibility: visible !important;
+  transform: none !important;
+  animation: none !important;
+}
+
+.om-product-gallery--featured .om-product-gallery__layer {
+  z-index: 1;
+}
+/* OPENMIND_FEATURED_FULL_IMAGE_FIX_V2 */
+
+/* La galeria ocupa exactamente el espacio de la tarjeta */
+.om-product-gallery--featured {
+  position: absolute !important;
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  overflow: hidden !important;
+  isolation: isolate;
+}
+
+/* El enlace tambien debe cubrir todo el recuadro */
+.om-product-gallery--featured .om-product-gallery__link {
+  position: absolute !important;
+  inset: 0 !important;
+  display: block !important;
+  width: 100% !important;
+  height: 100% !important;
+  overflow: hidden !important;
+}
+
+/* Fotografia de respaldo */
+.om-product-gallery--featured .om-product-gallery__fallback {
+  position: absolute !important;
+  inset: 0 !important;
+  z-index: 0 !important;
+}
+
+/* La imagen activa debe cubrir todo el espacio */
+.om-product-gallery--featured .om-product-gallery__layer {
+  position: absolute !important;
+  inset: 0 !important;
+  display: block !important;
+  width: 100% !important;
+  height: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  z-index: 2 !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  transform: none !important;
+  animation: none !important;
+}
+
+/* Evitar que la foto se desplace a las esquinas */
+.om-product-gallery--featured .om-product-gallery__layer img {
+  position: absolute !important;
+  inset: 0 !important;
+  display: block !important;
+  width: 100% !important;
+  height: 100% !important;
+  max-width: none !important;
+  max-height: none !important;
+  object-fit: cover !important;
+  object-position: center !important;
+  margin: 0 !important;
+  transform: none !important;
+  animation: none !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+/* Ocultar navegacion manual solamente en Destacados */
+.om-product-gallery--featured .om-product-gallery__arrow,
+.om-product-gallery--featured .om-product-gallery__dots,
+.om-product-gallery--featured .om-product-gallery__pause {
+  display: none !important;
+}
+/* OPENMIND_FEATURED_TRANSITIONS_V3 */
+
+/* Deslizar: la fotografia nueva entra desde la derecha */
+@keyframes om-featured-slide-full {
+  from {
+    translate: 100% 0;
+  }
+  to {
+    translate: 0 0;
+  }
+}
+
+/* Fundido: la fotografia nueva aparece suavemente */
+@keyframes om-featured-fade-full {
+  from {
+    filter: opacity(0);
+  }
+  to {
+    filter: opacity(1);
+  }
+}
+
+/* Zoom: entrada suave sin perder el recuadro */
+@keyframes om-featured-zoom-full {
+  from {
+    scale: 1.055;
+    filter: opacity(0);
+  }
+  to {
+    scale: 1;
+    filter: opacity(1);
+  }
+}
+
+/* Transiciones activas solamente durante hover en Inicio */
+.om-product-gallery--featured.om-product-gallery--hovering
+.om-product-gallery__layer--slide {
+  animation: om-featured-slide-full .38s ease-out both !important;
+}
+
+.om-product-gallery--featured.om-product-gallery--hovering
+.om-product-gallery__layer--fade {
+  animation: om-featured-fade-full .38s ease-out both !important;
+}
+
+.om-product-gallery--featured.om-product-gallery--hovering
+.om-product-gallery__layer--zoom {
+  animation: om-featured-zoom-full .38s ease-out both !important;
+}
+
+/* Respetar la preferencia de movimiento reducido */
+@media (prefers-reduced-motion: reduce) {
+  .om-product-gallery--featured.om-product-gallery--hovering
+  .om-product-gallery__layer--slide,
+  .om-product-gallery--featured.om-product-gallery--hovering
+  .om-product-gallery__layer--fade,
+  .om-product-gallery--featured.om-product-gallery--hovering
+  .om-product-gallery__layer--zoom {
+    animation: none !important;
+  }
+}

@@ -63,7 +63,14 @@ export function getInspectorGroups(section: VisualSectionId, catalogPage: boolea
       g('Imagen principal', [n('pages.login.content.imageSize', 'Tamaño de imagen principal', 'size', 1000, 60), n('pages.login.content.imageRadius', 'Bordes de la imagen', 'radius', 100), n('pages.login.content.imageRatio', 'Proporción ancho / alto', 'number', 4, .25, .05)]),
       g('Galería', [n('pages.login.content.gallerySize', 'Tamaño de miniaturas', 'size', 200, 30)]),
       g('Información', [n('pages.login.content.infoSize', 'Tamaño de descripción', 'size', 40, 10)]),
-      g('Precio', [n('pages.login.content.priceSize', 'Tamaño del precio', 'size', 80, 10)])
+      g('Flechas de navegación', [
+  s(
+    'pages.product.content.galleryArrowStyle',
+    'Forma de las flechas',
+    ['circulares', 'redondeadas', 'solo-flechas']
+  )
+]),
+g('Precio', [n('pages.login.content.priceSize', 'Tamaño del precio', 'size', 80, 10)])
     ] : page === 'cart' ? [g('Productos', [n('pages.login.content.imageSize', 'Tamaño de imagen', 'size', 300, 40), n('pages.login.content.imageRadius', 'Bordes de imagen', 'radius', 100), n('pages.login.content.priceSize', 'Tamaño de precios y total', 'size', 60, 10)])] : [];
     if (['login','profile','tracking'].includes(page)) extra.push(g('Formulario', [n('pages.login.content.formWidth', 'Ancho del formulario', 'size', 1200, 280), a('pages.login.content.align', 'Posición del formulario')]));
     return [{...common, label: page === 'product' ? 'Título y espaciado' : 'Título y distribución'}, ...extra].map(group => ({...group, fields: group.fields.map(field => ({...field,path:field.path.replace('pages.login.', 'pages.' + page + '.') as VisualPropertyPath}))}));

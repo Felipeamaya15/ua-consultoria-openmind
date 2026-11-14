@@ -22,12 +22,13 @@ export async function fetchMediaLibrary(page = 1, signal?: AbortSignal): Promise
   if (!value || !Array.isArray(value.resultados) || !Number.isSafeInteger(value.total) || value.total < 0 || value.pagina !== page || value.por_pagina !== 24) throw new Error('No pudimos confirmar los recursos. Reintenta la carga.');
   return { ...value, resultados: value.resultados.map(resource) };
 }
-export async function saveMediaResource(id: string | null, draft: MediaDraft, file: File | null, preserveImage: boolean, signal?: AbortSignal): Promise<MediaResource> {
+export async function saveMediaResource(id: string | null, draft: MediaDraft, file: File | null, preserveImage: boolean, signal?: AbortSignal, videoProfile: 'section' | 'product' = 'section'): Promise<MediaResource> {
   const payload = { ...draft, titulo: draft.titulo.trim(), descripcion: draft.descripcion.trim(), url: draft.url.trim() };
   const body = new FormData();
+  if (file && payload.tipo === 'video') body.append('perfil_video', videoProfile);
   for (const [key, value] of Object.entries(payload)) if (key !== 'url' || (!file && !preserveImage)) body.append(key, String(value));
-  if (file) body.append('imagen', file);
-  const saved = resource(await requestJson(id ? `${endpoint}${uuid(id)}/` : endpoint, { method: id ? 'PATCH' : 'POST', headers: headers(), body, signal }, undefined, 30000));
+  if (file) body.append(draft.tipo === 'video' ? 'video' : 'imagen', file);
+  const saved = resource(await requestJson(id ? `${endpoint}${uuid(id)}/` : endpoint, { method: id ? 'PATCH' : 'POST', headers: headers(), body, signal }, undefined, 90000));
   changed(); return saved;
 }
 export async function setMediaActive(id: string, active: boolean, signal?: AbortSignal): Promise<MediaResource> {
@@ -42,6 +43,18 @@ export async function deleteMediaResource(id: string, signal?: AbortSignal): Pro
 export async function fetchMediaImage(id: string, signal: AbortSignal): Promise<Blob> {
   const response = await fetch(`${endpoint}${uuid(id)}/imagen/`, { headers: headers(), cache: 'no-store', signal });
   if (!response.ok) { await readApiResponse(response); throw new Error('La imagen no está disponible.'); }
-  if (!['image/jpeg', 'image/png', 'image/webp'].includes(response.headers.get('Content-Type') || '')) throw new Error('La respuesta no contiene una imagen compatible.');
+  if (!['image/jpeg', 'image/png', 'image/webp', 'video/mp4', 'video/webm'].includes(response.headers.get('Content-Type') || '')) throw new Error('La respuesta no contiene una imagen compatible.');
   return response.blob();
+}
+
+
+/** Subida de producto: usa el perfil de 10 s / 3 MB del servidor. */
+export function saveProductVideoResource(
+  id: string | null,
+  draft: MediaDraft,
+  file: File | null,
+  preserveImage: boolean,
+  signal?: AbortSignal,
+): Promise<MediaResource> {
+  return saveMediaResource(id, draft, file, preserveImage, signal, 'product');
 }

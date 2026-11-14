@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { fetchStoreInformation, type StoreInformation } from '../../storefront/services/storeInformationService';
 import { useAdmin } from '../context/AdminContext';
 import { AdminCard, Alert, Input, Textarea, Button, Badge } from '../components/ui';
 import { GoogleAnalyticsField } from '../components/GoogleAnalyticsField';
@@ -16,6 +17,17 @@ export default function SeoAnalytics() {
   });
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState('');
+  const [business, setBusiness] = useState<StoreInformation | null>(null);
+  const [suggestionError, setSuggestionError] = useState('');
+  useEffect(() => {
+    const controller = new AbortController();
+    fetchStoreInformation(controller.signal, true).then(value => {
+      if (!controller.signal.aborted) setBusiness(value);
+    }).catch(() => {
+      if (!controller.signal.aborted) setSuggestionError('No se pudieron cargar las sugerencias del negocio. Puedes escribir el SEO manualmente.');
+    });
+    return () => controller.abort();
+  }, []);
 
   const update = (key: keyof typeof form, value: string) => {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -78,7 +90,7 @@ export default function SeoAnalytics() {
         <h2 className="font-semibold text-sm">Información para buscadores (SEO de la tienda)</h2>
         <Input
           label="Título de la tienda en buscadores"
-          placeholder="Mi Tienda · Productos de calidad"
+          placeholder={business?.nombre.slice(0, 150) || "Título para buscadores"}
           hint="Aparece en la pestaña del navegador y resultados de búsqueda"
           value={form.metaTitle}
           maxLength={150}
@@ -88,22 +100,32 @@ export default function SeoAnalytics() {
           label="Descripción de la tienda en buscadores"
           rows={3}
           maxLength={160}
-          placeholder="Descripción de tu tienda para motores de búsqueda..."
+          placeholder={business?.descripcion?.slice(0, 160) || "Descripción de tu tienda para motores de búsqueda..."}
           hint={`${form.metaDescription.length}/160 caracteres (recomendado: 120-160 caracteres)`}
           value={form.metaDescription}
           onChange={(e) => update('metaDescription', e.target.value)}
         />
+        {suggestionError && <p role="status" className="text-sm">{suggestionError}</p>}
+        {business && ((!form.metaTitle.trim() && business.nombre) || (!form.metaDescription.trim() && business.descripcion)) && (
+          <div className="rounded-lg bg-[var(--muted)] p-3 text-sm space-y-2">
+            <p>Sugerencias del negocio, todavía sin guardar. Puedes copiarlas a los campos vacíos y revisarlas antes de guardar.</p>
+            {!form.metaTitle.trim() && business.nombre && <p><strong>Título sugerido:</strong> {business.nombre.slice(0, 150)}</p>}
+            {!form.metaDescription.trim() && business.descripcion && <p><strong>Descripción sugerida:</strong> {business.descripcion.slice(0, 160)}</p>}
+            <Button type="button" variant="outline" onClick={() => { setForm(current => ({ ...current, metaTitle: current.metaTitle.trim() ? current.metaTitle : business.nombre.slice(0, 150), metaDescription: current.metaDescription.trim() ? current.metaDescription : (business.descripcion || '').slice(0, 160) })); setSaved(false) }}>Usar sugerencias en campos vacíos</Button>
+          </div>
+        )}
       </AdminCard>
 
       <AdminCard className="grid gap-4">
         <div className="flex items-center justify-between">
           <h2 className="font-semibold text-sm">Medición y Analítica</h2>
           <div className="flex flex-wrap gap-2">
-            {isAnalyticsActive && <Badge variant="success">Google Analytics activo</Badge>}
-            {isPixelActive && <Badge variant="success">Meta Pixel activo</Badge>}
+            {isAnalyticsActive && <Badge variant="success">Google Analytics configurado</Badge>}
+            {isPixelActive && <Badge variant="success">Meta Pixel configurado</Badge>}
           </div>
         </div>
 
+        <p className="text-sm text-[var(--muted-foreground)]">Guardar un identificador no sustituye el consentimiento: la medición respeta las preferencias de cookies de la tienda.</p>
         <MetaPixelField
           value={form.pixelId}
           onChange={(value) => update('pixelId', value)}

@@ -18,6 +18,9 @@ export function visualConfigWithCarouselVars(config: VisualConfig): CSSPropertie
   const hero = config.hero;
   return {
     ...visualConfigToCssVariables(config),
+    '--openmind-product-mode': hero.productImageMode ?? 'hover',
+    '--openmind-product-interval': String(hero.productImageInterval ?? 5),
+    '--openmind-product-transition': hero.productImageTransition ?? 'slide',
     '--openmind-carousel-mode': hero.carouselMode ?? 'automatic',
     '--openmind-carousel-interval': String(hero.carouselInterval ?? 5),
     '--openmind-carousel-transition': hero.carouselTransition ?? 'fade',

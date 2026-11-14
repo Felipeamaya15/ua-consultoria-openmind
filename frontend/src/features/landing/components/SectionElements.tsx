@@ -7,6 +7,9 @@ import { fetchPublishedSectionResources, type SectionResource } from '../service
 import type { SectionElement, SectionActivity } from '../types/sectionElements';
 import { ActivityRequestForm } from './ActivityRequestForm';
 import { LANDING_CONFIG_CHANGED } from '../services/landingService';
+import { API_BASE_URL } from '../../../api';
+import { ViewportVideo } from './ViewportVideo';
+import type { ImagenBloqueLanding } from '../types/landing.types';
 import { MEDIA_LIBRARY_CHANGED } from '../../marketing/services/mediaLibraryService';
 import './section-elements.css';
 
@@ -26,6 +29,94 @@ export function PublishedSectionMedia({ children }: { children: ReactNode }) {
   return <PublishedMedia.Provider value={resources}>{children}</PublishedMedia.Provider>;
 }
 
+export function SectionMediaItem({
+  item,
+  privatePreview = false,
+}: {
+  item: ImagenBloqueLanding;
+  privatePreview?: boolean;
+}) {
+  const [privateUrl, setPrivateUrl] = useState('');
+  const [error, setError] = useState('');
+  const videoId = item.video_recurso_id || '';
+
+  useEffect(() => {
+    setPrivateUrl('');
+    setError('');
+    if (!videoId || !privatePreview) return;
+
+    const token =
+      localStorage.getItem('token') ||
+      sessionStorage.getItem('token');
+    if (!token) {
+      setError('Inicia sesion para ver el video.');
+      return;
+    }
+
+    const controller = new AbortController();
+    let objectUrl = '';
+
+    fetch(
+      `${API_BASE_URL}/api/landing/biblioteca/${videoId}/imagen/`,
+      {
+        headers: { Authorization: `Token ${token}` },
+        cache: 'no-store',
+        signal: controller.signal,
+      }
+    )
+      .then(response => {
+        if (!response.ok) throw new Error('Archivo no disponible');
+        return response.blob();
+      })
+      .then(blob => {
+        if (controller.signal.aborted) return;
+        if (!blob.type.startsWith('video/')) {
+          throw new Error('Formato no compatible');
+        }
+        objectUrl = URL.createObjectURL(blob);
+        setPrivateUrl(objectUrl);
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) {
+          setError('No se pudo cargar el video.');
+        }
+      });
+
+    return () => {
+      controller.abort();
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [videoId, privatePreview]);
+
+  if (!videoId) {
+    return item.src
+      ? <img src={item.src} alt={item.alt} loading="lazy" />
+      : null;
+  }
+
+  const src = privatePreview
+    ? privateUrl
+    : `${API_BASE_URL}/api/landing/multimedia-publica/${videoId}/video/`;
+
+  if (error) return <p role="alert">{error}</p>;
+
+  if (!src) {
+    return <div className="section-media-loading">
+      Cargando video...
+    </div>;
+  }
+
+  return (
+    <ViewportVideo
+      key={src}
+      src={src}
+      loop
+      className="section-media-video"
+      onError={() => setError('No se pudo reproducir el video.')}
+    />
+  );
+}
+
 export function SectionElements({ elements, ownerResources, activity, sectionId }: { elements: SectionElement[]; ownerResources?: Record<string, MediaResource>; activity?:SectionActivity|null; sectionId?:string }) {
   const published = useContext(PublishedMedia);
   const resources = ownerResources ?? published;
@@ -41,7 +132,20 @@ export function SectionElements({ elements, ownerResources, activity, sectionId 
     else if (tipo === 'fecha') content = element.fecha && <p>Fecha: <time dateTime={element.fecha}>{element.fecha.split('-').reverse().join('/')}</time>{element.hasta&&<> al <time dateTime={element.hasta}>{element.hasta.split('-').reverse().join('/')}</time></>}</p>;
     else if (tipo === 'horario') content = element.inicio && <p>Horario: {element.inicio.slice(0, 5)}{element.termino ? ' a ' + element.termino.slice(0, 5) : ''}</p>;
     else if (tipo === 'modalidad') content = <p>Modalidad: {{ presencial: 'Presencial', online: 'Online', mixta: 'Mixta' }[element.modalidad || 'presencial']}</p>;
-    else if (tipo === 'imagen' || tipo === 'galeria') content = <div className={tipo === 'galeria' ? 'section-element-gallery' : 'section-element-image'}>{element.imagenes?.map(image => <figure key={image.id}><img src={image.src} alt={image.alt} loading="lazy" />{image.alt && <figcaption>{image.alt}</figcaption>}</figure>)}</div>;
+    else if (tipo === 'imagen' || tipo === 'galeria') content =
+      <div className={tipo === 'galeria'
+        ? 'section-element-gallery'
+        : 'section-element-image'}>
+        {element.imagenes?.map(image =>
+          <figure key={image.id}>
+            <SectionMediaItem
+              item={image}
+              privatePreview={!!ownerResources}
+            />
+            {image.alt && <figcaption>{image.alt}</figcaption>}
+          </figure>
+        )}
+      </div>;
     else if (tipo === 'boton' || tipo === 'ubicacion') {
       const href = element.url ? inspectMediaUrl('enlace', element.url).url : '';
       content = <>{tipo === 'ubicacion' && texto && <p>{texto}</p>}{href && <a href={href} target="_blank" rel="noopener noreferrer" className="section-element-link">{element.etiqueta || 'Más información'}</a>}</>;
@@ -52,10 +156,30 @@ export function SectionElements({ elements, ownerResources, activity, sectionId 
       content = href && <a href={href} target="_blank" rel="noopener noreferrer" className="section-element-link">{element.etiqueta || 'Solicitar información'}</a>;
     } else if (tipo === 'biblioteca') {
       const resource = resources[element.recurso_id || ''];
-      content = resource?.activo ? <MediaPreview resource={resource} publicImageUrl={ownerResources ? undefined : (resource as SectionResource).imagen_publica || undefined} initiallyOpen={resource.tipo === 'imagen'} /> : ownerResources ? <p role="status">El recurso no está activo o fue eliminado. No se mostrará en la tienda.</p> : null;
+      content = resource?.activo
+        ? resource.tipo === 'video'
+          ? <SectionMediaItem
+              item={{
+                id: element.id,
+                src: '',
+                alt: resource.titulo,
+                video_recurso_id: resource.id
+              }}
+              privatePreview={!!ownerResources}
+            />
+          : <MediaPreview
+              resource={resource}
+              publicImageUrl={ownerResources
+                ? undefined
+                : (resource as SectionResource).imagen_publica || undefined}
+              initiallyOpen={resource.tipo === 'imagen'}
+            />
+        : ownerResources
+          ? <p role="status">El recurso no esta disponible.</p>
+          : null;
     } else if (tipo === 'youtube' || tipo === 'social') {
       const kind = tipo === 'youtube' ? 'youtube' : element.proveedor || 'instagram';
-      if (element.url && !inspectMediaUrl(kind, element.url).error) content = <MediaPreview resource={{ id: element.id, titulo: tipo === 'youtube' ? 'Video de YouTube' : 'Publicación social', descripcion: '', tipo: kind, url: element.url, activo: true, archivo: null, creado: '', actualizado: '' }} />;
+      if (element.url && !inspectMediaUrl(kind, element.url).error) content = <MediaPreview resource={{ id: element.id, titulo: tipo === 'youtube' ? 'Video de YouTube' : 'Publicación social', descripcion: '', tipo: kind, url: element.url, activo: true, archivo: null, creado: '', actualizado: '' }} initiallyOpen={element.vista_abierta ?? false} />;
     }
     return content ? <div key={element.id} className={`section-element section-element--${tipo}`} data-section-element={element.id}>{content}</div> : null;
   })}</div>;

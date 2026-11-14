@@ -167,152 +167,205 @@ export default function EntrepreneurProfile() {
       {email === null ? (
         !error && <LoadingState align="start" spacing="compact">Cargando cuenta...</LoadingState>
       ) : (
-        <>
-          <section className="bg-white border rounded-xl p-5 space-y-3">
-            <div>
-              <h3 className="font-semibold">Sesion activa</h3>
-              <p className="text-sm text-[var(--muted-foreground)] break-all">
-                {email}
-              </p>
-              <p className="text-xs text-[var(--muted-foreground)]">
+        <div className="grid gap-6 lg:grid-cols-2 items-start">
+          <div className="grid gap-6">
+            <section className="bg-white border border-[var(--border)] rounded-xl p-6 shadow-[0_1px_2px_rgba(15,23,42,0.04)] space-y-5">
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex items-center gap-3.5 min-w-0">
+                  <div className="w-11 h-11 rounded-full overflow-hidden border border-slate-200 bg-[var(--primary)] text-white flex items-center justify-center font-bold text-sm shrink-0">
+                    {config.logo ? (
+                      <img
+                        src={config.logo}
+                        alt={config.name || 'Tienda'}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      (config.name?.trim()?.[0] || 'E').toUpperCase()
+                    )}
+                  </div>
+                  <div className="min-w-0">
+                    <h3 className="font-semibold text-slate-900 truncate">
+                      {config.name || 'Mi tienda'}
+                    </h3>
+                    <p className="text-xs text-slate-500 break-all">
+                      {email}
+                    </p>
+                  </div>
+                </div>
+                <span className="shrink-0 inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-0.5 text-[11px] font-medium text-emerald-700">
+                  Sesión activa
+                </span>
+              </div>
+
+              <div className="rounded-lg bg-slate-50 border border-slate-200/80 px-3.5 py-2.5 text-xs text-slate-600">
                 {sessionStartedAt
-                  ? `Inicio: ${new Date(
-                      sessionStartedAt,
-                    ).toLocaleString()} (expira tras 30 min de inactividad)`
-                  : 'Inicio no registrado para esta sesion.'}
-              </p>
-            </div>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={logout}
-            >
-              Cerrar sesion
-            </Button>
-          </section>
+                  ? `Inicio: ${String(new Date(sessionStartedAt).getDate()).padStart(2, '0')}/${String(new Date(sessionStartedAt).getMonth() + 1).padStart(2, '0')}/${new Date(sessionStartedAt).getFullYear()}, ${new Date(sessionStartedAt).toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' })} (expira tras 30 min de inactividad)`
+                  : 'Inicio no registrado para esta sesión.'}
+              </div>
 
-          <form
-            onSubmit={(event) => save(event)}
-            className="bg-white border rounded-xl p-5 space-y-4"
-          >
-            <Input
-              label="Correo electronico"
-              type="email"
-              autoComplete="email"
-              required
-              maxLength={254}
-              value={email}
-              onChange={(event) => {
-                setEmail(event.target.value);
-                setSuccess('');
-              }}
-            />
-            <Button
-              type="submit"
-              disabled={busy}
-            >
-              Guardar correo
-            </Button>
-          </form>
-
-          <form
-            onSubmit={(event) => save(event, true)}
-            className="bg-white border rounded-xl p-5 space-y-4"
-          >
-            <h3 className="font-semibold">Cambiar contrasena</h3>
-            <Input
-              label="Contrasena actual"
-              type="password"
-              autoComplete="current-password"
-              required
-              value={currentPassword}
-              onChange={(event) =>
-                setCurrentPassword(event.target.value)
-              }
-            />
-            <Input
-              label="Nueva contrasena"
-              type="password"
-              autoComplete="new-password"
-              required
-              value={newPassword}
-              onChange={(event) =>
-                setNewPassword(event.target.value)
-              }
-            />
-            <Button
-              type="submit"
-              disabled={busy}
-            >
-              Cambiar contrasena
-            </Button>
-          </form>
-
-          <section className="bg-white border rounded-xl p-5 space-y-3">
-            <h3 className="font-semibold">Autenticacion Multifactor (MFA · TOTP)</h3>
-            <p className="text-xs text-[var(--muted-foreground)]">
-              Segunda capa de verificacion con codigos temporales de 30-60 segundos compatibles con Google Authenticator o Authy.
-            </p>
-            {!mfaEnabled && !mfaSetup && (
-              <Button
-                type="button"
-                variant="outline"
-                disabled={busy}
-                onClick={() => void handleStartMfaSetup()}
-              >
-                Configurar MFA
-              </Button>
-            )}
-            {mfaSetup && (
-              <form onSubmit={handleConfirmMfa} className="space-y-3">
-                <p className="text-xs">
-                  Ingresa esta clave secreta en Google Authenticator o Authy:
-                </p>
-                <code className="block p-2 bg-neutral-100 rounded text-xs font-mono select-all break-all">
-                  {mfaSetup.secret}
-                </code>
-                <label className="block text-xs font-medium">
-                  Codigo de 6 digitos
-                  <input
-                    className="block w-full border rounded-lg p-2 mt-1 text-sm"
-                    type="text"
-                    inputMode="numeric"
-                    maxLength={6}
-                    placeholder="123456"
-                    required
-                    value={mfaCode}
-                    onChange={(e) =>
-                      setMfaCode(e.target.value.replace(/\D/g, '').slice(0, 6))
-                    }
-                  />
-                </label>
-                <Button type="submit" disabled={busy}>
-                  Activar MFA
+              <div className="flex items-center justify-between pt-1">
+                <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-[11px] font-medium text-slate-700">
+                  Emprendedor
+                </span>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={logout}
+                >
+                  Cerrar sesión
                 </Button>
-              </form>
-            )}
-            {mfaEnabled && (
-              <form onSubmit={handleDisableMfa} className="space-y-3">
-                <p className="text-xs text-green-700 font-medium">
-                  ✓ MFA activo en esta cuenta.
+              </div>
+            </section>
+
+            <form
+              onSubmit={(event) => save(event)}
+              className="bg-white border border-[var(--border)] rounded-xl p-6 shadow-[0_1px_2px_rgba(15,23,42,0.04)] space-y-4"
+            >
+              <div>
+                <h3 className="font-semibold text-slate-900">Correo electrónico</h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Dirección principal para acceder al panel y recibir notificaciones.
                 </p>
-                <label className="block text-xs font-medium">
-                  Contrasena actual para desactivar MFA
-                  <input
-                    className="block w-full border rounded-lg p-2 mt-1 text-sm"
-                    type="password"
-                    required
-                    value={mfaDisablePassword}
-                    onChange={(e) => setMfaDisablePassword(e.target.value)}
-                  />
-                </label>
-                <Button type="submit" variant="outline" disabled={busy}>
-                  Desactivar MFA
+              </div>
+              <Input
+                label="Correo electrónico"
+                type="email"
+                autoComplete="email"
+                required
+                maxLength={254}
+                value={email}
+                onChange={(event) => {
+                  setEmail(event.target.value);
+                  setSuccess('');
+                }}
+              />
+              <div className="flex justify-end">
+                <Button
+                  type="submit"
+                  size="sm"
+                  disabled={busy}
+                >
+                  Guardar correo
                 </Button>
-              </form>
-            )}
-          </section>
-        </>
+              </div>
+            </form>
+          </div>
+
+          <div className="grid gap-6">
+            <form
+              onSubmit={(event) => save(event, true)}
+              className="bg-white border border-[var(--border)] rounded-xl p-6 shadow-[0_1px_2px_rgba(15,23,42,0.04)] space-y-4"
+            >
+              <div>
+                <h3 className="font-semibold text-slate-900">Cambiar contraseña</h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Usa una contraseña segura que no utilices en otros servicios.
+                </p>
+              </div>
+              <Input
+                label="Contraseña actual"
+                type="password"
+                autoComplete="current-password"
+                required
+                value={currentPassword}
+                onChange={(event) =>
+                  setCurrentPassword(event.target.value)
+                }
+              />
+              <Input
+                label="Nueva contraseña"
+                type="password"
+                autoComplete="new-password"
+                required
+                value={newPassword}
+                onChange={(event) =>
+                  setNewPassword(event.target.value)
+                }
+              />
+              <div className="flex justify-end">
+                <Button
+                  type="submit"
+                  size="sm"
+                  disabled={busy}
+                >
+                  Cambiar contraseña
+                </Button>
+              </div>
+            </form>
+
+            <section className="bg-white border border-[var(--border)] rounded-xl p-6 shadow-[0_1px_2px_rgba(15,23,42,0.04)] space-y-4">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <h3 className="font-semibold text-slate-900">Autenticación Multifactor (MFA · TOTP)</h3>
+                  <p className="text-xs text-slate-500 mt-1">
+                    Segunda capa de verificación con códigos temporales de 30-60 segundos compatibles con Google Authenticator o Authy.
+                  </p>
+                </div>
+                <span className={`shrink-0 inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-medium ${mfaEnabled ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-600'}`}>
+                  {mfaEnabled ? 'Activo' : 'Inactivo'}
+                </span>
+              </div>
+
+              {!mfaEnabled && !mfaSetup && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={busy}
+                  onClick={() => void handleStartMfaSetup()}
+                >
+                  Configurar MFA
+                </Button>
+              )}
+              {mfaSetup && (
+                <form onSubmit={handleConfirmMfa} className="space-y-3 pt-1">
+                  <p className="text-xs text-slate-600">
+                    Ingresa esta clave secreta en Google Authenticator o Authy:
+                  </p>
+                  <code className="block p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-mono select-all break-all">
+                    {mfaSetup.secret}
+                  </code>
+                  <label className="block text-xs font-medium text-slate-700">
+                    Código de 6 dígitos
+                    <input
+                      className="block w-full border border-slate-200 rounded-lg p-2 mt-1 text-sm"
+                      type="text"
+                      inputMode="numeric"
+                      maxLength={6}
+                      placeholder="123456"
+                      required
+                      value={mfaCode}
+                      onChange={(e) =>
+                        setMfaCode(e.target.value.replace(/\D/g, '').slice(0, 6))
+                      }
+                    />
+                  </label>
+                  <Button type="submit" size="sm" disabled={busy}>
+                    Activar MFA
+                  </Button>
+                </form>
+              )}
+              {mfaEnabled && (
+                <form onSubmit={handleDisableMfa} className="space-y-3 pt-1">
+                  <label className="block text-xs font-medium text-slate-700">
+                    Contraseña actual para desactivar MFA
+                    <input
+                      className="block w-full border border-slate-200 rounded-lg p-2 mt-1 text-sm"
+                      type="password"
+                      required
+                      value={mfaDisablePassword}
+                      onChange={(e) => setMfaDisablePassword(e.target.value)}
+                    />
+                  </label>
+                  <Button type="submit" variant="outline" size="sm" disabled={busy}>
+                    Desactivar MFA
+                  </Button>
+                </form>
+              )}
+            </section>
+          </div>
+        </div>
       )}
     </div>
   );

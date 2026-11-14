@@ -1,3 +1,4 @@
+import './social-profiles.css';
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
 import { AdminCard, Alert, Button, Icon, Input, Textarea, Toggle } from '../../admin/components/ui';
 import { ErrorState, LoadingState } from '../../../shared/components/states';
@@ -26,7 +27,7 @@ function SocialProfileCard({ network, initial, isCurrent, onDirty }: CardProps) 
     if (request.current) return;
     setSubmitted(true); setError(''); setNotice('');
     if (!remove && preview.error) return;
-    if (!isCurrent()) { setError('Tu sesión cambió. Vuelve a abrir Marketing.'); return; }
+    if (!isCurrent()) { setError('Tu sesión cambió. Vuelve a abrir Página principal.'); return; }
     const controller = new AbortController(); request.current = controller; setBusy(true);
     try {
       const result = await saveSocialProfile(network, remove ? null : draft, controller.signal);
@@ -79,7 +80,7 @@ export function SocialProfiles({ active, isCurrent, onDirty }: { active: boolean
     return () => controller.abort();
   }, [active, profiles, retry, isCurrent]);
   return <div className="social-profiles">
-    <header><h2>Redes sociales de tu tienda</h2><p>Registra tus perfiles para que tus clientes puedan encontrarte.</p><p>Estos enlaces se muestran cuando Información de contacto está visible en la tienda. Registrar un enlace no conecta una cuenta ni autoriza publicaciones automáticas.</p></header>
+    <header><h2>Redes sociales de tu tienda</h2><p>Configura aquí WhatsApp, Instagram, Facebook y YouTube. Cada red se guarda por separado; estos cambios no dependen del botón general de Página principal.</p><p>Estos enlaces se muestran cuando Información de contacto está visible en la tienda. Registrar un enlace no conecta una cuenta ni autoriza publicaciones automáticas.</p></header>
     {!profiles && !error && <LoadingState>Cargando perfiles sociales…</LoadingState>}
     {error && <ErrorState onRetry={() => setRetry(old => old + 1)}>{error}</ErrorState>}
     {profiles && <div className="social-profiles-grid">{SOCIAL_NETWORKS.map(network => <SocialProfileCard key={network} network={network} initial={profiles[network]} isCurrent={isCurrent} onDirty={cardDirty} />)}</div>}

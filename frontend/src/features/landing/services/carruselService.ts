@@ -229,3 +229,15 @@ export async function deleteCarouselImage(
 
   notifyCarouselChanged();
 }
+
+
+export async function saveCarouselContent(id: string, contenido: import('../types/landing.types').CarouselSlideContent): Promise<ImagenCarruselLanding> {
+  const saved = await requestJson(`${ENDPOINT}${encodeURIComponent(id)}/`, {method:'PATCH',headers:{...authHeaders(),'Content-Type':'application/json'},body:JSON.stringify({contenido})});
+  if (!saved || typeof saved !== 'object' || (saved as ImagenCarruselLanding).id !== id) throw new Error('No pudimos confirmar el contenido guardado.');
+  notifyCarouselChanged(); return normalizeImage(saved as ImagenCarruselLanding);
+}
+export async function addCarouselResource(recurso_id: string): Promise<ImagenCarruselLanding> {
+  const saved = await requestJson(ENDPOINT,{method:'POST',headers:{...authHeaders(),'Content-Type':'application/json'},body:JSON.stringify({recurso_id})});
+  if (!saved || typeof saved !== 'object' || typeof (saved as ImagenCarruselLanding).id !== 'string') throw new Error('No pudimos confirmar el recurso agregado.');
+  notifyCarouselChanged(); return normalizeImage(saved as ImagenCarruselLanding);
+}

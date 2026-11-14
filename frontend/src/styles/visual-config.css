@@ -2164,8 +2164,9 @@
 }
 [data-storefront-visual] .ua-store-page :where(input:not([type=checkbox]):not([type=radio]):not([type=hidden]):not([type=file]),select,textarea) {
   background: var(--visual-page-field-background); color: var(--visual-page-field-color); border: var(--visual-page-field-border); border-radius: var(--visual-page-field-radius);
-  padding: var(--visual-page-field-padding); max-width: 100%; min-height: 40px;
+  padding: var(--visual-page-field-padding); max-width: 100%; min-height: 40px; box-sizing: border-box;
 }
+[data-storefront-visual] .ua-store-page select { height: auto; line-height: 1.4; }
 [data-storefront-visual] .ua-store-page :is(button[type=submit],[data-page-action=primary]) {
   background: var(--visual-page-button-background); color: var(--visual-page-button-color); border-radius: var(--visual-page-button-radius);
   padding: var(--visual-page-button-padding-y) var(--visual-page-button-padding-x); font-size: var(--visual-page-button-font-size); min-height: 40px; height: auto; white-space: normal;
