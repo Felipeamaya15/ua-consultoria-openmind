@@ -918,6 +918,7 @@ class CreateProductUseCase:
             "activo": data.get("activo", True),
             "fecha_creacion": timezone.now(),
             "imagenes": data.get("imagenes", []),
+            "video_recurso_id": data.get("video_recurso_id"),
             "atributos_generales": data.get("atributos_generales", []),
             "variantes": data["variantes"],
             "seo": data.get("seo", {}),

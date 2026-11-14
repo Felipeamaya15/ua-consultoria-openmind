@@ -1,7 +1,13 @@
+import { Button, Input, Textarea, Toggle, Modal } from './ui';
+import { MediaPreview } from '../../marketing/components/MediaPreview';
+import type { MediaResource } from '../../marketing/domain/mediaLibrary';
+import { fetchSectionLibrary } from '../../landing/services/sectionResources';
+import type { CarouselSlideContent } from '../../landing/types/landing.types';
 
 import { useEffect, useId, useRef, useState } from 'react';
 
 import {
+  addCarouselResource, saveCarouselContent,
   deleteCarouselImage,
   fetchCarouselImages,
   MAX_IMAGENES_CARRUSEL,
@@ -29,6 +35,25 @@ function errorMessage(error: unknown): string {
     : 'No pudimos completar la operación. Intenta nuevamente.';
 }
 
+function SlideContentEditor({image,onSaved,disabled}:{image:ImagenCarruselLanding;onSaved:(image:ImagenCarruselLanding)=>void;disabled:boolean}) {
+  const [draft,setDraft]=useState<CarouselSlideContent>(image.contenido ?? {}),[saving,setSaving]=useState(false),[error,setError]=useState(''),[notice,setNotice]=useState('');
+  const savedKey=JSON.stringify(image.contenido ?? {});
+  useEffect(()=>{setDraft(image.contenido ?? {});},[image.id,savedKey]);
+  const change=(next:Partial<CarouselSlideContent>)=>{setDraft(old=>({...old,...next}));setError('');setNotice('');};
+  async function persist(value:CarouselSlideContent){if(saving)return;setSaving(true);setError('');try{const saved=await saveCarouselContent(image.id,value);onSaved(saved);setDraft(saved.contenido ?? {});setNotice('Contenido guardado.');}catch(cause){setError(errorMessage(cause));}finally{setSaving(false);}}
+  return <details className="lp-slide-content"><summary>Texto y botón de esta diapositiva</summary><p>Sin personalización se usan los textos generales de la portada. El contenido acompaña a este archivo al reordenarlo.</p><fieldset disabled={disabled||saving}>
+    <Input label="Título de la diapositiva" maxLength={255} placeholder="Usar título general" value={draft.titulo ?? ''} onChange={e=>change({titulo:e.target.value})}/>
+    <Toggle label="Mostrar título" checked={draft.mostrar_titulo ?? true} onChange={mostrar_titulo=>change({mostrar_titulo})}/>
+    <Textarea label="Descripción de la diapositiva" maxLength={1000} placeholder="Usar descripción general" value={draft.descripcion ?? ''} onChange={e=>change({descripcion:e.target.value})}/>
+    <Toggle label="Mostrar descripción" checked={draft.mostrar_descripcion ?? true} onChange={mostrar_descripcion=>change({mostrar_descripcion})}/>
+    <Input label="Texto del botón de la diapositiva" maxLength={100} placeholder="Usar botón general" value={draft.texto_boton ?? ''} onChange={e=>change({texto_boton:e.target.value})}/>
+    <Input label="Destino del botón de la diapositiva" maxLength={2000} placeholder="catalogo o https://…" value={draft.enlace ?? ''} onChange={e=>change({enlace:e.target.value})}/>
+    <Toggle label="Mostrar botón" checked={draft.mostrar_boton ?? true} onChange={mostrar_boton=>change({mostrar_boton})}/>
+    <Button type="button" disabled={saving||JSON.stringify(draft)===savedKey} onClick={()=>void persist(draft)}>{saving?'Guardando…':'Guardar contenido de esta diapositiva'}</Button>
+    <Button type="button" variant="ghost" disabled={saving||savedKey==='{}'} onClick={()=>void persist({})}>Restablecer textos generales</Button>
+  </fieldset>{error&&<p role="alert">{error}</p>}{notice&&<p role="status">{notice}</p>}</details>;
+}
+
 export function CarouselImagesEditor() {
   const fileId = useId();
   const descriptionId = useId();
@@ -43,6 +68,11 @@ export function CarouselImagesEditor() {
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
 
+  const [library,setLibrary]=useState<MediaResource[]>([]),[picker,setPicker]=useState(false),[libraryLoading,setLibraryLoading]=useState(false);
+  const libraryRequest=useRef<AbortController|null>(null);
+  useEffect(()=>()=>libraryRequest.current?.abort(),[]);
+  async function openLibrary(){setPicker(true);setLibraryLoading(true);setError('');libraryRequest.current?.abort();const controller=new AbortController();libraryRequest.current=controller;try{const rows=await fetchSectionLibrary(controller.signal);if(!controller.signal.aborted)setLibrary(rows.filter(row=>row.activo&&['imagen','video'].includes(row.tipo)));}catch(cause){if(!controller.signal.aborted)setError(errorMessage(cause));}finally{if(!controller.signal.aborted)setLibraryLoading(false);}}
+  async function useResource(id:string){if(busy)return;setOperation('upload');setError('');try{const item=await addCarouselResource(id);setImages(rows=>[...rows,item]);setPicker(false);setNotice('Recurso agregado al carrusel.');}catch(cause){setError(errorMessage(cause));}finally{setOperation(null);}}
   const busy = loading || operation !== null;
   const full = images.length >= MAX_IMAGENES_CARRUSEL;
 
@@ -258,14 +288,15 @@ export function CarouselImagesEditor() {
                   className="lp-carousel-item"
                   key={image.id}
                 >
-                  <img
+                  {image.tipo === 'video' ? <video src={image.archivo} controls muted playsInline preload="none" aria-label={image.texto_alternativo || 'Video del carrusel'} /> : (<img
                     src={image.archivo}
                     alt={
                       image.texto_alternativo ||
                       `Vista previa de fotografía ${index + 1}`
                     }
                     loading="lazy"
-                  />
+                  />)}
+
 
                   <div className="lp-carousel-item-content">
                     <strong>
@@ -277,6 +308,7 @@ export function CarouselImagesEditor() {
                         'Sin descripción alternativa'}
                     </p>
 
+                    <SlideContentEditor image={image} disabled={busy} onSaved={saved=>setImages(rows=>rows.map(row=>row.id===saved.id?saved:row))} />
                     <div className="lp-carousel-actions">
                       <button
                         type="button"
@@ -323,6 +355,10 @@ export function CarouselImagesEditor() {
         </>
       )}
 
+      <Button type="button" variant="outline" disabled={busy||full} onClick={()=>void openLibrary()}>Agregar imagen o video desde la biblioteca</Button>
+      <Modal open={picker} onClose={()=>{setPicker(false);libraryRequest.current?.abort();}} title="Elegir multimedia para el carrusel" size="xl" portal>
+        {libraryLoading?<p role="status">Cargando biblioteca…</p>:<div className="flexible-library-results">{library.map(resource=><div key={resource.id}><strong>{resource.titulo}</strong><MediaPreview resource={resource}/><Button type="button" disabled={busy||full} onClick={()=>void useResource(resource.id)}>Usar {resource.titulo}</Button></div>)}{!library.length&&<p>No hay imágenes o videos activos. Agrégalos desde Marketing → Biblioteca multimedia.</p>}</div>}{error&&<p role="alert">{error}</p>}
+      </Modal>
       <div className="lp-carousel-upload">
         <h4>Agregar fotografía</h4>
 

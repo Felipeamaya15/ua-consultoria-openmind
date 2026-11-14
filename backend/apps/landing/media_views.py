@@ -33,7 +33,7 @@ class PrivateMediaView(APIView):
 
 
 def save_fields(resource, data, store):
-    image = data.pop('imagen', None)
+    image = data.pop('imagen', None) or data.pop('video', None)
     if image:
         resource.archivo = store_media_image(image, store)
         resource.url = ''

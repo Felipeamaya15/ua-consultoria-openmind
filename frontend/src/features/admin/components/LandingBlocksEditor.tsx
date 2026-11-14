@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { SYSTEM_SECTIONS, systemSectionVisible, type SystemSectionId } from '../../landing/types/homeSections';
 import { Link } from 'react-router-dom';
 import type { BloqueLanding, TipoBloqueLanding } from '../../landing/types/landing.types';
@@ -103,7 +103,24 @@ export function LandingBlocksEditor({
   const blocks = value ?? [];
   const rows = layout ? layout.order : blocks.map(block => block.id);
   const remainingDefaults = defaultStoryBlocks().filter(block => !blocks.some(current => current.id === block.id));
-  const [expanded, setExpanded] = useState<string>();
+  const expandedKey = 'openmind:landing:expanded-section';
+
+  const [expanded, setExpanded] = useState<string | undefined>(() => {
+    try {
+      return localStorage.getItem(expandedKey) || undefined;
+    } catch {
+      return undefined;
+    }
+  });
+
+  useEffect(() => {
+    try {
+      if (expanded) localStorage.setItem(expandedKey, expanded);
+      else localStorage.removeItem(expandedKey);
+    } catch {
+      // El editor sigue funcionando sin almacenamiento.
+    }
+  }, [expanded]);
   const [remove, setRemove] = useState<string>();
   const [picker, setPicker] = useState(false);
   const [flexiblePicker, setFlexiblePicker] = useState(false);

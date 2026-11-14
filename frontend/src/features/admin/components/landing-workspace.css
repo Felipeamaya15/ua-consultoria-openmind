@@ -13,3 +13,6 @@
 .lp-contact-layout>.lp-content-card,.lp-content-card>fieldset{min-width:0}
 .hours-manager{min-width:0;container-type:inline-size}
 @container(max-width:480px){.hours-compose{grid-template-columns:repeat(2,minmax(0,1fr))}.hours-compose>label:first-child,.hours-compose>.lp-button{grid-column:1/-1}}
+
+/* Portada: contenido e identidad a la izquierda, carrusel a la derecha. */
+.lp-cover-left{display:grid;gap:16px;min-width:0}.lp-cover-grid>*,.lp-cover-media>*{min-width:0}.lp-cover-media{grid-template-columns:minmax(0,1fr)}.lp-cover-carousel .lp-carousel-grid{max-height:680px;overflow-y:auto;overscroll-behavior:contain;padding:3px}.lp-cover-media img{max-height:200px;object-fit:contain}.lp-cover-carousel{min-width:0}@media(max-width:850px){.lp-cover-media{grid-template-columns:minmax(0,1fr)}.lp-cover-carousel .lp-carousel-grid{max-height:520px}}

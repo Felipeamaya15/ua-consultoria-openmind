@@ -117,3 +117,31 @@
     width: 100%;
   }
 }
+
+/* OPENMIND_THEME_ACTIVITY_MODAL_V1: la identidad visual viene de la tienda,
+   no del panel admin; el diálogo nativo permanece dentro del tema. */
+.activity-request-dialog {
+  --primary: var(--visual-button, #5433eb);
+  --on-primary: var(--visual-button-text, #fff);
+  --ring: var(--visual-button, #5433eb);
+  --border: var(--visual-border, #d9dce3);
+  --foreground: var(--visual-text, #172033);
+  --muted-foreground: var(--visual-muted, #475569);
+  color: var(--foreground);
+}
+.activity-request-dialog .activity-public-form button[type="submit"] {
+  background-color: var(--primary);
+  color: var(--on-primary);
+  border-color: var(--primary);
+}
+.activity-request-dialog .activity-consent input[type="checkbox"] {
+  accent-color: var(--primary);
+}
+.activity-request-dialog :is(input:not([type="checkbox"]), textarea, select):focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 1px;
+  border-color: var(--primary);
+}
+.activity-request-dialog :is(button, input, textarea, select):focus-visible {
+  outline-color: var(--primary);
+}

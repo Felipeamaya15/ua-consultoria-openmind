@@ -69,13 +69,13 @@ class TipoCambioTests(SimpleTestCase):
         with patch.object(fx, '_leer_json', return_value=respuesta):
             self.assertEqual(fx._desde_mindicador(), (Decimal('951.2'), date(2026, 11, 4), 'mindicador.cl'))
 
-    @override_settings(BCCH_USUARIO='', BCCH_CLAVE='')
-    def test_banco_central_solo_se_consulta_con_credenciales(self):
+    @override_settings(BCCH_TOKEN='')
+    def test_banco_central_solo_se_consulta_con_token(self):
         with patch.object(fx, '_leer_json') as leer:
             self.assertIsNone(fx._desde_bcch())
             leer.assert_not_called()
 
-    @override_settings(BCCH_USUARIO='u', BCCH_CLAVE='c')
+    @override_settings(BCCH_TOKEN='t')
     def test_lee_la_respuesta_del_banco_central(self):
         respuesta = {'Series': {'Obs': [{'indexDateString': '04-11-2026', 'value': '948.10', 'statusCode': 'OK'},
                                         {'indexDateString': '05-11-2026', 'value': '950.00', 'statusCode': 'OK'}]}}

@@ -1,3 +1,4 @@
+import { ProductImageGallery } from '../components/store/ProductImageGallery';
 import { useEffect, useState } from 'react';
 import { LoadingState } from '../../../shared/components/states';
 import { Link, useParams } from 'react-router-dom';
@@ -310,11 +311,7 @@ export default function ProductDetail({ previewProduct }: { previewProduct?: Pro
             {/* GALERÍA */}
             <div>
               <div data-page-panel className="relative overflow-hidden rounded-[22px] bg-[var(--visual-page-panel-background)] aspect-[4/4.25]">
-                <img data-page-main-image
-                  src={product.images[activeImg]}
-                  alt={product.name}
-                  className="w-full h-full object-cover"
-                />
+                <ProductImageGallery videoUrl={product.videoUrl} images={product.images} alt={product.name} detail index={activeImg} onSelect={setActiveImg} imageClassName="w-full h-full object-cover" />
 
                 {comparePrice && (
                   <span className="absolute left-4 top-4 rounded-full bg-[var(--primary)] px-3.5 py-2 text-[10px] font-black text-[var(--visual-page-color)]">
@@ -323,7 +320,7 @@ export default function ProductDetail({ previewProduct }: { previewProduct?: Pro
                 )}
               </div>
 
-              {product.images.length > 1 && (
+              {(product.images.length > 1 || !!product.videoUrl) && (
                 <div className="flex gap-3 overflow-x-auto pt-3 pb-1">
                   {product.images.map((img, index) => (
                     <button data-page-gallery-item data-page-action="choice"
@@ -345,6 +342,17 @@ export default function ProductDetail({ previewProduct }: { previewProduct?: Pro
                       />
                     </button>
                   ))}
+{product.videoUrl && (
+  <button data-page-gallery-item data-page-action="choice"
+    type="button" aria-label="Ver video del producto"
+    aria-pressed={activeImg === product.images.length}
+    onClick={() => setActiveImg(product.images.length)}
+    className={`flex h-16 w-16 shrink-0 flex-col items-center justify-center gap-1 rounded-lg border-2 text-xs ${activeImg === product.images.length ? 'border-[var(--primary)]' : 'border-[var(--border)]'}`}
+  >
+    <span aria-hidden="true">▶</span><span>Video</span>
+  </button>
+)}
+
                 </div>
               )}
             </div>
@@ -578,15 +586,11 @@ export default function ProductDetail({ previewProduct }: { previewProduct?: Pro
           <div data-page-columns className="grid grid-cols-1 lg:grid-cols-[1.08fr_0.92fr] gap-10 lg:gap-16 items-start">
             {/* Galería */}
             <div>
-              <div data-page-panel className="overflow-hidden rounded-[12px] bg-[var(--visual-page-panel-background)] aspect-[4/4.15]">
-                <img data-page-main-image
-                  src={product.images[activeImg]}
-                  alt={product.name}
-                  className="w-full h-full object-cover"
-                />
+              <div data-page-panel className="relative overflow-hidden rounded-[12px] bg-[var(--visual-page-panel-background)] aspect-[4/4.15]">
+                <ProductImageGallery videoUrl={product.videoUrl} images={product.images} alt={product.name} detail index={activeImg} onSelect={setActiveImg} imageClassName="w-full h-full object-cover" />
               </div>
 
-              {product.images.length > 1 && (
+              {(product.images.length > 1 || !!product.videoUrl) && (
                 <div className="flex gap-3 overflow-x-auto pt-3 pb-1">
                   {product.images.map((img, index) => (
                     <button data-page-gallery-item data-page-action="choice"
@@ -608,6 +612,17 @@ export default function ProductDetail({ previewProduct }: { previewProduct?: Pro
                       />
                     </button>
                   ))}
+{product.videoUrl && (
+  <button data-page-gallery-item data-page-action="choice"
+    type="button" aria-label="Ver video del producto"
+    aria-pressed={activeImg === product.images.length}
+    onClick={() => setActiveImg(product.images.length)}
+    className={`flex h-16 w-16 shrink-0 flex-col items-center justify-center gap-1 rounded-lg border-2 text-xs ${activeImg === product.images.length ? 'border-[var(--primary)]' : 'border-[var(--border)]'}`}
+  >
+    <span aria-hidden="true">▶</span><span>Video</span>
+  </button>
+)}
+
                 </div>
               )}
             </div>
@@ -878,14 +893,10 @@ export default function ProductDetail({ previewProduct }: { previewProduct?: Pro
               }
             `}
           >
-            <img data-page-main-image
-              src={product.images[activeImg]}
-              alt={product.name}
-              className="w-full h-full object-cover"
-            />
+            <ProductImageGallery videoUrl={product.videoUrl} images={product.images} alt={product.name} detail index={activeImg} onSelect={setActiveImg} imageClassName="w-full h-full object-cover" />
           </div>
 
-          {product.images.length > 1 && (
+          {(product.images.length > 1 || !!product.videoUrl) && (
             <div className="flex gap-2 overflow-x-auto pb-1">
               {product.images.map((img, index) => (
                 <button data-page-gallery-item data-page-action="choice"
@@ -916,6 +927,17 @@ export default function ProductDetail({ previewProduct }: { previewProduct?: Pro
                   />
                 </button>
               ))}
+{product.videoUrl && (
+  <button data-page-gallery-item data-page-action="choice"
+    type="button" aria-label="Ver video del producto"
+    aria-pressed={activeImg === product.images.length}
+    onClick={() => setActiveImg(product.images.length)}
+    className={`flex h-16 w-16 shrink-0 flex-col items-center justify-center gap-1 rounded-lg border-2 text-xs ${activeImg === product.images.length ? 'border-[var(--primary)]' : 'border-[var(--border)]'}`}
+  >
+    <span aria-hidden="true">▶</span><span>Video</span>
+  </button>
+)}
+
             </div>
           )}
         </div>

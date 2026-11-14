@@ -1,11 +1,13 @@
 import { IMAGE_ACCEPT, prepareImage } from '../../../shared/services/imageUpload';
 import { type FormEvent, useEffect, useMemo, useRef, useState } from "react"
+import { saveProductVideoResource } from '../../marketing/services/mediaLibraryService';
+import { ProductVideoField } from '../components/ProductVideoField';
 import { EmptyListState, LoadingState } from "../../../shared/components/states"
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom"
 import { emptyKind } from "../services/emptyStates"
 import { formatPrice, Product, ProductVariant } from "../data/mockAdminData"
 import { createPublicProduct, deleteCatalogProduct, fetchAdminProducts, fetchAdminProduct, permanentDeleteCatalogProduct, updateCatalogProduct, type AdminProduct } from "../services/productService"
-import { Alert, Badge, Button, Icon, Input, Modal, Tabs, Textarea, Toggle } from "../components/ui"
+import { Alert, Badge, Button, Icon, Input, Modal, Select, Tabs, Textarea, Toggle } from "../components/ui"
 
 function OfertaInfo({ precio, anterior }: { precio: number; anterior?: number }) {
   if (anterior === undefined || anterior === null || !precio) return null
@@ -26,6 +28,8 @@ const variantAttributes = (variant: ProductVariant) =>
 export function ProductList() {
   const [search, setSearch] = useState("")
   const [products, setProducts] = useState<AdminProduct[]>([])
+  const [statusFilter, setStatusFilter] = useState("all")
+  const [sort, setSort] = useState("active")
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
   const deactivatingRef = useRef(false)
@@ -58,8 +62,14 @@ export function ProductList() {
       .finally(() => { if (active) setLoading(false) })
     return () => { active = false }
   }, [])
-  const filtered = products.filter((product) => `${product.name} ${product.category} ${product.tags.join(" ")}`.toLowerCase().includes(search.toLowerCase()))
-  const vacio = emptyKind({ loading, error, shown: filtered.length, searching: search.trim() !== "" })
+  const filtered = products.filter(product =>
+    (statusFilter === "all" || product.status === statusFilter) &&
+    `${product.name} ${product.category} ${product.tags.join(" ")}`.toLowerCase().includes(search.toLowerCase())
+  ).sort((a, b) => {
+    const statusOrder = sort === "active" ? Number(b.status === "active") - Number(a.status === "active") : 0
+    return statusOrder || (Date.parse(b.createdAt) || 0) - (Date.parse(a.createdAt) || 0)
+  })
+  const vacio = emptyKind({ loading, error, shown: filtered.length, searching: search.trim() !== "" || statusFilter !== "all" })
 
   const handleToggleProductStatus = async (product: AdminProduct) => {
     if (deactivatingRef.current) return;
@@ -213,9 +223,10 @@ export function ProductList() {
     </section>
     <section className="admin-list-panel" aria-label="Buscar productos">
       <div className="admin-list-panel-heading"><div><h3>Tu catálogo, en orden</h3><p>Encuentra un producto y administra sus precios y disponibilidad.</p></div><Icon name="box" className="h-5 w-5 text-[var(--muted-foreground)]" /></div>
-      <div className="catalog-search-row">
+      <div className="grid items-end gap-3 md:grid-cols-[minmax(0,1fr)_auto_auto]">
         <Input id="catalog-search" label="Buscar productos" icon={<Icon name="search" />} value={search} onChange={event => setSearch(event.target.value)} placeholder="Nombre, categoría o etiqueta" />
-        {search && <Button type="button" variant="ghost" className="min-h-11" onClick={() => setSearch('')}>Limpiar búsqueda</Button>}
+        <Select label="Estado" value={statusFilter} onChange={event => setStatusFilter(event.target.value)} options={[{ value: 'all', label: 'Todos' }, { value: 'active', label: 'Activos' }, { value: 'archived', label: 'Archivados' }]} />
+        <Select label="Orden" value={sort} onChange={event => setSort(event.target.value)} options={[{ value: 'active', label: 'Activos primero · más recientes' }, { value: 'recent', label: 'Más recientes' }]} />
       </div>
     </section>
     {loading && <LoadingState align="start" spacing="compact">Cargando productos reales…</LoadingState>}
@@ -250,7 +261,7 @@ export function ProductList() {
         </article>
       })}</div>
       {vacio === 'empty' && <EmptyListState spacing="none" className="py-12" title="Aún no tienes productos" action={<Link to="/emprendedor/productos/nuevo"><Button variant="primary">Crear tu primer producto</Button></Link>}>Agrega tu primer producto para empezar a vender.</EmptyListState>}
-      {vacio === 'no-results' && <EmptyListState spacing="none" className="py-12" action={<Button variant="outline" onClick={() => setSearch('')}>Limpiar búsqueda</Button>}>No encontramos productos con esa búsqueda.</EmptyListState>}
+      {vacio === 'no-results' && <EmptyListState spacing="none" className="py-12" action={<Button variant="outline" onClick={() => { setSearch(''); setStatusFilter('all') }}>Limpiar filtros</Button>}>No encontramos productos con esos filtros.</EmptyListState>}
     </section>
     <Modal
       open={!!productToDelete}
@@ -330,6 +341,8 @@ export function ProductEditor({ initial, editing }: { initial: AdminProduct; edi
   const [activeTab, setActiveTab] = useState("info"); const [saved, setSaved] = useState(false); const [saving, setSaving] = useState(false)
   const [product, setProduct] = useState<AdminProduct>({ ...initial, images: [...initial.images], variants: initial.variants.map((variant) => ({ ...variant, attributes: { ...variant.attributes } })), attributes: { ...initial.attributes }, tags: [...initial.tags] })
   const [error, setError] = useState("");
+  const [pendingVideoFile, setPendingVideoFile] = useState<File | null>(null);
+  const uploadedVideoRef = useRef<{ file: File; id: string } | null>(null);
   const permanentDeletingRef = useRef(false);
   const [permanentlyDeleting, setPermanentlyDeleting] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
@@ -469,11 +482,42 @@ export function ProductEditor({ initial, editing }: { initial: AdminProduct; edi
 
     setSaved(false);
     try {
+      let videoResourceId = finalProduct.videoResourceId ?? null;
+
+      if (pendingVideoFile) {
+        if (uploadedVideoRef.current?.file === pendingVideoFile) {
+          videoResourceId = uploadedVideoRef.current.id;
+        } else {
+          const media = await saveProductVideoResource(
+            null,
+            {
+              titulo: `Video de ${finalProduct.name}`.slice(0, 180),
+              descripcion: '',
+              tipo: 'video',
+              url: '',
+              activo: true
+            },
+            pendingVideoFile,
+            false
+          );
+
+          videoResourceId = media.id;
+          uploadedVideoRef.current = {
+            file: pendingVideoFile,
+            id: media.id
+          };
+        }
+      }
+
+      const productWithVideo = {
+        ...finalProduct,
+        videoResourceId
+      };
       if (editing) {
-        const persisted = await updateCatalogProduct(finalProduct);
+        const persisted = await updateCatalogProduct(productWithVideo);
         setProduct(persisted);
       } else {
-        const id = await createPublicProduct(finalProduct);
+        const id = await createPublicProduct(productWithVideo);
         setProduct(current => ({ ...current, id }));
       }
       setSaved(true);
@@ -541,6 +585,16 @@ export function ProductEditor({ initial, editing }: { initial: AdminProduct; edi
     </div>}
     {activeTab === "variants" && <div className="mt-5 bg-white border border-[var(--border)] rounded-xl p-5"><div className="flex items-start justify-between gap-3 mb-5"><div><p className="font-semibold text-sm">Variantes, SKU e inventario</p><p className="text-xs text-[var(--muted-foreground)] mt-1">Stock total: <strong>{totalStock} unidades</strong>. Cada variante mantiene precio, precio de oferta, SKU y disponibilidad propios.</p></div><Button variant="primary" size="sm" onClick={addVariant}>+ Agregar variante</Button></div>{variants.length ? <div className="overflow-x-auto"><table className="w-full min-w-[780px] text-sm"><thead><tr className="border-b border-[var(--border)]">{["SKU", "Atributos", "Precio y oferta", "Stock", "Estado", ""].map((title) => <th key={title} className="text-left py-2 px-2 text-xs text-[var(--muted-foreground)] uppercase">{title}</th>)}</tr></thead><tbody>{variants.map((variant) => <tr key={variant.id} className="border-b border-[var(--border)] last:border-0 align-top"><td className="p-2"><input aria-label="SKU de variante" className="w-28 border border-[var(--border)] rounded px-2 py-1.5 text-xs font-mono" value={variant.sku} onChange={(event) => updateVariant(variant.id, { sku: event.target.value })} /></td><td className="p-2"><div className="grid gap-1">{attributeNames.map((name) => <label key={name} className="flex items-center gap-1 text-xs"><span className="w-14 text-[var(--muted-foreground)]">{name}</span><select className="border border-[var(--border)] rounded px-1 py-1" value={variant.attributes[name] ?? ""} onChange={(event) => updateVariant(variant.id, { attributes: { ...variant.attributes, [name]: event.target.value } })}>{(product.attributes[name] ?? []).map((value) => <option key={value}>{value}</option>)}</select></label>)}</div></td><td className="p-2"><div className="flex flex-col gap-1"><label className="text-[11px] text-[var(--muted-foreground)]">Precio venta / oferta<input aria-label="Precio de venta de variante" type="number" min="0" className="block w-28 border border-[var(--border)] rounded px-2 py-1.5 text-sm text-[var(--foreground)] mt-0.5" value={variant.price} onChange={(event) => updateVariant(variant.id, { price: Number(event.target.value) })} /></label><label className="text-[11px] text-[var(--muted-foreground)]">Precio anterior (normal)<input aria-label="Precio anterior de variante" placeholder="Precio anterior" type="number" min="0" className="block w-28 border border-[var(--border)] rounded px-2 py-1.5 text-sm text-[var(--foreground)] mt-0.5" value={variant.comparePrice ?? ""} onChange={event => updateVariant(variant.id, { comparePrice: event.target.value ? Number(event.target.value) : undefined })} /></label></div><div className="mt-1.5"><OfertaInfo precio={variant.price} anterior={variant.comparePrice} /></div></td><td className="p-2"><input aria-label="Stock de variante" type="number" min="0" className="w-20 border border-[var(--border)] rounded px-2 py-1.5" value={variant.stock} onChange={(event) => updateVariant(variant.id, { stock: Number(event.target.value) })} /><div className="mt-1"><Badge variant={stockState(variant.stock).badge}>{stockState(variant.stock).label}</Badge></div></td><td className="p-2"><Badge variant={variant.stock > 0 ? "success" : "warning"}>{variant.stock > 0 ? "Con stock" : "Sin stock"}</Badge></td><td className="p-2"><button onClick={() => setProduct((current) => ({ ...current, variants: current.variants.filter((item) => item.id !== variant.id) }))} className="text-xs text-[var(--error)] hover:underline">Eliminar</button></td></tr>)}</tbody></table></div> : <Alert variant="info">Agrega atributos y crea la primera variante. Así cada combinación tendrá SKU y stock independientes.</Alert>}</div>}
     {activeTab === "images" && <div className="mt-5 bg-white border border-[var(--border)] rounded-xl p-5"><p className="font-semibold text-sm">Galería del producto</p><p className="text-xs text-[var(--muted-foreground)] mt-1 mb-4">La primera imagen es la principal. Puedes cargar JPG, PNG, WebP, HEIC o HEIF de hasta 1 MB por imagen.</p><input ref={imageInput} aria-label="Agregar imágenes del producto" type="file" accept={IMAGE_ACCEPT} disabled={processingImages} multiple className="hidden" onChange={(event) => addImages(event.target.files)} /><div className="grid grid-cols-2 sm:grid-cols-4 gap-3">{product.images.map((image, index) => <div key={`${image}-${index}`} className="relative aspect-square rounded-xl overflow-hidden border border-[var(--border)]"><img src={image} alt={`Producto ${index + 1}`} className="w-full h-full object-cover" />{index === 0 && <span className="absolute top-2 left-2"><Badge variant="info">Principal</Badge></span>}<button onClick={() => removeImage(index)} className="absolute bottom-2 right-2 bg-white rounded-md px-2 py-1 text-xs text-[var(--error)] shadow">Eliminar</button></div>)}<button disabled={processingImages} onClick={() => imageInput.current?.click()} className="aspect-square rounded-xl border-2 border-dashed border-[var(--border)] hover:border-[var(--primary)] hover:bg-[var(--muted)] transition-colors flex flex-col items-center justify-center gap-2"><span className="text-2xl">＋</span><span className="text-xs">{processingImages?'Procesando…':'Subir imágenes'}</span></button></div></div>}
+    {activeTab === "images" && (
+      <ProductVideoField
+        file={pendingVideoFile}
+        onChange={setPendingVideoFile}
+        savedResourceId={product.videoResourceId}
+        onRemoveSaved={() => {
+          setProduct(current => ({ ...current, videoResourceId: null }));
+        }}
+      />
+    )}
     {activeTab === "seo" && (
       <div className="mt-5 bg-white border border-[var(--border)] rounded-xl p-5 max-w-2xl grid gap-4">
         <div>

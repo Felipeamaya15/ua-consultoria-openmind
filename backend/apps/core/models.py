@@ -570,3 +570,39 @@ class ConfiguracionCorreo(models.Model):
         db_table = 'configuracion_correo'
         verbose_name = 'Configuración de correo'
         verbose_name_plural = 'Configuraciones de correo'
+
+
+class ConexionGmailTienda(models.Model):
+    """Conexion Gmail independiente de cada tienda."""
+
+    tienda = models.OneToOneField(
+        "core.Tienda",
+        on_delete=models.CASCADE,
+        related_name="conexion_gmail",
+    )
+    correo_autorizado = models.EmailField(blank=True, default="")
+    refresh_token_cifrado = models.TextField(blank=True, default="")
+    estado_oauth_hash = models.CharField(
+        max_length=64,
+        blank=True,
+        default="",
+    )
+    estado_oauth_expira = models.DateTimeField(
+        null=True,
+        blank=True,
+    )
+    actualizado_en = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"Conexion Gmail de tienda {self.tienda_id}"
+
+
+class TipoCambioGuardado(models.Model):
+    """Ultimo dolar observado obtenido (fila unica, pk=1) usado para cobrar con PayPal."""
+    observado = models.DecimalField(max_digits=12, decimal_places=4)
+    fecha_dato = models.DateField()
+    fuente = models.CharField(max_length=60)
+    obtenido_en = models.DateTimeField()
+
+    def __str__(self):
+        return f"{self.observado} ({self.fuente}, {self.fecha_dato})"

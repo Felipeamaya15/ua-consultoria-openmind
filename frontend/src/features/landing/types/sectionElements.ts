@@ -1,7 +1,7 @@
 import type { BloqueLanding, ImagenBloqueLanding } from './landing.types';
 
 export const SECTION_ELEMENTS = {
-  titulo: 'Título', subtitulo: 'Subtítulo', texto: 'Texto o descripción', imagen: 'Imagen individual', galeria: 'Galería',
+  titulo: 'Título', subtitulo: 'Subtítulo', texto: 'Texto o descripción', imagen: 'Imagen o video individual', galeria: 'Galería',
   youtube: 'Video de YouTube', biblioteca: 'Recurso de biblioteca', social: 'Publicación social', separador: 'Separador',
   boton: 'Botón con enlace', whatsapp: 'Contacto por WhatsApp', nombre: 'Nombre de servicio o producto', precio: 'Precio informativo',
   caracteristicas: 'Características o beneficios', informacion: 'Información adicional', duracion: 'Duración',
@@ -12,7 +12,7 @@ export const SECTION_ELEMENTS = {
 export type ElementKind = keyof typeof SECTION_ELEMENTS;
 export interface SectionElement {
   id: string; tipo: ElementKind; visible: boolean; texto?: string; imagenes?: ImagenBloqueLanding[];
-  recurso_id?: string; url?: string; proveedor?: 'instagram' | 'facebook'; etiqueta?: string; numero?: string; mensaje?: string;
+  vista_abierta?: boolean; recurso_id?: string; url?: string; proveedor?: 'instagram' | 'facebook'; etiqueta?: string; numero?: string; mensaje?: string;
   importe?: string; fecha?: string; hasta?: string; inicio?: string; termino?: string; modalidad?: 'presencial' | 'online' | 'mixta';
 }
 export interface SectionActivity {

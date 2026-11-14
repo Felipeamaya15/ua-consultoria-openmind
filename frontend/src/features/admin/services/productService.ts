@@ -18,6 +18,7 @@ function toBackendPayload(product: AdminProduct) {
     categoria: product.category,
     activo: product.status === "active",
     imagenes: product.images,
+    video_recurso_id: product.videoResourceId ?? null,
     atributos_generales: product.generalAttributes ?? [],
     variantes: product.variants.map((variant) => {
       const hasOffer =
@@ -126,6 +127,7 @@ function adaptAdminProduct(item: any): AdminProduct {
     description: item.descripcion ?? "",
     category: item.categoria,
     images: item.imagenes ?? [],
+    videoResourceId: item.video_recurso_id ?? null,
     variants,
     attributes,
     attributeLabels: labels,

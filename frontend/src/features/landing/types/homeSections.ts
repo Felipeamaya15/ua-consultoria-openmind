@@ -12,14 +12,14 @@ export type SystemSectionId = typeof SYSTEM_SECTIONS[number]['id'];
 export type HomeTemplate = 'editorial' | 'minimal' | 'visual' | 'catalog';
 const defaults: Record<HomeTemplate, SystemSectionId[]> = {
   editorial:['sistema:destacados','sistema:categorias'],
-  minimal:['sistema:categorias','sistema:destacados','sistema:banner','sistema:mas-productos'],
+  minimal:['sistema:destacados','sistema:categorias'],
   visual:['sistema:destacados','sistema:categorias'],
-  catalog:['sistema:destacados','sistema:contenido','sistema:descubrir','sistema:categorias'],
+  catalog:['sistema:destacados','sistema:categorias'],
 };
 export function homeSectionOrder(content: Partial<ContenidoLanding> | undefined, template: HomeTemplate, includeOtherTemplates = false): string[] {
   const blocks = content?.bloques ?? [];
   const available = [...blocks.map(block=>block.id), ...defaults[template],
-    ...(includeOtherTemplates ? SYSTEM_SECTIONS.map(section=>section.id) : [])];
+    ...(includeOtherTemplates ? SYSTEM_SECTIONS.filter(section=>section.templates.length === 4).map(section=>section.id) : [])];
   const allowed = new Set(available);
   return [...new Set([...(content?.orden_apartados ?? []), ...available])].filter(id=>allowed.has(id));
 }

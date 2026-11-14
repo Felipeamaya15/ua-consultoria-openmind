@@ -1,3 +1,4 @@
+import { ActivityConversation } from '../components/ActivityConversation';
 import { useEffect, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { AdminCard, Button, Icon, Input, Select, Tabs } from '../components/ui';
@@ -104,6 +105,7 @@ export default function Activities() {
   const [attempt, setAttempt] = useState(0);
   const [busy, setBusy] = useState('');
   const [showAdvancedFilter, setShowAdvancedFilter] = useState(false);
+  const [conversationId, setConversationId] = useState<string | null>(null);
 
   const changing = useRef(false);
   const revision = useRef(0);
@@ -255,6 +257,22 @@ export default function Activities() {
             : 'Participantes registrados en tus talleres y actividades grupales gratuitas.'}
         </div>
       </div>
+
+      {kind === 'inscripcion' && (
+        <aside aria-label="Cómo gestionar inscripciones gratuitas" className="rounded-xl border border-[var(--border)] bg-white p-4 space-y-3 text-sm">
+          <h3 className="font-semibold">Participantes de talleres gratuitos</h3>
+          <p>Una inscripción registra la participación en un taller gratuito. La confirmación puede ser manual o automática, según la configuración del taller; recibir el formulario no garantiza que esté confirmada.</p>
+          <details>
+            <summary className="cursor-pointer font-semibold">¿Qué significa cada estado?</summary>
+            <dl className="mt-3 grid gap-3 sm:grid-cols-3">
+              <div><dt className="font-semibold">Pendiente de confirmación</dt><dd>La solicitud fue recibida y espera revisión de la tienda.</dd></div>
+              <div><dt className="font-semibold">Confirmada (gratuita)</dt><dd>La participación está confirmada de forma manual o automática. No acredita un pago.</dd></div>
+              <div><dt className="font-semibold">Cancelada</dt><dd>No ocupa cupo. Para reactivarla, el sistema vuelve a comprobar disponibilidad y vigencia del taller.</dd></div>
+            </dl>
+          </details>
+          <p>Si el taller tiene un límite, las pendientes y confirmadas ocupan cupo. Usa el filtro de estado o «Filtrar esta actividad» para consultar su lista. Cambiar un estado aquí no envía un correo.</p>
+        </aside>
+      )}
 
       {/* Sub-pestañas para consultas (Vigentes vs Archivadas) */}
       {kind === 'consulta' && (
@@ -427,7 +445,11 @@ export default function Activities() {
                 <p className="font-semibold text-slate-700 text-base">
                   {kind === 'consulta' && archived
                     ? 'No hay consultas archivadas con estos filtros.'
-                    : 'No se encontraron solicitudes con los filtros seleccionados.'}
+                    : kind === 'inscripcion'
+                      ? (state || section
+                        ? 'No hay participantes con estos filtros. Prueba con todos los estados o quita el filtro de actividad.'
+                        : 'Aún no hay inscripciones gratuitas. Comprueba que tu taller esté publicado, admita inscripciones y tenga fecha y cupos disponibles.')
+                      : 'No se encontraron solicitudes con los filtros seleccionados.'}
                 </p>
                 <p className="text-xs text-slate-500 max-w-md mx-auto">
                   Cuando los visitantes de tu tienda soliciten información o se inscriban a tus talleres, aparecerán listados aquí.
@@ -542,20 +564,18 @@ export default function Activities() {
                         <div className="flex flex-wrap items-center gap-2">
                           {record.tipo === 'consulta' ? (
                             <>
-                              {record.estado !== 'respondida' && record.estado !== 'cerrada' && (
-                                <Button
-                                  type="button"
-                                  variant="primary"
-                                  size="sm"
-                                  disabled={isBusy}
-                                  onClick={() => void changeState(record.id, 'respondida')}
-                                  className="bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs px-3 py-1.5 flex items-center gap-1.5 shadow-xs"
-                                  title="Marcar como atendida una vez que te hayas comunicado con el interesado"
-                                >
-                                  <Icon name="check" className="w-3.5 h-3.5" />
-                                  <span>Marcar como Respondida</span>
-                                </Button>
-                              )}
+                              <Button
+                                type="button"
+                                variant="primary"
+                                size="sm"
+                                disabled={isBusy}
+                                onClick={() => setConversationId(record.id)}
+                                className="font-medium text-xs px-3 py-1.5 flex items-center gap-1.5 shadow-xs"
+                                title="Abrir el historial de la consulta y preparar o enviar una respuesta"
+                              >
+                                <Icon name="mail" className="w-3.5 h-3.5" />
+                                <span>Abrir consulta y responder</span>
+                              </Button>
                               {record.estado === 'nueva' && (
                                 <Button
                                   type="button"
@@ -708,7 +728,9 @@ export default function Activities() {
                               disabled={isBusy}
                               options={Object.entries(
                                 record.tipo === 'consulta' ? CONSULT_STATES : ENROLL_STATES
-                              ).map(([value, label]) => ({ value, label }))}
+                              )
+                                .filter(([value]) => record.tipo !== 'consulta' || value !== 'respondida' || record.estado === 'respondida')
+                                .map(([value, label]) => ({ value, label }))}
                               onChange={event => void changeState(
                                 record.id,
                                 event.target.value as ActivityRequestState
@@ -763,6 +785,7 @@ export default function Activities() {
           </nav>
         </>
       )}
+      {conversationId && <ActivityConversation key={conversationId} id={conversationId} onClose={() => setConversationId(null)} onUpdated={() => setAttempt(n => n + 1)} />}
     </section>
   );
 }

@@ -135,6 +135,7 @@ export async function fetchPublicProducts(options?: InitialLoadOptions & { inclu
 }
 
 interface BackendProductDetail {
+  video_recurso_id?: string | null;
   id: string;
   nombre: string;
   slug: string;
@@ -205,6 +206,10 @@ function adaptProductDetail(item: BackendProductDetail): Product {
     description: item.descripcion ?? '',
     category: item.categoria,
     images,
+    videoResourceId: item.video_recurso_id ?? null,
+    videoUrl: item.video_recurso_id
+      ? `${API_URL}/api/catalog/productos/${encodeURIComponent(item.slug)}/video/`
+      : undefined,
     basePrice,
     comparePrice,
     variants,

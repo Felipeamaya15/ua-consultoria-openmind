@@ -12,7 +12,7 @@ from django.utils import timezone
 from rest_framework.test import APIClient
 
 from apps.core.models import Tienda, ConsentimientoComercial, Pedido
-from apps.landing.models import ConfiguracionLanding, SolicitudActividad
+from apps.landing.models import ConfiguracionLanding, SolicitudActividad, RespuestaActividad
 
 
 def element(kind, **values):
@@ -199,7 +199,7 @@ class ActivityTests(TestCase):
         self.submit()
         record = SolicitudActividad.objects.get()
         self.assertEqual(self.state(record, 'en_revision').status_code, 200)
-        self.assertEqual(self.state(record, 'respondida').status_code, 200)
+        self.assertEqual(self.state(record, 'respondida').status_code, 400)
         self.assertEqual(self.state(record, 'confirmada').status_code, 400)
         self.assertEqual(self.state(record, 'cerrada', mensaje='Sobrescrito').status_code, 400)
         record.refresh_from_db()
@@ -258,6 +258,7 @@ class ActivityTests(TestCase):
     def test_archiving_and_unarchiving_preserves_consultation_state_and_content(self):
         self.assertEqual(self.submit().status_code, 202)
         record = SolicitudActividad.objects.get(tipo='consulta')
+        RespuestaActividad.objects.create(solicitud=record, autor=self.owner, clave=uuid.uuid4(), destinatario=record.email, asunto='Respuesta QA', cuerpo='Respuesta aceptada de prueba', estado='aceptada')
         self.assertEqual(self.state(record, 'respondida').status_code, 200)
         original_message = record.mensaje
         original_email = record.email

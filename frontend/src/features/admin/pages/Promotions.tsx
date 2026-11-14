@@ -12,7 +12,7 @@ import {
   Alert,
 } from "../components/ui"
 import { promotionService } from "../services/promotionService"
-import { formatBusinessDate } from '../services/businessTime'
+import { businessDateParts, formatBusinessDate } from '../services/businessTime'
 
 const CODE_REGEX = /^[A-Z0-9]+(?:-[A-Z0-9]+)*$/
 
@@ -20,6 +20,19 @@ function formatPromoDate(value?: string): string {
   if (!value) return "Sin límite"
   return formatBusinessDate(value.trim(), true) || 'Fecha no disponible'
 }
+
+export function promotionState(promo: Promotion, now = new Date()) {
+  if (!promo.active) return 'inactive'
+  const parts = businessDateParts(now.toISOString())!
+  const today = `${parts.year}-${parts.month}-${parts.day}`
+  const isDay = (value: string) => /^\d{4}-\d{2}-\d{2}$/.test(value)
+  if (promo.endsAt && (isDay(promo.endsAt) ? promo.endsAt < today : Date.parse(promo.endsAt) < now.getTime())) return 'ended'
+  if (promo.startsAt && (isDay(promo.startsAt) ? promo.startsAt > today : Date.parse(promo.startsAt) > now.getTime())) return 'scheduled'
+  if (promo.maxUses !== undefined && promo.usedCount >= promo.maxUses) return 'exhausted'
+  return 'active'
+}
+
+const promotionStateLabels = { active: 'Activa', scheduled: 'Programada', ended: 'Finalizada', inactive: 'Inactiva', exhausted: 'Usos agotados' }
 
 export default function Promotions() {
   const { config, setConfig } = useAdmin()
@@ -32,6 +45,11 @@ export default function Promotions() {
   const [showModal, setShowModal] = useState(false)
   const [editPromo, setEditPromo] = useState<Partial<Promotion> | null>(null)
   const mutation = useRef(false)
+  const [statusFilter, setStatusFilter] = useState("all")
+  const [sort, setSort] = useState("recent")
+  // La API ya ordena por fecha_creacion descendente; conservar ese orden real.
+  const filteredPromos = promos.filter(promo => statusFilter === "all" || promotionState(promo) === statusFilter)
+  if (sort === "oldest") filteredPromos.reverse()
 
   const setPromos = (update: (previous: Promotion[]) => Promotion[]) => {
     const next = update(promos)
@@ -261,6 +279,12 @@ export default function Promotions() {
         </Button>
       </div>
 
+      <div className="grid gap-3 sm:grid-cols-2" aria-label="Filtrar promociones">
+        <Select label="Estado" value={statusFilter} onChange={event => setStatusFilter(event.target.value)} options={[{ value: 'all', label: 'Todas' }, { value: 'active', label: 'Activas' }, { value: 'scheduled', label: 'Programadas' }, { value: 'ended', label: 'Finalizadas' }, { value: 'inactive', label: 'Inactivas' }, { value: 'exhausted', label: 'Usos agotados' }]} />
+        <Select label="Orden de creación" value={sort} onChange={event => setSort(event.target.value)} options={[{ value: 'recent', label: 'Más recientes' }, { value: 'oldest', label: 'Más antiguas' }]} />
+        <p className="text-xs text-[var(--muted-foreground)] sm:col-span-2">Estados calculados según habilitación, vigencia y límite de usos. No cambian la aplicación de descuentos.</p>
+      </div>
+      {!loading && !error && promos.length > 0 && filteredPromos.length === 0 && <EmptyListState action={<Button variant="outline" onClick={() => setStatusFilter('all')}>Ver todas</Button>}>No hay promociones con este filtro.</EmptyListState>}
       {statusMessage && !showModal && (
         <Alert variant="success">{statusMessage}</Alert>
       )}
@@ -273,7 +297,7 @@ export default function Promotions() {
         {!loading && !error && promos.length === 0 && (
           <EmptyListState spacing="none" className="bg-white border border-[var(--border)] rounded-xl p-8">Aún no hay promociones creadas en tu tienda. Crea tu primera promoción con el botón «Nueva promoción».</EmptyListState>
         )}
-        {promos.map((promo) => (
+        {filteredPromos.map((promo) => (
           <div
             key={promo.id}
             className={`bg-white border-2 rounded-xl p-4 transition-all ${
@@ -288,7 +312,7 @@ export default function Promotions() {
                   <h3 className="font-semibold text-sm">{promo.name}</h3>
                   {typeBadge(promo.type)}
                   <Badge variant={promo.active ? "success" : "default"}>
-                    {promo.active ? "Activa" : "Inactiva"}
+                    {promotionStateLabels[promotionState(promo)]}
                   </Badge>
                 </div>
                 <div className="flex flex-wrap gap-4 text-xs text-[var(--muted-foreground)]">

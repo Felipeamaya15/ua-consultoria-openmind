@@ -107,6 +107,7 @@ class ProductPublicDetailSerializer(serializers.Serializer):
     descripcion = serializers.CharField(required=False, allow_blank=True)
     categoria = serializers.CharField()
     imagenes = serializers.ListField(child=serializers.CharField(), required=False)
+    video_recurso_id = serializers.CharField(required=False, allow_blank=True, allow_null=True)
     atributos_generales = AtributoGeneralSerializer(many=True, required=False)
     variantes = VarianteSerializer(many=True, required=False)
     seo = SeoSerializer(required=False)
@@ -330,6 +331,47 @@ class SeoInputSerializer(serializers.Serializer):
 
 
 class ProductCreateSerializer(serializers.Serializer):
+    video_recurso_id = serializers.CharField(
+        required=False, allow_blank=True, allow_null=True
+    )
+
+    def validate_video_recurso_id(self, value):
+        if not value:
+            return None
+
+        from uuid import UUID
+        from apps.landing.models import RecursoMultimedia
+
+        try:
+            resource_id = str(UUID(value))
+        except (ValueError, TypeError, AttributeError):
+            raise serializers.ValidationError(
+                "El identificador del video no es valido."
+            )
+
+        tienda_id = self.context.get("tienda_id")
+
+        if not tienda_id:
+            raise serializers.ValidationError(
+                "No se pudo identificar la tienda."
+            )
+
+        existe = RecursoMultimedia.objects.filter(
+            pk=resource_id,
+            tienda_id=tienda_id,
+            tipo="video",
+            activo=True,
+            eliminado=False,
+            archivo__isnull=False,
+            archivo__mime__in=["video/mp4", "video/webm"],
+        ).exists()
+
+        if not existe:
+            raise serializers.ValidationError(
+                "El video no existe o no pertenece a esta tienda."
+            )
+
+        return resource_id
     activo = serializers.BooleanField(required=False, default=True)
     nombre = serializers.CharField(
         max_length=200,

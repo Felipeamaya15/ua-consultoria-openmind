@@ -45,7 +45,9 @@ test('órdenes cuenta todos y por despachar coincide con los cuatro estados del 
   const backend = fs.readFileSync(path.join(root, '../backend/apps/core/infrastructure/dashboard.py'), 'utf8');
   assert.ok(backend.includes("('pendiente', 'pagado', 'preparando', 'en_origen')"));
   const model = fs.readFileSync(path.join(root, '../backend/apps/core/models.py'), 'utf8');
-  assert.ok(model.includes("ESTADOS_PAGADOS = ('pagado', 'preparando', 'en_origen', 'enviado', 'en_reparto', 'entregado')"));
+  const declared = model.match(/ESTADOS_PAGADOS = \(([^)]+)\)/)[1].match(/'[^']+'/g).map(value => value.slice(1, -1));
+  const statuses = load('src/features/admin/data/orderStatus.ts');
+  assert.deepEqual([...statuses.CONFIRMED_ORDER_STATES].sort(), declared.sort());
 });
 
 test('fechas inclusivas interpretadas en Chile, sin depender de zona del navegador', () => {
@@ -74,4 +76,11 @@ test('rangos inválidos no amplían la consulta; fechas, estado e identificador 
     const filters = filter(query); assert.ok(filters.error, query); assert.deepEqual(ids(api.filterStoreOrders(orders, filters)), []);
   }
   assert.equal(api.validOrderDate('2024-02-29'), true); assert.equal(api.validOrderDate('2026-02-29'), false);
+});
+
+
+test('el estado canónico en_camino participa en ventas confirmadas y conserva los alias históricos', () => {
+  const canonical = [...orders, { id: 9, estado: 'en_camino', fecha_creacion: '2026-10-14T12:00:00Z' }];
+  assert.deepEqual(ids(api.filterStoreOrders(canonical, filter('estado=confirmed'))), [2, 3, 4, 5, 6, 7, 9]);
+  assert.deepEqual(ids(api.filterStoreOrders(canonical, filter('estado=dispatch'))), [1, 2, 3, 4]);
 });

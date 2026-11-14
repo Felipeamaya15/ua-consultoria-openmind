@@ -189,9 +189,17 @@ class MediaInputSerializer(StrictSerializer):
         required=False
     )
     imagen = serializers.FileField(required=False)
+    video = serializers.FileField(required=False)
+    perfil_video = serializers.ChoiceField(choices=('section', 'product'), required=False, write_only=True)
     activo = serializers.BooleanField(required=False, default=True)
 
     def validate(self, data):
+        video_profile = data.pop('perfil_video', 'section')
+        if video_profile == 'product' and 'video' not in data:
+            raise serializers.ValidationError(
+                {'perfil_video': 'Este perfil solo se aplica al subir un video nuevo.'}
+            )
+
         if self.instance is None and not all(
             key in data for key in ('titulo', 'tipo')
         ):
@@ -204,12 +212,20 @@ class MediaInputSerializer(StrictSerializer):
             self.instance.tipo if self.instance else None
         )
 
-        if 'imagen' in data and data.get('url'):
+        if sum(bool(data.get(key)) for key in ('imagen', 'video', 'url')) > 1:
             raise serializers.ValidationError(
                 'Usa una URL o un archivo; no ambos.'
             )
 
-        if 'imagen' in data:
+        if 'video' in data:
+            if kind != 'video':
+                raise serializers.ValidationError('Selecciona el tipo Video para subir este archivo.')
+            from apps.landing.video_uploads import process_video_upload
+            try:
+                data['video'] = process_video_upload(data['video'], kind=video_profile)
+            except DjangoValidationError as error:
+                raise serializers.ValidationError({'video': error.messages}) from error
+        elif 'imagen' in data:
             if kind != 'imagen':
                 raise serializers.ValidationError(
                     'Los archivos permitidos son imágenes; no se admiten videos propios.'
@@ -226,6 +242,8 @@ class MediaInputSerializer(StrictSerializer):
                 }) from error
 
         elif 'url' in data:
+            if kind == 'video':
+                raise serializers.ValidationError('Los videos propios se suben desde tu dispositivo.')
             if not data['url']:
                 raise serializers.ValidationError({
                     'url': 'Ingresa una URL o selecciona una imagen.'
@@ -259,7 +277,7 @@ def store_media_image(image, store):
 
     if used + len(image.data) > 100 * 1024 * 1024:
         raise serializers.ValidationError(
-            'La biblioteca alcanzó su límite de 100 MB de imágenes.'
+            'La biblioteca alcanzó su límite de 100 MB de archivos multimedia.'
         )
 
     name = f'biblioteca/{store.pk}/{digest}.{image.extension}'

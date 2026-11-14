@@ -102,7 +102,7 @@ Tests automáticos: `apps/core/test_scrum_509_tuu.py`, `apps/core/test_scrum_509
 
 **Solución implementada (decisión de negocio a confirmar):**
 
-1. El tipo de cambio es el dólar observado, obtenido solo (API SIETE del Banco Central si hay credenciales `BCCH_USUARIO`/`BCCH_CLAVE`; si no, mindicador.cl, que replica el dato oficial) y refrescado cada `PAYPAL_FX_REFRESCO_HORAS` (6 h).
+1. El tipo de cambio es el dólar observado, obtenido solo (API SIETE del Banco Central si hay token `BCCH_TOKEN`; si no, mindicador.cl, que replica el dato oficial) y refrescado cada `PAYPAL_FX_REFRESCO_HORAS` (6 h).
 Si la fuente principal falla se usa la de respaldo y, si ambas fallan, el último dato mientras siga vigente.
 2. Se suma un margen configurable `PAYPAL_FX_MARGEN_PCT` (2 % por defecto) que encarece el dólar: `tasa = observado × (1 + margen)` y `USD = CLP / tasa`. Cubre variación del dólar y comisión de conversión de PayPal.
 3. Antes de pagar, el comprador ve en el checkout el monto estimado en USD, el tipo de cambio, el margen y la fecha del dato; tras pagar ve el monto en USD cobrado.

@@ -22,7 +22,7 @@ export function ActivityRequestForm({sectionId,kind,label}:{sectionId:string;kin
     finally{sending.current=false;if(!controller.signal.aborted)setBusy(false);}
   }
   return <><button type="button" className="section-element-link" onClick={()=>setOpen(true)}>{label}</button>
-    <Modal open={open} onClose={()=>{if(!sending.current)setOpen(false);}} title={kind==='consulta'?'Solicitar información':'Inscripción a taller gratuito'} className="activity-request-dialog" portal>
+    <Modal open={open} onClose={()=>{if(!sending.current)setOpen(false);}} title={kind==='consulta'?'Solicitar información':'Inscripción a taller gratuito'} className="activity-request-dialog">
       {sent?<div role="status"><h3>Recibimos tus datos</h3><p>Si ya existía una solicitud, se conserva sin duplicarla. La tienda gestionará tu solicitud. Esto no acredita pagos ni garantiza un cupo confirmado.</p><Button type="button" onClick={()=>setOpen(false)}>Cerrar</Button></div>:<form onSubmit={submit} className="activity-public-form">
         <p>{kind==='consulta'?'Deja tu consulta para que la tienda pueda responderte. No te inscribe ni reserva cupos.':'La inscripción es gratuita. La tienda puede requerir confirmación; los cupos se verifican al enviar.'}</p>
         <fieldset disabled={busy}>

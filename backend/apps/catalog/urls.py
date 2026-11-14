@@ -1,4 +1,5 @@
 from django.urls import path
+from apps.catalog.presentation.product_media import PublicProductVideoView
 
 from apps.catalog.presentation.views import (
     # Catálogo público
@@ -32,6 +33,7 @@ from apps.catalog.presentation.views import (
 )
 
 urlpatterns = [
+    path('productos/<str:slug>/video/', PublicProductVideoView.as_view(), name='producto-video-publico'),
     path('productos/admin/listado/', ProductoAdminDetailView.as_view(), name='producto-admin-list'),
     # ==========================================
     # 1. Catálogo Público
