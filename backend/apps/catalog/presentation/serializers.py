@@ -113,7 +113,16 @@ class ProductPublicDetailSerializer(serializers.Serializer):
     seo = SeoSerializer(required=False)
 
     def validate_imagenes(self, value):
-        return normalized_images(value)
+        existing_images = self.context.get("existing_images") or ()
+        if not existing_images:
+            return normalized_images(value)
+        result = []
+        for item in value:
+            if item in existing_images:
+                result.append(item)
+            else:
+                result.extend(normalized_images([item]))
+        return result
 
 
 class ProductAdminDetailSerializer(ProductPublicDetailSerializer):
@@ -148,7 +157,16 @@ class ProductImageSerializer(serializers.Serializer):
 
 class ProductoCreateSerializer(serializers.ModelSerializer):
     def validate_imagenes(self, value):
-        return normalized_images(value)
+        existing_images = self.context.get("existing_images") or ()
+        if not existing_images:
+            return normalized_images(value)
+        result = []
+        for item in value:
+            if item in existing_images:
+                result.append(item)
+            else:
+                result.extend(normalized_images([item]))
+        return result
 
     categoria = serializers.CharField(required=False, allow_blank=True, default='')
     descripcion = serializers.CharField(required=False, allow_blank=True, default='')
@@ -376,7 +394,16 @@ class ProductCreateSerializer(serializers.Serializer):
     seo = SeoInputSerializer(required=False)
 
     def validate_imagenes(self, value):
-        return normalized_images(value)
+        existing_images = self.context.get("existing_images") or ()
+        if not existing_images:
+            return normalized_images(value)
+        result = []
+        for item in value:
+            if item in existing_images:
+                result.append(item)
+            else:
+                result.extend(normalized_images([item]))
+        return result
 
     def validate_variantes(self, value):
         if not value:

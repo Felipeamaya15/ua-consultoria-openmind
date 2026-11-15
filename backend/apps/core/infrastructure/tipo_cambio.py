@@ -4,7 +4,8 @@ PayPal no admite pesos chilenos de forma estandar, asi que el pedido (en CLP) se
 equivalente en USD. El valor sale del dolar observado, se refresca solo y nunca se usa si esta
 desactualizado.
 
-Banco Central de Chile (API SIETE), solo si hay BCCH_USUARIO y BCCH_CLAVE configurados.
+Banco Central de Chile (API SIETE), solo si hay BCCH_TOKEN configurado (API Key Token de la BDE).
+El ultimo dato bueno tambien se guarda en la base de datos, para no perderlo al reiniciar.
 
 
 Todo es configurable por entorno (ver settings.py): margen, vigencia maxima y frecuencia de refresco.
@@ -65,17 +66,21 @@ def margen_pct():
 def _leer_json(url):
     request = urllib.request.Request(url, headers={'Accept': 'application/json', 'User-Agent': 'openmind-ecommerce'})
     with urllib.request.urlopen(request, timeout=TIMEOUT) as response:  # noqa: S310 (URL fija de la fuente)
-        return json.loads(response.read().decode('utf-8'))
-
+        crudo = response.read()
+        charset = response.headers.get_content_charset() or 'utf-8'
+    try:
+        texto = crudo.decode(charset)
+    except (UnicodeDecodeError, LookupError):
+        texto = crudo.decode('latin-1')
+    return json.loads(texto)
 
 def _desde_bcch():
-    usuario = (getattr(settings, 'BCCH_USUARIO', '') or '').strip()
-    clave = (getattr(settings, 'BCCH_CLAVE', '') or '').strip()
-    if not usuario or not clave:
+    token = (getattr(settings, 'BCCH_TOKEN', '') or '').strip()
+    if not token:
         return None
     hoy = date.today()
     query = urllib.parse.urlencode({
-        'user': usuario, 'pass': clave, 'timeseries': SERIE_BCCH,
+        'token': token, 'function': 'GetSeries', 'timeseries': SERIE_BCCH,
         'firstdate': (hoy - timedelta(days=10)).isoformat(), 'lastdate': hoy.isoformat(),
     })
     datos = _leer_json(f'{URL_BCCH}?{query}')
@@ -113,19 +118,46 @@ def _ahora():
     return datetime.now(dt_timezone.utc)
 
 
+def _leer_bd():
+    """Ultimo dato bueno guardado en la base de datos (sobrevive a reinicios y a varios workers)."""
+    try:
+        from apps.core.models import TipoCambioGuardado
+        fila = TipoCambioGuardado.objects.filter(pk=1).first()
+        if fila:
+            return {'observado': str(fila.observado), 'fecha_dato': fila.fecha_dato.isoformat(),
+                    'fuente': fila.fuente, 'obtenido': fila.obtenido_en.isoformat()}
+    except Exception:
+        logger.warning('No se pudo leer el tipo de cambio guardado en la base de datos.')
+    return None
+
+
+def _guardar_bd(guardado):
+    try:
+        from apps.core.models import TipoCambioGuardado
+        TipoCambioGuardado.objects.update_or_create(pk=1, defaults={
+            'observado': Decimal(guardado['observado']),
+            'fecha_dato': date.fromisoformat(guardado['fecha_dato']),
+            'fuente': guardado['fuente'],
+            'obtenido_en': datetime.fromisoformat(guardado['obtenido']),
+        })
+    except Exception:
+        logger.warning('No se pudo guardar el tipo de cambio en la base de datos.')
+
+
 def tipo_cambio_vigente():
     """TipoCambio listo para cobrar, o None si no hay un dato reciente y confiable."""
     refresco = timedelta(hours=float(getattr(settings, 'PAYPAL_FX_REFRESCO_HORAS', 6)))
     vigencia = timedelta(hours=float(getattr(settings, 'PAYPAL_FX_MAX_EDAD_HORAS', 96)))
     ahora = _ahora()
 
-    guardado = cache.get(CACHE_KEY)
+    guardado = cache.get(CACHE_KEY) or _leer_bd()
     if not guardado or ahora - datetime.fromisoformat(guardado['obtenido']) >= refresco:
         nuevo = _descargar()
         if nuevo:
             guardado = {'observado': str(nuevo[0]), 'fecha_dato': nuevo[1].isoformat(), 'fuente': nuevo[2],
                         'obtenido': ahora.isoformat()}
             cache.set(CACHE_KEY, guardado, 7 * 24 * 3600)
+            _guardar_bd(guardado)
     if not guardado:
         return None
 

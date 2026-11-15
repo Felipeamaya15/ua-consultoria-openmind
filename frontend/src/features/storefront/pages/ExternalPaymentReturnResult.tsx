@@ -163,26 +163,43 @@ export default function ExternalPaymentReturnResult({ gateway, orderNumber, tien
       {retryError && <p role="alert" className="text-sm text-red-600">{retryError}</p>}
 
       {result.status !== 'loading' && (
-        <div className="flex flex-col sm:flex-row flex-wrap gap-3 w-full">
+        <div className="flex flex-col sm:flex-row flex-wrap gap-3.5 w-full mt-2">
           {result.status === 'approved' || result.status === 'pending' ? (
             <>
-              <Link data-page-action="ghost" to={trackingRoute} state={{ email }} className="flex-1">
-                <Button variant="primary" fullWidth>Ver mi pedido</Button>
+              <Link
+                data-page-action="primary"
+                to={trackingRoute}
+                state={{ email }}
+                className="flex-1 min-h-[48px] px-6 py-3 rounded-xl bg-[var(--primary)] text-[var(--on-primary)] text-sm font-semibold inline-flex items-center justify-center gap-2 shadow-sm transition-all hover:brightness-95"
+              >
+                Ver mi pedido
               </Link>
-              <Link data-page-action="ghost" to={route('catalogo')} className="flex-1">
-                <Button variant="outline" fullWidth>Seguir comprando</Button>
+              <Link
+                data-page-action="outline"
+                to={route('catalogo')}
+                className="flex-1 min-h-[48px] px-6 py-3 rounded-xl border border-[var(--border)] bg-[var(--visual-page-field-background,white)] text-[var(--foreground)] text-sm font-semibold inline-flex items-center justify-center gap-2 shadow-sm transition-all hover:bg-[var(--muted)]"
+              >
+                Seguir comprando
               </Link>
             </>
           ) : (
             <>
-              <Link data-page-action="ghost" to={route('carrito')} className="flex-1">
-                <Button variant="primary" fullWidth>Volver al carrito</Button>
+              <Link
+                data-page-action="primary"
+                to={route('carrito')}
+                className="flex-1 min-h-[48px] px-6 py-3 rounded-xl bg-[var(--primary)] text-[var(--on-primary)] text-sm font-semibold inline-flex items-center justify-center gap-2 shadow-sm transition-all hover:brightness-95"
+              >
+                Volver al carrito
               </Link>
-              <Link data-page-action="ghost" to={route('compra')} className="flex-1">
-                <Button variant="outline" fullWidth>Volver al checkout</Button>
+              <Link
+                data-page-action="outline"
+                to={route('compra')}
+                className="flex-1 min-h-[48px] px-6 py-3 rounded-xl border border-[var(--border)] bg-[var(--visual-page-field-background,white)] text-[var(--foreground)] text-sm font-semibold inline-flex items-center justify-center gap-2 shadow-sm transition-all hover:bg-[var(--muted)]"
+              >
+                Volver al checkout
               </Link>
               {canRetry && (
-                <Button variant="outline" fullWidth className="flex-1" onClick={retryPayment} disabled={retrying}>
+                <Button variant="outline" fullWidth className="flex-1 min-h-[48px] rounded-xl" onClick={retryPayment} disabled={retrying}>
                   {retrying ? `Redirigiendo a ${name}…` : 'Reintentar pago'}
                 </Button>
               )}

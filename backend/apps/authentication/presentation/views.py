@@ -174,7 +174,7 @@ class RegisterAPIView(APIView):
                     defaults={"phone": phone, "postal_code": postal_code},
                 )
             token, _ = Token.objects.get_or_create(user=django_user)
-            touch_token_activity(token.key)
+            touch_token_activity(token.key, user=django_user)
             reset_rate_limit(request, scope="register", identifier=raw_email)
 
             response = success_response(
@@ -185,7 +185,7 @@ class RegisterAPIView(APIView):
                 mensaje="Usuario registrado exitosamente",
                 status=status.HTTP_201_CREATED,
             )
-            set_auth_cookies(response, request, token.key)
+            set_auth_cookies(response, request, token.key, user=django_user)
             return response
         except AuthException as err:
             record_failed_attempt(request, scope="register", identifier=raw_email)
@@ -267,7 +267,7 @@ class LoginAPIView(APIView):
 
             reset_rate_limit(request, scope="login", identifier=username_or_email)
             token, _ = Token.objects.get_or_create(user=django_user)
-            touch_token_activity(token.key)
+            touch_token_activity(token.key, user=django_user)
 
             response = success_response(
                 data={
@@ -277,7 +277,7 @@ class LoginAPIView(APIView):
                 mensaje="Inicio de sesión exitoso",
                 status=status.HTTP_200_OK,
             )
-            set_auth_cookies(response, request, token.key)
+            set_auth_cookies(response, request, token.key, user=django_user)
             return response
         except AuthException as err:
             record_failed_attempt(request, scope="login", identifier=username_or_email)
@@ -337,7 +337,7 @@ class GoogleLoginAPIView(APIView):
             from apps.core.email_verification import record_google_email
             record_google_email(django_user.pk, django_user.email)
             token, _ = Token.objects.get_or_create(user=django_user)
-            touch_token_activity(token.key)
+            touch_token_activity(token.key, user=django_user)
 
             response = success_response(
                 data={
@@ -347,7 +347,7 @@ class GoogleLoginAPIView(APIView):
                 mensaje="Inicio de sesión con Google exitoso",
                 status=status.HTTP_200_OK,
             )
-            set_auth_cookies(response, request, token.key)
+            set_auth_cookies(response, request, token.key, user=django_user)
             return response
         except AuthException as err:
             return error_response(
@@ -777,7 +777,7 @@ class MFAVerifyAPIView(APIView):
         repo = DjangoUserRepository()
         user_entity = repo.get_by_id(django_user.id)
         token, _ = Token.objects.get_or_create(user=django_user)
-        touch_token_activity(token.key)
+        touch_token_activity(token.key, user=django_user)
 
         response = success_response(
             data={
@@ -787,7 +787,7 @@ class MFAVerifyAPIView(APIView):
             mensaje="Verificación MFA exitosa",
             status=status.HTTP_200_OK,
         )
-        set_auth_cookies(response, request, token.key)
+        set_auth_cookies(response, request, token.key, user=django_user)
         return response
 
 

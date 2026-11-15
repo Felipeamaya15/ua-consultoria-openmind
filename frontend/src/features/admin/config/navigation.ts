@@ -16,7 +16,7 @@ export const legalSlugs = {
 } as const;
 
 export const menuItems = [
-  { path: '/emprendedor', label: 'Resumen', icon: 'grid' },
+  { path: '/emprendedor', label: 'Estadísticas', icon: 'grid' },
   { path: '/emprendedor/productos', label: 'Productos', icon: 'box' },
   { path: '/emprendedor/pedidos', label: 'Pedidos', icon: 'orders' },
   { path: '/emprendedor/ventas', label: 'Ventas', icon: 'file' },

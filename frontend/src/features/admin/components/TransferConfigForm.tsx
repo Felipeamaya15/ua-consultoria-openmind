@@ -9,10 +9,10 @@ interface Props {
 }
 
 const fieldHints: Record<string, { hint: string; placeholder: string; maxLength: number }> = {
-  account_number: { hint: 'Copia el número desde tu banco. Usa solo dígitos y conserva los ceros iniciales.', placeholder: 'Ej. 00123456789', maxLength: 24 },
-  holder_name: { hint: 'Nombre completo o razón social de quien es titular de la cuenta.', placeholder: 'Ej. María González Pérez', maxLength: 150 },
-  holder_rut: { hint: 'RUT de la persona o empresa titular, con dígito verificador. Se admiten puntos y K.', placeholder: 'Ej. 12.345.678-5', maxLength: 12 },
-  confirmation_email: { hint: 'Correo donde recibirás los comprobantes de tus clientes.', placeholder: 'Ej. pagos@mitienda.cl', maxLength: 254 },
+  account_number: { hint: 'Solo dígitos sin puntos ni guiones.', placeholder: 'Ej. 00123456789', maxLength: 24 },
+  holder_name: { hint: 'Nombre o razón social del titular.', placeholder: 'Ej. María González Pérez', maxLength: 150 },
+  holder_rut: { hint: 'RUT del titular con dígito verificador.', placeholder: 'Ej. 12.345.678-5', maxLength: 12 },
+  confirmation_email: { hint: 'Correo para recibir comprobantes de pago.', placeholder: 'Ej. pagos@mitienda.cl', maxLength: 254 },
 };
 
 export function TransferConfigForm({ fields, errors, disabled, onChange }: Props) {
@@ -32,34 +32,31 @@ export function TransferConfigForm({ fields, errors, disabled, onChange }: Props
       inputMode={field === 'account_number' ? 'numeric' : undefined}
       autoComplete={field === 'confirmation_email' ? 'email' : field === 'holder_name' ? 'name' : 'off'}
       required
-      persistentHint
       {...fieldHints[field]}
       hint={field === 'account_number' && accountType === 'CuentaRUT'
-        ? 'Para CuentaRUT, usa el RUT del titular sin puntos ni dígito verificador.' : fieldHints[field].hint}
+        ? 'Para CuentaRUT, usa el RUT sin puntos ni dígito verificador.' : fieldHints[field].hint}
       onChange={event => onChange(field, event.target.value)}
     />
   );
 
   return (
-    <fieldset disabled={disabled} className="min-w-0 grid gap-5 border-t border-[var(--border)] pt-4" data-transfer-config>
+    <fieldset disabled={disabled} className="min-w-0 grid gap-4 border-t border-[var(--border)] pt-3" data-transfer-config>
       <legend className="sr-only">Datos para recibir transferencias bancarias</legend>
-      <p className="text-sm text-[var(--muted-foreground)]">
-        Estos datos se mostrarán al cliente para transferir a tu cuenta. Los campos con * son obligatorios.
+      <p className="text-xs text-[var(--muted-foreground)]">
+        Datos bancarios que se mostrarán al comprador para realizar la transferencia.
       </p>
       {(legacyBank || legacyType) && (
         <Alert variant="info">Conservamos tu configuración anterior. Para actualizar los datos bancarios, selecciona un banco y un tipo de cuenta del listado.</Alert>
       )}
-      <div className="grid gap-3">
-        <h3 className="text-sm font-semibold">1. Cuenta de destino</h3>
-        <div className="grid min-w-0 sm:grid-cols-2 gap-4">
+      <div className="grid gap-2">
+        <h3 className="text-xs font-semibold text-slate-700 uppercase tracking-wider">Cuenta de destino</h3>
+        <div className="grid min-w-0 sm:grid-cols-2 gap-3">
           <Select
             id="transfer-bank_name"
             label="Banco *"
             value={bank?.name ?? bankName}
             required
             error={errors.bank_name}
-            persistentHint
-            hint="Selecciona la entidad donde está abierta tu cuenta."
             options={[
               { value: '', label: 'Selecciona un banco' },
               ...(legacyBank ? [{ value: bankName, label: `${bankName} (configuración anterior)` }] : []),
@@ -74,8 +71,6 @@ export function TransferConfigForm({ fields, errors, disabled, onChange }: Props
             required
             disabled={!bank}
             error={errors.account_type}
-            persistentHint
-            hint={bank?.code === '012' ? 'CuentaRUT es una cuenta vista de BancoEstado.' : 'Elige el tipo que aparece en tu cartola. CuentaRUT solo está disponible en BancoEstado.'}
             options={[
               { value: '', label: bank ? 'Selecciona un tipo de cuenta' : 'Primero selecciona un banco' },
               ...(legacyType ? [{ value: accountType, label: `${accountType} (configuración anterior)` }] : []),
@@ -86,9 +81,9 @@ export function TransferConfigForm({ fields, errors, disabled, onChange }: Props
           {renderInput('account_number')}
         </div>
       </div>
-      <div className="grid gap-3">
-        <h3 className="text-sm font-semibold">2. Datos del titular</h3>
-        <div className="grid min-w-0 sm:grid-cols-2 gap-4">
+      <div className="grid gap-2">
+        <h3 className="text-xs font-semibold text-slate-700 uppercase tracking-wider">Datos del titular</h3>
+        <div className="grid min-w-0 sm:grid-cols-2 gap-3">
           {renderInput('holder_name')}
           {renderInput('holder_rut')}
           {renderInput('confirmation_email')}
@@ -96,14 +91,12 @@ export function TransferConfigForm({ fields, errors, disabled, onChange }: Props
       </div>
       <Textarea
         id="transfer-instructions"
-        label="Instrucciones de conciliación (opcional)"
+        label="Instrucciones para la transferencia (opcional)"
         value={fields.instructions ?? ''}
-        placeholder="Ej. Indica el número de pedido en el comentario de la transferencia."
-        rows={3}
+        placeholder="Ej. Indica el número de pedido en el asunto de la transferencia."
+        rows={2}
         maxLength={1000}
         error={errors.instructions}
-        persistentHint
-        hint="Agrega indicaciones para identificar los pagos. Máximo 1000 caracteres."
         onChange={event => onChange('instructions', event.target.value)}
       />
     </fieldset>
