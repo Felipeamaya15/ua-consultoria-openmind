@@ -1,0 +1,172 @@
+# Despliegue de producción de OpenMind E-commerce (5 servicios: db, mongodb, backend, expirador_pedidos y web).
+# Se ejecuta desde la carpeta principal del proyecto:
+#   docker compose -f deploy/docker-compose.prod.yml up -d --build
+# Lee sus variables del archivo deploy/.env (se crea con deploy/preparar_env.sh).
+name: openmind
+
+# Variables compartidas por el backend y el expirador de pedidos (los dos corren el mismo programa).
+x-backend-env: &backend_env
+  - DOMAIN=${DOMAIN:?Falta DOMAIN en deploy/.env}
+  - SECRET_KEY=${DJANGO_SECRET_KEY:?Falta DJANGO_SECRET_KEY en deploy/.env}
+  - DEBUG=0
+  - PAYMENT_CREDENTIALS_KEY=${PAYMENT_CREDENTIALS_KEY:?Falta PAYMENT_CREDENTIALS_KEY en deploy/.env}
+  - DJANGO_ALLOWED_HOSTS=${DOMAIN}
+  - DJANGO_CORS_ALLOWED_ORIGINS=https://${DOMAIN}
+  - DJANGO_CSRF_TRUSTED_ORIGINS=https://${DOMAIN}
+  - DJANGO_SECURE_SSL_REDIRECT=1
+  - DJANGO_SECURE_HSTS_SECONDS=${DJANGO_SECURE_HSTS_SECONDS:-0}
+  - DB_NAME=${POSTGRES_DB}
+  - DB_USER=${POSTGRES_USER}
+  - DB_PASSWORD=${POSTGRES_PASSWORD}
+  - DB_HOST=db
+  - DB_PORT=5432
+  - MONGO_HOST=mongodb
+  - MONGO_PORT=27017
+  - MONGO_USER=${MONGO_USER}
+  - MONGO_PASSWORD=${MONGO_PASSWORD}
+  - MONGO_DB_NAME=${MONGO_DB_NAME}
+  - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:?Falta GOOGLE_CLIENT_ID en deploy/.env (ver el manual)}
+  - PICKUP_GEOCODING_PROVIDER=${PICKUP_GEOCODING_PROVIDER:-}
+  - PICKUP_GOOGLE_GEOCODING_KEY=${PICKUP_GOOGLE_GEOCODING_KEY:-}
+  - STOREFRONT_PUBLIC_URL=https://${DOMAIN}/plantilla/1
+  - COMMERCIAL_CONSENT_FRONTEND_ORIGIN=https://${DOMAIN}
+  - EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend
+  - EMAIL_HOST=${EMAIL_HOST:-smtp-relay.brevo.com}
+  - EMAIL_PORT=${EMAIL_PORT:-587}
+  - EMAIL_USE_TLS=${EMAIL_USE_TLS:-1}
+  - EMAIL_USE_SSL=${EMAIL_USE_SSL:-0}
+  - EMAIL_HOST_USER=${EMAIL_HOST_USER:-}
+  - EMAIL_HOST_PASSWORD=${EMAIL_HOST_PASSWORD:-}
+  - DEFAULT_FROM_EMAIL=${DEFAULT_FROM_EMAIL:-Tienda <no-reply@tienda.local>}
+  - TUU_CALLBACK_BASE_URL=https://${DOMAIN}
+  - PAYPAL_FX_MARGEN_PCT=${PAYPAL_FX_MARGEN_PCT:-2}
+  - PAYPAL_FX_MAX_EDAD_HORAS=${PAYPAL_FX_MAX_EDAD_HORAS:-96}
+  - PAYPAL_FX_REFRESCO_HORAS=${PAYPAL_FX_REFRESCO_HORAS:-6}
+  - BCCH_TOKEN=${BCCH_TOKEN:-}
+  - DJANGO_ADMIN_SESSION_COOKIE_AGE=${DJANGO_ADMIN_SESSION_COOKIE_AGE:-1800}
+  - DJANGO_CUSTOMER_SESSION_COOKIE_AGE=${DJANGO_CUSTOMER_SESSION_COOKIE_AGE:-2592000}
+  - ADMIN_SESSION_INACTIVITY_TIMEOUT_SECONDS=${ADMIN_SESSION_INACTIVITY_TIMEOUT_SECONDS:-1800}
+  - GOOGLE_OAUTH_CLIENT_ID=${GOOGLE_OAUTH_CLIENT_ID:-}
+  - GOOGLE_OAUTH_CLIENT_SECRET=${GOOGLE_OAUTH_CLIENT_SECRET:-}
+  - GOOGLE_OAUTH_REDIRECT_URI=https://${DOMAIN}/api/tienda/correo/google/callback/
+  - GOOGLE_OAUTH_TOKEN_ENCRYPTION_KEY=${GOOGLE_OAUTH_TOKEN_ENCRYPTION_KEY:-}
+  - STORE_MAIL_EXTERNAL_ENABLED=${STORE_MAIL_EXTERNAL_ENABLED:-0}
+  - STORE_MAIL_TRANSPORT=${STORE_MAIL_TRANSPORT:-auto}
+  - STORE_MAIL_HOURLY_LIMIT=${STORE_MAIL_HOURLY_LIMIT:-100}
+  - STORE_MAIL_DAILY_LIMIT=${STORE_MAIL_DAILY_LIMIT:-500}
+  - STORE_MAIL_PROVIDER_DAILY_LIMIT=${STORE_MAIL_PROVIDER_DAILY_LIMIT:-500}
+  - STORE_MAIL_PUBLIC_API_URL=https://${DOMAIN}
+
+x-backend-build: &backend_build
+  context: ..
+  dockerfile: deploy/backend.Dockerfile
+
+services:
+  # Base de datos de usuarios, pedidos y configuración (PostgreSQL).
+  db:
+    image: postgres:15-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:?Falta POSTGRES_DB en deploy/.env}
+      POSTGRES_USER: ${POSTGRES_USER:?Falta POSTGRES_USER en deploy/.env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Falta POSTGRES_PASSWORD en deploy/.env}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\""]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+
+  # Base de datos de productos e imágenes de productos (MongoDB).
+  mongodb:
+    image: mongo:8.0
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USER:?Falta MONGO_USER en deploy/.env}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:?Falta MONGO_PASSWORD en deploy/.env}
+      MONGO_INITDB_DATABASE: ${MONGO_DB_NAME:?Falta MONGO_DB_NAME en deploy/.env}
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 10s
+      timeout: 10s
+      retries: 12
+      start_period: 20s
+
+  # El programa de la tienda (Django con Gunicorn).
+  backend:
+    build: *backend_build
+    restart: unless-stopped
+    environment: *backend_env
+    volumes:
+      - media:/app/media
+      - static:/app/staticfiles
+    depends_on:
+      db:
+        condition: service_healthy
+      mongodb:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "/healthcheck.py"]
+      interval: 15s
+      timeout: 8s
+      retries: 6
+      start_period: 120s
+
+  # Cancela los pedidos pendientes que vencieron y devuelve su stock (revisa cada 5 minutos).
+  # Corre el mismo programa que el backend, pero sin Gunicorn ni migraciones: espera a que el backend este sano.
+  expirador_pedidos:
+    build: *backend_build
+    restart: unless-stopped
+    init: true
+    stop_grace_period: 60s
+    user: "1000:1000"
+    entrypoint: ["python", "manage.py", "expirar_pedidos_pendientes", "--daemon", "--intervalo", "300"]
+    environment: *backend_env
+    healthcheck:
+      test: ["CMD-SHELL", "find /tmp/expirador_pedidos.heartbeat -mmin -15 2>/dev/null | grep -q ."]
+      interval: 60s
+      timeout: 5s
+      retries: 3
+      start_period: 90s
+    depends_on:
+      db:
+        condition: service_healthy
+      mongodb:
+        condition: service_healthy
+      backend:
+        condition: service_healthy
+
+  # La página web y el candado HTTPS (Caddy). Es lo único abierto a internet.
+  web:
+    build:
+      context: ..
+      dockerfile: deploy/web.Dockerfile
+      args:
+        VITE_API_URL: https://${DOMAIN}
+        VITE_GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:?Falta GOOGLE_CLIENT_ID en deploy/.env (ver el manual)}
+    restart: unless-stopped
+    environment:
+      - DOMAIN=${DOMAIN}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
+      - static:/srv/static:ro
+    depends_on:
+      backend:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
+  mongo_data:
+  media:
+  static:
+  caddy_data:
+  caddy_config:
