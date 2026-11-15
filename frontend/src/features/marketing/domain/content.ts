@@ -45,13 +45,18 @@ export function buildPublication(product: MarketingProduct, source: ContentSourc
   const original = selected.originalPrice;
   const basisPoints = original ? Number((BigInt(original - selected.price) * 10000n) / BigInt(original)) : 0;
   return {
-    productId: product.id, productName: product.name, category: product.category, image: product.images[0] || null,
+    productId: product.id, productName: product.name, category: product.category, image: publicationImages(product, selected.variant.sku)[0] || null,
     description: product.description || '',
     price: selected.price, originalPrice: original,
     discountLabel: original !== null ? (basisPoints ? `${(basisPoints / 100).toLocaleString('es-CL', { maximumFractionDigits: 2 })}% menos` : 'Precio de oferta') : null,
     fromPrice: !sku && source === 'product' && new Set(choices.map(v => v.price)).size > 1,
     variantLabel: variantDescription(selected.variant), hasMultipleVariants: product.variants.length > 1, source,
   };
+}
+/** Variant photographs take priority when present; existing product photos are shared otherwise. */
+export function publicationImages(product: MarketingProduct, sku = '', source: ContentSource = 'product'): string[] {
+  const variant = sku ? product.variants.find(row => row.sku === sku) : pricedVariants(product).filter(row => source === 'product' || row.originalPrice !== null).reduce<PricedVariant | null>((best, row) => !best || row.price < best.price ? row : best, null)?.variant;
+  return [...new Set([...(variant?.images || []), ...product.images])];
 }
 export function hasRealOffer(product: MarketingProduct): boolean {
   return pricedVariants(product).some(v => v.originalPrice !== null);

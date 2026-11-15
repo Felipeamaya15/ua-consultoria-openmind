@@ -5,11 +5,13 @@ export interface MarketingVariant {
   offerPrice: unknown;
   stock: unknown;
   active: boolean;
+  images?: string[];
   attributes: { label: string; value: string }[];
 }
 export interface MarketingProduct {
   id: string; name: string; category: string; active: boolean; images: string[];
   description?: string;
+  slug?: string;
   variants: MarketingVariant[];
 }
 export type ContentSource = 'product' | 'promotion';

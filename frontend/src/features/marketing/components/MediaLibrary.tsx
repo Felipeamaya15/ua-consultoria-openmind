@@ -7,6 +7,8 @@ import { validateVideoFile } from '../domain/videoUpload';
 import { MEDIA_TYPES, emptyMediaDraft, mediaProblem, type MediaDraft, type MediaKind, type MediaPage, type MediaResource } from '../domain/mediaLibrary';
 import { deleteMediaResource, fetchMediaLibrary, saveMediaResource, setMediaActive } from '../services/mediaLibraryService';
 import { MediaPreview } from './MediaPreview';
+import { CatalogMedia, type CatalogSelection, type CatalogStatus } from './CatalogMedia';
+import type { MarketingProduct } from '../domain/types';
 import './mediaLibrary.css';
 
 const errorMessage = (cause: unknown) => humanizeAdminError(cause instanceof Error ? cause.message : 'No pudimos completar la operación. Intenta nuevamente.');
@@ -49,7 +51,9 @@ function ResourceForm({ initial, busy, onSave, onCancel, onDirty }: {
   </form></AdminCard>;
 }
 
-export function MediaLibrary({ active, isCurrent, onDirty }: { active: boolean; isCurrent: () => boolean; onDirty: (dirty: boolean) => void }) {
+export function MediaLibrary({ active, isCurrent, onDirty, products = [], catalogStatus, onSelectProduct, onUseImage, onOpenSharing }: { active: boolean; isCurrent: () => boolean; onDirty: (dirty: boolean) => void; products?: MarketingProduct[]; catalogStatus?: CatalogStatus; onSelectProduct?: (selection: CatalogSelection) => boolean; onUseImage?: (id: string) => Promise<boolean>; onOpenSharing?: () => void }) {
+  const [origin, setOrigin] = useState('saved');
+  const [query, setQuery] = useState(''), [kind, setKind] = useState(''), [state, setState] = useState(''), [order, setOrder] = useState('recientes');
   const [page, setPage] = useState(1), [revision, setRevision] = useState(0), [data, setData] = useState<MediaPage | null>(null);
   const [loading, setLoading] = useState(false), [error, setError] = useState(''), [mutationError, setMutationError] = useState(''), [notice, setNotice] = useState('');
   const [editor, setEditor] = useState<{ item: MediaResource | null; key: number } | null>(null), [dirty, setDirty] = useState(false), [busy, setBusy] = useState(false), [deleting, setDeleting] = useState<string | null>(null);
@@ -59,18 +63,24 @@ export function MediaLibrary({ active, isCurrent, onDirty }: { active: boolean; 
   useEffect(() => { onDirty(dirty); }, [dirty, onDirty]);
   useEffect(() => () => onDirty(false), [onDirty]);
   useEffect(() => {
-    if (!active) return;
-    const controller = new AbortController(); setLoading(true); setError('');
-    fetchMediaLibrary(page, controller.signal).then(next => { if (!controller.signal.aborted && isCurrent()) setData(next); }).catch(cause => { if (!controller.signal.aborted && isCurrent()) setError(errorMessage(cause)); }).finally(() => { if (!controller.signal.aborted) setLoading(false); });
+    if (!active || origin !== 'saved') return;
+    const controller = new AbortController(); setLoading(true); setError(''); setData(null);
+    fetchMediaLibrary(page, controller.signal, { q: query, tipo: kind, estado: state, orden: order }).then(next => {
+      if (!controller.signal.aborted && isCurrent()) {
+        if (page > 1 && !next.resultados.length) setPage(Math.max(1, Math.ceil(next.total / 24)));
+        else setData(next);
+      }
+    }).catch(cause => { if (!controller.signal.aborted && isCurrent()) setError(errorMessage(cause)); }).finally(() => { if (!controller.signal.aborted) setLoading(false); });
     return () => controller.abort();
-  }, [active, page, revision, isCurrent]);
+  }, [active, origin, page, revision, isCurrent, query, kind, state, order]);
   async function mutate(operation: (signal: AbortSignal) => Promise<unknown>, success: string, closeEditor = false) {
     if (mutation.current) return;
     if (!isCurrent()) { setMutationError('Tu sesión cambió. Vuelve a abrir Marketing.'); return; }
     const controller = new AbortController(); mutation.current = controller; setBusy(true); setMutationError(''); setNotice('');
     try {
-      await operation(controller.signal);
+      const result = await operation(controller.signal);
       if (controller.signal.aborted || !isCurrent()) return;
+      if (result === false) return;
       if (closeEditor) { setEditor(null); setDirty(false); }
       setDeleting(null); setNotice(success); setRevision(old => old + 1);
     } catch (cause) { if (!controller.signal.aborted && isCurrent()) setMutationError(errorMessage(cause)); }
@@ -81,21 +91,28 @@ export function MediaLibrary({ active, isCurrent, onDirty }: { active: boolean; 
     setEditor({ item, key: ++editorSequence.current }); setMutationError(''); setNotice(''); setDeleting(null);
   }
   return <div className="media-library">
-    <header className="media-library-heading"><div><h2>Biblioteca multimedia</h2><p>Guarda imágenes y contenido público para reutilizarlo más adelante en las secciones de tu tienda.</p></div><Button type="button" disabled={busy} onClick={() => openEditor(null)}>Agregar recurso</Button></header>
+    <header className="media-library-heading"><div><h2>Biblioteca multimedia</h2><p>Encuentra y reutiliza imágenes, videos y enlaces de tu tienda sin volver a cargarlos.</p></div><Button type="button" disabled={busy} onClick={() => { setOrigin('saved'); openEditor(null); }}>Agregar recurso</Button></header>
+    <div className="media-actions" role="group" aria-label="Origen de recursos"><Button type="button" variant={origin === 'saved' ? 'primary' : 'outline'} aria-pressed={origin === 'saved'} disabled={busy} onClick={() => setOrigin('saved')}>Recursos guardados</Button><Button type="button" variant={origin === 'catalog' ? 'primary' : 'outline'} aria-pressed={origin === 'catalog'} disabled={busy} onClick={() => setOrigin('catalog')}>Imágenes del catálogo</Button>{onOpenSharing && <Button type="button" variant="outline" disabled={busy} onClick={onOpenSharing}>Servicios y talleres en Difusión</Button>}</div>
+    {origin === 'catalog' && <CatalogMedia products={products} status={catalogStatus} busy={busy} onSelect={onSelectProduct} />}
+    <div hidden={origin !== 'saved'} className="media-library">
     <p className="media-help">Guardar aquí no publica contenido en tu tienda. Puedes reutilizar imágenes, videos propios de hasta 20 segundos y 8 MB, y enlaces públicos.</p>
     {editor && <ResourceForm key={editor.key} initial={editor.item} busy={busy} onDirty={setDirty} onCancel={() => { setEditor(null); setMutationError(''); }} onSave={(draft, file, preserve) => mutate(signal => saveMediaResource(editor.item?.id || null, draft, file, preserve, signal), 'Recurso guardado.', true)} />}
     {mutationError && <Alert variant="error">{mutationError}</Alert>}
     <p role="status">{notice}</p>
+    <div className="media-filters"><Input label="Buscar recurso multimedia" type="search" value={query} maxLength={180} placeholder="Nombre, descripción o enlace" onChange={event => { setQuery(event.target.value); setPage(1); }} /><Select label="Filtrar tipo de recurso" value={kind} options={[{ value: '', label: 'Todos los tipos' }, ...Object.entries(MEDIA_TYPES).map(([value, label]) => ({ value, label }))]} onChange={event => { setKind(event.target.value); setPage(1); }} /><Select label="Estado del recurso" value={state} options={[{ value: '', label: 'Todos los estados' }, { value: 'activo', label: 'Activos' }, { value: 'inactivo', label: 'Desactivados' }]} onChange={event => { setState(event.target.value); setPage(1); }} /><Select label="Ordenar recursos" value={order} options={[{ value: 'recientes', label: 'Más recientes' }, { value: 'nombre', label: 'Nombre' }]} onChange={event => { setOrder(event.target.value); setPage(1); }} /></div>
     {loading && <LoadingState>Cargando biblioteca multimedia…</LoadingState>}
     {error && <ErrorState onRetry={() => setRevision(old => old + 1)}>{error}</ErrorState>}
-    {!loading && !error && data?.total === 0 && <EmptyListState title="Tu biblioteca está vacía">Agrega una imagen, un video de YouTube, una publicación pública o un enlace externo.</EmptyListState>}
+    {!loading && !error && data?.total === 0 && <EmptyListState title={query || kind || state ? 'No hay recursos para estos filtros' : 'Tu biblioteca está vacía'}>Prueba otra búsqueda o agrega un recurso multimedia.</EmptyListState>}
     {data && <><p className="media-help">{data.total} recursos guardados · Página {data.pagina}</p><div className="media-library-grid">{data.resultados.map(item => <AdminCard key={item.id} className="media-resource-card">
       <div className="media-resource-heading"><span>{MEDIA_TYPES[item.tipo]}</span><span>{item.activo ? 'Activo' : 'Desactivado'}</span></div><h3>{item.titulo}</h3>{item.descripcion && <p className="media-resource-description">{item.descripcion}</p>}
-      {item.archivo && <p className="media-help">{item.archivo.ancho} × {item.archivo.alto} px · {Math.ceil(item.archivo.tamano / 1024)} KB</p>}
-      <MediaPreview key={`${item.id}:${item.actualizado}`} resource={item} />
+      {item.archivo && <p className="media-help">{item.archivo.mime} · {item.archivo.ancho} × {item.archivo.alto} px · {Math.ceil(item.archivo.tamano / 1024)} KB</p>}
+      {!!item.usos?.length && <p className="media-help">En uso: {item.usos.join(', ')}. Retira estas referencias antes de eliminarlo.</p>}
+      <MediaPreview key={`${item.id}:${item.actualizado}`} resource={item} initiallyOpen={item.tipo === 'imagen'} />
+      {item.tipo === 'imagen' && onUseImage && <Button type="button" disabled={busy || !item.activo} onClick={() => void mutate(() => onUseImage(item.id), 'Imagen preparada en Publicaciones.')}>Usar imagen en publicación</Button>}
       <div className="media-actions"><Button type="button" variant="outline" disabled={busy} onClick={() => openEditor(item)} aria-label={`Editar ${item.titulo}`}>Editar</Button><Button type="button" variant="ghost" disabled={busy} onClick={() => void mutate(signal => setMediaActive(item.id, !item.activo, signal), item.activo ? 'Recurso desactivado.' : 'Recurso activado.')} aria-label={`${item.activo ? 'Desactivar' : 'Activar'} ${item.titulo}`}>{item.activo ? 'Desactivar' : 'Activar'}</Button><Button type="button" variant="ghost" disabled={busy} onClick={() => setDeleting(item.id)} aria-label={`Eliminar ${item.titulo}`}>Eliminar</Button></div>
       {deleting === item.id && <div className="media-delete"><p>¿Eliminar «{item.titulo}» de la biblioteca? No se elimina el contenido en su proveedor.</p><Button type="button" variant="outline" disabled={busy} onClick={() => void mutate(signal => deleteMediaResource(item.id, signal), 'Recurso eliminado.')}>Confirmar eliminación</Button><Button type="button" variant="ghost" disabled={busy} onClick={() => setDeleting(null)}>Cancelar</Button></div>}
     </AdminCard>)}</div>
     <nav aria-label="Páginas de la biblioteca" className="media-actions"><Button type="button" variant="outline" disabled={busy || loading || page <= 1} onClick={() => setPage(old => old - 1)}>Anterior</Button><Button type="button" variant="outline" disabled={busy || loading || page * 24 >= data.total} onClick={() => setPage(old => old + 1)}>Siguiente</Button></nav></>}
+    </div>
   </div>;
 }

@@ -12,7 +12,7 @@
 .marketing-section-information h3{font-size:19px;font-weight:650}
 .marketing-section-information p{max-width:68ch;color:var(--muted-foreground)}
 .marketing-section-panel:focus-visible,.marketing-section-navigation button:focus-visible{outline:3px solid #a5a0fb;outline-offset:3px}
-@media(max-width:900px){.marketing-section-navigation .admin-numbered-tabs{display:flex}.marketing-section-navigation .admin-numbered-tabs>button{flex:0 0 auto;min-height:46px;padding-inline:14px}}
+@media(max-width:900px){.marketing-section-navigation .admin-numbered-tabs{grid-template-columns:repeat(2,minmax(0,1fr));overflow:visible}.marketing-section-navigation .admin-numbered-tabs>button{min-width:0;min-height:46px;white-space:normal;padding-inline:8px}}
 .marketing-module *{box-sizing:border-box}
 .marketing-intro{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:24px}
 .marketing-intro>p{color:var(--muted-foreground);max-width:640px;line-height:1.7}

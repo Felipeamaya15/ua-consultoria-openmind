@@ -7,6 +7,7 @@ import type { LandingConfig, BloqueLanding } from '../../landing/types/landing.t
 import type { SocialProfiles } from '../../landing/types/socialProfiles';
 import { fetchSocialProfiles } from './socialProfilesService';
 import { fetchMarketingProducts } from './marketingService';
+import { fetchMediaImage, fetchMediaResource } from './mediaLibraryService';
 import { buildPublication, formatMarketingMoney } from '../domain/content';
 import type { MarketingProduct, PublicationContent } from '../domain/types';
 import { sharingKey, type SharingItem, type SharingReference } from '../domain/sharing';
@@ -76,6 +77,21 @@ export async function fetchSharingSources(home:string,signal:AbortSignal):Promis
   return {items,errors,profiles:profiles.status==='fulfilled'?profiles.value:null};
 }
 export async function resolveSharingItem(reference:SharingReference,home:string,signal:AbortSignal):Promise<SharingItem>{
+  if (reference.kind === 'library') {
+    const resource = await fetchMediaResource(reference.id, signal);
+    if (!resource.activo || resource.tipo !== 'imagen') throw new Error('Selecciona una imagen activa y disponible de la biblioteca.');
+    let image = resource.url;
+    if (resource.archivo) {
+      const blob = await fetchMediaImage(resource.id, signal);
+      if (!blob.type.startsWith('image/')) throw new Error('Este recurso no es una imagen.');
+      const bytes = new Uint8Array(await blob.arrayBuffer());
+      let binary = '';
+      for (let offset = 0; offset < bytes.length; offset += 8192) binary += String.fromCharCode(...bytes.subarray(offset, offset + 8192));
+      image = `data:${blob.type};base64,${btoa(binary)}`;
+    }
+    signal.throwIfAborted();
+    return { reference, group: 'Multimedia', title: resource.titulo, description: resource.descripcion, url: home, images: image ? [image] : [], content: editorial(resource.id, resource.titulo, resource.descripcion, image || null, 'Multimedia') };
+  }
   const sources=await fetchSharingSources(home,signal);
   const item=sources.items.find(item=>sharingKey(item.reference)===sharingKey(reference));
   if(!item)throw new Error('Este contenido ya no está publicado o no pudimos verificar su disponibilidad. Actualiza Difusión antes de continuar.');

@@ -2,7 +2,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { LoadingState } from '../../../shared/components/states';
 import { Link, useBlocker, useSearchParams } from 'react-router-dom';
 import { Alert, Button, Input } from '../../admin/components/ui';
-import { buildPublication, productProblem } from '../domain/content';
+import { buildPublication, productProblem, publicationImages } from '../domain/content';
+import type { CatalogSelection } from '../components/CatalogMedia';
 import { useMarketingSources } from '../hooks/useMarketingSources';
 import { ContentPicker } from '../components/ContentPicker';
 import { FormatPicker } from '../components/FormatPicker';
@@ -89,7 +90,7 @@ function MarketingWorkspace({ scope, isCurrent }: { scope: DraftScope; isCurrent
   const product = sources.products.find(p => p.id === productId);
   const problem = product ? productProblem(product, source) : productId && !sources.loading && !sources.productError ? 'Este producto ya no está disponible en tu catálogo. Selecciona otro.' : null;
   const content = sharingReference ? sharingItem?.content||null : product && !sources.loading ? buildPublication(product, source, sku) : null;
-  const images=sharingReference?sharingItem?.images||[]:product?.images||[];
+  const images=sharingReference?sharingItem?.images||[]:product?publicationImages(product,sku,source):[];
   const sharingKeyValue=sharingReference?sharingKey(sharingReference):'';
   useEffect(()=>{
     if(!sharingReference){setSharingItem(null);return;}
@@ -108,6 +109,7 @@ function MarketingWorkspace({ scope, isCurrent }: { scope: DraftScope; isCurrent
       if (!draft) throw new Error('El borrador ya no está disponible.');
       const p = draft.publication;
       setSharingReference(p.sharingReference);setSharingItem(null);
+      setSharingAttempt(value => value + 1);
       setProductId(p.productId); setSku(p.sku); setSource(p.source); setDesign({ format: p.format, layout: 'product-spotlight' });
       setSession(restoreSession(p)); setSessionVersion(n => n + 1); setPickerVersion(n => n + 1); setOpened(draft); setName(draft.name);
       setBaseline(JSON.stringify({ publication: p, name: draft.name })); setNotice('Borrador abierto. Se consultan de nuevo los productos, precios e identidad de tu tienda.');
@@ -148,16 +150,25 @@ function MarketingWorkspace({ scope, isCurrent }: { scope: DraftScope; isCurrent
     } catch (error) { if (mounted.current) setError(message(error)); }
     finally { savingRef.current = false; if (mounted.current) setBusy(false); }
   };
-  async function prepareSharing(item:SharingItem,format:PublicationFormat):Promise<boolean>{
+  function prepareCatalog(selection: CatalogSelection): boolean {
+    if (!discard() || !isCurrent()) return false;
+    const next = initialTemplateHistory();
+    for (const history of Object.values(next.documents)) history.present.imageIndex = selection.imageIndex;
+    setSharingReference(undefined); setSharingItem(null); setProductId(selection.productId); setSku(selection.sku); setSource('product');
+    setSession(next); setSessionVersion(value=>value+1); setPickerVersion(value=>value+1); setOpened(null); setName(''); setError(''); setNotice('Producto y variante preparados desde el catálogo, sin copiar archivos.');
+    sources.refresh();
+    return true;
+  }
+  async function prepareSharing(item:SharingItem|SharingReference,format:PublicationFormat):Promise<boolean>{
     if(!discard()||!isCurrent())return false;
-    const fresh=await resolveSharingItem(item.reference,home,new AbortController().signal);
+    const fresh=await resolveSharingItem('reference' in item ? item.reference : item,home,new AbortController().signal);
     if(!mounted.current||!isCurrent())return false;
     const next=initialTemplateHistory();
     for(const history of Object.values(next.documents))history.present={...history.present,showDescription:true,cta:fresh.group==='Servicios'||fresh.group==='Talleres'?'Solicita información en nuestra tienda':'Conoce más en nuestra tienda'};
     setProductId('');setSku('');setSource('product');setDesign({format,layout:'product-spotlight'});setSharingReference(fresh.reference);setSharingItem(fresh);setSharingAttempt(value=>value+1);setSession(next);setSessionVersion(value=>value+1);setOpened(null);setName('');setError('');setNotice('Contenido preparado desde Difusión. Edita y descarga aquí; todavía no está publicado en redes.');
     return true;
   }
-  return <MarketingSections home={home} onPrepare={prepareSharing} onSharingDirty={setSharingDirty} busy={busy} isCurrent={isCurrent} onSocialDirty={setSocialDirty} onMediaDirty={setMediaDirty}><section className="marketing-module" aria-label="Generador de publicaciones">
+  return <MarketingSections home={home} products={sources.products} catalogStatus={{loading:sources.loading,error:sources.productError,retry:sources.refresh}} onSelectProduct={prepareCatalog} onUseImage={id=>prepareSharing({kind:'library',id},'square')} onPrepare={prepareSharing} onSharingDirty={setSharingDirty} busy={busy} isCurrent={isCurrent} onSocialDirty={setSocialDirty} onMediaDirty={setMediaDirty}><section className="marketing-module" aria-label="Generador de publicaciones">
     {showDrafts && <DraftPanel drafts={drafts} onOpen={openDraft} onRename={(draft, nextName) => run(() => {
       const next = repository.rename(draft.id, nextName, draft.updatedAt);
       if (opened?.id === draft.id) {
@@ -177,11 +188,12 @@ function MarketingWorkspace({ scope, isCurrent }: { scope: DraftScope; isCurrent
     <DesignStudio sourceKey={`${sessionVersion}:${productId}:${source}:${sharingKeyValue}`} sourceData={content} brandData={sources.brand} design={design} images={images}
       session={session} onAction={action => { setNotice(''); setSession(value => templateHistory(value, action)); }} previewRef={previewRef} busy={busy} selection={
       <div className="marketing-controls"><fieldset disabled={sharingReference?sharingLoading:sources.loading || !!sources.productError} className="marketing-control-group">
-        {sharingReference?<div><p>Contenido de Difusión: {sharingItem?.title||'verificando publicación…'}</p><Button type="button" variant="outline" onClick={()=>{if(discard()){setSharingReference(undefined);setSharingItem(null);setProductId('');setSession(initialTemplateHistory());setSessionVersion(value=>value+1);setOpened(null);}}}>Elegir un producto en su lugar</Button></div>:<ContentPicker key={pickerVersion} catalogReady={!sources.loading && !sources.productError} source={source} products={sources.products} productId={productId} sku={sku}
+        {sharingReference?<div><p>{sharingReference.kind === 'library' ? 'Imagen de la biblioteca' : 'Contenido de Difusión'}: {sharingItem?.title||'verificando contenido…'}</p><Button type="button" variant="outline" onClick={()=>{if(discard()){setSharingReference(undefined);setSharingItem(null);setProductId('');setSession(initialTemplateHistory());setSessionVersion(value=>value+1);setOpened(null);}}}>Elegir un producto en su lugar</Button></div>:<ContentPicker key={pickerVersion} catalogReady={!sources.loading && !sources.productError} source={source} products={sources.products} productId={productId} sku={sku}
           onSource={next => { if (discard()) { setNotice(''); setSource(next); setProductId(''); setSku(''); setSession(initialTemplateHistory()); setSessionVersion(n => n + 1); setOpened(null); if (productId) setName(''); } }} onProduct={changeProduct} onSku={value => { setNotice(''); setSku(value); }} />}
       </fieldset><FormatPicker value={design.format} onChange={format => { setNotice(''); setDesign({ ...design, format }); }} />
         <p className="marketing-hint">Puedes probar los formatos sin cambiar tu catálogo. Guarda un borrador para continuar después.</p>
         <Link to="/emprendedor/productos" className="marketing-text-link">Administrar productos →</Link>
+        {product?.slug && <a href={`${home}/producto/${encodeURIComponent(product.slug)}`} target="_blank" rel="noopener noreferrer" className="marketing-text-link">Ver producto en la tienda ↗</a>}
       </div>} notices={<>
         {sources.brandWarning && <p role="status" className="marketing-notice">{sources.brandWarning}</p>}
         {problem && <div role="status" className="marketing-notice">{problem}</div>}

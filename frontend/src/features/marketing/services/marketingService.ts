@@ -25,10 +25,12 @@ export function readMarketingProducts(data: unknown): MarketingProduct[] {
     return {
       id: item.id, name: item.nombre, category: typeof item.categoria === 'string' ? item.categoria : '', active: item.activo,
       description: typeof item.descripcion === 'string' ? item.descripcion : '',
-      images: Array.isArray(item.imagenes) ? item.imagenes.map(marketingImage).filter((v): v is string => v !== null) : [],
+      slug: typeof item.slug === 'string' ? item.slug : '',
+      images: Array.isArray(item.imagenes) ? [...new Set(item.imagenes.map(marketingImage).filter((v): v is string => v !== null))] : [],
       variants: Array.isArray(item.variantes) ? item.variantes.filter(record).map(v => ({
         sku: typeof v.sku === 'string' ? v.sku : '', price: v.precio, offerPrice: v.precio_oferta, stock: v.stock,
         active: v.activo !== false && v.es_activa !== false,
+        images: [...new Set([...(Array.isArray(v.imagenes) ? v.imagenes : []), v.imagen].map(marketingImage).filter((image): image is string => image !== null))],
         attributes: Array.isArray(v.atributos_variante) ? v.atributos_variante.filter(record).flatMap(a =>
           typeof a.valor === 'string' && typeof (a.etiqueta || a.clave) === 'string'
             ? [{ label: String(a.etiqueta || a.clave), value: a.valor }] : []) : [],

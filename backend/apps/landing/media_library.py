@@ -301,6 +301,10 @@ def store_media_image(image, store):
 
 class MediaOutputSerializer(serializers.ModelSerializer):
     archivo = serializers.SerializerMethodField()
+    usos = serializers.SerializerMethodField()
+
+    def get_usos(self, resource):
+        return self.context.get('usos', {}).get(str(resource.pk), [])
 
     def get_archivo(self, resource):
         asset = resource.archivo
@@ -323,6 +327,7 @@ class MediaOutputSerializer(serializers.ModelSerializer):
             'url',
             'activo',
             'archivo',
+            'usos',
             'creado',
             'actualizado'
         )

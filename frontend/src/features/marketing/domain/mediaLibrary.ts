@@ -26,7 +26,10 @@ export interface MediaResource {
   } | null;
   creado: string;
   actualizado: string;
+  usos?: string[];
 }
+
+export interface MediaFilters { q?: string; tipo?: string; estado?: string; orden?: string }
 
 export interface MediaPage {
   resultados: MediaResource[];

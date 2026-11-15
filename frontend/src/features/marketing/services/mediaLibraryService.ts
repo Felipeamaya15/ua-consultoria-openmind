@@ -1,6 +1,6 @@
 import { API_BASE_URL } from '../../../api';
 import { readApiResponse, requestJson } from '../../../shared/services/apiRequest';
-import { MEDIA_TYPES, type MediaDraft, type MediaPage, type MediaResource } from '../domain/mediaLibrary';
+import { MEDIA_TYPES, type MediaDraft, type MediaFilters, type MediaPage, type MediaResource } from '../domain/mediaLibrary';
 
 const endpoint = `${API_BASE_URL}/api/landing/biblioteca/`;
 export const MEDIA_LIBRARY_CHANGED = 'openmind:media-library-changed';
@@ -17,10 +17,15 @@ function resource(value: unknown): MediaResource {
   uuid(item.id);
   return item;
 }
-export async function fetchMediaLibrary(page = 1, signal?: AbortSignal): Promise<MediaPage> {
-  const value = await requestJson(`${endpoint}?pagina=${page}`, { headers: headers(), cache: 'no-store', signal }) as MediaPage;
+export async function fetchMediaLibrary(page = 1, signal?: AbortSignal, filters: MediaFilters = {}): Promise<MediaPage> {
+  const query = new URLSearchParams({ pagina: String(page) });
+  for (const [key, value] of Object.entries(filters)) if (value?.trim()) query.set(key, value.trim());
+  const value = await requestJson(`${endpoint}?${query}`, { headers: headers(), cache: 'no-store', signal }) as MediaPage;
   if (!value || !Array.isArray(value.resultados) || !Number.isSafeInteger(value.total) || value.total < 0 || value.pagina !== page || value.por_pagina !== 24) throw new Error('No pudimos confirmar los recursos. Reintenta la carga.');
   return { ...value, resultados: value.resultados.map(resource) };
+}
+export async function fetchMediaResource(id: string, signal?: AbortSignal): Promise<MediaResource> {
+  return resource(await requestJson(`${endpoint}${uuid(id)}/`, { headers: headers(), cache: 'no-store', signal }));
 }
 export async function saveMediaResource(id: string | null, draft: MediaDraft, file: File | null, preserveImage: boolean, signal?: AbortSignal, videoProfile: 'section' | 'product' = 'section'): Promise<MediaResource> {
   const payload = { ...draft, titulo: draft.titulo.trim(), descripcion: draft.descripcion.trim(), url: draft.url.trim() };

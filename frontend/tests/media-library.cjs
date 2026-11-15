@@ -136,6 +136,7 @@ test('library offers retry, toggles state, and requires explicit deletion confir
   let tree = h.parent.render();
   tree.find(n => n.type === 'Button' && n.props['aria-label'] === 'Desactivar Video').props.onClick(); await tick();
   assert.equal(h.toggles[0][0], id); assert.equal(h.toggles[0][1], false);
+  h.parent.render(); await tick();
   tree = h.parent.render(); tree.find(n => n.type === 'Button' && n.props['aria-label'] === 'Eliminar Video').props.onClick();
   assert.equal(h.removed.length, 0);
   h.parent.render().find(n => n.type === 'Button' && n.props.children === 'Confirmar eliminación').props.onClick(); await tick();
