@@ -123,6 +123,9 @@ class ProfileAPIView(APIView):
         if not serializer.is_valid():
             return error_response('Datos de perfil inválidos.', 'PERFIL_INVALIDO', serializer.errors, status=400)
         data = dict(serializer.validated_data)
+        if 'email' in data and data['email'].strip().lower() != user.email.strip().lower():
+            from apps.core.email_verification import invalidate_verified_email
+            invalidate_verified_email(user)
         profile_defaults = {}
         if 'phone' in data:
             profile_defaults['phone'] = data.pop('phone')

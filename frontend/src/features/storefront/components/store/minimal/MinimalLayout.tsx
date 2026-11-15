@@ -6,6 +6,7 @@ import { MinimalSidebar } from './MinimalSidebar';
 import { MinimalHeader } from './MinimalHeader';
 import { MinimalFooter } from './MinimalFooter';
 import { StoreVisualRoot } from '../StoreVisualRoot';
+import './minimalLandingPolish.css';
 
 export function MinimalLayout() {
   const { pathname, search } = useLocation();

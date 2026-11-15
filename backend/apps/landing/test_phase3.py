@@ -74,7 +74,7 @@ class ActivityReplyTests(TestCase):
         self.record.refresh_from_db()
         self.assertEqual(self.record.estado, 'nueva')
 
-    @override_settings(EMAIL_BACKEND='django.core.mail.backends.smtp.EmailBackend', ACTIVITY_REPLIES_MAILPIT_ENABLED=False)
+    @override_settings(EMAIL_BACKEND='django.core.mail.backends.smtp.EmailBackend', EMAIL_HOST='smtp.example.test', STORE_MAIL_EXTERNAL_ENABLED=False)
     def test_real_transport_is_disabled(self):
         row = self.draft()
         with patch('apps.landing.activity_replies.enviar_correo') as sender:
@@ -160,9 +160,9 @@ class CampaignDraftTests(TestCase):
     def test_draft_idempotent_persistent_and_no_delivery(self):
         row=self.create();again=self.client.post(self.url,self.payload,format='json')
         self.assertEqual(row['id'],again.data['data']['id']);self.assertEqual(len(row['destinatarios']),1)
-        self.assertFalse(row['envio_habilitado']);self.assertEqual(row['destinatarios'][0]['intentos'],0)
+        self.assertTrue(row['envio_habilitado']);self.assertEqual(row['destinatarios'][0]['intentos'],0)
         self.assertEqual(self.client.get(self.url).data['data']['total'],1)
-        self.assertEqual(self.client.post(self.url+row['id']+'/enviar/',{},format='json').status_code,404)
+        self.assertEqual(self.client.post(self.url+row['id']+'/enviar/',{},format='json').status_code,400)
         self.assertFalse(getattr(mail,'outbox',[]))
 
     def test_revoked_after_selection_excluded_on_preview(self):
@@ -219,7 +219,8 @@ class CommunicationMigrationTests(TransactionTestCase):
         plan=MigrationExecutor(connection).loader.graph.forwards_plan(('landing','0009_borradores_campanas'))
         self.assertNotIn(('core','0034_cifrar_credenciales_configuracion_pago'),plan)
         MigrationExecutor(connection).migrate([('landing','0007_imagenes_carrusel_portada')])
-        MigrationExecutor(connection).migrate([('landing','0009_borradores_campanas')])
+        executor = MigrationExecutor(connection)
+        executor.migrate(executor.loader.graph.leaf_nodes())
         record.refresh_from_db();self.assertEqual(record.mensaje,'Mensaje conservado')
         self.assertEqual(RespuestaActividad.objects.count(),0)
 
@@ -332,6 +333,7 @@ class RegisteredCustomerConversationTests(TestCase):
         from django.conf import settings
         self.assertEqual(parseaddr(mail.outbox[0].from_email)[1], parseaddr(settings.DEFAULT_FROM_EMAIL)[1])
         self.assertEqual(IntentoRespuestaActividad.objects.count(), 1)
-        buyer.credentials()  # Equivalente HTTP a retirar el token al cerrar sesión.
+        buyer.credentials()
+        buyer.cookies.clear()  # Retirar también la cookie de sesión establecida por el registro.
         self.assertEqual(buyer.get('/api/auth/me/').status_code, 401)
         self.assertEqual(other.get('/api/auth/me/').data['data']['email'], 'client-c@example.test')

@@ -25,7 +25,6 @@ export default function MinimalHome() {
   const [search, setSearch] = useState('');
 
   const activeProducts = featured;
-  const floatingProducts = isSectionVisible('Productos destacados') ? featured.slice(0, 4) : [];
   const discoveryProducts = featured.slice(0, 4);
   const moreProducts = featured.slice(4, 6);
 
@@ -50,108 +49,42 @@ export default function MinimalHome() {
   return (
     <div data-landing-page="minimal" className="pb-4 min-w-0 overflow-x-hidden">
 
-      {/* =====================================================
-          HERO / SHOP SEARCH
-      ====================================================== */}
-      <section data-visual-section={VISUAL_SECTION.hero} className="px-4 md:px-8 pt-6 sm:pt-10 md:pt-14">
-        <div data-visual-part="heroOverlay" className="absolute inset-0" /><div data-visual-layout="stack" data-visual-part="heroLayout" className="max-w-6xl mx-auto min-w-0 items-center text-center">
-
-          {/* Tarjetas flotantes */}
-          <div data-visual-part="heroDecorations" data-landing-content className="flex justify-center items-end -space-x-6 sm:-space-x-4 md:-space-x-3 mb-4 min-h-[130px] sm:min-h-[170px] md:min-h-[180px] px-2 sm:px-6 max-w-full overflow-x-hidden mx-auto">
-
-            {!floatingProducts.length && heroHasPhoto && (
-              <div
-                data-visual-part="heroImageFallback"
-                className="relative h-[180px] w-full max-w-[640px] overflow-hidden rounded-2xl"
-              >
-                <HeroCarousel landing={landing} onContentChange={hero.onChange} />
+      {/* OPENMIND_SOFT_DISCOVERY_COMPACT_HERO_V1
+          Soft Discovery: composición editorial compacta. Los productos destacados
+          conservan su sección habitual más abajo, sin duplicaciones flotantes.
+          Los atributos data-visual permiten continuar editando desde Diseño. */}
+      <section data-visual-section={VISUAL_SECTION.hero} className="px-4 md:px-8 py-8">
+        <div data-visual-part="heroOverlay" className="absolute inset-0" />
+        <div data-visual-layout="stack" data-visual-part="heroLayout" className="max-w-6xl mx-auto min-w-0">
+          <div className={`om-minimal-hero-grid ${heroHasPhoto ? '' : 'om-minimal-hero-grid--no-media'}`}>
+            <div data-visual-part="heroContent" className="om-minimal-hero-copy">
+              <div data-visual-part="heroTitleBlock" className="w-full min-w-0">
+                <LandingStatus />
+                <h1 hidden={!hero.showTitle} className="font-semibold text-[#151515] break-words">
+                  {hero.title}
+                </h1>
               </div>
-            )}
-            {floatingProducts.map((product, index) => {
-              const rotations = [
-                '-rotate-6 translate-y-4',
-                'rotate-3 -translate-y-3',
-                '-rotate-2 -translate-y-1',
-                'rotate-6 translate-y-5',
-              ];
 
-              return (
-                <div
-                  key={product.id}
+              <p hidden={!hero.showDescription} data-visual-part="heroSubtitle" className="text-gray-700">
+                {hero.description}
+              </p>
 
-                  className={`relative
-                    relative
-                    w-[92px] sm:w-[130px] md:w-[150px]
-                    shrink-0
-                    bg-white
-                    rounded-2xl
-                    p-1.5 sm:p-2
-                    shadow-lg
-                    border
-                    border-black/5
-                    transition-transform
-                    duration-300
-                    hover:rotate-0
-                    hover:-translate-y-3
-                    hover:z-20
-                    ${rotations[index] ?? ''}
-                  `}
-                >
-                  <div className="relative relative aspect-[4/3] rounded-xl overflow-hidden bg-gray-100">
-                    <ProductImageGallery images={product.images} alt={product.name} href={`producto/${product.id}`} imageClassName="w-full h-full object-cover" />
-                  </div>
-
-                  <div className="px-1 pt-2 pb-1 text-left">
-                    <p className="text-[10px] text-gray-600 truncate">
-                      {product.category}
-                    </p>
-
-                    <p className="text-xs font-semibold text-[#171717] truncate mt-0.5">
-                      {product.name}
-                    </p>
-
-                    <div className="flex items-center gap-1 mt-1">
-                      <span className="text-[10px] text-[var(--primary)]">
-                        ★★★★★
-                      </span>
-
-                      <span className="text-[10px] text-gray-600">
-                        5.0
-                      </span>
-                    </div>
-                  </div>
+              {hero.showButton && hero.buttonText && (
+                <div data-visual-part="heroCtaLayout" className="om-minimal-hero-cta">
+                  <Link data-visual-section={VISUAL_SECTION.heroCta} to={hero.href}
+                    target={hero.external ? '_blank' : undefined}
+                    rel={hero.external ? 'noopener noreferrer' : undefined}
+                    className="inline-flex min-h-11 items-center rounded-full bg-[var(--primary)] px-6 py-3 font-semibold text-[var(--on-primary)]">
+                    {hero.buttonText}
+                  </Link>
                 </div>
-              );
-            })}
+              )}
 
-          </div>
-
-          {/* Carrusel independiente: conserva intactas las tarjetas de productos. */}
-          {floatingProducts.length > 0 && heroHasPhoto && (
-            <div className="relative mx-auto mb-5 h-[160px] sm:h-[200px] w-full max-w-[640px] overflow-hidden rounded-2xl">
-              <HeroCarousel landing={landing} onContentChange={hero.onChange} />
-            </div>
-          )}
-
-          {/* Título */}
-          <div data-visual-part="heroTitleBlock" className="w-full text-center min-w-0 mx-auto">
-            <LandingStatus />
-            <h1 hidden={!hero.showTitle} className="w-full text-center mx-auto text-[clamp(2.5rem,11vw,4.5rem)] sm:text-[92px] md:text-[118px] leading-none tracking-[-0.06em] sm:tracking-[-0.08em] font-semibold text-[#151515] break-words">
-              {hero.title}
-            </h1>
-          </div>
-
-          <p hidden={!hero.showDescription} data-visual-part="heroSubtitle" className="w-full text-center text-gray-700 mt-4 px-2 mx-auto break-words">
-            {hero.description}
-          </p>
-
-          {hero.customButton && hero.showButton && <div data-visual-part="heroCtaLayout" className="mt-6"><Link data-visual-section={VISUAL_SECTION.heroCta} to={hero.href} target={hero.external?'_blank':undefined} rel={hero.external?'noopener noreferrer':undefined} className="inline-flex min-h-11 items-center rounded-full bg-[var(--primary)] px-6 py-3 font-semibold text-[var(--on-primary)]">{hero.buttonText}</Link></div>}
-          {/* Buscador en una sola línea (input + botón al lado tanto en móvil como en escritorio) */}
           <form data-visual-part="heroCtaLayout"
             onSubmit={handleSearch}
-            className="w-full max-w-2xl mx-auto mt-6 sm:mt-8 flex justify-center"
+            className="om-minimal-hero-search w-full max-w-2xl mx-auto mt-6 sm:mt-8 flex justify-center"
           >
-            <div data-landing-search className="w-full bg-white rounded-full border border-black/10 shadow-sm p-1.5 pl-3.5 sm:p-2 sm:pl-6 flex flex-nowrap items-center gap-2 sm:gap-3">
+            <div data-landing-search className="om-minimal-search-field w-full min-w-0 bg-white rounded-full border border-black/10 shadow-sm p-1.5 pl-3.5 sm:p-2 sm:pl-6 flex flex-nowrap items-center gap-2 sm:gap-3">
 
               <svg
                 className="w-4 h-4 sm:w-5 sm:h-5 text-gray-500 flex-shrink-0"
@@ -174,15 +107,15 @@ export default function MinimalHome() {
                 onChange={(event) => setSearch(event.target.value)}
                 placeholder="¿Qué estás buscando hoy?"
                 aria-label="Buscar productos"
-                className="flex-1 min-w-0 w-full h-10 sm:h-11 bg-transparent outline-none text-xs sm:text-sm md:text-base text-[#171717] placeholder:text-gray-500"
+                className="flex-1 min-w-0 w-0 h-10 sm:h-11 bg-transparent outline-none text-xs sm:text-sm md:text-base text-[#171717] placeholder:text-gray-500"
               />
 
-              <button data-visual-section={VISUAL_SECTION.heroCta}
+              <button
                 type="submit"
-                aria-label={landing?.texto_boton || 'Buscar'}
-                className="px-4 sm:px-6 min-w-11 min-h-11 w-auto shrink-0 gap-1.5 sm:gap-2 rounded-full bg-[var(--primary)] text-[var(--on-primary)] inline-flex items-center justify-center text-xs sm:text-sm font-semibold hover:scale-105 transition-transform whitespace-nowrap"
+                aria-label="Buscar productos"
+                className="om-minimal-search-submit min-h-11 shrink-0 gap-1.5 rounded-full bg-[var(--primary)] text-[var(--on-primary)] inline-flex items-center justify-center text-xs sm:text-sm font-semibold whitespace-nowrap"
               >
-                {hero.customButton ? 'Buscar' : landing?.texto_boton}
+                <span>Buscar</span>
                 <svg
                   className="w-4 h-4 shrink-0"
                   viewBox="0 0 24 24"
@@ -201,7 +134,14 @@ export default function MinimalHome() {
 
             </div>
           </form>
+            </div>
 
+            {heroHasPhoto && (
+              <div data-visual-part="heroFrame" className="om-minimal-hero-media">
+                <HeroCarousel landing={landing} onContentChange={hero.onChange} />
+              </div>
+            )}
+          </div>
         </div>
       </section>
 

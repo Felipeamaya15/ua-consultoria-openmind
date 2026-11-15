@@ -1,0 +1,172 @@
+{
+  "results": [
+    {
+      "flujo": "cliente verificado: activar, guardar y retirar publicidad; sin correo editable",
+      "template": 1,
+      "estado": "aprobado"
+    },
+    {
+      "flujo": "cliente sin verificación y visitante conservan confirmación por enlace",
+      "template": 1,
+      "estado": "aprobado"
+    },
+    {
+      "flujo": "cliente verificado: activar, guardar y retirar publicidad; sin correo editable",
+      "template": 2,
+      "estado": "aprobado"
+    },
+    {
+      "flujo": "cliente sin verificación y visitante conservan confirmación por enlace",
+      "template": 2,
+      "estado": "aprobado"
+    },
+    {
+      "flujo": "cliente verificado: activar, guardar y retirar publicidad; sin correo editable",
+      "template": 3,
+      "estado": "aprobado"
+    },
+    {
+      "flujo": "cliente sin verificación y visitante conservan confirmación por enlace",
+      "template": 3,
+      "estado": "aprobado"
+    },
+    {
+      "flujo": "cliente verificado: activar, guardar y retirar publicidad; sin correo editable",
+      "template": 4,
+      "estado": "aprobado"
+    },
+    {
+      "flujo": "cliente sin verificación y visitante conservan confirmación por enlace",
+      "template": 4,
+      "estado": "aprobado"
+    },
+    {
+      "flujo": "confirmación real del enlace de Mailpit acredita correo propio y habilita preferencia directa",
+      "estado": "aprobado"
+    },
+    {
+      "flujo": "Contactos: búsqueda, fecha del último pedido, consentimiento, paginación y limpieza",
+      "estado": "aprobado"
+    },
+    {
+      "flujo": "respuesta desde panel con historial",
+      "estado": "aprobado"
+    },
+    {
+      "flujo": "descarga CSV de contactos autorizados",
+      "estado": "aprobado"
+    },
+    {
+      "flujo": "borrador, producto, vista previa, confirmación y envío real a Mailpit",
+      "estado": "aprobado"
+    },
+    {
+      "flujo": "campaña adaptable",
+      "width": 1440,
+      "estado": "aprobado"
+    },
+    {
+      "flujo": "campaña adaptable",
+      "width": 768,
+      "estado": "aprobado"
+    },
+    {
+      "flujo": "campaña adaptable",
+      "width": 390,
+      "estado": "aprobado"
+    },
+    {
+      "flujo": "envío único en Mailpit, repetición sin duplicado y baja firmada actualiza Contactos",
+      "estado": "aprobado"
+    },
+    {
+      "flujo": "Negocio: autorización inicialmente desmarcada, inicio OAuth real, callback con proveedor simulado y prueba SMTP Mailpit",
+      "estado": "aprobado"
+    },
+    {
+      "flujo": "desconexión persistida y reconexión exige nueva autorización expresa",
+      "estado": "aprobado"
+    },
+    {
+      "flujo": "plantillas transaccionales conservadas sin panel Gmail en Correos",
+      "estado": "aprobado"
+    },
+    {
+      "flujo": "Marketing y difusión existentes conservados",
+      "estado": "aprobado"
+    },
+    {
+      "flujo": "plantilla adaptable",
+      "template": 1,
+      "width": 1440,
+      "estado": "aprobado"
+    },
+    {
+      "flujo": "plantilla adaptable",
+      "template": 1,
+      "width": 768,
+      "estado": "aprobado"
+    },
+    {
+      "flujo": "plantilla adaptable",
+      "template": 1,
+      "width": 390,
+      "estado": "aprobado"
+    },
+    {
+      "flujo": "plantilla adaptable",
+      "template": 2,
+      "width": 1440,
+      "estado": "aprobado"
+    },
+    {
+      "flujo": "plantilla adaptable",
+      "template": 2,
+      "width": 768,
+      "estado": "aprobado"
+    },
+    {
+      "flujo": "plantilla adaptable",
+      "template": 2,
+      "width": 390,
+      "estado": "aprobado"
+    },
+    {
+      "flujo": "plantilla adaptable",
+      "template": 3,
+      "width": 1440,
+      "estado": "aprobado"
+    },
+    {
+      "flujo": "plantilla adaptable",
+      "template": 3,
+      "width": 768,
+      "estado": "aprobado"
+    },
+    {
+      "flujo": "plantilla adaptable",
+      "template": 3,
+      "width": 390,
+      "estado": "aprobado"
+    },
+    {
+      "flujo": "plantilla adaptable",
+      "template": 4,
+      "width": 1440,
+      "estado": "aprobado"
+    },
+    {
+      "flujo": "plantilla adaptable",
+      "template": 4,
+      "width": 768,
+      "estado": "aprobado"
+    },
+    {
+      "flujo": "plantilla adaptable",
+      "template": 4,
+      "width": 390,
+      "estado": "aprobado"
+    }
+  ],
+  "errors": []
+}

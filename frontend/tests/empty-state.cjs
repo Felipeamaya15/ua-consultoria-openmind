@@ -159,7 +159,7 @@ const CONVERTIDOS = [
   ['src/features/admin/pages/Sales.tsx', 'Sin ventas confirmadas en este período.'],
   ['src/features/admin/pages/Sales.tsx', 'No hay ventas confirmadas para estos filtros.'],
   ['src/features/admin/pages/Contacts.tsx', 'No hay contactos que coincidan con los filtros.'],
-  ['src/features/admin/pages/Products.tsx', 'No encontramos productos con esa búsqueda.'],
+  ['src/features/admin/pages/Products.tsx', 'No encontramos productos con esos filtros.'],
   ['src/features/admin/pages/Products.tsx', 'Agrega tu primer producto para empezar a vender.'],
   ['src/features/storefront/pages/CustomerOrders.tsx', 'Aún no tienes pedidos.'],
 ];
@@ -203,11 +203,11 @@ test('quien usa <EmptyListState> lo importa del módulo compartido', () => {
 
 test('el listado de productos distingue "no hay productos" de "la búsqueda no encuentra" y no parpadea al cargar', () => {
   const productos = leer('src/features/admin/pages/Products.tsx');
-  assert.ok(/const vacio = emptyKind\(\{ loading, error, shown: filtered\.length, searching: search\.trim\(\) !== "" \}\)/.test(productos));
+  assert.ok(/const vacio = emptyKind\(\{ loading, error, shown: filtered\.length, searching: search\.trim\(\) !== "" \|\| statusFilter !== "all" \}\)/.test(productos));
   assert.ok(/\{vacio === ['"]empty['"] && <EmptyListState/.test(productos));
   assert.ok(/\{vacio === ['"]no-results['"] && <EmptyListState/.test(productos));
   assert.ok(productos.includes('to="/emprendedor/productos/nuevo"') && productos.includes('Crear tu primer producto'));
-  assert.ok(/onClick=\{\(\) => setSearch\(['"]['"]\)\}>Limpiar búsqueda/.test(productos));
+  assert.ok(/onClick=\{\(\) => \{ setSearch\(['"]['"]\); setStatusFilter\(['"]all['"]\) \}\}>Limpiar filtros/.test(productos));
   assert.ok(!/\{filtered\.length === 0 && </.test(productos), 'el mensaje no debe depender solo de que la lista esté vacía (aparecería mientras carga)');
 });
 

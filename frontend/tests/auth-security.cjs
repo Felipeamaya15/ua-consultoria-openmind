@@ -150,6 +150,35 @@ async function run() {
   assert.equal(calls[calls.length - 1].url, 'http://test/api/auth/mfa/verify/');
   assert.equal(authService.getToken(), 'tok-123');
 
+  // Nunca exponer HTML, respuestas malformadas ni rastros internos al cliente.
+  mockResponse = {
+    ok: false, status: 500,
+    headers: { get: () => 'text/html; charset=utf-8' },
+    json: async () => { throw new SyntaxError('Unexpected token <'); },
+  };
+  await assert.rejects(
+    authService.login({ username: 'qa@example.test', password: 'no-real' }),
+    /El servicio no esta disponible en este momento/,
+  );
+  mockResponse = {
+    ok: false, status: 404,
+    headers: { get: () => 'text/html; charset=utf-8' },
+    json: async () => { throw new SyntaxError('Unexpected token <'); },
+  };
+  await assert.rejects(
+    authService.login({ username: 'qa@example.test', password: 'no-real' }),
+    /No pudimos comunicarnos con el servicio/,
+  );
+  mockResponse = {
+    ok: false, status: 401,
+    headers: { get: () => 'application/json' },
+    json: async () => ({ exito: false, mensaje: 'Credenciales incorrectas.', error: { codigo: 'CREDENCIALES_INVALIDAS' } }),
+  };
+  await assert.rejects(
+    authService.login({ username: 'qa@example.test', password: 'no-real' }),
+    (err) => err?.error?.codigo === 'CREDENCIALES_INVALIDAS',
+  );
+
   console.log(
     'OK: ojito de contraseña, listas blancas, escape XSS, inactividad de 30m, MFA, CAPTCHA y recuperación de contraseña verificados.',
   );

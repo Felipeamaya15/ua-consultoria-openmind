@@ -5,7 +5,7 @@ import { useStore } from '../../context/StoreContext';
 import { useVerifiedLegalScope } from '../../hooks/useVerifiedLegalScope';
 import { consentKey, readConsent, saveConsent, resetConsent, type ConsentScope } from '../../services/cookieConsent';
 import { getStoreConfigKey } from '../../visual/storage';
-import { isActiveEditorPreview } from '../../visual/pages';
+import { isActiveEditorPreview, isActiveTemplateThumbnailPreview } from '../../visual/pages';
 import { disableGoogleAnalytics, initGoogleAnalytics } from '../../services/googleAnalyticsService';
 import { initMetaPixel, revokeMetaPixelConsent, trackMetaPixelPageView } from '../../services/metaPixelService';
 export const COOKIE_CONSENT_EVENT_OPEN = 'openmind_open_cookie_banner';
@@ -19,7 +19,7 @@ export function CookieConsentBanner() {
   const isEnabled = bannerConfig?.enabled !== false;
   const page = legalPages.cookies;
   const legalVersion = JSON.stringify([page.version, page.fecha_vigencia ?? page.lastPublished]);
-  const ready = session.ready && session.identity && legalVerified && !legalLoading && !legalError && legalScopeKey === getStoreConfigKey(session.identity) && !isActiveEditorPreview();
+  const ready = session.ready && session.identity && legalVerified && !legalLoading && !legalError && legalScopeKey === getStoreConfigKey(session.identity) && !isActiveEditorPreview() && !isActiveTemplateThumbnailPreview();
   const scope = useMemo<ConsentScope | null>(() => ready && session.identity ? { ...session.identity, principal: session.principal, legalVersion } : null, [ready, session.key, legalVersion]);
   const key = scope ? consentKey(scope) : '';
   const [state, setState] = useState({ key: '', visible: false, message: '' });

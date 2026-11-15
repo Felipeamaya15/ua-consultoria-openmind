@@ -1,4 +1,4 @@
-"""Preparación de campañas: no hay endpoint de envío ni llamadas a SMTP."""
+"""Borradores persistentes y selección de destinatarios con evidencia vigente."""
 import re
 from django.db import transaction
 from django.shortcuts import get_object_or_404
@@ -12,9 +12,10 @@ from apps.core.models import Tienda, ConsentimientoComercial
 from apps.core.presentation.responses import success_response, error_response
 from apps.landing.activity_views import NoStoreActivityView
 from apps.landing.models import CampanaPromocional, DestinatarioCampana
+from apps.core.infrastructure.store_mail import connection_state
+from apps.landing.campaign_rendering import validate_design
 
 LIMIT = 1000
-DISABLED_REASON = 'El envío de campañas aún no está habilitado. Puedes guardar y revisar borradores sin enviar mensajes.'
 
 
 class CampaignInput(StrictSerializer):
@@ -25,6 +26,7 @@ class CampaignInput(StrictSerializer):
     cuerpo = serializers.CharField(max_length=5000, allow_blank=True)
     destinatarios = serializers.ListField(child=serializers.IntegerField(min_value=1), max_length=LIMIT)
     producto_id = serializers.RegexField(r'^[a-fA-F0-9]{24}$', allow_blank=True, required=False, default='')
+    diseno = serializers.JSONField(required=False, default=dict)
 
     def validate_asunto(self, value):
         if any(char in value for char in ('\r', '\n', '\x00')):
@@ -64,13 +66,20 @@ def product_snapshot(store, product_id, previous):
 def campaign_data(row, detail=True):
     result = {'id': str(row.pk), 'clave': str(row.clave), 'nombre': row.nombre, 'asunto': row.asunto,
         'cuerpo': row.cuerpo, 'producto': row.producto, 'estado': row.estado, 'revision': row.revision,
-        'creado': row.creado, 'actualizado': row.actualizado, 'envio_habilitado': False, 'aviso_envio': DISABLED_REASON}
+        'creado': row.creado, 'actualizado': row.actualizado,
+        'diseno': {k: v for k, v in row.diseno.items() if not k.startswith('_')},
+        'confirmada_en': row.confirmada_en,
+        'envio_habilitado': connection_state(row.tienda)['envio_habilitado'],
+        'aviso_envio': connection_state(row.tienda)['aviso']}
+    from django.db.models import Count
+    result['resultados'] = dict(row.destinatarios.order_by('estado').values_list('estado').annotate(total=Count('pk')))
     if detail:
         selected = list(row.destinatarios.select_related('consentimiento'))
         current_ids = set(eligible_consents(row.tienda).filter(pk__in=[r.consentimiento_id for r in selected]).values_list('pk', flat=True))
         result['destinatarios'] = [{'id': record.consentimiento_id, 'email': record.email,
             'elegible': record.consentimiento_id in current_ids and record.revision_consentimiento == record.consentimiento.revision and record.email == record.consentimiento.email,
-            'intentos': record.intentos} for record in selected]
+            'intentos': record.intentos, 'estado': record.estado, 'ultimo_error': record.ultimo_error,
+            'finalizado': record.finalizado} for record in selected]
         result['elegibles'] = sum(record['elegible'] for record in result['destinatarios'])
         result['excluidos'] = len(selected)-result['elegibles']
     return result
@@ -99,7 +108,8 @@ class CampaignsView(NoStoreActivityView):
         rows = CampanaPromocional.objects.filter(tienda=store)
         total = rows.count()
         return success_response(data={'resultados': [campaign_data(row, False) for row in rows[(page-1)*20:page*20]],
-            'pagina': page, 'paginas': max(1,(total+19)//20), 'total': total, 'envio_habilitado': False})
+            'pagina': page, 'paginas': max(1,(total+19)//20), 'total': total,
+            'envio_habilitado': connection_state(store)['envio_habilitado']})
 
     def post(self, request, pk=None):
         if pk:
@@ -118,13 +128,16 @@ class CampaignsView(NoStoreActivityView):
         serializer = CampaignInput(data=request.data)
         serializer.is_valid(raise_exception=True)
         values = serializer.validated_data
+        design = validate_design(store, values['diseno'])
         row = get_object_or_404(CampanaPromocional.objects.select_for_update(), pk=pk, tienda=store) if pk else CampanaPromocional.objects.filter(tienda=store, clave=values['clave']).first()
         if row and not pk:
-            if (row.nombre, row.asunto, row.cuerpo, row.producto.get('id', '')) != (values['nombre'], values['asunto'], values['cuerpo'], values['producto_id']) or set(row.destinatarios.values_list('consentimiento_id', flat=True)) != set(values['destinatarios']):
+            if (row.nombre, row.asunto, row.cuerpo, row.producto.get('id', '')) != (values['nombre'], values['asunto'], values['cuerpo'], values['producto_id']) or {k: v for k,v in row.diseno.items() if not k.startswith('_')} != design or set(row.destinatarios.values_list('consentimiento_id', flat=True)) != set(values['destinatarios']):
                 return error_response('Esta clave ya identifica otro borrador. Actualiza la campaña antes de guardar.', 'CLAVE_REUTILIZADA', status=409)
             return success_response(data=campaign_data(row))
         if row and (row.revision != values.get('revision') or row.clave != values['clave']):
             return error_response('El borrador cambió. Vuelve a abrirlo antes de guardar.', 'REVISION_CAMBIO', status=409)
+        if row and row.estado != 'borrador':
+            return error_response('Una campaña confirmada conserva su contenido e historial. Crea otro borrador.', 'CAMPANA_CONFIRMADA', status=409)
         ids = values['destinatarios']
         records = list(ConsentimientoComercial.objects.filter(tienda=store, pk__in=ids))
         if len(records) != len(ids):
@@ -137,6 +150,7 @@ class CampaignsView(NoStoreActivityView):
         else:
             row.revision += 1
         row.nombre, row.asunto, row.cuerpo, row.producto = values['nombre'], values['asunto'], values['cuerpo'], snapshot
+        row.diseno = design
         row.save()
         valid = set(eligible_consents(store).filter(pk__in=ids).values_list('pk', flat=True))
         # Solo sustituye la selección del borrador; nunca borra contactos, consentimientos ni envíos.

@@ -8,11 +8,23 @@ const normalize=value=>JSON.parse(JSON.stringify(value));
 
 test('legacy order, unique references, removed blocks and 20 custom sections retain capacity',()=>{
   const content={bloques:[first,second]};
-  assert.deepEqual(normalize(order.homeSectionOrder(content,'minimal')),[first.id,second.id,'sistema:categorias','sistema:destacados','sistema:banner','sistema:mas-productos']);
+  // El inicio actual de las cuatro plantillas comparte destacados y categorías.
+  const active=['sistema:destacados','sistema:categorias'];
+  const legacy=['sistema:banner','sistema:mas-productos','sistema:contenido','sistema:descubrir'];
+  for (const template of ['editorial','minimal','visual','catalog']) {
+    assert.deepEqual(normalize(order.homeSectionOrder(content,template)),[first.id,second.id,...active]);
+    const oldSaved=[legacy[0],second.id,active[1],legacy[1],first.id,legacy[2],active[0],legacy[3],second.id,'unknown'];
+    assert.deepEqual(normalize(order.homeSectionOrder({...content,orden_apartados:oldSaved},template,true)),[second.id,active[1],first.id,active[0]]);
+    // Los IDs históricos siguen siendo reconocidos al reconciliar; no se activan en el inicio actual.
+    assert.deepEqual(normalize(order.reconcileHomeOrder(oldSaved,[first,second])),oldSaved.slice(0,8));
+  }
   const saved=['sistema:destacados',second.id,'sistema:categorias',first.id];
   assert.deepEqual(normalize(order.homeSectionOrder({...content,orden_apartados:saved},'editorial')),saved);
   assert.deepEqual(normalize(order.reconcileHomeOrder([...saved,second.id,'unknown'],[second])),['sistema:destacados',second.id,'sistema:categorias']);
-  assert.equal(order.homeSectionOrder({bloques:Array.from({length:20},(_,i)=>({...first,id:String(i)}))},'catalog',true).length,26);
+  const twenty=Array.from({length:20},(_,i)=>({...first,id:String(i)}));
+  for (const template of ['editorial','minimal','visual','catalog']) {
+    assert.deepEqual(normalize(order.homeSectionOrder({bloques:twenty},template,true)),[...twenty.map(block=>block.id),...active]);
+  }
   assert.equal(content.bloques[0],first);
 });
 
@@ -37,7 +49,7 @@ function renderHome(template, content, flags={}) {
     '../../landing/hooks/useLandingSectionVisibility':{useLandingSectionVisibility:()=>name=>flags[name]!==false},
     '../../landing/components/LandingStatus':{LandingStatus:()=>null},'../../landing/components/LandingDetails':{LandingDetails:()=>React.createElement('footer',null,'Contacto final')},
     '../components/store/ProductCard':{ProductCard:({product})=>React.createElement('a',{'data-real-product':product.catalogId,href:'producto/'+product.id},product.name+' '+product.basePrice)},
-    'react-router-dom':{Link:({to,children,...props})=>React.createElement('a',{...props,href:to},children),useNavigate:()=>()=>{}},
+    'react-router-dom':{Link:({to,children,...props})=>React.createElement('a',{...props,href:to},children),useNavigate:()=>()=>{},useLocation:()=>({pathname:templ().route()})},
     '../components/ui':{Icon:()=>null,Badge:({children})=>React.createElement('span',null,children)},
   }).default;
   return renderToStaticMarkup(React.createElement(Home));
@@ -78,7 +90,7 @@ test('the actual unified editor moves commerce across custom sections and shares
   let flags={'Productos destacados':true};
   const nodes=tree=>Array.isArray(tree)?tree.flatMap(nodes):tree&&typeof tree==='object'?[tree,...nodes(tree.props?.children)]:[];
   const {LandingBlocksEditor}=load('src/features/admin/components/LandingBlocksEditor.tsx',{
-    react:{useState:initial=>{const i=cursor++;if(!(i in slots))slots[i]=initial;return [slots[i],value=>{slots[i]=value;}];}},
+    react:{useEffect:()=>{},useState:initial=>{const i=cursor++;if(!(i in slots))slots[i]=typeof initial==='function'?initial():initial;return [slots[i],value=>{slots[i]=typeof value==='function'?value(slots[i]):value;}];}},
     'react-router-dom':{Link:'Link'},'./ui':Object.fromEntries(['AdminCard','Button','Input','Textarea','Toggle','Modal'].map(name=>[name,name])),
     './ui/ImageUpload':{ImageUpload:'ImageUpload'},'./FlexibleSectionEditor':{FlexibleSectionEditor:'FlexibleSectionEditor'},
   });

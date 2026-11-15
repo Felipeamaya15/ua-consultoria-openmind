@@ -22,6 +22,8 @@ export interface BloqueLanding {
   actividad?: import('./sectionElements').SectionActivity | null;
 }
 export interface ContenidoLanding {
+  /** Modo global del texto del carrusel. Ausente conserva la compatibilidad anterior. */
+  carrusel_texto_modo?: 'unico' | 'por_imagen';
   /** Stable references to existing sections and unique commerce slots; no copied content. */
   orden_apartados?: string[];
   /** Absent keeps legacy template content; an explicit empty list hides it. */

@@ -102,6 +102,29 @@ async function profileRequest<T = CustomerProfile>(path: string, method = 'GET',
 export type CustomerOrderItem = { id_item_pedido: number; producto_id: number | string; nombre: string; cantidad: number; precio_unitario: string; subtotal: string; sku?: string; atributos_variante?: {clave: string; etiqueta: string; valor: string}[] };
 export type CustomerOrder = { id_pedido: number; identificador?: string; fecha_creacion: string; estado: string; estado_etiqueta: string; medio_pago?: string; vence_en?: string | null; monto_total: string; cantidad_productos: number; costo_envio?: string; descuento?: string; items?: CustomerOrderItem[]; entrega?: { retiro?: { seleccion?: { fecha: string; hora: string } } } };
 
+// Evita mostrar trazas HTML/JSON a los clientes cuando la API falla.
+// Conserva el formato de error JSON del backend para CAPTCHA, MFA y limites de intentos.
+async function readAuthJson(res: Response): Promise<any> {
+  if (res.status >= 500) {
+    throw new Error('El servicio no esta disponible en este momento. Intenta nuevamente mas tarde.');
+  }
+  const contentType = res.headers?.get?.('content-type')?.toLowerCase() || '';
+  if (contentType && !contentType.includes('json')) {
+    throw new Error('No pudimos comunicarnos con el servicio. Intenta nuevamente mas tarde.');
+  }
+  let body: unknown;
+  try {
+    body = await res.json();
+  } catch {
+    throw new Error('No pudimos comunicarnos con el servicio. Intenta nuevamente mas tarde.');
+  }
+  if (!body || typeof body !== 'object' || Array.isArray(body)) {
+    throw new Error('No pudimos comunicarnos con el servicio. Intenta nuevamente mas tarde.');
+  }
+  if (!res.ok || (body as { exito?: boolean }).exito === false) throw body;
+  return body;
+}
+
 export const authService = {
   getToken() {
     return getStoredToken();
@@ -147,8 +170,7 @@ export const authService = {
       method: 'GET',
       credentials: 'omit',
     });
-    if (!res.ok) throw await res.json();
-    const body = await res.json();
+    const body = await readAuthJson(res);
     return body.data;
   },
   async register(data: any) {
@@ -160,8 +182,7 @@ export const authService = {
       },
       body: JSON.stringify(data),
     });
-    if (!res.ok) throw await res.json();
-    const json = await res.json();
+    const json = await readAuthJson(res);
     if (json?.data?.token) {
       authService.setSession(json.data.token);
     }
@@ -177,8 +198,7 @@ export const authService = {
       },
       body: JSON.stringify(data),
     });
-    if (!res.ok) throw await res.json();
-    const json = await res.json();
+    const json = await readAuthJson(res);
     if (json?.data?.token) {
       authService.setSession(json.data.token);
     }
@@ -192,8 +212,7 @@ export const authService = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ mfa_token, code }),
     });
-    if (!res.ok) throw await res.json();
-    const json = await res.json();
+    const json = await readAuthJson(res);
     if (json?.data?.token) {
       authService.setSession(json.data.token);
     }
@@ -207,8 +226,7 @@ export const authService = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ mfa_token }),
     });
-    if (!res.ok) throw await res.json();
-    return res.json();
+    return readAuthJson(res);
   },
 
   async getMfaStatus(): Promise<{ mfa_enabled: boolean; configured: boolean }> {
@@ -234,8 +252,7 @@ export const authService = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, template }),
     });
-    if (!res.ok) throw await res.json();
-    return res.json();
+    return readAuthJson(res);
   },
 
   async confirmPasswordReset(token: string, new_password: string) {
@@ -245,8 +262,7 @@ export const authService = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ token, new_password }),
     });
-    if (!res.ok) throw await res.json();
-    return res.json();
+    return readAuthJson(res);
   },
 
   async googleLogin(token: string) {
@@ -256,8 +272,7 @@ export const authService = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ token }),
     });
-    if (!res.ok) throw await res.json();
-    const json = await res.json();
+    const json = await readAuthJson(res);
     if (json?.data?.token) {
       authService.setSession(json.data.token);
     }

@@ -185,7 +185,9 @@ class CampanaPromocional(models.Model):
     cuerpo = models.TextField()
     producto = models.JSONField(default=dict)
     revision = models.PositiveIntegerField(default=1)
-    estado = models.CharField(max_length=15, default='borrador', choices=[('borrador', 'Borrador')])
+    estado = models.CharField(max_length=15, default='borrador', choices=[(s, s) for s in ('borrador', 'pendiente', 'procesando', 'aceptada', 'parcial', 'fallida', 'cancelada')])
+    diseno = models.JSONField(default=dict, blank=True)
+    confirmada_en = models.DateTimeField(null=True, blank=True)
     creado = models.DateTimeField(auto_now_add=True)
     actualizado = models.DateTimeField(auto_now=True)
 
@@ -199,10 +201,31 @@ class DestinatarioCampana(models.Model):
     consentimiento = models.ForeignKey('core.ConsentimientoComercial', on_delete=models.PROTECT)
     revision_consentimiento = models.PositiveIntegerField()
     email = models.EmailField(max_length=320)
-    estado = models.CharField(max_length=15, default='seleccionado', choices=[('seleccionado', 'Seleccionado'), ('excluido', 'Excluido')])
+    estado = models.CharField(max_length=15, default='seleccionado', choices=[(s, s) for s in ('seleccionado', 'excluido', 'pendiente', 'procesando', 'aceptada', 'fallida', 'indeterminada', 'cancelada')])
     intentos = models.PositiveIntegerField(default=0)
     ultimo_error = models.CharField(max_length=60, blank=True, default='')
+    finalizado = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         ordering = ['email']
         constraints = [models.UniqueConstraint(fields=['campana', 'email'], name='campana_email_unico')]
+
+
+class EnvioCorreoTienda(models.Model):
+    """Reserva durable antes del transporte. Un resultado incierto nunca se reenvía automáticamente."""
+    tienda = models.ForeignKey('core.Tienda', on_delete=models.PROTECT)
+    clave = models.UUIDField()
+    categoria = models.CharField(max_length=20)
+    referencia = models.UUIDField(null=True, blank=True)
+    huella = models.CharField(max_length=64, blank=True, default='')
+    destinatario = models.EmailField(max_length=320)
+    proveedor = models.CharField(max_length=15)
+    cuenta_hash = models.CharField(max_length=64)
+    estado = models.CharField(max_length=15, default='procesando')
+    codigo = models.CharField(max_length=60, blank=True, default='')
+    creado = models.DateTimeField(auto_now_add=True)
+    finalizado = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=['tienda', 'clave'], name='envio_tienda_clave_unica')]
+        indexes = [models.Index(fields=['tienda', 'creado'], name='envio_tienda_fecha')]

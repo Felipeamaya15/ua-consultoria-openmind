@@ -10,16 +10,16 @@ from rest_framework.permissions import IsAuthenticated
 from apps.authentication.presentation.profile import StrictSerializer
 from apps.core.infrastructure.tenant import resolver_tienda
 from apps.core.infrastructure.email_service import enviar_correo, es_entorno_local
+from apps.core.infrastructure.store_mail import connection_state, send_store_mail, local_transport
+from uuid import uuid5
 from apps.core.models import Tienda
 from apps.core.presentation.responses import success_response, error_response
 from apps.landing.activity_views import NoStoreActivityView, ActivityRequestOutput
 from apps.landing.models import SolicitudActividad, RespuestaActividad, IntentoRespuestaActividad
 
 
-def delivery_available():
-    return settings.EMAIL_BACKEND == 'django.core.mail.backends.locmem.EmailBackend' or (
-        getattr(settings, 'ACTIVITY_REPLIES_MAILPIT_ENABLED', False) and es_entorno_local()
-        and settings.EMAIL_BACKEND == 'django.core.mail.backends.smtp.EmailBackend')
+def delivery_available(store=None):
+    return connection_state(store)['envio_habilitado'] if store else local_transport()
 
 
 class ReplyInput(StrictSerializer):
@@ -71,9 +71,8 @@ class ActivityRepliesView(NoStoreActivityView):
         return success_response(data={'solicitud': ActivityRequestOutput(record).data,
             'respuestas': ReplyOutput(rows[(page-1)*20:page*20], many=True).data,
             'pagina': page, 'paginas': max(1, (total+19)//20), 'total': total,
-            'envio_habilitado': delivery_available(),
-            'aviso_envio': 'Disponible solo con correo de pruebas. Aceptado no significa entregado al buzón.' if delivery_available()
-                else 'El envío está deshabilitado. Puedes guardar borradores; falta habilitar Mailpit o revisar el proveedor autorizado.'})
+            'envio_habilitado': delivery_available(store),
+            'aviso_envio': connection_state(store)['aviso'] + ' Aceptado no significa entregado al buzón.'})
 
     @transaction.atomic
     def post(self, request, pk):
@@ -111,30 +110,34 @@ class SendActivityReplyView(NoStoreActivityView):
             if reply.estado in ('aceptada', 'enviando', 'indeterminada'):
                 return success_response(data=ReplyOutput(reply).data,
                     mensaje='Se conserva el intento existente. No se realiza otro envío.')
-            if not delivery_available():
+            if not delivery_available(store):
                 return error_response('Envío deshabilitado. Revisa el correo de pruebas antes de enviar.', 'ENVIO_DESHABILITADO', status=409)
             if record.estado == 'cerrada':
                 raise ValidationError('La consulta está cerrada.')
             if reply.destinatario != record.email:
                 raise ValidationError('El destinatario de la consulta cambió. Revisa el detalle.')
-            count = reply.intentos.count()
+            count = reply.intentos.exclude(codigo='limite_tienda').count()
             if count >= 3:
                 raise Throttled(detail='Se alcanzó el máximo de tres intentos. Revisa el historial antes de continuar.')
             if IntentoRespuestaActividad.objects.filter(respuesta__solicitud__tienda=store,
                     creado__gte=timezone.now()-timedelta(hours=1)).count() >= 20:
                 raise Throttled(detail='Se alcanzó el límite de respuestas por hora de la tienda.')
-            attempt = IntentoRespuestaActividad.objects.create(respuesta=reply, numero=count+1)
+            attempt = IntentoRespuestaActividad.objects.create(respuesta=reply, numero=reply.intentos.count()+1)
             reply.estado = 'enviando'
             reply.save(update_fields=['estado', 'actualizado'])
         # El intento se confirma antes de contactar SMTP. Una caída deja enviando: nunca se reintenta a ciegas.
         try:
-            result = enviar_correo(reply.destinatario, reply.asunto, reply.cuerpo,
-                nombre_remitente=store.nombre, reply_to=store.correo_negocio,
-                referencia=f'activity_reply {reply.pk}')
-            definitive = result.codigo in ('destinatario_invalido', 'contenido_invalido') or result.detalle in (
-                'SMTPRecipientsRefused', 'SMTPSenderRefused', 'SMTPAuthenticationError', 'SMTPConnectError', 'ConnectionRefusedError', 'gaierror')
-            state = 'aceptada' if result.enviado else 'fallida' if definitive else 'indeterminada'
-            code = result.codigo
+            result = send_store_mail(store, uuid5(reply.pk, str(attempt.numero)), reply.destinatario,
+                reply.asunto, reply.cuerpo, category='consulta',
+                reference=reply.pk,
+                local_sender=(lambda: enviar_correo(reply.destinatario, reply.asunto, reply.cuerpo,
+                    nombre_remitente=store.nombre, reply_to=store.correo_negocio,
+                    referencia=f'activity_reply {reply.pk}')) if settings.EMAIL_BACKEND.endswith('locmem.EmailBackend') else None)
+            state, code = result.estado, result.codigo
+        except Throttled:
+            state, code = 'fallida', 'limite_tienda'
+        except ValueError:
+            state, code = 'fallida', 'reconectar'
         except Exception:
             state, code = 'indeterminada', 'resultado_desconocido'
         with transaction.atomic():
@@ -149,5 +152,5 @@ class SendActivityReplyView(NoStoreActivityView):
                 record.estado = 'respondida'
                 record.save(update_fields=['estado', 'actualizado'])
         return success_response(data=ReplyOutput(reply).data,
-            mensaje='Respuesta aceptada por el transporte de pruebas; no confirma entrega al buzón.' if state == 'aceptada'
+            mensaje='Respuesta aceptada por el proveedor; no confirma entrega al buzón.' if state == 'aceptada'
                 else 'No se confirmó el envío. Revisa el resultado y el historial antes de reintentar.')

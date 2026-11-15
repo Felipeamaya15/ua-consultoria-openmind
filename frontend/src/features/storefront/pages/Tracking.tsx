@@ -196,10 +196,13 @@ export default function Tracking() {
     return () => {requestRef.current?.abort();};
   }, [incomingNumber, incomingEmail, search]);
 
+  // Los alias históricos conservan la etapa canónica del pedido.
+  const legacySteps: Record<string, string> = {
+    preparando: 'pagado', en_origen: 'en_camino', enviado: 'en_camino', en_reparto: 'en_camino',
+  };
   const currentStepIdx = order
     ? STATUS_STEPS.findIndex(
-        (status) =>
-          status.id === order.estado,
+        (status) => status.id === (legacySteps[order.estado] ?? order.estado),
       )
     : -1;
 

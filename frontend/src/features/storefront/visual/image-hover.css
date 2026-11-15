@@ -163,3 +163,48 @@
   animation:var(--om-product-overlay-animation,none);
  }
 }
+
+/* OPENMIND_CATEGORIES_COMPACT_AND_GALLERY_HOVER_V2
+   El producto principal de Obsidian ahora usa ProductImageGallery (varias fotos).
+   Las reglas anteriores solo reconocían el selector a:has(> img), por lo que
+   el cambio de foto funcionaba pero el efecto de luz desaparecía.
+   Se usan los ajustes existentes del editor; no se agregan efectos obligatorios.
+*/
+@media (hover: hover) and (pointer: fine) {
+  [data-storefront-visual] [data-landing-page="catalog"] [data-ob-featured-gallery] {
+    position: relative;
+    isolation: isolate;
+  }
+  [data-storefront-visual] [data-landing-page="catalog"] [data-ob-featured-gallery]::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 3;
+    pointer-events: none;
+    border-radius: inherit;
+    opacity: 0;
+    background: var(--om-product-overlay-background, transparent);
+  }
+  [data-storefront-visual] [data-landing-page="catalog"] [data-ob-featured-gallery]:is(:hover,:focus-within)::after {
+    animation: var(--om-product-overlay-animation, none);
+  }
+  [data-storefront-visual] [data-landing-page="catalog"] [data-ob-featured-gallery] .om-product-gallery__layer img {
+    transition: transform 480ms cubic-bezier(.21,.7,.22,1), filter 400ms ease;
+    transform-origin: center;
+  }
+  [data-storefront-visual] [data-landing-page="catalog"] [data-ob-featured-gallery]:is(:hover,:focus-within) .om-product-gallery__layer img {
+    transform: var(--om-product-transform, none);
+    animation: var(--om-online-product-motion, none);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-storefront-visual] [data-landing-page="catalog"] [data-ob-featured-gallery]::after {
+    animation: none !important;
+    opacity: 0 !important;
+  }
+  [data-storefront-visual] [data-landing-page="catalog"] [data-ob-featured-gallery] .om-product-gallery__layer img {
+    animation: none !important;
+    transition: none !important;
+    transform: none !important;
+  }
+}

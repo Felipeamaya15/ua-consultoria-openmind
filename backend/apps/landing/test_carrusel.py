@@ -114,6 +114,25 @@ class CarruselLandingTests(TestCase):
             self.assertEqual(self.client.patch(self.url + first + '/', {'contenido': {'enlace': link}}, format='json').status_code, 400)
         self.assertEqual(self.client.get(self.url).data['data'][1]['contenido'], payload)
 
+    def test_text_mode_toggle_preserves_existing_slide_contents(self):
+        slide_id = str(self.uploaded_id())
+        endpoint = self.url + 'modo-texto/'
+        old = {'titulo': 'Texto individual guardado', 'texto_boton': 'Ver este'}
+        self.assertEqual(self.client.get(endpoint).data['data']['modo'], 'unico')
+        self.assertEqual(self.client.patch(self.url + slide_id + '/', {'contenido': old}, format='json').status_code, 200)
+        # Sin configuracion explicita, los datos anteriores mantienen su comportamiento.
+        self.assertEqual(self.client.get(endpoint).data['data']['modo'], 'por_imagen')
+        self.assertEqual(self.client.patch(endpoint, {'modo': 'unico'}, format='json').status_code, 200)
+        self.assertEqual(self.client.get(endpoint).data['data']['modo'], 'unico')
+        self.assertEqual(self.client.get(self.url).data['data'][0]['contenido'], old)
+        self.assertEqual(self.client.get('/api/landing/configuracion/').data['data']['contenido']['carrusel_texto_modo'], 'unico')
+        self.assertEqual(self.client.patch(endpoint, {'modo': 'por_imagen'}, format='json').status_code, 200)
+        self.assertEqual(self.client.get(self.url).data['data'][0]['contenido'], old)
+        self.assertEqual(self.client.patch(endpoint, {'modo': 'desconocido'}, format='json').status_code, 400)
+        self.assertEqual(self.client.get(endpoint).data['data']['modo'], 'por_imagen')
+        self.client.force_authenticate(user=self.other)
+        self.assertNotEqual(self.client.patch(endpoint, {'modo': 'unico'}, format='json').status_code, 200)
+
     def test_uploaded_library_video_is_reused_and_only_public_while_referenced_and_active(self):
         from apps.landing.test_media_library import MediaLibraryTests
         from apps.landing.models import RecursoMultimedia

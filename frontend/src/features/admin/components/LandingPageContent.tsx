@@ -8,6 +8,7 @@ import { useBlocker, useLocation } from 'react-router-dom';
 import { LandingBlocksEditor } from './LandingBlocksEditor';
 import { LandingContentEditor } from './LandingContentEditor';
 import { BusinessInformationFields } from './BusinessInformation';
+import { MailConnectionPanel } from './MailConnectionPanel';
 import { parseWeeklyHours, validHour } from './WeeklyHoursEditor';
 import { homeSectionOrder, reconcileHomeOrder, type SystemSectionId } from '../../landing/types/homeSections';
 import { normalizeContactFields, normalizeLandingContent } from '../../landing/types/landingContent';
@@ -49,6 +50,7 @@ export default function LandingPageContent() {
   const {showHelp,toggleHelp} = useAdminHelp();
   const {hash} = useLocation();
   const [active,setActive] = useState<Panel>(() => {
+    if (hash === '#informacion-negocio') return 'business';
     try {
       const saved = localStorage.getItem('openmind:landing:active-panel');
       return panels.some(panel => panel.id === saved)
@@ -214,11 +216,11 @@ export default function LandingPageContent() {
     <header className="lp-page-heading"><div><p className="lp-eyebrow">MI TIENDA / CONTENIDO</p><h1>Página principal</h1><p id="lp-page-description" hidden={!showHelp}>Todo el contenido de tu tienda, organizado en un solo lugar.</p></div><div className="lp-heading-actions"><button type="button" className="lp-button" aria-expanded={showHelp} aria-controls="lp-page-description" onClick={toggleHelp}>{showHelp?'Ocultar ayudas':'Mostrar ayudas'}</button><a className="lp-button" href={templatePaths[config.template]} target="_blank" rel="noreferrer">Ver mi tienda ↗</a></div></header>
     <nav className="lp-tabs" role="tablist" aria-label="Apartados de Página principal">{panels.map((panel,index)=><button type="button" role="tab" id={'lp-tab-'+panel.id} aria-controls={'lp-panel-'+panel.id} aria-selected={active===panel.id} tabIndex={active===panel.id?0:-1} key={panel.id} disabled={saving} onClick={()=>selectPanel(panel.id)} onKeyDown={event=>{if(!['ArrowRight','ArrowLeft','Home','End'].includes(event.key))return;event.preventDefault();const next=event.key==='Home'?0:event.key==='End'?panels.length-1:(index+(event.key==='ArrowRight'?1:-1)+panels.length)%panels.length;selectPanel(panels[next].id);document.getElementById('lp-tab-'+panels[next].id)?.focus();}}><span className="lp-tab-number" aria-hidden="true">0{index+1}</span><span>{panel.short}</span></button>)}</nav>
     <form noValidate onSubmit={event=>void save(event)} className="lp-form">
-      {error&&<ErrorState className="lp-feedback" onRetry={loadFailed?()=>setAttempt(n=>n+1):undefined} retryLabel="Reintentar carga">{error}</ErrorState>}
+      {error&&<ErrorState className="lp-feedback" onRetry={loadFailed?()=>setAttempt(n=>n+1):undefined} retryLabel="Reintentar carga">{humanizeAdminError(error)}</ErrorState>}
       <fieldset disabled={saving||loadFailed} className="lp-panels">
         {panels.map(panel=><section key={panel.id} id={'lp-panel-'+panel.id} role="tabpanel" aria-labelledby={'lp-tab-'+panel.id} data-landing-panel={panel.id} hidden={active!==panel.id}>
           {panel.id!=='blocks'&&<div className="lp-panel-heading"><h2>{panel.label}</h2><p>{panel.description}</p></div>}
-          {panel.id==='business'&&<AdminCard><div id="informacion-negocio"><BusinessInformationFields value={form.negocio} onChange={negocio=>change({...form,negocio})} /><AdminHelp>Estos datos se muestran en las cuatro plantillas. El nombre es obligatorio.</AdminHelp></div></AdminCard>}
+          {panel.id==='business'&&<><AdminCard><div id="informacion-negocio"><BusinessInformationFields value={form.negocio} onChange={negocio=>change({...form,negocio})} /><AdminHelp>Estos datos se muestran en las cuatro plantillas. El nombre es obligatorio.</AdminHelp></div></AdminCard><MailConnectionPanel businessEmail={form.negocio.correo_negocio} businessSaved={!businessDirty && !saving} /></>}
           {panel.id==='cover'&&<div className="lp-cover-grid" id="pagina-principal"><div className="lp-cover-left"><AdminCard className="lp-cover-copy"><Input label="Título principal" required maxLength={255} value={form.titulo} onChange={e=>change({...form,titulo:e.target.value})} /><AdminHelp>Tu mensaje de bienvenida. Es obligatorio.</AdminHelp><Textarea label="Descripción de portada" rows={4} value={form.descripcion} onChange={e=>change({...form,descripcion:e.target.value})} /><Input label="Texto del botón principal" required maxLength={100} value={form.texto_boton} onChange={e=>change({...form,texto_boton:e.target.value})} /><AdminHelp>Por ejemplo: Ver productos. Es obligatorio.</AdminHelp></AdminCard><div className="lp-cover-media"><AdminCard><h3>Imagen principal</h3><ImageUpload label="Subir imagen principal" value={form.imagen_principal || ''} maxMB={2} allowSVG={false} onChange={image=>change({...form,imagen_principal:image || null})} /></AdminCard><AdminCard><h3>Logo de tu negocio</h3><ImageUpload label="Subir logo del negocio" value={form.logo || ''} maxMB={1} allowSVG={false} onChange={logo=>change({...form,logo:logo || null})} /><AdminHelp>Usa tu propia marca. Es opcional.</AdminHelp></AdminCard></div></div><AdminCard className="lp-cover-carousel"><CarouselImagesEditor /></AdminCard></div>}
           {panel.id==='blocks'&&<>
             {catalogLoading&&<LoadingState align="start" spacing="compact">Cargando productos y categorías...</LoadingState>}{catalogError&&<Alert variant="error">{catalogError}</Alert>}

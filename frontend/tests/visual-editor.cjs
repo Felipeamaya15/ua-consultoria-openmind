@@ -92,12 +92,58 @@ test('save reloads overrides and leaves another store untouched', async () => { 
 test('legacy color reset is not re-persisted as effective preset color', async () => { seed({primaryColor:'#123456',themeEditor:{editorial:{primaryColor:'#654321'}}}); const config=adminRepository.load(identityA), base=model.createEditorDocument(config,'editorial',storageApi.readStoredStoreConfig(identityA)); const next=model.resetProperty(base,'global.colors.primary'); adminRepository.save(model.publishEditorDocument(config,'editorial',next),identityA); const saved=storageApi.readStoredStoreConfig(identityA); assert.equal(saved.primaryColor,undefined); assert.equal(saved.themeEditor?.editorial?.primaryColor,undefined); assert.equal(saved.themeEditor?.editorial?.visualConfig?.global?.colors?.primary,undefined); });
 test('zero and false persist through publication and reload', async () => { seed({}); let draft=model.createEditorDocument(adminRepository.load(identityA),'editorial',{}); draft=model.editProperty(draft,'heroCta.paddingX',0); draft=model.editProperty(draft,'productCard.buttonVisible',false); adminRepository.save(model.publishEditorDocument(adminRepository.load(identityA),'editorial',draft),identityA); const resolved=resolver.resolveStoreVisualConfig(storageApi.readStoredStoreConfig(identityA),'editorial'); assert.equal(resolved.heroCta.paddingX,0); assert.equal(resolved.productCard.buttonVisible,false); });
 test('all inspector property paths exist in the resolver schema', async () => { const {INSPECTOR_GROUPS}=load('src/features/admin/visualEditor/inspector.tsx'); const resolved=resolver.resolveVisualConfig(); for(const groups of Object.values(INSPECTOR_GROUPS)) for(const group of groups) for(const field of group.fields) assert.notEqual(model.readPath(resolved,field.path),undefined,field.path); });
-test('all emitted variables have responsive aliases and public consumers', async () => { const source=fs.readFileSync(path.join(root,'src/styles/visual-config.css'),'utf8'); const consumers=source+fs.readFileSync(path.join(root,'src/features/landing/components/landing-blocks.css'),'utf8'); const vars=css(resolver.resolveVisualConfig()); for(const key of Object.keys(vars)) { const base=key.replace(/-(desktop|tablet|mobile)$/,''); assert(source.includes(`${base}: var(${key})`),key); if(base.startsWith("--visual")) assert(consumers.includes(`var(${base})`)||consumers.includes(`var(${base},`),base); } });
+test('emitted variables have responsive aliases or documented direct/derived consumers', async () => {
+  const source=fs.readFileSync(path.join(root,'src/styles/visual-config.css'),'utf8');
+  const gallery=fs.readFileSync(path.join(root,'src/features/storefront/components/store/productImageGallery.css'),'utf8');
+  // Los consumidores incluyen estilos en JSX (p. ej., etiqueta promocional Editorial),
+  // no solamente las hojas CSS. No se cuentan comentarios ni archivos de pruebas.
+  function readConsumers(dir) {
+    return fs.readdirSync(dir,{withFileTypes:true}).flatMap(entry=>{
+      const file=path.join(dir,entry.name);
+      if(entry.isDirectory()) return readConsumers(file);
+      if(!entry.isFile()||!(/\.(css|tsx|jsx)$/.test(entry.name))) return [];
+      return [fs.readFileSync(file,'utf8').replace(/\/\*[\s\S]*?\*\//g,'')];
+    });
+  }
+  const consumers=['src/styles','src/features/storefront','src/features/landing']
+    .flatMap(dir=>readConsumers(path.join(root,dir))).join('\n');
+  const editorial=fs.readFileSync(path.join(root,'src/features/storefront/pages/EditorialHome.tsx'),'utf8');
+  for(const property of ['background','color','border-color','font-size','radius','border-width','align']) {
+    assert(editorial.includes(`var(--visual-hero-promo-${property})`),`Etiqueta promocional: ${property}`);
+  }
+  const references=(stylesheet,key)=>stylesheet.includes(`var(${key})`)||stylesheet.includes(`var(${key},`);
+  const vars=css(resolver.resolveVisualConfig());
+  const inactiveArrows=/^--visual-page-(catalog|login|cart|checkout|confirmation|tracking|profile|orders|terms|privacy|refund|story)-gallery-arrow-(radius|background|color|border|shadow)-(desktop|tablet|mobile)$/;
+  const productArrows=/^--visual-page-product-gallery-arrow-(radius|background|color|border|shadow)-(desktop|tablet|mobile)$/;
+  const logoMetadata=/^--visual-header-(store|institution)-logo-(padding|shape)-(desktop|tablet|mobile)$/;
+  let direct=0,derivedCount=0,inactive=0;
+  for(const key of Object.keys(vars)) {
+    const base=key.replace(/-(desktop|tablet|mobile)$/,'');
+    assert(typeof vars[key]==='string'&&vars[key].length&&!/undefined|NaN|Infinity/.test(vars[key]),key);
+    if(productArrows.test(key)) {assert(references(gallery,key),key);direct++;continue;}
+    if(inactiveArrows.test(key)) {inactive++;continue;} // esquema compartido; el inspector de flechas corresponde a Producto.
+    if(logoMetadata.test(key)) {
+      const [,owner,property,view]=key.match(logoMetadata),derived=`--visual-header-${owner}-logo-${property==='shape'?'radius':'safe-padding'}`;
+      assert(Object.hasOwn(vars,`${derived}-${view}`),key);
+      assert(source.includes(`${derived}: var(${derived}-${view})`),key);
+      assert(references(consumers,derived),key);derivedCount++;continue;
+    }
+    assert(source.includes(`${base}: var(${key})`),key);
+    if(base.startsWith('--visual')) assert(references(consumers,base),base);
+  }
+  assert.equal(direct,15);assert.equal(derivedCount,12);assert.equal(inactive,180);
+  // Comprueba la configuración real de flechas en cada tamaño, sin cambiar su posición ni hit target.
+  const styles=css(resolver.resolveVisualConfig({customization:{pages:{product:{content:{galleryArrowStyle:'circulares'}}},responsive:{tablet:{pages:{product:{content:{galleryArrowStyle:'redondeadas'}}}},mobile:{pages:{product:{content:{galleryArrowStyle:'solo-flechas'}}}}}}}));
+  for(const [view,radius] of [['desktop','999px'],['tablet','10px'],['mobile','0px']]) assert.equal(styles[`--visual-page-product-gallery-arrow-radius-${view}`],radius);
+  assert.equal(styles['--visual-page-product-gallery-arrow-background-mobile'],'transparent');
+});
 test('selection listeners prevent navigation only while connected and clean up', async () => {
   const {connectVisualPreview}=load('src/features/admin/visualEditor/preview.ts'), handlers=new Map(), styles=[], elements=[]; let callback, disconnected=0, selected;
   const element={dataset:{visualSection:'heroCta'},removeAttribute(){},scrollIntoView(){},getAttribute(){return 'heroCta';}}; elements.push(element);
-  const doc={body:{},head:{appendChild:e=>styles.push(e)},createElement:()=>({remove(){}}),querySelectorAll:selector=>selector==='img'||selector==='[data-content-block-id]'?[]:elements,querySelector:()=>element,addEventListener:(type,fn)=>handlers.set(type,fn),removeEventListener:(type,fn)=>{assert.equal(handlers.get(type),fn);handlers.delete(type);},defaultView:{MutationObserver:class{constructor(fn){callback=fn;}observe(){}disconnect(){disconnected++;}}}};
+  const events=[];
+  const doc={body:{},head:{appendChild:e=>styles.push(e)},createElement:()=>({remove(){}}),createEvent:()=>({initCustomEvent(type,_bubbles,_cancelable,detail){this.type=type;this.detail=detail;},initEvent(type){this.type=type;}}),querySelectorAll:selector=>selector==='img'||selector==='[data-content-block-id]'?[]:elements,querySelector:()=>element,addEventListener:(type,fn)=>handlers.set(type,fn),removeEventListener:(type,fn)=>{assert.equal(handlers.get(type),fn);handlers.delete(type);},defaultView:{dispatchEvent:event=>events.push(event),MutationObserver:class{constructor(fn){callback=fn;}observe(){}disconnect(){disconnected++;}}}};
   const connection=connectVisualPreview(doc,value=>selected=value,()=>{});connection.update(resolver.resolveVisualConfig(),{});
+  assert.deepEqual(events.map(event=>event.type),['openmind:editor-promo-preview','openmind:carousel:sync']);
   let prevented=0,stopped=0;handlers.get('click')({target:{closest:selector=>selector==='[data-visual-section]'?element:null},preventDefault(){prevented++;},stopPropagation(){},stopImmediatePropagation(){stopped++;}});
   assert.equal(selected,'heroCta');assert.equal(prevented,1);assert.equal(stopped,1);callback();assert.equal(styles.length,2);connection.disconnect();assert.equal(handlers.size,0);assert.equal(disconnected,1);
 });
@@ -128,7 +174,7 @@ test('legacy image restoration uses the original before saved customizations', a
   const img={dataset:{},style:{objectPosition:'',transform:'',transformOrigin:'',borderRadius:''},src:'original.png',getAttribute(key){return key === 'src' ? this.src : null;},setAttribute(k,v){if(k === 'src')this.src=v;},removeAttribute(key){if(key === 'src')this.src=null;},hasAttribute(){return false;},closest(){return null;}};
   captureOriginalImage(img); img.src='published.png'; img.style.borderRadius='15px';
   const {connectVisualPreview}=load('src/features/admin/visualEditor/preview.ts');
-  const doc={body:{},head:{appendChild(){}},createElement:()=>({remove(){}}),querySelectorAll:selector=>selector==='img'?[img]:[],addEventListener(){},removeEventListener(){},defaultView:{}};
+  const doc={body:{},head:{appendChild(){}},createElement:()=>({remove(){}}),createEvent:()=>({initCustomEvent(type,_bubbles,_cancelable,detail){this.type=type;this.detail=detail;},initEvent(type){this.type=type;}}),querySelectorAll:selector=>selector==='img'?[img]:[],addEventListener(){},removeEventListener(){},defaultView:{dispatchEvent(){}}};
   const connection=connectVisualPreview(doc,()=>{},()=>{}), saved={'image-0':{src:'published.png',x:50,y:50,scale:100,radius:15}};
   connection.update(resolver.resolveVisualConfig(),saved); connection.update(resolver.resolveVisualConfig(),{});
   assert.equal(img.src,'original.png'); assert.equal(img.style.borderRadius,'');
@@ -208,7 +254,7 @@ test('category navigation lives in the existing landing category section',async 
 });
 test('main editor section names are friendly without changing shared IDs',async () =>{
   const labels=Object.fromEntries(sections.VISUAL_SECTIONS);
-  for(const [id,label] of Object.entries({hero:'Banner principal',heroCta:'Botón principal',header:'Encabezado',productGrid:'Distribución de productos',productCard:'Tarjeta de producto',footer:'Pie de página'})) assert.equal(labels[id],label);
+  for(const [id,label] of Object.entries({hero:'Portada',heroCta:'Botón principal',header:'Encabezado',productGrid:'Distribución de productos',productCard:'Tarjeta de producto',footer:'Pie de página'})) assert.equal(labels[id],label);
 });
 test('help opens on hover, focus and click and closes with Escape and blur',async () =>{
   let state=[],cursor=0;

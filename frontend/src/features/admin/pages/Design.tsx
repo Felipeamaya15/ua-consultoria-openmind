@@ -1,9 +1,10 @@
+/* OPENMIND_TEMPLATE_GALLERY_LAYOUT_FIX_V1 */
 import { PaletteLibrary } from '../../../shared/PaletteLibrary';
 import { VISUAL_PRESETS } from '../../storefront/visual/presets';
 import { VISUAL_DEFAULTS } from '../../storefront/visual/defaults';
 import { usePaletteLibrary, saveAppearance, paletteOverrides, type Appearance, type StorePalette } from '../../../shared/palettes';
 import { resolveStoreVisualConfig } from '../../storefront/visual/resolveVisualConfig';
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { Link, useBlocker } from "react-router-dom"
 import { useAdmin } from "../context/AdminContext"
 import { TemplateId } from "../data/mockAdminData"
@@ -18,7 +19,6 @@ const TEMPLATES: {
   name: string
   description: string
   tags: string[]
-  preview: string
 }[] = [
   {
     id: "editorial",
@@ -26,8 +26,6 @@ const TEMPLATES: {
     description:
       "Colorida, moderna y dinámica. Ideal para una marca con personalidad.",
     tags: ["Modular", "Color", "Editorial"],
-    preview:
-      "https://images.unsplash.com/photo-1555212697-194d092e3b8f?w=400&h=250&fit=crop&auto=format",
   },
   {
     id: "minimal",
@@ -35,8 +33,6 @@ const TEMPLATES: {
     description:
       "Suave, cercana y fácil de recorrer. Una experiencia acogedora para tus clientes.",
     tags: ["Suave", "Cercana", "Luminosa"],
-    preview:
-      "https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=400&h=250&fit=crop&auto=format",
   },
   {
     id: "visual",
@@ -44,8 +40,6 @@ const TEMPLATES: {
     description:
       "Elegante y enfocada en fotografía. Cuenta tu historia con imágenes.",
     tags: ["Fotografía", "Elegancia", "Historia"],
-    preview:
-      "https://images.unsplash.com/photo-1558769132-cb1aea458c5e?w=400&h=250&fit=crop&auto=format",
   },
   {
     id: "catalog",
@@ -53,10 +47,75 @@ const TEMPLATES: {
     description:
       "Oscura, premium y minimalista. Tus productos son protagonistas.",
     tags: ["Premium", "Oscuro", "Minimalista"],
-    preview:
-      "https://images.unsplash.com/photo-1472851294608-062f824d29cc?w=400&h=250&fit=crop&auto=format",
   },
 ]
+
+// OPENMIND_REAL_TEMPLATE_PREVIEW_V1
+// La miniatura reutiliza la tienda pública REAL de cada ruta; no altera la plantilla activa.
+// Solo monta el iframe cerca del área visible y lo desmonta al alejarse.
+const THUMBNAIL_BROWSER_WIDTH = 1280;
+const THUMBNAIL_BROWSER_HEIGHT = 720; // 16:9: encaja con aspect-video sin bandas internas
+
+function StorefrontTemplateThumbnail({ template, name }: { template: TemplateId; name: string }) {
+  const hostRef = useRef<HTMLDivElement>(null);
+  const [scale, setScale] = useState(0.5); // El contenedor reduce todo el viewport proporcionalmente
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    const host = hostRef.current;
+    if (!host) return;
+    const measure = () => setScale(Math.min(1, Math.max(0.1, host.clientWidth / THUMBNAIL_BROWSER_WIDTH)));
+    measure();
+    if (typeof ResizeObserver !== 'undefined') {
+      const observer = new ResizeObserver(measure);
+      observer.observe(host);
+      return () => observer.disconnect();
+    }
+    window.addEventListener('resize', measure);
+    return () => window.removeEventListener('resize', measure);
+  }, []);
+
+  useEffect(() => {
+    const host = hostRef.current;
+    if (!host) return;
+    if (typeof IntersectionObserver === 'undefined') {
+      setVisible(true);
+      return;
+    }
+    const observer = new IntersectionObserver(
+      ([entry]) => setVisible(Boolean(entry?.isIntersecting)),
+      { rootMargin: '120px 0px' },
+    );
+    observer.observe(host);
+    return () => observer.disconnect();
+  }, []);
+
+  return (
+    <div ref={hostRef} role="img" aria-label={`Vista real de la tienda con ${name}`}
+      className="absolute inset-0 overflow-hidden bg-[var(--muted)]">
+      {visible ? (
+        <iframe
+          title={`Vista de la tienda real con ${name}`}
+          aria-hidden="true"
+          tabIndex={-1}
+          loading="lazy"
+          src={`${templatePaths[template]}?miniatura=1`}
+          className="absolute top-0 left-0 pointer-events-none border-0 bg-white"
+          style={{
+            width: THUMBNAIL_BROWSER_WIDTH,
+            height: THUMBNAIL_BROWSER_HEIGHT,
+            transform: `scale(${scale})`,
+            transformOrigin: 'top left',
+          }}
+        />
+      ) : (
+        <div aria-hidden="true" className="absolute inset-0 flex items-center justify-center text-xs text-[var(--muted-foreground)]">
+          Preparando vista de la tienda…
+        </div>
+      )}
+    </div>
+  );
+}
 
 const originalColors = (id: TemplateId) => ({ ...VISUAL_DEFAULTS.global.colors, ...(VISUAL_PRESETS[id]?.config.global?.colors ?? {}) })
 const originalPalette = (id: TemplateId): StorePalette => ({ id: 'system-original', nombre: 'Original', colores: originalColors(id) })
@@ -128,8 +187,8 @@ const [saved,setSaved]=useState(false);
         mantienen intactos. Solo cambia la presentación visual.
       </AdminHelp>
 
-      <div className="bg-white border border-[var(--border)] rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 shadow-2xs">
-        <div>
+      <div className="bg-white border border-[var(--border)] rounded-2xl p-4 sm:p-5 flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4 shadow-2xs">
+        <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 flex-wrap">
             <h2 className="font-bold text-base text-[var(--foreground)]">
               Plantilla activa en tu tienda:{" "}
@@ -144,7 +203,7 @@ const [saved,setSaved]=useState(false);
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+        <div className="flex flex-wrap items-center gap-2.5 w-full xl:w-auto xl:shrink-0">
           <Button
             type="button"
             variant="primary"
@@ -228,7 +287,7 @@ const [saved,setSaved]=useState(false);
             </h2>
 
             <p className="text-xs text-[var(--muted-foreground)] mt-1">
-              Al pulsar «Usar esta», la plantilla se activa y guarda automáticamente en la vista del comprador.
+               Cada tarjeta muestra tu tienda real en esa plantilla. La vista previa no activa ni cambia el diseño del comprador.
             </p>
           </div>
 
@@ -273,11 +332,7 @@ const [saved,setSaved]=useState(false);
                 }`}
               >
                 <div className="relative aspect-video overflow-hidden bg-[var(--muted)]">
-                  <img
-                    src={tpl.preview}
-                    alt={tpl.name}
-                    className="w-full h-full object-cover"
-                  />
+                  <StorefrontTemplateThumbnail template={tpl.id} name={tpl.name} />
 
                   {isActive && !isPreviewing && (
                     <div className="absolute top-2 right-2">

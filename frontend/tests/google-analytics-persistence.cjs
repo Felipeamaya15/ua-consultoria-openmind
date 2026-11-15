@@ -50,6 +50,6 @@ assert.equal(storage.size, 1);
 
 const page = fs.readFileSync(path.join(root, 'src/features/admin/pages/SeoAnalytics.tsx'), 'utf8');
 assert.match(page, /analyticsValidation\.measurementId/);
-assert.match(page, /Google Analytics activo/);
+assert.match(page, /Google Analytics configurado/);
 
 console.log('OK: el identificador GA4 normalizado se guarda y recupera por tienda');

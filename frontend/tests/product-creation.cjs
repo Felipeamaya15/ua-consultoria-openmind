@@ -60,6 +60,8 @@ async function main() {
       setTimeout: () => {},
       require: id => {
         if (id.includes('shared/services/imageUpload')) return { IMAGE_ACCEPT: 'image/*', prepareImage: async () => { throw new Error('Este test no selecciona archivos'); } };
+        if (id === '../../marketing/services/mediaLibraryService') return {saveProductVideoResource: async () => {throw new Error('Esta fixture no selecciona videos');}};
+        if (id === '../components/ProductVideoField') return {ProductVideoField: 'ProductVideoField'};
         if (id === 'react/jsx-runtime') return { jsx, jsxs: jsx };
         if (id === 'react') return {
           useEffect: () => {}, useMemo: f => f(), useRef: () => ({ current: null }),

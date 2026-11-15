@@ -37,6 +37,40 @@ def persist_json(config, key, value):
     config.save(update_fields=['contenido'])
 
 
+def read_carousel_text_mode(config):
+    """Sin clave explicita, conservar el comportamiento historico de cada imagen."""
+    content = config.contenido if isinstance(config.contenido, dict) else {}
+    mode = content.get('carrusel_texto_modo')
+    if mode in ('unico', 'por_imagen'):
+        return mode
+    saved = content.get('carrusel_contenido', {})
+    if isinstance(saved, dict) and any(isinstance(row, dict) and row for row in saved.values()):
+        return 'por_imagen'
+    return 'unico'
+
+
+class ModoTextoCarruselAPIView(APIView):
+    """Modo global de texto; no elimina ni modifica contenidos de diapositivas."""
+    parser_classes = [JSONParser]
+
+    def get(self, request):
+        config = configuration(request)
+        if not config:
+            raise NotFound('Guarda primero la portada de tu tienda.')
+        return success_response(data={'modo': read_carousel_text_mode(config)})
+
+    @transaction.atomic
+    def patch(self, request):
+        if not isinstance(request.data, dict) or set(request.data) != {'modo'}:
+            raise ValidationError({'modo': 'Selecciona texto unico o texto por imagen.'})
+        mode = serializers.ChoiceField(choices=['unico', 'por_imagen']).run_validation(request.data['modo'])
+        config = configuration(request, lock=True)
+        if not config:
+            raise NotFound('Guarda primero la portada de tu tienda.')
+        persist_json(config, 'carrusel_texto_modo', mode)
+        return success_response(data={'modo': mode})
+
+
 class ImagenesCarruselLandingAPIView(APIView):
     parser_classes = [MultiPartParser, FormParser, JSONParser]
 

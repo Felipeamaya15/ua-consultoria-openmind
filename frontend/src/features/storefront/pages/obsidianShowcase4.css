@@ -1,0 +1,564 @@
+/* OPENMIND_OBSIDIAN_SHOWCASE_UNIVERSAL_V1
+   Solo la portada de la plantilla 4. Usa las variables/paleta de cada tienda.
+   No cambia el encabezado en fichas, catálogo, checkout, otras plantillas.
+   Preserva editor visual, textos por slide, CTA y galería hover existente. */
+
+/* La navegación se superpone a una imagen a toda altura, como el referente. */
+[data-storefront-visual].template-catalog:has([data-landing-page="catalog"]) {
+  position: relative;
+}
+[data-storefront-visual].template-catalog:has([data-landing-page="catalog"]) > [data-visual-section="header"] {
+  position: absolute !important;
+  top: clamp(10px, 2vw, 26px) !important;
+  left: 0;
+  right: 0;
+  width: 100%;
+  z-index: 70;
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  padding: 0 clamp(10px, 2.6vw, 36px) !important;
+}
+[data-storefront-visual].template-catalog:has([data-landing-page="catalog"]) > [data-visual-section="header"] > div {
+  width: 100%;
+  max-width: 1370px !important;
+  padding-inline: 0 !important;
+}
+[data-storefront-visual].template-catalog:has([data-landing-page="catalog"]) [data-visual-section="header"] [data-visual-part="headerLayout"] {
+  width: 100% !important;
+  max-width: 1370px !important;
+  border-radius: 999px !important;
+  min-height: 68px !important;
+  background: color-mix(in srgb, var(--visual-header-bg, var(--visual-surface)) 90%, transparent) !important;
+  border: 1px solid color-mix(in srgb, var(--visual-header-color, var(--visual-text)) 15%, transparent) !important;
+  color: var(--visual-header-color, var(--visual-text)) !important;
+  box-shadow: 0 15px 32px rgb(0 0 0 / .17) !important;
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+[data-storefront-visual].template-catalog:has([data-landing-page="catalog"]) [data-visual-section="header"] [data-visual-part="navigation"],
+[data-storefront-visual].template-catalog:has([data-landing-page="catalog"]) [data-visual-section="header"] [data-visual-part="headerLayout"] > div:last-child {
+  color: inherit !important;
+}
+[data-storefront-visual].template-catalog:has([data-landing-page="catalog"]) [data-visual-section="header"] a,
+[data-storefront-visual].template-catalog:has([data-landing-page="catalog"]) [data-visual-section="header"] button {
+  color: inherit !important;
+}
+
+[data-storefront-visual].template-catalog [data-landing-page="catalog"] .om-ob-hero {
+  width: 100% !important;
+  max-width: none !important;
+  min-height: max(650px, 100svh) !important;
+  height: auto !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: hidden;
+}
+[data-storefront-visual].template-catalog [data-landing-page="catalog"] .om-ob-hero-frame {
+  position: relative;
+  width: 100%;
+  min-height: max(650px, 100svh) !important;
+  height: auto !important;
+  overflow: hidden;
+  border-radius: 0;
+  background: var(--visual-alternate, var(--visual-background));
+}
+[data-storefront-visual].template-catalog [data-landing-page="catalog"] .om-ob-hero-frame--plain {
+  color: var(--visual-text);
+}
+[data-storefront-visual].template-catalog [data-landing-page="catalog"] .om-ob-hero-frame--photo {
+  color: #fff;
+}
+[data-storefront-visual].template-catalog [data-landing-page="catalog"] .om-ob-hero-frame .hero-carousel,
+[data-storefront-visual].template-catalog [data-landing-page="catalog"] .om-ob-hero-frame .hero-carousel__image {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+[data-storefront-visual].template-catalog [data-landing-page="catalog"] .om-ob-hero-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(180deg, rgb(0 0 0 / .38) 0%, rgb(0 0 0 / .38) 32%, rgb(0 0 0 / .54) 77%, rgb(0 0 0 / .68) 100%) !important;
+  opacity: 1 !important;
+  pointer-events: none;
+}
+[data-storefront-visual].template-catalog [data-landing-page="catalog"] .om-ob-hero-layout {
+  position: relative !important;
+  z-index: 3;
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+  width: 100% !important;
+  max-width: none !important;
+  min-height: max(650px, 100svh) !important;
+  padding: clamp(130px, 21vh, 210px) 24px clamp(125px, 20vh, 195px) !important;
+}
+[data-storefront-visual].template-catalog [data-landing-page="catalog"] .om-ob-hero-copy {
+  position: relative;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: clamp(12px, 2vh, 26px);
+  width: 100%;
+  max-width: 1050px !important;
+  margin: auto;
+  padding: 0 !important;
+  text-align: center !important;
+  color: inherit;
+}
+[data-storefront-visual].template-catalog [data-landing-page="catalog"] .om-ob-hero-kicker {
+  margin: 0;
+  color: inherit;
+  font-size: clamp(11px, 1vw, 15px);
+  font-weight: 700;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+}
+[data-storefront-visual].template-catalog [data-landing-page="catalog"] .om-ob-hero-copy h1 {
+  width: 100%;
+  max-width: 1050px !important;
+  margin: 0 !important;
+  color: inherit;
+  font-size: clamp(2.6rem, min(7.3vw, var(--visual-hero-title-size, 94px)), 7rem) !important;
+  line-height: 1.02;
+  letter-spacing: -.05em;
+  text-wrap: balance;
+  overflow-wrap: break-word;
+  text-align: center;
+  text-shadow: 0 2px 22px rgb(0 0 0 / .12);
+}
+[data-storefront-visual].template-catalog [data-landing-page="catalog"] .om-ob-hero-description {
+  width: 100%;
+  max-width: 680px !important;
+  margin: 0 !important;
+  padding: 0;
+  color: inherit;
+  font-size: clamp(15px, 1.4vw, 20px);
+  line-height: 1.55;
+  text-align: center !important;
+}
+[data-storefront-visual].template-catalog [data-landing-page="catalog"] .om-ob-hero-actions {
+  width: 100% !important;
+  max-width: 800px !important;
+  margin: 0 !important;
+  padding: 0;
+  display: flex !important;
+  justify-content: center !important;
+  align-self: center !important;
+  flex-wrap: wrap;
+}
+[data-storefront-visual].template-catalog [data-landing-page="catalog"] .om-ob-hero-button {
+  width: auto;
+  min-height: 48px !important;
+  padding: 12px clamp(20px, 3vw, 34px) !important;
+  border-radius: 999px !important;
+  background: var(--visual-button, var(--primary)) !important;
+  color: var(--visual-button-text, var(--on-primary)) !important;
+  border: 1px solid color-mix(in srgb, currentColor 15%, transparent) !important;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  text-decoration: none;
+  box-shadow: 0 8px 26px rgb(0 0 0 / .14);
+  font-weight: 700;
+}
+[data-storefront-visual].template-catalog [data-landing-page="catalog"] .om-ob-hero-scroll {
+  position: absolute;
+  z-index: 4;
+  left: 50%;
+  bottom: clamp(95px, 10vw, 155px);
+  transform: translateX(-50%);
+  color: inherit;
+  white-space: nowrap;
+  opacity: .86;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .18em;
+}
+[data-storefront-visual].template-catalog [data-landing-page="catalog"] .om-ob-hero .hero-carousel__dots {
+  bottom: clamp(38px, 5vw, 72px);
+  z-index: 7;
+}
+
+/* Enlaces que descansan sobre el final del hero; solo se muestran si hay destino. */
+[data-storefront-visual].template-catalog [data-landing-page="catalog"] .om-ob-quicklinks {
+  position: relative;
+  z-index: 5;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+  width: min(93%, 1260px);
+  margin: -35px auto 52px;
+  background: var(--visual-surface, #fff);
+  color: var(--visual-text, #17171a);
+  border: 1px solid var(--visual-border, transparent);
+  box-shadow: 0 16px 38px rgb(0 0 0 / .13);
+  border-radius: clamp(16px, 2vw, 28px);
+  overflow: hidden;
+}
+[data-storefront-visual].template-catalog [data-landing-page="catalog"] .om-ob-quicklink {
+  min-height: 90px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 18px clamp(15px, 2vw, 26px);
+  color: inherit;
+  text-decoration: none;
+  border-right: 1px solid var(--visual-border, transparent);
+  transition: background 200ms ease, transform 200ms ease;
+}
+[data-storefront-visual].template-catalog [data-landing-page="catalog"] .om-ob-quicklink:hover,
+[data-storefront-visual].template-catalog [data-landing-page="catalog"] .om-ob-quicklink:focus-visible {
+  background: var(--visual-alternate, var(--visual-background));
+}
+[data-storefront-visual].template-catalog [data-landing-page="catalog"] .om-ob-quicklink > span:nth-child(2) {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  flex: 1;
+  min-width: 0;
+}
+[data-storefront-visual].template-catalog [data-landing-page="catalog"] .om-ob-quicklink strong {
+  font-size: clamp(14px, 1vw, 17px);
+  font-weight: 800;
+  line-height: 1.2;
+}
+[data-storefront-visual].template-catalog [data-landing-page="catalog"] .om-ob-quicklink small {
+  font-size: 11px;
+  opacity: .74;
+  line-height: 1.3;
+}
+[data-storefront-visual].template-catalog [data-landing-page="catalog"] .om-ob-quicklink-number {
+  font-size: 11px;
+  color: var(--primary);
+  font-weight: 900;
+}
+
+/* Un mosaico real: una tarjeta protagonista + dos menores. */
+[data-storefront-visual].template-catalog [data-landing-page="catalog"] .om-ob-featured {
+  max-width: 1380px !important;
+  width: min(96%, 1380px) !important;
+  margin: 0 auto;
+  padding: clamp(40px, 6vw, 92px) 0;
+}
+[data-storefront-visual].template-catalog [data-landing-page="catalog"] .om-ob-section-heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 15px;
+  margin: 0 0 clamp(22px, 3vw, 38px);
+}
+[data-storefront-visual].template-catalog [data-landing-page="catalog"] .om-ob-section-heading h2 {
+  margin: 0;
+  color: var(--visual-text);
+  font-size: clamp(27px, 3vw, 44px);
+  letter-spacing: -.03em;
+  line-height: 1.12;
+}
+[data-storefront-visual].template-catalog [data-landing-page="catalog"] .om-ob-eyebrow {
+  color: var(--primary);
+  font-size: 11px;
+  font-weight: 850;
+  letter-spacing: .13em;
+  margin-bottom: 9px;
+}
+[data-storefront-visual].template-catalog [data-landing-page="catalog"] .om-ob-see-all {
+  color: var(--primary);
+  font-weight: 750;
+  text-decoration: underline;
+  text-underline-offset: 5px;
+}
+[data-storefront-visual].template-catalog [data-landing-page="catalog"] .om-ob-featured-grid {
+  width: 100%;
+  max-width: none !important;
+  display: grid !important;
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, .85fr) !important;
+  gap: clamp(12px, 1.6vw, 22px);
+  align-items: stretch;
+}
+[data-storefront-visual].template-catalog [data-landing-page="catalog"] .om-ob-featured-main {
+  position: relative;
+  display: block;
+  width: 100%;
+  min-width: 0;
+  min-height: 520px;
+  overflow: hidden;
+  border-radius: clamp(16px, 2vw, 26px);
+  background: var(--visual-surface);
+  isolation: isolate;
+  text-decoration: none;
+}
+[data-storefront-visual].template-catalog [data-landing-page="catalog"] .om-ob-featured-main > .om-product-gallery {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+[data-storefront-visual].template-catalog [data-landing-page="catalog"] .om-ob-featured-main .om-product-gallery__layer img {
+  object-fit: cover;
+}
+[data-storefront-visual].template-catalog [data-landing-page="catalog"] .om-ob-featured-shade {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  background: linear-gradient(180deg, transparent 20%, rgb(0 0 0 / .8) 100%) !important;
+  opacity: 1 !important;
+  pointer-events: none;
+}
+[data-storefront-visual].template-catalog [data-landing-page="catalog"] .om-ob-featured-copy {
+  position: absolute;
+  z-index: 5;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  color: #fff;
+}
+[data-storefront-visual].template-catalog [data-landing-page="catalog"] .om-ob-featured-copy > span:first-child {
+  font-size: 12px;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+[data-storefront-visual].template-catalog [data-landing-page="catalog"] .om-ob-featured-copy h3 {
+  color: inherit;
+  font-size: clamp(24px, 3vw, 42px);
+  line-height: 1.1;
+  margin: 12px 0;
+}
+[data-storefront-visual].template-catalog [data-landing-page="catalog"] .om-ob-featured-price { font-size: 13px; font-weight: 750; }
+[data-storefront-visual].template-catalog [data-landing-page="catalog"] .om-ob-featured-side {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(12px, 1.6vw, 22px);
+  min-width: 0;
+}
+[data-storefront-visual].template-catalog [data-landing-page="catalog"] .om-ob-side-card {
+  display: grid;
+  grid-template-columns: 50% 1fr;
+  flex: 1;
+  min-width: 0;
+  min-height: 240px;
+  border-radius: clamp(16px, 2vw, 26px);
+  overflow: hidden;
+  background: var(--visual-surface);
+  color: var(--visual-text);
+  text-decoration: none;
+  border: 1px solid var(--visual-border, transparent);
+}
+[data-storefront-visual].template-catalog [data-landing-page="catalog"] .om-ob-side-media {
+  position: relative;
+  min-width: 0;
+  min-height: 100%;
+  overflow: hidden;
+}
+[data-storefront-visual].template-catalog [data-landing-page="catalog"] .om-ob-side-media .om-product-gallery {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+[data-storefront-visual].template-catalog [data-landing-page="catalog"] .om-ob-side-copy {
+  min-width: 0;
+  padding: clamp(13px, 2vw, 24px);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 7px;
+}
+[data-storefront-visual].template-catalog [data-landing-page="catalog"] .om-ob-side-copy span { font-size: 11px; opacity: .8; }
+[data-storefront-visual].template-catalog [data-landing-page="catalog"] .om-ob-side-copy h3 {
+  color: inherit;
+  font-size: clamp(17px, 1.5vw, 23px);
+  line-height: 1.15;
+  margin: 0;
+}
+[data-storefront-visual].template-catalog [data-landing-page="catalog"] .om-ob-side-copy strong { font-size: 13px; }
+[data-storefront-visual].template-catalog [data-landing-page="catalog"] .om-ob-side-copy small { color: var(--primary); font-weight: 750; margin-top: 4px; }
+
+/* Categorías 4: más angostas y casi cuadradas, diferentes de las bandas de Velta. */
+[data-storefront-visual].template-catalog [data-landing-page="catalog"] [data-visual-section="categories"] {
+  max-width: 1380px !important;
+  width: min(96%, 1380px) !important;
+  padding-block: clamp(35px, 5vw, 72px);
+}
+[data-storefront-visual].template-catalog [data-landing-page="catalog"] [data-visual-section="categories"] [data-visual-part="categoryList"] {
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 195px), 1fr)) !important;
+  justify-content: stretch;
+}
+[data-storefront-visual].template-catalog [data-landing-page="catalog"] [data-visual-section="categories"] [data-visual-part="categoryItem"] {
+  min-height: 170px !important;
+  aspect-ratio: 5 / 4 !important;
+  border-radius: 16px !important;
+}
+[data-storefront-visual].template-catalog [data-landing-page="catalog"] [data-visual-section="categories"] [data-visual-part="categoryLabel"] {
+  font-size: clamp(13px, 1.1vw, 17px) !important;
+}
+
+@media (max-width: 900px) {
+  [data-storefront-visual].template-catalog [data-landing-page="catalog"] .om-ob-featured-grid {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+  [data-storefront-visual].template-catalog [data-landing-page="catalog"] .om-ob-featured-main { min-height: 420px; }
+  [data-storefront-visual].template-catalog [data-landing-page="catalog"] .om-ob-featured-side {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  [data-storefront-visual].template-catalog [data-landing-page="catalog"] .om-ob-side-card {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: 190px 1fr;
+    min-height: 0;
+  }
+}
+@media (max-width: 600px) {
+  [data-storefront-visual].template-catalog:has([data-landing-page="catalog"]) > [data-visual-section="header"] {
+    top: 10px !important;
+  }
+  [data-storefront-visual].template-catalog [data-landing-page="catalog"] .om-ob-hero,
+  [data-storefront-visual].template-catalog [data-landing-page="catalog"] .om-ob-hero-frame,
+  [data-storefront-visual].template-catalog [data-landing-page="catalog"] .om-ob-hero-layout {
+    min-height: max(650px, 100svh) !important;
+  }
+  [data-storefront-visual].template-catalog [data-landing-page="catalog"] .om-ob-hero-layout {
+    padding: 145px 17px 170px !important;
+  }
+  [data-storefront-visual].template-catalog [data-landing-page="catalog"] .om-ob-hero-copy h1 {
+    font-size: clamp(34px, 9vw, 58px) !important;
+  }
+  [data-storefront-visual].template-catalog [data-landing-page="catalog"] .om-ob-quicklinks {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    margin-top: -24px;
+    margin-bottom: 30px;
+  }
+  [data-storefront-visual].template-catalog [data-landing-page="catalog"] .om-ob-quicklink {
+    min-height: 80px;
+    padding: 13px;
+    gap: 8px;
+  }
+  [data-storefront-visual].template-catalog [data-landing-page="catalog"] .om-ob-quicklink small { display: none; }
+  [data-storefront-visual].template-catalog [data-landing-page="catalog"] .om-ob-featured-side {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  [data-storefront-visual].template-catalog [data-landing-page="catalog"] .om-ob-side-card {
+    grid-template-columns: 40% 1fr;
+    grid-template-rows: minmax(0, 1fr);
+    min-height: 175px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-storefront-visual].template-catalog [data-landing-page="catalog"] .om-ob-quicklink,
+  [data-storefront-visual].template-catalog [data-landing-page="catalog"] .om-ob-hero-button {
+    transition: none !important;
+  }
+}
+[data-storefront-visual].template-catalog [data-landing-page="catalog"] .om-ob-hero-frame--photo .om-ob-hero-copy {
+  text-shadow: 0 2px 12px rgb(0 0 0 / .46);
+}
+
+/* OPENMIND_OBSIDIAN_WIDTHS_CONSISTENT_V1
+   La portada permanece a pantalla completa. Las demas secciones del inicio
+   usan la MISMA cuadricula centrada. Se limita exclusivamente a plantilla 4.
+   No altera la paleta ni estilos guardados en otras plantillas. */
+[data-storefront-visual].template-catalog [data-landing-page="catalog"] {
+  --om-ob-content-width: min(92%, 1280px);
+}
+
+/* El header flotante conserva las mismas guias laterales que el contenido. */
+[data-storefront-visual].template-catalog:has([data-landing-page="catalog"])
+  > [data-visual-section="header"] > div,
+[data-storefront-visual].template-catalog:has([data-landing-page="catalog"])
+  [data-visual-section="header"] [data-visual-part="headerLayout"] {
+  width: min(92%, 1280px) !important;
+  max-width: 1280px !important;
+  margin-inline: auto !important;
+  box-sizing: border-box;
+}
+
+/* Accesos, beneficios, destacados y categorias alineados sobre 1280px. */
+[data-storefront-visual].template-catalog [data-landing-page="catalog"]
+  :is(.om-ob-quicklinks, .om-ob-featured,
+      [data-visual-kind="benefits"], [data-visual-section="categories"]) {
+  width: var(--om-ob-content-width) !important;
+  max-width: 1280px !important;
+  margin-inline: auto !important;
+  box-sizing: border-box;
+}
+
+/* Respeta el diseno asimetrico interno, sin crear desbordes. */
+[data-storefront-visual].template-catalog [data-landing-page="catalog"]
+  .om-ob-featured-grid {
+  width: 100% !important;
+  min-width: 0;
+  max-width: 100% !important;
+  box-sizing: border-box;
+}
+[data-storefront-visual].template-catalog [data-landing-page="catalog"]
+  .om-ob-featured-grid > * {
+  min-width: 0;
+}
+
+/* Las pantallas pequenas conservan margenes respirables e iguales. */
+@media (max-width: 640px) {
+  [data-storefront-visual].template-catalog [data-landing-page="catalog"] {
+    --om-ob-content-width: calc(100% - 32px);
+  }
+  [data-storefront-visual].template-catalog:has([data-landing-page="catalog"])
+    > [data-visual-section="header"] > div,
+  [data-storefront-visual].template-catalog:has([data-landing-page="catalog"])
+    [data-visual-section="header"] [data-visual-part="headerLayout"] {
+    width: calc(100% - 16px) !important;
+  }
+}
+
+/* OPENMIND_OBSIDIAN_CLOUD_HEADER_V1
+   El encabezado exterior es transparente y no desenfoca el carrusel.
+   La barra interior tiene una silueta curva organica y usa la paleta activa.
+   No se tocan las transiciones de las imagenes del carrusel. */
+[data-storefront-visual].template-catalog:has([data-landing-page="catalog"]) > [data-visual-section="header"] {
+  background: transparent !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  filter: none !important;
+  box-shadow: none !important;
+  padding-inline: clamp(12px, 4vw, 32px) !important;
+}
+[data-storefront-visual].template-catalog:has([data-landing-page="catalog"]) > [data-visual-section="header"] > div {
+  width: 100% !important;
+  max-width: 1280px !important;
+  padding-inline: 0 !important;
+  margin-inline: auto !important;
+}
+[data-storefront-visual].template-catalog:has([data-landing-page="catalog"]) [data-visual-section="header"] [data-visual-part="headerLayout"] {
+  width: 100% !important;
+  max-width: 1280px !important;
+  margin-inline: auto !important;
+  /* Contorno suave, asimetrico, sin recortar logos ni menues. */
+  border-radius: 72px 36px 68px 40px / 46px 36px 46px 36px !important;
+  background: var(--visual-header-bg, var(--visual-surface)) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  filter: none !important;
+  box-shadow: 0 8px 24px rgb(0 0 0 / .16) !important;
+  padding-inline: clamp(16px, 3vw, 40px) !important;
+}
+/* Contraste sin desenfoque: se conserva la foto y la animacion elegida. */
+[data-storefront-visual].template-catalog [data-landing-page="catalog"] .om-ob-hero-overlay {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  filter: none !important;
+  background: linear-gradient(180deg, rgb(0 0 0 / .22) 0%, rgb(0 0 0 / .43) 43%, rgb(0 0 0 / .43) 68%, rgb(0 0 0 / .36) 100%) !important;
+}
+@media (max-width: 767px) {
+  [data-storefront-visual].template-catalog:has([data-landing-page="catalog"]) > [data-visual-section="header"] {
+    padding-inline: 10px !important;
+  }
+  [data-storefront-visual].template-catalog:has([data-landing-page="catalog"]) [data-visual-section="header"] [data-visual-part="headerLayout"] {
+    border-radius: 32px 22px 32px 22px / 28px 22px 28px 22px !important;
+    padding-inline: 12px !important;
+  }
+}

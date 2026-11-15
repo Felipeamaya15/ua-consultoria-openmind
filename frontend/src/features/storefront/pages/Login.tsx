@@ -134,7 +134,7 @@ export default function Login() {
       setMessage(res.mensaje || 'Código temporal enviado a tu correo (expira en 60 segundos).');
     } catch (err: any) {
       setMessageVariant('error');
-      setMessage(err?.mensaje || err?.message || 'No se pudo enviar el código temporal por correo.');
+      setMessage(err?.mensaje || 'No se pudo enviar el código temporal por correo. Intenta nuevamente.');
     } finally {
       setLoading(false);
     }
@@ -338,10 +338,11 @@ export default function Login() {
         setMessage('Nombre incompleto: Escribe tu nombre y apellido separados por un espacio.');
       } else if (err?.email || detalles?.email || errorString.includes('email')) {
         setMessage('Error en el correo: El formato es inválido o ya está registrado.');
-      } else if (err?.message) {
+      } else if (err?.message === 'No pudimos comunicarnos con el servicio. Intenta nuevamente mas tarde.' ||
+                 err?.message === 'El servicio no esta disponible en este momento. Intenta nuevamente mas tarde.') {
         setMessage(err.message);
       } else {
-        setMessage('Error al procesar la solicitud. Revisa los datos ingresados.');
+        setMessage('No pudimos completar el inicio de sesion. Comprueba tu conexion e intenta nuevamente.');
       }
     } finally {
       setLoading(false);

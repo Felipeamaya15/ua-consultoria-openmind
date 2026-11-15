@@ -31,6 +31,7 @@ function load(file, globals) {
   const jsx = (type, props) => ({type, props});
   const service = {getCustomerOrders: async () => {if (fail) throw Error('No disponible'); return data;}, getCustomerOrder: async requested => {assert.equal(requested, '42'); return real;}};
   const requireMock = name => {
+    if (name === '../components/checkout/PagarPedidoPendiente') return {PagarPedidoPendiente: 'PagarPedidoPendiente'};
     if (name === 'react/jsx-runtime') return {jsx, jsxs: jsx};
     if (name === 'react') return {useRef: () => ({current: null}), useState: initial => {const i = index++; if (!(i in states)) states[i] = initial; return [states[i], value => {states[i] = value;}];}, useEffect: effect => effects.push(effect)};
     if (name === 'react-router-dom') return {Link: 'Link', NavLink: 'NavLink', useParams: () => ({id})};

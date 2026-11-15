@@ -885,7 +885,7 @@ export default function ProductDetail({ previewProduct }: { previewProduct?: Pro
         <div className="flex flex-col gap-3">
           <div data-page-panel
             className={`
-              overflow-hidden bg-[var(--muted)]
+              relative overflow-hidden bg-[var(--muted)]
               ${
                 isMinimal
                   ? 'aspect-[4/4.3] rounded-[28px]'

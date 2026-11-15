@@ -2,13 +2,20 @@ from django.db import OperationalError, ProgrammingError
 from django.utils.crypto import salted_hmac
 from rest_framework import serializers
 from rest_framework.exceptions import PermissionDenied, Throttled
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.throttling import SimpleRateThrottle
 from rest_framework.views import APIView
 
 from apps.core import commercial_consent as consent
 from apps.core.infrastructure.tenant import resolver_tienda
-from apps.core.models import Tienda
+from apps.core.models import Tienda, ConsentimientoComercial, SolicitudConsentimiento, VerificacionCorreoCuenta, EventoConsentimiento
+from apps.core.email_verification import record_verified_email, email_is_verified
+from apps.authentication.presentation.profile import StrictSerializer, IsCustomer
+from django.db import transaction
+from django.contrib.auth import get_user_model
+from django.utils import timezone
+from uuid import uuid4
+from apps.core.infrastructure.contacts import eligible_consents
 from apps.core.presentation.responses import success_response, error_response
 
 
@@ -46,6 +53,11 @@ class ConsentRecipientThrottle(ConsentIPThrottle):
 class ConsentView(APIView):
     permission_classes = [AllowAny]
     throttle_classes = [ConsentIPThrottle, ConsentRecipientThrottle]
+
+    def handle_exception(self, exc):
+        if isinstance(exc, (ProgrammingError, OperationalError)):
+            return error_response('Preferencias comerciales temporalmente no disponibles.', 'CONSENTIMIENTO_NO_DISPONIBLE', status=503)
+        return super().handle_exception(exc)
 
     def throttled(self, request, wait):
         raise Throttled(detail='Has solicitado varios enlaces. Espera antes de reintentar.')
@@ -93,7 +105,83 @@ class ConsentActionView(ConsentView):
             return error_response('El enlace no es válido o venció. Solicita uno nuevo.', 'ENLACE_INVALIDO')
         except (OperationalError, ProgrammingError):
             return error_response('Preferencias comerciales temporalmente no disponibles.', 'CONSENTIMIENTO_NO_DISPONIBLE', status=503)
+        if action == 'confirmar' and result.get('estado') == 'autorizado' and request.user.is_authenticated:
+            record = SolicitudConsentimiento.objects.select_related('consentimiento').get(
+                pk=consent.decode(data.validated_data['token'], 'confirmar')).consentimiento
+            if record.email == request.user.email.strip().lower():
+                record_verified_email(request.user.pk, record.email, 'enlace_email')
         message = {'confirmar': 'Autorización confirmada. Puedes retirarla cuando quieras.',
                    'retirar': 'Autorización retirada. Ya no eres elegible para publicidad de esta tienda.',
                    'consultar': 'Preferencias consultadas.'}[action]
         return success_response(data=result, mensaje=message)
+
+
+class OwnPreferenceInput(StrictSerializer):
+    recibir = serializers.BooleanField()
+    version_texto = serializers.ChoiceField(choices=[consent.VERSION])
+
+
+def own_state(store, user):
+    record = ConsentimientoComercial.objects.filter(tienda=store, email=user.email.strip().lower()).first()
+    eligible = bool(record and eligible_consents(store).filter(pk=record.pk).exists())
+    return {'email': user.email, 'correo_verificado': email_is_verified(user),
+        'estado': 'sin_registro' if not record else 'autorizado' if eligible else
+            'pendiente' if record.estado == 'autorizado' else record.estado,
+        'recibir': eligible, 'version_texto': consent.VERSION, 'texto': consent.TEXT,
+        'fecha_autorizacion': record.fecha_autorizacion if record else None,
+        'fecha_actualizacion': record.fecha_actualizacion if record else None,
+        'fecha_retirada': record.fecha_retirada if record else None}
+
+
+class OwnConsentThrottle(SimpleRateThrottle):
+    scope = 'commercial_consent_account'
+    rate = '60/hour'
+
+    def get_cache_key(self, request, view):
+        return 'consent:account:' + str(request.user.pk)
+
+
+class OwnConsentView(ConsentView):
+    permission_classes = [IsAuthenticated, IsCustomer]
+    throttle_classes = [OwnConsentThrottle]
+
+    def get(self, request):
+        store = resolver_tienda(request)
+        return success_response(data=own_state(store, request.user))
+
+    def post(self, request):
+        store = resolver_tienda(request)
+        values = OwnPreferenceInput(data=request.data)
+        values.is_valid(raise_exception=True)
+        with transaction.atomic():
+            Tienda.objects.select_for_update().get(pk=store.pk)
+            user = get_user_model().objects.select_for_update().get(pk=request.user.pk)
+            if not email_is_verified(user):
+                raise PermissionDenied('Primero confirma el correo de tu cuenta mediante el enlace enviado a su titular.')
+            email = user.email.strip().lower()
+            record, _ = ConsentimientoComercial.objects.get_or_create(tienda=store, email=email,
+                defaults={'estado': 'pendiente'})
+            record = ConsentimientoComercial.objects.select_for_update().get(pk=record.pk)
+            receive = values.validated_data['recibir']
+            current = eligible_consents(store).filter(pk=record.pk).exists()
+            if (receive and current) or (not receive and record.estado == 'retirado'):
+                return success_response(data=own_state(store, user), mensaje='Preferencia guardada.')
+            now = timezone.now()
+            evidence = uuid4()
+            record.version_texto = consent.VERSION
+            record.referencia_evidencia = f'cuenta-verificada:{user.pk}:{evidence}'
+            record.fecha_actualizacion = now
+            if receive:
+                record.estado = 'autorizado'
+                record.verificado = True
+                record.fecha_autorizacion = now
+                record.fecha_verificacion = VerificacionCorreoCuenta.objects.get(usuario=user).fecha
+                record.revision += 1
+            else:
+                record.estado = 'retirado'
+            record.save()
+            EventoConsentimiento.objects.create(consentimiento=record, tipo=record.estado,
+                revision=record.revision, version_texto=consent.VERSION,
+                texto=consent.TEXT if receive else 'Retirar autorización comercial',
+                metodo='cuenta_correo_verificado', solicitud_id=evidence)
+        return success_response(data=own_state(store, user), mensaje='Preferencia guardada.')

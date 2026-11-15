@@ -50,3 +50,6 @@ htmlcov/
 backups/
 /.env.gmail.local
 /gmail-local.compose.yml
+
+# Respaldos binarios de MongoDB: mantener fuera de nuevos commits
+*.archive

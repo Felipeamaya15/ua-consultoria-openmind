@@ -24,6 +24,20 @@ export function checkoutPreviewStep(search: string, embedded: boolean, parentPat
   const value = new URLSearchParams(search).get('visualStep');
   return isStorefrontEditorPreview(embedded, parentPath) && CHECKOUT_PREVIEW_STEPS.some(step => step === value) ? value! : 'contact';
 }
+// OPENMIND_REAL_TEMPLATE_PREVIEW_V1
+/** Solo el panel de Diseño puede abrir miniaturas sin banner/analytics. La URL pública sola no basta. */
+export function isTemplateThumbnailPreview(embedded: boolean, parentPath: string, search: string): boolean {
+  return embedded && parentPath === '/emprendedor/diseno' && new URLSearchParams(search).get('miniatura') === '1';
+}
+
+export function isActiveTemplateThumbnailPreview(): boolean {
+  try {
+    return isTemplateThumbnailPreview(window.parent !== window, window.parent.location.pathname, window.location.search);
+  } catch {
+    return false;
+  }
+}
+
 export function pageFromPath(pathname: string): StorePageId | null {
   const relative = pathname.replace(/^\/plantilla\/[1-4]\/?/, '').replace(/\/$/, '');
   if (relative === 'legal/cookies' || relative.startsWith('legal/cookies/')) return 'terms';

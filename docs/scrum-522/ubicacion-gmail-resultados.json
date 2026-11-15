@@ -1,0 +1,439 @@
+{
+  "date": "2026-11-14T18:28:10.526595",
+  "scope": "Reubicacion de Gmail en Contactos → Campañas, sin cambios de backend, base de datos o plantillas de tienda.",
+  "backup": "backups/SCRUM-522-ubicacion-gmail-20261114-182451",
+  "restoration": {
+    "emails_matches_original_backup": true,
+    "emails_matches_HEAD": true,
+    "emails_content_diff_empty": true,
+    "normalized_sha256": "cb478ebe7d687388234ee2843028c0e6f734393fd707f2a350c3eb63fe8db890",
+    "campaign_workspace_only_adds_existing_panel_import_and_jsx": true
+  },
+  "regression": {
+    "files": 42,
+    "passed": 42,
+    "failed": 0,
+    "results": [
+      {
+        "file": "frontend/tests/account-navigation.cjs",
+        "command": "node tests/account-navigation.cjs",
+        "exit_code": 0,
+        "seconds": 0.555,
+        "log": "backups/SCRUM-522-ubicacion-gmail-20261114-182451/account-navigation.cjs.log",
+        "source_sha256": "ed38201648dc31869cd8580d6e138fb348f45d354062a86cc4827c1d354c98aa",
+        "log_sha256": "bcf5a207976026dac6814ab186059890c18e3cbcd6f155fb10d18560c59b727c"
+      },
+      {
+        "file": "frontend/tests/visual-editor.cjs",
+        "command": "node tests/visual-editor.cjs",
+        "exit_code": 0,
+        "seconds": 14.71,
+        "log": "backups/SCRUM-522-ubicacion-gmail-20261114-182451/visual-editor.cjs.log",
+        "source_sha256": "da352c29969359f39527177f11513d5fdc88b634edd144b797767a881ee0575b",
+        "log_sha256": "ff95742b4bd84c7c33c77a57092bf23a5c53976318a5d831c0a0e3bab0e41f3d"
+      },
+      {
+        "file": "frontend/tests/visual-editor-final.cjs",
+        "command": "node tests/visual-editor-final.cjs",
+        "exit_code": 0,
+        "seconds": 7.583,
+        "log": "backups/SCRUM-522-ubicacion-gmail-20261114-182451/visual-editor-final.cjs.log",
+        "source_sha256": "98f3c5568989a36f03403b5ee2943f96e2c9a11f9fded1bfb8e72b60e6793f2a",
+        "log_sha256": "f5cae77f9022978f65c042bb14a9c0eca4c72c1e8a7e58872b8325daea1a8007"
+      },
+      {
+        "file": "frontend/tests/editor-emprendedor-ux.cjs",
+        "command": "node tests/editor-emprendedor-ux.cjs",
+        "exit_code": 0,
+        "seconds": 17.421,
+        "log": "backups/SCRUM-522-ubicacion-gmail-20261114-182451/editor-emprendedor-ux.cjs.log",
+        "source_sha256": "3f550558f2c0064e1c57f05d83768749bcfa204817669689bb22fc93a211406b",
+        "log_sha256": "22f7b73ad832bb43e5e93a88179a77d27ac15bb25ff606bf47b22d88a6f7b96e"
+      },
+      {
+        "file": "frontend/tests/editor-incremental.cjs",
+        "command": "node tests/editor-incremental.cjs",
+        "exit_code": 0,
+        "seconds": 1.278,
+        "log": "backups/SCRUM-522-ubicacion-gmail-20261114-182451/editor-incremental.cjs.log",
+        "source_sha256": "261de5a31e85b9b60d6cf4447b10cf355cb7de77d92652bd2dc038463522fdcc",
+        "log_sha256": "2437034467a95a453f34a5a93c2860032b578a7f1f6ed704d57b2442957818f5"
+      },
+      {
+        "file": "frontend/tests/home-section-order.cjs",
+        "command": "node tests/home-section-order.cjs",
+        "exit_code": 0,
+        "seconds": 16.069,
+        "log": "backups/SCRUM-522-ubicacion-gmail-20261114-182451/home-section-order.cjs.log",
+        "source_sha256": "4ae3b1a9c59357ff0b6d1be4190a507d1e644cd90d9597a61460854f33469e52",
+        "log_sha256": "61cfc72b79fc06b6616392c2abaf07f565b83027c68be94e40c7bc8fc176c031"
+      },
+      {
+        "file": "frontend/tests/landing-editor.cjs",
+        "command": "node tests/landing-editor.cjs",
+        "exit_code": 0,
+        "seconds": 0.603,
+        "log": "backups/SCRUM-522-ubicacion-gmail-20261114-182451/landing-editor.cjs.log",
+        "source_sha256": "7b4719bfbd905ff9dd5d4cf4ae5a916bd40db7ea5294581a8b1e84999c2279f6",
+        "log_sha256": "45c76a25ae14b4e21f03f20f5a1639a728923988cc476eed06d403af87c6e018"
+      },
+      {
+        "file": "frontend/tests/landing-content.cjs",
+        "command": "node tests/landing-content.cjs",
+        "exit_code": 0,
+        "seconds": 2.956,
+        "log": "backups/SCRUM-522-ubicacion-gmail-20261114-182451/landing-content.cjs.log",
+        "source_sha256": "f2b18eb024363116aeb823b9f37422fe149d615c5e475cc4ff360fe71561f346",
+        "log_sha256": "70ebb3613d4cc0a2eda84d33dd3ab6680fb12ee9d5d0af0ccdbe437e0834abda"
+      },
+      {
+        "file": "frontend/tests/landing-blocks.cjs",
+        "command": "node tests/landing-blocks.cjs",
+        "exit_code": 0,
+        "seconds": 0.38,
+        "log": "backups/SCRUM-522-ubicacion-gmail-20261114-182451/landing-blocks.cjs.log",
+        "source_sha256": "57d5bb482f688e535f5e7a2e6eae69c321be1c7044f8f5909de70f6f74bfef8b",
+        "log_sha256": "3fc43c4eb51114dd1d130827fe762d620572d567d8bb73558d97816c5472e008"
+      },
+      {
+        "file": "frontend/tests/landing-sections.cjs",
+        "command": "node tests/landing-sections.cjs",
+        "exit_code": 0,
+        "seconds": 8.58,
+        "log": "backups/SCRUM-522-ubicacion-gmail-20261114-182451/landing-sections.cjs.log",
+        "source_sha256": "63a5251f1eb9ac147fa031a666859293a167f1be0e70006713ba18e87dc0c918",
+        "log_sha256": "e132e7f0feaf18e450204f525c5fc4e7da9b5fac061d51e744a7cda2dbdf7c11"
+      },
+      {
+        "file": "frontend/tests/flexible-sections.cjs",
+        "command": "node tests/flexible-sections.cjs",
+        "exit_code": 0,
+        "seconds": 2.836,
+        "log": "backups/SCRUM-522-ubicacion-gmail-20261114-182451/flexible-sections.cjs.log",
+        "source_sha256": "7cfbd68539643e6bae95ab5d0f4289402f0bf0591481da3fdbc28d08bd0eff31",
+        "log_sha256": "bd69990cebc24f4e1cd317697f2f92b794bc768df17c78003d92df7f34e734c5"
+      },
+      {
+        "file": "frontend/tests/visual-config.cjs",
+        "command": "node tests/visual-config.cjs",
+        "exit_code": 0,
+        "seconds": 3.818,
+        "log": "backups/SCRUM-522-ubicacion-gmail-20261114-182451/visual-config.cjs.log",
+        "source_sha256": "c380be8118d64eecd31f9442b9bc348e83acfabc3f77a84d004e23659e56beba",
+        "log_sha256": "5416351ada5836879d74e15b074e3ba79d2f6d154be9f8124def1c71ca3284df"
+      },
+      {
+        "file": "frontend/tests/auth-security.cjs",
+        "command": "node tests/auth-security.cjs",
+        "exit_code": 0,
+        "seconds": 0.565,
+        "log": "backups/SCRUM-522-ubicacion-gmail-20261114-182451/auth-security.cjs.log",
+        "source_sha256": "633938c04275f28555eb8033a1410fd59e1dded450a9fcaa356d813c15f0a00d",
+        "log_sha256": "6b929a3d8889f9bf08676bd7c085b79c0a6f81fbf1d0957bbd101ac54accb685"
+      },
+      {
+        "file": "frontend/tests/communications.cjs",
+        "command": "node tests/communications.cjs",
+        "exit_code": 0,
+        "seconds": 0.552,
+        "log": "backups/SCRUM-522-ubicacion-gmail-20261114-182451/communications.cjs.log",
+        "source_sha256": "842cbf5366e8ad7a414a69a861515aab31307de0753930c69d44e9f80bc186c0",
+        "log_sha256": "73d71c5a40fe998edfc4d21810bd406c4487992a1494df4bc82aeb3f157ecb0b"
+      },
+      {
+        "file": "frontend/tests/commercial-consent.cjs",
+        "command": "node tests/commercial-consent.cjs",
+        "exit_code": 0,
+        "seconds": 0.627,
+        "log": "backups/SCRUM-522-ubicacion-gmail-20261114-182451/commercial-consent.cjs.log",
+        "source_sha256": "84f452ad1927096291e907b175264e0d680d735dff0fe8f080976b677bc2f39b",
+        "log_sha256": "a0e57f49e121818b7843bdcdbf846a0eba237c6c0c30880d515f6e10e5c3ad5d"
+      },
+      {
+        "file": "frontend/tests/email-variables.cjs",
+        "command": "node tests/email-variables.cjs",
+        "exit_code": 0,
+        "seconds": 0.333,
+        "log": "backups/SCRUM-522-ubicacion-gmail-20261114-182451/email-variables.cjs.log",
+        "source_sha256": "155a6c115deda345377cd2e2a82b7c30afef385b1e3012ed4c1b694678fdebf8",
+        "log_sha256": "d92be6a55200560cd4bc603ff6d62eb17f5e3fca49b3109f5900072046c8be98"
+      },
+      {
+        "file": "frontend/tests/scrum522.cjs",
+        "command": "node tests/scrum522.cjs",
+        "exit_code": 0,
+        "seconds": 1.488,
+        "log": "backups/SCRUM-522-ubicacion-gmail-20261114-182451/scrum522.cjs.log",
+        "source_sha256": "595f444b9029d81404b88d68c25feb442805b471effb3e98079bfce3271b5c83",
+        "log_sha256": "3db2dacf9c311f09d1a47391061e25147a91dca72638eadf17378051826f94e0"
+      },
+      {
+        "file": "frontend/tests/multimedia-final.cjs",
+        "command": "node tests/multimedia-final.cjs",
+        "exit_code": 0,
+        "seconds": 1.575,
+        "log": "backups/SCRUM-522-ubicacion-gmail-20261114-182451/multimedia-final.cjs.log",
+        "source_sha256": "22f9f63cba1d36c4f6fce25e5417c21fb007996e53f21ac7a5d1aab363a056e9",
+        "log_sha256": "cbbad18c5769c453af5fb05d1cd0487f0e32251a44016dbfbb636fa8d125f654"
+      },
+      {
+        "file": "frontend/tests/plantillas3y4-regresiones.cjs",
+        "command": "node tests/plantillas3y4-regresiones.cjs",
+        "exit_code": 0,
+        "seconds": 0.09,
+        "log": "backups/SCRUM-522-ubicacion-gmail-20261114-182451/plantillas3y4-regresiones.cjs.log",
+        "source_sha256": "f3754747aacb3328c5c44be0f8f027dd561b644a8c3b6af5ea665727671f240a",
+        "log_sha256": "080a06ad01e0356cb5479b4bdefc366fb837bfcbc606e6b1d4f57b8d07431105"
+      },
+      {
+        "file": "frontend/tests/minimal-home-layout.cjs",
+        "command": "node tests/minimal-home-layout.cjs",
+        "exit_code": 0,
+        "seconds": 0.088,
+        "log": "backups/SCRUM-522-ubicacion-gmail-20261114-182451/minimal-home-layout.cjs.log",
+        "source_sha256": "45eed2b13d6b2d444b6a20ce404a2c617ae915962995f5623525661e12518116",
+        "log_sha256": "90573210b9fa03b81437124b736ad2b0c4ff74ec70872885878757c201594c89"
+      },
+      {
+        "file": "frontend/tests/minimal-search-responsive.cjs",
+        "command": "node tests/minimal-search-responsive.cjs",
+        "exit_code": 0,
+        "seconds": 0.085,
+        "log": "backups/SCRUM-522-ubicacion-gmail-20261114-182451/minimal-search-responsive.cjs.log",
+        "source_sha256": "a160559d017ae049049792f2a0633a9e97970f8ec7f1e546c07c8cb2e9c9efa0",
+        "log_sha256": "2e8603ba0405a8ac1109b9dddc046f408e3ea37377ff557273447ca143ff1b7f"
+      },
+      {
+        "file": "frontend/tests/obsidian-cloud-header.cjs",
+        "command": "node tests/obsidian-cloud-header.cjs",
+        "exit_code": 0,
+        "seconds": 0.083,
+        "log": "backups/SCRUM-522-ubicacion-gmail-20261114-182451/obsidian-cloud-header.cjs.log",
+        "source_sha256": "f81504ffd11fb0b342558360a7dbbbbd163bb8fcd05829d6e23d4bcda0904adc",
+        "log_sha256": "33eba3e1f3b0f71339bb8d51abfcf9e4078f00e4f2ba15f172f0e5f3504b08fe"
+      },
+      {
+        "file": "frontend/tests/obsidian-showcase-layout.cjs",
+        "command": "node tests/obsidian-showcase-layout.cjs",
+        "exit_code": 0,
+        "seconds": 0.087,
+        "log": "backups/SCRUM-522-ubicacion-gmail-20261114-182451/obsidian-showcase-layout.cjs.log",
+        "source_sha256": "35b1ae611ed99bf20e18ae775db7c1fa5c8e9235c0402fded91055877f1b96c7",
+        "log_sha256": "b2a81837264506ea21bd29728719b6970ae74d4a131503a8b0468632fbefe109"
+      },
+      {
+        "file": "frontend/tests/obsidian-showcase-widths.cjs",
+        "command": "node tests/obsidian-showcase-widths.cjs",
+        "exit_code": 0,
+        "seconds": 0.085,
+        "log": "backups/SCRUM-522-ubicacion-gmail-20261114-182451/obsidian-showcase-widths.cjs.log",
+        "source_sha256": "70eaba042c952c30ac8864c425c9a03f078500641d1c00a26c30df5be1cdb7b9",
+        "log_sha256": "57d3b384b9c7e1cb3f6f4d69a49c7ac42b68818bcf8390bac48bc914f09b7b09"
+      },
+      {
+        "file": "frontend/tests/preview-layout-regressions.cjs",
+        "command": "node tests/preview-layout-regressions.cjs",
+        "exit_code": 0,
+        "seconds": 0.09,
+        "log": "backups/SCRUM-522-ubicacion-gmail-20261114-182451/preview-layout-regressions.cjs.log",
+        "source_sha256": "4c62148eddab24f84295083bcc8356cca8fc8d937bf8e00188e1df91ea29aa14",
+        "log_sha256": "f31ff0fed3b7e05d78e49108dbf4a7c3d03fc61ecb14d60350873de9e5c7b481"
+      },
+      {
+        "file": "frontend/tests/template-thumbnails.cjs",
+        "command": "node tests/template-thumbnails.cjs",
+        "exit_code": 0,
+        "seconds": 0.369,
+        "log": "backups/SCRUM-522-ubicacion-gmail-20261114-182451/template-thumbnails.cjs.log",
+        "source_sha256": "2ba296fce58242bd09bc98f34b10561ab87960ac081aa5316da633e75a40b683",
+        "log_sha256": "ae3adbd27ddcc06f6ac84565aa0560c8848798216ea3b46bfd1f497f41f207be"
+      },
+      {
+        "file": "frontend/tests/storefront-layout-finish.cjs",
+        "command": "node tests/storefront-layout-finish.cjs",
+        "exit_code": 0,
+        "seconds": 0.089,
+        "log": "backups/SCRUM-522-ubicacion-gmail-20261114-182451/storefront-layout-finish.cjs.log",
+        "source_sha256": "8e9b86a02565790842585c05b5bc535ed6b0f611f6b88e5b8b3749b53557076b",
+        "log_sha256": "d18b61fdd52860cf26a79fa32d53330831a1c81d6351afdd3decf86b5a1a0fc2"
+      },
+      {
+        "file": "frontend/tests/storefront-variants.cjs",
+        "command": "node tests/storefront-variants.cjs",
+        "exit_code": 0,
+        "seconds": 0.937,
+        "log": "backups/SCRUM-522-ubicacion-gmail-20261114-182451/storefront-variants.cjs.log",
+        "source_sha256": "1719e2e113cdb0072d7864e16e0a293436f5456ec97d81fdc0e55c9f29d44176",
+        "log_sha256": "9ccb0c11cdcbb2e5541fdb40285ea4dbe1b601df8da5ed6c4c5d3d05a3b79887"
+      },
+      {
+        "file": "frontend/tests/product-visual-consistency.cjs",
+        "command": "node tests/product-visual-consistency.cjs",
+        "exit_code": 0,
+        "seconds": 0.38,
+        "log": "backups/SCRUM-522-ubicacion-gmail-20261114-182451/product-visual-consistency.cjs.log",
+        "source_sha256": "edabd7c7b39b26d2ba35fda5ff64a0db02739dd7d7601712276dd06309ff8729",
+        "log_sha256": "91099941f8200a0e0154e57484e19d52bef403a2214d6d126d6c0baf7ca80d99"
+      },
+      {
+        "file": "frontend/tests/product-creation.cjs",
+        "command": "node tests/product-creation.cjs",
+        "exit_code": 0,
+        "seconds": 0.808,
+        "log": "backups/SCRUM-522-ubicacion-gmail-20261114-182451/product-creation.cjs.log",
+        "source_sha256": "90f666002825870bfd15abe27a700889bd210dd1124cf46150398c13b4f98b0a",
+        "log_sha256": "aac120788b0628f3a02971e3e734caa10f09ad6318955bd340c30890525fc0c5"
+      },
+      {
+        "file": "frontend/tests/product-editing.cjs",
+        "command": "node tests/product-editing.cjs",
+        "exit_code": 0,
+        "seconds": 0.86,
+        "log": "backups/SCRUM-522-ubicacion-gmail-20261114-182451/product-editing.cjs.log",
+        "source_sha256": "e21a8f03c8952717405ce03bb2d55b7374759c9b34b77eb287df895d707f9cea",
+        "log_sha256": "f735fc7c998e03579ff9137a4b7a365d93b94c7e9652a54db7fc7fd375aa5c02"
+      },
+      {
+        "file": "frontend/tests/cart-checkout.cjs",
+        "command": "node tests/cart-checkout.cjs",
+        "exit_code": 0,
+        "seconds": 0.747,
+        "log": "backups/SCRUM-522-ubicacion-gmail-20261114-182451/cart-checkout.cjs.log",
+        "source_sha256": "ff537b844d956d0b80f3cc56d26a32825a5be614888759fd4a770e7ff19c0120",
+        "log_sha256": "dba21b4ec3281ac5e461b872684c3b98816c87c5996596023a549213acbbc832"
+      },
+      {
+        "file": "frontend/tests/customer-orders.cjs",
+        "command": "node tests/customer-orders.cjs",
+        "exit_code": 0,
+        "seconds": 0.62,
+        "log": "backups/SCRUM-522-ubicacion-gmail-20261114-182451/customer-orders.cjs.log",
+        "source_sha256": "cb99cfbe03d2ff06847f18da84cac5a5d7c0082a5968ebbd630119d13f8b05c7",
+        "log_sha256": "f29df44074775d08cd4601977702b8c84cd3a47fd3650635f144b09c242d5f89"
+      },
+      {
+        "file": "frontend/tests/order-tracking.cjs",
+        "command": "node tests/order-tracking.cjs",
+        "exit_code": 0,
+        "seconds": 0.629,
+        "log": "backups/SCRUM-522-ubicacion-gmail-20261114-182451/order-tracking.cjs.log",
+        "source_sha256": "3366e6abd2b8aa0e3ce559652a24e6cb8692a3a6410052ecdfeba5af99cf475d",
+        "log_sha256": "83defa774454db3a07e1d465becd5d78777bfe56b60aede13e10b1209644d51a"
+      },
+      {
+        "file": "frontend/tests/empty-state.cjs",
+        "command": "node tests/empty-state.cjs",
+        "exit_code": 0,
+        "seconds": 1.203,
+        "log": "backups/SCRUM-522-ubicacion-gmail-20261114-182451/empty-state.cjs.log",
+        "source_sha256": "0cee92f8518b28c4947bfe42f77cc1ecf58e200af7db6474ba5d89260e472174",
+        "log_sha256": "05e87d88cc67ee7558166ec3b935fbfbf181ff79a27cee630981a9b864f80514"
+      },
+      {
+        "file": "frontend/tests/stock-feedback.cjs",
+        "command": "node tests/stock-feedback.cjs",
+        "exit_code": 0,
+        "seconds": 0.946,
+        "log": "backups/SCRUM-522-ubicacion-gmail-20261114-182451/stock-feedback.cjs.log",
+        "source_sha256": "77502867ae1e1677b4c93b1d02ddd95eeebf4e7a5020ca22d5e6d51b701d0d2a",
+        "log_sha256": "6011d7149eee02e753a29a6983744c285679ac6c1664ac42c715e2ea44acee90"
+      },
+      {
+        "file": "frontend/tests/google-analytics-persistence.cjs",
+        "command": "node tests/google-analytics-persistence.cjs",
+        "exit_code": 0,
+        "seconds": 0.426,
+        "log": "backups/SCRUM-522-ubicacion-gmail-20261114-182451/google-analytics-persistence.cjs.log",
+        "source_sha256": "0aad87f969820289705757c09afea8fdb496897a7b75f9b6626c0c2d06592085",
+        "log_sha256": "04af8c33a0058aff6311984c5a3f3e1a6aea61d71fca175fe1ad87755e602efb"
+      },
+      {
+        "file": "frontend/tests/marketing.cjs",
+        "command": "node tests/marketing.cjs",
+        "exit_code": 0,
+        "seconds": 0.905,
+        "log": "backups/SCRUM-522-ubicacion-gmail-20261114-182451/marketing.cjs.log",
+        "source_sha256": "75f32a1521c4453192d6dd54a605c083ddc8389f5baf3682010ff997e67f1950",
+        "log_sha256": "dd43e1e9330338489d464e7c407c019aafc3bfd2ae8f510e1ce3129226cf9c17"
+      },
+      {
+        "file": "frontend/tests/marketing-editor.cjs",
+        "command": "node tests/marketing-editor.cjs",
+        "exit_code": 0,
+        "seconds": 1.103,
+        "log": "backups/SCRUM-522-ubicacion-gmail-20261114-182451/marketing-editor.cjs.log",
+        "source_sha256": "a5073548f06eeed6121654ada3de6ff0f3d61e133a98612f97b5822b27b66018",
+        "log_sha256": "06c43dd4859896539fda807b40eeb282c724d7e6f3b947d686fae90314c3a217"
+      },
+      {
+        "file": "frontend/tests/marketing-drafts.cjs",
+        "command": "node tests/marketing-drafts.cjs",
+        "exit_code": 0,
+        "seconds": 1.092,
+        "log": "backups/SCRUM-522-ubicacion-gmail-20261114-182451/marketing-drafts.cjs.log",
+        "source_sha256": "f33f902f03b162f85a4087fe9682a82735accf70e9a12c1d3e99b9bdd129c54f",
+        "log_sha256": "8a059116abda645c9fc099fa887efec3af6f86487916ee0cc03d7a4987691b6e"
+      },
+      {
+        "file": "frontend/tests/automatic-fields.cjs",
+        "command": "node tests/automatic-fields.cjs",
+        "exit_code": 0,
+        "seconds": 0.446,
+        "log": "backups/SCRUM-522-ubicacion-gmail-20261114-182451/automatic-fields.cjs.log",
+        "source_sha256": "3d3b98284cc17adabf39c73282c3ff70e675eb11f7048dcda30cb4cbe3c9ff83",
+        "log_sha256": "5bf992f01cf43abd9dffb12a03882d7c026295fb163ffd947167bb25f9b44b02"
+      },
+      {
+        "file": "frontend/tests/order-email-notice.cjs",
+        "command": "node tests/order-email-notice.cjs",
+        "exit_code": 0,
+        "seconds": 0.967,
+        "log": "backups/SCRUM-522-ubicacion-gmail-20261114-182451/order-email-notice.cjs.log",
+        "source_sha256": "5e88d324352691e4d68bc591e9a0b9a6d9cdcc74b285d814c8a2803a807be970",
+        "log_sha256": "30bdcd0b5ffeaf8f60d846a450b66edcf45fbb258f337fa1660dc8972da15e27"
+      }
+    ]
+  },
+  "build": {
+    "command": "npm run build",
+    "directory": "frontend",
+    "exit_code": 0,
+    "includes_typecheck": true,
+    "vite_seconds": 5.27,
+    "log": "backups/SCRUM-522-ubicacion-gmail-20261114-182451/frontend-build.log",
+    "log_sha256": "b1f9bdc2ae15f5f3c883d0c12f75c1e8e1f2ae14240a1406040d18c237d5d77f"
+  },
+  "browser_e2e": {
+    "syntax_check_exit": 0,
+    "executed": false,
+    "reason": "El E2E crea registros y envia pruebas locales. La instruccion vigente prohibe modificar bases de datos.",
+    "previous_images_are_historical": true
+  },
+  "preservation": {
+    "all_initial_files_present": true,
+    "unrelated_changes_preserved": true,
+    "database_writes": false,
+    "real_email_sent": false,
+    "production_templates_changed": false,
+    "changed_files": [
+      "frontend/src/features/admin/pages/Emails.tsx",
+      "frontend/src/features/admin/components/CampaignWorkspace.tsx",
+      "frontend/tests/scrum522.cjs",
+      "frontend/tests/scrum522-browser.cjs",
+      "docs/scrum-522/INFORME-FINAL.md",
+      "docs/scrum-522/COMO-PROBAR.md",
+      "docs/scrum-522/archivos.json"
+    ],
+    "new_files": [
+      "docs/scrum-522/ubicacion-gmail-resultados.json"
+    ]
+  },
+  "git": {
+    "branch": "feature/textos-portada-por-imagen",
+    "head": "72a46eea245f40598aab3495130cb0535ebf845e",
+    "diff_check_exit": 0,
+    "staged_files": [],
+    "forbidden_operations_performed": false
+  },
+  "blockers_for_relocation": []
+}

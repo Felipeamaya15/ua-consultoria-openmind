@@ -20,6 +20,7 @@ export function MinimalSidebar() {
       {/* Botón superior: Iniciar sesión / Cuenta / Cerrar sesión */}
       <div className="w-full flex flex-col items-center gap-1.5">
         <AccountNavigation className="w-full min-h-10 px-1.5 py-1.5 rounded-xl bg-[var(--primary)] text-[var(--on-primary)] flex items-center justify-center text-[10px] leading-tight font-semibold text-center break-words whitespace-normal shadow-2xs hover:opacity-90 transition-opacity" />
+        {!user && <Link to={route('ingresar?modo=registro')} className="om-minimal-register">Registrarse</Link>}
         {user && (
           <button
             type="button"

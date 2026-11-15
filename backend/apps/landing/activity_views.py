@@ -1,7 +1,7 @@
 import json
 from collections.abc import Mapping
 
-from django.db import transaction
+from django.db import transaction, OperationalError, ProgrammingError
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from django.utils.crypto import salted_hmac
@@ -14,7 +14,7 @@ from rest_framework.views import APIView
 from apps.authentication.presentation.profile import StrictSerializer
 from apps.core.infrastructure.tenant import resolver_tienda
 from apps.core.models import Tienda
-from apps.core.presentation.responses import success_response
+from apps.core.presentation.responses import success_response, error_response
 from apps.landing.activities import (ActivitySubmissionSerializer, CONSENT_VERSION, CONSULT_STATES,
     ENROLL_STATES, activity_title, find_activity, require_enrollment)
 from apps.landing.models import ConfiguracionLanding, SolicitudActividad
@@ -38,6 +38,12 @@ class ActivityEmailThrottle(ActivityIPThrottle):
 
 
 class NoStoreActivityView(APIView):
+    def handle_exception(self, exc):
+        if isinstance(exc, (OperationalError, ProgrammingError)):
+            return error_response('Las comunicaciones no están disponibles temporalmente. Revisa si hay una actualización pendiente.',
+                'COMUNICACIONES_NO_DISPONIBLES', status=503)
+        return super().handle_exception(exc)
+
     def finalize_response(self, request, response, *args, **kwargs):
         response = super().finalize_response(request, response, *args, **kwargs)
         response['Cache-Control'] = 'no-store'

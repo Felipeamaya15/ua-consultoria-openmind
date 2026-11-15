@@ -13,6 +13,7 @@ import { Icon } from '../components/ui';
 import { HeroCarousel, hasHeroSlides } from '../components/HeroCarousel';
 import { formatPrice } from '../data/mockData';
 import { useStorefrontTemplate } from '../hooks/useStorefrontTemplate';
+import './obsidianShowcase4.css';
 
 export default function CatalogHome() {
   const { featured, content } = useLandingContent();
@@ -22,73 +23,71 @@ export default function CatalogHome() {
   const { route } = useStorefrontTemplate();
 
   const mochila = featured[0];
-  const discover = featured.slice(1);
+  const showcaseSide = featured.slice(1, 3);
+  const discover = featured.slice(3);
+  // Bloques publicados: si no hay talleres/servicios, no aparecen accesos falsos.
+  const visibleBlocks = landing?.contenido?.bloques?.filter(block => block.visible) ?? [];
+  const workshopBlock = visibleBlocks.find(block => /taller|curso|workshop/i.test(
+    `${block.titulo ?? ''} ${block.subtitulo ?? ''}`
+  ));
+  const serviceBlock = visibleBlocks.find(block => /servici|asesor|consultor/i.test(
+    `${block.titulo ?? ''} ${block.subtitulo ?? ''}`
+  ));
 
   const hero = useHeroContent(landing, route);
   return (
     <div data-landing-page="catalog" className="bg-[var(--visual-background)] text-[var(--visual-text)] overflow-hidden min-w-0">
-      {/* HERO EDITORIAL */}
-      <section
-        data-visual-section={VISUAL_SECTION.hero}
-        className="max-w-[1320px] mx-auto px-4 sm:px-5 pt-2 md:pt-4"
-      >
-        <div
-          data-visual-part="heroFrame"
-          className={`relative min-h-[460px] sm:min-h-[620px] md:min-h-[720px] overflow-hidden rounded-[22px] sm:rounded-[28px] ${heroHasPhoto ? 'text-white' : 'bg-[var(--primary)] text-[var(--on-primary)]'}`}
-        >
+      {/* OPENMIND_OBSIDIAN_SHOWCASE_UNIVERSAL_V1: portada inmersiva, distinta a las plantillas 1-3. */}
+      <section data-visual-section={VISUAL_SECTION.hero} className="om-ob-hero" aria-label="Portada de la tienda">
+        <div data-visual-part="heroFrame" className={`om-ob-hero-frame ${heroHasPhoto ? 'om-ob-hero-frame--photo' : 'om-ob-hero-frame--plain'}`}>
           <HeroCarousel landing={landing} onContentChange={hero.onChange} />
-
-          <div
-            data-visual-part="heroOverlay"
-            className={`absolute inset-0 bg-gradient-to-r from-black/90 via-black/55 to-black/15 ${heroHasPhoto ? '' : 'hidden'}`}
-          />
-
-          <div
-            data-visual-part="heroOverlaySecondary"
-            className={`absolute inset-0 bg-gradient-to-t from-black/45 via-transparent to-black/10 ${heroHasPhoto ? '' : 'hidden'}`}
-          />
-
-          <div
-            data-visual-part="heroLayout"
-            className="relative z-10 min-h-[460px] sm:min-h-[620px] md:min-h-[720px] flex items-center"
-          >
-            <div
-              data-visual-part="heroContent"
-              className="w-full min-w-0 max-w-3xl px-5 sm:px-12 md:px-16 py-8"
-            >
-              <p className="text-[var(--primary)] text-xs font-extrabold uppercase tracking-[0.08em]">
-                Producto destacado
-              </p>
-
+          {heroHasPhoto && <div data-visual-part="heroOverlay" className="om-ob-hero-overlay" aria-hidden="true" />}
+          <div data-visual-part="heroLayout" className="om-ob-hero-layout">
+            <div data-visual-part="heroContent" className="om-ob-hero-copy">
+              <p className="om-ob-hero-kicker">Una experiencia a tu manera</p>
               <LandingStatus />
-
-              <h1 hidden={!hero.showTitle} className="mt-4 sm:mt-6 text-[clamp(2.15rem,6vw,5.125rem)] leading-[0.98] tracking-[-0.045em] font-black break-words text-inherit">
-                {hero.title}
-              </h1>
-
-              <p hidden={!hero.showDescription}
-                data-visual-part="heroSubtitle"
-                className="mt-5 sm:mt-7 max-w-xl text-sm md:text-base leading-7 text-inherit opacity-90 break-words"
-              >
+              <h1 hidden={!hero.showTitle}>{hero.title}</h1>
+              <p hidden={!hero.showDescription} data-visual-part="heroSubtitle" className="om-ob-hero-description">
                 {hero.description}
               </p>
-
-              <div
-                data-visual-part="heroCtaLayout"
-                className="mt-6 sm:mt-8 flex flex-wrap items-center gap-4 sm:gap-5"
-              >
-                <Link
-                  data-visual-section={VISUAL_SECTION.heroCta}
-                  hidden={!hero.showButton} to={hero.href} target={hero.external ? "_blank" : undefined} rel={hero.external ? "noopener noreferrer" : undefined}
-                  className="inline-flex min-h-11 w-full sm:w-auto items-center justify-center rounded-full bg-[var(--accent)] px-7 py-3 text-sm font-semibold text-[var(--on-accent)] hover:opacity-90 transition-opacity"
+              <div data-visual-part="heroCtaLayout" className="om-ob-hero-actions">
+                <Link data-visual-section={VISUAL_SECTION.heroCta}
+                  hidden={!hero.showButton} to={hero.href}
+                  target={hero.external ? '_blank' : undefined}
+                  rel={hero.external ? 'noopener noreferrer' : undefined}
+                  className="om-ob-hero-button"
                 >
-                  {hero.buttonText}
+                  {hero.buttonText || 'Explorar tienda'} <span aria-hidden="true">↗</span>
                 </Link>
               </div>
             </div>
           </div>
+          <span className="om-ob-hero-scroll" aria-hidden="true">DESCUBRE MÁS ↓</span>
         </div>
       </section>
+      {/* Navegación funcional: catálogo real, destacados y secciones publicadas. */}
+      <nav className="om-ob-quicklinks" aria-label="Explora esta tienda">
+        <Link to={route('catalogo')} className="om-ob-quicklink">
+          <span className="om-ob-quicklink-number">01</span>
+          <span><strong>Catálogo</strong><small>Explora nuestros productos</small></span>
+          <span aria-hidden="true">↗</span>
+        </Link>
+        {mochila && isSectionVisible('Productos destacados') && <a href="#om-ob-featured" className="om-ob-quicklink">
+          <span className="om-ob-quicklink-number">02</span>
+          <span><strong>Destacados</strong><small>Conoce nuestra selección</small></span>
+          <span aria-hidden="true">↓</span>
+        </a>}
+        {workshopBlock && <a href={`#seccion-${workshopBlock.id}`} className="om-ob-quicklink">
+          <span className="om-ob-quicklink-number">03</span>
+          <span><strong>Talleres</strong><small>Actividades y experiencias</small></span>
+          <span aria-hidden="true">↓</span>
+        </a>}
+        {serviceBlock && <a href={`#seccion-${serviceBlock.id}`} className="om-ob-quicklink">
+          <span className="om-ob-quicklink-number">04</span>
+          <span><strong>Servicios</strong><small>Descubre qué ofrecemos</small></span>
+          <span aria-hidden="true">↓</span>
+        </a>}
+      </nav>
 
       {/* BENEFICIOS: una sola vez, justo debajo de la portada */}
       {isSectionVisible('Beneficios') && content.beneficios.length > 0 && (
@@ -129,49 +128,47 @@ export default function CatalogHome() {
 
       <HomeSections commerce={{
         "sistema:destacados": isSectionVisible('Productos destacados') && mochila && (
-        <section
-          data-visual-section={VISUAL_SECTION.sections}
-          data-visual-kind="featured"
-          data-landing-content
-          className="max-w-[1160px] mx-auto px-4 sm:px-5 py-14 sm:py-20 md:py-24"
-        >
-          <h2 className="max-w-4xl text-[34px] sm:text-[56px] md:text-[68px] leading-[0.98] tracking-[-0.055em] font-black text-[var(--visual-text)] break-words">
-            Todo lo que necesitas.
-            <br />
-            Nada que no.
-          </h2>
-
-          <Link
-            to={route(`producto/${mochila.id}`)}
-            className="group relative block mt-8 sm:mt-12 min-h-[360px] sm:min-h-[500px] md:min-h-[600px] overflow-hidden rounded-[22px] sm:rounded-[28px]"
-          >
-            <img
-              src={mochila.images[0]}
-              alt={mochila.name}
-              className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.025]"
-            />
-
-            <div
-              data-visual-part="heroOverlay"
-              className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/30 to-transparent"
-            />
-
-            <div className="relative z-10 p-6 sm:p-8 md:p-12">
-              <p className="text-[var(--primary)] text-xs font-bold">
-                {mochila.category}
-              </p>
-
-              <h3 className="mt-4 sm:mt-6 text-2xl sm:text-3xl md:text-4xl font-semibold tracking-tight text-white break-words">
-                {mochila.name}
-              </h3>
-
-              <p className="mt-3 max-w-md text-sm text-white/90">
-                Diseñado para acompañarte todos los días.
-              </p>
+          <section id="om-ob-featured" data-visual-section={VISUAL_SECTION.sections}
+            data-visual-kind="featured" data-landing-content className="om-ob-featured">
+            <div className="om-ob-section-heading">
+              <div>
+                <p className="om-ob-eyebrow">DESCUBRE NUESTRA SELECCIÓN</p>
+                <h2>Productos destacados</h2>
+              </div>
+              <Link to={route('catalogo')} className="om-ob-see-all">Ver catálogo completo ↗</Link>
             </div>
-          </Link>
-        </section>
-      ),
+            <div data-visual-section={VISUAL_SECTION.productGrid} data-visual-grid="products" className="om-ob-featured-grid">
+              <Link data-ob-featured-gallery to={route(`producto/${mochila.id}`)}
+                className="om-ob-featured-main">
+                <ProductImageGallery images={mochila.images} alt={mochila.name}
+                  imageClassName="w-full h-full object-cover" />
+                <div data-visual-part="heroOverlay" className="om-ob-featured-shade" aria-hidden="true" />
+                <div className="om-ob-featured-copy pointer-events-none p-6 sm:p-8 md:p-12">
+                  <span>{mochila.category}</span>
+                  <h3>{mochila.name}</h3>
+                  <span className="om-ob-featured-price">{formatPrice(mochila.basePrice)} · Ver producto ↗</span>
+                </div>
+              </Link>
+              {showcaseSide.length > 0 && <div className="om-ob-featured-side">
+                {showcaseSide.map(product => (
+                  <Link key={product.id} to={route(`producto/${product.id}`)}
+                    className="om-ob-side-card" data-visual-section={VISUAL_SECTION.productCard}>
+                    <div className="om-ob-side-media">
+                      <ProductImageGallery images={product.images} alt={product.name}
+                        imageClassName="w-full h-full object-cover" />
+                    </div>
+                    <div className="om-ob-side-copy">
+                      <span>{product.category}</span>
+                      <h3>{product.name}</h3>
+                      <strong>{formatPrice(product.basePrice)}</strong>
+                      <small>Descubrir ↗</small>
+                    </div>
+                  </Link>
+                ))}
+              </div>}
+            </div>
+          </section>
+        ),
         "sistema:contenido": (<section
         data-visual-section={VISUAL_SECTION.sections}
         data-visual-kind="content"

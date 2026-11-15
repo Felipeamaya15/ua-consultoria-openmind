@@ -1,16 +1,16 @@
+import { LoadingState } from '../../../shared/components/states';
+import { MailConnectionPanel } from './MailConnectionPanel';
 import { useEffect, useRef, useState } from 'react';
 import { useBlocker } from 'react-router-dom';
 import { AdminCard, Alert, Button, Input, Modal, Select, Textarea } from './ui';
-import { useAdmin } from '../context/AdminContext';
-import { templatePaths } from '../config/navigation';
-import { campaignService, type Campaign, type CampaignForm, type CampaignList, type CampaignAudience } from '../services/campaignService';
+import { campaignService, type Campaign, type CampaignForm, type CampaignList, type CampaignAudience, type CampaignHistory } from '../services/campaignService';
 import { fetchAdminProducts, type AdminProduct } from '../services/productService';
 import { formatPrice } from '../data/mockAdminData';
 import { formatBusinessDate } from '../services/businessTime';
 
-const blank = (): CampaignForm => ({ nombre: '', asunto: '', cuerpo: '', destinatarios: [], producto_id: '' });
+const blank = (): CampaignForm => ({ nombre: '', asunto: '', cuerpo: '', destinatarios: [], producto_id: '', diseno: { imagen: '', boton_texto: '', boton_url: '' } });
+export const CAMPAIGN_STATES: Record<string, string> = { borrador: 'Borrador', seleccionado: 'Seleccionado', pendiente: 'Pendiente', procesando: 'Procesando: revisa antes de reenviar', aceptada: 'Aceptada por el proveedor', parcial: 'Parcialmente aceptada', fallida: 'Fallida', cancelada: 'Cancelada', excluido: 'Excluido por consentimiento', indeterminada: 'Resultado incierto: requiere revisión' };
 export function CampaignWorkspace() {
-  const { config } = useAdmin();
   const [form, setForm] = useState<CampaignForm>(blank), [baseline, setBaseline] = useState<CampaignForm>(blank);
   const [current, setCurrent] = useState<Campaign | null>(null), [history, setHistory] = useState<CampaignList | null>(null);
   const [audience, setAudience] = useState<CampaignAudience | null>(null), [query, setQuery] = useState('');
@@ -18,6 +18,10 @@ export function CampaignWorkspace() {
   const [page, setPage] = useState(1), [reload, setReload] = useState(0);
   const [busy, setBusy] = useState(false), [preview, setPreview] = useState(false);
   const [error, setError] = useState(''), [notice, setNotice] = useState('');
+  const [previewHtml, setPreviewHtml] = useState('');
+  const [deliveryReview, setDeliveryReview] = useState<'enviar' | 'reintentar' | 'cancelar' | null>(null);
+  const [sendHistory, setSendHistory] = useState<CampaignHistory | null>(null), [historyOpen, setHistoryOpen] = useState(false);
+  const stop = useRef(false), testKey = useRef<string>();
   const key = useRef<string>(), lock = useRef(false), alive = useRef(true);
   const dirty = JSON.stringify(form) !== JSON.stringify(baseline);
   const blocker = useBlocker(dirty);
@@ -45,39 +49,88 @@ export function CampaignWorkspace() {
       key.current ??= crypto.randomUUID();
       const row = await campaignService.save(form, key.current, current);
       if (!alive.current) return;
-      const stored = { nombre: row.nombre, asunto: row.asunto, cuerpo: row.cuerpo, producto_id: row.producto.id || '', destinatarios: row.destinatarios?.map(item => item.id) || [] };
-      setCurrent(row); setForm(stored); setBaseline(stored); setNotice('Borrador guardado. No se enviaron correos.'); setPreview(openPreview); setReload(n => n + 1);
+      const stored = { nombre: row.nombre, asunto: row.asunto, cuerpo: row.cuerpo, producto_id: row.producto.id || '', diseno: row.diseno || blank().diseno, destinatarios: row.destinatarios?.map(item => item.id) || [] };
+      setCurrent(row); setForm(stored); setBaseline(stored); setNotice('Borrador guardado. No se enviaron correos.'); setReload(n => n + 1); if (openPreview) await showPreview(row);
     } catch (cause) { if (alive.current) setError(cause instanceof Error ? cause.message : 'No se pudo guardar. Tu borrador se conserva.'); }
     finally { lock.current = false; if (alive.current) setBusy(false); }
   }
   async function open(id: string) {
     if (dirty && !window.confirm('¿Descartar el texto sin guardar y abrir otro borrador?')) return;
     setBusy(true); setError('');
-    try { const row = await campaignService.get(id); if (!alive.current) return; const stored = { nombre: row.nombre, asunto: row.asunto, cuerpo: row.cuerpo, producto_id: row.producto.id || '', destinatarios: row.destinatarios?.map(item => item.id) || [] }; setCurrent(row); key.current = row.clave; setForm(stored); setBaseline(stored); setNotice('Borrador recuperado. Revisa los contactos que siguen autorizados.'); }
+    try { const row = await campaignService.get(id); if (!alive.current) return; const stored = { nombre: row.nombre, asunto: row.asunto, cuerpo: row.cuerpo, producto_id: row.producto.id || '', diseno: row.diseno || blank().diseno, destinatarios: row.destinatarios?.map(item => item.id) || [] }; setCurrent(row); key.current = row.clave; setForm(stored); setBaseline(stored); setNotice('Campaña recuperada. Revisa el estado y los contactos que siguen autorizados.'); }
     catch (cause) { if (alive.current) setError(cause instanceof Error ? cause.message : 'No se pudo abrir el borrador.'); }
     finally { if (alive.current) setBusy(false); }
   }
+  async function showPreview(row: Campaign) {
+    setError('');
+    try { const result = await campaignService.preview(row.id); if (alive.current) { setCurrent(result.campana); setPreviewHtml(result.html); setPreview(true); } }
+    catch (cause) { if (alive.current) setError(cause instanceof Error ? cause.message : 'No se pudo cargar la vista previa.'); }
+  }
+  async function sendTest() {
+    if (!current || lock.current || dirty) return;
+    lock.current = true; setBusy(true); setError('');
+    try { testKey.current ??= crypto.randomUUID(); const result = await campaignService.test(current.id, testKey.current); if (alive.current) setNotice(result.estado === 'aceptada' ? 'Prueba aceptada por el proveedor. Revisa el buzón de pruebas en modo Mailpit.' : 'No se confirmó la prueba. Revisa la conexión antes de repetir.'); if (['aceptada','fallida'].includes(result.estado)) testKey.current = undefined; }
+    catch (cause) { if (alive.current) setError(cause instanceof Error ? cause.message : 'No se confirmó la prueba.'); }
+    finally { lock.current = false; if (alive.current) setBusy(false); }
+  }
+  async function openSendHistory(page = 1) {
+    if (!current || lock.current) return;
+    lock.current = true; setBusy(true); setError('');
+    try { const rows = await campaignService.history(current.id, page); if (alive.current) { setSendHistory(rows); setHistoryOpen(true); } }
+    catch (cause) { if (alive.current) setError(cause instanceof Error ? cause.message : 'No se pudo cargar el registro de envíos.'); }
+    finally { lock.current = false; if (alive.current) setBusy(false); }
+  }
+  async function delivery(action: 'enviar' | 'procesar' | 'reintentar' | 'cancelar') {
+    if (!current || lock.current || dirty) return;
+    if (action !== 'procesar' && deliveryReview !== action) return;
+    setDeliveryReview(null);
+    lock.current = true; stop.current = false; setBusy(true); setError(''); setNotice(''); setPreview(false);
+    try {
+      let row = action === 'procesar' ? current : await campaignService.action(current, action);
+      if (alive.current) setCurrent(row);
+      for (let index = 0; action !== 'cancelar' && index < 20 && row.resultados?.pendiente && !stop.current && alive.current; index++) {
+        row = await campaignService.action(row, 'procesar');
+        if (alive.current) setCurrent(row);
+      }
+      if (alive.current) { setReload(n => n + 1); setNotice(row.resultados?.pendiente ? 'Los pendientes se conservan. Pulsa Continuar pendientes cuando corresponda.' : 'Resultado actualizado. Revisa el detalle de cada destinatario.'); }
+    } catch (cause) { if (alive.current) { setError(cause instanceof Error ? cause.message : 'No se confirmó el resultado. Actualiza el historial.'); setReload(n => n + 1); } }
+    finally { lock.current = false; if (alive.current) setBusy(false); }
+  }
   return <div className="space-y-5">
-    <Alert variant="info">Prepara comunicaciones para personas que autorizaron publicidad. El envío de campañas está deshabilitado: guardar y previsualizar no envía correos.</Alert>
-    <div className="flex flex-wrap items-center justify-between gap-3"><h3 className="font-semibold">{current ? 'Editar borrador de campaña' : 'Preparar campaña'}</h3><Button variant="outline" disabled={busy} onClick={() => { if (dirty && !window.confirm('¿Descartar el borrador sin guardar?')) return; const next = blank(); setForm(next); setBaseline(next); setCurrent(null); key.current = undefined; setNotice(''); setError(''); }}>Nuevo borrador</Button></div>
+    <MailConnectionPanel summary />
+    <Alert variant="info">Las campañas solo incluyen personas con autorización comercial vigente y verificada. Guardar y previsualizar no envía correos. Mailpit captura las pruebas locales; el envío externo requiere habilitación del administrador.</Alert>
+    <div className="flex flex-wrap items-center justify-between gap-3"><h3 className="font-semibold">{current ? current.estado === 'borrador' ? 'Editar borrador de campaña' : 'Detalle de campaña' : 'Preparar campaña'}</h3><Button variant="outline" disabled={busy} onClick={() => { if (dirty && !window.confirm('¿Descartar el borrador sin guardar?')) return; const next = blank(); setForm(next); setBaseline(next); setCurrent(null); key.current = undefined; setNotice(''); setError(''); }}>Nuevo borrador</Button></div>
     {error && <Alert variant="error">{error}</Alert>}{notice && <p role="status" className="text-sm">{notice}</p>}
-    <fieldset disabled={busy} className="grid gap-5 lg:grid-cols-2">
+    <fieldset disabled={busy || !!current && current.estado !== 'borrador'} className="grid gap-5 lg:grid-cols-2">
       <AdminCard className="space-y-3 min-w-0"><h4 className="font-semibold">Destinatarios autorizados</h4><Input label="Filtrar contactos autorizados" value={query} maxLength={100} onChange={event => setQuery(event.target.value)} placeholder="Buscar por correo" />
-        {!audience ? <p role="status">Cargando contactos autorizados…</p> : <>
+        {!audience ? <LoadingState align="start" spacing="compact">Cargando contactos autorizados…</LoadingState> : <>
           <p className="text-sm">{audience.total} elegibles con este filtro · {form.destinatarios.length} seleccionados. Máximo {audience.limite} por borrador.</p>
           {audience.limite_excedido && <p className="text-sm">Hay más contactos que el límite. Acota el filtro para seleccionar todo el grupo.</p>}
           <div className="flex flex-wrap gap-2"><Button variant="outline" disabled={audience.limite_excedido || !audience.resultados.length} onClick={() => edit({ destinatarios: [...new Set([...form.destinatarios, ...audience.resultados.map(row => row.id)])] })}>Seleccionar todos los elegibles del filtro</Button><Button variant="ghost" onClick={() => edit({ destinatarios: [] })}>Limpiar selección</Button></div>
           {!audience.resultados.length && <p>No hay contactos con autorización válida y verificada en este filtro.</p>}
           <div className="max-h-80 overflow-y-auto space-y-2 p-1">{audience.resultados.map(row => <label key={row.id} className="flex min-h-11 items-center gap-3 break-all text-sm"><input type="checkbox" checked={form.destinatarios.includes(row.id)} onChange={event => choose(row.id, event.target.checked)} />{row.email}</label>)}</div>
         </>}
-        <p className="text-xs">Las bajas y autorizaciones se vuelven a comprobar al guardar la vista previa. Tener pedidos o aceptar cookies no autoriza publicidad.</p>
+        <p className="text-xs">Las bajas y autorizaciones se vuelven a comprobar al confirmar e inmediatamente antes de cada envío. Tener pedidos o aceptar cookies no autoriza publicidad.</p>
       </AdminCard>
       <AdminCard className="space-y-3 min-w-0"><h4 className="font-semibold">Contenido de la campaña</h4><Input label="Nombre del borrador" maxLength={150} value={form.nombre} onChange={event => edit({ nombre: event.target.value })} /><Input label="Asunto de la campaña" maxLength={200} value={form.asunto} onChange={event => edit({ asunto: event.target.value })} /><Textarea label="Contenido de la campaña" rows={7} maxLength={5000} value={form.cuerpo} onChange={event => edit({ cuerpo: event.target.value })} /><Select label="Producto de la tienda (opcional)" value={form.producto_id} onChange={event => edit({ producto_id: event.target.value })} options={[{ value: '', label: 'Sin producto' }, ...products.filter(product => product.status === 'active').map(product => ({ value: product.id, label: `${product.name} · ${formatPrice(product.basePrice)}` })), ...(current?.producto.id && !products.some(product => product.id === current.producto.id) ? [{ value: current.producto.id, label: `${current.producto.nombre} · Producto del borrador` }] : [])]} />{productError && <p className="text-sm">{productError}</p>}
-        <div className="flex flex-wrap gap-2"><Button onClick={() => void save()} disabled={busy || !dirty}>Guardar borrador de campaña</Button><Button variant="outline" disabled={busy || !form.nombre.trim()} onClick={() => void save(true)}>Guardar y previsualizar</Button></div><Button disabled title="Disponible después de habilitar el servicio de campañas y sus controles de baja.">Envío de campañas no habilitado</Button>
+        <Input label="Imagen de campaña (URL HTTP o HTTPS)" maxLength={2000} value={form.diseno?.imagen || ''} onChange={event => edit({ diseno: { ...form.diseno, imagen: event.target.value } })} /><Input label="Texto del botón" maxLength={80} value={form.diseno?.boton_texto || ''} onChange={event => edit({ diseno: { ...form.diseno, boton_texto: event.target.value } })} /><Input label="Enlace a una página de la tienda (opcional)" maxLength={2000} placeholder="Sin enlace personalizado se utiliza el catálogo" value={form.diseno?.boton_url || ''} onChange={event => edit({ diseno: { ...form.diseno, boton_url: event.target.value } })} /><p className="text-xs">Puedes usar una imagen publicada o la imagen del producto seleccionado. El contenido se trata como texto seguro; el diseño del correo se genera en el servidor.</p><div className="flex flex-wrap gap-2"><Button onClick={() => void save()} disabled={busy || !dirty}>Guardar borrador de campaña</Button><Button variant="outline" disabled={busy || !form.nombre.trim()} onClick={() => void save(true)}>Guardar y previsualizar</Button></div>
       </AdminCard>
     </fieldset>
-    <AdminCard className="space-y-3"><div className="flex flex-wrap items-center justify-between gap-2"><h3 className="font-semibold">Historial de campañas</h3><Button variant="outline" disabled={busy} onClick={() => { setError(''); setReload(n => n + 1); }}>Actualizar contactos e historial</Button></div>{!history ? <p>Cargando borradores…</p> : <>{!history.resultados.length && <p>Aún no hay campañas guardadas.</p>}{history.resultados.map(row => <div key={row.id} className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--border)] py-3"><div className="min-w-0 break-words"><strong>{row.nombre}</strong><p className="text-xs">Borrador · Revisión {row.revision} · {formatBusinessDate(row.actualizado, true)}</p></div><Button variant="outline" disabled={busy} onClick={() => void open(row.id)}>Abrir campaña</Button></div>)}<div className="flex flex-wrap items-center gap-3"><Button variant="ghost" disabled={page <= 1 || busy} onClick={() => setPage(n => n - 1)}>Campañas anteriores</Button><span className="text-xs">Página {history.pagina} de {history.paginas}</span><Button variant="ghost" disabled={page >= history.paginas || busy} onClick={() => setPage(n => n + 1)}>Más campañas</Button></div></>}</AdminCard>
-    <Modal open={preview} onClose={() => setPreview(false)} title="Vista previa de campaña" size="lg"><div className="space-y-4 break-words"><p>{current?.elegibles || 0} destinatarios elegibles · {current?.excluidos || 0} excluidos por consentimiento no vigente o cambiado.</p><h3 className="font-semibold">{current?.asunto || 'Sin asunto todavía'}</h3><p className="whitespace-pre-wrap">{current?.cuerpo || 'Completa el contenido antes de un futuro envío.'}</p>{current?.producto.id && <article className="rounded-lg border border-[var(--border)] p-3">{current.producto.imagen && <img className="max-h-40 max-w-full rounded-lg object-contain" src={current.producto.imagen} alt={current.producto.nombre || 'Producto'} />}<strong>{current.producto.nombre}</strong><p>{current.producto.precio ? formatPrice(Number(current.producto.precio)) : 'Consulta el precio del producto'}</p></article>}<a className="underline inline-flex min-h-11 items-center" target="_blank" rel="noopener noreferrer" href={`${templatePaths[config.template]}/preferencias-comerciales`}>Consultar o retirar autorización comercial</a><p className="text-xs">Este enlace abre las preferencias de publicidad de la tienda. Los enlaces personales de baja se habilitarán junto con el envío. Esta previsualización no envía mensajes.</p><p>{current?.aviso_envio}</p></div></Modal>
+    <AdminCard className="space-y-3"><div className="flex flex-wrap items-center justify-between gap-2"><h3 className="font-semibold">Historial de campañas</h3><Button variant="outline" disabled={busy} onClick={() => { setError(''); setReload(n => n + 1); }}>Actualizar contactos e historial</Button></div>{!history ? <LoadingState align="start" spacing="compact">Cargando borradores…</LoadingState> : <>{!history.resultados.length && <p>Aún no hay campañas guardadas.</p>}{history.resultados.map(row => <div key={row.id} className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--border)] py-3"><div className="min-w-0 break-words"><strong>{row.nombre}</strong><p className="text-xs">{CAMPAIGN_STATES[row.estado]} · Revisión {row.revision} · {formatBusinessDate(row.actualizado, true)}</p></div><Button variant="outline" disabled={busy} onClick={() => void open(row.id)}>Abrir campaña</Button></div>)}<div className="flex flex-wrap items-center gap-3"><Button variant="ghost" disabled={page <= 1 || busy} onClick={() => setPage(n => n - 1)}>Campañas anteriores</Button><span className="text-xs">Página {history.pagina} de {history.paginas}</span><Button variant="ghost" disabled={page >= history.paginas || busy} onClick={() => setPage(n => n + 1)}>Más campañas</Button></div></>}</AdminCard>
+    {current && <AdminCard className="space-y-3"><h3 className="font-semibold">Resultado de {current.nombre}</h3><p>{CAMPAIGN_STATES[current.estado]} · {current.aviso_envio}</p><div className="flex flex-wrap gap-3">{Object.entries(current.resultados || {}).map(([state, total]) => <span key={state}>{CAMPAIGN_STATES[state] || 'Pendiente de revisión'}: {total}</span>)}</div>
+      <div className="flex flex-wrap gap-2"><Button variant="outline" disabled={busy || dirty} onClick={() => void showPreview(current)}>Previsualizar campaña guardada</Button><Button variant="outline" disabled={busy || dirty || !current.envio_habilitado} onClick={() => void sendTest()}>{busy ? 'Procesando…' : 'Enviar prueba al propietario'}</Button>
+        {current.estado === 'borrador' && <Button disabled={busy || dirty || !current.envio_habilitado || !current.asunto.trim() || !current.cuerpo.trim()} onClick={() => void showPreview(current)}>Revisar y enviar campaña</Button>}
+        {!!current.resultados?.pendiente && <Button disabled={busy} onClick={() => void delivery('procesar')}>Continuar pendientes (hasta 20)</Button>}
+        {['fallida','parcial'].includes(current.estado) && !!current.resultados?.fallida && <Button disabled={busy || !current.envio_habilitado} onClick={() => setDeliveryReview('reintentar')}>Revisar y reintentar fallos definitivos</Button>}
+        {['borrador','pendiente','procesando'].includes(current.estado) && <Button variant="outline" disabled={busy} onClick={() => setDeliveryReview('cancelar')}>Cancelar campaña</Button>}
+        {busy && <Button variant="outline" onClick={() => { stop.current = true; }}>Pausar después del mensaje actual</Button>}
+      </div><p className="text-xs">Aceptada significa que el proveedor admitió el mensaje; no acredita entrega, apertura o lectura. Los resultados inciertos requieren revisión y no se reenvían automáticamente. Los pendientes se conservan al cerrar esta página.</p>
+      <Button variant="outline" disabled={busy} onClick={() => void openSendHistory()}>Ver registro de intentos</Button>
+      <div className="max-h-64 overflow-auto">{current.destinatarios?.map(row => <p key={row.id} className="text-sm break-all py-1">{row.email} · {CAMPAIGN_STATES[row.estado || 'seleccionado']} · {row.intentos} intentos{row.finalizado ? ` · ${formatBusinessDate(row.finalizado, true)}` : ''}</p>)}</div>
+    </AdminCard>}
+    <Modal open={preview} onClose={() => { if (!busy) setPreview(false); }} title="Vista previa de campaña" size="lg"><div className="space-y-4"><p>{current?.elegibles || 0} elegibles · {current?.excluidos || 0} excluidos. El enlace personal de baja se incorpora en cada envío.</p><iframe title="Correo promocional generado por el servidor" sandbox="" srcDoc={previewHtml} className="w-full min-h-[520px] rounded-lg border border-[var(--border)]" /><p className="text-sm">{current?.aviso_envio}</p>{current?.estado === 'borrador' && <Button disabled={busy || dirty || !current.envio_habilitado || !current.asunto.trim() || !current.cuerpo.trim()} onClick={() => setDeliveryReview('enviar')}>Confirmar envío promocional</Button>}</div></Modal>
+    <Modal open={deliveryReview !== null} onClose={() => { if (!busy) setDeliveryReview(null); }} title={deliveryReview === 'cancelar' ? 'Confirmar cancelación de campaña' : 'Confirmar envío de campaña'} size="sm"><div className="space-y-4"><p>{deliveryReview === 'cancelar' ? 'Se cancelarán los mensajes pendientes. Los mensajes ya aceptados y su historial se conservan.' : `Confirma el envío promocional de «${current?.nombre || ''}» a los contactos que siguen autorizados y verificados. Las bajas se comprobarán de nuevo antes de cada mensaje.`}</p><p>{current?.aviso_envio}</p><div className="flex flex-wrap gap-2"><Button variant="outline" disabled={busy} onClick={() => setDeliveryReview(null)}>Volver sin confirmar</Button><Button disabled={busy} onClick={() => { if (deliveryReview) void delivery(deliveryReview); }}>{deliveryReview === 'cancelar' ? 'Sí, cancelar pendientes' : 'Sí, confirmar envío'}</Button></div></div></Modal>
+    <Modal open={historyOpen} onClose={() => setHistoryOpen(false)} title="Registro de envíos de la campaña" size="lg"><div className="space-y-3">{sendHistory && <><p>{sendHistory.total} intentos registrados. No hay métricas de apertura o lectura.</p>{!sendHistory.resultados.length && <p>Aún no hay intentos de envío.</p>}{sendHistory.resultados.map((row, index) => <article key={index} className="border-b border-[var(--border)] py-2 text-sm break-all"><p>{row.destinatario} · {CAMPAIGN_STATES[row.estado] || 'Pendiente de revisión'}</p><p>{formatBusinessDate(row.creado, true)} · {row.proveedor === 'mailpit' ? 'Buzón de pruebas' : 'Gmail'} · {row.categoria === 'prueba_campana' ? 'Prueba controlada' : 'Promoción'}</p></article>)}<div className="flex flex-wrap gap-2"><Button disabled={busy || sendHistory.pagina <= 1} onClick={() => void openSendHistory(sendHistory.pagina - 1)}>Anteriores</Button><span>Página {sendHistory.pagina} de {sendHistory.paginas}</span><Button disabled={busy || sendHistory.pagina >= sendHistory.paginas} onClick={() => void openSendHistory(sendHistory.pagina + 1)}>Más intentos</Button></div></>}</div></Modal>
     <Modal open={blocker.state === 'blocked'} onClose={() => blocker.reset?.()} title="Campaña sin guardar" size="sm"><p>Hay cambios pendientes en la campaña.</p><div className="mt-4 flex flex-wrap gap-2"><Button variant="outline" onClick={() => blocker.reset?.()}>Seguir editando</Button><Button onClick={() => blocker.proceed?.()}>Descartar y salir</Button></div></Modal>
   </div>;
 }

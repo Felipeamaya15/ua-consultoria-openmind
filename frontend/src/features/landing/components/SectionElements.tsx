@@ -1,3 +1,4 @@
+import { LoadingState } from '../../../shared/components/states';
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import { MediaPreview } from '../../marketing/components/MediaPreview';
 import type { MediaResource } from '../../marketing/domain/mediaLibrary';
@@ -102,7 +103,7 @@ export function SectionMediaItem({
 
   if (!src) {
     return <div className="section-media-loading">
-      Cargando video...
+      <LoadingState spacing="compact">Cargando video…</LoadingState>
     </div>;
   }
 
@@ -175,7 +176,7 @@ export function SectionElements({ elements, ownerResources, activity, sectionId 
               initiallyOpen={resource.tipo === 'imagen'}
             />
         : ownerResources
-          ? <p role="status">El recurso no esta disponible.</p>
+          ? <p role="status">El recurso no está disponible. No se mostrará en la tienda.</p>
           : null;
     } else if (tipo === 'youtube' || tipo === 'social') {
       const kind = tipo === 'youtube' ? 'youtube' : element.proveedor || 'instagram';

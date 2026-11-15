@@ -74,6 +74,7 @@ function component(file, template, initial = []) {
     if (name.includes('CartContext')) return { useCart: context };
     if (name.includes('mockData')) return { formatPrice: value => `CLP ${value}` };
     if (name.includes('useStorefrontTemplate')) return { useStorefrontTemplate: () => ({ route: p => `/${p}`, isCatalog: template === 'catalog', isVisual: template === 'visual', isMinimal: template === 'minimal' }) };
+    if (name.endsWith('/ProductImageGallery')) return { ProductImageGallery: 'ProductImageGallery' };
     if (name.includes('ProductCard')) return { ProductCard: 'ProductCard' };
     if (name.includes('ProductAttributes')) return { ProductAttributes: 'ProductAttributes' };
     if (name.includes('catalogService')) return {};

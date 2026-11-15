@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { useLocation } from 'react-router-dom';
-import { consentRequest, requestConsent, CONSENT_TEXT } from '../services/commercialConsent';
+import { consentRequest, requestConsent, CONSENT_TEXT, readOwnConsent, saveOwnConsent, hasConsentSession, type OwnCommercialPreference } from '../services/commercialConsent';
 import { useStorefrontTemplate } from '../hooks/useStorefrontTemplate';
 
 export default function CommercialPreferences() {
@@ -18,6 +18,16 @@ export default function CommercialPreferences() {
   const [error, setError] = useState('');
   const [state, setState] = useState('');
   const [purpose, setPurpose] = useState('gestionar');
+  const [own, setOwn] = useState<OwnCommercialPreference | null>(null);
+  const [receive, setReceive] = useState(false), [checking, setChecking] = useState(true);
+  useEffect(() => {
+    let active = true; setChecking(true); setOwn(null);
+    if (!hasConsentSession()) { setChecking(false); return; }
+    readOwnConsent().then(value => { if (active) { setOwn(value); setReceive(value.recibir); setEmail(value.email); } })
+      .catch(cause => { if (active) setError(cause instanceof Error ? cause.message : 'No pudimos consultar tu preferencia.'); })
+      .finally(() => { if (active) setChecking(false); });
+    return () => { active = false; };
+  }, [location.pathname]);
   useEffect(() => {
     const values = new URLSearchParams(location.hash.slice(1));
     if (values.has('token')) {
@@ -30,9 +40,20 @@ export default function CommercialPreferences() {
     if (busy) return;
     setBusy(true); setError(''); setMessage('');
     try {
-      const result = await consentRequest('enlace', {token: link.token, accion: action});
+      const result = await consentRequest('enlace', {token: link.token, accion: action}, action === 'confirmar');
       setState(result.data.estado); setMessage(result.mensaje);
+      if (hasConsentSession()) {
+        try { const value = await readOwnConsent(); setOwn(value); setReceive(value.recibir); }
+        catch { setOwn(null); }
+      }
     } catch (e) { setError(e instanceof Error ? e.message : 'No pudimos procesar el enlace.'); }
+    finally { setBusy(false); }
+  }
+  async function savePreference(event: FormEvent) {
+    event.preventDefault(); if (busy || checking || !own?.correo_verificado) return;
+    setBusy(true); setError(''); setMessage('');
+    try { const value = await saveOwnConsent(receive); setOwn(value); setReceive(value.recibir); setMessage('Preferencia guardada. Puedes cambiarla cuando quieras.'); }
+    catch (cause) { setError(cause instanceof Error ? cause.message : 'No pudimos guardar tu preferencia.'); }
     finally { setBusy(false); }
   }
   async function send(event: FormEvent) {
@@ -49,6 +70,7 @@ export default function CommercialPreferences() {
     {message && <p role="status" className="border rounded p-3">{message}</p>}
     {error && <p role="alert" className="border rounded p-3 text-red-700">{error}</p>}
     {busy && <p role="status">Procesando…</p>}
+    {checking && <p role="status">Consultando tu preferencia…</p>}
     {link.token && <section className="space-y-4">
       {link.action === 'confirmar' ? <><p>{CONSENT_TEXT}</p><button data-page-action="primary" className={button} disabled={busy || state === 'autorizado'} onClick={() => void run('confirmar')}>Confirmar autorización comercial</button></> : <>
         <button data-page-action="outline" className={button} disabled={busy} onClick={() => void run('consultar')}>Consultar mi preferencia</button>
@@ -56,15 +78,21 @@ export default function CommercialPreferences() {
         <button data-page-action="primary" className={button} disabled={busy || state === 'retirado'} onClick={() => void run('retirar')}>Retirar autorización comercial</button>
       </>}
     </section>}
-    <form onSubmit={send} className="space-y-4">
+    {!checking && own?.correo_verificado ? <form onSubmit={savePreference} className="space-y-4">
+      <p className="break-all">Correo verificado de tu cuenta: {own.email}</p>
+      <p>Estado actual: {{autorizado:'Autorizado y verificado', retirado:'Autorización retirada', pendiente:'Pendiente de verificación', sin_registro:'Sin autorización registrada'}[own.estado]}</p>
+      <label className="flex items-start gap-3"><input type="checkbox" checked={receive} disabled={busy} onChange={event => setReceive(event.target.checked)} /><span>{CONSENT_TEXT}</span></label>
+      <button data-page-action="primary" className={button} disabled={busy}>Guardar preferencia</button>
+    </form> : !checking && <form onSubmit={send} className="space-y-4">
       <h2 className="text-lg font-semibold">Solicitar un enlace nuevo</h2>
-      <label className="block">Correo electrónico<input required type="email" autoComplete="email" maxLength={320} className="block w-full border rounded p-3 mt-1" value={email} onChange={e => setEmail(e.target.value)} /></label>
+      {own && <p>Tu sesión no acredita la verificación del correo. Confirma el enlace enviado a tu cuenta para activar la gestión directa.</p>}
+      <label className="block">Correo electrónico<input required type="email" autoComplete="email" readOnly={!!own} maxLength={320} className="block w-full border rounded p-3 mt-1" value={email} onChange={e => setEmail(e.target.value)} /></label>
       <label className="block">Qué quieres hacer<select className="block w-full border rounded p-3 mt-1" value={purpose} onChange={e => setPurpose(e.target.value)}>
         <option value="gestionar">Consultar o retirar mi autorización</option><option value="confirmar">Autorizar publicidad (requiere confirmación)</option>
       </select></label>
       {purpose === 'confirmar' && <p>{CONSENT_TEXT}</p>}
       <button data-page-action="outline" className={button} disabled={busy}>Enviar enlace por correo</button>
       <p className="text-sm">Por privacidad, no mostramos si un correo tiene autorización. El enlace llegará a su titular. Puedes reintentar el envío después de cinco minutos.</p>
-    </form>
+    </form>}
   </main>;
 }

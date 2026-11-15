@@ -1,6 +1,7 @@
 ﻿from apps.landing.campaigns import CampaignAudienceView, CampaignsView
 
 from apps.core.presentation.customer_orders import CustomerOrdersAPIView
+from apps.landing.campaign_delivery import CampaignActionView, CampaignUnsubscribeView
 from apps.core.presentation.pago_pedido_pendiente import PagarPedidoPendienteView
 from apps.core.presentation.order_tracking import OrderTrackingAPIView
 from apps.core.presentation.checkout import CheckoutOrderAPIView
@@ -35,12 +36,13 @@ from apps.core.presentation.pickup_address import PickupAddressAPIView
 from apps.core.presentation.promotions import PromocionesAPIView, PromocionDetalleAPIView, ValidarPromocionAPIView
 from django.urls import path
 from apps.core.presentation.images import ProcessImageAPIView
-from apps.core.presentation.consent import ConsentRequestView, ConsentActionView
+from apps.core.presentation.consent import ConsentRequestView, ConsentActionView, OwnConsentView
 from apps.core.presentation.gmail_oauth_views import (
     GmailGoogleEstadoView,
     GmailGoogleIniciarView,
     GmailGoogleCallbackView,
     GmailGoogleDesconectarView,
+    GmailGooglePruebaView,
     gmail_google_resultado,
 )
 from . import views
@@ -60,17 +62,27 @@ from apps.core.presentation.views import (
 )
 
 urlpatterns = [
+    path('tienda/correo/google/prueba/', GmailGooglePruebaView.as_view(), name='gmail-google-prueba'),
     path("tienda/correo/google/estado/", GmailGoogleEstadoView.as_view(), name="gmail-google-estado"),
     path("tienda/correo/google/iniciar/", GmailGoogleIniciarView.as_view(), name="gmail-google-iniciar"),
     path("tienda/correo/google/callback/", GmailGoogleCallbackView.as_view(), name="gmail-google-callback"),
     path("tienda/correo/google/desconectar/", GmailGoogleDesconectarView.as_view(), name="gmail-google-desconectar"),
     path("tienda/correo/google/resultado/", gmail_google_resultado, name="gmail-google-resultado"),
     path('tienda/campanas/destinatarios/', CampaignAudienceView.as_view(), name='campanas-destinatarios'),
+    path('tienda/campanas/baja/', CampaignUnsubscribeView.as_view(), name='campanas-baja'),
+    path('tienda/campanas/<uuid:pk>/vista-previa/', CampaignActionView.as_view(action='preview'), name='campana-preview'),
+    path('tienda/campanas/<uuid:pk>/historial/', CampaignActionView.as_view(action='history'), name='campana-history'),
+    path('tienda/campanas/<uuid:pk>/prueba/', CampaignActionView.as_view(action='test'), name='campana-test'),
+    path('tienda/campanas/<uuid:pk>/enviar/', CampaignActionView.as_view(action='confirm'), name='campana-confirm'),
+    path('tienda/campanas/<uuid:pk>/procesar/', CampaignActionView.as_view(action='process'), name='campana-process'),
+    path('tienda/campanas/<uuid:pk>/reintentar/', CampaignActionView.as_view(action='retry'), name='campana-retry'),
+    path('tienda/campanas/<uuid:pk>/cancelar/', CampaignActionView.as_view(action='cancel'), name='campana-cancel'),
     path('tienda/campanas/', CampaignsView.as_view(), name='campanas'),
     path('tienda/campanas/<uuid:pk>/', CampaignsView.as_view(), name='campana-detalle'),
     path('tienda/imagenes/procesar/', ProcessImageAPIView.as_view(), name='store-process-image'),
     path('consentimiento/solicitar/', ConsentRequestView.as_view(), name='consent-request'),
     path('consentimiento/enlace/', ConsentActionView.as_view(), name='consent-link'),
+    path('consentimiento/mi-preferencia/', OwnConsentView.as_view(), name='consent-own'),
     path('tienda/informes/', InformeAPIView.as_view(), name='tienda-informes'),
     path('tienda/informes/pdf/', InformePDFAPIView.as_view(), name='tienda-informes-pdf'),
     path('tienda/informes/xlsx/', InformeXLSXAPIView.as_view(), name='tienda-informes-xlsx'),

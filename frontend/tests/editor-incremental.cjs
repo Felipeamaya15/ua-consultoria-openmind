@@ -11,8 +11,21 @@ test('structural color links header/footer on all templates and viewports, with 
 });
 test('palette roles flow into sections, cards, pages and borders without touching geometry',()=>{
   for(const template of ['editorial','minimal','visual','catalog']){
-    const before=resolver.resolveVisualConfig({template});const changed=resolver.resolveVisualConfig({template,customization:{global:{colors:{background:'#fefefe',alternate:'#eeffee',surface:'#ffefff',muted:'#444444',button:'#225522',buttonText:'#ffffee',border:'#778877'}}}});const vars=css(changed);
-    assert.equal(vars['--visual-section-featured-background-desktop'],'#eeffee');assert.equal(vars['--visual-contact-background-desktop'],'#eeffee');assert.equal(vars['--visual-location-background-desktop'],'#eeffee');assert.equal(vars['--visual-page-login-panel-background-desktop'],'#ffefff');assert.equal(vars['--visual-cta-color-desktop'],'#ffffee');assert.equal(vars['--visual-global-border-desktop'],'#778877');assert.equal(changed.hero.height,before.hero.height);assert.equal(changed.productCard.radius,before.productCard.radius);
+    const before=resolver.resolveVisualConfig({template});
+    const global={colors:{background:'#fefefe',alternate:'#eeffee',secondary:'#bbddbb',surface:'#ffefff',muted:'#444444',button:'#225522',buttonText:'#ffffee',border:'#778877'}};
+    const changed=resolver.resolveVisualConfig({template,customization:{global}}),vars=css(changed);
+    // currentColor en fondos de sección es el secundario del preset; transparent hereda el rol alternativo/general.
+    assert.equal(vars['--visual-section-featured-background-desktop'],template==='minimal'?'#bbddbb':'#eeffee');
+    assert.equal(vars['--visual-section-content-background-desktop'],template==='visual'?'#bbddbb':'#fefefe');
+    assert.equal(vars['--visual-contact-background-desktop'],'#eeffee');assert.equal(vars['--visual-location-background-desktop'],'#eeffee');assert.equal(vars['--visual-page-login-panel-background-desktop'],'#ffefff');
+    assert.equal(vars['--visual-page-login-button-color-desktop'],'#ffffee');
+    // Contraste automático del CTA oscuro y texto blanco del CTA outline sobre la portada.
+    assert.equal(vars['--visual-cta-color-desktop'],'#ffffff');
+    const light=css(resolver.resolveVisualConfig({template,customization:{global,heroCta:{variant:'solid',background:'#ffffee',textColor:'currentColor'}}}));
+    assert.equal(light['--visual-cta-color-desktop'],'#000000');
+    const explicit=css(resolver.resolveVisualConfig({template,customization:{global,heroCta:{variant:'solid',textColor:'#ffffee'}}}));
+    assert.equal(explicit['--visual-cta-color-desktop'],'#ffffee');
+    assert.equal(vars['--visual-global-border-desktop'],'#778877');assert.equal(changed.hero.height,before.hero.height);assert.equal(changed.productCard.radius,before.productCard.radius);
   }
 });
 test('fonts load only chosen families, deduplicate per document, and retry after failure',()=>{
@@ -23,7 +36,7 @@ test('fonts load only chosen families, deduplicate per document, and retry after
 
 test('alternate sections inherit palette at every breakpoint while explicit colors and content background remain independent',()=>{
   for(const template of ['editorial','minimal','visual','catalog']){
-    const vars=css(resolver.resolveVisualConfig({template,customization:{global:{colors:{background:'#fefefe',alternate:'#eeffee'}},sections:{benefits:{background:'#123456'}},location:{background:'#654321'}}}));
+    const vars=css(resolver.resolveVisualConfig({template,customization:{global:{colors:{background:'#fefefe',alternate:'#eeffee',secondary:'#bbddbb'}},sections:{content:{background:'transparent'},featured:{background:'transparent'},benefits:{background:'#123456'}},location:{background:'#654321'}}}));
     for(const viewport of ['desktop','tablet','mobile']){
       assert.equal(vars['--visual-section-content-background-'+viewport],'#fefefe');
       assert.equal(vars['--visual-section-featured-background-'+viewport],'#eeffee');

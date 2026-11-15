@@ -337,3 +337,136 @@
     animation: none !important;
   }
 }
+/* OPENMIND_TEMPLATE_GALLERY_LAYOUT_FIX_V1 */
+/* Solo ficha de producto: escena estable al cambiar fotos de proporciones distintas. */
+.om-product-gallery--detail {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  aspect-ratio: auto;
+  overflow: hidden;
+  background: var(--visual-page-panel-background, #f6f2f6);
+}
+.om-product-gallery--detail .om-product-gallery__backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.om-product-gallery--detail .om-product-gallery__backdrop img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  filter: blur(24px) brightness(.9);
+  transform: scale(1.10);
+  opacity: .68;
+}
+.om-product-gallery--detail .om-product-gallery__layer {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+.om-product-gallery--detail .om-product-gallery__layer img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center;
+}
+/* Los controles existentes permanecen sobre la fotografía. */
+
+/* OPENMIND_PRODUCT_GALLERY_CENTERED_FULL_HEIGHT_V2
+   La regla global [data-page-main-image] impone height:auto y max-height
+   aunque el carrusel de detalle necesita ocupar un visor de tamaño fijo.
+   Sobrescribir SOLO la foto central de la ficha; no afecta catálogo,
+   portada, editor visual, fondo desenfocado ni reproductor de video. */
+[data-storefront-visual] .ua-store-page .om-product-gallery--detail .om-product-gallery__layer img[data-page-main-image] {
+  position: absolute !important;
+  inset: 0 !important;
+  display: block !important;
+  width: 100% !important;
+  height: 100% !important;
+  max-width: none !important;
+  max-height: none !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  aspect-ratio: auto !important;
+  object-fit: contain !important;
+  object-position: center center !important;
+  margin: 0 !important;
+  border-radius: 0 !important;
+}
+
+/* OPENMIND_DETAIL_STABLE_ARROW_HIT_TARGET_V1
+   Solo ficha de producto. Una zona de clic fija, amplia y centrada,
+   que no se desplaza durante hover/click ni al cambiar la imagen.
+   La forma y los colores configurados siguen viniendo del editor visual. */
+.om-product-gallery.om-product-gallery--detail-controls .om-product-gallery__arrow {
+  position: absolute !important;
+  top: 50% !important;
+  bottom: auto !important;
+  transform: translate3d(0, -50%, 0) !important;
+  translate: none !important;
+  scale: 1 !important;
+  width: 52px !important;
+  height: 52px !important;
+  min-width: 52px !important;
+  min-height: 52px !important;
+  max-width: 52px !important;
+  max-height: 52px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  z-index: 20 !important;
+  pointer-events: auto !important;
+  touch-action: manipulation;
+  animation: none !important;
+  transition: background-color .18s ease, border-color .18s ease, box-shadow .18s ease;
+}
+.om-product-gallery.om-product-gallery--detail-controls .om-product-gallery__arrow--previous {
+  left: 10px !important;
+  right: auto !important;
+}
+.om-product-gallery.om-product-gallery--detail-controls .om-product-gallery__arrow--next {
+  right: 10px !important;
+  left: auto !important;
+}
+.om-product-gallery.om-product-gallery--detail-controls .om-product-gallery__arrow:is(:hover, :active, :focus-visible) {
+  top: 50% !important;
+  bottom: auto !important;
+  transform: translate3d(0, -50%, 0) !important;
+  translate: none !important;
+  scale: 1 !important;
+}
+
+/* OPENMIND_DETAIL_VIDEO_FULL_VIEWPORT_V1
+   Solo reproductor de la ficha de producto: la regla global de
+   [data-page-main-image] define height:auto y max-height, pero aqui
+   el video debe ocupar la misma escena estable que las fotografias.
+   object-fit:contain conserva el encuadre del video, sin recortarlo. */
+[data-storefront-visual] .ua-store-page .om-product-gallery--detail .om-product-gallery__layer video[data-page-main-image] {
+  position: absolute !important;
+  inset: 0 !important;
+  display: block !important;
+  box-sizing: border-box !important;
+  width: 100% !important;
+  height: 100% !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  max-width: none !important;
+  max-height: none !important;
+  aspect-ratio: auto !important;
+  object-fit: contain !important;
+  object-position: center center !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border-radius: 0 !important;
+  background: #000 !important;
+  pointer-events: auto !important;
+}

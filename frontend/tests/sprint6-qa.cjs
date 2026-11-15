@@ -106,7 +106,8 @@ test('pagos no confirma ni persiste antes de todas las respuestas y conserva for
     };
     const page = load('src/features/admin/pages/Payments.tsx', {
       react: { useState(initial) { const i = cursor++; if (!(i in states)) states[i] = typeof initial === 'function' ? initial() : initial; return [states[i], next => { states[i] = typeof next === 'function' ? next(states[i]) : next; }]; },
-        useRef(initial) { const i = refCursor++; return refs[i] ||= { current: initial }; }, useEffect(fn) { if (!effects.length) effects.push(fn); } },
+        useRef(initial) { const i = refCursor++; return refs[i] ||= { current: initial }; }, useEffect(fn) { if (!effects.length) effects.push(fn); },
+        createContext: value => ({fixtureDefault: value, Provider: 'Provider'}), useContext: context => context.fixtureDefault },
       'react/jsx-runtime': { jsx, jsxs: jsx },
       '../hooks/useAdminForm': { useAdminForm: () => ({ form, setForm, save: value => saves.push(value), saved: false }) },
       '../components/ui': Object.fromEntries(['AdminCard', 'Alert', 'Input', 'Toggle', 'Button', 'Icon', 'Select', 'Textarea'].map(name => [name, name])),

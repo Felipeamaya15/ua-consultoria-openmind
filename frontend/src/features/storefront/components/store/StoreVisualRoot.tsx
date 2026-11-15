@@ -1,4 +1,5 @@
 import { loadVisualFonts } from '../../visual/fontLibrary';
+import './storefrontLayoutPolish.css';
 import { VISUAL_SECTION } from '../../visual/sectionIds';
 import { useEffect, useMemo, type ReactNode } from 'react';
 import { useStore } from '../../context/StoreContext';

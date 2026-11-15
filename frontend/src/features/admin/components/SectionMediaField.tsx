@@ -1,3 +1,4 @@
+import { LoadingState } from '../../../shared/components/states';
 import { useEffect, useRef, useState } from 'react';
 import { API_BASE_URL } from '../../../api';
 import { ImageUpload } from './ui/ImageUpload';
@@ -260,7 +261,7 @@ export function SectionMediaField({ value, onChange }: Props) {
         portal
       >
         {loading ? (
-          <p>Cargando biblioteca...</p>
+          <LoadingState align="start" spacing="compact">Cargando biblioteca…</LoadingState>
         ) : choices.length ? (
           <div className="grid gap-2 max-h-96 overflow-y-auto">
             {choices.map(resource => (

@@ -592,6 +592,30 @@ class ConexionGmailTienda(models.Model):
         blank=True,
     )
     actualizado_en = models.DateTimeField(auto_now=True)
+    autorizacion_correo = models.EmailField(blank=True, default='')
+    autorizacion_fecha = models.DateTimeField(null=True, blank=True)
+    autorizacion_version = models.CharField(max_length=100, blank=True, default='')
+    autorizacion_usuario = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True,
+        on_delete=models.PROTECT, related_name='+')
+    autorizacion_pendiente = models.JSONField(default=dict, blank=True)
 
     def __str__(self):
         return f"Conexion Gmail de tienda {self.tienda_id}"
+
+
+class EventoAutorizacionCorreo(models.Model):
+    tienda = models.ForeignKey(Tienda, on_delete=models.PROTECT)
+    usuario = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT)
+    correo = models.EmailField()
+    tipo = models.CharField(max_length=20)
+    version = models.CharField(max_length=100)
+    texto = models.TextField()
+    fecha = models.DateTimeField(default=timezone.now)
+
+
+class VerificacionCorreoCuenta(models.Model):
+    """Prueba del buzón vinculada a usuario y dirección; iniciar sesión no la crea."""
+    usuario = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    correo = models.EmailField()
+    fecha = models.DateTimeField(default=timezone.now)
+    metodo = models.CharField(max_length=40)

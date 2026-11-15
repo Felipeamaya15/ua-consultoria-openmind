@@ -75,3 +75,25 @@ test('Contacts distinguishes schema updates, service outages and connection fail
   await assert.rejects(request(async()=>({ok:false,status:500})),/servicio no está disponible/);
   await assert.rejects(request(async()=>{throw new Error('private connection detail');}),/Revisa tu conexión/);
 });
+
+test('Direct preference uses authenticated account, no caller email, and current consent version',async()=>{
+  const calls=[];
+  const value={email:'buyer@example.test',correo_verificado:true,estado:'autorizado',recibir:true};
+  const api=load(service,{localStorage:{getItem:()=>null},sessionStorage:{getItem:()=> 'qa-tab-token'},fetch:async(url,options)=>{
+    calls.push({url,options});return{ok:true,json:async()=>({exito:true,data:value})};
+  }});
+  assert.equal((await api.readOwnConsent()).email,'buyer@example.test');
+  assert.equal(calls[0].options.method,'GET');assert.equal(calls[0].options.body,undefined);
+  await api.saveOwnConsent(true);
+  assert.equal(calls[1].options.headers.Authorization,'Token qa-tab-token');
+  assert.deepEqual(JSON.parse(calls[1].options.body),{recibir:true,version_texto:api.CONSENT_VERSION});
+});
+
+test('Confirmation can prove signed-in email but a stale identity never blocks the bearer link',async()=>{
+  const headers=[];
+  const api=load(service,{localStorage:{getItem:()=> 'expired-qa-token'},fetch:async(url,options)=>{
+    headers.push(options.headers);return headers.length===1?{ok:false,status:401}:ok;
+  }});
+  await api.consentRequest('enlace',{accion:'confirmar',token:'synthetic-link'},true);
+  assert.equal(headers.length,2);assert.equal(headers[0].Authorization,'Token expired-qa-token');assert.equal(headers[1].Authorization,undefined);
+});

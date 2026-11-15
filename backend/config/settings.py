@@ -255,6 +255,10 @@ PAYPAL_FX_REFRESCO_HORAS = float(os.getenv('PAYPAL_FX_REFRESCO_HORAS') or 6)
 BCCH_USUARIO = (os.getenv('BCCH_USUARIO') or '').strip()
 BCCH_CLAVE = (os.getenv('BCCH_CLAVE') or '').strip()
 STOREFRONT_PUBLIC_URL = (os.getenv('STOREFRONT_PUBLIC_URL') or 'http://localhost:5173/plantilla/1').rstrip('/')
+if not os.getenv('COMMERCIAL_CONSENT_FRONTEND_ORIGIN'):
+    from urllib.parse import urlsplit
+    _consent_origin = urlsplit(STOREFRONT_PUBLIC_URL)
+    COMMERCIAL_CONSENT_FRONTEND_ORIGIN = f'{_consent_origin.scheme}://{_consent_origin.netloc}'
 TUU_CALLBACK_BASE_URL = (os.getenv('TUU_CALLBACK_BASE_URL') or '').rstrip('/')
 
 # Solo habilita respuestas capturadas por Mailpit; no autoriza SMTP real.
@@ -262,3 +266,11 @@ ACTIVITY_REPLIES_MAILPIT_ENABLED = os.getenv("ACTIVITY_REPLIES_MAILPIT_ENABLED",
 GOOGLE_OAUTH_CLIENT_ID = os.getenv('GOOGLE_OAUTH_CLIENT_ID', '').strip()
 GOOGLE_OAUTH_CLIENT_SECRET = os.getenv('GOOGLE_OAUTH_CLIENT_SECRET', '').strip()
 GOOGLE_OAUTH_REDIRECT_URI = os.getenv('GOOGLE_OAUTH_REDIRECT_URI', '').strip()
+
+# SCRUM-522: Mailpit está permitido; Gmail real requiere habilitación expresa.
+STORE_MAIL_EXTERNAL_ENABLED = os.getenv('STORE_MAIL_EXTERNAL_ENABLED', '0') == '1'
+STORE_MAIL_TRANSPORT = os.getenv('STORE_MAIL_TRANSPORT', 'auto').strip().lower()
+STORE_MAIL_HOURLY_LIMIT = max(1, int(os.getenv('STORE_MAIL_HOURLY_LIMIT', '100')))
+STORE_MAIL_DAILY_LIMIT = max(1, int(os.getenv('STORE_MAIL_DAILY_LIMIT', '500')))
+STORE_MAIL_PROVIDER_DAILY_LIMIT = max(1, int(os.getenv('STORE_MAIL_PROVIDER_DAILY_LIMIT', '500')))
+STORE_MAIL_PUBLIC_API_URL = os.getenv('STORE_MAIL_PUBLIC_API_URL', 'http://localhost:8000').rstrip('/')

@@ -334,6 +334,8 @@ class GoogleLoginAPIView(APIView):
         try:
             user_entity = use_case.execute(token=serializer.validated_data["token"])
             django_user = UserModel.objects.get(pk=user_entity.id)
+            from apps.core.email_verification import record_google_email
+            record_google_email(django_user.pk, django_user.email)
             token, _ = Token.objects.get_or_create(user=django_user)
             touch_token_activity(token.key)
 

@@ -4,7 +4,7 @@ from apps.landing.views import ConfiguracionLandingAPIView, AparienciaBloquesAPI
 from apps.landing.media_views import MediaLibraryView, MediaResourceView, MediaImageView
 from apps.landing.public_section_media import PublicSectionMediaView, PublicSectionImageView, PublicSectionVideoView
 from apps.landing.activity_views import ActivitySubmissionView, ActivityEnrollmentView, ActivityRequestsView, ActivityRequestView
-from apps.landing.carrusel_views import (ImagenesCarruselLandingAPIView, ImagenCarruselLandingDetalleAPIView, OrdenImagenesCarruselLandingAPIView)
+from apps.landing.carrusel_views import (ImagenesCarruselLandingAPIView, ImagenCarruselLandingDetalleAPIView, OrdenImagenesCarruselLandingAPIView, ModoTextoCarruselAPIView)
 
 urlpatterns = [
     path('solicitudes-actividades/<uuid:pk>/respuestas/', ActivityRepliesView.as_view(), name='respuestas-actividad'),
@@ -24,5 +24,6 @@ urlpatterns = [
     path("configuracion/", ConfiguracionLandingAPIView.as_view(), name="configuracion-landing"),
     path('carrusel/', ImagenesCarruselLandingAPIView.as_view(), name='imagenes-carrusel-landing'),
     path('carrusel/orden/', OrdenImagenesCarruselLandingAPIView.as_view(), name='orden-imagenes-carrusel'),
+    path('carrusel/modo-texto/', ModoTextoCarruselAPIView.as_view(), name='modo-texto-carrusel'),
     path('carrusel/<uuid:pk>/', ImagenCarruselLandingDetalleAPIView.as_view(), name='detalle-imagen-carrusel'),
 ]

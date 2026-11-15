@@ -1,0 +1,177 @@
+/* OPENMIND_TEMPLATE4_CLOUD_HEADER_V2 */
+/* Override visual para la plantilla 4: header tipo nube y hero sin blur global */
+
+:root {
+  --om-p4-cloud-bg: color-mix(in srgb, var(--surface, #ead8ee) 88%, white 12%);
+  --om-p4-cloud-border: color-mix(in srgb, var(--border, #d7bfdc) 70%, white 30%);
+  --om-p4-cloud-shadow: 0 14px 36px rgba(43, 24, 54, 0.18);
+}
+
+/* Plantilla 4 / Obsidian / Showcase */
+.template-4 .storefront-header,
+.template-4-header,
+[data-template='4'] .storefront-header,
+[data-template='4'] .template-header,
+[data-template='4'] .om-storefront-header,
+[data-template='4'] header[role='banner'],
+.obsidian-showcase .storefront-header,
+.obsidian-showcase .template-header,
+.obsidian-showcase header[role='banner'],
+[class*='template4'] .storefront-header,
+[class*='showcase'] .storefront-header {
+  position: relative;
+  isolation: isolate;
+  border-radius: 999px;
+  background: var(--om-p4-cloud-bg) !important;
+  border: 1px solid var(--om-p4-cloud-border);
+  box-shadow: var(--om-p4-cloud-shadow);
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  overflow: visible;
+}
+
+/* Forma orgánica tipo nube: bultitos arriba y abajo */
+.template-4 .storefront-header::before,
+.template-4-header::before,
+[data-template='4'] .storefront-header::before,
+[data-template='4'] .template-header::before,
+[data-template='4'] .om-storefront-header::before,
+[data-template='4'] header[role='banner']::before,
+.obsidian-showcase .storefront-header::before,
+.obsidian-showcase .template-header::before,
+.obsidian-showcase header[role='banner']::before,
+[class*='template4'] .storefront-header::before,
+[class*='showcase'] .storefront-header::before,
+.template-4 .storefront-header::after,
+.template-4-header::after,
+[data-template='4'] .storefront-header::after,
+[data-template='4'] .template-header::after,
+[data-template='4'] .om-storefront-header::after,
+[data-template='4'] header[role='banner']::after,
+.obsidian-showcase .storefront-header::after,
+.obsidian-showcase .template-header::after,
+.obsidian-showcase header[role='banner']::after,
+[class*='template4'] .storefront-header::after,
+[class*='showcase'] .storefront-header::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-repeat: no-repeat;
+}
+
+/* Nubes superiores */
+.template-4 .storefront-header::before,
+.template-4-header::before,
+[data-template='4'] .storefront-header::before,
+[data-template='4'] .template-header::before,
+[data-template='4'] .om-storefront-header::before,
+[data-template='4'] header[role='banner']::before,
+.obsidian-showcase .storefront-header::before,
+.obsidian-showcase .template-header::before,
+.obsidian-showcase header[role='banner']::before,
+[class*='template4'] .storefront-header::before,
+[class*='showcase'] .storefront-header::before {
+  inset: -14px -10px auto -10px;
+  height: 28px;
+  background-image:
+    radial-gradient(circle at 6% 100%, var(--om-p4-cloud-bg) 0 18px, transparent 19px),
+    radial-gradient(circle at 17% 100%, var(--om-p4-cloud-bg) 0 14px, transparent 15px),
+    radial-gradient(circle at 31% 100%, var(--om-p4-cloud-bg) 0 16px, transparent 17px),
+    radial-gradient(circle at 48% 100%, var(--om-p4-cloud-bg) 0 18px, transparent 19px),
+    radial-gradient(circle at 64% 100%, var(--om-p4-cloud-bg) 0 14px, transparent 15px),
+    radial-gradient(circle at 79% 100%, var(--om-p4-cloud-bg) 0 16px, transparent 17px),
+    radial-gradient(circle at 93% 100%, var(--om-p4-cloud-bg) 0 18px, transparent 19px);
+}
+
+/* Nubes inferiores */
+.template-4 .storefront-header::after,
+.template-4-header::after,
+[data-template='4'] .storefront-header::after,
+[data-template='4'] .template-header::after,
+[data-template='4'] .om-storefront-header::after,
+[data-template='4'] header[role='banner']::after,
+.obsidian-showcase .storefront-header::after,
+.obsidian-showcase .template-header::after,
+.obsidian-showcase header[role='banner']::after,
+[class*='template4'] .storefront-header::after,
+[class*='showcase'] .storefront-header::after {
+  inset: auto -10px -14px -10px;
+  height: 28px;
+  background-image:
+    radial-gradient(circle at 11% 0%, var(--om-p4-cloud-bg) 0 18px, transparent 19px),
+    radial-gradient(circle at 25% 0%, var(--om-p4-cloud-bg) 0 14px, transparent 15px),
+    radial-gradient(circle at 40% 0%, var(--om-p4-cloud-bg) 0 16px, transparent 17px),
+    radial-gradient(circle at 56% 0%, var(--om-p4-cloud-bg) 0 18px, transparent 19px),
+    radial-gradient(circle at 72% 0%, var(--om-p4-cloud-bg) 0 14px, transparent 15px),
+    radial-gradient(circle at 87% 0%, var(--om-p4-cloud-bg) 0 16px, transparent 17px);
+}
+
+/* Evitar blur sobre el resto del hero */
+.template-4 .hero,
+.template-4 .hero::before,
+.template-4 .hero::after,
+[data-template='4'] .hero,
+[data-template='4'] .hero::before,
+[data-template='4'] .hero::after,
+.obsidian-showcase .hero,
+.obsidian-showcase .hero::before,
+.obsidian-showcase .hero::after,
+[data-template='4'] [data-visual-section='hero'],
+[data-template='4'] [data-visual-section='hero']::before,
+[data-template='4'] [data-visual-section='hero']::after {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+/* Si existe una capa borrosa por pseudo-elemento, dejarla como overlay nítido */
+.template-4 .hero::before,
+[data-template='4'] .hero::before,
+.obsidian-showcase .hero::before,
+[data-template='4'] [data-visual-section='hero']::before {
+  filter: none !important;
+  background: linear-gradient(180deg, rgba(24,14,28,0.20) 0%, rgba(24,14,28,0.28) 55%, rgba(24,14,28,0.34) 100%) !important;
+}
+
+/* Ajustes móviles para que la nube no se deforme */
+@media (max-width: 840px) {
+  .template-4 .storefront-header,
+  .template-4-header,
+  [data-template='4'] .storefront-header,
+  [data-template='4'] .template-header,
+  [data-template='4'] .om-storefront-header,
+  [data-template='4'] header[role='banner'],
+  .obsidian-showcase .storefront-header,
+  .obsidian-showcase .template-header,
+  .obsidian-showcase header[role='banner'],
+  [class*='template4'] .storefront-header,
+  [class*='showcase'] .storefront-header {
+    border-radius: 28px;
+  }
+
+  .template-4 .storefront-header::before,
+  .template-4-header::before,
+  [data-template='4'] .storefront-header::before,
+  [data-template='4'] .template-header::before,
+  [data-template='4'] .om-storefront-header::before,
+  [data-template='4'] header[role='banner']::before,
+  .obsidian-showcase .storefront-header::before,
+  .obsidian-showcase .template-header::before,
+  .obsidian-showcase header[role='banner']::before,
+  [class*='template4'] .storefront-header::before,
+  [class*='showcase'] .storefront-header::before,
+  .template-4 .storefront-header::after,
+  .template-4-header::after,
+  [data-template='4'] .storefront-header::after,
+  [data-template='4'] .template-header::after,
+  [data-template='4'] .om-storefront-header::after,
+  [data-template='4'] header[role='banner']::after,
+  .obsidian-showcase .storefront-header::after,
+  .obsidian-showcase .template-header::after,
+  .obsidian-showcase header[role='banner']::after,
+  [class*='template4'] .storefront-header::after,
+  [class*='showcase'] .storefront-header::after {
+    height: 20px;
+  }
+}

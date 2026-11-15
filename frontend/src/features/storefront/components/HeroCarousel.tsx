@@ -1,4 +1,6 @@
+// OPENMIND_TEMPLATE_GALLERY_LAYOUT_FIX_V1
 import { useEffect, useRef, useState } from 'react';
+import { isActiveTemplateThumbnailPreview } from '../visual/pages'; // miniaturas: vista estable
 import type { CarouselSlideContent, LandingConfig } from '../../landing/types/landing.types';
 import './hero-carousel.css';
 // Animaciones oficiales disponibles también en la tienda pública, sin fetch en cada visita.
@@ -84,6 +86,7 @@ function getSettings(element: HTMLElement, fallbackMs?: number): CarouselSetting
 }
 
 export function HeroCarousel({ landing, intervalMs, onContentChange }: HeroCarouselProps) {
+  const thumbnailPreview = isActiveTemplateThumbnailPreview();
   const hostRef = useRef<HTMLDivElement>(null);
   const [videoPlaying, setVideoPlaying] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -97,11 +100,11 @@ export function HeroCarousel({ landing, intervalMs, onContentChange }: HeroCarou
 
   const slides = getHeroSlides(landing);
   const count = slides.length;
-  const currentIndex = count > 0 && settings.mode !== 'static'
+  const currentIndex = count > 0 && !thumbnailPreview && settings.mode !== 'static'
     ? activeIndex % count
     : 0;
   const active = slides[currentIndex];
-  const nextImageSource = count > 1 && settings.mode === 'automatic'
+  const nextImageSource = count > 1 && !thumbnailPreview && settings.mode === 'automatic'
     ? (slides[(currentIndex + 1) % count]?.tipo === 'video' ? undefined : slides[(currentIndex + 1) % count]?.src)
     : undefined;
 
@@ -109,7 +112,7 @@ export function HeroCarousel({ landing, intervalMs, onContentChange }: HeroCarou
   useEffect(() => { onContentChange?.(active?.content ?? {}); }, [active?.id, contentKey, onContentChange]);
   useEffect(() => {
     const video = videoRef.current; if (!video) return;
-    if (settings.mode === 'automatic' && !manualPaused && !reducedMotion && pageVisible) void video.play().catch(() => undefined);
+    if (!thumbnailPreview && settings.mode === 'automatic' && !manualPaused && !reducedMotion && pageVisible) void video.play().catch(() => undefined);
     else video.pause();
     return () => video.pause();
   }, [active?.id, settings.mode, manualPaused, reducedMotion, pageVisible]);
@@ -118,10 +121,10 @@ export function HeroCarousel({ landing, intervalMs, onContentChange }: HeroCarou
     const preload = new Image();
     preload.src = nextImageSource;
   }, [nextImageSource]);
-  const showDots = count > 1 && settings.mode !== 'static' &&
+  const showDots = !thumbnailPreview && count > 1 && settings.mode !== 'static' &&
     (settings.mode === 'manual' || settings.indicators);
   // Pausa explícita para accesibilidad, incluso con indicadores ocultos.
-  const showControls = showDots || (count > 1 && settings.mode === 'automatic');
+  const showControls = !thumbnailPreview && (showDots || (count > 1 && settings.mode === 'automatic'));
 
   // Configuración compartida entre tienda pública y vista previa del editor.
   useEffect(() => {
@@ -170,7 +173,7 @@ export function HeroCarousel({ landing, intervalMs, onContentChange }: HeroCarou
   }, [settings.mode]);
 
   useEffect(() => {
-    if (count <= 1 || settings.mode !== 'automatic' || manualPaused ||
+    if (count <= 1 || thumbnailPreview || settings.mode !== 'automatic' || manualPaused ||
       reducedMotion || !pageVisible) return;
     // Un solo temporizador por fotografía: respeta 2–20 s, y se reinicia
     // después de escoger un indicador sin desactivar la reproducción.
@@ -187,7 +190,7 @@ export function HeroCarousel({ landing, intervalMs, onContentChange }: HeroCarou
     const last = previousSlide.current;
     const changed = Boolean(last && active && (last.id !== active.id || last.src !== active.src));
     previousSlide.current = active ?? null;
-    if (!changed || reducedMotion || settings.mode === 'static') {
+    if (!changed || thumbnailPreview || reducedMotion || settings.mode === 'static') {
       setOutgoing(null);
       return;
     }
@@ -257,7 +260,7 @@ export function HeroCarousel({ landing, intervalMs, onContentChange }: HeroCarou
             </button>
           ))}
       </div>
-      {count > 1 && settings.mode === 'automatic' && (
+      {!thumbnailPreview && count > 1 && settings.mode === 'automatic' && (
         <button
           type="button"
           className="hero-carousel__playback"

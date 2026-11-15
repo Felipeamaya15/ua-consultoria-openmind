@@ -2,10 +2,11 @@
 from rest_framework import serializers
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.views import APIView
+from django.db import transaction, ProgrammingError, OperationalError
 
 from apps.core.models import Tienda
 from apps.core.infrastructure.tenant import resolver_tienda
-from apps.core.presentation.responses import success_response
+from apps.core.presentation.responses import success_response, error_response
 
 
 class InformacionTiendaSerializer(serializers.ModelSerializer):
@@ -15,6 +16,11 @@ class InformacionTiendaSerializer(serializers.ModelSerializer):
 
 
 class InformacionTiendaAPIView(APIView):
+    def handle_exception(self, exc):
+        if isinstance(exc, (ProgrammingError, OperationalError)):
+            return error_response('No se pudo guardar la información del negocio. Reintenta.', 'NEGOCIO_NO_DISPONIBLE', status=503)
+        return super().handle_exception(exc)
+
     def get_permissions(self):
         return [AllowAny()] if self.request.method == 'GET' else [IsAuthenticated()]
 
@@ -36,9 +42,25 @@ class InformacionTiendaAPIView(APIView):
 
     def _guardar(self, request, partial):
         tienda = resolver_tienda(request, exigir_propietario=True)
-        serializer = InformacionTiendaSerializer(tienda, data=request.data, partial=partial)
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
+        with transaction.atomic():
+            tienda = Tienda.objects.select_for_update().get(pk=tienda.pk)
+            serializer = InformacionTiendaSerializer(tienda, data=request.data, partial=partial)
+            serializer.is_valid(raise_exception=True)
+            changed = ('correo_negocio' in serializer.validated_data and
+                serializer.validated_data['correo_negocio'].strip().lower() != tienda.correo_negocio.strip().lower())
+            if changed:
+                try:
+                    with transaction.atomic():
+                        from apps.core.models import ConexionGmailTienda
+                        from apps.core.mail_authorization import invalidate
+                        connection = ConexionGmailTienda.objects.select_for_update().filter(tienda=tienda).first()
+                        if connection:
+                            invalidate(connection, request.user, 'cuenta_cambiada')
+                except ProgrammingError as exc:
+                    # Conserva el editor original mientras la actualización está pendiente.
+                    if getattr(exc.__cause__, 'sqlstate', None) not in ('42703', '42P01'):
+                        raise
+            serializer.save()
         response = success_response(data=serializer.data, mensaje='Información del negocio guardada.')
         response['Cache-Control'] = 'no-store'
         return response

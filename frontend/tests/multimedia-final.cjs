@@ -16,6 +16,20 @@ test('slide content has legacy fallbacks, independent visibility, stable links a
  const {resolveHeroContent}=load('src/features/storefront/hooks/useHeroContent.ts');const landing={titulo:'General',descripcion:'Descripción general',texto_boton:'Ver'},route=path=>'/plantilla/2/'+path;
  assert.equal(resolveHeroContent(landing,{},route).title,'General');const slide={titulo:'Colección',descripcion:'Texto propio',texto_boton:'Explorar',enlace:'catalogo?categoria=Flores',mostrar_descripcion:false};const value=resolveHeroContent(landing,slide,route);assert.equal(value.title,'Colección');assert.equal(value.showDescription,false);assert.equal(value.href,'/plantilla/2/catalogo?categoria=Flores');assert.equal(value.buttonText,'Explorar');assert.equal(resolveHeroContent(landing,{enlace:'javascript:alert(1)'},route).href,'/plantilla/2/catalogo');assert.equal(resolveHeroContent(landing,{enlace:'//evil.test'},route).href,'/plantilla/2/catalogo');
 });
+test('shared cover text ignores saved individual slides without losing them',()=>{
+ const {resolveHeroContent}=load('src/features/storefront/hooks/useHeroContent.ts');
+ const route=path=>'/plantilla/1/'+path;
+ const savedSlide={titulo:'Imagen A',descripcion:'Descripción A',texto_boton:'Comprar A',enlace:'catalogo?x=1',mostrar_descripcion:false};
+ const landing={titulo:'Titulo general',descripcion:'Descripcion general',texto_boton:'Ver catalogo',contenido:{carrusel_texto_modo:'unico'}};
+ const shared=resolveHeroContent(landing,savedSlide,route);
+ assert.equal(shared.title,'Titulo general');assert.equal(shared.description,'Descripcion general');assert.equal(shared.buttonText,'Ver catalogo');assert.equal(shared.href,'/plantilla/1/catalogo');assert.equal(shared.showDescription,true);
+ assert.equal(savedSlide.titulo,'Imagen A');
+ const perSlide=resolveHeroContent({...landing,contenido:{carrusel_texto_modo:'por_imagen'}},savedSlide,route);
+ assert.equal(perSlide.title,'Imagen A');assert.equal(perSlide.description,'Descripción A');assert.equal(perSlide.showDescription,false);
+ assert.equal(perSlide.href,'/plantilla/1/catalogo?x=1');
+ assert.equal(resolveHeroContent({...landing,contenido:{}},savedSlide,route).title,'Imagen A');
+});
+
 test('gallery keeps product links separate from controls and hides arrows for a single image',()=>{
  const {ProductImageGallery}=load('src/features/storefront/components/store/ProductImageGallery.tsx');
  const render=images=>renderToStaticMarkup(React.createElement(MemoryRouter,null,React.createElement(ProductImageGallery,{images,alt:'Producto QA',href:'/producto/qa'})));

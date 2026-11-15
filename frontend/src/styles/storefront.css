@@ -1,4 +1,5 @@
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&family=DM+Serif+Display:ital@0;1&display=swap');
+@import './plantilla4_cloud_header_override.css';
 @import 'tailwindcss';
 @import './visual-config.css';
 
@@ -1010,4 +1011,68 @@ button:disabled { cursor: not-allowed; opacity: .65; }
 
 [data-storefront-visual].template-minimal textarea {
   border-radius: 20px !important;
+}
+
+/* OPENMIND_VELTA_OBSIDIAN_CATEGORIES_AND_FEATURED_HOVER_V1
+   Solo las portadas de Velta Editorial (3) y Obsidian Showcase (4).
+   Restablece la visibilidad de categorías cuando la configuración general
+   deja el fondo transparente y pone la etiqueta en blanco.
+   Se respeta --visual-categories-image-display si el editor oculta fotos. */
+[data-storefront-visual] :is([data-landing-page="visual"], [data-landing-page="catalog"])
+[data-visual-section="categories"] [data-visual-part="categoryList"] {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 200px), 1fr)) !important;
+  gap: clamp(12px, 1.6vw, 22px) !important;
+  justify-content: stretch !important;
+  align-items: stretch !important;
+  width: 100%;
+}
+[data-storefront-visual] :is([data-landing-page="visual"], [data-landing-page="catalog"])
+[data-visual-section="categories"] [data-visual-part="categoryItem"] {
+  position: relative !important;
+  display: block !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  min-height: 132px !important;
+  aspect-ratio: 16 / 10 !important;
+  padding: 0 !important;
+  isolation: isolate;
+  background: color-mix(in srgb, var(--visual-text, #182338) 14%, var(--visual-background, #faf6fa)) !important;
+  overflow: hidden;
+}
+[data-storefront-visual] :is([data-landing-page="visual"], [data-landing-page="catalog"])
+[data-visual-section="categories"] [data-visual-part="categoryItem"] > img {
+  position: absolute !important;
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  max-width: none !important;
+  object-fit: cover !important;
+  display: block !important; /* Fotos habilitadas solo en categorías de plantillas 3/4 */
+}
+[data-storefront-visual] :is([data-landing-page="visual"], [data-landing-page="catalog"])
+[data-visual-section="categories"] [data-visual-part="categoryLabel"] {
+  position: absolute !important;
+  inset: 0 !important;
+  display: flex !important;
+  align-items: flex-end !important;
+  justify-content: flex-start !important;
+  width: 100% !important;
+  height: 100% !important;
+  margin: 0 !important;
+  padding: clamp(12px, 1.6vw, 20px) !important;
+  background: linear-gradient(180deg, rgba(15, 19, 30, .04) 0%, rgba(15, 19, 30, .86) 100%) !important;
+  color: #fff !important;
+  font-size: clamp(14px, 1.2vw, 18px) !important;
+  font-weight: 700 !important;
+  line-height: 1.25 !important;
+  text-align: left !important;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, .5);
+  overflow-wrap: anywhere;
+}
+@media (max-width: 520px) {
+  [data-storefront-visual] :is([data-landing-page="visual"], [data-landing-page="catalog"])
+  [data-visual-section="categories"] [data-visual-part="categoryList"] {
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 145px), 1fr)) !important;
+  }
 }

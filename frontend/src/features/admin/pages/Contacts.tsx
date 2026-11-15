@@ -21,6 +21,13 @@ function ContactsList() {
   const [params, setParams] = useSearchParams();
   const key = params.toString();
   const result = useCommercialHistory(key, getContacts);
+  const refresh = useRef(result.retry);
+  refresh.current = result.retry;
+  useEffect(() => {
+    const update = () => refresh.current();
+    window.addEventListener('focus', update);
+    return () => window.removeEventListener('focus', update);
+  }, []);
   const file = useCommercialExport(key);
   const [menuOpen, setMenuOpen] = useState(false);
   const exportRef = useRef<HTMLDivElement>(null);
@@ -71,7 +78,7 @@ function ContactsList() {
         </div>
       </div>
       <p className="text-xs text-[#52617a]">Los datos de pedidos pueden usarse para su gestión. El envío de publicidad requiere autorización comercial expresa.</p>
-      <CommercialFilters key={key} params={params} onApply={setParams} contacts />
+      <CommercialFilters key={key} params={params} onApply={next => { setParams(next); result.retry(); }} contacts />
       {file.busy && <p role="status" className="text-sm">Preparando exportación…</p>}
       {file.message && <p role="status" className="text-sm text-[#1a3a6b]">{file.message}</p>}
       {file.error && <p role="alert" className="text-sm text-red-700">{file.error}</p>}

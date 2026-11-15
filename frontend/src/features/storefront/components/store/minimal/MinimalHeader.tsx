@@ -1,11 +1,9 @@
 import { InstitutionalBadge } from '../../ui';
 import { CompactMobileNavigation } from '../CompactMobileNavigation';
 import { VISUAL_SECTION } from '../../../visual/sectionIds';
-import { AccountNavigation, notifyStorefrontAuthChange, useStorefrontIdentity } from '../AccountNavigation';
 import { useStore } from '../../../context/StoreContext';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { useCart } from '../../../context/CartContext';
-import { authService } from '../../../../auth/services/authService';
 import { useStorefrontTemplate } from '../../../hooks/useStorefrontTemplate';
 
 function MinimalCartIcon({ count }: { count: number }) {
@@ -38,15 +36,8 @@ function MinimalCartIcon({ count }: { count: number }) {
 export function MinimalHeader() {
   const { config } = useStore();
   const { count } = useCart();
-  const { user } = useStorefrontIdentity();
   const { route } = useStorefrontTemplate();
-  const navigate = useNavigate();
 
-  const handleLogout = () => {
-    authService.logout();
-    notifyStorefrontAuthChange();
-    navigate(route());
-  };
 
   return (
     <div data-visual-header-shell className="px-3 sm:px-4 md:px-8 pt-4 sm:pt-5">
@@ -54,7 +45,7 @@ export function MinimalHeader() {
 
         {/* Nombre */}
         <InstitutionalBadge compact /><Link data-visual-part="logo"
-          to="."
+          to={route()}
           aria-label={`Ir al inicio de ${config.name || 'la tienda'}`}
           className="flex min-w-0 max-w-full items-center gap-2 font-semibold text-[var(--primary)]"
         >
@@ -63,56 +54,14 @@ export function MinimalHeader() {
         </Link>
 
         {/* Navegación (pastilla clara con texto oscuro legible) */}
-        <nav data-visual-part="navigation"
-          data-minimal-nav-pill
-          className="hidden md:flex items-center gap-1 bg-[#f4f4f4] text-[#0f1623] rounded-full p-1.5 border border-black/10"
-          aria-label="Navegación principal"
-        >
-          <Link
-            to="."
-            className="px-5 py-2 rounded-full text-xs font-semibold text-[#0f1623] hover:bg-white hover:text-[var(--primary)] transition-colors"
-          >
-            Inicio
-          </Link>
-
-          <Link
-            to="catalogo"
-            className="px-5 py-2 rounded-full text-xs font-semibold text-[#0f1623] hover:bg-white hover:text-[var(--primary)] transition-colors"
-          >
-            Catálogo
-          </Link>
-
-          <Link
-            to="seguimiento"
-            className="px-5 py-2 rounded-full text-xs font-semibold text-[#0f1623] hover:bg-white hover:text-[var(--primary)] transition-colors"
-          >
-            Seguimiento
-          </Link>
-        </nav>
+        {/* OPENMIND_STOREFRONT_LAYOUT_FINISH_V1: navegacion en barra lateral y menu movil. */}
 
         {/* Acciones */}
         <div className="flex shrink-0 items-center gap-2 md:gap-4">
-          <AccountNavigation className="hidden sm:inline-flex text-xs font-semibold underline underline-offset-4" />
 
-          {user ? (
-            <button
-              type="button"
-              onClick={handleLogout}
-              className="hidden sm:inline-flex px-4 py-2 rounded-full border border-current/30 text-xs font-semibold hover:opacity-80 transition-opacity"
-            >
-              Salir
-            </button>
-          ) : (
-            <Link
-              to="ingresar?modo=registro"
-              className="hidden md:inline-flex px-4 py-2 rounded-full border border-current/30 text-xs font-semibold hover:opacity-80 transition-opacity"
-            >
-              Registrarse
-            </Link>
-          )}
 
           <Link
-            to="carrito"
+            to={route('carrito')}
             aria-label={`Ver carrito (${count} productos)`}
             className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-[var(--primary)] text-[var(--on-primary)] flex items-center justify-center hover:opacity-90 transition-opacity"
           >

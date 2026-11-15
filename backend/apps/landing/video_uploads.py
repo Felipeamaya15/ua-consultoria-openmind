@@ -75,7 +75,8 @@ def encode_local_video(filename, destination, kind):
     if kind not in VIDEO_PROFILES:
         raise ValueError('format')
     profile = VIDEO_PROFILES[kind]
-    inspect_local_video(filename, profile['seconds'])
+    original = inspect_local_video(filename, profile['seconds'])
+    output_format = original['extension']
 
     with av.open(filename, options={'protocol_whitelist': 'file,pipe'}) as source:
         input_stream = source.streams.video[0]
@@ -90,13 +91,14 @@ def encode_local_video(filename, destination, kind):
         with av.open(filename, options={'protocol_whitelist': 'file,pipe'}) as source:
             input_stream = source.streams.video[0]
             source_fps = float(input_stream.average_rate or 30)
-            with av.open(destination, mode='w', format='mp4', options={'movflags': '+faststart'}) as output:
-                stream = output.add_stream('libx264', rate=24)
+            options = {'movflags': '+faststart'} if output_format == 'mp4' else {}
+            with av.open(destination, mode='w', format=output_format, options=options) as output:
+                stream = output.add_stream('libx264' if output_format == 'mp4' else 'libvpx-vp9', rate=24)
                 stream.width = new_width
                 stream.height = new_height
                 stream.pix_fmt = 'yuv420p'
                 stream.bit_rate = bitrate
-                stream.options = {'preset': 'veryfast'}
+                stream.options = {'preset': 'veryfast'} if output_format == 'mp4' else {'deadline': 'realtime', 'cpu-used': '5'}
                 previous_pts = -1
                 first_time = None
                 decoded_frames = 0
@@ -132,7 +134,7 @@ def encode_local_video(filename, destination, kind):
         # Re-validar archivo final; no se persiste nada si falla.
         if Path(destination).stat().st_size <= profile['bytes']:
             result = inspect_local_video(destination, profile['seconds'])
-            if result['extension'] != 'mp4':
+            if result['extension'] != output_format:
                 raise ValueError('format')
             return result
     raise ValueError('size')
@@ -152,7 +154,7 @@ def process_video_upload(upload, kind='section'):
     try:
         with TemporaryDirectory(prefix='openmind_video_') as folder:
             original = Path(folder) / 'video.upload'
-            optimized = Path(folder) / 'optimized.mp4'
+            optimized = Path(folder) / 'optimized.video'
             original.write_bytes(data)
             command = [
                 sys.executable, str(Path(__file__).resolve()),
@@ -176,7 +178,7 @@ def process_video_upload(upload, kind='section'):
             if not output_data or len(output_data) > profile['bytes']:
                 raise ValidationError('El video comprimido supera el tamano permitido.')
             return VideoUpload(
-                data=output_data, extension='mp4', mime='video/mp4',
+                data=output_data, extension=info['extension'], mime=info['mime'],
                 width=info['width'], height=info['height'],
             )
     except (subprocess.TimeoutExpired, json.JSONDecodeError, OSError) as error:

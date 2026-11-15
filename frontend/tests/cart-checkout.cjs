@@ -74,6 +74,8 @@ const result = {id_pedido: 42, identificador: 'PEDIDO-BACKEND-42', tienda_id: 9,
   await assert.rejects(orderService.create(input), /Stock insuficiente/);
 
   let states, stateIndex, refs, refIndex, navigateCalls, clearCount, createCalls, fail, pending;
+  let gatewayFailure = false, gatewayCalls = [];
+  const paymentLocation = {origin: 'http://localhost:5173', href: ''};
   let recordEffects = false, effects = [], paymentReply, paymentFetches = [];
   const cart = {items, subtotal: 30000, shipping: 0, discount: 0, total: 30000, promoCode: '', shippingMethod: 'Retiro', count: 3,
     clearCart: async () => {clearCount++;}, setShippingMethod() {}, updateQuantity() {}, removeItem() {}, applyPromo() {}};
@@ -84,6 +86,9 @@ const result = {id_pedido: 42, identificador: 'PEDIDO-BACKEND-42', tienda_id: 9,
     useMemo: callback => callback(), useEffect(callback) {if (recordEffects) effects.push(callback);},
   };
   const requireMock = name => {
+    if (name === '@react-oauth/google') return {useGoogleLogin: () => () => {throw Error('OAuth fuera del alcance de esta fixture de invitado');}};
+    if (name.endsWith('/authService')) return {authService: {hasSession: () => false, getToken: () => null}};
+    if (name.endsWith('/mercadoPagoPaymentService')) return {mercadoPagoPaymentService: {iniciarPago: async (...args) => {gatewayCalls.push(['MercadoPago', ...args]); return gatewayFailure ? {exito: false, mensaje: 'Proveedor no disponible'} : {exito: true, data: {url: 'https://example.test/mercadopago'}};}}};
     if (name.includes('CommercialOptIn')) return {CommercialOptIn: 'CommercialOptIn'};
     if (name.includes('commercialConsent')) return {requestConsent: async () => ({exito: true, mensaje: 'Pendiente de confirmar'})};
     if (name.includes('PickupDetails')) return {default: 'PickupDetails'};
@@ -104,21 +109,21 @@ const result = {id_pedido: 42, identificador: 'PEDIDO-BACKEND-42', tienda_id: 9,
     if (name.includes('comunasChile')) return load('src/features/storefront/data/comunasChile.ts', {
       require: () => ({default: require('../src/features/admin/data/chileTerritory.json')}),
     });
-    if (name.includes('paypalPaymentService')) return {paypalPaymentService: {}};
+    if (name.includes('paypalPaymentService')) return {paypalPaymentService: {iniciarPago: async (...args) => {gatewayCalls.push(['PayPal', ...args]); return gatewayFailure ? {exito: false, mensaje: 'Proveedor no disponible'} : {exito: true, data: {approve_url: 'https://example.test/paypal'}};}}};
     if (name.includes('transbankPaymentService')) return {transbankPaymentService: {iniciarPago: async (...args) => {assert.equal(args[0], 9); assert.equal(args[1], result.identificador); assert.equal(args[2], 30000); return {exito: true, data: {url: 'webpay', token: 'token'}};}, redirigirAWebpay() {}}};
     if (name.includes('StockFeedback')) return {StockFeedback: 'StockFeedback'};
     if (name.includes('components/ui')) return Object.fromEntries(['Stepper','Button','Input','Select','Alert','Icon','EmptyState'].map(label => [label, label]));
     if (name.includes('shared/components/states')) return {LoadingState: 'LoadingState', ErrorState: 'ErrorState', EmptyListState: 'EmptyListState'}; if (name.includes('humanizeError')) return {humanizeAdminError: message => message}; throw Error(name);
   };
   const receiptStorage = new Map();
-  const globals = {require: requireMock, localStorage: {getItem: () => null}, sessionStorage: {setItem: (key, value) => receiptStorage.set(key, value)}, crypto: {randomUUID: () => 'fixed-checkout-key'}, window: {location: {origin: 'http://localhost:5173'}},
+  const globals = {require: requireMock, localStorage: {getItem: () => null}, sessionStorage: {setItem: (key, value) => receiptStorage.set(key, value)}, crypto: {randomUUID: () => 'fixed-checkout-key'}, window: {location: paymentLocation},
     fetch: async url => {paymentFetches.push(url); return paymentReply;}};
   const Checkout = load('src/features/storefront/pages/Checkout.tsx', globals).default;
   function reset() {
     states = [[{id: 'Retiro', label: 'Retiro'}], false, '', 0, 'confirm', 'guest', {name: 'Comprador', email: 'buyer@example.com', phone: ''}, {street: '', number: '', apt: '', city: '', region: ''}, 'Transferencia', false, {}];
     states[13] = [{id: 'Transferencia', label: 'Transferencia'}, {id: 'Transbank', label: 'Transbank'}];
     states[14] = false; states[15] = '';
-    refs = []; navigateCalls = []; clearCount = 0; createCalls = []; fail = false; pending = null;
+    refs = []; navigateCalls = []; clearCount = 0; createCalls = []; fail = false; pending = null; gatewayFailure = false; gatewayCalls = []; paymentLocation.href = '';
   }
   function render(component) {stateIndex = 0; refIndex = 0; return nodes(component());}
   const confirm = () => render(Checkout).find(node => node.props?.onClick && nodes(node).some(value => typeof value === 'string' && value.startsWith('Confirmar y pagar'))).props.onClick;
@@ -153,15 +158,41 @@ const result = {id_pedido: 42, identificador: 'PEDIDO-BACKEND-42', tienda_id: 9,
   await confirm()();
   assert.equal(clearCount, 1);
   assert.deepEqual(JSON.parse(receiptStorage.get(`order-tracking:${result.identificador}`)), {
-    identificador: result.identificador, email: 'buyer@example.com',
+    identificador: result.identificador, email: 'buyer@example.com', monto: Number(result.monto_total),
   });
   for (const method of ['PayPal', 'MercadoPago']) {
-    reset(); states[8] = method; states[13] = [{id: method, label: method}];
+    // Un medio deshabilitado no crea pedidos ni contacta al proveedor.
+    reset(); states[8] = method; states[13] = [];
     await confirm()();
-    assert.equal(createCalls.length, 0, 'Un medio incompleto no puede crear pedidos ni descontar stock');
+    assert.equal(createCalls.length, 0);
+    assert.equal(gatewayCalls.length, 0);
     assert.equal(clearCount, 0);
     assert.equal(navigateCalls.length, 0);
-    assert.match(states[10].payment, /todavía no está disponible/);
+    assert.equal(paymentLocation.href, '');
+
+    // Habilitado: si el proveedor falla, el pedido existe pero no se limpia el carrito.
+    reset(); states[8] = method; states[13] = [{id: method, label: method}]; gatewayFailure = true;
+    await confirm()();
+    assert.equal(createCalls.length, 1);
+    assert.equal(gatewayCalls.length, 1);
+    assert.equal(clearCount, 0);
+    assert.equal(navigateCalls.length, 0);
+    assert.equal(paymentLocation.href, '');
+    assert.match(states[10].payment, /Proveedor no disponible/);
+    const gatewayKey = createCalls[0].key;
+    gatewayFailure = false;
+    await confirm()();
+    assert.equal(createCalls.length, 2);
+    assert.equal(createCalls[1].key, gatewayKey, 'El reintento conserva idempotencia');
+    assert.equal(gatewayCalls.length, 2);
+    assert.equal(gatewayCalls[1][0], method);
+    assert.equal(gatewayCalls[1][1], result.tienda_id);
+    assert.equal(gatewayCalls[1][2], result.identificador);
+    if (method === 'PayPal') assert.equal(gatewayCalls[1][3], Number(result.monto_total));
+    assert.equal(clearCount, 1);
+    assert.equal(navigateCalls.length, 0);
+    assert.equal(paymentLocation.href, method === 'PayPal' ? 'https://example.test/paypal' : 'https://example.test/mercadopago');
+    assert.deepEqual(JSON.parse(receiptStorage.get(`order-tracking:${result.identificador}`)), {identificador: result.identificador, email: 'buyer@example.com'});
   }
   reset(); states[6].email = 'invalid';
   await confirm()();

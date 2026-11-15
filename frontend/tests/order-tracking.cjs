@@ -93,6 +93,8 @@ const real = {id_pedido: 42, identificador: identifier, fecha_creacion: '2026-10
     if (name.includes('transbankPaymentService')) return {transbankPaymentService: {confirmarPago: async () => ({exito: true, data: {orden_compra: identifier}})}};
     if (name.includes('mockData')) return {formatPrice: String};
     if (name.includes('TransbankReturnResult')) return {default: 'WebpayResult'};
+    if (name === './ExternalPaymentReturnResult') return {default: 'ExternalPaymentReturnResult'};
+    if (name === '../components/checkout/PagarPedidoPendiente') return {PagarPedidoPendiente: 'PagarPedidoPendiente'};
     if (name.includes('shippingService')) return {shippingService: {getTracking: async (...args) => liveReply(...args)}};
     if (name.includes('trackingStates')) return load('src/features/storefront/data/trackingStates.ts', {});
     if (name.includes('components/ui')) return Object.fromEntries(['Button','Input','Badge','Alert','Icon'].map(type => [type, type]));
@@ -133,7 +135,7 @@ const real = {id_pedido: 42, identificador: identifier, fecha_creacion: '2026-10
     assert.equal(trackCalls[0][1], email);
     let tree = await settle();
     assert.ok(!tree.some(node => node.type === 'Input'), 'El enlace muestra directamente el detalle');
-    for (const value of [identifier, 'Producto real', 'Comprador real', 'En tránsito', '15000']) assert.ok(tree.includes(value), value);
+    for (const value of [identifier, 'Producto real', 'Comprador real', 'En camino', '15000']) assert.ok(tree.includes(value), value);
 
     // Entrada directa: conserva el formulario y consulta solo al pulsar.
     resetTracking(); location = {search: '', state: null};
@@ -227,14 +229,16 @@ const real = {id_pedido: 42, identificador: identifier, fecha_creacion: '2026-10
     }
   }
   liveReply = async () => ({historial: []});
-  // Estado del pedido: "En tránsito" y "En reparto" coherentes en la insignia y en los pasos.
+  // Estado del pedido: etapas canónicas y alias históricos, sin alterar las etiquetas del transportista.
   for (template of [1, 2, 3, 4]) {
-    for (const [estado, label] of [['enviado', 'En tránsito'], ['en_reparto', 'En reparto']]) {
+    for (const [estado, label] of [['en_camino', 'En camino'], ['enviado', 'En camino'], ['en_origen', 'En camino'], ['en_reparto', 'En camino'], ['preparando', 'Pagado/En preparación']]) {
       resetTracking(); request = async () => ({...real, estado}); location = {search: `?orden=${identifier}`, state: {email}};
       render(Tracking); const tree = await settle();
       assert.ok(tree.some(node => node.type === 'Badge' && nodes(node).includes(label)), `${estado}: la insignia dice ${label}`);
       assert.ok(tree.filter(value => value === label).length >= 2, `${estado}: tambien aparece en los pasos`);
       assert.ok(!tree.includes('Despachado'), 'Ya no se usa "Despachado"');
+      assert.equal(tree.filter(value => value === 'Estado actual').length, 1, `${estado}: una etapa activa`);
+      assert.ok(tree.some(node => node.type === 'div' && nodes(node).includes(label) && nodes(node).includes('Estado actual')), `${estado}: etapa actual identificada`);
     }
   }
   // El servicio acepta el estado En reparto.

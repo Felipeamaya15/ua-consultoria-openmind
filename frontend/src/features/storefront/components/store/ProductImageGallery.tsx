@@ -1,3 +1,4 @@
+// OPENMIND_TEMPLATE_GALLERY_LAYOUT_FIX_V1
 import { ViewportVideo } from '../../../landing/components/ViewportVideo';
 import { useEffect, useRef, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
@@ -90,11 +91,17 @@ export function ProductImageGallery({ images, alt, href, imageClassName = '', de
   }, [esInicio, inView, count, current, detail, settings.mode, images.join('|')]);
   useEffect(() => {
     const old = previous.current; previous.current = src;
-    if (!src || !old || old === src || reduced) { setOutgoing(undefined); return; }
+    if (detail || !src || !old || old === src || reduced) { setOutgoing(undefined); return; }
     setOutgoing(old); const timer = window.setTimeout(() => setOutgoing(undefined), 450);
     return () => clearTimeout(timer);
-  }, [src, reduced]);
+  }, [src, reduced, detail]);
   const image = <>
+    {/* Fondo suave para rellenar el recuadro sin recortar fotografías ni láminas con texto. */}
+    {detail && src && (
+      <div className="om-product-gallery__backdrop" aria-hidden="true">
+        <img src={src} alt="" loading="lazy" decoding="async" />
+      </div>
+    )}
     {esInicio && !detail && images[0] && (
       <div className="om-product-gallery__fallback" aria-hidden="true">
         <img src={images[0]} alt="" loading="eager" />

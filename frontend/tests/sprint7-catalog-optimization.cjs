@@ -127,7 +127,15 @@ test('el serializador del backend incluye variantes activas y ProductCard aplica
     path.join(root, 'src/features/storefront/components/store/ProductCard.tsx'),
     'utf8',
   );
-  const lazyMatches = cardSource.match(/loading="lazy"/g) || [];
-  assert.ok(lazyMatches.length >= 5, 'Todas las vistas de ProductCard usan loading="lazy"');
-  assert.match(cardSource, /decoding="async"/);
+  // Las tarjetas ahora delegan las imágenes en una sola galería. Verificar ambas capas.
+  const gallerySource = fs.readFileSync(path.join(root, 'src/features/storefront/components/store/ProductImageGallery.tsx'), 'utf8');
+  const galleries = cardSource.match(/<ProductImageGallery\b[\s\S]*?\/>/g) || [];
+  assert.ok(galleries.length >= 6, 'Todas las variantes actuales de ProductCard usan la galería');
+  for (const gallery of galleries) {
+    assert.match(gallery, /images=\{product\.images\}/);
+    assert.doesNotMatch(gallery, /\bdetail(?:\s|=|\/)/, 'Las tarjetas no activan el modo detalle eager');
+  }
+  assert.doesNotMatch(cardSource, /<img\b/, 'No hay imágenes de tarjeta fuera de la galería');
+  assert.match(gallerySource, /detail\s*=\s*false/);
+  assert.match(gallerySource, /<img[^>]*src=\{src\}[^>]*loading=\{detail\s*\?\s*'eager'\s*:\s*'lazy'\}[^>]*decoding="async"/);
 });
