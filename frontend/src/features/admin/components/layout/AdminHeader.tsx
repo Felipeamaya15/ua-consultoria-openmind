@@ -32,9 +32,11 @@ function formatSessionTime(iso: string | null, nowMs: number): string {
 export function AdminHeader({
   onMenu,
   open,
+  onSearch,
 }: {
   onMenu: () => void;
   open: boolean;
+  onSearch?: () => void;
 }) {
   const navigate = useNavigate();
   const { config } = useAdmin();
@@ -116,10 +118,22 @@ export function AdminHeader({
         </h1>
       </div>
 
-      <div
-        ref={profileRef}
-        className="relative"
-      >
+      <div className="flex items-center gap-2">
+        {onSearch && (
+          <button
+            type="button"
+            className="lg:hidden inline-flex items-center justify-center w-9 h-9 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors"
+            aria-label="Buscar módulos y funcionalidades"
+            onClick={onSearch}
+          >
+            <Icon name="search" className="w-4 h-4" />
+          </button>
+        )}
+
+        <div
+          ref={profileRef}
+          className="relative"
+        >
         <button
           type="button"
           onClick={() =>
@@ -224,6 +238,7 @@ export function AdminHeader({
             </div>
           </div>
         )}
+        </div>
       </div>
     </header>
   );

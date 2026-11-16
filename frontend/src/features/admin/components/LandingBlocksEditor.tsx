@@ -1,4 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import { SYSTEM_SECTIONS, systemSectionVisible, type SystemSectionId } from '../../landing/types/homeSections';
 import { Link } from 'react-router-dom';
 import type { BloqueLanding, TipoBloqueLanding } from '../../landing/types/landing.types';
@@ -125,6 +126,35 @@ export function LandingBlocksEditor({
   const [picker, setPicker] = useState(false);
   const [flexiblePicker, setFlexiblePicker] = useState(false);
   const [pickerCategory, setPickerCategory] = useState<'content' | 'interactive'>('content');
+  const [fullscreenBlockId, setFullscreenBlockId] = useState<string | undefined>(undefined);
+
+  const fullscreenBlock = blocks.find(
+    block => block.id === fullscreenBlockId && block.tipo === 'personalizada',
+  );
+
+  useEffect(() => {
+    if (fullscreenBlockId && !fullscreenBlock) {
+      setFullscreenBlockId(undefined);
+    }
+  }, [fullscreenBlockId, fullscreenBlock]);
+
+  useEffect(() => {
+    if (!fullscreenBlock || typeof document === 'undefined') return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key !== 'Escape') return;
+      if (document.querySelector('dialog[open]')) return;
+      setFullscreenBlockId(undefined);
+    }
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [fullscreenBlock]);
 
   const visibleCount = blocks.filter(block => block.visible).length;
   const hiddenCount = blocks.length - visibleCount;
@@ -159,7 +189,8 @@ export function LandingBlocksEditor({
   const addFlexible = (preset: SectionPreset) => {
     const block = createFlexibleSection(preset);
     onChange([...editableLandingBlocks(value), block]);
-    setExpanded(block.id);
+    setExpanded(undefined);
+    setFullscreenBlockId(block.id);
     setPicker(false);
     setFlexiblePicker(false);
   };
@@ -372,9 +403,16 @@ export function LandingBlocksEditor({
                     type="button"
                     className="lb-expand"
                     aria-label={`Editar sección ${index + 1}`}
-                    aria-expanded={expanded === block.id}
-                    aria-controls={'lb-fields-' + block.id}
-                    onClick={() => setExpanded(expanded === block.id ? undefined : block.id)}
+                    aria-expanded={block.tipo === 'personalizada' ? fullscreenBlockId === block.id : expanded === block.id}
+                    aria-controls={block.tipo === 'personalizada' ? undefined : 'lb-fields-' + block.id}
+                    onClick={() => {
+                      if (block.tipo === 'personalizada') {
+                        setExpanded(undefined);
+                        setFullscreenBlockId(block.id);
+                      } else {
+                        setExpanded(expanded === block.id ? undefined : block.id);
+                      }
+                    }}
                   >
                     <span className="lb-row-thumbnail">
                       {block.imagenes[0]?.src ? (
@@ -390,9 +428,9 @@ export function LandingBlocksEditor({
                       </small>
                     </span>
                     <span className="lb-edit-label">
-                      <span>{expanded === block.id ? 'Cerrar' : 'Editar'}</span>
+                      <span>{block.tipo === 'personalizada' ? 'Editar en pantalla completa' : expanded === block.id ? 'Cerrar' : 'Editar'}</span>
                       <svg
-                        className={`lb-edit-chevron ${expanded === block.id ? 'is-open' : ''}`}
+                        className={`lb-edit-chevron ${block.tipo !== 'personalizada' && expanded === block.id ? 'is-open' : ''}`}
                         viewBox="0 0 20 20"
                         fill="currentColor"
                         aria-hidden="true"
@@ -448,11 +486,8 @@ export function LandingBlocksEditor({
                     </button>
                   </div>
                 </div>
-                {expanded === block.id && (
+                {expanded === block.id && block.tipo !== 'personalizada' && (
                   <div className="lb-fields" id={'lb-fields-' + block.id}>
-                    {block.tipo === 'personalizada' ? (
-                      <FlexibleSectionEditor section={block} onChange={next => update(block.id, next)} />
-                    ) : (
                       <>
                         <div className="lb-text-fields">
                           <Input
@@ -557,7 +592,6 @@ export function LandingBlocksEditor({
                           )}
                         </div>
                       </>
-                    )}
                   </div>
                 )}
               </li>
@@ -754,6 +788,71 @@ export function LandingBlocksEditor({
           </Button>
         </div>
       </Modal>
+
+      {/* Editor a pantalla completa para servicios, talleres y secciones modulares */}
+      {fullscreenBlock && (() => {
+        const fullscreenTypeLabel = fullscreenBlock.actividad
+          ? fullscreenBlock.actividad.tipo === 'taller'
+            ? 'Taller'
+            : 'Servicio'
+          : 'Sección modular';
+        const fullscreenTitle = fullscreenBlock.nombre_interno || fullscreenBlock.titulo || fullscreenTypeLabel;
+        const overlay = (
+          <div
+            className="admin-shell lb-fullscreen-overlay"
+            role="dialog"
+            aria-modal="true"
+            aria-label={`Editar ${fullscreenTitle}`}
+          >
+            <header className="lb-fullscreen-header">
+              <div className="lb-fullscreen-title-group">
+                <button
+                  type="button"
+                  className="lb-fullscreen-back"
+                  onClick={() => setFullscreenBlockId(undefined)}
+                >
+                  <svg viewBox="0 0 20 20" width="16" height="16" fill="currentColor" aria-hidden="true">
+                    <path fillRule="evenodd" d="M17 10a.75.75 0 01-.75.75H5.612l4.158 3.96a.75.75 0 11-1.04 1.08l-5.5-5.25a.75.75 0 010-1.08l5.5-5.25a.75.75 0 111.04 1.08L5.612 9.25H16.25A.75.75 0 0117 10z" clipRule="evenodd" />
+                  </svg>
+                  <span>Volver a secciones</span>
+                </button>
+                <div className="lb-fullscreen-title-meta">
+                  <span className="lb-fullscreen-badge">{fullscreenTypeLabel}</span>
+                  <h2>{fullscreenTitle}</h2>
+                </div>
+              </div>
+              <div className="lb-fullscreen-actions">
+                <span className={'lb-status ' + (!fullscreenBlock.visible ? 'is-hidden' : '')}>
+                  <span className="lb-status-dot" />
+                  <span>{fullscreenBlock.visible ? 'Visible en tienda' : 'Oculta'}</span>
+                </span>
+                <Toggle
+                  checked={fullscreenBlock.visible}
+                  ariaLabel={`Mostrar ${fullscreenTitle} en la tienda`}
+                  onChange={visible => update(fullscreenBlock.id, { visible })}
+                />
+                <Button type="button" onClick={() => setFullscreenBlockId(undefined)}>
+                  Listo
+                </Button>
+              </div>
+            </header>
+            <div className="lb-fullscreen-subbar">
+              <span>Los cambios se aplican al borrador. Al terminar, pulsa «Guardar cambios» en Página principal para publicar.</span>
+            </div>
+            <div className="lb-fullscreen-body">
+              <FlexibleSectionEditor
+                section={fullscreenBlock}
+                onChange={next => update(fullscreenBlock.id, next)}
+                fullScreen
+              />
+            </div>
+          </div>
+        );
+
+        return typeof document !== 'undefined'
+          ? createPortal(overlay, document.body)
+          : overlay;
+      })()}
     </section>
   );
 }
