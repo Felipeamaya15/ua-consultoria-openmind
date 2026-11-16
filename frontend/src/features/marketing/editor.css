@@ -248,3 +248,138 @@
    data-blocked sigue activo para que la exportación pueda rechazar recortes. */
 .marketing-art.is-editable[data-editorial-type="activity"][data-blocked="true"]>*{visibility:visible}
 .marketing-art.is-editable[data-editorial-type="activity"][data-blocked="true"]::after{display:none}
+/* Clearer template hierarchy, scoped to the publication renderer only. */
+.marketing-art.is-editable[data-template=photo] .marketing-art-media{border:1px solid color-mix(in srgb,var(--mk-on-primary) 12%,transparent)}
+.marketing-art.is-editable[data-template=feature] .marketing-art-copy{border-radius:2cqw;border-width:1.5px}
+.marketing-template{transition:background-color .15s,border-color .15s}.marketing-template.is-selected{border-color:var(--primary);background:var(--secondary);box-shadow:inset 0 0 0 1px var(--primary)}
+@media(prefers-reduced-motion:reduce){.marketing-template{transition:none}}
+
+/* OPENMIND: ajuste de formatos actividad v1 */
+/* Solo actividades: evitar columnas implicitas y reservar espacio para la imagen. */
+.marketing-art.is-editable[data-editorial-type="activity"] .marketing-activity-footer {
+  grid-template-columns: minmax(0, 1fr);
+  align-content: start;
+  align-items: start;
+  min-height: 0;
+}
+.marketing-art.is-editable[data-editorial-type="activity"] .marketing-activity-footer > * {
+  min-width: 0;
+  max-width: 100%;
+}
+.marketing-art.is-editable[data-editorial-type="activity"] .marketing-activity-price {
+  grid-column: 1 / -1;
+  margin: 0;
+  width: 100%;
+  max-width: 100%;
+  white-space: nowrap;
+  overflow-wrap: normal;
+  word-break: normal;
+  line-height: 1.12;
+  font-variant-numeric: tabular-nums;
+}
+.marketing-art.is-editable[data-editorial-type="activity"] .marketing-activity-head > * {
+  min-width: 0;
+  max-width: 100%;
+}
+.marketing-art.is-editable[data-editorial-type="activity"] .marketing-art-brand img {
+  max-height: 100%;
+  box-sizing: border-box;
+}
+.marketing-art.is-editable[data-editorial-type="activity"] .marketing-activity-action {
+  grid-column: 1 / -1;
+  box-sizing: border-box;
+}
+/* Cuadrado: cabecera, fotografia amplia, datos y llamada a la accion. */
+.marketing-art.is-editable[data-editorial-type="activity"][data-format="square"] {
+  padding: 3cqw;
+  gap: 1.1cqw;
+  grid-template-rows: minmax(0, 7cqw) minmax(0, 1fr);
+}
+.marketing-art.is-editable[data-editorial-type="activity"][data-format="square"][data-image="present"]:not([data-template="feature"]) .marketing-activity-layout {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto minmax(21cqw, 1fr) auto;
+  grid-template-areas: "head" "gallery" "footer";
+  gap: 1.2cqw;
+}
+.marketing-art.is-editable[data-editorial-type="activity"][data-format="square"][data-image="present"][data-media-side="end"]:not([data-template="feature"]) .marketing-activity-layout {
+  grid-template-rows: auto auto minmax(21cqw, 1fr);
+  grid-template-areas: "head" "footer" "gallery";
+}
+.marketing-art.is-editable[data-editorial-type="activity"][data-format="square"] .marketing-activity-title {
+  font-size: calc(4.1cqw * var(--mk-fit) * var(--mk-block-size, 1));
+}
+.marketing-art.is-editable[data-editorial-type="activity"][data-format="square"] .marketing-activity-description {
+  font-size: calc(2.15cqw * var(--mk-fit) * var(--mk-block-size, 1));
+  line-height: 1.25;
+}
+.marketing-art.is-editable[data-editorial-type="activity"][data-format="square"] .marketing-activity-footer {
+  gap: .85cqw;
+}
+.marketing-art.is-editable[data-editorial-type="activity"][data-format="square"] .marketing-activity-price {
+  font-size: calc(5cqw * var(--mk-fit) * var(--mk-block-size, 1));
+}
+.marketing-art.is-editable[data-editorial-type="activity"][data-format="square"]:not([data-template="feature"]) .marketing-activity-facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: .55cqw 1.5cqw;
+}
+.marketing-art.is-editable[data-editorial-type="activity"][data-format="square"] .marketing-activity-fact[data-detail="wide"] {
+  grid-column: 1 / -1;
+}
+.marketing-art.is-editable[data-editorial-type="activity"][data-format="square"] .marketing-activity-fact-text strong {
+  font-size: calc(1.95cqw * var(--mk-fit) * var(--mk-block-size, 1));
+}
+/* Banner: el logo debe caber dentro de su fila (antes 6cqw en una fila de 5cqw). */
+.marketing-art.is-editable[data-editorial-type="activity"][data-format="banner"] {
+  grid-template-rows: minmax(0, 6.4cqw) minmax(0, 1fr);
+  padding: 2.1cqw;
+  gap: 1cqw;
+}
+.marketing-art.is-editable[data-editorial-type="activity"][data-format="banner"] .marketing-art-brand img {
+  height: 5cqw;
+  max-height: 100%;
+}
+.marketing-art.is-editable[data-editorial-type="activity"][data-format="banner"][data-image="present"] .marketing-activity-layout {
+  grid-template-rows: minmax(0, 1fr) auto;
+  gap: 1.3cqw;
+}
+.marketing-art.is-editable[data-editorial-type="activity"][data-format="banner"] .marketing-activity-head {
+  justify-content: end;
+  gap: .55cqw;
+}
+.marketing-art.is-editable[data-editorial-type="activity"][data-format="banner"] .marketing-activity-title {
+  font-size: calc(3.05cqw * var(--mk-fit) * var(--mk-block-size, 1));
+  line-height: 1.12;
+}
+.marketing-art.is-editable[data-editorial-type="activity"][data-format="banner"] .marketing-activity-description {
+  font-size: calc(1.75cqw * var(--mk-fit) * var(--mk-block-size, 1));
+  line-height: 1.25;
+}
+.marketing-art.is-editable[data-editorial-type="activity"][data-format="banner"] .marketing-activity-price {
+  font-size: calc(4cqw * var(--mk-fit) * var(--mk-block-size, 1));
+}
+.marketing-art.is-editable[data-editorial-type="activity"][data-format="banner"] .marketing-activity-footer {
+  gap: .8cqw;
+}
+.marketing-art.is-editable[data-editorial-type="activity"][data-format="banner"] .marketing-activity-facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: .4cqw .8cqw;
+}
+.marketing-art.is-editable[data-editorial-type="activity"][data-format="banner"] .marketing-activity-fact[data-detail="wide"] {
+  grid-column: 1 / -1;
+}
+.marketing-art.is-editable[data-editorial-type="activity"][data-format="banner"] .marketing-activity-fact-text span {
+  font-size: calc(1.02cqw * var(--mk-fit) * var(--mk-block-size, 1));
+}
+.marketing-art.is-editable[data-editorial-type="activity"][data-format="banner"] .marketing-activity-fact-text strong {
+  font-size: calc(1.55cqw * var(--mk-fit) * var(--mk-block-size, 1));
+}
+.marketing-art.is-editable[data-editorial-type="activity"][data-format="banner"] .marketing-activity-action {
+  font-size: calc(1.7cqw * var(--mk-fit) * var(--mk-block-size, 1));
+  padding: .9cqw 1cqw;
+}
+/* Historia: conservar el formato aprobado. */
+.marketing-art.is-editable[data-editorial-type="activity"][data-format="story"] .marketing-activity-footer {
+  gap: 2.3cqw;
+}

@@ -1,9 +1,8 @@
-import { CampaignWorkspace } from '../components/CampaignWorkspace';
 import { useEffect, useRef, useState } from 'react';
 import { EmptyListState, ErrorState, LoadingState } from '../../../shared/components/states';
 import { humanizeAdminError } from '../utils/humanizeError';
-import { useSearchParams } from 'react-router-dom';
-import { AdminCard, Button, Tabs } from '../components/ui';
+import { Navigate, useSearchParams } from 'react-router-dom';
+import { AdminCard, Button } from '../components/ui';
 import { HistoryPagination } from '../components/HistoryControls';
 import CommercialFilters from '../components/CommercialFilters';
 import { useCommercialHistory, useCommercialExport } from '../hooks/useCommercialHistory';
@@ -141,7 +140,7 @@ function ContactsList() {
 
 
 export default function Contacts() {
-  const [params, setParams] = useSearchParams();
-  const active = params.get('vista') === 'campanas' ? 'campaigns' : 'contacts';
-  return <div className="space-y-5"><Tabs label="Contactos y campañas" active={active} tabs={[{ id: 'contacts', label: 'Contactos' }, { id: 'campaigns', label: 'Campañas' }]} onChange={value => { const next = new URLSearchParams(params); if (value === 'campaigns') next.set('vista', 'campanas'); else next.delete('vista'); setParams(next); }} />{active === 'campaigns' ? <CampaignWorkspace /> : <ContactsList />}</div>;
+  const [params] = useSearchParams();
+  if (params.get('vista') === 'campanas') return <Navigate to="/emprendedor/marketing#campanas" replace />;
+  return <ContactsList />;
 }

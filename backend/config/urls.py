@@ -15,6 +15,7 @@ urlpatterns = [
     path('api/', include('apps.core.urls')),
     path('api/visual-config/', include('apps.visual_config.urls')),
     path('api/landing/', include('apps.landing.urls')),
+    path('api/instagram/', include('apps.instagram.urls')),
 
     # Rutas directas de variantes mantenidas por compatibilidad / QA
     path(

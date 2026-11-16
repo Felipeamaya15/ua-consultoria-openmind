@@ -26,6 +26,7 @@ class CampaignInput(StrictSerializer):
     cuerpo = serializers.CharField(max_length=5000, allow_blank=True)
     destinatarios = serializers.ListField(child=serializers.IntegerField(min_value=1), max_length=LIMIT)
     producto_id = serializers.RegexField(r'^[a-fA-F0-9]{24}$', allow_blank=True, required=False, default='')
+    contenido = serializers.JSONField(required=False, allow_null=True, default=None)
     diseno = serializers.JSONField(required=False, default=dict)
 
     def validate_asunto(self, value):
@@ -131,7 +132,7 @@ class CampaignsView(NoStoreActivityView):
         design = validate_design(store, values['diseno'])
         row = get_object_or_404(CampanaPromocional.objects.select_for_update(), pk=pk, tienda=store) if pk else CampanaPromocional.objects.filter(tienda=store, clave=values['clave']).first()
         if row and not pk:
-            if (row.nombre, row.asunto, row.cuerpo, row.producto.get('id', '')) != (values['nombre'], values['asunto'], values['cuerpo'], values['producto_id']) or {k: v for k,v in row.diseno.items() if not k.startswith('_')} != design or set(row.destinatarios.values_list('consentimiento_id', flat=True)) != set(values['destinatarios']):
+            if (row.nombre, row.asunto, row.cuerpo, (row.producto.get('id', '') if row.producto.get('tipo') != 'seccion' else '')) != (values['nombre'], values['asunto'], values['cuerpo'], values['producto_id']) or row.producto.get('seleccion') != values['contenido'] or {k: v for k,v in row.diseno.items() if not k.startswith('_')} != design or set(row.destinatarios.values_list('consentimiento_id', flat=True)) != set(values['destinatarios']):
                 return error_response('Esta clave ya identifica otro borrador. Actualiza la campaña antes de guardar.', 'CLAVE_REUTILIZADA', status=409)
             return success_response(data=campaign_data(row))
         if row and (row.revision != values.get('revision') or row.clave != values['clave']):
@@ -142,7 +143,12 @@ class CampaignsView(NoStoreActivityView):
         records = list(ConsentimientoComercial.objects.filter(tienda=store, pk__in=ids))
         if len(records) != len(ids):
             raise ValidationError('La selección contiene contactos que no pertenecen a esta tienda.')
-        snapshot = product_snapshot(store, values['producto_id'], row.producto if row else {})
+        from apps.landing.campaign_content import content_snapshot
+        snapshot = content_snapshot(store, values['contenido'], row.producto if row else {})
+        if snapshot is not None and values['producto_id'] != (snapshot['id'] if snapshot['tipo'] == 'producto' else ''):
+            raise ValidationError('La referencia de producto no coincide con el contenido seleccionado.')
+        if snapshot is None:
+            snapshot = product_snapshot(store, values['producto_id'], row.producto if row else {})
         if row is None:
             if CampanaPromocional.objects.filter(tienda=store).count() >= 500:
                 raise ValidationError('Se alcanzó el límite de 500 borradores. Revisa las campañas existentes.')

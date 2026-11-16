@@ -145,5 +145,5 @@ test('promociones sin fuente general mantienen explicación y vacío honesto', (
     '../../admin/components/ui': { Input: () => null, Select: () => null },
   });
   const html = renderToStaticMarkup(React.createElement(ContentPicker, { catalogReady: true, source: 'promotion', products: [], productId: '', sku: '', onSource() {}, onProduct() {}, onSku() {} }));
-  assert(html.includes('Promociones')); assert(html.includes('campañas generales aún no')); assert(html.includes('No hay ofertas'));
+  assert(html.includes('Promociones')); assert(html.includes('Marketing → Campañas')); assert(html.includes('No hay ofertas'));
 });

@@ -2,12 +2,13 @@ import { API_BASE_URL } from '../../../api';
 import { requestJson } from '../../../shared/services/apiRequest';
 import { authService } from '../../auth/services/authService';
 
-export interface CampaignDesign { imagen?: string; boton_texto?: string; boton_url?: string }
-export interface CampaignForm { nombre: string; asunto: string; cuerpo: string; destinatarios: number[]; producto_id: string; diseno?: CampaignDesign }
+export interface CampaignContentSelection { kind: 'product' | 'section'; id: string; skus: string[]; images: number[] }
+export interface CampaignDesign { imagen?: string; boton_texto?: string; boton_url?: string; recurso_id?: string; plantilla?: string }
+export interface CampaignForm { nombre: string; asunto: string; cuerpo: string; destinatarios: number[]; producto_id: string; contenido?: CampaignContentSelection | null; diseno?: CampaignDesign }
 export interface Campaign {
   id: string; clave: string; revision: number; nombre: string; asunto: string; cuerpo: string;
   estado: 'borrador' | 'pendiente' | 'procesando' | 'aceptada' | 'parcial' | 'fallida' | 'cancelada';
-  producto: { id?: string; nombre?: string; precio?: string; imagen?: string };
+  producto: { id?: string; nombre?: string; precio?: string; imagen?: string; tipo?: string; seleccion?: CampaignContentSelection; imagenes?: string[] };
   actualizado: string; envio_habilitado: boolean; aviso_envio: string; diseno?: CampaignDesign;
   resultados?: Record<string, number>;
   destinatarios?: { id: number; email: string; elegible: boolean; intentos: number; estado?: string; ultimo_error?: string; finalizado?: string | null }[]; elegibles?: number; excluidos?: number;

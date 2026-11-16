@@ -4,7 +4,7 @@ import { EmptyListState, ErrorState, LoadingState } from '../../../shared/compon
 import { humanizeAdminError } from '../../admin/utils/humanizeError';
 import { SOCIAL_LABELS, type SocialNetwork } from '../../landing/types/socialProfiles';
 import { fetchSharingSources, resolveSharingItem, type SharingSources } from '../services/sharingService';
-import { sharingChannels, sharingKey, sharingText, whatsappShareUrl, type SharingItem } from '../domain/sharing';
+import { matchesSharing, sharingChannels, sharingKey, sharingText, whatsappShareUrl, type SharingItem } from '../domain/sharing';
 import type { PublicationFormat } from '../domain/types';
 import './sharing.css';
 
@@ -22,6 +22,7 @@ export function Sharing({active,home,isCurrent,onDirty,onPrepare,onOpenSocial}:P
     fetchSharingSources(home,controller.signal).then(result=>{if(!controller.signal.aborted&&isCurrent())setSources(result);}).catch(cause=>{if(!controller.signal.aborted&&isCurrent())setError(humanizeAdminError(cause instanceof Error?cause.message:''));}).finally(()=>{if(!controller.signal.aborted&&isCurrent())setLoading(false);});
     return()=>controller.abort();
   },[active,home,attempt]);
+  const filtered=(sources?.items||[]).filter(item=>matchesSharing(item,group,query));
   const channels=sources?.profiles?sharingChannels(sources.profiles,item):[];
   const chosen=channels.find(entry=>entry.network===channel&&entry.compatible);
   const text=item?sharingText(title,caption,item.url):'';
@@ -51,8 +52,8 @@ export function Sharing({active,home,isCurrent,onDirty,onPrepare,onOpenSocial}:P
     {loading&&<LoadingState>Cargando contenido publicado y perfiles sociales…</LoadingState>}{error&&<ErrorState>{humanizeAdminError(error)}</ErrorState>}
     {sources?.errors.map(message=><p role="alert" key={message}>{message}</p>)}
     <div className="sharing-columns"><AdminCard><h4>1. Selecciona contenido publicado</h4><Input label="Buscar contenido para difundir" value={query} onChange={event=>setQuery(event.target.value)} /><Select label="Tipo de contenido" value={group} options={[{value:'',label:'Todos'},...['Productos','Destacados','Promociones','Servicios','Talleres','Información','Multimedia'].map(value=>({value,label:value}))]} onChange={event=>setGroup(event.target.value)} />
-      <div className="sharing-items">{(sources?.items||[]).filter(item=>(!group||item.group===group)&&`${item.title} ${item.description}`.toLocaleLowerCase('es').includes(query.toLocaleLowerCase('es'))).map(row=><button key={sharingKey(row.reference)} type="button" disabled={busy||loading} aria-pressed={key===sharingKey(row.reference)} onClick={()=>{if(dirty&&!window.confirm('Tienes un texto de difusión editado. ¿Descartarlo y elegir otro contenido?'))return;setKey(sharingKey(row.reference));setTitle(row.title);setCaption(row.description);setError('');setNotice('');}}><strong>{row.title}</strong><small>{row.group}</small></button>)}</div>
-      {!loading&&!sources?.items.length&&<EmptyListState>No hay contenido publicado disponible. Publica una sección o agrega productos disponibles.</EmptyListState>}
+      <div className="sharing-items">{filtered.map(row=><button key={sharingKey(row.reference)} type="button" disabled={busy||loading} aria-pressed={key===sharingKey(row.reference)} onClick={()=>{if(dirty&&!window.confirm('Tienes un texto de difusión editado. ¿Descartarlo y elegir otro contenido?'))return;setKey(sharingKey(row.reference));setTitle(row.title);setCaption(row.description);setError('');setNotice('');}}><span className="sharing-item-thumb">{row.images[0]?<img src={row.images[0]} alt="" loading="lazy" onError={event=>{event.currentTarget.style.display='none';}} />:<span aria-hidden="true">↗</span>}</span><span><strong>{row.title}</strong><small>{row.group}</small></span></button>)}</div>
+      {!loading&&!error&&!sources?.errors.length&&!filtered.length&&<EmptyListState>{query||group?'No hay coincidencias con estos filtros. Prueba otro tipo o búsqueda.':'No hay contenido publicado disponible. Publica una sección o agrega productos disponibles.'}</EmptyListState>}
       <p>Biblioteca solo muestra recursos usados en secciones visibles. Los archivos privados conservan su acceso restringido.</p>
     </AdminCard><AdminCard><h4>2. Prepara el texto y el canal</h4>{item?<>
       {item.images[0]&&<img className="sharing-source-image" src={item.images[0]} alt={item.title} loading="lazy" referrerPolicy="no-referrer" />}

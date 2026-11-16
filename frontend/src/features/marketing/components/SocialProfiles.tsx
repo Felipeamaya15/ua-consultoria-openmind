@@ -1,4 +1,5 @@
 import './social-profiles.css';
+import { InstagramConnectionPanel } from './InstagramConnectionPanel';
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
 import { AdminCard, Alert, Button, Icon, Input, Textarea, Toggle } from '../../admin/components/ui';
 import { ErrorState, LoadingState } from '../../../shared/components/states';
@@ -63,6 +64,7 @@ function SocialProfileCard({ network, initial, isCurrent, onDirty }: CardProps) 
       {error && <Alert variant="error">{error}</Alert>}
       <p role="status" className="social-profile-notice">{notice}</p>
     </form>
+    {network === 'instagram' && <InstagramConnectionPanel isCurrent={isCurrent} />}
   </AdminCard>;
 }
 

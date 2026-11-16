@@ -4,7 +4,9 @@ import { SOCIAL_NETWORKS, profileLink } from '../../landing/types/socialProfiles
 
 export type SharingKind='product'|'promotion'|'section'|'media'|'library';
 export interface SharingReference {kind:SharingKind;id:string}
-export interface SharingItem {reference:SharingReference;group:'Productos'|'Destacados'|'Promociones'|'Servicios'|'Talleres'|'Información'|'Multimedia';title:string;description:string;url:string;images:string[];content:PublicationContent;youtube?:boolean}
+export interface SharingItem {reference:SharingReference;group:'Productos'|'Destacados'|'Promociones'|'Servicios'|'Talleres'|'Información'|'Multimedia';title:string;description:string;url:string;images:string[];videoIds?:string[];content:PublicationContent;youtube?:boolean}
+export const normalizeSharingSearch = (value:string) => value.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLocaleLowerCase('es-CL').trim();
+export const matchesSharing = (item:SharingItem, group:string, query:string) => (!group || item.group===group || group==='Productos'&&item.group==='Destacados') && normalizeSharingSearch(`${item.title} ${item.description} ${item.group}`).includes(normalizeSharingSearch(query));
 export const sharingKey=(reference:SharingReference)=>`${reference.kind}:${reference.id}`;
 export function readSharingReference(value:unknown):SharingReference|null {
   if(!value||typeof value!=='object')return null;

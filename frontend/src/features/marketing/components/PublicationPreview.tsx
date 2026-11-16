@@ -34,7 +34,7 @@ function activityDescription(value: string) {
   for (const part of value.split(/\n+/)) {
     const line = part.trim();
     if (!line) continue;
-    const match = /^(Modalidad|Fecha|Horario|Duraci[oó]n|Requisitos|Condiciones):\s*(.+)$/i.exec(line);
+    const match = /^(Modalidad|Fecha|Horario|Duraci[oó]n|Requisitos|Condiciones|Ubicaci[oó]n):\s*(.+)$/i.exec(line);
     if (match) {
       const label = match[1].toLocaleLowerCase('es');
       const prettyLabel = label === 'duración' ? 'Duración' : label[0].toUpperCase() + label.slice(1);
@@ -83,9 +83,20 @@ export function PublicationPreview({ content, brand, design, paletteColors, imag
       if (disposed || !art.clientWidth) return;
       const copy = art.querySelector<HTMLElement>('.marketing-art-copy');
       const brandRow = art.querySelector<HTMLElement>('.marketing-art-brand')!;
-      const fits = () => art.scrollHeight <= art.clientHeight + 1 && art.scrollWidth <= art.clientWidth + 1
-        && brandRow.scrollHeight <= brandRow.clientHeight + 1 && (!copy || copy.scrollHeight <= copy.clientHeight + 1)
-        && [...art.querySelectorAll<HTMLElement>('.marketing-art-copy > *, .marketing-art-brand')].every(node => node.scrollWidth <= node.clientWidth + 1);
+      const fits = () => {
+        const regularFits = art.scrollHeight <= art.clientHeight + 1 && art.scrollWidth <= art.clientWidth + 1
+          && brandRow.scrollHeight <= brandRow.clientHeight + 1 && (!copy || copy.scrollHeight <= copy.clientHeight + 1)
+          && [...art.querySelectorAll<HTMLElement>('.marketing-art-copy > *, .marketing-art-brand')].every(node => node.scrollWidth <= node.clientWidth + 1);
+        if (!isActivity) return regularFits;
+        const panels = [...art.querySelectorAll<HTMLElement>('.marketing-activity-head, .marketing-activity-footer, .marketing-activity-facts, .marketing-activity-fact-text, .marketing-activity-price, .marketing-activity-action')];
+        const fitsPanel = (node: HTMLElement) => node.scrollHeight <= node.clientHeight + 2 && node.scrollWidth <= node.clientWidth + 2;
+        const gallery = art.querySelector<HTMLElement>('.marketing-activity-gallery');
+        const layout = art.querySelector<HTMLElement>('.marketing-activity-layout');
+        // A real overflow must still block export. A photo must not collapse into a strip.
+        return art.scrollHeight <= art.clientHeight + 2 && art.scrollWidth <= art.clientWidth + 2
+          && fitsPanel(brandRow) && (!layout || fitsPanel(layout)) && panels.every(fitsPanel)
+          && (!gallery || (gallery.clientHeight >= art.clientWidth * .20 && gallery.clientWidth >= art.clientWidth * .20));
+      };
       let scale = 1;
       art.style.setProperty('--mk-fit', String(scale));
       while (!fits() && scale > .65) { scale = Math.max(.65, +(scale - .025).toFixed(3)); art.style.setProperty('--mk-fit', String(scale)); }
@@ -154,7 +165,7 @@ export function PublicationPreview({ content, brand, design, paletteColors, imag
     paddingBottom: proportional(appearance.buttonPaddingY),
     justifySelf: buttonAlign === 'right' ? 'end' : buttonAlign === 'center' ? 'center' : 'start',
   };
-  const galleryShare = appearance.mediaShare === null ? 52 : Math.min(82, Math.max(22, appearance.mediaShare));
+  const galleryShare = appearance.mediaShare === null ? (design.format === 'banner' ? 43 : 52) : Math.min(82, Math.max(22, appearance.mediaShare));
   const activityGalleryStyle: CSSProperties = {
     borderRadius: proportional(appearance.imageRadius),
     background: appearance.copyBackground || undefined,
@@ -217,11 +228,16 @@ export function PublicationPreview({ content, brand, design, paletteColors, imag
               </div>)}
             </div>}
             <div className="marketing-activity-footer" style={activityPanelStyle}>
+              {!content.hidePrice && (
+                <p className="marketing-art-price marketing-activity-price" style={activityTextStyle('price')}>
+                  {formatMarketingMoney(content.price)}
+                </p>
+              )}
               <div className="marketing-activity-facts" style={{
                 textAlign: editor.alignment,
                 '--mk-block-size': editor.textStyles.description.size / 100,
               } as CSSProperties} aria-label="Datos del taller o servicio">
-                {editor.showDescription && activityDetails.map((detail, index) => <div className="marketing-activity-fact" key={`${detail.label}-${index}`}>
+                {editor.showDescription && activityDetails.map((detail, index) => <div className="marketing-activity-fact" data-detail={detail.value.length > 42 || /^(requisitos|condiciones|ubicaci[oó]n)$/i.test(detail.label) ? 'wide' : 'short'} key={`${detail.label}-${index}`}>
                   <ActivityFactIcon label={detail.label} />
                   <div className="marketing-activity-fact-text">
                     <span>{detail.label}</span><strong>{detail.value}</strong>

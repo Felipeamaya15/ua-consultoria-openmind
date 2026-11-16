@@ -58,6 +58,7 @@ INSTALLED_APPS = [
     'apps.authentication',
     'apps.catalog',
     'apps.landing',
+    'apps.instagram',
     'apps.visual_config',
     'apps.shipping',
 ]
@@ -278,3 +279,15 @@ STORE_MAIL_HOURLY_LIMIT = max(1, int(os.getenv('STORE_MAIL_HOURLY_LIMIT', '100')
 STORE_MAIL_DAILY_LIMIT = max(1, int(os.getenv('STORE_MAIL_DAILY_LIMIT', '500')))
 STORE_MAIL_PROVIDER_DAILY_LIMIT = max(1, int(os.getenv('STORE_MAIL_PROVIDER_DAILY_LIMIT', '500')))
 STORE_MAIL_PUBLIC_API_URL = os.getenv('STORE_MAIL_PUBLIC_API_URL', 'http://localhost:8000').rstrip('/')
+
+# Instagram Unified Login: independiente de Gmail. Publicar requiere autorización operativa expresa.
+INSTAGRAM_APP_ID = os.getenv('META_APP_ID', '').strip()
+INSTAGRAM_APP_SECRET = os.getenv('META_APP_SECRET', '').strip()
+INSTAGRAM_CONFIG_ID = os.getenv('META_CONFIG_ID', '').strip()
+INSTAGRAM_REDIRECT_URI = os.getenv('INSTAGRAM_REDIRECT_URI', '').strip()
+INSTAGRAM_FRONTEND_ORIGIN = os.getenv('INSTAGRAM_FRONTEND_ORIGIN', '').rstrip('/')
+INSTAGRAM_MEDIA_PUBLIC_ORIGIN = os.getenv('INSTAGRAM_MEDIA_PUBLIC_ORIGIN', '').rstrip('/')
+INSTAGRAM_TOKEN_ENCRYPTION_KEY = os.getenv('INSTAGRAM_TOKEN_ENCRYPTION_KEY', '').strip()
+INSTAGRAM_API_VERSION = os.getenv('INSTAGRAM_API_VERSION', 'v27.0').strip()
+INSTAGRAM_PUBLISHING_ENABLED = os.getenv('INSTAGRAM_PUBLISHING_ENABLED', '0') == '1'
+INSTAGRAM_DAILY_LIMIT = max(1, min(100, int(os.getenv('INSTAGRAM_DAILY_LIMIT', '20'))))

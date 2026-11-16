@@ -12,10 +12,11 @@ const ui = load('src/features/admin/components/ui/index.tsx', {
 const children = node => Array.isArray(node) ? node.flatMap(children) : node && typeof node === 'object' ? [node, ...children(node.props?.children)] : [];
 
 function workspace() {
-  let active, focused;
+  let focused, cursor=0; const slots=[];
   const api = load('src/features/marketing/components/MarketingSections.tsx', {
-    react: { useId: () => 'marketing-test', useState: initial => [active ??= typeof initial === 'function' ? initial() : initial, next => { active = next; }] },
-    'react-router-dom': { Link: 'a' },
+    react: { useEffect:()=>{}, useId: () => 'marketing-test', useState: initial => {const i=cursor++;return [slots[i] ??= typeof initial === 'function' ? initial() : initial, next => {slots[i] = next;}];} },
+    'react-router-dom': { useLocation:()=>({hash:'',pathname:'/emprendedor/marketing',search:''}),useNavigate:()=>()=>{} },
+    '../../admin/components/CampaignWorkspace':{CampaignWorkspace:'CampaignWorkspace'},
     '../../admin/components/ui': { Tabs: ui.Tabs, AdminCard: 'section', Button: 'button' },
     '../../admin/components/AdminPageHeader': { AdminHelp: 'p' },
     './SocialProfiles': { SocialProfiles: 'SocialProfiles' },
@@ -24,7 +25,7 @@ function workspace() {
   }, { window: { location: { hash: '' } }, document: { getElementById: id => ({ focus: () => { focused = id; } }) } });
   const editor = React.createElement('input', { defaultValue: 'Edición sin guardar', 'data-editor': true });
   const render = busy => {
-    const tree = api.MarketingSections({ children: editor, busy, onPrepare:async()=>true });
+    cursor=0; const tree = api.MarketingSections({ children: editor, busy, onPrepare:async()=>true });
     const navigation = children(tree).find(node => node.type === ui.Tabs);
     return { tree, tabs: children(ui.Tabs(navigation.props)).filter(node => node.props?.role === 'tab'), panels: children(tree).filter(node => node.props?.role === 'tabpanel') };
   };
@@ -34,7 +35,7 @@ function workspace() {
 test('four labelled panels preserve the same mounted publication editor across every section', () => {
   const page = workspace();
   const labels = page.render().tabs.map(tab => tab.props.children.at(-1));
-  assert.deepEqual(labels, ['Publicaciones', 'Redes sociales', 'Biblioteca multimedia', 'Difusión']);
+  assert.deepEqual(labels, ['Publicaciones', 'Biblioteca multimedia', 'Difusión', 'Campañas']);
   for (let index = 0; index < 4; index++) {
     page.render().tabs[index].props.onClick();
     const { tabs, panels } = page.render();
@@ -61,8 +62,8 @@ test('keyboard navigation wraps, supports Home/End, moves focus and is disabled 
 
 test('manual sharing returns to the existing editor and focuses its tab after preparing content', async () => {
   const page = workspace();
-  page.render().tabs[3].props.onClick();
-  const action = children(page.render().panels[3]).find(node => node.type === 'Sharing');
+  page.render().tabs[2].props.onClick();
+  const action = children(page.render().panels[2]).find(node => node.type === 'Sharing');
   await action.props.onPrepare({},'square');
   assert.equal(page.render().panels[0].props.hidden, false);
   assert.equal(page.focused(), 'marketing-test-tab-publications');

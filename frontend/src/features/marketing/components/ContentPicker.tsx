@@ -24,7 +24,7 @@ export function ContentPicker({ catalogReady, source, products, productId, sku, 
         </label>)}
     </fieldset>
     {source === 'promotion' && catalogReady && <div className="marketing-source-note"><strong>Ofertas de tu catálogo</strong>
-      <p>Las campañas generales aún no están disponibles aquí. Puedes usar las ofertas registradas en productos activos con stock.</p>
+      <p>Usa las ofertas registradas en productos activos con stock. Para preparar correos, abre Marketing → Campañas.</p>
       {!candidates.length && <p role="status">No hay ofertas de productos disponibles para crear una publicación.</p>}
     </div>}
     {catalogReady && products.length === 0 && <p role="status" className="marketing-empty-message">Tu catálogo está vacío. Agrega un producto en Productos para comenzar.</p>}

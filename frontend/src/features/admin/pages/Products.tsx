@@ -162,14 +162,6 @@ export function ProductList() {
       </svg>
       <span>Editar</span>
     </Link>
-    <Link to={`/emprendedor/marketing?producto=${encodeURIComponent(product.id)}`} className="catalog-action-btn catalog-action-marketing">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="h-3.5 w-3.5 shrink-0" aria-hidden="true">
-        <path d="m11 4-6 4H2v8h3l6 4v-16Z" />
-        <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
-        <path d="M19.07 4.93a10 10 0 0 1 0 14.14" />
-      </svg>
-      <span>Crear publicación</span>
-    </Link>
     <button type="button" onClick={() => handleToggleProductStatus(product)} disabled={deactivating} className="catalog-action-btn catalog-action-delete">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="h-3.5 w-3.5 shrink-0" aria-hidden="true">
         <path d="M18.36 6.64a9 9 0 1 1-12.73 0" />

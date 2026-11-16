@@ -71,9 +71,20 @@ test('actual sharing form preserves edits, checks availability before copy, and 
   },{navigator:{clipboard:{writeText:async text=>copied.push(text)}},window:{confirm:()=>true}});
   const own={slots:[],cursor:0,effects:[]};const props={active:true,home:'https://shop.test/plantilla/1',isCurrent:()=>true,onDirty:value=>dirty.push(value),onOpenSocial:()=>{},onPrepare:async(item,format)=>{prepared.push({item,format});return true;}};
   const render=()=>{runtime=own;own.cursor=0;const tree=nodes(Sharing(props));while(own.effects.length)own.effects.shift()();return tree;};
-  render();await tick();let tree=render();tree.find(node=>node.type==='button'&&node.props?.children?.[0]?.props?.children==='Taller público').props.onClick();
+  render();await tick();let tree=render();tree.find(node=>node.type==='button'&&nodes(node).some(child=>child.type==='strong'&&child.props?.children==='Taller público')).props.onClick();
   tree=render();tree.find(node=>node.props?.label==='Texto descriptivo para compartir').props.onChange({target:{value:'Mi texto preparado'}});
   tree=render();await tree.find(node=>node.props?.children==='Copiar texto y enlace').props.onClick();await tick();assert(copied[0].includes('Mi texto preparado'));assert(copied[0].includes('#seccion-'+sectionId));
   unavailable=true;tree=render();await tree.find(node=>node.props?.children==='Copiar enlace público').props.onClick();await tick();assert.equal(copied.length,1);tree=render();assert(tree.some(node=>node.type==='ErrorState'));assert.equal(tree.find(node=>node.props?.label==='Texto descriptivo para compartir').props.value,'Mi texto preparado');
   unavailable=false;await tree.find(node=>node.props?.children==='Preparar imagen 1:1').props.onClick();await tick();tree=render();await tree.find(node=>node.props?.children==='Preparar imagen 9:16').props.onClick();await tick();assert.deepEqual(prepared.map(row=>row.format),['square','story']);assert(prepared.every(row=>row.item.reference.id===sectionId));assert(dirty.includes(true));
+});
+
+
+test('Productos includes featured products, search ignores accents, and legacy service sections remain discoverable',()=>{
+  const items=buildSharingItems(input());const featured=items.find(item=>item.reference.kind==='product');
+  assert(domain.matchesSharing(featured,'Productos','PÓLERA'));
+  assert(domain.matchesSharing(featured,'Destacados','real'));
+  assert(!domain.matchesSharing(featured,'Servicios',''));
+  const legacy={...block,actividad:undefined,nombre_interno:'Sección de servicios'};
+  const service=buildSharingItems({...input(),landing:{contenido:{bloques:[legacy]}}}).find(item=>item.reference.kind==='section');
+  assert.equal(service.group,'Servicios');
 });

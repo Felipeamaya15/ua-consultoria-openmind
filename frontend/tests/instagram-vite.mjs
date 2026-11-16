@@ -1,0 +1,10 @@
+import path from 'node:path';
+import {fileURLToPath} from 'node:url';
+import {build} from 'vite';
+import react from '@vitejs/plugin-react';
+import tailwindcss from '@tailwindcss/vite';
+const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
+const output=process.env.INSTAGRAM_QA_OUTPUT&&path.resolve(process.env.INSTAGRAM_QA_OUTPUT);
+if(!output||output.toLowerCase().startsWith(path.resolve(root,'..').toLowerCase()+path.sep))throw new Error('INSTAGRAM_QA_OUTPUT debe quedar fuera del repositorio.');
+process.env.VITE_API_URL='https://localhost:8444';
+await build({root,configFile:false,plugins:[react(),tailwindcss()],cacheDir:path.join(output,'vite-cache'),build:{outDir:path.join(output,'build'),emptyOutDir:false}});

@@ -56,24 +56,15 @@ test('connection service rejects non-Google authorization URLs and never accepts
   await api.test(key);assert.deepEqual(JSON.parse(calls[0].options.body),{clave:key});
 });
 
-test('Campaigns belongs to Contacts; Gmail configuration belongs to Negocio and Correos retains its transactional editor',()=>{
-  let params=new URLSearchParams('q=qa');
-  const CampaignWorkspace=()=>null;
+test('Campaigns belongs to Marketing; legacy Contacts redirects; Gmail belongs to Negocio and Correos is preserved',()=>{
   const h=hooks('src/features/admin/pages/Contacts.tsx','default',{
-    'react-router-dom':{useSearchParams:()=>[params,value=>{params=value}]},
-    '../components/CampaignWorkspace':{CampaignWorkspace},
-    '../components/ui':{Tabs:'Tabs'},
-    '../components/HistoryControls':{HistoryPagination:'HistoryPagination'},
-    '../components/CommercialFilters':{default:'CommercialFilters'},
+    'react-router-dom':{useSearchParams:()=>[new URLSearchParams('vista=campanas')],Navigate:'Navigate'},
+    '../components/ui':{},'../components/HistoryControls':{},'../components/CommercialFilters':{},
     '../hooks/useCommercialHistory':{},'../services/commercialService':{},
   });
-  let tree=h.render();
-  assert.equal(tree.filter(n=>n.type===CampaignWorkspace).length,0);
-  tree.find(n=>n.type==='Tabs').props.onChange('campaigns');tree=h.render();
-  assert.equal(params.get('vista'),'campanas');assert.equal(params.get('q'),'qa');
-  assert.equal(tree.filter(n=>n.type===CampaignWorkspace).length,1);
-  tree.find(n=>n.type==='Tabs').props.onChange('contacts');tree=h.render();
-  assert.equal(tree.filter(n=>n.type===CampaignWorkspace).length,0);
+  const tree=h.render();assert.equal(tree[0].type,'Navigate');assert.equal(tree[0].props.to,'/emprendedor/marketing#campanas');assert.equal(tree[0].props.replace,true);
+  const marketing=fs.readFileSync(path.join(__dirname,'../src/features/marketing/components/MarketingSections.tsx'),'utf8');
+  assert(marketing.includes('<CampaignWorkspace'));assert(!marketing.includes("label: 'Redes sociales'"));
   const emails=fs.readFileSync(path.join(__dirname,'../src/features/admin/pages/Emails.tsx'),'utf8');
   assert(!emails.includes('MailConnectionPanel'));
   assert(!emails.includes('mailConnectionService'));
@@ -90,6 +81,8 @@ test('campaign UI keeps draft and idempotency key on failure, previews backend H
     action:async(row,action)=>{actions.push(action);return{...row,estado:action==='enviar'?'pendiente':'aceptada',resultados:action==='enviar'?{pendiente:1}:{aceptada:1}}}};
   const h=hooks('src/features/admin/components/CampaignWorkspace.tsx','CampaignWorkspace',{
     './MailConnectionPanel':{MailConnectionPanel:'MailConnectionPanel'},
+    '../../marketing/components/PublishedContentPicker':{PublishedContentPicker:'PublishedContentPicker'},
+    '../../marketing/components/MediaPreview':{MediaPreview:'MediaPreview'},
     'react-router-dom':{useBlocker:()=>({state:'unblocked'})},'../services/campaignService':{campaignService:api},'../services/productService':{fetchAdminProducts:async()=>[]}},
     {window:{addEventListener(){},removeEventListener(){},confirm:()=>true}});
   let tree=h.render();await new Promise(r=>setTimeout(r,270));tree=await h.flush();
