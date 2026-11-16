@@ -220,7 +220,7 @@ export default function Activities() {
   }
 
   return (
-    <section aria-label="Servicios y talleres" className="space-y-6 max-w-6xl">
+    <section aria-label="Servicios y talleres" className="space-y-6 w-full">
       {/* Encabezado principal */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-3 border-b border-[var(--border)]">
         <div>

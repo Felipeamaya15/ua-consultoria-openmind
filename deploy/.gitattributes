@@ -1,0 +1,6 @@
+# Estos archivos se ejecutan en Linux: deben guardarse siempre con saltos de línea LF.
+*.sh text eol=lf
+*.py text eol=lf
+Caddyfile text eol=lf
+*.Dockerfile text eol=lf
+*.yml text eol=lf

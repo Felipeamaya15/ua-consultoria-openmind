@@ -37,7 +37,7 @@ const panels: {id:Panel;label:string;short:string;description:string}[] = [
   {id:'catalog',label:'Beneficios de comprar en tu tienda',short:'Beneficios',description:'Este apartado fijo aparece inmediatamente después de Portada. Productos y categorías se administran en Secciones.'},
   {id:'contact',label:'Contacto, horarios y ubicación',short:'Contacto y horarios',description:'Ayuda a tus clientes a encontrarte y conocer tus horarios.'},
 ];
-const panelFromHash = (hash:string):Panel => hash === '#secciones-tienda' ? 'blocks' : hash === '#pagina-principal' ? 'cover' : hash === '#contacto-horarios' ? 'contact' : 'business';
+const panelFromHash = (hash:string):Panel => hash === '#secciones-tienda' ? 'blocks' : hash === '#pagina-principal' ? 'cover' : hash === '#contacto-horarios' ? 'contact' : hash === '#beneficios' ? 'catalog' : 'business';
 const emptyForm: Draft = {
   negocio:{nombre:'',descripcion:'',correo_negocio:''}, titulo:'',descripcion:'',texto_boton:'',imagen_principal:null,logo:null,contenido:normalizeLandingContent(),
   secciones:{'Productos destacados':false,'Categorías':false,'Beneficios':false,'Información de contacto':false,'Horarios de atención':false,'Mapa / ubicación':false},
@@ -50,14 +50,14 @@ export default function LandingPageContent() {
   const {showHelp,toggleHelp} = useAdminHelp();
   const {hash} = useLocation();
   const [active,setActive] = useState<Panel>(() => {
-    if (hash === '#informacion-negocio') return 'business';
+    if (hash) return panelFromHash(hash);
     try {
       const saved = localStorage.getItem('openmind:landing:active-panel');
       return panels.some(panel => panel.id === saved)
         ? saved as Panel
-        : panelFromHash(hash);
+        : 'business';
     } catch {
-      return panelFromHash(hash);
+      return 'business';
     }
   });
 
