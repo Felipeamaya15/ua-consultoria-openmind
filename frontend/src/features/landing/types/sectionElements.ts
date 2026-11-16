@@ -15,9 +15,19 @@ export interface SectionElement {
   vista_abierta?: boolean; recurso_id?: string; url?: string; proveedor?: 'instagram' | 'facebook'; etiqueta?: string; numero?: string; mensaje?: string;
   importe?: string; fecha?: string; hasta?: string; inicio?: string; termino?: string; modalidad?: 'presencial' | 'online' | 'mixta';
 }
+export interface PaidActivitySettings {
+  cierre_minutos: number;
+  tolerancia_minutos: number;
+  cancelacion: 'evaluacion' | 'anticipada';
+  cancelacion_horas: number;
+}
+export const newPaidActivitySettings = (): PaidActivitySettings => ({
+  cierre_minutos: 60, tolerancia_minutos: 15, cancelacion: 'evaluacion', cancelacion_horas: 48,
+});
 export interface SectionActivity {
   tipo:'servicio'|'taller'; estado:'activa'|'cancelada'; categoria:string; zona_horaria:string;
   plataforma:string; enlace_reunion?:string; gratuito:boolean; inscripciones:boolean; cupos:number|null; confirmacion:'manual'|'automatica';
+  venta?: PaidActivitySettings | null;
 }
 export const newActivity=(tipo:SectionActivity['tipo']):SectionActivity=>({tipo,estado:'activa',categoria:'',zona_horaria:'America/Santiago',plataforma:'',enlace_reunion:'',gratuito:false,inscripciones:false,cupos:null,confirmacion:'manual'});
 export const TEXT_ELEMENTS: ElementKind[] = ['titulo', 'subtitulo', 'texto', 'nombre', 'caracteristicas', 'informacion', 'duracion', 'requisitos', 'condiciones'];

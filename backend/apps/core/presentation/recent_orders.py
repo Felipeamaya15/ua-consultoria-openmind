@@ -96,6 +96,22 @@ class ActualizarEstadoPedidoAPIView(APIView):
                 status=status.HTTP_404_NOT_FOUND,
             )
 
+        if (pedido.entrega or {}).get('origen') in ('actividad_transferencia_v1','actividad_webpay_v1','actividad_pasarela_v1'):
+            from django.db import transaction
+            from apps.landing.webpay_activity_orders import meta
+            with transaction.atomic():
+                locked=Pedido.objects.select_for_update().get(pk=pedido.pk,tienda=tienda)
+                allowed={'pagado':('en_camino','entregado'),'en_camino':('entregado',),'entregado':()}
+                if not locked.stock_descontado or not locked.itempedido_set.exclude(producto_mongo_id='').exists() or locked.estado not in allowed or estado_normalizado not in (locked.estado,*allowed[locked.estado]):
+                    return error_response('Gestiona el pago y la inscripción desde Servicios y talleres.', 'ACTIVIDAD_TRANSFERENCIA', status=409)
+                old=locked.estado
+                locked.estado=estado_normalizado
+                locked.save(update_fields=['estado'])
+                if old!=locked.estado and ((locked.entrega or {}).get('origen')=='actividad_transferencia_v1' or meta(locked).get('ambiente')=='PRODUCCION' or (locked.entrega or {}).get('pago_actividad_externo',{}).get('ambiente') in ('LIVE','PRODUCCION')):
+                    transaction.on_commit(lambda: notificar_cambio_de_estado(locked,old))
+            return success_response(data={'id_pedido':locked.pk,'identificador':locked.identificador,'estado':locked.estado,'estado_etiqueta':locked.get_estado_display(),'correo':None},mensaje='Estado de despacho actualizado.')
+        if isinstance(pedido.entrega, dict) and pedido.entrega.get('origen') in ('actividad_prueba_v1','actividad_unificada_qa_v1'):
+            return error_response('Gestiona este pedido de prueba en transferencias pendientes.', 'ACTIVIDAD_PRUEBA', status=409)
         estado_anterior = pedido.estado
         pedido.estado = estado_normalizado
         pedido.save(update_fields=['estado'])

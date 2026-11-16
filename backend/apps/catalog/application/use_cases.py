@@ -512,6 +512,9 @@ class IniciarPagoTransbankUseCase:
             )
             if not pedido or pedido.medio_pago != "Transbank" or pedido.estado != "pendiente":
                 raise ConfiguracionPagoInvalidaException("El pedido no está disponible para pagar con Webpay.")
+            from apps.landing.webpay_activity_orders import is_webpay_activity, assert_start_allowed, remember_session
+            webpay_activity=is_webpay_activity(pedido)
+            if webpay_activity: assert_start_allowed(pedido)
             monto = pedido.monto_total
             if not monto.is_finite() or monto <= 0 or monto != monto.to_integral_value():
                 raise ConfiguracionPagoInvalidaException("Webpay requiere un total positivo en pesos enteros.")
@@ -522,6 +525,8 @@ class IniciarPagoTransbankUseCase:
                 raise ConfiguracionPagoInvalidaException("Este pedido expiró. Realiza una nueva compra.")
             if token_webpay_vigente(pedido):
                 return {"token": pedido.webpay_token, "url": pedido.webpay_url}
+            if webpay_activity and pedido.webpay_token:
+                raise ConfiguracionPagoInvalidaException('Este pago debe verificarse antes de iniciar otro. Consulta el pedido.')
             if bool(pedido.webpay_token) != bool(pedido.webpay_url):
                 raise TransbankTransaccionException("El inicio de Webpay requiere revisión.")
 
@@ -553,6 +558,7 @@ class IniciarPagoTransbankUseCase:
             pedido.webpay_url = respuesta["url"]
             pedido.webpay_iniciado_en = timezone.now()
             pedido.save(update_fields=["webpay_token", "webpay_url", "webpay_iniciado_en"])
+            if webpay_activity: remember_session(pedido,session_id)
             return {"token": pedido.webpay_token, "url": pedido.webpay_url}
 
     def ejecutar(self, *args, **kwargs) -> Dict[str, Any]:
@@ -580,6 +586,9 @@ class ConfirmarPagoTransbankUseCase:
 
         tienda_pk = getattr(id_tienda, "id_tienda", None) or getattr(id_tienda, "pk", None) or id_tienda
 
+        from apps.landing.webpay_activity_orders import confirm_if_activity
+        activity_result=confirm_if_activity(tienda_pk,token_ws)
+        if activity_result is not None: return activity_result
         config = ConfiguracionTransbank.objects.filter(id_tienda_id=tienda_pk).first()
         if not config:
             raise TransbankConfiguracionFaltanteException("Configuración de tienda no encontrada.")
@@ -610,6 +619,8 @@ class ConfirmarPagoTransbankUseCase:
                 tienda_id=tienda_pk, medio_pago="Transbank", estado="pendiente", webpay_token=token_ws
             ).first()
             if pedido:
+                from apps.landing.webpay_activity_orders import is_webpay_activity
+                if is_webpay_activity(pedido): return  # Reconcile status; never reuse token.
                 try:
                     notificar_pago_rechazado(pedido)
                 finally:
@@ -636,6 +647,9 @@ class ConfirmarPagoTransbankUseCase:
             ).first()
             if not pedido or pedido.medio_pago != "Transbank":
                 raise TransbankTransaccionException("El pago no corresponde a un pedido Webpay de esta tienda.")
+            from apps.landing.webpay_activity_orders import is_webpay_activity
+            if is_webpay_activity(pedido):
+                raise TransbankTransaccionException('El pago de actividad requiere la validación del token original.')
             if pedido.estado not in ("pendiente", *Pedido.ESTADOS_PAGADOS):
                 raise TransbankTransaccionException("El pedido no admite este pago.")
             if pedido.monto_total != monto:
@@ -1130,7 +1144,7 @@ class ConsultarCarritoUseCase:
         scope = {"id_producto__id_tienda_id": tienda_id} if tienda_id is not None else {}
         items = list(
             ItemCarrito.objects
-            .filter(id_carrito__id_usuario_id=usuario_id, **scope)
+            .filter(id_carrito__id_usuario_id=usuario_id, id_producto__activo=True, **scope)
             .select_related("id_producto")
             .order_by("id_item_carrito")
         )

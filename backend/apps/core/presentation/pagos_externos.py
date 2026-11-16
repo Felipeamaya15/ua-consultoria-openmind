@@ -72,6 +72,12 @@ def _adaptador_mp(tienda):
 
 
 def _crear_pago_mercadopago(adaptador, pedido, return_url):
+    from apps.landing.external_activity_orders import is_external, start_online, assert_adapter
+    if is_external(pedido):
+        return start_online(pedido.pk, lambda locked: (assert_adapter(locked,adaptador), _crear_pago_mercadopago_impl(adaptador,locked,return_url))[1])
+    return _crear_pago_mercadopago_impl(adaptador,pedido,return_url)
+
+def _crear_pago_mercadopago_impl(adaptador, pedido, return_url):
     """Preferencia de pago nueva para el pedido (monto del pedido). Lo usan el checkout y 'Pagar ahora'."""
     try:
         # El enlace de pago vence junto con el pedido: despues de cancelarlo ya no se puede pagar.
@@ -115,6 +121,12 @@ class ConfirmarPagoMercadoPagoView(_PagoExternoBase):
         pedido = Pedido.objects.filter(tienda=tienda, identificador=order_number, medio_pago='MercadoPago').first()
         if not pedido:
             return error_response('El pedido no corresponde a este medio de pago.', 'PEDIDO_NO_ENCONTRADO', status=404)
+        from apps.landing.external_activity_orders import is_external, confirm_mp
+        if is_external(pedido):
+            try: confirm_mp(pedido.pk,adaptador,payment_id)
+            except ErrorPago as error: return error_response(error.mensaje,error.codigo,status=error.status)
+            except Exception: return error_response('Pago en revisión. No pagues otra vez.','PAGO_EN_VERIFICACION',status=503)
+            return success_response(mensaje='Pago aprobado.',data={'orden_compra':pedido.identificador,'monto':str(pedido.monto_total)})
         try:
             resultado = adaptador.consultar_pago(payment_id)
         except PagoGatewayException:
@@ -144,6 +156,12 @@ def _adaptador_paypal(tienda):
 
 
 def _crear_orden_paypal(adaptador, tipo, pedido, return_url, cancel_url):
+    from apps.landing.external_activity_orders import is_external, start_online, assert_adapter
+    if is_external(pedido):
+        return start_online(pedido.pk, lambda locked: (assert_adapter(locked,adaptador), _crear_orden_paypal_impl(adaptador,tipo,locked,return_url,cancel_url))[1])
+    return _crear_orden_paypal_impl(adaptador,tipo,pedido,return_url,cancel_url)
+
+def _crear_orden_paypal_impl(adaptador, tipo, pedido, return_url, cancel_url):
     """Orden de PayPal nueva en USD: fija y guarda la conversion en el pedido (la ultima orden es la unica valida)."""
     monto_usd = tipo.clp_a_usd(pedido.monto_total)
     try:
@@ -204,6 +222,12 @@ class CapturarPagoPayPalView(_PagoExternoBase):
         pedido = Pedido.objects.filter(tienda=tienda, identificador=order_number, medio_pago='PayPal').first()
         if not pedido:
             return error_response('El pedido no corresponde a este medio de pago.', 'PEDIDO_NO_ENCONTRADO', status=404)
+        from apps.landing.external_activity_orders import is_external, confirm_paypal
+        if is_external(pedido):
+            try: pedido=confirm_paypal(pedido.pk,adaptador,order_id,capture=True)
+            except ErrorPago as error: return error_response(error.mensaje,error.codigo,status=error.status)
+            except Exception: return error_response('Pago en revisión. No pagues otra vez.','PAGO_EN_VERIFICACION',status=503)
+            return success_response(mensaje='Pago aprobado.',data=_datos_pago_paypal(pedido))
         fx = pedido.pago_fx if isinstance(pedido.pago_fx, dict) else {}
         if pedido.estado != 'pendiente':
             if pedido.estado in Pedido.ESTADOS_PAGADOS:

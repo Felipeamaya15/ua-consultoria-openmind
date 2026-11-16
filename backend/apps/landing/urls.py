@@ -3,12 +3,21 @@ from django.urls import path
 from apps.landing.views import ConfiguracionLandingAPIView, AparienciaBloquesAPIView, RedesSocialesAPIView
 from apps.landing.media_views import MediaLibraryView, MediaResourceView, MediaImageView
 from apps.landing.public_section_media import PublicSectionMediaView, PublicSectionImageView, PublicSectionVideoView
-from apps.landing.activity_views import ActivitySubmissionView, ActivityEnrollmentView, ActivityRequestsView, ActivityRequestView
+from apps.landing.activity_views import ActivitySubmissionView, ActivityEnrollmentView, ActivityRequestsView, ActivityRequestView, PaidActivityAvailabilityView
 from apps.landing.carrusel_views import (ImagenesCarruselLandingAPIView, ImagenCarruselLandingDetalleAPIView, OrdenImagenesCarruselLandingAPIView, ModoTextoCarruselAPIView)
 
+from apps.landing.qa_activity_management import OwnerActivitySales, CustomerActivitySales, ActivityRefundAction
+
+from apps.landing.transfer_activity_orders import ActivityCheckoutModeView
+
 urlpatterns = [
+    path('modo-compra-actividades/', ActivityCheckoutModeView.as_view(), name='modo-compra-actividades'),
+    path('ventas-actividades-qa/', OwnerActivitySales.as_view(), name='ventas-actividades-qa'),
+    path('ventas-actividades-qa/pedido/<int:pedido_id>/', CustomerActivitySales.as_view(), name='ventas-actividades-cliente-qa'),
+    path('ventas-actividades-qa/pedido/<int:pedido_id>/<uuid:reserva_id>/', ActivityRefundAction.as_view(), name='devolucion-actividad-qa'),
     path('solicitudes-actividades/<uuid:pk>/respuestas/', ActivityRepliesView.as_view(), name='respuestas-actividad'),
     path('solicitudes-actividades/<uuid:pk>/respuestas/<uuid:reply_id>/enviar/', SendActivityReplyView.as_view(), name='enviar-respuesta-actividad'),
+    path('actividades/<uuid:pk>/disponibilidad/', PaidActivityAvailabilityView.as_view(), name='disponibilidad-actividad-pagada'),
     path('actividades/<uuid:pk>/consultas/', ActivitySubmissionView.as_view(), name='consulta-actividad'),
     path('actividades/<uuid:pk>/inscripciones/', ActivityEnrollmentView.as_view(), name='inscripcion-actividad'),
     path('solicitudes-actividades/', ActivityRequestsView.as_view(), name='solicitudes-actividades'),

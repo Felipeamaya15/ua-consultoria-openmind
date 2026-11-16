@@ -41,6 +41,19 @@ def plazo_pedido_pendiente(pedido):
 
 
 def vence_en(pedido):
+    from apps.landing.webpay_activity_orders import is_webpay_activity, deadline
+    if is_webpay_activity(pedido): return deadline(pedido)
+    from apps.landing.external_activity_orders import is_external, deadline as external_deadline
+    if is_external(pedido): return external_deadline(pedido)
+    if (pedido.entrega or {}).get('origen') == 'actividad_transferencia_v1':
+        return None  # El propietario debe conciliar el banco antes de liberar.
+    if isinstance(pedido.entrega, dict) and pedido.entrega.get('origen') == 'actividad_unificada_qa_v1':
+        if pedido.estado != 'pendiente':
+            return None
+        from apps.landing.models import ReservaActividadPagada
+        return ReservaActividadPagada.objects.filter(tienda_id=pedido.tienda_id, clave_checkout=pedido.clave_checkout, estado='en_pago').order_by('vence').values_list('vence',flat=True).first()
+    if isinstance(pedido.entrega, dict) and pedido.entrega.get('origen') == 'actividad_prueba_v1':
+        return None  # ruta de prueba anterior: no modificar pedidos históricos
     if pedido.estado != 'pendiente' or pedido.medio_pago not in MEDIOS_EXPIRABLES or not pedido.fecha_creacion:
         return None
     plazo = plazo_pedido_pendiente(pedido)
@@ -124,6 +137,12 @@ RESULTADO_OMITIDO = 'omitido'
 
 
 def _procesar_pedido(pedido_pk, consultar_pasarela=True):
+    from apps.landing.webpay_activity_orders import reconcile_expired
+    activity_result=reconcile_expired(pedido_pk,consultar_pasarela)
+    if activity_result is not None: return activity_result
+    from apps.landing.external_activity_orders import reconcile
+    activity_result=reconcile(pedido_pk,consultar_pasarela)
+    if activity_result is not None: return activity_result
     from apps.core.infrastructure.conciliacion_pagos import Veredicto, marcar_pedido_pagado, veredicto_de_pasarela
     from apps.core.models import Pedido
 
@@ -149,6 +168,10 @@ def _procesar_pedido(pedido_pk, consultar_pasarela=True):
             return RESULTADO_OMITIDO
         if pedido.medio_pago in MEDIOS_EXTERNOS and not consultar_pasarela:
             return RESULTADO_OMITIDO
+        from apps.landing.unified_activity_orders import is_unified_qa, resolve_unified_qa
+        qa = is_unified_qa(pedido)
+        if qa:
+            resolve_unified_qa(pedido, approve=False)
         entrega = dict(pedido.entrega or {})
         entrega['motivo_cancelacion'] = MOTIVO_PLAZO_VENCIDO
         pedido.estado = 'cancelado'
@@ -157,7 +180,8 @@ def _procesar_pedido(pedido_pk, consultar_pasarela=True):
         pedido.entrega = entrega
         pedido.save(update_fields=['estado', 'webpay_token', 'webpay_url', 'entrega'])
         devolver_stock_de_pedido_cancelado(pedido)
-        transaction.on_commit(lambda: _avisar_cancelacion(pedido))
+        if not qa:
+            transaction.on_commit(lambda: _avisar_cancelacion(pedido))
     return RESULTADO_CANCELADO
 
 
@@ -171,10 +195,18 @@ def _candidatos(limite=None, externos=True, **filtros):
     from apps.core.models import Pedido
 
     nunca = Q(medio_pago__in=MEDIOS_MANUALES, tienda__horas_expiracion_pedido_manual=0)
+    # QA has no money in flight: use the real reservation's 15-minute deadline.
+    qa = Q(entrega__contains={'origen':'actividad_unificada_qa_v1'})
+    from apps.landing.models import ReservaActividadPagada
+    expired_qa = ReservaActividadPagada.objects.filter(estado='en_pago', vence__lte=timezone.now()).values('clave_checkout')
+    # JSON key lookup negation excludes missing keys (SQL UNKNOWN).
+    # Containment returns false for ordinary orders without an origin.
+    webpay = (Q(entrega__contains={'origen': 'actividad_webpay_v1'})
+              | Q(entrega__contains={'origen': 'actividad_pasarela_v1'}))
+    normal = Q(fecha_creacion__lte=timezone.now()-timedelta(hours=1)) & ~nunca & ~qa & ~webpay
     consulta = Pedido.objects.filter(
-        estado='pendiente', medio_pago__in=MEDIOS_EXPIRABLES,
-        fecha_creacion__lte=timezone.now() - timedelta(hours=1), **filtros,
-    ).exclude(nunca).order_by('fecha_creacion', 'pk').values_list('pk', flat=True)
+        estado='pendiente', medio_pago__in=MEDIOS_EXPIRABLES, **filtros,
+    ).filter(normal | ((qa | webpay) & Q(clave_checkout__in=expired_qa))).exclude(entrega__contains={'origen':'actividad_prueba_v1'}).exclude(entrega__contains={'origen':'actividad_transferencia_v1'}).order_by('fecha_creacion','pk').values_list('pk',flat=True)
     if not externos:
         consulta = consulta.exclude(medio_pago__in=MEDIOS_EXTERNOS)
     return consulta[:limite] if limite else consulta

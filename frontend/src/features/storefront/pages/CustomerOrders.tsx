@@ -1,3 +1,4 @@
+import { PaidActivityOrderQA } from '../components/store/PaidActivityOrderQA';
 import { useEffect, useState } from 'react';
 import { EmptyListState, ErrorState, LoadingState } from '../../../shared/components/states';
 import { Link, useParams } from 'react-router-dom';
@@ -50,6 +51,7 @@ export default function CustomerOrders() {
           <p>Total: {formatReportMoney(order.monto_total)}</p>
           <PagarPedidoPendiente orderNumber={order.identificador} estado={order.estado} medioPago={order.medio_pago} venceEn={order.vence_en} conSesion />
           <PickupSelectionSummary selection={order.entrega?.retiro?.seleccion} />
+          {id && <PaidActivityOrderQA key={order.id_pedido} orderId={order.id_pedido} />}
           
           {!id && <Link data-page-action="ghost" to={route(`mis-pedidos/${order.id_pedido}`)} className="font-medium text-[var(--primary)] hover:underline">Ver detalle y seguimiento</Link>}
           

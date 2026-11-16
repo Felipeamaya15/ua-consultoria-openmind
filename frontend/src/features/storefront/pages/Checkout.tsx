@@ -1,3 +1,5 @@
+import './checkout-order-summary.css';
+import {useActivityCheckoutOptions} from '../../landing/services/activityPurchaseMode';
 import { CommercialOptIn } from '../components/store/CommercialOptIn';
 import { requestConsent } from '../services/commercialConsent';
 import { checkoutPreviewStep } from '../visual/pages';
@@ -12,6 +14,7 @@ import { validatePromotion, type ValidatedPromotion } from '../services/promotio
 import { getDeliveryAlternatives, getShippingQuotes, type ShippingQuote, type ShippingConfiguration } from '../services/shippingService';
 import PickupDetails from '../components/checkout/PickupDetails';
 import { useCart } from '../context/CartContext';
+import { formatActivityDate } from '../../landing/services/paidActivityService';
 import { formatPrice } from '../data/mockData';
 import { comunasDeRegion, esComunaDeRegion } from '../data/comunasChile';
 import {
@@ -289,6 +292,7 @@ function CardFields({
 export default function Checkout() {
   const {
     items,
+    activities,
     subtotal,
     clearCart,
     promoCode,
@@ -297,6 +301,9 @@ export default function Checkout() {
     setShippingMethod,
   } = useCart();
 
+  const onlyActivities = !items.length && activities.length > 0;
+  const {mode:activityMode,methods:activityPayments}=useActivityCheckoutOptions(activities.length>0,!onlyActivities);
+  const activityPurchaseAllowed=activityMode!=='disabled';
   const submitting = useRef(false);
   const checkoutAttempt = useRef({signature: '', key: ''});
   const consentRequested = useRef('');
@@ -317,6 +324,7 @@ export default function Checkout() {
   const [shippingLoadAttempt, setShippingLoadAttempt] = useState(0);
 
   useEffect(() => {
+    if (onlyActivities) { setShippingLoading(false); setShippingOptions([]); setShippingError(''); return; }
     const controller = new AbortController();
     setShippingLoading(true);
     setShippingError('');
@@ -342,7 +350,7 @@ export default function Checkout() {
       if (!controller.signal.aborted) setShippingLoading(false);
     });
     return () => controller.abort();
-  }, [shippingLoadAttempt]);
+  }, [shippingLoadAttempt, onlyActivities]);
   const availableAuthModes = useMemo(
     () => getAvailableAuthModes(authSettings),
     [authSettings],
@@ -468,6 +476,7 @@ export default function Checkout() {
           );
 
         const enabled = paymentPresentation.filter((option) => {
+          if (activities.length && (!activityPurchaseAllowed||!activityPayments.includes(option.id))) return false;
           const configuration = body.data[keys[option.id]] ?? body.data[option.id];
           if (option.id === 'Transferencia') {
             return configuration?.enabled === true && Boolean(validTransfer);
@@ -500,7 +509,7 @@ export default function Checkout() {
     };
     void loadPayments();
     return () => {active = false;};
-  }, []);
+  }, [activities.length,activityPurchaseAllowed,activityMode,activityPayments]);
 
   /*
    * ==========================================================
@@ -525,13 +534,13 @@ export default function Checkout() {
   const applyingPromotion = useRef(false);
   
   const destinationKey = JSON.stringify([shippingMethod, address.region, address.city]);
-  const selectedShippingOption = shippingOptions.find(option => option.id === shippingMethod);
+  const selectedShippingOption = onlyActivities ? undefined : shippingOptions.find(option => option.id === shippingMethod);
   const candidateQuote = shippingQuotes[shippingMethod];
   const selectedQuote = candidateQuote?.destino === destinationKey && candidateQuote.vence_en > Date.now() / 1000
     ? candidateQuote : undefined;
     
   // => CÁLCULO DEL TOTAL DEL PEDIDO SUMANDO EL COSTO DE DESPACHO <=
-  const quotedShipping = shippingMethod === 'Retiro' ? 0 : selectedQuote?.monto ?? null;
+  const quotedShipping = onlyActivities || shippingMethod === 'Retiro' ? 0 : selectedQuote?.monto ?? null;
   const currentPromotionBasis = JSON.stringify([subtotal, quotedShipping, checkoutPromoCode]);
   const currentPromotion = promotionBasis === currentPromotionBasis ? validatedPromotion : null;
   const shipping = currentPromotion ? currentPromotion.shipping : quotedShipping;
@@ -585,8 +594,8 @@ export default function Checkout() {
   };
   
   // Validamos que exista un costo real de despacho, o sea retiro en tienda.
-  const deliveryReady = !shippingLoading && !shippingError && !!selectedShippingOption
-    && (shippingMethod === 'Retiro' ? true : (!!selectedQuote && !quoteLoading && !quoteError));
+  const deliveryReady = onlyActivities || (!shippingLoading && !shippingError && !!selectedShippingOption
+    && (shippingMethod === 'Retiro' ? true : (!!selectedQuote && !quoteLoading && !quoteError)));
 
   // Si no hay tarifa para el destino, reintentar no sirve: se ofrece cambiar de alternativa o de comuna.
   const quoteNeedsOtherOption = ['sin_tarifa', 'no_disponible', 'destino'].includes(quoteErrorKind);
@@ -768,7 +777,7 @@ export default function Checkout() {
       }
     }
 
-    if (currentStep === 'delivery') {
+    if (currentStep === 'delivery' && !onlyActivities) {
       if (
         selectedShippingOption?.requiresAddress &&
         (!address.street.trim() ||
@@ -794,6 +803,7 @@ export default function Checkout() {
     }
 
     if (currentStep === 'payment') {
+      if (activities.length && (!activityPurchaseAllowed||!activityPayments.includes(paymentMethod))) { setErrors({payment:'No está habilitada esta combinación de compra. Revisa los artículos y el medio de pago.'}); return false; }
       if (paymentsLoading || paymentsError || !paymentOptions.some(option => option.id === paymentMethod)) {
         newErrors.payment =
           'Selecciona un método de pago';
@@ -807,7 +817,7 @@ export default function Checkout() {
 
   const next = async () => {
     if (consentSending.current || !validate(step)) return;
-    if (step === 'contact' && commercial && consentRequested.current !== contact.email.trim().toLowerCase()) {
+    if (step === 'contact' && (!activities.length||(activityMode!=='qa'&&activityMode!=='disabled')) && commercial && consentRequested.current !== contact.email.trim().toLowerCase()) {
       consentSending.current = true;
       setConsentMessage('Solicitando confirmación de correo…');
       try {
@@ -843,7 +853,9 @@ export default function Checkout() {
    * ==========================================================
    */
   const handleConfirm = async () => {
-    if (submitting.current || loading || !items.length) return;
+    if (submitting.current || loading || (!items.length && !activities.length)) return;
+    if(activities.length && (!activityPurchaseAllowed||!activityPayments.includes(paymentMethod)||checkoutPromoCode)) {setErrors({payment:'Revisa la disponibilidad, selecciona el medio de pago habilitado y quita el código promocional.'});return;}
+    if(activities.length&&activityMode==='qa'&&!contact.email.trim().toLowerCase().endsWith('@example.com')){setErrors({payment:'Utiliza un correo @example.com para la prueba. No transfieras dinero.'});return;}
     if (promoLoading || (checkoutPromoCode && !currentPromotion)) {
       setPromoError('Vuelve a aplicar o quita el código para confirmar el total actualizado.');
       return;
@@ -852,7 +864,7 @@ export default function Checkout() {
     submitting.current = true;
     setLoading(true);
     setErrors({});
-    const signature = JSON.stringify({items, contact, paymentMethod, shippingMethod, address, promoCode: checkoutPromoCode});
+    const signature = JSON.stringify({items, activities, contact, paymentMethod, shippingMethod, address, promoCode: checkoutPromoCode});
     if (checkoutAttempt.current.signature !== signature) {
       checkoutAttempt.current = {signature, key: crypto.randomUUID()};
     }
@@ -861,8 +873,8 @@ export default function Checkout() {
         throw new Error('Este medio de pago todavía no está disponible para completar la compra.');
       }
       const order = await orderService.create({
-        key: checkoutAttempt.current.key, items, contact, paymentMethod, shippingMethod, address, promoCode: checkoutPromoCode,
-        shippingQuote: selectedQuote?.cotizacion,
+        key: checkoutAttempt.current.key, items, activities, contact, paymentMethod, shippingMethod: onlyActivities ? 'Actividad' : shippingMethod, address, promoCode: checkoutPromoCode,
+        shippingQuote: onlyActivities ? undefined : selectedQuote?.cotizacion,
       });
 
       const orderNumber = String(order.identificador || order.id_pedido);
@@ -966,7 +978,7 @@ export default function Checkout() {
    * CARRITO VACÍO
    * ==========================================================
    */
-  if (items.length === 0) {
+  if (items.length === 0 && activities.length === 0) {
     return (
       <div
         className={
@@ -1046,7 +1058,7 @@ export default function Checkout() {
       : 'bg-white border border-[var(--border)] rounded-2xl min-w-0 p-4 sm:p-6 flex flex-col gap-5';
 
 
-  const isPaymentDisabled = loading || promoLoading || (!!checkoutPromoCode && !currentPromotion) || !deliveryReady || (shipping === null && shippingMethod !== 'Retiro');
+  const isPaymentDisabled = (activities.length > 0 && (!activityPurchaseAllowed||!activityPayments.includes(paymentMethod)||!!checkoutPromoCode)) || loading || promoLoading || (!!checkoutPromoCode && !currentPromotion) || !deliveryReady || (shipping === null && shippingMethod !== 'Retiro');
 
   return (
     <div
@@ -1059,6 +1071,7 @@ export default function Checkout() {
             : 'max-w-5xl mx-auto px-4 py-8'
       }
     >
+      {activities.length > 0 && <div role="status" className="mb-4 rounded-lg border border-[var(--border)] p-3 text-sm">{activityMode==='qa'?'Prueba local sin cobro. No transfieras dinero.':activityMode==='disabled'?'La venta de esta combinación de artículos no está habilitada.':onlyActivities?'Selecciona un medio de pago. Tu inscripción se confirma tras verificar el pago. No repitas un pago en revisión.':'Compra productos y actividades en un pedido. El despacho se calcula solo para productos físicos. Los cupos se confirman tras verificar el pago.'}</div>}
       {isVisual && (
         <div className="mb-8">
           <p className="mb-3 text-[9px] font-medium uppercase tracking-[0.18em] text-[var(--visual-page-color)]">
@@ -1335,7 +1348,13 @@ export default function Checkout() {
           {/* ===============================================
               ENTREGA
           ================================================ */}
-          {step === 'delivery' && (
+          {step === 'delivery' && onlyActivities && (
+            <div data-checkout-step-panel tabIndex={-1} data-visual-section="pagePanel" data-page-panel className={panelClass}>
+              <h2 className="text-lg font-semibold">Entrega</h2>
+              <p>No requiere despacho ni retiro. Los talleres y servicios se realizan en la fecha y modalidad indicadas.</p>
+            </div>
+          )}
+          {step === 'delivery' && !onlyActivities && (
             <div data-checkout-step-panel tabIndex={-1} data-visual-section="pagePanel" data-page-panel className={panelClass}>
               <div>
                 {isMinimal && (
@@ -2044,9 +2063,9 @@ export default function Checkout() {
                   </p>
 
                   <p className={isCatalog ? "font-medium text-[var(--visual-page-color)]" : "font-medium"}>
-                    {shippingMethod}
+                    {onlyActivities ? 'No aplica — actividades sin despacho' : shippingMethod}
                   </p>
-                  {shippingMethod === 'Retiro' && (
+                  {!onlyActivities && shippingMethod === 'Retiro' && (
                     <p className="mt-2 text-xs text-[var(--visual-page-color)]">
                       Retiro sin costo. La tienda te informará cuando tu pedido esté listo.
                     </p>
@@ -2117,6 +2136,7 @@ export default function Checkout() {
           {/* ===============================================
               NAVEGACIÓN
           ================================================ */}
+          {step==='confirm' && errors.payment && <Alert variant="error">{errors.payment}</Alert>}
           <div data-checkout-navigation className="flex justify-between items-center gap-3 mt-5">
             {step !== 'contact' ? (
               isVisual ? (
@@ -2155,7 +2175,7 @@ export default function Checkout() {
                   onClick={handleConfirm}
                   className="min-h-12 px-6 rounded-[8px] bg-[var(--visual-page-panel-background)] text-[var(--visual-page-color)] text-[12px] font-semibold hover:opacity-80 disabled:opacity-50 transition-opacity"
                 >
-                  {loading ? 'Registrando pedido...' : `Confirmar y pagar ${formatPrice(total)}`}
+                  {loading ? 'Registrando pedido...' : `${activities.length && activityMode==='qa' ? 'Registrar prueba' : 'Confirmar y pagar'} ${formatPrice(total)}`}
                 </button>
               ) : isMinimal ? (
                 <button data-page-action="primary"
@@ -2166,7 +2186,7 @@ export default function Checkout() {
                 >
                   {loading
                     ? 'Registrando pedido...'
-                    : `Confirmar y pagar ${formatPrice(total)}`}
+                    : `${activities.length && activityMode==='qa' ? 'Registrar prueba' : 'Confirmar y pagar'} ${formatPrice(total)}`}
                 </button>
               ) : (
                 <Button
@@ -2176,7 +2196,7 @@ export default function Checkout() {
                   disabled={isPaymentDisabled}
                   onClick={handleConfirm}
                 >
-                  {loading ? 'Registrando pedido...' : `Confirmar y pagar ${formatPrice(total)}`}
+                  {loading ? 'Registrando pedido...' : `${activities.length && activityMode==='qa' ? 'Registrar prueba' : 'Confirmar y pagar'} ${formatPrice(total)}`}
                 </Button>
               )
             ) : isVisual ? (
@@ -2230,6 +2250,12 @@ export default function Checkout() {
             </h3>
 
             <div data-checkout-items className="flex flex-col gap-4 mb-5">
+              {activities.map(item => (
+                <div className="flex items-start justify-between gap-3" key={`activity-${item.sectionId}`}>
+                  <div className="min-w-0"><p className="text-sm font-medium">{item.title}</p><p className="text-xs">{formatActivityDate(item.start,item.zone)} · {item.quantity} {item.quantity === 1 ? 'participante' : 'participantes'}</p><p className="text-xs">Sin despacho</p></div>
+                  <span data-page-price className="text-xs font-semibold whitespace-nowrap">{formatPrice(item.quantity*item.price)}</span>
+                </div>
+              ))}
               {items.map((item) => (
                 <div
                   key={`${item.productId}-${item.variantId}`}
@@ -2290,7 +2316,7 @@ export default function Checkout() {
               ))}
             </div>
 
-            <div className="border-t border-[var(--border)] pt-4 flex flex-col gap-3 text-sm">
+            <div data-checkout-cost-breakdown className="border-t border-[var(--border)] pt-4 flex flex-col gap-3 text-sm">
               <div className="pb-4 border-b border-[var(--border)]">
                 <label htmlFor="checkout-promo-code" className="block text-xs font-semibold uppercase tracking-wider text-[var(--visual-page-color)] mb-2">
                   Código promocional
@@ -2340,7 +2366,7 @@ export default function Checkout() {
               <div className="flex justify-between text-sm">
                 <span className="text-[var(--visual-page-color)]">Envío</span>
                 <span className="font-medium">
-                  {shipping === null ? 'Por cotizar' : shipping === 0 ? 'Gratis ($0)' : formatPrice(shipping)}
+                  {onlyActivities ? 'No aplica' : shipping === null ? 'Por cotizar' : shipping === 0 ? 'Gratis ($0)' : formatPrice(shipping)}
                 </span>
               </div>
               <div className="flex justify-between font-bold text-lg pt-2 border-t border-[var(--border)]">

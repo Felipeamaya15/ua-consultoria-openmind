@@ -5,6 +5,7 @@ import { useStore } from '../../context/StoreContext';
 import { useVerifiedLegalScope } from '../../hooks/useVerifiedLegalScope';
 import { consentKey, readConsent, saveConsent, resetConsent, type ConsentScope } from '../../services/cookieConsent';
 import { getStoreConfigKey } from '../../visual/storage';
+import { contrastRatio, institutionalTextColor } from '../../visual/contrast';
 import { isActiveEditorPreview, isActiveTemplateThumbnailPreview } from '../../visual/pages';
 import { disableGoogleAnalytics, initGoogleAnalytics } from '../../services/googleAnalyticsService';
 import { initMetaPixel, revokeMetaPixelConsent, trackMetaPixelPageView } from '../../services/metaPixelService';
@@ -80,9 +81,15 @@ export function CookieConsentBanner() {
   const surface = `color-mix(in srgb, ${colors.primary} 8%, ${colors.background})`;
   const mutedSurface = `color-mix(in srgb, ${colors.primary} 16%, ${colors.background})`;
   const borderColor = `color-mix(in srgb, ${colors.primary} 28%, ${colors.background})`;
-  // Respetar el color de texto de los botones definido por la paleta.
-  const actionBackground = colors.button || colors.primary;
-  const actionText = colors.buttonText;
+  // COOKIE_PALETTE_V2: mantener la combinacion configurada solo si es legible.
+  const configuredBackground = colors.button || colors.primary;
+  const configuredText = colors.buttonText;
+  const validPair = (contrastRatio(configuredText || '', configuredBackground || '') ?? 0) >= 4.5;
+  const actionBackground = validPair ? configuredBackground
+    : /^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i.test(colors.primary || '') ? colors.primary : '#19345d';
+  const actionText = validPair ? configuredText
+    : (contrastRatio(configuredText || '', actionBackground) ?? 0) >= 4.5
+      ? configuredText : institutionalTextColor(actionBackground);
 
   return (
     <aside

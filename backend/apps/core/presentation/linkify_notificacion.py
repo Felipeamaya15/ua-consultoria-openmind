@@ -174,6 +174,13 @@ class LinkifyNotificacionView(APIView):
 
         with transaction.atomic():
             pedido = Pedido.objects.select_for_update().get(pk=pedido.pk)
+            from apps.landing.external_activity_orders import is_external, approve_locked
+            if is_external(pedido):
+                if monto is None: raise _Rechazo('MONTO_INVALIDO','El monto es obligatorio para una actividad.',409,pedido)
+                from apps.core.presentation.pago_pedido_pendiente import ErrorPago
+                try: approve_locked(pedido,str(pedido.pk),'CLP',_a_entero(monto,pedido))
+                except ErrorPago as exc: raise _Rechazo(exc.codigo,exc.mensaje,exc.status,pedido) from None
+                return Response({'exito':True,'estado':pedido.estado})
             if pedido.estado == "cancelado":
                 raise _Rechazo("PEDIDO_CANCELADO", "El pedido esta cancelado y no puede marcarse como pagado.",
                                status.HTTP_409_CONFLICT, pedido)
@@ -194,6 +201,9 @@ class LinkifyNotificacionView(APIView):
             raise _Rechazo("PEDIDO_NO_LINKIFY", "El pedido no fue creado con Linkify.", status.HTTP_409_CONFLICT, pedido)
         with transaction.atomic():
             pedido = Pedido.objects.select_for_update().get(pk=pedido.pk)
+            from apps.landing.external_activity_orders import is_external
+            if is_external(pedido):
+                raise _Rechazo('ACTIVIDAD_REVISION','La anulación debe conciliarse con las inscripciones y el inventario.',409,pedido)
             if pedido.estado in Pedido.ESTADOS_EN_DESPACHO:
                 raise _Rechazo("PEDIDO_YA_ENVIADO", "El pedido ya esta en preparacion o despacho: la anulacion del pago requiere revision manual.",
                                status.HTTP_409_CONFLICT, pedido)
