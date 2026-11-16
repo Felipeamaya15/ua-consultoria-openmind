@@ -12,6 +12,7 @@ import { validatePromotion, type ValidatedPromotion } from '../services/promotio
 import { getDeliveryAlternatives, getShippingQuotes, type ShippingQuote, type ShippingConfiguration } from '../services/shippingService';
 import PickupDetails from '../components/checkout/PickupDetails';
 import { useCart } from '../context/CartContext';
+import { useActivityCart } from '../context/activityCart';
 import { formatPrice } from '../data/mockData';
 import { comunasDeRegion, esComunaDeRegion } from '../data/comunasChile';
 import {
@@ -287,6 +288,13 @@ function CardFields({
 }
 
 export default function Checkout() {
+  const { items: activities } = useActivityCart();
+  const { route } = useStorefrontTemplate();
+  if (activities.length) return <section className="max-w-xl mx-auto p-6 space-y-4" role="status"><h1>Actividades en modo prueba</h1><p>El pago todavía no está habilitado para servicios y talleres. Elimina las actividades de prueba para continuar con una compra de productos físicos.</p><Link to={route('carrito')}>Volver al carrito</Link></section>;
+  return <ProductCheckout />;
+}
+
+function ProductCheckout() {
   const {
     items,
     subtotal,
@@ -297,6 +305,7 @@ export default function Checkout() {
     setShippingMethod,
   } = useCart();
 
+  const { items: activityPreviewItems } = useActivityCart();
   const submitting = useRef(false);
   const checkoutAttempt = useRef({signature: '', key: ''});
   const consentRequested = useRef('');
@@ -843,6 +852,7 @@ export default function Checkout() {
    * ==========================================================
    */
   const handleConfirm = async () => {
+    if (activityPreviewItems.length) return;
     if (submitting.current || loading || !items.length) return;
     if (promoLoading || (checkoutPromoCode && !currentPromotion)) {
       setPromoError('Vuelve a aplicar o quita el código para confirmar el total actualizado.');

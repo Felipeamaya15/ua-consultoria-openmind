@@ -5,6 +5,7 @@ import { cartService } from '../services/cartService';
 import { useStoreIdentity } from './StoreIdentityContext';
 import { guestCartKey, readGuestCart, saveGuestCart } from '../services/guestCartStorage';
 import { validatePromotion } from '../services/promotionService';
+import { useActivityCart } from './activityCart';
 
 export interface CartItem extends BaseCartItem {
   id_item_carrito?: number;
@@ -247,7 +248,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const count = items.reduce((sum, i) => sum + i.quantity, 0);
+  const { items: activityPreviewItems } = useActivityCart();
+  const count = items.reduce((sum, i) => sum + i.quantity, 0) + activityPreviewItems.reduce((sum,i)=>sum+i.quantity,0);
   const subtotal = items.reduce((sum, i) => sum + i.price * i.quantity, 0);
   const discount = promoCode ? Math.min(subtotal, promoDiscount) : 0;
 

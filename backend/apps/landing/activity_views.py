@@ -100,6 +100,15 @@ class ActivitySubmissionView(NoStoreActivityView):
         return success_response(data={'recibida': True}, mensaje='Recibimos tus datos. Si ya existía una solicitud, se conserva sin duplicarla. La tienda gestionará tu solicitud; esto no acredita pagos.', status=202)
 
 
+class PaidActivityAvailabilityView(NoStoreActivityView):
+    permission_classes = [AllowAny]
+
+    def get(self, request, pk):
+        from apps.landing.paid_availability import availability
+        store = resolver_tienda(request)
+        return success_response(data=availability(store, pk))
+
+
 class ActivityEnrollmentView(ActivitySubmissionView):
     tipo = 'inscripcion'
 

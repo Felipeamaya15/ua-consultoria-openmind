@@ -4,11 +4,19 @@ import { Link, useNavigate } from 'react-router-dom';
 
 import { StockFeedback } from '../components/store/StockFeedback';
 import { useCart } from '../context/CartContext';
+import { useActivityCart } from '../context/activityCart';
+import { ActivityCartPreview } from '../components/store/ActivityCartPreview';
 import { formatPrice } from '../data/mockData';
 import { Button, EmptyState, Icon } from '../components/ui';
 import { useStorefrontTemplate } from '../hooks/useStorefrontTemplate';
 
 export default function Cart() {
+  const { items } = useCart();
+  const { items: activities } = useActivityCart();
+  return <><ActivityCartPreview />{(items.length > 0 || activities.length === 0) && <ProductCart />}</>;
+}
+
+function ProductCart() {
   const {
     items,
     removeItem,
@@ -20,9 +28,9 @@ export default function Cart() {
     total,
     applyPromo,
     promoNotice,
-    count,
     loading,
   } = useCart();
+  const count = items.reduce((sum,item)=>sum+item.quantity,0);
   const shippingLabel = shipping === null ? 'Se calcula en checkout' : shipping === 0 ? 'Gratis' : formatPrice(shipping);
 
   const { route, isMinimal, isVisual, isCatalog } = useStorefrontTemplate();

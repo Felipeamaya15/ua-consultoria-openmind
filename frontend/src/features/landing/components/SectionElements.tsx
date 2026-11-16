@@ -13,6 +13,8 @@ import { ViewportVideo } from './ViewportVideo';
 import type { ImagenBloqueLanding } from '../types/landing.types';
 import { MEDIA_LIBRARY_CHANGED } from '../../marketing/services/mediaLibraryService';
 import './section-elements.css';
+import { ActivityPurchasePreview } from './ActivityPurchasePreview';
+import { activityCartPreviewEnabled } from '../../storefront/context/activityCart';
 
 const PublishedMedia = createContext<Record<string, SectionResource>>({});
 export function PublishedSectionMedia({ children }: { children: ReactNode }) {
@@ -183,5 +185,5 @@ export function SectionElements({ elements, ownerResources, activity, sectionId 
       if (element.url && !inspectMediaUrl(kind, element.url).error) content = <MediaPreview resource={{ id: element.id, titulo: tipo === 'youtube' ? 'Video de YouTube' : 'Publicación social', descripcion: '', tipo: kind, url: element.url, activo: true, archivo: null, creado: '', actualizado: '' }} initiallyOpen={element.vista_abierta ?? false} />;
     }
     return content ? <div key={element.id} className={`section-element section-element--${tipo}`} data-section-element={element.id}>{content}</div> : null;
-  })}</div>;
+  })}{activity?.venta && activity.estado==='activa' && sectionId && !ownerResources && activityCartPreviewEnabled() && <ActivityPurchasePreview key={sectionId} sectionId={sectionId}/>}</div>;
 }

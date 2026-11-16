@@ -144,6 +144,32 @@ class SolicitudActividad(models.Model):
         indexes = [models.Index(fields=['tienda', 'tipo', 'seccion_id', 'estado'], name='actividad_gestion_tienda')]
 
 
+class ReservaActividadPagada(models.Model):
+    """Reserva interna. Nunca confirma un pago por sí sola."""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    tienda = models.ForeignKey('core.Tienda', on_delete=models.PROTECT)
+    seccion_id = models.UUIDField()
+    # Identificador de intento de checkout, NO una autorización del cliente.
+    clave_checkout = models.UUIDField()
+    cantidad = models.PositiveIntegerField()
+    precio_unitario = models.PositiveBigIntegerField()
+    inicio = models.DateTimeField()
+    cierre = models.DateTimeField()
+    condiciones = models.JSONField(default=dict)
+    estado = models.CharField(max_length=16, default='reservada', choices=[(v,v) for v in (
+        'reservada','en_pago','confirmada','liberada','revision_pago')])
+    vence = models.DateTimeField()
+    creado = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['tienda','seccion_id','clave_checkout'], name='reserva_act_checkout_unica'),
+            models.CheckConstraint(condition=models.Q(cantidad__gte=1, precio_unitario__gte=1), name='reserva_act_importe_cantidad'),
+            models.CheckConstraint(condition=models.Q(estado__in=['reservada','en_pago','confirmada','liberada','revision_pago']), name='reserva_act_estado_valido'),
+        ]
+        indexes = [models.Index(fields=['tienda','seccion_id','estado','vence'], name='reserva_act_disponibilidad')]
+
+
 class RespuestaActividad(models.Model):
     ESTADOS = [(value, value) for value in ('borrador', 'enviando', 'aceptada', 'fallida', 'indeterminada')]
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
