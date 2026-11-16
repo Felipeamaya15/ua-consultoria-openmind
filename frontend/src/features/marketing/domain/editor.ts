@@ -9,6 +9,17 @@ export const TEMPLATES = [
   { id: 'minimal', name: 'Esencial', detail: 'Composición limpia con ficha primero' },
 ] as const;
 export type Template = typeof TEMPLATES[number]['id'];
+
+export const ART_DIRECTIONS = [
+  { id: 'original', label: 'Original', detail: 'Conserva la composición de tu plantilla' },
+  { id: 'editorial', label: 'Editorial', detail: 'Tipografía expresiva y líneas finas' },
+  { id: 'boutique', label: 'Boutique', detail: 'Marcos suaves y acabado elegante' },
+  { id: 'impact', label: 'Impacto', detail: 'Jerarquía fuerte y acentos gráficos' },
+  { id: 'organic', label: 'Orgánico', detail: 'Formas redondeadas e inspiración natural' },
+] as const;
+export type ArtDirection = typeof ART_DIRECTIONS[number]['id'];
+export type BackgroundEffect = 'plain' | 'gradient' | 'glow' | 'pattern';
+export type GalleryMode = 'auto' | 'single' | 'collage';
 export type EditorialBlock = 'heading' | 'subtitle' | 'cta';
 export type TextBlock = EditorialBlock | 'title' | 'price' | 'variant' | 'brand' | 'description';
 // Reutiliza el catálogo de la tienda, conservando los tres alias de Marketing 1/2.
@@ -36,6 +47,9 @@ export const defaultAppearance = (): Appearance => ({ radius: null, borderStyle:
 export interface TextStyle { size: number; bold: boolean; italic: boolean; align: 'inherit' | 'left' | 'center' | 'right'; color: string | null }
 export interface DesignState {
   template: Template;
+  artDirection?: ArtDirection;
+  backgroundEffect?: BackgroundEffect;
+  galleryMode?: GalleryMode;
   paletteId?:string|null;
   heading: string; subtitle: string; cta: string; showSubtitle: boolean;
   showDescription: boolean;
@@ -50,7 +64,7 @@ export interface DesignState {
 export const TEXT_LIMITS = { heading: 48, subtitle: 72, cta: 48 } as const;
 const style = (bold = false): TextStyle => ({ size: 100, bold, italic: false, align: 'left', color: null });
 export function defaultDesign(template: Template = 'photo'): DesignState {
-  return { template, paletteId:null, heading: '', subtitle: '', cta: 'Disponible en nuestra tienda', showSubtitle: false, showDescription: false, font: 'sans', headingFont: null, appearance: defaultAppearance(),
+  return { template, artDirection: 'original', backgroundEffect: 'plain', galleryMode: 'auto', paletteId:null, heading: '', subtitle: '', cta: 'Disponible en nuestra tienda', showSubtitle: false, showDescription: false, font: 'sans', headingFont: null, appearance: defaultAppearance(),
     textStyles: { heading: style(true), subtitle: style(), cta: style(), title: { ...style(true), align: 'inherit' }, price: { ...style(true), align: 'inherit' }, variant: { ...style(), align: 'inherit' }, brand: { ...style(true), align: 'inherit' }, description: { ...style(), align: 'inherit' } },
     colors: { background: null, text: null, accent: null, label: null }, showLogo: true, imageIndex: 0,
     fit: 'contain', position: 'center', zoom: 100, spacing: 'comfortable', alignment: 'left', mediaSide: template === 'minimal' ? 'end' : 'start' };
@@ -85,7 +99,10 @@ export function normalizeDesign(value: DesignState): DesignState {
     buttonShape: choice(raw.buttonShape, ['original', 'square', 'rounded', 'pill'], 'original'), buttonWidth: optional('buttonWidth', 100, 20),
     buttonBorderStyle: choice(raw.buttonBorderStyle, ['solid', 'dashed'], 'solid'), buttonBorderWidth: bound(raw.buttonBorderWidth, 0, 8, 1), buttonBorderColor: hex(raw.buttonBorderColor),
   };
-  return { paletteId:typeof value.paletteId==='string'&&/^[a-z0-9-]{1,80}$/i.test(value.paletteId)?value.paletteId:null, template: choice(value.template, ['photo', 'feature', 'minimal'], 'photo'), heading: text('heading'), subtitle: text('subtitle'), cta: text('cta'),
+  return { artDirection: choice(value.artDirection, ART_DIRECTIONS.map(item => item.id), 'original'),
+    backgroundEffect: choice<BackgroundEffect>(value.backgroundEffect, ['plain', 'gradient', 'glow', 'pattern'], 'plain'),
+    galleryMode: choice<GalleryMode>(value.galleryMode, ['auto', 'single', 'collage'], 'auto'),
+    paletteId:typeof value.paletteId==='string'&&/^[a-z0-9-]{1,80}$/i.test(value.paletteId)?value.paletteId:null, template: choice(value.template, ['photo', 'feature', 'minimal'], 'photo'), heading: text('heading'), subtitle: text('subtitle'), cta: text('cta'),
     showSubtitle: value.showSubtitle === true, showDescription: value.showDescription === true, font: choice(value.font, Object.keys(FONT_FAMILIES) as (keyof typeof FONT_FAMILIES)[], 'sans'),
     headingFont: value.headingFont && Object.prototype.hasOwnProperty.call(FONT_FAMILIES, value.headingFont) ? value.headingFont : null, appearance, textStyles,
     colors: { background: hex(value.colors?.background), text: hex(value.colors?.text), accent: hex(value.colors?.accent), label: hex(value.colors?.label) },

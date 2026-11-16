@@ -1,7 +1,7 @@
 import type { PaletteColors } from '../../../shared/palettes';
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { formatMarketingMoney } from '../domain/content';
-import { defaultDesign, designPalette, editorialProblem, FONT_FAMILIES, normalizeDesign, safeTextColor, type EditorialBlock, type TextBlock } from '../domain/editor';
+import { defaultDesign, designPalette, editorialProblem, FONT_FAMILIES, normalizeDesign, safeTextColor, type EditorialBlock, type TextBlock, type GalleryMode } from '../domain/editor';
 import { PUBLICATION_FORMATS, type PublicationContent, type PublicationDesign, type StoreBrand } from '../domain/types';
 
 
@@ -55,10 +55,10 @@ function ActivityFactIcon({label}: {label: string}) {
 }
 
 /** Render compartido por la vista previa y su captura de exportación; no consulta ni guarda. */
-export function PublicationPreview({ content, brand, design, paletteColors, images = [] }: { paletteColors?:PaletteColors; content: PublicationContent; brand: StoreBrand; design: PublicationDesign; images?: readonly string[] }) {
+export function PublicationPreview({ content, brand, design, paletteColors, images = [], onGalleryMode }: { paletteColors?:PaletteColors; content: PublicationContent; brand: StoreBrand; design: PublicationDesign; images?: readonly string[]; onGalleryMode?: (mode: GalleryMode) => void }) {
   const [failedImage, setFailedImage] = useState<string | null>(null);
   const [failedGalleryImages, setFailedGalleryImages] = useState<string[]>([]);
-  const [galleryMode, setGalleryMode] = useState<'single' | 'collage'>('collage');
+
   const [failedLogo, setFailedLogo] = useState<string | null>(null);
   const [fit, setFit] = useState({ scale: 1, blocked: false });
   const artRef = useRef<HTMLElement>(null);
@@ -68,8 +68,9 @@ export function PublicationPreview({ content, brand, design, paletteColors, imag
   const image = images[editor.imageIndex] || images[0] || content.image;
   const galleryImages = [...new Set([image, ...images, content.image].filter((src): src is string => !!src))]
     .filter(src => !failedGalleryImages.includes(src));
-  const hasImage = isActivity ? galleryImages.length > 0 : !!image && failedImage !== image;
-  const collage = isActivity && galleryMode === 'collage' && galleryImages.length > 1;
+  const galleryMode = editor.galleryMode === 'auto' || !editor.galleryMode ? (isActivity ? 'collage' : 'single') : editor.galleryMode;
+  const collage = galleryMode === 'collage' && galleryImages.length > 1;
+  const hasImage = isActivity || collage ? galleryImages.length > 0 : !!image && failedImage !== image;
   const featuredImages = (collage ? galleryImages.slice(0, 3) : galleryImages.slice(0, 1));
   const hasLogo = editor.showLogo && !!brand.logo && failedLogo !== brand.logo;
   const palette = designPalette(brand.palette, editor, paletteColors);
@@ -116,7 +117,14 @@ export function PublicationPreview({ content, brand, design, paletteColors, imag
   const appearance = editor.appearance;
   const proportional = (value: number | null) => value === null ? undefined : `${value}cqw`;
   const shadows = { none: 'none', soft: '0 .3cqw 1cqw #00000026', medium: '0 1cqw 2cqw #00000033', strong: '0 1.5cqw 3cqw #00000055' };
+  const backgrounds = {
+    plain: 'none',
+    gradient: 'linear-gradient(145deg, #ffffff12 0%, transparent 52%, #0000000c 100%)',
+    glow: 'radial-gradient(ellipse at 10% 4%, #ffffff1c 0%, transparent 64%)',
+    pattern: 'repeating-linear-gradient(135deg, transparent 0px, transparent 15px, #ffffff09 15px, #ffffff09 16px)',
+  };
   const artStyle: CSSProperties = {
+    ...(editor.backgroundEffect && editor.backgroundEffect !== 'plain' ? { backgroundImage: backgrounds[editor.backgroundEffect] } : {}),
     borderRadius: proportional(appearance.radius), padding: proportional(appearance.padding), gap: proportional(appearance.gap),
     ...(appearance.borderStyle !== 'original' ? { border: `${appearance.borderWidth}px ${appearance.borderStyle} ${appearance.borderColor || palette.text}` } : {}),
     ...(appearance.shadow !== 'original' ? { boxShadow: shadows[appearance.shadow] } : {}),
@@ -192,14 +200,14 @@ export function PublicationPreview({ content, brand, design, paletteColors, imag
   } as CSSProperties;
   return <figure className="marketing-preview" aria-label="Vista previa de la publicación">
     <div className="marketing-preview-label"><span>Vista previa</span><span>{format.label} · {format.ratio}</span></div>
-    {isActivity && galleryImages.length > 1 && <div className="marketing-activity-view-switch" role="group" aria-label="Cómo mostrar las fotografías">
-      <button type="button" aria-pressed={galleryMode === 'single'} onClick={() => setGalleryMode('single')}>Una fotografía</button>
-      <button type="button" aria-pressed={galleryMode === 'collage'} onClick={() => setGalleryMode('collage')}>Collage ({Math.min(3, galleryImages.length)})</button>
+    {onGalleryMode && galleryImages.length > 1 && <div className="marketing-activity-view-switch" role="group" aria-label="Cómo mostrar las fotografías">
+      <button type="button" aria-pressed={galleryMode === 'single'} onClick={() => onGalleryMode?.('single')}>Una fotografía</button>
+      <button type="button" aria-pressed={galleryMode === 'collage'} onClick={() => onGalleryMode?.('collage')}>Collage ({Math.min(3, galleryImages.length)})</button>
     </div>}
     <div className="marketing-canvas" data-format={design.format} style={variables}>
       <article ref={artRef} className="marketing-art is-editable" data-format={design.format} data-image={hasImage ? 'present' : 'none'} data-layout={design.layout}
         style={artStyle}
-        data-editorial-type={isActivity ? 'activity' : 'regular'} data-template={editor.template} data-spacing={editor.spacing} data-align={editor.alignment} data-media-side={editor.mediaSide} data-blocked={fit.blocked}
+        data-editorial-type={isActivity ? 'activity' : 'regular'} data-art-direction={editor.artDirection || 'original'} data-template={editor.template} data-spacing={editor.spacing} data-align={editor.alignment} data-media-side={editor.mediaSide} data-blocked={fit.blocked}
         data-resource-error={!!image && !hasImage || editor.showLogo && !!brand.logo && !hasLogo}
         aria-label={`Publicación de ${content.productName} para ${brand.name}`}>
         <div className="marketing-art-brand">
@@ -251,7 +259,9 @@ export function PublicationPreview({ content, brand, design, paletteColors, imag
           </div>
         ) : (
         <div className="marketing-art-composition" style={compositionStyle}>
-          {hasImage && <div className="marketing-art-media" style={{ order: editor.mediaSide === 'start' ? 0 : 1, borderRadius: proportional(appearance.imageRadius) }}><img key={image} src={image!} alt={content.productName} referrerPolicy="no-referrer" style={{ objectFit: editor.fit, objectPosition: `${appearance.imageX ?? 50}% ${appearance.imageY ?? (editor.position === 'top' ? 0 : editor.position === 'bottom' ? 100 : 50)}%`, padding: proportional(appearance.imagePadding), transform: `scale(${editor.zoom / 100})` }} onError={() => setFailedImage(image)} /></div>}
+          {hasImage && <div className={`marketing-art-media${collage ? ` marketing-product-collage${featuredImages.length === 2 ? ' is-two' : ''}` : ''}`} style={{ order: editor.mediaSide === 'start' ? 0 : 1, borderRadius: proportional(appearance.imageRadius) }}>
+            {collage ? featuredImages.map((src, index) => <div className="marketing-product-photo" key={src}><img src={src} alt={`${content.productName} · imagen ${index + 1}`} referrerPolicy="no-referrer" style={activityPhotoStyle} onError={() => setFailedGalleryImages(previous => previous.includes(src) ? previous : [...previous, src])}/></div>) : <img key={image} src={image!} alt={content.productName} referrerPolicy="no-referrer" style={activityPhotoStyle} onError={() => setFailedImage(image)} />}
+          </div>}
           <div className="marketing-art-copy" style={copyStyle}>
             {content.category && <p className="marketing-art-category">{content.category}</p>}
             {editorial('heading') && <p className="marketing-art-heading" style={textStyle('heading')}>{editorial('heading')}</p>}

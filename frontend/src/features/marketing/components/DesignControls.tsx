@@ -3,12 +3,12 @@ import { resolveVisualConfig } from '../../storefront/visual/resolveVisualConfig
 import type { PaletteColors } from '../../../shared/palettes';
 import { useEffect, useId, useState } from 'react';
 import { Button, Input, Select } from '../../admin/components/ui';
-import { FONT_FAMILIES, TEMPLATES, TEXT_LIMITS, defaultDesign, designPalette, editorialProblem, safeTextColor, type DesignState, type TextBlock, type EditorialBlock } from '../domain/editor';
+import { ART_DIRECTIONS, FONT_FAMILIES, TEMPLATES, TEXT_LIMITS, defaultDesign, designPalette, editorialProblem, safeTextColor, type DesignState, type TextBlock, type EditorialBlock } from '../domain/editor';
 import { AppearanceControls } from './AppearanceControls';
 import type { StoreBrand } from '../domain/types';
 
 interface Props { paletteColors?:PaletteColors; value: DesignState; brand: StoreBrand; images: readonly string[]; hasDescription: boolean; onChange: (value: DesignState) => void; onReset: () => void; onUndo: () => void; onRedo: () => void; canUndo: boolean; canRedo: boolean }
-const sections = ['Plantilla', 'Textos', 'Colores', 'Imagen y logo', 'Composición'] as const;
+const sections = ['Plantilla', 'Estilo gráfico', 'Textos', 'Colores', 'Imagen y logo', 'Composición'] as const;
 function Toggle({ label, checked, onChange }: { label: string; checked: boolean; onChange: (value: boolean) => void }) {
   return <label className="marketing-editor-toggle"><input type="checkbox" checked={checked} onChange={e => onChange(e.target.checked)} /><span>{label}</span></label>;
 }
@@ -40,6 +40,16 @@ export function DesignControls({ value: d, brand, paletteColors, images, hasDesc
         <input type="radio" name={`${id}-template`} checked={d.template === template.id} onChange={() => change({ template: template.id })} />
         <span className={`marketing-template-mini is-${template.id}`} aria-hidden="true"><i /><b /><em /></span><span><strong>{template.name}</strong><small>{template.detail}</small></span>
       </label>)}<p className="marketing-hint">Cada plantilla conserva sus propios textos, colores, ajustes y deshacer/rehacer durante esta sesión. Cambiar de producto inicia diseños nuevos.</p></fieldset>}
+      {section === 'Estilo gráfico' && <>
+        <fieldset className="marketing-style-grid"><legend>Dirección artística</legend>
+          {ART_DIRECTIONS.map(style => <button key={style.id} type="button" className="marketing-style-choice" aria-pressed={(d.artDirection || 'original') === style.id} onClick={() => change({ artDirection: style.id })}>
+            <span className="marketing-style-swatch" data-art-direction={style.id} aria-hidden="true"><i/><b/><em/></span>
+            <strong>{style.label}</strong><small>{style.detail}</small>
+          </button>)}
+        </fieldset>
+        <Select label="Acabado del fondo" value={d.backgroundEffect || 'plain'} onChange={e => change({ backgroundEffect: e.target.value as DesignState['backgroundEffect'] })} options={[{value:'plain',label:'Color liso'}, {value:'gradient',label:'Degradado suave'}, {value:'glow',label:'Luz radial'}, {value:'pattern',label:'Trama sutil'}]} />
+        <p className="marketing-hint">Combina estos estilos con tus colores, imágenes, textos y composición. Los datos comerciales no cambian.</p>
+      </>}
       {section === 'Textos' && <>
         <p className="marketing-hint">El nombre real del producto siempre aparece. El encabezado es un título editorial adicional; evita afirmaciones comerciales.</p>
         <Select label="Bloque de texto" value={block} onChange={e => setBlock(e.target.value as TextBlock)} options={[{ value: 'heading', label: 'Encabezado adicional' }, { value: 'subtitle', label: 'Subtítulo' }, { value: 'cta', label: 'Llamada a la acción' }, { value: 'title', label: 'Nombre del producto' }, { value: 'price', label: 'Precio del producto' }, { value: 'variant', label: 'Variante del producto' }, { value: 'brand', label: 'Nombre de la tienda' }, { value: 'description', label: 'Descripción del producto' }]} />
@@ -73,6 +83,7 @@ export function DesignControls({ value: d, brand, paletteColors, images, hasDesc
         <Toggle label="Mostrar logo de la tienda" checked={d.showLogo} onChange={showLogo => change({ showLogo })} />
         {!brand.logo && <p className="marketing-hint">Tu tienda no tiene logo disponible. Su nombre permanece visible.</p>}
         {images.length ? <>
+          {images.length > 1 && <Select label="Composición de fotografías" value={d.galleryMode || 'auto'} onChange={e => change({ galleryMode: e.target.value as DesignState['galleryMode'] })} options={[{value:'auto',label:'Original de la publicación'}, {value:'single',label:'Una fotografía'}, {value:'collage',label:'Collage de hasta tres fotografías'}]} />}
           <Select label="Imagen real del producto" value={String(Math.min(d.imageIndex, images.length - 1))} options={images.map((_, i) => ({ value: String(i), label: i ? `Imagen ${i + 1}` : 'Imagen principal' }))} onChange={e => change({ imageIndex: Number(e.target.value) })} />
           <Select label="Encuadre de imagen" value={d.fit} options={[{ value: 'contain', label: 'Completa · sin recortar' }, { value: 'cover', label: 'Llenar · puede recortar bordes' }]} onChange={e => change({ fit: e.target.value as DesignState['fit'] })} />
           <Select label="Posición de imagen" value={d.appearance.imageY === null ? d.position : 'custom'} options={[...(d.appearance.imageY === null ? [] : [{ value: 'custom', label: 'Personalizada en las medidas inferiores' }]), { value: 'top', label: 'Arriba' }, { value: 'center', label: 'Centro' }, { value: 'bottom', label: 'Abajo' }]} onChange={e => { if (e.target.value !== 'custom') change({ position: e.target.value as DesignState['position'], appearance: { ...d.appearance, imageY: null } }); }} />

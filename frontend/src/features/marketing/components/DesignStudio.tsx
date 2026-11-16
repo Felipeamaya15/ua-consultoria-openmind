@@ -14,7 +14,7 @@ export function DesignStudio({ sourceData, brandData, design, images, notices, e
   const paletteColors=[...(library?.sistema??[]),...(library?.compatibles??[]),...(library?.propias??[])].find(palette=>palette.id===history.present.paletteId)?.colores;
   useEffect(()=>{if(library&&history.present.paletteId&&![...library.sistema,...(library.compatibles??[]),...library.propias].some(palette=>palette.id===history.present.paletteId))dispatch({type:'change',next:{...history.present,paletteId:null}});},[library,history.present.paletteId]);
   return <div ref={node => { if (node) node.inert = busy; }} className="marketing-workspace marketing-studio">{selection}
-    <div className="marketing-preview-panel" ref={previewRef}>{notices}{sourceData && brandData ? <PublicationPreview paletteColors={paletteColors} content={sourceData} brand={brandData} design={{ ...design, editor: history.present }} images={images} /> : empty}</div>
+    <div className="marketing-preview-panel" ref={previewRef}>{notices}{sourceData && brandData ? <PublicationPreview paletteColors={paletteColors} content={sourceData} brand={brandData} design={{ ...design, editor: history.present }} images={images} onGalleryMode={galleryMode => dispatch({ type: 'change', next: { ...history.present, galleryMode } })} /> : empty}</div>
     {sourceData && brandData && <DesignControls paletteColors={paletteColors} key={sourceKey} value={history.present} brand={brandData} images={images} hasDescription={!!sourceData.description?.trim()} onChange={next => dispatch({ type: 'change', next })}
       onReset={() => dispatch({ type: 'reset' })} onUndo={() => dispatch({ type: 'undo' })} onRedo={() => dispatch({ type: 'redo' })} canUndo={!!history.past.length} canRedo={!!history.future.length} />
     }

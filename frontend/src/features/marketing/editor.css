@@ -415,3 +415,38 @@
   .marketing-publication-actions .marketing-primary-actions > button { flex:1 1 100%; }
   .mk-publication-secondary-actions button { flex:1 1 140px; }
 }
+
+
+/* OPENMIND_MARKETING_ART_DIRECTION_V1 — same DOM for preview and image export. */
+.marketing-style-grid{grid-column:1/-1;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,130px),1fr));gap:10px;min-width:0;border:0;padding:0;margin:0}
+.marketing-style-grid legend{font-weight:700;font-size:13px;margin-bottom:10px}
+.marketing-style-choice{display:flex;flex-direction:column;align-items:stretch;gap:6px;text-align:left;padding:9px;border:1px solid #d5dce5;border-radius:10px;background:white;color:#172033;min-width:0;cursor:pointer}
+.marketing-style-choice[aria-pressed=true]{border-color:var(--primary,#5145dc);box-shadow:inset 0 0 0 1px var(--primary,#5145dc)}
+.marketing-style-choice strong{font-size:12px}.marketing-style-choice small{font-size:11px;line-height:1.4;color:#52617a}
+.marketing-style-swatch{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 8px;gap:6px;min-height:64px;padding:9px;background:#ede4d8;border-radius:6px}
+.marketing-style-swatch i{grid-row:1/3;background:linear-gradient(140deg,#b1c3ab,#527160);border-radius:3px}.marketing-style-swatch b{align-self:end;background:#344a40;height:12px;width:88%}.marketing-style-swatch em{background:#9b8066;width:70%;height:5px}
+.marketing-style-swatch[data-art-direction=editorial]{background:#f8f4e9;border-top:3px solid #4e4336}.marketing-style-swatch[data-art-direction=editorial] b{height:2px;box-shadow:0 -7px #4e4336}
+.marketing-style-swatch[data-art-direction=boutique]{background:#f3dfe1}.marketing-style-swatch[data-art-direction=boutique] i{border-radius:22px 22px 4px 4px;background:linear-gradient(150deg,#aa756b,#e3b796)}.marketing-style-swatch[data-art-direction=boutique] b{border-radius:8px;background:#754652}
+.marketing-style-swatch[data-art-direction=impact]{background:#fadd7d;border-left:8px solid #293536}.marketing-style-swatch[data-art-direction=impact] i{background:#e17945}.marketing-style-swatch[data-art-direction=impact] b{height:17px;background:#293536}
+.marketing-style-swatch[data-art-direction=organic]{background:#e3eddd}.marketing-style-swatch[data-art-direction=organic] i{border-radius:50% 50% 10% 10%;background:#7e9d6d}.marketing-style-swatch[data-art-direction=organic] b{background:#456948;border-radius:9px}
+/* Explicit properties chosen by the entrepreneur remain inline and take priority. */
+.marketing-art.is-editable[data-art-direction=editorial] .marketing-art-brand{border-bottom:1px solid currentColor;padding-bottom:1cqw}
+.marketing-art.is-editable[data-art-direction=editorial] :is(.marketing-art-title,.marketing-activity-title,.marketing-art-heading){font-family:Georgia,serif;letter-spacing:-.045em;line-height:1.12}
+.marketing-art.is-editable[data-art-direction=editorial] .marketing-art-copy{border:0;border-top:1px solid currentColor;padding-top:1.8cqw}
+.marketing-art.is-editable[data-art-direction=editorial] :is(.marketing-art-media,.marketing-activity-gallery){border-radius:0}
+.marketing-art.is-editable[data-art-direction=boutique] :is(.marketing-art-media,.marketing-activity-gallery){border-radius:5cqw 5cqw 1.3cqw 1.3cqw;box-shadow:0 .6cqw 1.6cqw #00000024}
+.marketing-art.is-editable[data-art-direction=boutique] :is(.marketing-art-title,.marketing-activity-title){font-family:Georgia,serif;letter-spacing:-.035em}
+.marketing-art.is-editable[data-art-direction=boutique] :is(.marketing-art-copy,.marketing-activity-head,.marketing-activity-footer){border-radius:2cqw}
+.marketing-art.is-editable[data-art-direction=boutique] :is(.marketing-art-cta,.marketing-activity-action,.marketing-art-offer){border-radius:99px}
+.marketing-art.is-editable[data-art-direction=impact] .marketing-art-brand{border-bottom:1cqw solid var(--mk-secondary);padding-bottom:.6cqw}
+.marketing-art.is-editable[data-art-direction=impact] :is(.marketing-art-title,.marketing-activity-title){letter-spacing:-.055em;line-height:1.04}
+.marketing-art.is-editable[data-art-direction=impact] .marketing-art-copy{border:0;border-left:1.1cqw solid var(--mk-secondary);padding-left:2cqw}
+.marketing-art.is-editable[data-art-direction=impact] :is(.marketing-art-cta,.marketing-activity-action,.marketing-art-offer,.marketing-art-media,.marketing-activity-gallery){border-radius:0}
+.marketing-art.is-editable[data-art-direction=organic] :is(.marketing-art-media,.marketing-activity-gallery){border-radius:16cqw 16cqw 2cqw 2cqw}
+.marketing-art.is-editable[data-art-direction=organic] :is(.marketing-art-cta,.marketing-activity-action,.marketing-art-offer){border-radius:99px}
+.marketing-art.is-editable[data-art-direction=organic] .marketing-art-brand{border-bottom:1px dashed currentColor;padding-bottom:.8cqw}
+.marketing-art.is-editable .marketing-art-media.marketing-product-collage{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);grid-template-rows:minmax(0,1fr) minmax(0,1fr);gap:.8cqw;min-width:0;min-height:0;overflow:hidden}
+.marketing-art.is-editable .marketing-product-collage:not(.is-two)>.marketing-product-photo:first-child{grid-row:1/3}
+.marketing-art.is-editable .marketing-product-collage.is-two{grid-template-rows:minmax(0,1fr)}
+.marketing-art.is-editable .marketing-product-photo{min-width:0;min-height:0;overflow:hidden}
+.marketing-art.is-editable .marketing-product-photo img{display:block;width:100%;height:100%;max-width:none;max-height:none;box-sizing:border-box;transform-origin:center}
