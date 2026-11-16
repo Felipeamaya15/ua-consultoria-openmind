@@ -13,7 +13,15 @@ import type { BloqueLanding } from '../../landing/types/landing.types';
 import { ActivitySettings } from './ActivitySettings';
 import './flexible-sections.css';
 
-export function FlexibleSectionEditor({ section, onChange }: { section: BloqueLanding; onChange: (section: BloqueLanding) => void }) {
+export function FlexibleSectionEditor({
+  section,
+  onChange,
+  fullScreen = false,
+}: {
+  section: BloqueLanding;
+  onChange: (section: BloqueLanding) => void;
+  fullScreen?: boolean;
+}) {
   const elements = section.componentes || [];
   // OPENMIND_PERSIST_PREVIEW_V1
   const [kind, setKind] = useState<ElementKind>('titulo');
@@ -75,16 +83,24 @@ export function FlexibleSectionEditor({ section, onChange }: { section: BloqueLa
     if (element.tipo === 'ubicacion') return <><Input label="Lugar o plataforma" value={element.texto || ''} maxLength={5000} onChange={event => change({ texto: event.target.value })} /><Input label="Enlace público informativo (opcional)" type="url" value={element.url || ''} onChange={event => { const next = { ...element }; if (event.target.value) next.url = event.target.value; else delete next.url; set(elements.map(old => old.id === element.id ? next : old)); }} /><p className="flexible-help">No publiques claves o enlaces privados de una reunión.</p></>;
     return <p>Separador visual entre contenidos.</p>;
   }
-  return <div className="flexible-section-editor">
-    <ActivitySettings section={section} onChange={onChange} />
-    <Input label="Nombre interno de la sección" value={section.nombre_interno || ''} maxLength={100} onChange={event => onChange({ ...section, nombre_interno: event.target.value })} />
-    <p className="flexible-help">El nombre interno es para organizarte. Los títulos públicos se agregan como bloques. Guarda los cambios de Página principal para publicar; puedes mantener la sección oculta.</p>
-    <div className="flexible-add"><Select label="Bloque que quieres agregar" value={kind} options={Object.entries(SECTION_ELEMENTS).map(([value, label]) => ({ value, label }))} onChange={event => setKind(event.target.value as ElementKind)} /><Button type="button" disabled={elements.length >= 30} onClick={() => set([...elements, newSectionElement(kind)])}>Agregar bloque</Button></div>
-    <p>{elements.length} de 30 bloques</p>
-    {loading && <LoadingState>Cargando recursos de biblioteca…</LoadingState>}{error && <ErrorState onRetry={() => setAttempt(old => old + 1)}>{humanizeAdminError(error)}</ErrorState>}
-    <ol className="flexible-elements-list">{elements.map((element, index) => <li key={element.id}><AdminCard><div className="flexible-element-heading"><h3>{index + 1}. {SECTION_ELEMENTS[element.tipo]}</h3><Toggle checked={element.visible} ariaLabel={`Mostrar bloque ${index + 1}`} onChange={visible => edit(element.id, { visible })} /></div><div className="flexible-element-fields">{fields(element)}</div><div className="flexible-element-actions"><Button type="button" variant="ghost" disabled={index === 0} aria-label={`Subir bloque ${index + 1}`} onClick={() => set(moveElement(elements, index, -1))}>↑ Subir</Button><Button type="button" variant="ghost" disabled={index === elements.length - 1} aria-label={`Bajar bloque ${index + 1}`} onClick={() => set(moveElement(elements, index, 1))}>↓ Bajar</Button><Button type="button" variant="ghost" aria-label={`Eliminar bloque ${index + 1}`} onClick={() => set(elements.filter(old => old.id !== element.id))}>Eliminar bloque</Button></div></AdminCard></li>)}</ol>
-    <Button type="button" variant="outline" onClick={togglePreview}>{preview ? 'Ocultar vista previa' : 'Ver vista previa'}</Button>
-    {preview && <div className="flexible-section-preview" aria-label="Vista previa de sección"><SectionElements activity={section.actividad} elements={elements} ownerResources={resourceMap} /></div>}
+  return <div className={`flexible-section-editor${fullScreen ? ' is-fullscreen' : ''}${preview ? ' has-preview' : ''}`}>
+    <div className="flexible-config-pane">
+      <ActivitySettings section={section} onChange={onChange} />
+      <AdminCard className="flexible-meta-card">
+        <Input label="Nombre interno de la sección" value={section.nombre_interno || ''} maxLength={100} onChange={event => onChange({ ...section, nombre_interno: event.target.value })} />
+        <p className="flexible-help">El nombre interno es para organizarte. Los títulos públicos se agregan como bloques. Guarda los cambios de Página principal para publicar; puedes mantener la sección oculta.</p>
+        <div className="flexible-preview-toggle">
+          <Button type="button" variant="outline" onClick={togglePreview}>{preview ? 'Ocultar vista previa' : 'Ver vista previa'}</Button>
+        </div>
+      </AdminCard>
+    </div>
+    <div className="flexible-blocks-pane">
+      <div className="flexible-add"><Select label="Bloque que quieres agregar" value={kind} options={Object.entries(SECTION_ELEMENTS).map(([value, label]) => ({ value, label }))} onChange={event => setKind(event.target.value as ElementKind)} /><Button type="button" disabled={elements.length >= 30} onClick={() => set([...elements, newSectionElement(kind)])}>Agregar bloque</Button></div>
+      <p className="flexible-count">{elements.length} de 30 bloques</p>
+      {loading && <LoadingState>Cargando recursos de biblioteca…</LoadingState>}{error && <ErrorState onRetry={() => setAttempt(old => old + 1)}>{humanizeAdminError(error)}</ErrorState>}
+      <ol className="flexible-elements-list">{elements.map((element, index) => <li key={element.id}><AdminCard><div className="flexible-element-heading"><h3>{index + 1}. {SECTION_ELEMENTS[element.tipo]}</h3><Toggle checked={element.visible} ariaLabel={`Mostrar bloque ${index + 1}`} onChange={visible => edit(element.id, { visible })} /></div><div className="flexible-element-fields">{fields(element)}</div><div className="flexible-element-actions"><Button type="button" variant="ghost" disabled={index === 0} aria-label={`Subir bloque ${index + 1}`} onClick={() => set(moveElement(elements, index, -1))}>↑ Subir</Button><Button type="button" variant="ghost" disabled={index === elements.length - 1} aria-label={`Bajar bloque ${index + 1}`} onClick={() => set(moveElement(elements, index, 1))}>↓ Bajar</Button><Button type="button" variant="ghost" aria-label={`Eliminar bloque ${index + 1}`} onClick={() => set(elements.filter(old => old.id !== element.id))}>Eliminar bloque</Button></div></AdminCard></li>)}</ol>
+    </div>
+    {preview && <div className="flexible-section-preview" aria-label="Vista previa de sección"><p className="flexible-preview-label">Vista previa en vivo</p><SectionElements activity={section.actividad} elements={elements} ownerResources={resourceMap} /></div>}
     <Modal open={!!picker} onClose={() => setPicker(null)} title="Seleccionar recurso de biblioteca" size="xl" portal><Input label="Buscar recurso por título" value={search} onChange={event => setSearch(event.target.value)} /><Select label="Filtrar recursos por tipo" value={filter} options={[{ value: '', label: 'Todos los tipos' }, ...Object.entries(MEDIA_TYPES).map(([value, label]) => ({ value, label }))]} onChange={event => setFilter(event.target.value)} />
       {loading && <LoadingState>Cargando recursos disponibles…</LoadingState>}{error && <ErrorState onRetry={() => setAttempt(old => old + 1)}>{humanizeAdminError(error)}</ErrorState>}
       {!loading && !error && !active.length && <p>No hay recursos activos con este filtro. Puedes agregarlos desde Marketing → Biblioteca multimedia.</p>}

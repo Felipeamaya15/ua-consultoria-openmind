@@ -24,6 +24,7 @@ import '../../admin.css';
 
 function Layout() {
   const [open, setOpen] = useState(false);
+  const [searchFocusToken, setSearchFocusToken] = useState(0);
 
   const { pathname } = useLocation();
   const pageHelp = getAdminPageHelp(pathname);
@@ -63,12 +64,18 @@ function Layout() {
       <AdminSidebar
         open={open}
         onClose={() => setOpen(false)}
+        onOpen={() => setOpen(true)}
+        searchFocusToken={searchFocusToken}
       />
 
       <div className="admin-content">
         <AdminHeader
           open={open}
           onMenu={() => setOpen(!open)}
+          onSearch={() => {
+            setOpen(true);
+            setSearchFocusToken(token => token + 1);
+          }}
         />
 
         <main id="admin-main-content" tabIndex={-1} className="p-5 md:p-8 w-full">
