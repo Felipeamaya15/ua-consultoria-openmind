@@ -168,6 +168,15 @@ class AppearanceAPIView(APIView):
         def validate_tree(value, depth=0, field=None, path=()):
             if depth > 12:
                 return False
+            if field in ('productImageInterval', 'catalogProductImageInterval'):
+                return type(value) is int and 1 <= value <= (10 if field == 'catalogProductImageInterval' else 20)
+            if field in ('productImageMode', 'catalogProductImageMode'):
+                return isinstance(value, str) and value in ('static', 'hover', 'automatic')
+            if field in ('productImageTransition', 'catalogProductImageTransition'):
+                return isinstance(value, str) and (value in (
+                    'fade', 'slide', 'zoom', 'blur', 'rise', 'reveal', 'curtain', 'curtain-up',
+                    'drop', 'flip', 'diagonal', 'bounce', 'spin', 'zoom-blur',
+                ) or bool(magic_id.fullmatch(value)))
             if isinstance(value, dict):
                 return len(value) <= 100 and all(
                     isinstance(key, str)

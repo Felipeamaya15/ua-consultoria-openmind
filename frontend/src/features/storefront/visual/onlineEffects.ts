@@ -18,7 +18,7 @@ const ID_PATTERN = /^magic:([A-Za-z][A-Za-z0-9]{1,47})$/;
 const MAX_CSS_BYTES = 250000;
 let pending: Promise<OnlineEffect[]> | null = null;
 const definitions = new Map<string, string>();
-const installed = new Set<string>();
+const installed = new WeakMap<Document, Set<string>>();
 
 export function isOnlineEffectId(value: unknown): value is OnlineEffectId {
   return typeof value === 'string' && ID_PATTERN.test(value);
@@ -134,17 +134,22 @@ export async function loadOnlineEffects(): Promise<OnlineEffect[]> {
 }
 
 /** Solo inyecta keyframes regenerados con propiedades y valores admitidos. */
-export async function ensureOnlineEffect(value: string | undefined): Promise<boolean> {
+export async function ensureOnlineEffect(value: string | undefined, targetDocument?: Document): Promise<boolean> {
   if (!isOnlineEffectId(value)) return false;
+  const doc = targetDocument ?? (typeof document !== 'undefined' ? document : undefined);
+  if (!doc) return false;
   const name = value.substring(6);
-  if (installed.has(name)) return true;
+  let names = installed.get(doc);
+  if (!names) { names = new Set<string>(); installed.set(doc, names); }
+  if (names.has(name) || doc.querySelector(`[data-openmind-effect="${name}"]`)) return true;
   await loadOnlineEffects();
+  if (names.has(name) || doc.querySelector(`[data-openmind-effect="${name}"]`)) return true;
   const css = definitions.get(name);
-  if (!css || typeof document === 'undefined') return false;
-  const style = document.createElement('style');
+  if (!css) return false;
+  const style = doc.createElement('style');
   style.setAttribute('data-openmind-effect', name);
   style.textContent = `/* Magic CSS - Copyright (c) 2022 Christian Pucci - MIT: https://github.com/miniMAC/magic/blob/master/LICENSE */\n@keyframes ${onlineEffectName(value)}{${css}}`;
-  document.head.appendChild(style);
-  installed.add(name);
+  doc.head.appendChild(style);
+  names.add(name);
   return true;
 }

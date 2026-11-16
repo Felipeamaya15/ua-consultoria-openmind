@@ -37,10 +37,14 @@ class ProductPublicListItemSerializer(serializers.Serializer):
     descripcion = serializers.CharField(required=False, allow_blank=True, default="")
     categoria = serializers.CharField()
     imagen = serializers.SerializerMethodField()
+    imagenes = serializers.SerializerMethodField()
     precio = serializers.SerializerMethodField()
     precio_oferta = serializers.SerializerMethodField()
     disponible = serializers.SerializerMethodField()
     variantes = serializers.SerializerMethodField()
+
+    def get_imagenes(self, producto):
+        return producto.get("imagenes") or []
 
     def get_imagen(self, producto):
         imagenes = producto.get("imagenes") or []

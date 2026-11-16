@@ -42,6 +42,9 @@ type SharedCarouselSettings = {
   productImageMode: NonNullable<VisualConfig['hero']['productImageMode']>;
   productImageInterval: number;
   productImageTransition: NonNullable<VisualConfig['hero']['productImageTransition']>;
+  catalogProductImageMode: NonNullable<VisualConfig['hero']['catalogProductImageMode']>;
+  catalogProductImageInterval: number;
+  catalogProductImageTransition: NonNullable<VisualConfig['hero']['catalogProductImageTransition']>;
   importedEffectPresets: string;
   hoverFeaturedMotion: NonNullable<VisualConfig['hero']['hoverFeaturedMotion']>;
   hoverFeaturedLight: NonNullable<VisualConfig['hero']['hoverFeaturedLight']>;
@@ -59,6 +62,9 @@ function readSharedCarousel(hero: VisualConfig['hero']): SharedCarouselSettings 
     productImageMode: hero.productImageMode ?? 'hover',
     productImageInterval: hero.productImageInterval ?? 5,
     productImageTransition: hero.productImageTransition ?? 'slide',
+    catalogProductImageMode: hero.catalogProductImageMode ?? 'hover',
+    catalogProductImageInterval: hero.catalogProductImageInterval ?? 2,
+    catalogProductImageTransition: hero.catalogProductImageTransition ?? 'slide',
     importedEffectPresets: hero.importedEffectPresets ?? '[]',
     hoverFeaturedMotion: hero.hoverFeaturedMotion ?? 'none',
     hoverFeaturedLight: hero.hoverFeaturedLight ?? 'none',

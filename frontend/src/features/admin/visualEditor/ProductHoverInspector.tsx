@@ -7,13 +7,16 @@ import {
   loadOnlineEffects, onlineEffectAnimation, type OnlineEffect,
   type ProductMotionChoice, type ProductLightChoice,
 } from '../../storefront/visual/onlineEffects';
+import { CarouselTransitionLibrary } from './CarouselTransitionLibrary';
+import { CAROUSEL_TRANSITIONS, carouselTransitionById } from '../../storefront/visual/carouselTransitionLibrary';
+import './heroCarouselInspector.css';
 import './productHoverInspector.css';
 import './effectLibraryInspector.css';
 import '../../storefront/visual/image-hover.css';
 
 type Area = 'featured' | 'catalog' | 'category';
 type Kind = 'motion' | 'light';
-type Field = 'productImageMode' | 'productImageInterval' | 'productImageTransition' | 'hoverFeaturedMotion' | 'hoverFeaturedLight' | 'hoverCatalogMotion' |
+type Field = 'productImageMode' | 'productImageInterval' | 'productImageTransition' | 'catalogProductImageMode' | 'catalogProductImageInterval' | 'catalogProductImageTransition' | 'hoverFeaturedMotion' | 'hoverFeaturedLight' | 'hoverCatalogMotion' |
   'hoverCatalogLight' | 'hoverCategoryMotion' | 'hoverCategoryLight';
 type Props = { hero: VisualConfig['hero']; suggestedArea: Area; onEdit: (field: Field, value: string | number) => void };
 const groups = [
@@ -32,6 +35,52 @@ function matches(effect: OnlineEffect, query: string): boolean {
     /vanish|foolish|space|magic/i.test(effect.name) ? 'efecto especial desaparecer aparecer' : '';
   const searchable = `${effect.name} ${effect.category} ${effect.id} ${synonyms}`;
   return normalize(query).split(/\s+/).every(term => normalize(searchable).includes(term));
+}
+
+function PhotoChangeControls({ hero, area, onEdit }: { hero: VisualConfig['hero']; area: 'featured' | 'catalog'; onEdit: Props['onEdit'] }) {
+  const catalog = area === 'catalog';
+  const mode = (catalog ? hero.catalogProductImageMode : hero.productImageMode) ?? 'hover';
+  const interval = (catalog ? hero.catalogProductImageInterval : hero.productImageInterval) ?? (catalog ? 2 : 5);
+  const transition = (catalog ? hero.catalogProductImageTransition : hero.productImageTransition) ?? 'slide';
+  const max = catalog ? 10 : 20;
+  const [draft, setDraft] = useState(String(interval));
+  const [libraryOpen, setLibraryOpen] = useState(false);
+  useEffect(() => setDraft(String(interval)), [interval]);
+  const changeInterval = (value: number) => { if (value !== interval) onEdit(catalog ? 'catalogProductImageInterval' : 'productImageInterval', value); };
+  const commitInterval = () => {
+    const n = Number(draft);
+    const value = draft.trim() !== '' && Number.isInteger(n) ? Math.min(max, Math.max(1, n)) : interval;
+    setDraft(String(value)); changeInterval(value);
+  };
+  const changeTransition = (value: string) => onEdit(catalog ? 'catalogProductImageTransition' : 'productImageTransition', value);
+  return <fieldset className="ve-carousel-panel__fieldset">
+    <legend>Cambio de fotografías</legend>
+    <label>Modo de cambio
+      <select aria-label="Cambio de fotografías de productos" value={mode} onChange={event => onEdit(catalog ? 'catalogProductImageMode' : 'productImageMode', event.target.value)}>
+        <option value="hover">Al pasar el mouse</option><option value="static">Manual</option><option value="automatic">Automático (computador)</option>
+      </select>
+    </label>
+    {mode !== 'static' && <>
+      <div className="ve-carousel-panel__interval-row" style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+        <label htmlFor="ve-product-interval">Segundos entre fotografías</label>
+        <input id="ve-product-interval" type="number" min={1} max={max} step={1} inputMode="numeric" value={draft}
+          onChange={event => { const raw = event.target.value; setDraft(raw); const n = Number(raw); if (raw.trim() !== '' && Number.isInteger(n) && n >= 1 && n <= max) changeInterval(n); }}
+          onBlur={commitInterval} onKeyDown={event => { if (event.key === 'Enter') { event.preventDefault(); event.currentTarget.blur(); } }}
+          style={{ width: 78, minHeight: 38, borderRadius: 8, border: '1px solid var(--border, #a7a7a7)', background: 'var(--background, white)', color: 'inherit', padding: '6px 10px' }} />
+        <span aria-hidden="true">s</span>
+      </div>
+      <p className="ve-carousel-panel__subhint">Entre 1 y {max} segundos.</p>
+    </>}
+    <label>Transición entre fotografías
+      <select aria-label="Transición de fotografías de productos" value={transition} onChange={event => changeTransition(event.target.value)}>
+        {CAROUSEL_TRANSITIONS.slice(0, 6).map(item => <option key={item.id} value={item.id}>{item.title}</option>)}
+        {!CAROUSEL_TRANSITIONS.slice(0, 6).some(item => item.id === transition) && <option value={transition}>{carouselTransitionById(transition)?.title ?? transition}</option>}
+      </select>
+    </label>
+    <button className="ve-carousel-library-launch" type="button" aria-expanded={libraryOpen} onClick={() => setLibraryOpen(open => !open)}>{libraryOpen ? 'Cerrar biblioteca de transiciones' : 'Explorar más transiciones'}</button>
+    {libraryOpen && <CarouselTransitionLibrary current={transition} onApply={changeTransition} />}
+    <p>Una sola foto permanece estática. En celulares puedes deslizar o usar los controles disponibles.</p>
+  </fieldset>;
 }
 
 export function ProductHoverInspector({ hero, suggestedArea, onEdit }: Props) {
@@ -76,7 +125,8 @@ export function ProductHoverInspector({ hero, suggestedArea, onEdit }: Props) {
     const sampleStyle = {
       '--ve-sample-transform': kind === 'motion' ? 'none' : motionTransform(motion),
       '--ve-sample-overlay-animation': kind === 'light' ? animation : lightStyle(light).animation,
-      '--ve-sample-overlay-background': kind === 'light' ? 'rgba(255,255,255,.14)' : lightStyle(light).background,
+      '--ve-sample-overlay-background': kind === 'light' ? 'radial-gradient(ellipse,rgba(255,255,255,.65),rgba(255,255,255,.08) 70%,transparent 95%)' : lightStyle(light).background,
+      '--ve-sample-overlay-opacity': kind === 'light' ? '.65' : '0',
       '--om-online-sample-animation': kind === 'motion' ? animation : 'none',
     } as CSSProperties;
     return (
@@ -98,14 +148,14 @@ export function ProductHoverInspector({ hero, suggestedArea, onEdit }: Props) {
             onClick={() => { setSelectedId(effect.id); setRepeat(n => n + 1); void ensureOnlineEffect(effect.id); }}>
               <strong>{effect.name}</strong><span>{effect.category} · Magic CSS</span>
             </button>)}
-          {!list.length && <p className="ve-effect-library__empty">No se encontraron efectos de este tipo. Prueba otra palabra. «Resplandor» está entre las opciones rápidas de luz.</p>}
+          {!list.length && <p className="ve-effect-library__empty">No se encontraron efectos de este tipo. Prueba otra palabra. La biblioteca de luz solo muestra efectos externos compatibles; también tienes nueve opciones locales.</p>}
         </div>}
         {failure && <button type="button" className="ve-effect-library__repeat" onClick={() => {
           setOpened(null); setTimeout(() => setOpened(kind), 0);
         }}>Volver a conectar</button>}
         {chosen && !loading && !failure && <div className="ve-effect-library__preview">
           <strong>Vista previa: {chosen.name}</strong>
-          <div className="ve-effect-library__sample" style={sampleStyle} tabIndex={0}
+          <div key={`${chosen.id}-${repeat}`} className="ve-effect-library__sample" style={sampleStyle} tabIndex={0}
             aria-label="Pasa el mouse para ver el efecto externo">
             <div className="ve-effect-library__sample-art" key={`${chosen.id}-${repeat}`}>🪴</div>
           </div>
@@ -125,7 +175,6 @@ export function ProductHoverInspector({ hero, suggestedArea, onEdit }: Props) {
   return <section className="ve-hover-panel" aria-labelledby="ve-hover-heading">
     <div className="ve-hover-panel__heading"><span className="ve-hover-panel__eyebrow">INTERACCIÓN CON EL MOUSE</span>
       <h2 id="ve-hover-heading">Efectos de las fotografías</h2>
-      <fieldset className="ve-carousel-panel__fieldset"><legend>Fotografías del producto</legend><label>Modo de cambio<select aria-label="Cambio de fotografías de productos" value={hero.productImageMode ?? 'hover'} onChange={event => onEdit('productImageMode', event.target.value)}><option value="static">Estático (navegación manual)</option><option value="hover">Al pasar el mouse</option><option value="automatic">Automático</option></select></label><label>Transición de fotografías<select aria-label="Transición de fotografías de productos" value={hero.productImageTransition ?? 'slide'} onChange={event => onEdit('productImageTransition', event.target.value)}><option value="slide">Deslizar</option><option value="fade">Fundido</option><option value="zoom">Zoom</option></select></label>{hero.productImageMode === 'automatic' && <label>Segundos entre fotografías<input type="number" min={2} max={20} value={hero.productImageInterval ?? 5} onChange={event => { const value = Number(event.target.value); if (Number.isInteger(value) && value >= 2 && value <= 20) onEdit('productImageInterval', value); }} /></label>}<p>Las flechas permiten navegar también en celulares. Una sola foto permanece estática.</p></fieldset>
       <p>Escoge un movimiento y una iluminación por separado. También puedes buscar animaciones en internet.</p>
     </div>
     <label className="ve-hover-panel__label" htmlFor="ve-hover-area">Dónde aplicar los efectos</label>
@@ -133,8 +182,9 @@ export function ProductHoverInspector({ hero, suggestedArea, onEdit }: Props) {
       setArea(e.target.value as Area); setOpened(null);
     }}>{groups.map(group => <option key={group.id} value={group.id}>{group.label}</option>)}</select>
     <p className="ve-hover-panel__help">{current.description}</p>
-    <fieldset className="ve-hover-panel__group"><legend>Movimiento al pasar el mouse</legend>
-      <div className="ve-hover-panel__choices">{MOVEMENT_EFFECTS.slice(0, 5).map(effect => <label key={effect.id}
+    {area === 'category' ? <p className="ve-hover-panel__help">Cada categoría utiliza una sola fotografía; no necesita intervalo ni transición.</p> : <PhotoChangeControls key={area} hero={hero} area={area} onEdit={onEdit} />}
+    <fieldset className="ve-hover-panel__group"><legend>Movimiento de la fotografía al pasar el mouse</legend>
+      <div className="ve-hover-panel__choices">{MOVEMENT_EFFECTS.map(effect => <label key={effect.id}
         className={motion === effect.id ? 'is-selected' : ''}>
         <input type="radio" name={`hover-motion-${area}`} checked={motion === effect.id}
           onChange={() => onEdit(current.motion, effect.id)}/><span>{effect.label}</span>
@@ -145,7 +195,7 @@ export function ProductHoverInspector({ hero, suggestedArea, onEdit }: Props) {
         aria-expanded={opened === 'motion'}>{opened === 'motion' ? 'Cerrar búsqueda en internet' : 'Buscar más movimientos en internet'}</button>
     </fieldset>
     <fieldset className="ve-hover-panel__group"><legend>Efectos de luz</legend>
-      <div className="ve-hover-panel__choices">{LIGHT_EFFECTS.slice(0, 5).map(effect => <label key={effect.id}
+      <div className="ve-hover-panel__choices">{LIGHT_EFFECTS.map(effect => <label key={effect.id}
         className={light === effect.id ? 'is-selected' : ''}>
         <input type="radio" name={`hover-light-${area}`} checked={light === effect.id}
           onChange={() => onEdit(current.light, effect.id)}/><span>{effect.label}</span>

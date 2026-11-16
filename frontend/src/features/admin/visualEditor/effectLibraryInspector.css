@@ -214,3 +214,9 @@
 @media (prefers-reduced-motion:reduce){
  .ve-hover-panel .ve-effect-library__sample-art{animation:none !important}
 }
+
+@media (hover: hover) and (pointer: fine) {
+  .ve-hover-panel .ve-effect-library__sample:is(:hover,:focus-visible)::after {
+    opacity: var(--ve-sample-overlay-opacity, 0);
+  }
+}

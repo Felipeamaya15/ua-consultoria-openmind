@@ -246,10 +246,7 @@
   padding: 0 !important;
   overflow: hidden !important;
   z-index: 2 !important;
-  opacity: 1 !important;
   visibility: visible !important;
-  transform: none !important;
-  animation: none !important;
 }
 
 /* Evitar que la foto se desplace a las esquinas */
@@ -264,16 +261,13 @@
   object-fit: cover !important;
   object-position: center !important;
   margin: 0 !important;
-  transform: none !important;
-  animation: none !important;
-  opacity: 1 !important;
   visibility: visible !important;
 }
 
 /* Ocultar navegacion manual solamente en Destacados */
-.om-product-gallery--featured .om-product-gallery__arrow,
-.om-product-gallery--featured .om-product-gallery__dots,
-.om-product-gallery--featured .om-product-gallery__pause {
+.om-product-gallery--featured:not(.om-product-gallery--controls-enabled) .om-product-gallery__arrow,
+.om-product-gallery--featured:not(.om-product-gallery--controls-enabled) .om-product-gallery__dots,
+.om-product-gallery--featured:not(.om-product-gallery--controls-enabled) .om-product-gallery__pause {
   display: none !important;
 }
 /* OPENMIND_FEATURED_TRANSITIONS_V3 */
@@ -469,4 +463,43 @@
   border-radius: 0 !important;
   background: #000 !important;
   pointer-events: auto !important;
+}
+
+/* OPENMIND_PRODUCT_TRANSITION_RUNTIME_V2 */
+.om-product-gallery .om-product-gallery__layer[data-gallery-transition="true"] {
+  animation: var(--om-gallery-transition) !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  .om-product-gallery .om-product-gallery__layer[data-gallery-transition="true"] {
+    animation: none !important;
+  }
+}
+
+
+/* OPENMIND_CATALOG_TRANSITION_FIX */
+[data-storefront-visual] .om-product-gallery[data-photo-area="catalog"]
+.om-product-gallery__layer {
+    position: absolute !important;
+    inset: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    overflow: hidden;
+    z-index: 1;
+}
+
+[data-storefront-visual] .om-product-gallery[data-photo-area="catalog"]
+.om-product-gallery__layer[data-gallery-active="true"] {
+    z-index: 2;
+}
+
+[data-storefront-visual] .om-product-gallery[data-photo-area="catalog"]
+.om-product-gallery__layer[data-gallery-transition="true"] {
+    animation: var(--om-gallery-transition) !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    [data-storefront-visual] .om-product-gallery[data-photo-area="catalog"]
+    .om-product-gallery__layer[data-gallery-transition="true"] {
+        animation: none !important;
+    }
 }
