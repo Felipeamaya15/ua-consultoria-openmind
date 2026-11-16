@@ -247,7 +247,7 @@ function MarketingWorkspace({ scope, isCurrent }: { scope: DraftScope; isCurrent
     const fresh=await resolveSharingItem('reference' in item ? item.reference : item,home,new AbortController().signal);
     if(!mounted.current||!isCurrent())return false;
     const next=initialTemplateHistory();
-    for(const history of Object.values(next.documents))history.present={...history.present,showDescription:true,cta:fresh.group==='Servicios'||fresh.group==='Talleres'?'Solicita información en nuestra tienda':'Conoce más en nuestra tienda'};
+    for(const history of Object.values(next.documents))history.present={...history.present,showDescription:true,...(fresh.group==='Servicios'||fresh.group==='Talleres'?{campaignLayout:'classic' as const,fit:'contain' as const,mediaSide:history.present.template==='minimal'?'end' as const:'start' as const}:{}),cta:fresh.group==='Servicios'||fresh.group==='Talleres'?'Solicita información en nuestra tienda':'Conoce más en nuestra tienda'};
     setProductId('');setSku('');setSource('product');setDesign({format,layout:'product-spotlight'});setSharingReference(fresh.reference);setSharingItem(fresh);setSharingAttempt(value=>value+1);setSession(next);setSessionVersion(value=>value+1);setOpened(null);setName('');setError('');setNotice('Contenido publicado preparado. Personaliza y descarga tu publicación.');
     return true;
   }
@@ -286,7 +286,9 @@ function MarketingWorkspace({ scope, isCurrent }: { scope: DraftScope; isCurrent
       {/* OPENMIND_MARKETING_ACTIONS_V1 */}
       <div className="mk-publication-heading"><strong>Tu publicación</strong><span>{dirty ? 'Cambios sin guardar' : 'Sin cambios pendientes'}</span></div>
       <Input label="Nombre del borrador" value={name} maxLength={80} disabled={busy} onChange={event => { setNotice(''); setName(event.target.value); }} placeholder="Ej.: Colección de primavera" />
+      <p className="marketing-hint">Descarga tu diseño y publícalo en cualquier red social, o utiliza la integración oficial de Instagram si tu cuenta está autorizada.</p>
       <div className="marketing-editor-actions marketing-primary-actions">
+        <Button type="button" size="sm" disabled={busy || !content || !sources.brand} onClick={() => void exportImage('jpg')}>Descargar publicación (JPG)</Button>
         <InstagramPublisher disabled={busy || !content || !sources.brand} square={design.format === 'square'} revision={revision.current} initialCaption={instagramCaption} generate={async () => {
           if (design.format !== 'square') throw new Error('Instagram admite inicialmente publicaciones individuales cuadradas.');
           if (readyInstagram) return readyInstagram.file;
@@ -304,7 +306,17 @@ function MarketingWorkspace({ scope, isCurrent }: { scope: DraftScope; isCurrent
         }} />
         <Button type="button" size="sm" variant="outline" disabled={busy || (!productId&&!sharingReference) || !dirty} onClick={() => void saveDraft()}>{savingDraft ? 'Guardando…' : 'Guardar borrador'}</Button>
       </div>
-      {design.format !== 'square' && <p className="marketing-hint">La publicación directa en Instagram requiere el formato cuadrado. Puedes descargar los otros formatos o usar la difusión manual.</p>}
+      {design.format !== 'square' && <p className="marketing-hint">La publicación directa requiere formato cuadrado. Puedes descargar este formato para publicarlo manualmente.</p>}
+      <div className="mk-publication-group" style={{marginTop: 12}}>
+        <h3>Publicar manualmente en redes sociales</h3>
+        <p className="marketing-hint">1. Descarga la publicación. 2. Copia la descripción. 3. Abre tu red social, sube la imagen y confirma allí.</p>
+        <div className="mk-publication-secondary-actions">
+          <Button type="button" size="sm" variant="outline" disabled={busy || !content} onClick={() => void copyInstagramCaption()}>Copiar descripción</Button>
+          <Button type="button" size="sm" variant="outline" onClick={() => window.open('https://www.instagram.com/', '_blank', 'noopener,noreferrer')}>Abrir Instagram</Button>
+          <Button type="button" size="sm" variant="outline" onClick={() => window.open('https://www.facebook.com/', '_blank', 'noopener,noreferrer')}>Abrir Facebook</Button>
+        </div>
+        <details><summary>Ver descripción para copiar manualmente</summary><textarea aria-label="Descripción de la publicación" readOnly rows={4} value={instagramCaption} style={{width:'100%',padding:10}} /></details>
+      </div>
       <details className="mk-publication-more">
         <summary>Más opciones</summary>
         <div className="mk-publication-more-body">
@@ -319,7 +331,6 @@ function MarketingWorkspace({ scope, isCurrent }: { scope: DraftScope; isCurrent
             <h3>Descargar y compartir</h3>
             <div className="mk-publication-secondary-actions">
         <Button type="button" size="sm" variant="outline" disabled={busy || !content || !sources.brand} onClick={() => void exportImage('png')}>Descargar PNG</Button>
-        <Button type="button" size="sm" variant="outline" disabled={busy || !content || !sources.brand} onClick={() => void exportImage('jpg')}>Descargar JPG</Button>
         <Button type="button" size="sm"
           disabled={busy || !content || !sources.brand}
           onClick={() => void exportImage('jpg', true)}>
@@ -331,27 +342,8 @@ function MarketingWorkspace({ scope, isCurrent }: { scope: DraftScope; isCurrent
             Compartir imagen
           </Button>
         }
-        <Button type="button" size="sm" variant="outline"
-          disabled={busy || !content}
-          onClick={() => void copyInstagramCaption()}>
-          Copiar descripción
-        </Button>
-        <Button type="button" size="sm" variant="outline"
-          onClick={() => window.open('https://www.instagram.com/', '_blank', 'noopener,noreferrer')}>
-          Abrir Instagram
-        </Button>
             </div>
           </div>
-      <details>
-        <summary>Ver descripción para Instagram</summary>
-        <textarea aria-label="Descripción para Instagram"
-          readOnly rows={4} value={instagramCaption}
-          style={{ width: '100%', padding: 10 }} />
-        <p className="marketing-hint">
-          Revisa el texto antes de publicarlo. Puedes editarlo en Instagram.
-          La publicación directa requiere tu confirmación.
-        </p>
-      </details>
         </div>
       </details>
       <p className="marketing-hint">{busy ? savingDraft ? 'Guardando borrador…' : 'Preparando imágenes y fuentes para descargar...' : dirty ? 'Cambios sin guardar.' : 'Sin cambios pendientes.'} Los borradores se guardan solo en este navegador.</p>

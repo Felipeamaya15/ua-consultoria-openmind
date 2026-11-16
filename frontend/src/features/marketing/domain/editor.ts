@@ -1,6 +1,7 @@
 import type { PaletteColors } from '../../../shared/palettes';
 import { foregroundFor, marketingPalette } from './brand';
 import type { MarketingPalette } from './types';
+import { normalizeLayers, type FreeLayer } from './layers';
 import { fonts } from '../../storefront/visual/cssVariables';
 
 export const TEMPLATES = [
@@ -18,6 +19,15 @@ export const ART_DIRECTIONS = [
   { id: 'organic', label: 'Orgánico', detail: 'Formas redondeadas e inspiración natural' },
 ] as const;
 export type ArtDirection = typeof ART_DIRECTIONS[number]['id'];
+export const CAMPAIGN_LAYOUTS = [
+  { id: 'classic', label: 'Clásico', detail: 'Tus tres plantillas originales' },
+  { id: 'premium', label: 'Premium', detail: 'Fotografía protagonista y tipografía editorial' },
+  { id: 'immersive', label: 'Inmersivo', detail: 'Imagen de borde a borde y texto sobre degradado' },
+  { id: 'commercial', label: 'Comercial', detail: 'Color, precio destacado y composición asimétrica' },
+  { id: 'artisan', label: 'Artesanal', detail: 'Arco fotográfico y composición cálida' },
+  { id: 'blank', label: 'Lienzo libre', detail: 'Espacio para tus capas con firma y ficha mínima' },
+] as const;
+export type CampaignLayout = typeof CAMPAIGN_LAYOUTS[number]['id'];
 export type BackgroundEffect = 'plain' | 'gradient' | 'glow' | 'pattern';
 export type GalleryMode = 'auto' | 'single' | 'collage';
 export type EditorialBlock = 'heading' | 'subtitle' | 'cta';
@@ -48,8 +58,12 @@ export interface TextStyle { size: number; bold: boolean; italic: boolean; align
 export interface DesignState {
   template: Template;
   artDirection?: ArtDirection;
+  campaignLayout?: CampaignLayout;
+  campaignShade?: string | null;
+  campaignShadeStrength?: number;
   backgroundEffect?: BackgroundEffect;
   galleryMode?: GalleryMode;
+  layers?: FreeLayer[];
   paletteId?:string|null;
   heading: string; subtitle: string; cta: string; showSubtitle: boolean;
   showDescription: boolean;
@@ -64,10 +78,10 @@ export interface DesignState {
 export const TEXT_LIMITS = { heading: 48, subtitle: 72, cta: 48 } as const;
 const style = (bold = false): TextStyle => ({ size: 100, bold, italic: false, align: 'left', color: null });
 export function defaultDesign(template: Template = 'photo'): DesignState {
-  return { template, artDirection: 'original', backgroundEffect: 'plain', galleryMode: 'auto', paletteId:null, heading: '', subtitle: '', cta: 'Disponible en nuestra tienda', showSubtitle: false, showDescription: false, font: 'sans', headingFont: null, appearance: defaultAppearance(),
+  return { template, campaignLayout: template === 'feature' ? 'commercial' : template === 'minimal' ? 'artisan' : 'premium', campaignShade: null, campaignShadeStrength: 92, artDirection: 'original', backgroundEffect: 'plain', galleryMode: 'auto', layers: [], paletteId:null, heading: '', subtitle: '', cta: 'Disponible en nuestra tienda', showSubtitle: false, showDescription: false, font: 'sans', headingFont: null, appearance: defaultAppearance(),
     textStyles: { heading: style(true), subtitle: style(), cta: style(), title: { ...style(true), align: 'inherit' }, price: { ...style(true), align: 'inherit' }, variant: { ...style(), align: 'inherit' }, brand: { ...style(true), align: 'inherit' }, description: { ...style(), align: 'inherit' } },
     colors: { background: null, text: null, accent: null, label: null }, showLogo: true, imageIndex: 0,
-    fit: 'contain', position: 'center', zoom: 100, spacing: 'comfortable', alignment: 'left', mediaSide: template === 'minimal' ? 'end' : 'start' };
+    fit: 'cover', position: 'center', zoom: 100, spacing: 'comfortable', alignment: 'left', mediaSide: template === 'photo' ? 'start' : 'end' };
 }
 const hex = (v: unknown): string | null => typeof v === 'string' && /^#[a-f\d]{6}$/i.test(v) ? v : null;
 const choice = <T extends string>(v: unknown, options: readonly T[], fallback: T): T => options.includes(v as T) ? v as T : fallback;
@@ -100,8 +114,11 @@ export function normalizeDesign(value: DesignState): DesignState {
     buttonBorderStyle: choice(raw.buttonBorderStyle, ['solid', 'dashed'], 'solid'), buttonBorderWidth: bound(raw.buttonBorderWidth, 0, 8, 1), buttonBorderColor: hex(raw.buttonBorderColor),
   };
   return { artDirection: choice(value.artDirection, ART_DIRECTIONS.map(item => item.id), 'original'),
+    campaignLayout: choice<CampaignLayout>(value.campaignLayout, CAMPAIGN_LAYOUTS.map(item => item.id), 'classic'),
+    campaignShade: hex(value.campaignShade), campaignShadeStrength: bound(value.campaignShadeStrength, 80, 100, 92),
     backgroundEffect: choice<BackgroundEffect>(value.backgroundEffect, ['plain', 'gradient', 'glow', 'pattern'], 'plain'),
     galleryMode: choice<GalleryMode>(value.galleryMode, ['auto', 'single', 'collage'], 'auto'),
+    layers: normalizeLayers(value.layers),
     paletteId:typeof value.paletteId==='string'&&/^[a-z0-9-]{1,80}$/i.test(value.paletteId)?value.paletteId:null, template: choice(value.template, ['photo', 'feature', 'minimal'], 'photo'), heading: text('heading'), subtitle: text('subtitle'), cta: text('cta'),
     showSubtitle: value.showSubtitle === true, showDescription: value.showDescription === true, font: choice(value.font, Object.keys(FONT_FAMILIES) as (keyof typeof FONT_FAMILIES)[], 'sans'),
     headingFont: value.headingFont && Object.prototype.hasOwnProperty.call(FONT_FAMILIES, value.headingFont) ? value.headingFont : null, appearance, textStyles,

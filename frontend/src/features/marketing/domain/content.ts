@@ -63,6 +63,9 @@ export function hasRealOffer(product: MarketingProduct): boolean {
 }
 export function searchProducts(products: MarketingProduct[], text: string): MarketingProduct[] {
   const normalize = (value: string) => value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('es-CL');
-  const query = normalize(text.trim());
-  return products.filter(p => normalize(`${p.name} ${p.category} ${p.variants.map(v => v.sku).join(' ')}`).includes(query));
+  const tokens = normalize(text.trim()).split(/\s+/).filter(Boolean);
+  return products.filter(p => {
+    const searchable = normalize(`${p.name} ${p.category} ${p.variants.map(v => v.sku).join(' ')}`);
+    return tokens.every(token => searchable.includes(token));
+  });
 }

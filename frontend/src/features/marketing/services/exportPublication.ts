@@ -1,3 +1,4 @@
+import { layerLayoutProblem } from './layerLayout';
 import { PUBLICATION_FORMATS, type PublicationFormat } from '../domain/types';
 
 export type ExportType = 'png' | 'jpg';
@@ -56,6 +57,8 @@ async function embeddedFonts(used: Set<string>): Promise<string> {
 export async function renderPublication(art: HTMLElement, format: PublicationFormat, type: ExportType, isCurrent: () => boolean = () => true): Promise<Blob> {
   const check = () => {
     if (!art.isConnected || !isCurrent()) throw new Error('La publicación o sesión cambió durante la exportación. Vuelve a descargarla.');
+    const layerProblem = layerLayoutProblem(art);
+    if (layerProblem) throw new Error(layerProblem);
     if (art.dataset.blocked === 'true') throw new Error('Ajusta el contenido: esta publicación no cabe de forma legible.');
     if (art.dataset.resourceError === 'true') throw new Error('Hay una imagen o logo que no pudo cargarse. Corrígelo antes de descargar.');
   };
