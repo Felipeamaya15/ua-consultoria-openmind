@@ -8,7 +8,7 @@
   position: relative;
 }
 [data-storefront-visual].template-catalog:has([data-landing-page="catalog"]) > [data-visual-section="header"] {
-  position: absolute !important;
+  position: fixed !important;
   top: clamp(10px, 2vw, 26px) !important;
   left: 0;
   right: 0;

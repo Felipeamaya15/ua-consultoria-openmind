@@ -1,3 +1,5 @@
+import { MinimalCartIcon } from './MinimalHeader';
+import { useCart } from '../../../context/CartContext';
 import { AccountNavigation, notifyStorefrontAuthChange, useStorefrontIdentity } from '../AccountNavigation';
 import { Link, useNavigate } from 'react-router-dom';
 import { Icon } from '../../ui';
@@ -8,6 +10,7 @@ export function MinimalSidebar() {
   const { user } = useStorefrontIdentity();
   const { route } = useStorefrontTemplate();
   const navigate = useNavigate();
+  const { count } = useCart();
 
   const handleLogout = () => {
     authService.logout();
@@ -38,7 +41,11 @@ export function MinimalSidebar() {
         aria-label="Navegación lateral"
       >
         <Link
-          to="."
+          to={route()} onClick={event => {
+            if (!event.ctrlKey && !event.metaKey && !event.shiftKey && !event.altKey) {
+              window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+            }
+          }}
           aria-label="Inicio"
           title="Inicio"
           className="w-10 h-10 rounded-full flex items-center justify-center text-gray-600 hover:bg-gray-100 hover:text-[var(--primary)] transition-colors"
@@ -53,6 +60,15 @@ export function MinimalSidebar() {
           className="w-10 h-10 rounded-full flex items-center justify-center text-gray-600 hover:bg-gray-100 hover:text-[var(--primary)] transition-colors"
         >
           <Icon name="grid" className="w-5 h-5" />
+        </Link>
+
+        <Link
+          to={route('carrito')}
+          aria-label={`Ver carrito (${count} productos)`}
+          title="Carrito de compras"
+          className="w-10 h-10 rounded-full bg-[var(--primary)] text-[var(--on-primary)] flex items-center justify-center hover:opacity-90 transition-opacity"
+        >
+          <MinimalCartIcon count={count} />
         </Link>
 
         <Link

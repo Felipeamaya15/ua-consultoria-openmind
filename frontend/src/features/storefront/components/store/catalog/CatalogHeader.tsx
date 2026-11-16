@@ -26,7 +26,11 @@ export function CatalogHeader() {
       <div className="max-w-[1160px] mx-auto px-3 sm:px-5">
         <nav data-visual-part="headerLayout" className="min-h-14 rounded-full bg-[#202022] border border-white/[0.08] px-3.5 sm:px-6 flex flex-row items-center justify-between gap-2 sm:gap-4 shadow-xl shadow-black/25">
           {/* Izquierda: Logo Universidad al lado del logo y nombre completo de la tienda */}
-          <InstitutionalBadge compact /><Link data-visual-part="logo"
+          <InstitutionalBadge compact /><Link data-visual-part="logo" onClick={event => {
+            if (!event.ctrlKey && !event.metaKey && !event.shiftKey && !event.altKey) {
+              window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+            }
+          }}
             to={route()}
             aria-label={`Ir al inicio de ${config.name || 'la tienda'}`}
             className="flex min-w-0 items-center gap-2 text-white hover:text-[var(--primary)] transition-colors"

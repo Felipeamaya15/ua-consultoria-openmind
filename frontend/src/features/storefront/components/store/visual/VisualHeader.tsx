@@ -22,13 +22,17 @@ export function VisualHeader() {
   };
 
   return (
-    <header data-visual-section={VISUAL_SECTION.header} className="bg-white border-t-4 border-[var(--primary)] border-b border-black/10">
+    <header data-visual-section={VISUAL_SECTION.header} className="sticky top-0 z-50 bg-white border-t-4 border-[var(--primary)] border-b border-black/10">
       <div data-visual-part="headerLayout" className="max-w-6xl mx-auto px-4 sm:px-5 min-h-16 flex items-center justify-between gap-4">
 
         {/* Izquierda: Logo Universidad al lado del logo y nombre completo de la tienda */}
         <div className="flex min-w-0 items-center gap-3">
           <InstitutionalBadge compact />
-          <Link data-visual-part="logo"
+          <Link data-visual-part="logo" onClick={event => {
+            if (!event.ctrlKey && !event.metaKey && !event.shiftKey && !event.altKey) {
+              window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+            }
+          }}
             to={route()}
             aria-label={`Ir al inicio de ${config.name || 'la tienda'}`}
             className="flex min-w-0 items-center gap-3 text-[#111111] hover:opacity-75 transition-opacity"

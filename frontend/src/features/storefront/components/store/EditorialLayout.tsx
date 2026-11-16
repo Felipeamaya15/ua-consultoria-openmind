@@ -90,7 +90,11 @@ export function EditorialLayout() {
       <header data-visual-section={VISUAL_SECTION.header} className="bg-white border-b border-[var(--border)] sticky top-0 z-40">
         <div data-visual-part="headerLayout" className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between gap-6">
           {/* Logo / nombre de tienda */}
-          <InstitutionalBadge compact /><Link data-visual-part="logo"
+          <InstitutionalBadge compact /><Link data-visual-part="logo" onClick={event => {
+            if (!event.ctrlKey && !event.metaKey && !event.shiftKey && !event.altKey) {
+              window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+            }
+          }}
             to="."
             className="flex min-w-0 max-w-full items-center gap-3"
             aria-label={`Ir al inicio de ${config.name || 'la tienda'}`}
@@ -120,12 +124,7 @@ export function EditorialLayout() {
             className="hidden md:flex items-center gap-6"
             aria-label="Navegación principal"
           >
-            <Link
-              to="."
-              className="text-sm text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition-colors"
-            >
-              Inicio
-            </Link>
+
 
             <Link
               to="catalogo"
@@ -207,13 +206,7 @@ export function EditorialLayout() {
             aria-label="Navegación móvil"
             className="md:hidden border-t border-[var(--border)] bg-white px-4 py-3 flex flex-col gap-2 shadow-lg"
           >
-            <Link
-              to="."
-              className="text-sm font-medium py-2.5 px-2 rounded-lg"
-              onClick={() => setMobileOpen(false)}
-            >
-              Inicio
-            </Link>
+
 
             <Link
               to="catalogo"

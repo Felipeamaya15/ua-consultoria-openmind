@@ -1076,3 +1076,19 @@ button:disabled { cursor: not-allowed; opacity: .65; }
     grid-template-columns: repeat(auto-fill, minmax(min(100%, 145px), 1fr)) !important;
   }
 }
+
+
+/* OPENMIND: navegacion persistente en plantillas 3 y 4 */
+[data-storefront-visual].template-visual,
+[data-storefront-visual].template-catalog {
+  overflow-x: clip !important;
+  overflow-y: visible !important;
+}
+
+[data-storefront-visual].template-visual > [data-visual-section="header"],
+[data-storefront-visual].template-catalog:not(:has([data-landing-page="catalog"])) > [data-visual-section="header"] {
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 50 !important;
+  flex-shrink: 0;
+}
