@@ -503,3 +503,16 @@
         animation: none !important;
     }
 }
+
+/* Ficha: la nueva imagen queda sobre la anterior sin mover los controles. */
+.om-product-gallery--detail .om-product-gallery__layer[data-gallery-active="true"] {
+  z-index: 2;
+}
+.om-product-gallery--detail .om-product-gallery__layer[data-gallery-transition="true"] {
+  animation: var(--om-gallery-transition) !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  .om-product-gallery--detail .om-product-gallery__layer[data-gallery-transition="true"] {
+    animation: none !important;
+  }
+}

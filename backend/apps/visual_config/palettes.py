@@ -172,7 +172,9 @@ class AppearanceAPIView(APIView):
                 return type(value) is int and 1 <= value <= (10 if field == 'catalogProductImageInterval' else 20)
             if field in ('productImageMode', 'catalogProductImageMode'):
                 return isinstance(value, str) and value in ('static', 'hover', 'automatic')
-            if field in ('productImageTransition', 'catalogProductImageTransition'):
+            if field == 'detailProductImageTransition' and value == 'none':
+                return True
+            if field in ('productImageTransition', 'catalogProductImageTransition', 'detailProductImageTransition'):
                 return isinstance(value, str) and (value in (
                     'fade', 'slide', 'zoom', 'blur', 'rise', 'reveal', 'curtain', 'curtain-up',
                     'drop', 'flip', 'diagonal', 'bounce', 'spin', 'zoom-blur',

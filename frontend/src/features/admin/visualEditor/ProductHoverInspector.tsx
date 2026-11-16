@@ -208,3 +208,29 @@ export function ProductHoverInspector({ hero, suggestedArea, onEdit }: Props) {
     <p className="ve-hover-panel__footnote">La configuración se comparte entre las cuatro plantillas. En pantallas táctiles se evitan animaciones por hover.</p>
   </section>;
 }
+
+// Ficha de producto: solo cambio manual, misma biblioteca, ajuste independiente.
+export function ProductDetailTransitionInspector({ transition, onEdit }: {
+  transition: NonNullable<VisualConfig['hero']['detailProductImageTransition']>;
+  onEdit: (value: NonNullable<VisualConfig['hero']['detailProductImageTransition']>) => void;
+}) {
+  const [libraryOpen, setLibraryOpen] = useState(false);
+  const options = CAROUSEL_TRANSITIONS.slice(0, 6);
+  return <section className="ve-hover-panel" aria-label="Transición de la galería del producto">
+    <h2>Transición de la galería</h2>
+    <fieldset className="ve-carousel-panel__fieldset">
+      <legend>Cambio manual de fotografías</legend>
+      <label>Efecto de transición
+        <select aria-label="Transición de la galería del producto" value={transition}
+          onChange={event => onEdit(event.target.value as NonNullable<VisualConfig['hero']['detailProductImageTransition']>)}>
+          <option value="none">Sin transición</option>
+          {options.map(item => <option key={item.id} value={item.id}>{item.title}</option>)}
+          {transition !== 'none' && !options.some(item => item.id === transition) && <option value={transition}>{carouselTransitionById(transition)?.title ?? transition}</option>}
+        </select>
+      </label>
+      <button className="ve-carousel-library-launch" type="button" aria-expanded={libraryOpen} onClick={() => setLibraryOpen(open => !open)}>{libraryOpen ? 'Cerrar biblioteca de transiciones' : 'Explorar más transiciones'}</button>
+      {libraryOpen && <CarouselTransitionLibrary current={transition} onApply={onEdit} />}
+      <p>Cambia de fotografía con las flechas o miniaturas de la vista previa. Esta configuración se comparte entre las cuatro plantillas.</p>
+    </fieldset>
+  </section>;
+}

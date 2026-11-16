@@ -25,6 +25,7 @@ export function visualConfigWithCarouselVars(config: VisualConfig, targetDocumen
     '--openmind-catalog-product-mode': hero.catalogProductImageMode ?? 'hover',
     '--openmind-catalog-product-interval': String(hero.catalogProductImageInterval ?? 2),
     '--openmind-catalog-product-transition': hero.catalogProductImageTransition ?? 'slide',
+    '--openmind-detail-product-transition': hero.detailProductImageTransition ?? 'none',
     '--om-online-product-transition': omOnline(hero.productImageTransition, 750),
     '--om-online-catalog-product-transition': omOnline(hero.catalogProductImageTransition, 750),
     '--openmind-carousel-mode': hero.carouselMode ?? 'automatic',

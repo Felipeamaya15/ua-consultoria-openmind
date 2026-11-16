@@ -22,7 +22,7 @@ export function ProductImageGallery({ images, alt, href, imageClassName = '', de
   const suppressClick = useRef(false);
   const [selected, setSelected] = useState(0), [hovered, setHovered] = useState(false), [focused, setFocused] = useState(false);
   const [paused, setPaused] = useState(false), [visible, setVisible] = useState(true), [reduced, setReduced] = useState(false);
-  const [settings, setSettings] = useState({ mode: 'hover', interval: esCatalogo ? 2 : 5, transition: 'slide', indicators: true });
+  const [settings, setSettings] = useState({ mode: 'hover', interval: esCatalogo ? 2 : 5, transition: detail ? 'none' : 'slide', indicators: true });
   const previewHero = useRef<VisualConfig['hero'] | null>(null);
   const [onlineReady, setOnlineReady] = useState<string | null>(null);
   const count = images.length + (detail && videoUrl ? 1 : 0), current = count ? ((index ?? selected) + count) % count : 0, src = images[current];
@@ -77,11 +77,13 @@ export function ProductImageGallery({ images, alt, href, imageClassName = '', de
       const hero = previewHero.current;
       const mode = (esCatalogo ? hero?.catalogProductImageMode : hero?.productImageMode) ?? read(prefix + 'mode');
       const interval = (esCatalogo ? hero?.catalogProductImageInterval : hero?.productImageInterval) ?? Number(read(prefix + 'interval'));
-      const transition = (esCatalogo ? hero?.catalogProductImageTransition : hero?.productImageTransition) ?? read(prefix + 'transition');
+      const transition = detail
+        ? hero?.detailProductImageTransition ?? (read('--openmind-detail-product-transition') || 'none')
+        : (esCatalogo ? hero?.catalogProductImageTransition : hero?.productImageTransition) ?? read(prefix + 'transition');
       const next = {
         mode: ['static', 'hover', 'automatic'].includes(mode) ? mode : 'hover',
         interval: Math.max(1, Math.min(esCatalogo ? 10 : 20, Math.round(interval || (esCatalogo ? 2 : 5)))),
-        transition: isCarouselTransitionId(transition) || isOnlineEffectId(transition) ? transition : 'slide',
+        transition: (detail && transition === 'none') || isCarouselTransitionId(transition) || isOnlineEffectId(transition) ? transition : detail ? 'none' : 'slide',
         indicators: hero?.carouselIndicators ?? read('--openmind-carousel-indicators') !== '0',
       };
       setSettings(old => old.mode === next.mode && old.interval === next.interval && old.transition === next.transition && old.indicators === next.indicators ? old : next);
@@ -96,7 +98,7 @@ export function ProductImageGallery({ images, alt, href, imageClassName = '', de
     win.addEventListener('openmind:carousel:sync', receive);
     sync();
     return () => { observer.disconnect(); win.removeEventListener('openmind:carousel:sync', receive); };
-  }, [esCatalogo]);
+  }, [esCatalogo, detail]);
   useEffect(() => {
     const pointer = window.matchMedia('(any-hover: hover) and (any-pointer: fine)');
     const updatePointer = () => setDesktopPointer(pointer.matches);
@@ -143,7 +145,7 @@ export function ProductImageGallery({ images, alt, href, imageClassName = '', de
       : `openmind-carrusel-${settings.transition} 700ms ease-in-out both`;
   useLayoutEffect(() => {
     const old = previous.current; previous.current = src;
-    if (detail || !src || !old || old === src || reduced) { setOutgoing(undefined); return; }
+    if ((detail && settings.transition === 'none') || !src || !old || old === src || reduced) { setOutgoing(undefined); return; }
     setOutgoing(old); const timer = window.setTimeout(() => setOutgoing(undefined), transitionDuration);
     return () => clearTimeout(timer);
   }, [src, reduced, detail, transitionDuration]);
@@ -161,8 +163,8 @@ export function ProductImageGallery({ images, alt, href, imageClassName = '', de
     )}
     {outgoing && <div className="om-product-gallery__layer" aria-hidden="true"><img src={outgoing} alt="" className={imageClassName} /></div>}
     {src && <div key={src} className="om-product-gallery__layer" data-gallery-active="true"
-      data-gallery-transition={outgoing && count > 1 && !reduced ? 'true' : undefined}
-      style={outgoing && count > 1 && !reduced ? { '--om-gallery-transition': transitionAnimation } as CSSProperties : undefined}><img {...(detail ? { 'data-page-main-image': true } : {})} src={src} alt={alt} loading={detail ? 'eager' : 'lazy'} decoding="async" className={imageClassName} /></div>}
+      data-gallery-transition={outgoing && count > 1 && !reduced && settings.transition !== 'none' ? 'true' : undefined}
+      style={outgoing && count > 1 && !reduced && settings.transition !== 'none' ? { '--om-gallery-transition': transitionAnimation } as CSSProperties : undefined}><img {...(detail ? { 'data-page-main-image': true } : {})} src={src} alt={alt} loading={detail ? 'eager' : 'lazy'} decoding="async" className={imageClassName} /></div>}
 
     {detail && videoUrl && current === images.length && (
       <div className="om-product-gallery__layer">

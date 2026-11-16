@@ -57,6 +57,8 @@ export function connectVisualPreview(doc: Document, onSelect: (section: VisualSe
     const target = event.target;
     if (!target || typeof (target as Element).closest !== 'function') return;
     const element = target as Element;
+    if (!imageMode && element.closest('[data-visual-page="product"]') &&
+      element.closest('button[data-page-gallery-item], .om-product-gallery--detail button.om-product-gallery__arrow')) return;
     event.preventDefault(); event.stopPropagation(); event.stopImmediatePropagation();
     const block = element.closest<HTMLElement>('[data-content-block-id]');
     if (block?.dataset.contentBlockId && onBlock) { selectedBlock = block.dataset.contentBlockId; selected = 'global'; apply(); onBlock(selectedBlock); return; }

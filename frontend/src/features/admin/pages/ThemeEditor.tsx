@@ -24,7 +24,7 @@ import { connectVisualPreview } from '../visualEditor/preview';
 import { TemplateGallery } from '../visualEditor/templates';
 import { ContentInspector } from '../visualEditor/content';
 import { Icon } from '../../storefront/components/ui/Icon';
-import { ProductHoverInspector } from '../visualEditor/ProductHoverInspector';
+import { ProductHoverInspector, ProductDetailTransitionInspector } from '../visualEditor/ProductHoverInspector';
 import { HeroCarouselInspector } from '../visualEditor/HeroCarouselInspector';
 import { fetchPrivateLandingConfig as fetchLandingConfig, saveLandingConfig, saveBlockStyles } from '../../landing/services/landingService';
 import '../admin.css';
@@ -45,6 +45,7 @@ type SharedCarouselSettings = {
   catalogProductImageMode: NonNullable<VisualConfig['hero']['catalogProductImageMode']>;
   catalogProductImageInterval: number;
   catalogProductImageTransition: NonNullable<VisualConfig['hero']['catalogProductImageTransition']>;
+  detailProductImageTransition: NonNullable<VisualConfig['hero']['detailProductImageTransition']>;
   importedEffectPresets: string;
   hoverFeaturedMotion: NonNullable<VisualConfig['hero']['hoverFeaturedMotion']>;
   hoverFeaturedLight: NonNullable<VisualConfig['hero']['hoverFeaturedLight']>;
@@ -65,6 +66,7 @@ function readSharedCarousel(hero: VisualConfig['hero']): SharedCarouselSettings 
     catalogProductImageMode: hero.catalogProductImageMode ?? 'hover',
     catalogProductImageInterval: hero.catalogProductImageInterval ?? 2,
     catalogProductImageTransition: hero.catalogProductImageTransition ?? 'slide',
+    detailProductImageTransition: hero.detailProductImageTransition ?? 'none',
     importedEffectPresets: hero.importedEffectPresets ?? '[]',
     hoverFeaturedMotion: hero.hoverFeaturedMotion ?? 'none',
     hoverFeaturedLight: hero.hoverFeaturedLight ?? 'none',
@@ -413,6 +415,15 @@ export default function ThemeEditor() {
         }} /></div>)}
         </div>)}
           {/* OPENMIND_IMPORTED_PRESETS_V1: panel duplicado retirado en V1 online. */}
+          {previewPage === 'product' && selectedSection === 'pageLayout' && (
+            <ProductDetailTransitionInspector
+              transition={effective.hero.detailProductImageTransition ?? 'none'}
+              onEdit={value => {
+                setSharedCarousel(current => ({ ...(current ?? readSharedCarousel(effective.hero)), detailProductImageTransition: value }));
+                setDraft(current => editScopedProperty(current, template, 'hero.detailProductImageTransition', value, 'all', 'desktop'));
+              }}
+            />
+          )}
           {/* OPENMIND_PRODUCT_HOVER_V1 */}
           {(previewPage === 'home' || previewPage === 'catalog') &&
             ['sections', 'productCard', 'productGrid', 'categories'].includes(selectedSection) && (

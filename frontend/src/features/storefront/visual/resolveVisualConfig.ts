@@ -28,7 +28,8 @@ const enumValues: Record<string, readonly string[]> = {
 
 function validLeaf(value: unknown, baseline: unknown, path: string): boolean {
   const key = path.split('.').pop()!;
-  if (['carouselTransition', 'productImageTransition', 'catalogProductImageTransition'].includes(key)) return typeof value === 'string' && (CAROUSEL_TRANSITIONS.some(item => item.id === value) || isOnlineEffectId(value));
+  if (key === 'detailProductImageTransition' && value === 'none') return true;
+  if (['carouselTransition', 'productImageTransition', 'catalogProductImageTransition', 'detailProductImageTransition'].includes(key)) return typeof value === 'string' && (CAROUSEL_TRANSITIONS.some(item => item.id === value) || isOnlineEffectId(value));
   if (/^hover(?:Featured|Catalog|Category)(?:Motion|Light)$/.test(key)) return typeof value === 'string' && (isOnlineEffectId(value) || (key.endsWith('Motion') ? MOVEMENT_EFFECTS : LIGHT_EFFECTS).some(item => item.id === value));
   if (key === 'productImageInterval' || key === 'catalogProductImageInterval') return typeof value === 'number' && Number.isInteger(value) && value >= 1 && value <= (key === 'catalogProductImageInterval' ? 10 : 20);
   if (key === 'carouselInterval') return typeof value === 'number' && Number.isInteger(value) && value >= 2 && value <= 20;

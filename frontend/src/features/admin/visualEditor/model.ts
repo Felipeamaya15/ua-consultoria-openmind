@@ -65,6 +65,7 @@ function carouselFields(hero?: VisualConfigOverrides['hero']) {
     ...(hero?.catalogProductImageMode !== undefined ? {catalogProductImageMode: hero.catalogProductImageMode} : {}),
     ...(hero?.catalogProductImageInterval !== undefined ? {catalogProductImageInterval: hero.catalogProductImageInterval} : {}),
     ...(hero?.catalogProductImageTransition !== undefined ? {catalogProductImageTransition: hero.catalogProductImageTransition} : {}),
+    ...(hero?.detailProductImageTransition !== undefined ? {detailProductImageTransition: hero.detailProductImageTransition} : {}),
     ...(hero?.productImageTransition !== undefined ? {productImageTransition: hero.productImageTransition} : {}),
     ...(hero?.carouselMode !== undefined ? {carouselMode: hero.carouselMode} : {}),
     ...(hero?.carouselInterval !== undefined ? {carouselInterval: hero.carouselInterval} : {}),
@@ -99,7 +100,7 @@ export function readPath(value: unknown, path: string): unknown {
 }
 export function editProperty(document: EditorDocument, path: string, value: string | number | boolean): EditorDocument {
   // Preserva las propiedades del carrusel sin pasar por filtros de claves del resolvedor.
-  if (/^hero\.(productImageMode|productImageInterval|productImageTransition|catalogProductImageMode|catalogProductImageInterval|catalogProductImageTransition|carouselMode|carouselInterval|carouselTransition|carouselIndicators|importedEffectPresets|hoverFeaturedMotion|hoverFeaturedLight|hoverCatalogMotion|hoverCatalogLight|hoverCategoryMotion|hoverCategoryLight)$/.test(path)) {
+  if (/^hero\.(productImageMode|productImageInterval|productImageTransition|catalogProductImageMode|catalogProductImageInterval|catalogProductImageTransition|detailProductImageTransition|carouselMode|carouselInterval|carouselTransition|carouselIndicators|importedEffectPresets|hoverFeaturedMotion|hoverFeaturedLight|hoverCatalogMotion|hoverCatalogLight|hoverCategoryMotion|hoverCategoryLight)$/.test(path)) {
     const field = path.slice('hero.'.length);
     return {...document, overrides: {...document.overrides, hero: {...document.overrides.hero, [field]: value}} as VisualConfigOverrides};
   }

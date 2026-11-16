@@ -142,6 +142,7 @@ export interface VisualSections {
     catalogProductImageMode?: 'static' | 'hover' | 'automatic';
     catalogProductImageInterval?: number;
     catalogProductImageTransition?: import('./onlineEffects').CarouselChoice;
+    detailProductImageTransition?: 'none' | import('./onlineEffects').CarouselChoice;
     /** Recetas JSON seguras importadas por la tienda y compartidas por sus plantillas. */
     importedEffectPresets?: string;
     // OPENMIND_PRODUCT_HOVER_V1
