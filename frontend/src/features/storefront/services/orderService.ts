@@ -1,4 +1,5 @@
 import type { CartItem } from '../context/CartContext';
+import type { ActivityCartItem } from '../context/activityCart';
 import { authService, type CustomerOrder, type CustomerOrderItem } from '../../auth/services/authService';
 
 const API_BASE = (import.meta.env.VITE_API_URL || 'http://localhost:8000').replace(/\/+$/, '');
@@ -13,7 +14,7 @@ export type CreatedOrder = {
   url_pago?: string;
 };
 export type CheckoutInput = {
-  key: string; items: CartItem[]; contact: {name: string; email: string; phone: string};
+  key: string; items: CartItem[]; activities?: ActivityCartItem[]; contact: {name: string; email: string; phone: string};
   paymentMethod: string; shippingMethod: string; promoCode: string;
   address: {street: string; number: string; apt: string; city: string; region: string};
   shippingQuote?: string;
@@ -154,6 +155,7 @@ export const orderService = {
         body: JSON.stringify({
           clave_checkout: input.key,
           items: input.items.map(item => ({producto_id: item.productId, sku: item.sku, cantidad: item.quantity})),
+          ...(input.activities?.length ? {actividades:input.activities.map(item=>({seccion_id:item.sectionId,cantidad:item.quantity,version:item.version}))} : {}),
           contacto: {nombre: input.contact.name, email: input.contact.email.trim(), telefono: input.contact.phone},
           medio_pago: input.paymentMethod, metodo_entrega: input.shippingMethod,
           direccion: input.address, codigo_promocional: input.promoCode,

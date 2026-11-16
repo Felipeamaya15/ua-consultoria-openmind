@@ -64,7 +64,9 @@ class OrderDetailSerializer(OrderSerializer):
     def to_representation(self, order):
         result = super().to_representation(order)
         if order.clave_checkout:
-            result.update(medio_pago=order.medio_pago, entrega=order.entrega,
+            delivery=dict(order.entrega or {})
+            delivery.pop('pago_actividad_externo',None)
+            result.update(medio_pago=order.medio_pago, entrega=delivery,
                           costo_envio=format(order.costo_envio, '.2f'), descuento=format(order.descuento, '.2f'))
         return result
 

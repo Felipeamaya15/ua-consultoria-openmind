@@ -189,6 +189,9 @@ class VerificarTransferenciaLinkifyAPIView(APIView):
             tienda = resolver_tienda(request, exigir_propietario=True)
             pedido = Pedido.objects.get(id_pedido=pedido_id, tienda=tienda)
             
+            from apps.landing.external_activity_orders import is_external
+            if is_external(pedido):
+                return error_response('La confirmación de actividades Linkify requiere el aviso firmado de la pasarela.', 'ACTIVIDAD_REVISION', status=409)
             metodo = (pedido.medio_pago or pedido.metodo_pago or '').strip().lower()
             if metodo != 'linkify':
                 return error_response('El pedido no corresponde a Linkify.', 'PEDIDO_NO_LINKIFY', status=409)
@@ -301,11 +304,19 @@ class AprobarTransferenciaManualAPIView(APIView):
                     status=409,
                 )
 
+            if (pedido.entrega or {}).get('origen') == 'actividad_transferencia_v1':
+                return error_response('Gestiona esta transferencia en Servicios y talleres, indicando la referencia bancaria.', 'ACTIVIDAD_TRANSFERENCIA', status=409)
+            from apps.landing.paid_checkout import resolve_test_order
+            prueba = resolve_test_order(pedido, approve=True)
+            from apps.landing.unified_activity_orders import resolve_unified_qa
+            qa = resolve_unified_qa(pedido, approve=True)
             pedido.estado = 'pagado'
             pedido.save(update_fields=['estado'])
 
-        descontar_stock_de_pedido(pedido.pk)
-        notificar_cambio_de_estado(pedido, 'pendiente')
+        if not prueba:
+            descontar_stock_de_pedido(pedido.pk)
+            if not qa:
+                notificar_cambio_de_estado(pedido, 'pendiente')
         return success_response(
             data={'id_pedido': pedido.pk, 'estado': pedido.estado},
             mensaje='Transferencia aprobada y pedido marcado como pagado.',
@@ -353,11 +364,19 @@ class RechazarTransferenciaManualAPIView(APIView):
                     status=409,
                 )
 
+            if (pedido.entrega or {}).get('origen') == 'actividad_transferencia_v1':
+                return error_response('Gestiona esta transferencia en Servicios y talleres, indicando la referencia bancaria.', 'ACTIVIDAD_TRANSFERENCIA', status=409)
+            from apps.landing.paid_checkout import resolve_test_order
+            prueba = resolve_test_order(pedido, approve=False)
+            from apps.landing.unified_activity_orders import resolve_unified_qa
+            qa = resolve_unified_qa(pedido, approve=False)
             pedido.estado = 'cancelado'
             pedido.save(update_fields=['estado'])
-            devolver_stock_de_pedido_cancelado(pedido)
+            if not prueba:
+                devolver_stock_de_pedido_cancelado(pedido)
 
-        notificar_pago_rechazado(pedido)
+        if not prueba and not qa:
+            notificar_pago_rechazado(pedido)
         return success_response(
             data={'id_pedido': pedido.pk, 'estado': pedido.estado},
             mensaje='Transferencia rechazada y pedido cancelado.',

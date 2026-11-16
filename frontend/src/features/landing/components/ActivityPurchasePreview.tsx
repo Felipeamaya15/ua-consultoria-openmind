@@ -5,9 +5,11 @@ import { useStorefrontTemplate } from '../../storefront/hooks/useStorefrontTempl
 import { formatPrice } from '../../storefront/data/mockData';
 import { fetchPaidQuote,canSelectPaidQuote,formatActivityDate,paidStatusLabel,type PaidQuote } from '../services/paidActivityService';
 import './activity-purchase-preview.css';
+import {useActivityPurchaseMode} from '../services/activityPurchaseMode';
 
 export function ActivityPurchasePreview({sectionId}:{sectionId:string}){
   const {route}=useStorefrontTemplate();
+  const mode=useActivityPurchaseMode();
   const {items,put,ready}=useActivityCart();
   const [quote,setQuote]=useState<PaidQuote|null>(null),[error,setError]=useState(''),[notice,setNotice]=useState('');
   const [quantity,setQuantity]=useState(1),[accepted,setAccepted]=useState(''),[busy,setBusy]=useState(false),[expired,setExpired]=useState(false);
@@ -32,27 +34,49 @@ export function ActivityPurchasePreview({sectionId}:{sectionId:string}){
     return()=>window.clearTimeout(timer);
   },[quote]);
   async function add(){
-    if(!quote||busy||expired||!ready||!canSelectPaidQuote(quote,quantity,accepted))return;
+    if(mode==='disabled'||!quote||busy||expired||!ready||!canSelectPaidQuote(quote,quantity,accepted))return;
     setBusy(true);setNotice('');setError('');
     try{
       const fresh=await fetchPaidQuote(sectionId);setQuote(fresh);setExpired(Date.parse(fresh.hora_servidor)>=Date.parse(fresh.cierre));
       if(!canSelectPaidQuote(fresh,quantity,accepted))throw new Error('La disponibilidad o condiciones cambiaron. Revisa nuevamente antes de agregar.');
-      put(sectionId,fresh,quantity,accepted);setNotice('Actividad agregada al carrito de prueba. Todavía no reserva cupos ni realiza cobros.');
+      put(sectionId,fresh,quantity,accepted);setNotice('Actividad agregada a tu carrito. Los cupos aún no están reservados.');
     }catch(e){setError(e instanceof Error?e.message:'No pudimos agregar la actividad.');}
     finally{setBusy(false);}
   }
   const existing=items.find(i=>i.sectionId===sectionId);
-  return <section className="paid-activity-preview" aria-label="Compra de actividad de prueba">
-    <strong>Inscripción pagada · prueba local</strong>
+  useEffect(()=>{setQuantity(existing?.quantity??1);},[sectionId,existing?.quantity]);
+  const available=!!quote&&quote.estado==='disponible'&&!expired&&quote.cupos_disponibles>0;
+  const validQuantity=!!quote&&Number.isSafeInteger(quantity)&&quantity>=1&&quantity<=quote.cupos_disponibles;
+  const typeLabel=quote?.tipo==='servicio'?'Servicio':'Taller';
+  const countLabel=quote?.tipo==='servicio'?'Selecciona la cantidad de participantes':'¿Cuántas personas asistirán?';
+  if(mode==='disabled')return null;
+  return <section className="paid-activity-preview paid-purchase-card" aria-label="Reserva de actividad">
+    <header className="paid-purchase-heading">
+      <span className="paid-purchase-eyebrow">{typeLabel} · Reserva online</span>
+      <h3>{quote?.tipo==='servicio'?'Reserva tu servicio':'Reserva tu cupo'}</h3>
+      <p>Selecciona los participantes y agrega la actividad a tu carrito.</p>
+    </header>
     {!quote&&!error&&<p role="status">Consultando disponibilidad…</p>}
     {quote&&<>
-      <p><strong>{formatPrice(quote.precio)}</strong> por participante</p>
-      <p>{formatActivityDate(quote.inicio,quote.zona_horaria)} — {formatActivityDate(quote.termino,quote.zona_horaria)} ({quote.zona_horaria})</p>
-      <p role="status">{expired&&quote.estado==='disponible'?'Inscripciones cerradas':paidStatusLabel[quote.estado]} · {quote.cupos_disponibles} cupos disponibles</p>
-      <p>Cierre de ventas: {formatActivityDate(quote.cierre,quote.zona_horaria)}</p>
-      {quote.estado==='disponible'&&!expired&&quote.cupos_disponibles>0&&<>
-        <label>Participantes <input type="number" min={1} max={quote.cupos_disponibles} value={quantity} onChange={e=>{setQuantity(Number(e.target.value));setNotice('');}} /></label>
-        <div className="paid-activity-terms"><strong>Condiciones de participación y devoluciones</strong>
+      <div className="paid-purchase-overview">
+        <div className="paid-purchase-cost"><span>Precio por participante</span><strong>{formatPrice(quote.precio)}</strong><small>Sin despacho</small></div>
+        <div className={`paid-purchase-stock ${available?'is-available':'is-unavailable'}`} role="status"><span>{expired&&quote.estado==='disponible'?'Inscripciones cerradas':paidStatusLabel[quote.estado]}</span><strong>{quote.cupos_disponibles} {quote.cupos_disponibles===1?'cupo disponible':'cupos disponibles'}</strong></div>
+      </div>
+      <div className="paid-purchase-dates">
+        <div><span>Inicio</span><strong>{formatActivityDate(quote.inicio,quote.zona_horaria)}</strong></div>
+        <div><span>Término</span><strong>{formatActivityDate(quote.termino,quote.zona_horaria)}</strong></div>
+        <div className="paid-purchase-deadline"><span>Cierre de ventas</span><strong>{formatActivityDate(quote.cierre,quote.zona_horaria)}</strong><small>{quote.zona_horaria}</small></div>
+      </div>
+      {available&&<>
+        <div className="paid-purchase-select"><div><strong>Participantes</strong><small>{countLabel}</small></div>
+          <div className="paid-cart-stepper" aria-label="Cantidad de participantes">
+            <button type="button" aria-label="Disminuir participantes" disabled={busy||quantity<=1} onClick={()=>{setQuantity(n=>Math.max(1,n-1));setNotice('');}}>−</button>
+            <output aria-live="polite">{quantity}</output>
+            <button type="button" aria-label="Aumentar participantes" disabled={busy||quantity>=quote.cupos_disponibles} onClick={()=>{setQuantity(n=>Math.min(quote.cupos_disponibles,n+1));setNotice('');}}>+</button>
+          </div>
+        </div>
+        {!validQuantity&&<p role="alert">La disponibilidad cambió. Ajusta la cantidad de participantes.</p>}
+        <div className="paid-activity-terms paid-purchase-terms"><strong>Condiciones de participación y devoluciones</strong>
           <p>Tolerancia de atraso: {quote.venta.tolerancia_minutos} minutos.</p>
           <p>{quote.venta.cancelacion==='anticipada'?`Anulación voluntaria anticipada: solicitar al menos ${quote.venta.cancelacion_horas} h antes.`:'Las solicitudes de anulación y devolución se evalúan individualmente.'}</p>
           {quote.condiciones.filter(Boolean).map((text,i)=><p key={`c${i}`}>{text}</p>)}
@@ -60,12 +84,12 @@ export function ActivityPurchasePreview({sectionId}:{sectionId:string}){
           <p>Estas condiciones no limitan los derechos legales del consumidor.</p>
           <label className="paid-activity-accept"><input type="checkbox" checked={accepted===quote.version} onChange={e=>setAccepted(e.target.checked?quote.version:'')} /> He leído y acepto las condiciones.</label>
         </div>
-        <p><strong>Total estimado: {formatPrice(quote.precio*(Number.isSafeInteger(quantity)&&quantity>0&&quantity<=quote.cupos_disponibles?quantity:0))}</strong></p>
-        <button className="paid-activity-action" type="button" disabled={!ready||busy||!canSelectPaidQuote(quote,quantity,accepted)} onClick={add}>{busy?'Verificando…':existing?'Actualizar participantes en carrito':'Agregar al carrito'}</button>
+        <div className="paid-purchase-total"><div><span>Total estimado</span><small>{quantity} {quantity===1?'participante':'participantes'}</small></div><strong>{formatPrice(quote.precio*(validQuantity?quantity:0))}</strong></div>
+        <button className="paid-activity-action" type="button" disabled={!ready||busy||!validQuantity||!canSelectPaidQuote(quote,quantity,accepted)} onClick={add}>{busy?'Verificando…':existing?'Actualizar carrito':'Agregar al carrito'}</button>
       </>}
     </>}
-    {error&&<p role="alert">{error}</p>}{notice&&<p role="status">{notice}</p>}
-    {existing&&<Link to={route('carrito')}>Ver carrito ({existing.quantity} participantes) →</Link>}
-    <small>Prueba local: no se cobra ni se reserva un cupo al agregar.</small>
+    {error&&<p role="alert">{error}</p>}{notice&&<p className="paid-purchase-notice" role="status">{notice}</p>}
+    {existing&&<Link className="paid-purchase-cart-link" to={route('carrito')}>Ver carrito ({existing.quantity} {existing.quantity===1?'participante':'participantes'}) →</Link>}
+    <small className="paid-purchase-test-note">Agregar al carrito no reserva cupos ni realiza cobros. La disponibilidad se verifica al registrar el pedido.</small>
   </section>;
 }

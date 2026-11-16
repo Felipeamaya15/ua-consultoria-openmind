@@ -1,12 +1,13 @@
 import { useCallback, useSyncExternalStore } from 'react';
 import { useStoreIdentity } from './StoreIdentityContext';
+import { useCartSession, currentCartToken } from './cartSession';
 import { guestCartKey } from '../services/guestCartStorage';
 import { isActiveEditorPreview } from '../visual/pages';
 import { validActivityId, canSelectPaidQuote, type PaidQuote } from '../../landing/services/paidActivityService';
 
 // Preview deliberately limited to local development; no payment or seat hold.
 export function activityCartPreviewEnabled() {
-  return import.meta.env.DEV && ['localhost','127.0.0.1','[::1]'].includes(window.location.hostname) && !isActiveEditorPreview();
+  return typeof window !== 'undefined' && !isActiveEditorPreview(); // El servidor autoriza el modo de compra.
 }
 export interface ActivityCartItem {
   sectionId: string; title: string; quantity: number; price: number; version: string; start: string; zone: string;
@@ -41,14 +42,23 @@ function subscribe(fn:()=>void){window.addEventListener(event,fn);return()=>wind
 export function useActivityCart(){
   const {identity}=useStoreIdentity();
   const base=guestCartKey(identity);
-  const key=activityCartPreviewEnabled()&&base?`${base}:activity-preview-v1`:null;
+  const {token, scope}=useCartSession();
+  // Deliberately do not migrate the old shared key: owner of those rows is unknown.
+  const key=activityCartPreviewEnabled()&&base&&scope?`${base}:activity-v2:${scope}`:null;
   const snapshot=useCallback(()=>read(key),[key]);
   const items=useSyncExternalStore(subscribe,snapshot,()=>EMPTY);
   const put=useCallback((sectionId:string,quote:PaidQuote,quantity:number,version:string)=>{
-    if(!key||!validActivityId(sectionId)||!canSelectPaidQuote(quote,quantity,version))throw new Error('Revisa disponibilidad y condiciones antes de agregar.');
+    if(currentCartToken()!==token||!key||!validActivityId(sectionId)||!canSelectPaidQuote(quote,quantity,version))throw new Error('Revisa disponibilidad y condiciones antes de agregar.');
     const item:ActivityCartItem={sectionId,title:quote.titulo,quantity,price:quote.precio,version,start:quote.inicio,zone:quote.zona_horaria};
     write(key,[...read(key).filter(x=>x.sectionId!==sectionId),item]);
-  },[key]);
-  const remove=useCallback((id:string)=>{if(key)write(key,read(key).filter(x=>x.sectionId!==id));},[key]);
-  return {items,put,remove,ready:!!key};
+  },[key,token]);
+  const remove=useCallback((id:string)=>{if(key&&currentCartToken()===token)write(key,read(key).filter(x=>x.sectionId!==id));},[key,token]);
+  // Reducing a selection never requires a fresh quote: no seats are held at this stage.
+  const reduce=useCallback((id:string)=>{
+    if(!key||currentCartToken()!==token)return;
+    const rows=read(key);
+    write(key,rows.flatMap(row=>row.sectionId!==id?[row]:row.quantity>1?[{...row,quantity:row.quantity-1}]:[]));
+  },[key,token]);
+  const clear=useCallback(()=>{if(key&&currentCartToken()===token)write(key,[]);},[key,token]);
+  return {items,put,remove,reduce,clear,ready:!!key};
 }

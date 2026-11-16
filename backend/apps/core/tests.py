@@ -208,8 +208,12 @@ class TiendaPropietarioMigrationTests(TransactionTestCase):
     def setUp(self):
         executor = MigrationExecutor(connection)
         self.final_targets = executor.loader.graph.leaf_nodes()
+        # Keep only independent leaves. Instagram (and future dependants)
+        # requires a later core schema, so retaining it would reapply the
+        # same migrations that this historical test is rolling back.
         self.other_targets = [node for node in self.final_targets
-                              if node[0] not in ('core', 'authentication', 'landing', 'visual_config')]
+                              if node[0] not in ('core', 'authentication', 'landing', 'visual_config')
+                              and self.migrate_to not in executor.loader.graph.forwards_plan(node)]
         targets = [self.migrate_from, *self.other_targets]
         operation = executor.loader.disk_migrations[('authentication', '0002_ensure_configuracion_autenticacion_table')].operations[0]
         promotion_reverse = executor.loader.disk_migrations[('core', '0023_reconciliar_promocion_historica')].operations[0].database_operations[0]

@@ -186,6 +186,7 @@ function clearStoredSession() {
   safeRemoveStorage(SESSION_STARTED_AT_KEY);
   safeRemoveStorage(SESSION_LAST_ACTIVITY_KEY);
   safeRemoveStorage(SESSION_IS_ADMIN_KEY);
+  if (typeof window !== 'undefined') window.dispatchEvent(new Event('openmind-cart-session-changed'));
 }
 
 async function profileRequest<T = CustomerProfile>(path: string, method = 'GET', data?: unknown, base = 'perfil', namespace = 'auth'): Promise<{ data: T }> {
@@ -255,6 +256,7 @@ export const authService = {
         safeSetStorage(SESSION_IS_ADMIN_KEY, 'true');
       }
     }
+    if (typeof window !== 'undefined') window.dispatchEvent(new Event('openmind-cart-session-changed'));
   },
   touchActivity() {
     if (getStoredToken()) {
@@ -410,10 +412,11 @@ export const authService = {
     });
     
     if (!res.ok) {
-      if (res.status === 401) clearStoredSession(); // Solo invalida sesiones rechazadas por autenticación.
+      if (res.status === 401 && getStoredToken() === token) clearStoredSession(); // No cerrar una sesión nueva por una respuesta anterior.
       return null;
     }
     const json = await res.json();
+    if (getStoredToken() !== token) return null;
     if (json?.data) {
       const isAdmin = Boolean(json.data.is_staff || json.data.is_superuser || json.data.is_store_owner);
       safeSetStorage(SESSION_IS_ADMIN_KEY, isAdmin ? 'true' : 'false');

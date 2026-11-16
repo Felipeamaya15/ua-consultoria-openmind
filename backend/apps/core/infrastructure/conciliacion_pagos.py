@@ -32,6 +32,10 @@ def marcar_pedido_pagado(pedido_pk):
 
     with transaction.atomic():
         pedido = Pedido.objects.select_for_update().get(pk=pedido_pk)
+        from apps.landing.external_activity_orders import is_external
+        if is_external(pedido):
+            # This generic route does not carry provider evidence.
+            raise ValueError('El pago de actividades exige conciliación específica.')
         pasa_a_pagado = pedido.estado == 'pendiente'
         if pasa_a_pagado:
             pedido.estado = 'pagado'

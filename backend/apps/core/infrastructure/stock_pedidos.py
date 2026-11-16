@@ -24,9 +24,12 @@ def descontar_stock_de_pedido(pedido_pk):
         pedido = Pedido.objects.select_for_update().filter(pk=pedido_pk).first()
         if not pedido or pedido.estado not in Pedido.ESTADOS_PAGADOS or pedido.stock_descontado:
             return False
+        if isinstance(pedido.entrega, dict) and pedido.entrega.get('origen') in ('actividad_prueba_v1','actividad_unificada_qa_v1','actividad_transferencia_v1','actividad_webpay_v1','actividad_pasarela_v1'):
+            return False  # las actividades no descuentan stock de MongoDB
         tienda_id = str(pedido.tienda_id)
         repositorio = ProductRepository()
-        lineas = list(ItemPedido.objects.filter(id_pedido=pedido).values(
+        items = ItemPedido.objects.filter(id_pedido=pedido)
+        lineas = list(items.values(
             'producto_mongo_id', 'sku', 'cantidad', 'id_producto_id'))
         descontadas = []
         try:

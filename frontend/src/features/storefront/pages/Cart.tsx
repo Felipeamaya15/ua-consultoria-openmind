@@ -1,24 +1,20 @@
+import '../../landing/components/activity-purchase-preview.css';
 import { useEffect, useState } from 'react';
 import { LoadingState } from '../../../shared/components/states';
 import { Link, useNavigate } from 'react-router-dom';
 
 import { StockFeedback } from '../components/store/StockFeedback';
 import { useCart } from '../context/CartContext';
-import { useActivityCart } from '../context/activityCart';
-import { ActivityCartPreview } from '../components/store/ActivityCartPreview';
+import { ActivityCartRows } from '../components/store/ActivityCartPreview';
 import { formatPrice } from '../data/mockData';
 import { Button, EmptyState, Icon } from '../components/ui';
 import { useStorefrontTemplate } from '../hooks/useStorefrontTemplate';
 
 export default function Cart() {
-  const { items } = useCart();
-  const { items: activities } = useActivityCart();
-  return <><ActivityCartPreview />{(items.length > 0 || activities.length === 0) && <ProductCart />}</>;
-}
-
-function ProductCart() {
   const {
     items,
+    activities,
+    count,
     removeItem,
     updateQuantity,
     subtotal,
@@ -30,8 +26,8 @@ function ProductCart() {
     promoNotice,
     loading,
   } = useCart();
-  const count = items.reduce((sum,item)=>sum+item.quantity,0);
-  const shippingLabel = shipping === null ? 'Se calcula en checkout' : shipping === 0 ? 'Gratis' : formatPrice(shipping);
+  const hasItems = items.length > 0 || activities.length > 0;
+  const shippingLabel = !items.length && activities.length ? 'No aplica' : shipping === null ? 'Se calcula en checkout' : shipping === 0 ? 'Gratis' : formatPrice(shipping);
 
   const { route, isMinimal, isVisual, isCatalog } = useStorefrontTemplate();
   const navigate = useNavigate();
@@ -124,7 +120,7 @@ function ProductCart() {
   // ==========================================================
   // CARRITO VACÍO — PLANTILLA 4 / CATALOG
   // ==========================================================
-  if (isCatalog && items.length === 0) {
+  if (isCatalog && !hasItems) {
     return (
       <div className="bg-[var(--visual-page-panel-background)] text-[var(--visual-page-color)]">
         <div className="max-w-[1160px] mx-auto px-5 py-20 md:py-28 text-center">
@@ -158,7 +154,7 @@ function ProductCart() {
   // ==========================================================
   // CARRITO VACÍO — PLANTILLA 3 / VELTA
   // ==========================================================
-  if (isVisual && items.length === 0) {
+  if (isVisual && !hasItems) {
     return (
       <div className="bg-[var(--visual-page-panel-background)] text-[var(--visual-page-color)]">
         <div className="max-w-[1180px] mx-auto px-5 md:px-8 py-16 md:py-24">
@@ -194,7 +190,7 @@ function ProductCart() {
   // ==========================================================
   // CARRITO VACÍO — PLANTILLAS 1 Y 2
   // ==========================================================
-  if (items.length === 0) {
+  if (!hasItems) {
     return (
       <div
         className={
@@ -234,12 +230,13 @@ function ProductCart() {
             </h1>
 
             <p className="mt-4 text-[13px] text-[var(--visual-page-color)]/45">
-              {count} {count === 1 ? 'producto en tu carrito' : 'productos en tu carrito'}
+              {count} {count === 1 ? 'artículo en tu carrito' : 'artículos en tu carrito'}
             </p>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-6 lg:gap-8 items-start">
             <div className="space-y-3">
+              <ActivityCartRows items={activities} />
               {items.map((item) => {
                 const hasDiscount = Boolean(item.comparePrice);
                 const canIncrease = item.quantity < item.maxStock;
@@ -286,14 +283,14 @@ function ProductCart() {
                             <StockFeedback sku={item.sku} maxStock={item.maxStock} quantity={item.quantity} className="mt-2 text-[10px] font-semibold text-[#e04b1a]" />
                           </div>
 
-                          <button data-page-action="danger"
-                            type="button"
-                            onClick={() => handleRequestRemove(item)}
-                            className="w-8 h-8 flex-shrink-0 rounded-full flex items-center justify-center text-[var(--visual-page-color)]/45 hover:bg-red-500/10 hover:text-[var(--error)] transition-colors"
+                          <button
+                    type="button"
+                    onClick={() => handleRequestRemove(item)}
+                    className="paid-cart-remove"
                             aria-label={`Eliminar ${item.name}`}
                             title={item.quantity > 1 ? 'Quitar unidad o eliminar producto' : `Eliminar ${item.name}`}
                           >
-                            <span aria-hidden="true">×</span>
+                            Eliminar
                           </button>
                         </div>
 
@@ -459,7 +456,7 @@ function ProductCart() {
                       name="box"
                       className="w-4 h-4 mt-0.5 flex-shrink-0 text-[var(--primary)]"
                     />
-                    <p>Despacho a todo Chile y embalaje seguro para tu pedido.</p>
+                    <p>{items.length ? "El despacho se aplica a los productos físicos." : "Las actividades no requieren despacho."}</p>
                   </div>
                 </div>
               </div>
@@ -488,7 +485,7 @@ function ProductCart() {
               </h1>
 
               <p className="mt-3 text-[13px] text-[var(--visual-page-color)]">
-                {count} {count === 1 ? 'producto en tu carrito' : 'productos en tu carrito'}
+                {count} {count === 1 ? 'artículo en tu carrito' : 'artículos en tu carrito'}
               </p>
             </div>
 
@@ -502,6 +499,7 @@ function ProductCart() {
 
           <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-8 lg:gap-12 items-start">
             <div className="flex flex-col gap-4">
+              <ActivityCartRows items={activities} />
               {items.map((item) => {
                 const hasDiscount = Boolean(item.comparePrice);
 
@@ -546,14 +544,14 @@ function ProductCart() {
                           <StockFeedback sku={item.sku} maxStock={item.maxStock} quantity={item.quantity} className="mt-2 text-[10px] text-[#756b51]" />
                         </div>
 
-                        <button data-page-action="danger"
-                          type="button"
-                          onClick={() => handleRequestRemove(item)}
-                          className="w-8 h-8 flex-shrink-0 rounded-full flex items-center justify-center text-[var(--visual-page-color)] hover:bg-red-500/10 hover:text-[var(--error)] transition-colors"
+                        <button
+                    type="button"
+                    onClick={() => handleRequestRemove(item)}
+                    className="paid-cart-remove"
                           aria-label={`Eliminar ${item.name}`}
                           title={item.quantity > 1 ? 'Quitar unidad o eliminar producto' : `Eliminar ${item.name}`}
                         >
-                          <span aria-hidden="true">×</span>
+                          Eliminar
                         </button>
                       </div>
 
@@ -701,7 +699,7 @@ function ProductCart() {
                 <div className="mt-5 border-t border-[var(--visual-global-border)]/10 pt-5">
                   <div className="flex items-start gap-3 text-[11px] leading-5 text-[var(--visual-page-color)]">
                     <Icon name="box" className="w-4 h-4 mt-0.5 flex-shrink-0 text-black" />
-                    <p>Despacho a todo Chile y embalaje seguro para tu pedido.</p>
+                    <p>{items.length ? "El despacho se aplica a los productos físicos." : "Las actividades no requieren despacho."}</p>
                   </div>
                 </div>
               </div>
@@ -735,6 +733,7 @@ function ProductCart() {
 
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-8">
         <div className="flex flex-col gap-4">
+          <ActivityCartRows items={activities} />
           {items.map((item) => (
             <article data-page-panel
               key={`${item.productId}-${item.variantId}`}
@@ -771,14 +770,14 @@ function ProductCart() {
                     <StockFeedback sku={item.sku} maxStock={item.maxStock} quantity={item.quantity} />
                   </div>
 
-                  <button data-page-action="danger"
+                  <button
                     type="button"
                     onClick={() => handleRequestRemove(item)}
-                    className="w-8 h-8 flex-shrink-0 rounded-full flex items-center justify-center text-[var(--muted-foreground)] hover:bg-red-500/10 hover:text-[var(--error)] transition-colors"
+                    className="paid-cart-remove"
                     aria-label={`Eliminar ${item.name}`}
                     title={item.quantity > 1 ? 'Quitar unidad o eliminar producto' : `Eliminar ${item.name}`}
                   >
-                    <span aria-hidden="true">×</span>
+                    Eliminar
                   </button>
                 </div>
 

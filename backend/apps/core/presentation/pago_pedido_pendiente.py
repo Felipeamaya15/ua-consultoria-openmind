@@ -121,6 +121,10 @@ class PagarPedidoPendienteView(APIView):
         if guard:
             guard.register_success()
 
+        if (pedido.entrega or {}).get('origen') == 'actividad_transferencia_v1':
+            return error_response('La transferencia se gestiona directamente con la tienda. No crees otro pago.', 'ACTIVIDAD_TRANSFERENCIA', status=409)
+        if isinstance(pedido.entrega, dict) and pedido.entrega.get('origen') in ('actividad_prueba_v1','actividad_unificada_qa_v1'):
+            return error_response('Este pedido es una prueba sin cobro.', 'ACTIVIDAD_PRUEBA', status=409)
         if pedido.estado != 'pendiente':
             return error_response('Este pedido ya no está pendiente de pago.', 'PEDIDO_NO_DISPONIBLE', status=409)
         if plazo_vencido(pedido):

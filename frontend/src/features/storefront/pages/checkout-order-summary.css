@@ -1,0 +1,49 @@
+/* Resumen de compra: conservamos fuentes, colores y paleta de la tienda. */
+[data-checkout-page] [data-checkout-items] {
+  gap: 1rem;
+}
+[data-checkout-page] [data-checkout-items] > div {
+  align-items: flex-start;
+  min-width: 0;
+  padding-bottom: .8rem;
+  border-bottom: 1px solid var(--visual-global-border, var(--border));
+}
+[data-checkout-page] [data-checkout-items] > div:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+[data-checkout-page] [data-checkout-items] p:not([data-page-price]) {
+  font-size: .875rem !important;
+  line-height: 1.5 !important;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+[data-checkout-page] [data-checkout-items] p:not([data-page-price]):first-child {
+  font-size: .98rem !important;
+  font-weight: 600;
+}
+[data-checkout-page] [data-checkout-items] [data-page-price],
+[data-checkout-page] [data-checkout-cost-breakdown] [data-page-price] {
+  font-size: 1rem !important;
+  line-height: 1.4 !important;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+[data-checkout-page] [data-checkout-items] [data-page-price].line-through {
+  font-size: .78rem !important;
+}
+[data-checkout-page] [data-checkout-cost-breakdown] > div:last-child [data-page-price] {
+  font-size: 1.25rem !important;
+  font-weight: 700;
+}
+[data-checkout-page] [data-checkout-cost-breakdown] > div:last-child {
+  font-size: 1.05rem !important;
+}
+@media(max-width:480px) {
+  [data-checkout-page] [data-checkout-items] p:not([data-page-price]) {
+    font-size: .82rem !important;
+  }
+  [data-checkout-page] [data-checkout-items] [data-page-price] {
+    font-size: .92rem !important;
+  }
+}

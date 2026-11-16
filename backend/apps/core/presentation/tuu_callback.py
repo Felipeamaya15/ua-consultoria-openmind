@@ -54,6 +54,14 @@ class TuuCallbackView(APIView):
             if monto != pedido.monto_total:
                 logger.error('Callback TUU con monto distinto en pedido %s.', pedido.pk)
                 return Response({'exito': False}, status=400)
+            from apps.landing.external_activity_orders import is_external, approve_locked
+            if is_external(pedido):
+                from apps.core.presentation.pago_pedido_pendiente import ErrorPago
+                try:
+                    # Signature, account and order reference were verified above.
+                    with transaction.atomic(): approve_locked(pedido,datos.get('x_reference'),datos.get('x_currency'),monto)
+                except ErrorPago: return Response({'exito':False},status=409)
+                return Response({'exito':True})
             if pedido.estado == 'cancelado':
                 logger.critical('PAGO_SOBRE_PEDIDO_CANCELADO pedido=%s tienda=%s medio=TUU x_reference=%s',
                                 pedido.pk, pedido.tienda_id, pedido.identificador)

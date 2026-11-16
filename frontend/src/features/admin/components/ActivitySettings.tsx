@@ -1,7 +1,8 @@
 import { Link } from 'react-router-dom';
+import './paid-activity-settings.css';
 import { Input, Select, Toggle } from './ui';
 import type { BloqueLanding } from '../../landing/types/landing.types';
-import { newActivity, newSectionElement, newPaidActivitySettings, type PaidActivitySettings, type SectionActivity, type ElementKind } from '../../landing/types/sectionElements';
+import { newActivity, newSectionElement, newPaidActivitySettings, type PaidActivitySettings, type SectionActivity, type ElementKind, type SectionElement } from '../../landing/types/sectionElements';
 
 /** Operational settings live on the same section; visual content stays in its blocks. */
 export function ActivitySettings({section,onChange}:{section:BloqueLanding;onChange:(section:BloqueLanding)=>void}) {
@@ -10,6 +11,30 @@ export function ActivitySettings({section,onChange}:{section:BloqueLanding;onCha
   const sale=activity?.venta;
   const updateSale=(patch:Partial<PaidActivitySettings>)=>{if(sale)update({venta:{...sale,...patch}});};
   const add=(kind:ElementKind)=>onChange({...section,componentes:[...(section.componentes||[]),newSectionElement(kind)]});
+  const components=section.componentes||[];
+  const kinds=['precio','fecha','horario'] as const;
+  const firstVisible=(kind:ElementKind)=>components.find(e=>e.tipo===kind&&e.visible);
+  const price=firstVisible('precio'),day=firstVisible('fecha'),hours=firstVisible('horario');
+  const edit=(kind:ElementKind,patch:Partial<SectionElement>)=>{
+    const current=firstVisible(kind)||components.find(e=>e.tipo===kind);
+    if(!current&&components.length>=30)return;
+    const next={...(current||newSectionElement(kind)),...patch,visible:true};
+    onChange({...section,componentes:current?components.map(e=>e.id===current.id?next:e):[...components,next]});
+  };
+  const issues:string[]=[];
+  if(sale){
+    if(!price||!/^\d{1,12}$/.test(price.importe||'')||Number(price.importe)<=0)issues.push('Ingresa un precio por participante mayor que $0.');
+    if(!day?.fecha)issues.push('Selecciona la fecha de inicio.');
+    if(!hours?.inicio||!hours?.termino)issues.push('Completa las horas de inicio y término.');
+    if(day?.fecha&&hours?.inicio&&hours?.termino&&`${day.hasta||day.fecha}T${hours.termino}`<=`${day.fecha}T${hours.inicio}`)issues.push('El término debe ser posterior al inicio.');
+    if(!Number.isInteger(activity?.cupos)||Number(activity?.cupos)<1||Number(activity?.cupos)>10000)issues.push('Define entre 1 y 10.000 cupos.');
+    for(const kind of kinds)if(components.filter(e=>e.tipo===kind&&e.visible).length>1)issues.push(`Deja solo un bloque ${kind} visible.`);
+    if(!components.some(e=>e.visible&&(e.tipo==='titulo'||e.tipo==='nombre')&&e.texto?.trim())&&!section.titulo?.trim())issues.push('Agrega un título para la actividad.');
+    if(!Number.isInteger(sale.cierre_minutos)||sale.cierre_minutos<0||sale.cierre_minutos>10080)issues.push('El cierre de ventas debe estar entre 0 y 10.080 minutos.');
+    if(!Number.isInteger(sale.tolerancia_minutos)||sale.tolerancia_minutos<0||sale.tolerancia_minutos>120)issues.push('La tolerancia debe estar entre 0 y 120 minutos.');
+    if(sale.cancelacion==='anticipada'&&(!Number.isInteger(sale.cancelacion_horas)||sale.cancelacion_horas<0||sale.cancelacion_horas>720))issues.push('La anticipación de anulaciones debe estar entre 0 y 720 horas.');
+    try{new Intl.DateTimeFormat('es-CL',{timeZone:activity?.zona_horaria||'!'}).format();}catch{issues.push('Selecciona una zona horaria válida, por ejemplo America/Santiago.');}
+  }
   return <fieldset className="activity-settings"><legend>Servicio o taller</legend>
     <Select label="Tipo de actividad" value={activity?.tipo||''} options={[{value:'',label:'Contenido general'},{value:'servicio',label:'Servicio'},{value:'taller',label:'Taller o actividad'}]} onChange={event=>onChange({...section,actividad:event.target.value?{...newActivity(event.target.value as SectionActivity['tipo']),...(activity||{}),tipo:event.target.value as SectionActivity['tipo'],inscripciones:false}:null})} />
     {activity&&<>
@@ -27,22 +52,33 @@ export function ActivitySettings({section,onChange}:{section:BloqueLanding;onCha
       </>}
       {!activity.gratuito&&<>
         <Toggle label="Preparar venta online" checked={!!sale} onChange={enabled=>update({venta:enabled?newPaidActivitySettings():null,inscripciones:false})} />
-        {sale&&<div className="activity-settings" aria-label="Configuración de venta online">
-          <strong>Configuración de venta (sin cobros habilitados)</strong>
-          <p>Usa los bloques visibles Precio, Fecha y Horario. El precio es por participante. Esta etapa guarda la configuración; todavía no permite comprar.</p>
-          <div className="flexible-add">{(['precio','fecha','horario'] as const).filter(kind=>!section.componentes?.some(element=>element.tipo===kind)).map(kind=><button key={kind} className="lp-button" type="button" disabled={(section.componentes?.length||0)>=30} onClick={()=>add(kind)}>Agregar {kind}</button>)}</div>
+        {sale&&<div className="activity-settings paid-sale-editor" aria-label="Configuración de venta online">
+          <div className="paid-sale-heading"><strong>Venta online</strong><p>Define el precio, las fechas y los cupos que podrán comprar tus clientes.</p></div>
+          {issues.length>0&&<div className="paid-sale-validation paid-sale-incomplete" role="alert">
+            <strong>Para guardar la venta online, completa lo siguiente:</strong>
+            <ul>{issues.map(issue=><li key={issue}>{issue}</li>)}</ul>
+          </div>}
+          <div className="paid-sale-price"><label htmlFor={`paid-price-${section.id}`}>Precio por participante (CLP)</label><div className="paid-sale-money"><span>$</span><input id={`paid-price-${section.id}`} type="text" inputMode="numeric" maxLength={12} placeholder="15000" value={price?.importe||components.find(e=>e.tipo==='precio')?.importe||''} disabled={!components.some(e=>e.tipo==='precio')&&components.length>=30} onChange={e=>edit('precio',{importe:e.target.value.replace(/[^0-9]/g,'')})}/></div><p>Este importe se sincroniza con el bloque Precio de la tienda.</p>{!price&&<button type="button" className="paid-sale-add" disabled={!components.some(e=>e.tipo==='precio')&&components.length>=30} onClick={()=>edit('precio',{})}>+ {components.some(e=>e.tipo==='precio')?'Mostrar':'Agregar'} bloque Precio</button>}</div>
+          <div className="activity-settings-grid">
+            <Input label="Fecha de inicio" type="date" value={day?.fecha||''} onChange={e=>edit('fecha',{fecha:e.target.value})} />
+            <Input label="Fecha de término (opcional)" type="date" value={day?.hasta||''} onChange={e=>edit('fecha',{hasta:e.target.value})} />
+            <Input label="Hora de inicio" type="time" value={hours?.inicio||''} onChange={e=>edit('horario',{inicio:e.target.value})} />
+            <Input label="Hora de término" type="time" value={hours?.termino||''} onChange={e=>edit('horario',{termino:e.target.value})} />
+          </div>
+          {components.length>=30&&(!price||!day||!hours)&&<p role="alert">Se alcanzó el máximo de 30 bloques. Elimina uno si necesitas crear otro.</p>}
           <div className="activity-settings-grid">
             <Input label="Cupos totales" type="number" min={1} max={10000} step={1} value={activity.cupos??''} onChange={event=>update({cupos:event.target.value?Number(event.target.value):null})} />
             <Input label="Cierre de ventas (minutos antes del inicio)" type="number" min={0} max={10080} step={1} value={sale.cierre_minutos} onChange={event=>updateSale({cierre_minutos:Number(event.target.value)})} />
             <Input label="Tolerancia de atraso (minutos)" type="number" min={0} max={120} step={1} value={sale.tolerancia_minutos} onChange={event=>updateSale({tolerancia_minutos:Number(event.target.value)})} />
             <Select label="Política de anulaciones y devoluciones" value={sale.cancelacion} options={[{value:'evaluacion',label:'Evaluar cada solicitud de devolución'},{value:'anticipada',label:'Admitir anulación anticipada'}]} onChange={event=>updateSale({cancelacion:event.target.value as PaidActivitySettings['cancelacion']})} />
-            {sale.cancelacion==='anticipada'&&<Input label="Solicitar anulación al menos (horas antes)" type="number" min={0} max={720} step={1} value={sale.cancelacion_horas} onChange={event=>updateSale({cancelacion_horas:Number(event.target.value)})} />}
+            {sale.cancelacion==='anticipada'&&<Input label="Solicitar anulación con cuántas horas de anticipación" type="number" min={0} max={720} step={1} value={sale.cancelacion_horas} onChange={event=>updateSale({cancelacion_horas:Number(event.target.value)})} />}
           </div>
-          <p>Las condiciones de atraso, inasistencia y anulación voluntaria no limitan los derechos legales del consumidor. Si la tienda anula la actividad, corresponde gestionar la devolución.</p>
+          <p>Las solicitudes se gestionan desde Servicios y talleres. Si admites anulación anticipada, el comprador puede solicitarla dentro del plazo indicado. Las demás solicitudes se evalúan individualmente.</p>
+          <p>Para transferencias, la tienda realiza la devolución desde su banco y registra el comprobante una sola vez. No se solicita otra tarjeta. Las condiciones no limitan los derechos legales del consumidor.</p>
         </div>}
       </>}
       <p><Link to="/emprendedor/actividades">Ver consultas e inscripciones recibidas ↗</Link></p>
-      <p>Agrega los bloques de formulario para mostrar «Solicitar información» o «Inscribirme». Las consultas no reservan cupos. El precio es informativo y no habilita compras.</p>
+      <p>Agrega los bloques de formulario para mostrar «Solicitar información» o «Inscribirme». Las consultas no reservan cupos. Si preparas la venta online, el bloque Precio define el valor por participante.</p>
     </>}
   </fieldset>;
 }

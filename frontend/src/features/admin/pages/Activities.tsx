@@ -1,3 +1,4 @@
+import { PaidActivitySalesQA } from '../components/PaidActivitySalesQA';
 import { ActivityConversation } from '../components/ActivityConversation';
 import { useEffect, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
@@ -238,6 +239,8 @@ export default function Activities() {
           <Icon name="arrowUpRight" className="w-4 h-4" />
         </Link>
       </div>
+
+      <PaidActivitySalesQA />
 
       {/* Selector de tipo principal (Consultas vs Inscripciones) */}
       <div className="bg-white rounded-xl border border-[var(--border)] p-2 shadow-xs">
