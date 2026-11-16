@@ -282,9 +282,11 @@ function MarketingWorkspace({ scope, isCurrent }: { scope: DraftScope; isCurrent
         {problem && <div role="status" className="marketing-notice">{problem}</div>}
         {missingVariant && <div role="status" className="marketing-notice">La variante guardada ya no está disponible. Selecciona otra para continuar. <Button type="button" size="sm" onClick={() => setSku('')}>Usar una variante disponible</Button></div>}
         </>} empty={<div className="marketing-preview-empty"><span className="marketing-empty-mark" aria-hidden="true">↗</span><h3>Tu próxima publicación empieza aquí</h3><p>{sources.loading ? 'Estamos consultando los datos de tu tienda.' : sources.brandError ? 'Carga la identidad de tu tienda para generar la vista previa.' : 'Selecciona un producto, servicio o taller publicado para ver su composición.'}</p></div>} />
-    <div className="marketing-publication-actions" aria-label="Borradores y descargas" aria-busy={busy}>
+    <div className="marketing-publication-actions" aria-label="Acciones de publicación" aria-busy={busy}>
+      {/* OPENMIND_MARKETING_ACTIONS_V1 */}
+      <div className="mk-publication-heading"><strong>Tu publicación</strong><span>{dirty ? 'Cambios sin guardar' : 'Sin cambios pendientes'}</span></div>
       <Input label="Nombre del borrador" value={name} maxLength={80} disabled={busy} onChange={event => { setNotice(''); setName(event.target.value); }} placeholder="Ej.: Colección de primavera" />
-      <div className="marketing-editor-actions">
+      <div className="marketing-editor-actions marketing-primary-actions">
         <InstagramPublisher disabled={busy || !content || !sources.brand} square={design.format === 'square'} revision={revision.current} initialCaption={instagramCaption} generate={async () => {
           if (design.format !== 'square') throw new Error('Instagram admite inicialmente publicaciones individuales cuadradas.');
           if (readyInstagram) return readyInstagram.file;
@@ -300,15 +302,28 @@ function MarketingWorkspace({ scope, isCurrent }: { scope: DraftScope; isCurrent
           const blob = await renderPublication(art, 'square', 'jpg', () => mounted.current && isCurrent() && revision.current === start);
           return new File([blob], publicationFilename(session.active, 'square', 'jpg'), {type: 'image/jpeg'});
         }} />
-        <Button type="button" size="sm" disabled={busy || (!productId&&!sharingReference) || !dirty} onClick={() => void saveDraft()}>{savingDraft ? 'Guardando…' : 'Guardar borrador'}</Button>
+        <Button type="button" size="sm" variant="outline" disabled={busy || (!productId&&!sharingReference) || !dirty} onClick={() => void saveDraft()}>{savingDraft ? 'Guardando…' : 'Guardar borrador'}</Button>
+      </div>
+      {design.format !== 'square' && <p className="marketing-hint">La publicación directa en Instagram requiere el formato cuadrado. Puedes descargar los otros formatos o usar la difusión manual.</p>}
+      <details className="mk-publication-more">
+        <summary>Más opciones</summary>
+        <div className="mk-publication-more-body">
+          <div className="mk-publication-group">
+            <h3>Borradores</h3>
+            <div className="mk-publication-secondary-actions">
         <Button type="button" size="sm" variant="outline" disabled={busy} aria-expanded={showDrafts} onClick={() => { loadList(); setShowDrafts(value => !value); }}>Mis borradores</Button>
         <Button type="button" size="sm" variant="outline" disabled={busy} onClick={newPublication}>Nueva publicación</Button>
+            </div>
+          </div>
+          <div className="mk-publication-group">
+            <h3>Descargar y compartir</h3>
+            <div className="mk-publication-secondary-actions">
         <Button type="button" size="sm" variant="outline" disabled={busy || !content || !sources.brand} onClick={() => void exportImage('png')}>Descargar PNG</Button>
         <Button type="button" size="sm" variant="outline" disabled={busy || !content || !sources.brand} onClick={() => void exportImage('jpg')}>Descargar JPG</Button>
         <Button type="button" size="sm"
           disabled={busy || !content || !sources.brand}
           onClick={() => void exportImage('jpg', true)}>
-          Preparar para Instagram
+          Preparar para publicación manual
         </Button>
         {readyInstagram && canShareInstagram(readyInstagram.file) &&
           <Button type="button" size="sm" disabled={busy}
@@ -325,7 +340,8 @@ function MarketingWorkspace({ scope, isCurrent }: { scope: DraftScope; isCurrent
           onClick={() => window.open('https://www.instagram.com/', '_blank', 'noopener,noreferrer')}>
           Abrir Instagram
         </Button>
-      </div>
+            </div>
+          </div>
       <details>
         <summary>Ver descripción para Instagram</summary>
         <textarea aria-label="Descripción para Instagram"
@@ -333,8 +349,10 @@ function MarketingWorkspace({ scope, isCurrent }: { scope: DraftScope; isCurrent
           style={{ width: '100%', padding: 10 }} />
         <p className="marketing-hint">
           Revisa el texto antes de publicarlo. Puedes editarlo en Instagram.
-          OpenMind no publica automáticamente.
+          La publicación directa requiere tu confirmación.
         </p>
+      </details>
+        </div>
       </details>
       <p className="marketing-hint">{busy ? savingDraft ? 'Guardando borrador…' : 'Preparando imágenes y fuentes para descargar...' : dirty ? 'Cambios sin guardar.' : 'Sin cambios pendientes.'} Los borradores se guardan solo en este navegador.</p>
       {notice && !error && <div role="status"><Alert variant="success">{notice}</Alert></div>}

@@ -383,3 +383,35 @@
 .marketing-art.is-editable[data-editorial-type="activity"][data-format="story"] .marketing-activity-footer {
   gap: 2.3cqw;
 }
+
+
+/* OPENMIND_MARKETING_ACTIONS_V1: jerarquia y acciones secundarias */
+.marketing-publication-actions .mk-publication-heading {
+  display:flex; align-items:center; justify-content:space-between; gap:12px;
+  flex-wrap:wrap; max-width:none; margin-bottom:12px;
+}
+.mk-publication-heading strong { font-size:16px; font-weight:700; }
+.mk-publication-heading span { font-size:12px; color:var(--muted-foreground,#64748b); }
+.marketing-publication-actions .marketing-primary-actions {
+  display:flex; flex-wrap:wrap; align-items:center; gap:10px;
+}
+.marketing-publication-actions .marketing-primary-actions > button {
+  min-height:42px; white-space:normal; height:auto;
+}
+.mk-publication-more { margin-top:10px; border-top:1px solid var(--border,#e2e8f0); }
+.mk-publication-more > summary {
+  cursor:pointer; font-size:13px; font-weight:650; color:var(--primary,#183b56);
+  padding:12px 0; min-height:44px;
+}
+.mk-publication-more > summary:focus-visible { outline:2px solid var(--primary,#183b56); outline-offset:2px; }
+.mk-publication-more-body { display:grid; gap:14px; min-width:0; padding-bottom:8px; }
+.mk-publication-group h3 { font-size:12px; font-weight:650; margin:0 0 8px; color:var(--muted-foreground,#64748b); }
+.mk-publication-secondary-actions { display:flex; flex-wrap:wrap; gap:8px; }
+.mk-publication-secondary-actions button { white-space:normal; height:auto; min-height:38px; max-width:100%; }
+.marketing-publication-actions:has(.mk-publication-more[open]) { position:static; }
+.marketing-publication-actions > .marketing-hint { margin-top:8px; }
+@media(max-width:600px) {
+  .marketing-publication-actions { position:static; border-radius:12px; }
+  .marketing-publication-actions .marketing-primary-actions > button { flex:1 1 100%; }
+  .mk-publication-secondary-actions button { flex:1 1 140px; }
+}
