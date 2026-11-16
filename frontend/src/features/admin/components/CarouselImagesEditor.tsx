@@ -3,7 +3,8 @@ import { Button, Input, Textarea, Toggle, Modal } from './ui';
 import { MediaPreview } from '../../marketing/components/MediaPreview';
 import type { MediaResource } from '../../marketing/domain/mediaLibrary';
 import { fetchSectionLibrary } from '../../landing/services/sectionResources';
-import type { CarouselSlideContent } from '../../landing/types/landing.types';
+import type { CarouselSlideContent, BloqueLanding } from '../../landing/types/landing.types';
+import type { Product } from '../../storefront/data/mockData';
 import type { CarouselTextMode } from '../../landing/services/carruselService';
 
 import { useEffect, useId, useRef, useState } from 'react';
@@ -37,10 +38,44 @@ function errorMessage(error: unknown): string {
     : 'No pudimos completar la operación. Intenta nuevamente.';
 }
 
-function SlideContentEditor({image,onSaved,disabled}:{image:ImagenCarruselLanding;onSaved:(image:ImagenCarruselLanding)=>void;disabled:boolean}) {
+type Destination = { value: string; label: string; group: string };
+const pageDestinations: Destination[] = [
+  {value:'catalogo', label:'Catálogo', group:'Páginas de mi tienda'},
+  {value:'carrito', label:'Carrito de compras', group:'Páginas de mi tienda'},
+  {value:'seguimiento', label:'Seguimiento de pedidos', group:'Páginas de mi tienda'},
+  {value:'ingresar', label:'Acceso de clientes', group:'Páginas de mi tienda'},
+  {value:'perfil', label:'Mi cuenta', group:'Páginas de mi tienda'},
+  {value:'mis-pedidos', label:'Mis pedidos', group:'Páginas de mi tienda'},
+];
+
+function slideDestinations(blocks: BloqueLanding[], products: Product[]): Destination[] {
+  const sections = blocks.filter(block => block.visible && /^[a-zA-Z0-9_-]+$/.test(block.id)).map(block => {
+    const title = block.titulo?.trim() || block.componentes?.find(item => item.visible && ['titulo','nombre'].includes(item.tipo) && item.texto?.trim())?.texto?.trim() || block.nombre_interno?.trim() || 'Sección sin título';
+    const group = block.actividad?.tipo === 'taller' ? 'Talleres publicados' : block.actividad?.tipo === 'servicio' ? 'Servicios publicados' : 'Secciones publicadas';
+    return {value: '#seccion-' + block.id, label: title, group};
+  });
+  const items = products.filter(product => product.status === 'active' && !!product.id).map(product => ({value:'producto/' + encodeURIComponent(product.id), label:product.name, group:'Productos publicados'}));
+  return [...pageDestinations, ...sections, ...items];
+}
+
+function validExternalDestination(value: string): boolean {
+  try {
+    const url = new URL(value);
+    return url.protocol === 'https:' && !!url.hostname && !url.username && !url.password && !/[\s\\<>"]/.test(value);
+  } catch { return false; }
+}
+
+function SlideContentEditor({image,onSaved,disabled,destinations}:{image:ImagenCarruselLanding;onSaved:(image:ImagenCarruselLanding)=>void;disabled:boolean;destinations:Destination[]}) {
   const [draft,setDraft]=useState<CarouselSlideContent>(image.contenido ?? {}),[saving,setSaving]=useState(false),[error,setError]=useState(''),[notice,setNotice]=useState('');
   const savedKey=JSON.stringify(image.contenido ?? {});
-  useEffect(()=>{setDraft(image.contenido ?? {});},[image.id,savedKey]);
+  const [externalMode,setExternalMode]=useState((image.contenido?.enlace ?? '').startsWith('https://'));
+  const destinationId=useId();
+  const rawDestination=draft.enlace ?? '';
+  const knownDestination=destinations.some(option=>option.value===rawDestination);
+  const selectedDestination=externalMode ? '__external' : !rawDestination ? 'catalogo' : knownDestination ? rawDestination : '__saved';
+  const invalidExternal=externalMode && !validExternalDestination(rawDestination);
+  const groups=[...new Set(destinations.map(option=>option.group))];
+  useEffect(()=>{setDraft(image.contenido ?? {});setExternalMode((image.contenido?.enlace ?? '').startsWith('https://'));},[image.id,savedKey]);
   const change=(next:Partial<CarouselSlideContent>)=>{setDraft(old=>({...old,...next}));setError('');setNotice('');};
   async function persist(value:CarouselSlideContent){if(saving)return;setSaving(true);setError('');try{const saved=await saveCarouselContent(image.id,value);onSaved(saved);setDraft(saved.contenido ?? {});setNotice('Contenido guardado.');}catch(cause){setError(errorMessage(cause));}finally{setSaving(false);}}
   return <details className="lp-slide-content"><summary>Texto y botón de esta diapositiva</summary><p>Sin personalización se usan los textos generales de la portada. El contenido acompaña a este archivo al reordenarlo.</p><fieldset disabled={disabled||saving}>
@@ -49,14 +84,30 @@ function SlideContentEditor({image,onSaved,disabled}:{image:ImagenCarruselLandin
     <Textarea label="Descripción de la diapositiva" maxLength={1000} placeholder="Usar descripción general" value={draft.descripcion ?? ''} onChange={e=>change({descripcion:e.target.value || undefined})}/>
     <Toggle label="Mostrar descripción" checked={draft.mostrar_descripcion ?? true} onChange={mostrar_descripcion=>change({mostrar_descripcion})}/>
     <Input label="Texto del botón de la diapositiva" maxLength={100} placeholder="Usar botón general" value={draft.texto_boton ?? ''} onChange={e=>change({texto_boton:e.target.value || undefined})}/>
-    <Input label="Destino del botón de la diapositiva" maxLength={2000} placeholder="catalogo o https://…" value={draft.enlace ?? ''} onChange={e=>change({enlace:e.target.value || undefined})}/>
+    <div className="lp-slide-destination">
+      <label htmlFor={destinationId}>Destino del botón de la diapositiva</label>
+      <select id={destinationId} value={selectedDestination} onChange={event=>{
+        const next=event.target.value;
+        if(next==='__external'){setExternalMode(true);change({enlace:undefined});return;}
+        if(next==='__saved')return;
+        setExternalMode(false);change({enlace:next});
+      }}>
+        {groups.map(group=><optgroup key={group} label={group}>{destinations.filter(option=>option.group===group).map(option=><option key={option.value} value={option.value}>{option.label}</option>)}</optgroup>)}
+        {selectedDestination==='__saved'&&<option value="__saved">Destino guardado anteriormente</option>}
+        <option value="__external">Otro sitio web (enlace HTTPS)</option>
+      </select>
+      {externalMode&&<><Input label="Enlace del sitio web" maxLength={2000} placeholder="https://…" value={rawDestination} onChange={event=>change({enlace:event.target.value || undefined})}/>{invalidExternal&&<small>Escribe una dirección HTTPS válida para guardar.</small>}</>}
+      {selectedDestination==='__saved'&&<small>Este destino no está en las opciones actuales. Puedes conservarlo o elegir otro.</small>}
+      <small>Elige el destino sin copiar enlaces. Solo aparecen productos y secciones guardadas y visibles.</small>
+    </div>
     <Toggle label="Mostrar botón" checked={draft.mostrar_boton ?? true} onChange={mostrar_boton=>change({mostrar_boton})}/>
-    <Button type="button" disabled={saving||JSON.stringify(draft)===savedKey} onClick={()=>void persist(draft)}>{saving?'Guardando…':'Guardar contenido de esta diapositiva'}</Button>
+    <Button type="button" disabled={saving||invalidExternal||JSON.stringify(draft)===savedKey} onClick={()=>void persist(draft)}>{saving?'Guardando…':'Guardar contenido de esta diapositiva'}</Button>
     <Button type="button" variant="ghost" disabled={saving||savedKey==='{}'} onClick={()=>void persist({})}>Restablecer textos generales</Button>
   </fieldset>{error&&<p role="alert">{error}</p>}{notice&&<p role="status">{notice}</p>}</details>;
 }
 
-export function CarouselImagesEditor() {
+export function CarouselImagesEditor({blocks=[],products=[]}:{blocks?:BloqueLanding[];products?:Product[]} = {}) {
+  const destinations=slideDestinations(blocks,products);
   const fileId = useId();
   const descriptionId = useId();
   const textModeInputName = useId();
@@ -359,7 +410,7 @@ export function CarouselImagesEditor() {
                         'Sin descripción alternativa'}
                     </p>
 
-                    {textMode === 'por_imagen' && <SlideContentEditor image={image} disabled={busy} onSaved={saved=>setImages(rows=>rows.map(row=>row.id===saved.id?saved:row))} />}
+                    {textMode === 'por_imagen' && <SlideContentEditor image={image} destinations={destinations} disabled={busy} onSaved={saved=>setImages(rows=>rows.map(row=>row.id===saved.id?saved:row))} />}
                     <div className="lp-carousel-actions">
                       <button
                         type="button"

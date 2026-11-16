@@ -188,3 +188,16 @@
 }
 
 .lp-slide-content{margin-block:12px;padding:10px;border:1px solid #dbe3ee;border-radius:8px}.lp-slide-content summary{cursor:pointer;font-weight:600}.lp-slide-content fieldset{display:grid;gap:10px;min-width:0;margin-top:12px}.lp-carousel-item>video{width:100%;max-height:180px;object-fit:contain}
+
+/* OPENMIND_SLIDE_DESTINATION_V1 */
+.lp-slide-content, .lp-slide-content fieldset, .lp-slide-destination {min-width:0;max-width:100%;box-sizing:border-box;}
+.lp-slide-content fieldset {width:100%;}
+.lp-slide-content input:not([type=checkbox]):not([type=radio]), .lp-slide-content textarea, .lp-slide-content select {max-width:100%;min-width:0;box-sizing:border-box;}
+.lp-slide-content textarea {resize:vertical;min-height:80px;}
+.lp-slide-content fieldset > button {width:100%;height:auto;min-height:42px;white-space:normal;line-height:1.4;padding:10px 12px;overflow-wrap:anywhere;}
+.lp-slide-destination {display:grid;gap:8px;}
+.lp-slide-destination > label {font-size:.88rem;font-weight:600;}
+.lp-slide-destination select {width:100%;min-height:42px;padding:9px 12px;border:1px solid #cbd5e1;border-radius:8px;background:#fff;color:#1e293b;font:inherit;}
+.lp-slide-destination small {font-size:.78rem;line-height:1.5;color:#526078;}
+.lp-slide-destination select:focus-visible {outline:2px solid #2563eb;outline-offset:2px;}
+.lp-carousel-item-content {min-width:0;}

@@ -11,3 +11,6 @@
 
 /* General desktop layouts stack on narrow screens; explicit mobile layouts remain editable. */
 @media(max-width:639px){.store-content-block{grid-template-columns:var(--lb-mobile-columns,minmax(0,1fr))}.store-block-media{order:var(--lb-mobile-image-order,0)}}
+
+/* OPENMIND_COVER_SECTION_ANCHOR_V1: mantener la sección bajo la navegación fija. */
+[data-storefront-visual] [data-content-block-id][id^="seccion-"] {scroll-margin-top:120px;}

@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import type { CarouselSlideContent, LandingConfig } from '../../landing/types/landing.types';
 
 export function resolveHeroContent(landing: LandingConfig | null | undefined, content: CarouselSlideContent, route: (path: string) => string) {
@@ -18,5 +19,13 @@ export function resolveHeroContent(landing: LandingConfig | null | undefined, co
 
 export function useHeroContent(landing: LandingConfig | null | undefined, route: (path: string) => string) {
   const [content, setContent] = useState<CarouselSlideContent>({});
+  const { hash, key } = useLocation();
+  useEffect(() => {
+    if (!/^#seccion-[a-zA-Z0-9_-]+$/.test(hash)) return;
+    const frame = window.requestAnimationFrame(() => {
+      document.getElementById(hash.slice(1))?.scrollIntoView({block:'start'});
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [hash, key, landing]);
   return { ...resolveHeroContent(landing, content, route), onChange: setContent };
 }

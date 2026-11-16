@@ -16,3 +16,24 @@
 
 /* Portada: contenido e identidad a la izquierda, carrusel a la derecha. */
 .lp-cover-left{display:grid;gap:16px;min-width:0}.lp-cover-grid>*,.lp-cover-media>*{min-width:0}.lp-cover-media{grid-template-columns:minmax(0,1fr)}.lp-cover-carousel .lp-carousel-grid{max-height:680px;overflow-y:auto;overscroll-behavior:contain;padding:3px}.lp-cover-media img{max-height:200px;object-fit:contain}.lp-cover-carousel{min-width:0}@media(max-width:850px){.lp-cover-media{grid-template-columns:minmax(0,1fr)}.lp-cover-carousel .lp-carousel-grid{max-height:520px}}
+
+/* OPENMIND_COVER_RESPONSIVE_V1: adaptarse al ancho del panel, no al monitor. */
+.lp-workspace .lp-cover-grid {
+  grid-template-columns: repeat(auto-fit,minmax(min(100%,500px),1fr));
+  align-items: start;
+}
+.lp-workspace .lp-cover-carousel { min-width:0; }
+.lp-workspace .lp-cover-carousel .lp-carousel-grid {
+  max-height:none;
+  overflow:visible;
+  overscroll-behavior:auto;
+  padding:3px;
+  grid-template-columns:repeat(auto-fill,minmax(min(100%,245px),1fr));
+  align-items:start;
+}
+.lp-workspace .lp-cover-carousel .lp-carousel-item:has(.lp-slide-content[open]) {grid-column:1/-1;}
+.lp-workspace .lp-cover-carousel .lp-carousel-item:has(.lp-slide-content[open]) > img,
+.lp-workspace .lp-cover-carousel .lp-carousel-item:has(.lp-slide-content[open]) > video {
+  max-height:270px; object-fit:contain; background:#f5f7fa;
+}
+.lp-workspace .lp-cover-carousel .lp-carousel-item {scroll-margin:90px 0 110px;}
