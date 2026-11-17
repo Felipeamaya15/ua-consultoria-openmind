@@ -22,52 +22,48 @@ export function VisualHeader() {
   };
 
   return (
-    <header data-visual-section={VISUAL_SECTION.header} className="sticky top-0 z-50 bg-white border-t-4 border-[var(--primary)] border-b border-black/10">
-      <div data-visual-part="headerLayout" className="max-w-6xl mx-auto px-4 sm:px-5 min-h-16 flex items-center justify-between gap-4">
+    <header data-visual-section={VISUAL_SECTION.header} className="bg-white border-t-4 border-[var(--primary)] border-b border-black/10">
+      <div data-visual-part="headerLayout" className="max-w-6xl mx-auto px-3 sm:px-5 py-2 min-h-16 flex items-center justify-between gap-2 sm:gap-3 lg:gap-4">
 
         {/* Izquierda: Logo Universidad al lado del logo y nombre completo de la tienda */}
-        <div className="flex min-w-0 items-center gap-3">
+        <div className="flex flex-1 min-w-0 items-center gap-2 sm:gap-3">
           <InstitutionalBadge compact />
-          <Link data-visual-part="logo" onClick={event => {
-            if (!event.ctrlKey && !event.metaKey && !event.shiftKey && !event.altKey) {
-              window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
-            }
-          }}
+          <Link data-visual-part="logo"
             to={route()}
             aria-label={`Ir al inicio de ${config.name || 'la tienda'}`}
-            className="flex min-w-0 items-center gap-3 text-[#111111] hover:opacity-75 transition-opacity"
+            className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3 text-[#111111] hover:opacity-75 transition-opacity"
           >
-            {config.logo && <img data-landing-image src={config.logo} alt={`Logo de ${config.name}`} className="block w-auto h-auto max-w-[80px] sm:max-w-[120px] xl:max-w-[160px] max-h-10 sm:max-h-11 shrink-0 object-contain object-center" />}
-            <span className="font-serif text-xl sm:text-2xl truncate whitespace-nowrap">
+            {config.logo && <img data-landing-image src={config.logo} alt={`Logo de ${config.name}`} className="block w-auto h-auto max-w-[56px] sm:max-w-[90px] xl:max-w-[150px] max-h-9 sm:max-h-10 shrink-0 object-contain object-center" />}
+            <span className="min-w-0 font-serif text-base sm:text-lg lg:text-2xl leading-tight break-words">
               {config.name}
             </span>
           </Link>
         </div>
 
         {/* Derecha: Catálogo -> Seguimiento -> Iniciar sesión (/ Salir) -> Carrito -> Menú móvil */}
-        <div className="flex shrink-0 items-center gap-4 md:gap-6 text-sm">
-          <nav data-visual-part="navigation" className="hidden md:flex shrink-0 items-center gap-4 md:gap-6 text-sm">
+        <div className="flex shrink-0 items-center gap-2.5 sm:gap-3 lg:gap-6 text-sm">
+          <nav data-visual-part="navigation" className="hidden md:flex shrink-0 items-center gap-3 lg:gap-6 text-xs lg:text-sm">
             <Link
               to={route('catalogo')}
-              className="hover:opacity-50 transition-opacity"
+              className="whitespace-nowrap hover:opacity-50 transition-opacity"
             >
               Catálogo
             </Link>
 
             <Link
               to={route('seguimiento')}
-              className="hidden md:inline-block hover:opacity-50 transition-opacity"
+              className="hidden md:inline-block whitespace-nowrap hover:opacity-50 transition-opacity"
             >
               Seguimiento
             </Link>
 
-            <AccountNavigation className="font-semibold underline underline-offset-4 hover:opacity-50 transition-opacity" />
+            <AccountNavigation className="whitespace-nowrap font-semibold underline underline-offset-4 hover:opacity-50 transition-opacity" />
 
             {user && (
               <button
                 type="button"
                 onClick={handleLogout}
-                className="text-sm font-medium hover:opacity-50 transition-opacity"
+                className="text-xs lg:text-sm font-medium whitespace-nowrap hover:opacity-50 transition-opacity"
               >
                 Salir
               </button>
