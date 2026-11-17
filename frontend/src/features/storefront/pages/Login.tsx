@@ -2,7 +2,7 @@ import { CommercialOptIn } from '../components/store/CommercialOptIn';
 import { requestConsent } from '../services/commercialConsent';
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { useGoogleLogin } from '@react-oauth/google';
+import { useOptionalGoogleLogin as useGoogleLogin, GOOGLE_LOGIN_CONFIGURED } from '../../auth/hooks/useOptionalGoogleLogin';
 import { authService } from '../../auth/services/authService';
 import { CaptchaWidget } from '../../auth/components/CaptchaWidget';
 import { Button, Input, Alert, InstitutionalBadge } from '../components/ui';
@@ -381,8 +381,8 @@ export default function Login() {
             ? 'Nueva contraseña'
             : 'Verificación MFA';
 
-  const showGoogle = authSettings.google && (mode === 'login' || mode === 'register');
-  const hasAnyLoginMethod = authSettings.emailPassword || authSettings.google;
+  const showGoogle = GOOGLE_LOGIN_CONFIGURED && authSettings.google && (mode === 'login' || mode === 'register');
+  const hasAnyLoginMethod = authSettings.emailPassword || (GOOGLE_LOGIN_CONFIGURED && authSettings.google);
   const showEmailForm =
     mode === 'forgot' ||
     mode === 'reset' ||

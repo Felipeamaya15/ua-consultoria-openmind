@@ -39,6 +39,15 @@ export function InstagramConnectionPanel({isCurrent}: {isCurrent: () => boolean}
   }
   return <section aria-label="Conexión oficial de Instagram" className="instagram-connection space-y-3 border-t border-[var(--border)] pt-4 mt-4">
     <h4 className="font-semibold">Conectar cuenta profesional</h4>
+    <details className="rounded-lg border border-[var(--border)] p-3">
+      <summary className="cursor-pointer font-semibold text-sm">Paso a paso para publicar desde OpenMind</summary>
+      <ol className="list-decimal pl-5 mt-3 space-y-2 text-sm">
+        <li>Utiliza una cuenta profesional en <a className="underline" href="https://www.instagram.com/" target="_blank" rel="noopener noreferrer">Instagram ↗</a>. Guardar el enlace de tu perfil solo lo muestra en la tienda.</li>
+        <li>Marca la autorización de abajo y presiona Conectar Instagram. En Meta, inicia sesión y selecciona tu cuenta profesional.</li>
+        <li>Al volver, actualiza la conexión. En Marketing, elige un producto y formato cuadrado, revisa la imagen y confirma la publicación.</li>
+      </ol>
+      <p className="text-sm mt-3">Si la conexión no está disponible, el administrador debe habilitar la integración. Puedes continuar con Descargar publicación, Copiar descripción y Abrir Instagram desde Marketing.</p>
+    </details>
     <p className="text-sm">Conecta mediante Unified Login. Comparte una sola cuenta profesional de Instagram de tu portafolio empresarial para publicar desde Marketing. Meta exige el permiso de mensajes para este acceso; OpenMind no lee ni envía mensajes.</p>
     {!data ? <p role="status">Consultando conexión de Instagram…</p> : <>
       <p className="text-sm">{data.usuario ? `@${data.usuario}` : 'Sin cuenta autorizada'} · {data.conectado ? 'Conectada' : data.estado === 'vencida' ? 'Autorización vencida' : data.estado === 'reconectar' ? 'Requiere reconexión' : 'Desconectada'}</p>

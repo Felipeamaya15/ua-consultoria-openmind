@@ -1,0 +1,4 @@
+PASS 360: búsqueda, borrador, descarga real JPG, alternativa manual e integración autorizada simulada
+PASS 768: búsqueda, borrador, descarga real JPG, alternativa manual e integración autorizada simulada
+PASS 1366: búsqueda, borrador, descarga real JPG, alternativa manual e integración autorizada simulada
+OUTPUT C:\Users\Catal\AppData\Local\Temp\openmind-s9-marketing-jSl7V4

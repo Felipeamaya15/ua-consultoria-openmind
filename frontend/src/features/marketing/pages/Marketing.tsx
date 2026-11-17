@@ -49,6 +49,13 @@ function MarketingWorkspace({ scope, isCurrent }: { scope: DraftScope; isCurrent
   const [pickerVersion, setPickerVersion] = useState(0);
   const [name, setName] = useState(''), [opened, setOpened] = useState<MarketingDraft | null>(null);
   const [showDrafts, setShowDrafts] = useState(false), [drafts, setDrafts] = useState<MarketingDraft[]>([]);
+  const draftsRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (showDrafts) {
+      draftsRef.current?.scrollIntoView({ block: 'start', behavior: 'instant' });
+      draftsRef.current?.focus({ preventScroll: true });
+    }
+  }, [showDrafts]);
   const [error, setError] = useState(''), [notice, setNotice] = useState(''), [busy, setBusy] = useState(false);
   const [savingDraft, setSavingDraft] = useState(false);
   const savingRef = useRef(false);
@@ -252,7 +259,7 @@ function MarketingWorkspace({ scope, isCurrent }: { scope: DraftScope; isCurrent
     return true;
   }
   return <MarketingSections home={home} products={sources.products} catalogStatus={{loading:sources.loading,error:sources.productError,retry:sources.refresh}} onSelectProduct={prepareCatalog} onUseImage={id=>prepareSharing({kind:'library',id},'square')} onPrepare={prepareSharing} onSharingDirty={setSharingDirty} busy={busy} isCurrent={isCurrent} onCampaignDirty={setCampaignDirty} onMediaDirty={setMediaDirty}><section className="marketing-module" aria-label="Generador de publicaciones">
-    {showDrafts && <DraftPanel drafts={drafts} onOpen={openDraft} onRename={(draft, nextName) => run(() => {
+    {showDrafts && <div ref={draftsRef} tabIndex={-1} className="scroll-mt-24" aria-label="Listado de borradores"><DraftPanel drafts={drafts} onOpen={openDraft} onRename={(draft, nextName) => run(() => {
       const next = repository.rename(draft.id, nextName, draft.updatedAt);
       if (opened?.id === draft.id) {
         setOpened(next); setName(next.name);
@@ -260,7 +267,7 @@ function MarketingWorkspace({ scope, isCurrent }: { scope: DraftScope; isCurrent
       }
       setDrafts(repository.list()); setNotice('Nombre actualizado.');
     })} onDuplicate={draft => run(() => { repository.duplicate(draft.id); setDrafts(repository.list()); setNotice('Copia creada. El original se conserva.'); })}
-      onDelete={draft => run(() => { repository.remove(draft.id, draft.updatedAt); if (opened?.id === draft.id) { setOpened(null); setBaseline(''); } setDrafts(repository.list()); setNotice('Borrador eliminado.'); })} />}
+      onDelete={draft => run(() => { repository.remove(draft.id, draft.updatedAt); if (opened?.id === draft.id) { setOpened(null); setBaseline(''); } setDrafts(repository.list()); setNotice('Borrador eliminado.'); })} /></div>}
     <div className="marketing-intro"><p>Elige contenido publicado y su formato. Tu publicación se compone con los datos y colores de tu tienda.</p>
       <Button type="button" variant="outline" size="sm" disabled={busy || sources.loading} onClick={refresh}>Actualizar datos</Button></div>
     {sharingLoading&&<LoadingState>Cargando contenido publicado para la composición…</LoadingState>}
@@ -305,6 +312,7 @@ function MarketingWorkspace({ scope, isCurrent }: { scope: DraftScope; isCurrent
           return new File([blob], publicationFilename(session.active, 'square', 'jpg'), {type: 'image/jpeg'});
         }} />
         <Button type="button" size="sm" variant="outline" disabled={busy || (!productId&&!sharingReference) || !dirty} onClick={() => void saveDraft()}>{savingDraft ? 'Guardando…' : 'Guardar borrador'}</Button>
+        <Button type="button" size="sm" variant="outline" disabled={busy} aria-expanded={showDrafts} onClick={() => { loadList(); setShowDrafts(true); draftsRef.current?.scrollIntoView({ block: 'start', behavior: 'instant' }); draftsRef.current?.focus({ preventScroll: true }); }}>Mis borradores</Button>
       </div>
       {design.format !== 'square' && <p className="marketing-hint">La publicación directa requiere formato cuadrado. Puedes descargar este formato para publicarlo manualmente.</p>}
       <div className="mk-publication-group" style={{marginTop: 12}}>
@@ -323,7 +331,6 @@ function MarketingWorkspace({ scope, isCurrent }: { scope: DraftScope; isCurrent
           <div className="mk-publication-group">
             <h3>Borradores</h3>
             <div className="mk-publication-secondary-actions">
-        <Button type="button" size="sm" variant="outline" disabled={busy} aria-expanded={showDrafts} onClick={() => { loadList(); setShowDrafts(value => !value); }}>Mis borradores</Button>
         <Button type="button" size="sm" variant="outline" disabled={busy} onClick={newPublication}>Nueva publicación</Button>
             </div>
           </div>

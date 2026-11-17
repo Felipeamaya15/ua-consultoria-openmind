@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Alert, Button, Modal, Textarea } from '../../admin/components/ui';
 import { instagramService, INSTAGRAM_STATES, type InstagramConnection, type InstagramPublication } from '../services/instagramService';
+import { downloadPublication } from '../services/exportPublication';
 
 export function InstagramPublisher({disabled, square, revision, initialCaption, generate}: {
   disabled: boolean; square: boolean; revision: string; initialCaption: string; generate: () => Promise<File>;
@@ -11,6 +12,7 @@ export function InstagramPublisher({disabled, square, revision, initialCaption, 
   const [state, setState] = useState<InstagramConnection | null>(null), [saved, setSaved] = useState<InstagramPublication | null>(null);
   const [history, setHistory] = useState<InstagramPublication[]>([]), [error, setError] = useState('');
   const [statusError, setStatusError] = useState(''), [historyError, setHistoryError] = useState('');
+  const [copyNotice, setCopyNotice] = useState('');
   const key = useRef<string>(), lock = useRef(false), alive = useRef(true), signature = useRef(revision);
   signature.current = revision;
   useEffect(() => {alive.current = true; return () => {alive.current = false;};}, []);
@@ -62,7 +64,24 @@ export function InstagramPublisher({disabled, square, revision, initialCaption, 
         {state?.conectado && !state.publicacion_habilitada && <p role="status">La cuenta está conectada, pero la publicación directa todavía no está habilitada. Revisa la configuración.</p>}
         {state?.publicacion_habilitada && <p role="status">Publicación directa habilitada. Revisa la imagen y confirma el envío.</p>}
         {!state?.publicacion_habilitada && <p className="text-sm"><Link className="marketing-text-link" to="/emprendedor/landing#contacto-horarios">Revisar conexión en Contacto y horarios ↗</Link></p>}
-        <p className="text-sm">Si no puedes publicar directamente, cierra esta ventana y utiliza Descargar publicación, Copiar descripción y Abrir Instagram. La publicación manual no necesita conexión de Meta.</p>
+        {!state?.publicacion_habilitada && <section aria-label="Publicar sin conexión de Meta" className="rounded-xl border border-[var(--border)] p-4 space-y-3">
+          <h3 className="font-semibold">Completa tu publicación manualmente</h3>
+          <ol className="list-decimal pl-5 space-y-2 text-sm">
+            <li>Descarga la imagen preparada.</li>
+            <li>Copia la descripción de abajo.</li>
+            <li>Abre Instagram, elige Crear, sube la imagen, pega la descripción y confirma allí.</li>
+          </ol>
+          <div className="flex flex-wrap gap-2">
+            <Button variant="outline" disabled={busy || !file} onClick={() => { if (file) downloadPublication(file, file.name); }}>Descargar imagen preparada</Button>
+            <Button variant="outline" disabled={busy} onClick={async () => {
+              try { await navigator.clipboard.writeText(caption); setCopyNotice('Descripción copiada. Pégala en Instagram.'); }
+              catch { setCopyNotice('Selecciona y copia la descripción del campo inferior.'); }
+            }}>Copiar descripción para Instagram</Button>
+            <a href="https://www.instagram.com/" target="_blank" rel="noopener noreferrer" className="marketing-text-link self-center">Abrir Instagram ↗</a>
+          </div>
+          <p className="text-xs">No requiere conectar Meta. Descargar la imagen no la publica; Instagram confirma la publicación.</p>
+          {copyNotice && <p role="status" className="text-sm">{copyNotice}</p>}
+        </section>}
         {historyError && <p role="status" className="text-sm">{historyError} Si ya intentaste publicar, verifica Instagram antes de repetir.</p>}
         <Textarea label="Descripción de la publicación en Instagram" rows={5} maxLength={4400} value={caption} disabled={busy || !!saved && saved.estado !== 'preparada'} onChange={event => {setCaption(Array.from(event.target.value).slice(0, 2200).join('')); setSaved(null); key.current = undefined;}} />
         <p className="text-xs">{Array.from(caption).length}/2200 caracteres. Guardar la preparación no publica la imagen.</p>
