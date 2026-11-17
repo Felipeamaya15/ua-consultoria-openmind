@@ -245,6 +245,7 @@ export default function Activities() {
       {/* Selector de tipo principal (Consultas vs Inscripciones) */}
       <div className="bg-white rounded-xl border border-[var(--border)] p-2 shadow-xs">
         <Tabs
+          wrap
           label="Solicitudes de actividades"
           tabs={[
             { id: 'consulta', label: 'Solicitudes de información' },

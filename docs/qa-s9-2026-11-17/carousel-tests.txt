@@ -1,0 +1,9 @@
+PASS editorial: imagen, video decodificado, movimiento normal con avance automático
+PASS editorial: imagen, video decodificado, movimiento reducido sin avance automático
+PASS minimal: imagen, video decodificado, movimiento normal con avance automático
+PASS minimal: imagen, video decodificado, movimiento reducido sin avance automático
+PASS visual: imagen, video decodificado, movimiento normal con avance automático
+PASS visual: imagen, video decodificado, movimiento reducido sin avance automático
+PASS catalog: imagen, video decodificado, movimiento normal con avance automático
+PASS catalog: imagen, video decodificado, movimiento reducido sin avance automático
+OUTPUT C:\Users\Catal\AppData\Local\Temp\openmind-s9-carousel-Ivjeac

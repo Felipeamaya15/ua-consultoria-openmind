@@ -24,7 +24,7 @@ function harness(template) {
   let states, cursor, refs, refCursor, effects, effectCursor, pending, config, failConfig;
   let quoteCalls, created, request, timerId, timers, now, networkReply, createError;
   class Clock extends Date {static now() {return now;}}
-  const cart = {items: [{productId: 'real-product', variantId: 'SKU', sku: 'SKU', name: 'Real', attributes: {}, price: 60000, quantity: 1, image: ''}],
+  const cart = {activities: [], items: [{productId: 'real-product', variantId: 'SKU', sku: 'SKU', name: 'Real', attributes: {}, price: 60000, quantity: 1, image: ''}],
     subtotal: 60000, discount: 12000, shipping: 3490, total: 51490, promoCode: '', shippingMethod: 'Retiro',
     clearCart: async () => {}, setShippingMethod: value => {cart.shippingMethod = value;}};
   const realShipping = load('src/features/storefront/services/shippingService.ts', {
@@ -50,6 +50,10 @@ function harness(template) {
     localStorage: {getItem: () => '{invalid'}, window: {scrollTo() {}, location: {origin: 'http://localhost'}},
     fetch: async () => networkReply,
     require: name => {
+      if (name.endsWith('.css')) return {};
+      if (name.includes('paidActivityService')) return {formatActivityDate:()=>''};
+      if (name.includes('activityPurchaseMode')) return {useActivityCheckoutOptions:()=>({mode:'disabled',methods:[]})};
+      if (name.includes('useOptionalGoogleLogin')) return {GOOGLE_LOGIN_CONFIGURED:false,useOptionalGoogleLogin:()=>()=>{}};
       if (name.includes('CommercialOptIn')) return {CommercialOptIn: 'CommercialOptIn'};
       if (name.includes('commercialConsent')) return {requestConsent: async () => ({exito: true, mensaje: 'Pendiente de confirmar'})};
       if (name === 'react/jsx-runtime') return {jsx, jsxs: jsx};

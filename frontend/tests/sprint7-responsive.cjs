@@ -101,7 +101,9 @@ test('las seis vistas prioritarias (catálogo, detalle, carrito, checkout, login
   assert.match(login, /data-login-header/);
   assert.doesNotMatch(login, /onClick=\{\(\) => loginConGoogle\(\)\}[\s\S]{0,250}¿Olvidaste tu contraseña\?/);
   assert.match(css, /\[data-storefront-visual\] \[data-visual-page="login"\] \[data-login-header\]/);
-  assert.match(minimalHeader, /to="ingresar\?modo=registro"/);
+  const minimalSidebar = fs.readFileSync(path.join(root, 'src/features/storefront/components/store/minimal/MinimalSidebar.tsx'), 'utf8');
+  assert.match(minimalSidebar, /route\('ingresar\?modo=registro'\)/);
+  assert.match(minimalHeader, /CompactMobileNavigation/);
 
   assert.match(adminCss, /@media\(max-width:639px\)\{[\s\S]*?\.catalog-overview\{grid-template-columns:minmax\(0,1fr\)\}/);
 });

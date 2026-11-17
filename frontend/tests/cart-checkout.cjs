@@ -77,7 +77,7 @@ const result = {id_pedido: 42, identificador: 'PEDIDO-BACKEND-42', tienda_id: 9,
   let gatewayFailure = false, gatewayCalls = [];
   const paymentLocation = {origin: 'http://localhost:5173', href: ''};
   let recordEffects = false, effects = [], paymentReply, paymentFetches = [];
-  const cart = {items, subtotal: 30000, shipping: 0, discount: 0, total: 30000, promoCode: '', shippingMethod: 'Retiro', count: 3,
+  const cart = {activities: [], items, subtotal: 30000, shipping: 0, discount: 0, total: 30000, promoCode: '', shippingMethod: 'Retiro', count: 3,
     clearCart: async () => {clearCount++;}, setShippingMethod() {}, updateQuantity() {}, removeItem() {}, applyPromo() {}};
   let template = 'editorial';
   const mockReact = {
@@ -86,6 +86,10 @@ const result = {id_pedido: 42, identificador: 'PEDIDO-BACKEND-42', tienda_id: 9,
     useMemo: callback => callback(), useEffect(callback) {if (recordEffects) effects.push(callback);},
   };
   const requireMock = name => {
+      if (name.endsWith('.css')) return {};
+      if (name.includes('paidActivityService')) return {formatActivityDate:()=>''};
+      if (name.includes('activityPurchaseMode')) return {useActivityCheckoutOptions:()=>({mode:'disabled',methods:[]})};
+      if (name.includes('useOptionalGoogleLogin')) return {GOOGLE_LOGIN_CONFIGURED:false,useOptionalGoogleLogin:()=>()=>{}};
     if (name === '@react-oauth/google') return {useGoogleLogin: () => () => {throw Error('OAuth fuera del alcance de esta fixture de invitado');}};
     if (name.endsWith('/authService')) return {authService: {hasSession: () => false, getToken: () => null}};
     if (name.endsWith('/mercadoPagoPaymentService')) return {mercadoPagoPaymentService: {iniciarPago: async (...args) => {gatewayCalls.push(['MercadoPago', ...args]); return gatewayFailure ? {exito: false, mensaje: 'Proveedor no disponible'} : {exito: true, data: {url: 'https://example.test/mercadopago'}};}}};
@@ -121,8 +125,8 @@ const result = {id_pedido: 42, identificador: 'PEDIDO-BACKEND-42', tienda_id: 9,
   const Checkout = load('src/features/storefront/pages/Checkout.tsx', globals).default;
   function reset() {
     states = [[{id: 'Retiro', label: 'Retiro'}], false, '', 0, 'confirm', 'guest', {name: 'Comprador', email: 'buyer@example.com', phone: ''}, {street: '', number: '', apt: '', city: '', region: ''}, 'Transferencia', false, {}];
-    states[13] = [{id: 'Transferencia', label: 'Transferencia'}, {id: 'Transbank', label: 'Transbank'}];
-    states[14] = false; states[15] = '';
+    states[11] = [{id: 'Transferencia', label: 'Transferencia'}, {id: 'Transbank', label: 'Transbank'}];
+    states[12] = false; states[13] = '';
     refs = []; navigateCalls = []; clearCount = 0; createCalls = []; fail = false; pending = null; gatewayFailure = false; gatewayCalls = []; paymentLocation.href = '';
   }
   function render(component) {stateIndex = 0; refIndex = 0; return nodes(component());}
@@ -162,7 +166,7 @@ const result = {id_pedido: 42, identificador: 'PEDIDO-BACKEND-42', tienda_id: 9,
   });
   for (const method of ['PayPal', 'MercadoPago']) {
     // Un medio deshabilitado no crea pedidos ni contacta al proveedor.
-    reset(); states[8] = method; states[13] = [];
+    reset(); states[8] = method; states[11] = [];
     await confirm()();
     assert.equal(createCalls.length, 0);
     assert.equal(gatewayCalls.length, 0);
@@ -171,7 +175,7 @@ const result = {id_pedido: 42, identificador: 'PEDIDO-BACKEND-42', tienda_id: 9,
     assert.equal(paymentLocation.href, '');
 
     // Habilitado: si el proveedor falla, el pedido existe pero no se limpia el carrito.
-    reset(); states[8] = method; states[13] = [{id: method, label: method}]; gatewayFailure = true;
+    reset(); states[8] = method; states[11] = [{id: method, label: method}]; gatewayFailure = true;
     await confirm()();
     assert.equal(createCalls.length, 1);
     assert.equal(gatewayCalls.length, 1);
@@ -199,11 +203,11 @@ const result = {id_pedido: 42, identificador: 'PEDIDO-BACKEND-42', tienda_id: 9,
   assert.equal(createCalls.length, 0);
 
   async function loadPayments(data, ok = true) {
-    reset(); states[4] = 'payment'; states[13] = []; states[14] = true;
+    reset(); states[4] = 'payment'; states[11] = []; states[12] = true;
     recordEffects = true; effects = [];
     paymentReply = {ok, json: async () => ({exito: ok, data})};
     render(Checkout);
-    assert.ok(states[14]);
+    assert.ok(states[12]);
     effects.find(effect => effect.toString().includes('loadPayments'))();
     await new Promise(setImmediate);
     recordEffects = false;
@@ -224,7 +228,7 @@ const result = {id_pedido: 42, identificador: 'PEDIDO-BACKEND-42', tienda_id: 9,
   states[4] = 'confirm';
   await confirm()();
   assert.equal(createCalls.length, 0);
-  reset(); states[13] = [{id: 'PayPal'}];
+  reset(); states[11] = [{id: 'PayPal'}];
   await confirm()();
   assert.equal(createCalls.length, 0, 'No se puede confirmar un medio deshabilitado aunque siga seleccionado');
 
@@ -252,6 +256,9 @@ const result = {id_pedido: 42, identificador: 'PEDIDO-BACKEND-42', tienda_id: 9,
     localStorage: {getItem: () => 'buyer-token'}, sessionStorage: {getItem: () => null},
     require: name => {
       if (name.includes('StoreIdentityContext')) return {useStoreIdentity: () => ({identity: null})};
+      if (name.includes('activityCart')) return {useActivityCart:()=>({items:[],clear(){}})};
+      if (name.includes('cartSession')) return {useCartSession:()=>({token:'buyer-token',scope:'test-account'}),currentCartToken:()=> 'buyer-token'};
+      if (name.includes('catalogService')) return {fetchPublicProducts:async()=>[]};
       if (name.includes('guestCartStorage')) return {guestCartKey: () => null};
       if (name.includes('promotionService')) return {validatePromotion: async () => ({code: 'TEST', type: 'fixed', discount: 0, shipping: 0, message: ''})};
       if (name === '../visual/pages') return {isActiveEditorPreview: () => editorPreview};
@@ -265,7 +272,7 @@ const result = {id_pedido: 42, identificador: 'PEDIDO-BACKEND-42', tienda_id: 9,
       if (name.includes('shared/components/states')) return {LoadingState: 'LoadingState', ErrorState: 'ErrorState', EmptyListState: 'EmptyListState'}; if (name.includes('humanizeError')) return {humanizeAdminError: message => message}; throw Error(name);
     },
   }).CartProvider;
-  const context = () => {cursor = 0; return Provider({children: null}).props.value;};
+  const context = () => {cursor = 0; const scoped=Provider({children:null}); return scoped.type(scoped.props).props.value;};
   await context().addItem(items[0]);
   await context().addItem(items[1]);
   assert.equal(context().shipping, null);

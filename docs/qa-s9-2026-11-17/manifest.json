@@ -1,0 +1,29 @@
+{
+  "base_commit": "81a41340aa5f5e59456ec863c213a7bd3316c3cc",
+  "branch": "feature/correcciones-ultimo-qa-revision-final-sistema",
+  "sha256": {
+    "frontend/src/features/admin/components/ui/index.tsx": "70491d1a225968c3e97d87ead5ac641c2a0b19783ba3f22e241dbbce22ffa2a7",
+    "frontend/src/features/admin/pages/Activities.tsx": "e136ccca583097c1d7836c9aa9670164d87a4b9bfe96f7b9cf41ce55a613272c",
+    "frontend/src/features/auth/hooks/useOptionalGoogleLogin.ts": "d3a7498300e4c1bd53fedc34aaa969a39f3f1c8d377914c2476a48e91456fc1f",
+    "frontend/src/features/marketing/components/InstagramConnectionPanel.tsx": "5df1da73633e52de5eee3a3ebf6c76246d33b35312bca6e850906d4eef022d00",
+    "frontend/src/features/marketing/components/InstagramPublisher.tsx": "199dc0db78f3323c38f3f6929c763659ea0038f65d10540f010ea8cbda71cd68",
+    "frontend/src/features/marketing/pages/Marketing.tsx": "47d0cce9f96f21f00878d377c6963b5c572be78f18100867df07a26d1b4eeae0",
+    "frontend/src/features/storefront/pages/Checkout.tsx": "d491084cf97eeeb250caf9d95d91a1b3c6c64ff7fde97bc2f0f3e8903b145d38",
+    "frontend/src/features/storefront/pages/ExternalPaymentReturnResult.tsx": "3a75302db67909d087113e3189649cffea9667a35dabd7f0c01ab73aa37de2cd",
+    "frontend/src/features/storefront/pages/Login.tsx": "415926c81bb9b51e3b1241ac73ad599c393fcdca19a7e6fb8770377688d12c25",
+    "frontend/src/main.tsx": "e25cfc101b0e5e0f1785ec7baa6982f5ce89fc2ac984401ec0560ad5fcd777e7",
+    "frontend/tests/cart-checkout.cjs": "1fa2640f0a52ba521affd952c4d0b74c1936b4be0e4f8ec87a8ee2f6e0b62f6c",
+    "frontend/tests/checkout-shipping.cjs": "5506f4b0d3386a032beafb667f5d58d90ed0b840906fcfa1fab31b1000f6d273",
+    "frontend/tests/google-optional.cjs": "20e5fa561a2973dca55c8795fe77bc11f5f79693efce1e9d1f920ce57d08bf91",
+    "frontend/tests/guest-cart.cjs": "da7c5dc6fc37e06b4dbff34f12d6159eb814f330630bdba7cbb61ce1323bfdcc",
+    "frontend/tests/payment-checkout-visual.cjs": "8e981bb124cb3246a12caf715230bed45d6ffbdf50a9d34183f7377c26504272",
+    "frontend/tests/payment-return.cjs": "19932972ec654c2839ad9424b7e283ce8411d3bc62e041565bb5b12098add5f3",
+    "frontend/tests/qa-s9-carousel.cjs": "d5a3507baea22627a3d7e34b98acd18bb458f6d09b93d33a3da9e146a35579d8",
+    "frontend/tests/qa-s9-marketing.cjs": "6f8f4eb7df042317b54fbdb85fe1ade17f2ac3d58f1b14c91d903e872ac5d6f0",
+    "frontend/tests/qa-s9-responsive.cjs": "db234a82e350d221b55f765272939d75d0c7aa6d0c8b5947461caa492e1dd7ec",
+    "frontend/tests/sprint7-responsive.cjs": "bc6005d37a3850b3b8718c58804a4e729cbb58721e34dc3ac80584f2c6eca7c0"
+  },
+  "author": "Patricio Jaramillo",
+  "snapshot_taken_before_commit": true,
+  "hash_basis": "Git index contents (normalized line endings)"
+}

@@ -12,7 +12,7 @@ function load(file, requireMock) {
 }
 const persistence = load('src/features/storefront/services/guestCartStorage.ts', () => {throw Error('Unexpected import');});
 let identity = {apiBaseUrl: 'http://test', storeId: 'A'}, preview = false;
-const a = persistence.guestCartKey(identity), b = persistence.guestCartKey({...identity, storeId: 'B'});
+const a = persistence.guestCartKey(identity) + ':guest-v2', b = persistence.guestCartKey({...identity, storeId: 'B'}) + ':guest-v2';
 assert.notEqual(a, b);
 assert.notEqual(a, persistence.guestCartKey({...identity, apiBaseUrl: 'http://other'}));
 assert.equal(persistence.guestCartKey(null), null);
@@ -27,13 +27,16 @@ const Provider = load('src/features/storefront/context/CartContext.tsx', name =>
       return [states[i], value => {states[i] = typeof value === 'function' ? value(states[i]) : value; dirty = true;}];},
     useEffect(fn, deps) {const i = cursor++; if (!slots[i] || deps.some((d, j) => d !== slots[i][j])) {slots[i] = deps; effects.push(fn);}}};
   if (name.includes('StoreIdentityContext')) return {useStoreIdentity: () => ({identity})};
+  if (name.includes('activityCart')) return {useActivityCart: () => ({items: [], clear() {}})};
+  if (name.includes('cartSession')) return {useCartSession: () => ({token: null, scope: 'guest-v2'}), currentCartToken: () => null};
+  if (name.includes('catalogService')) return {fetchPublicProducts: async () => [{id: item.productId}]};
   if (name.includes('guestCartStorage')) return persistence;
   if (name.includes('visual/pages')) return {isActiveEditorPreview: () => preview};
   if (name.includes('promotionService')) return {validatePromotion: async () => {throw Error('No promo validation expected');}};
   if (name.includes('cartService')) return {cartService: {obtenerCarrito() {throw Error('Guest/preview must not query real cart');}}};
   throw Error(name);
 }).CartProvider;
-function render() {cursor = 0; return Provider({children: null}).props.value;}
+function render() {cursor = 0; const scoped = Provider({children: null}); return scoped.type(scoped.props).props.value;}
 function settle() {let context; for (let i = 0; i < 8; i++) {dirty = false; context = render(); const pending = effects; effects = []; pending.forEach(fn => fn()); if (!dirty) return context;} throw Error('Effects did not settle');}
 function remount() {states = []; slots = []; effects = []; return settle();}
 (async () => {

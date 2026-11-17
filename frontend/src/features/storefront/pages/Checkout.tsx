@@ -6,7 +6,7 @@ import { checkoutPreviewStep } from '../visual/pages';
 import { ErrorState, LoadingState } from '../../../shared/components/states';
 import { useEffect, useMemo, useState, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { useGoogleLogin } from '@react-oauth/google';
+import { useOptionalGoogleLogin as useGoogleLogin, GOOGLE_LOGIN_CONFIGURED } from '../../auth/hooks/useOptionalGoogleLogin';
 import { authService } from '../../auth/services/authService';
 
 import { orderService } from '../services/orderService';
@@ -96,7 +96,7 @@ function getAvailableAuthModes(settings: AuthSettings): AuthMode[] {
     modes.push('guest');
   }
 
-  if (settings.google) {
+  if (settings.google && GOOGLE_LOGIN_CONFIGURED) {
     modes.push('google');
   }
 
@@ -168,126 +168,6 @@ const paymentPresentation: PaymentOption[] = [
     desc: 'Verificacion manual en 24-48h',
   },
 ];
-
-const fmtCardNumber = (value: string) =>
-  value
-    .replace(/\D/g, '')
-    .slice(0, 16)
-    .replace(/(.{4})/g, '$1 ')
-    .trim();
-
-const fmtExpiry = (value: string) => {
-  const digits = value.replace(/\D/g, '').slice(0, 4);
-
-  return digits.length > 2
-    ? `${digits.slice(0, 2)}/${digits.slice(2)}`
-    : digits;
-};
-
-const fmtCvv = (value: string) =>
-  value.replace(/\D/g, '').slice(0, 4);
-
-const last4 = (number: string) =>
-  number.replace(/\D/g, '').slice(-4);
-
-interface CardData {
-  number: string;
-  name: string;
-  expiry: string;
-  cvv: string;
-}
-
-function CardFields({
-  prefix,
-  data,
-  onField,
-  errors,
-}: {
-  prefix: string;
-  data: CardData;
-  onField: (
-    key: keyof CardData,
-    value: string,
-  ) => void;
-  errors: Record<string, string>;
-}) {
-  return (
-    <>
-      <Input
-        label="Número de tarjeta"
-        value={data.number}
-        onChange={(event) =>
-          onField(
-            'number',
-            fmtCardNumber(event.target.value),
-          )
-        }
-        placeholder="1234 5678 9012 3456"
-        inputMode="numeric"
-        readOnly
-        autoComplete="off"
-        error={errors[`${prefix}Number`]}
-        iconRight={
-          <Icon
-            name="card"
-            className="w-4 h-4 text-[#667085]"
-          />
-        }
-      />
-
-      <Input
-        label="Nombre del titular"
-        value={data.name}
-        onChange={(event) =>
-          onField(
-            'name',
-            event.target.value.toUpperCase(),
-          )
-        }
-        placeholder="COMO APARECE EN LA TARJETA"
-        readOnly
-        autoComplete="off"
-        error={errors[`${prefix}Name`]}
-      />
-
-      <div className="grid grid-cols-2 gap-3">
-        <Input
-          label="Vencimiento"
-          value={data.expiry}
-          onChange={(event) =>
-            onField(
-              'expiry',
-              fmtExpiry(event.target.value),
-            )
-          }
-          placeholder="MM/AA"
-          inputMode="numeric"
-          readOnly
-          autoComplete="off"
-          error={errors[`${prefix}Expiry`]}
-        />
-
-        <Input
-          label="CVV"
-          type="password"
-          value={data.cvv}
-          onChange={(event) =>
-            onField(
-              'cvv',
-              fmtCvv(event.target.value),
-            )
-          }
-          placeholder="•••"
-          inputMode="numeric"
-          readOnly
-          autoComplete="off"
-          error={errors[`${prefix}Cvv`]}
-          hint="3 o 4 dígitos"
-        />
-      </div>
-    </>
-  );
-}
 
 export default function Checkout() {
   const {
@@ -401,30 +281,6 @@ export default function Checkout() {
       setAuthMode(availableAuthModes[0]);
     }
   }, [authMode, availableAuthModes]);
-
-  /*
-   * ==========================================================
-   * DATOS DE DEMOSTRACIÓN DE PAGO
-   * ==========================================================
-   */
-  const [transbank, setTransbank] = useState({
-    cardType: 'credito',
-    number: '0000 0000 0000 0000',
-    name: 'CLIENTE DEMO',
-    expiry: '12/30',
-    cvv: '000',
-    rut: '11.111.111-1',
-  });
-
-  const [mercadopago, setMercadopago] =
-    useState({
-      number: '0000 0000 0000 0000',
-      name: 'CLIENTE DEMO',
-      expiry: '12/30',
-      cvv: '000',
-      installments: '1',
-      email: 'demo@example.com',
-    });
 
   const [paymentOptions, setPaymentOptions] = useState<PaymentOption[]>([]);
   const [paymentsLoading, setPaymentsLoading] = useState(true);
@@ -652,24 +508,6 @@ export default function Checkout() {
       setPaymentMethod('');
     }
   }, [paymentMethod, paymentOptions]);
-
-  const setTbField = (
-    key: keyof CardData,
-    value: string,
-  ) =>
-    setTransbank((current) => ({
-      ...current,
-      [key]: value,
-    }));
-
-  const setMpField = (
-    key: keyof CardData,
-    value: string,
-  ) =>
-    setMercadopago((current) => ({
-      ...current,
-      [key]: value,
-    }));
 
   const [googleLoading, setGoogleLoading] = useState(false);
 
@@ -1026,19 +864,9 @@ export default function Checkout() {
 
   const paymentDetail =
     paymentMethod === 'Transbank'
-      ? `Webpay · Tarjeta ${
-          transbank.cardType
-        } ·••• ${last4(transbank.number)}`
+      ? 'Redirección segura a Webpay'
       : paymentMethod === 'MercadoPago'
-        ? `Mercado Pago ·••• ${last4(
-            mercadopago.number,
-          )} · ${
-            mercadopago.installments
-          } cuota${
-            mercadopago.installments === '1'
-              ? ''
-              : 's'
-          }`
+        ? 'Redirección segura a Mercado Pago'
         : paymentMethod === 'PayPal'
           ? 'Redirección segura a PayPal'
           : paymentMethod ===
@@ -1770,43 +1598,6 @@ export default function Checkout() {
                     </div>
                   </div>
 
-                  <Select
-                    label="Tipo de tarjeta preferida"
-                    value={transbank.cardType}
-                    onChange={(event) =>
-                      setTransbank((current) => ({
-                        ...current,
-                        cardType: event.target.value,
-                      }))
-                    }
-                    options={[
-                      { value: 'credito', label: 'Crédito' },
-                      { value: 'debito', label: 'Débito' },
-                      { value: 'prepago', label: 'Prepago' },
-                    ]}
-                  />
-
-                  <CardFields
-                    prefix="tb"
-                    data={transbank}
-                    onField={setTbField}
-                    errors={errors}
-                  />
-
-                  <Input
-                    readOnly
-                    label="RUT del titular"
-                    value={transbank.rut}
-                    onChange={(event) =>
-                      setTransbank((current) => ({
-                        ...current,
-                        rut: event.target.value,
-                      }))
-                    }
-                    placeholder="12.345.678-9"
-                    error={errors.tbRut}
-                  />
-
                   <p className="flex items-center gap-1.5 text-xs text-[var(--visual-page-color)]">
                     <Icon
                       name="lock"
@@ -1845,52 +1636,12 @@ export default function Checkout() {
                     </div>
                   </div>
 
-                  <CardFields
-                    prefix="mp"
-                    data={mercadopago}
-                    onField={setMpField}
-                    errors={errors}
-                  />
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <Select
-                      label="Cuotas"
-                      value={mercadopago.installments}
-                      onChange={(event) =>
-                        setMercadopago((current) => ({
-                          ...current,
-                          installments: event.target.value,
-                        }))
-                      }
-                      options={[
-                        { value: '1', label: '1 cuota (sin interés)' },
-                        { value: '3', label: '3 cuotas' },
-                        { value: '6', label: '6 cuotas' },
-                        { value: '12', label: '12 cuotas' },
-                      ]}
-                    />
-
-                    <Input
-                      readOnly
-                      label="Correo de Mercado Pago (opcional)"
-                      type="email"
-                      value={mercadopago.email}
-                      onChange={(event) =>
-                        setMercadopago((current) => ({
-                          ...current,
-                          email: event.target.value,
-                        }))
-                      }
-                      placeholder="tu@correo.com"
-                    />
-                  </div>
-
                   <p className="flex items-center gap-1.5 text-xs text-[var(--visual-page-color)]">
                     <Icon
                       name="lock"
                       className="w-3.5 h-3.5"
                     />
-                    Demostración sin conexión a Mercado Pago.
+                    Al confirmar serás redirigido a Mercado Pago para elegir tu medio de pago y las cuotas disponibles. Los datos de tu tarjeta se ingresan en su portal seguro.
                   </p>
                 </div>
               )}
@@ -1951,12 +1702,12 @@ export default function Checkout() {
                 <div data-page-panel
                   className={
                     isMinimal
-                      ? 'bg-[var(--info-bg)] border border-[var(--info)] rounded-[18px] p-5 text-sm space-y-3'
-                      : 'bg-[var(--info-bg)] border border-[var(--info)] rounded-xl p-4 text-sm space-y-3'
+                      ? 'bg-[var(--visual-page-panel-background)] text-[var(--visual-page-color)] border border-[var(--border)] rounded-[18px] p-5 text-sm space-y-3'
+                      : 'bg-[var(--visual-page-panel-background)] text-[var(--visual-page-color)] border border-[var(--border)] rounded-xl p-4 text-sm space-y-3'
                   }
                 >
                   <div>
-                    <p className="font-semibold text-[var(--info)]">
+                    <p className="font-semibold text-[var(--visual-page-color)]">
                       Datos para realizar la transferencia
                     </p>
                     <p className="text-xs text-[var(--visual-page-color)] mt-1">
@@ -1964,7 +1715,7 @@ export default function Checkout() {
                     </p>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-x-3 gap-y-2 text-xs text-[var(--visual-page-color)]">
+                  <div className="grid grid-cols-2 gap-x-3 gap-y-2 text-xs text-[var(--visual-page-color)] [&>span]:min-w-0 [&>span]:break-words">
                     <span className="text-[var(--visual-page-color)]">Banco:</span>
                     <span>{transferDetails.bank_name}</span>
 
@@ -1987,10 +1738,10 @@ export default function Checkout() {
                     <span data-page-price className="font-bold">{formatPrice(total)}</span>
                   </div>
 
-                  <Alert variant="info">
+                  <p className="border-t border-[var(--border)] pt-3 text-[var(--visual-page-color)]">
                     El pago se realiza directamente a la cuenta bancaria informada por el emprendedor.
                     El pedido quedará registrado para su posterior verificación.
-                  </Alert>
+                  </p>
                 </div>
               )}
             </div>
