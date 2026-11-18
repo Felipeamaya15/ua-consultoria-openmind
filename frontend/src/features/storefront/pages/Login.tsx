@@ -294,14 +294,8 @@ export default function Login() {
 
       authService.setSession(data.data.token, data.data.user);
       if (mode === 'register' && commercial) {
-        let notice: string;
-        try {
-          notice = (await requestConsent(cleanEmail, templateNumber)).mensaje;
-        } catch (e) {
-          notice = 'Tu cuenta fue creada. ' + (e instanceof Error ? e.message : 'Reintenta la preferencia comercial.');
-        }
-        navigate(route('preferencias-comerciales'), { state: { notice } });
-        return;
+        // Send double opt-in confirmation in the background so registration stays in the store flow.
+        void requestConsent(cleanEmail, templateNumber).catch(() => undefined);
       }
 
       redirectAuthenticatedUser(data.data.user);
