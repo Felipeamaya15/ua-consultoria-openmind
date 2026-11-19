@@ -2,7 +2,7 @@
 import { PaletteLibrary } from '../../../shared/PaletteLibrary';
 import { VISUAL_PRESETS } from '../../storefront/visual/presets';
 import { VISUAL_DEFAULTS } from '../../storefront/visual/defaults';
-import { usePaletteLibrary, saveAppearance, paletteOverrides, type Appearance, type StorePalette } from '../../../shared/palettes';
+import { usePaletteLibrary, saveAppearance, saveSelectedTemplate, paletteOverrides, type Appearance, type StorePalette } from '../../../shared/palettes';
 import { resolveStoreVisualConfig } from '../../storefront/visual/resolveVisualConfig';
 import { useEffect, useRef, useState } from "react"
 import { Link, useBlocker } from "react-router-dom"
@@ -165,10 +165,11 @@ const [saved,setSaved]=useState(false);
         nextConfig.themeEditor[id]=patchThemeCustomization(theme,{visualConfig,paletteName:palette.nombre});
       }
       if(Object.keys(appearances).length)await saveAppearance(appearances);
+      await saveSelectedTemplate(template);
       if(!setConfig({...nextConfig,template}))throw new Error('No pudimos guardar la copia local. Los cambios de paleta enviados al servidor se conservan; vuelve a intentar.');
       setPaletteDrafts({});setPreviewTemplate(null);setSaved(true);
       const tplName = TEMPLATES.find(t => t.id === template)?.name ?? template;
-      setTemplateSavedMsg(`Plantilla "${tplName}" guardada en este navegador y activa en la vista del comprador.`);
+      setTemplateSavedMsg(`Plantilla "${tplName}" guardada y activa en tu tienda para todos los visitantes.`);
       return true;
     }catch(error){setPaletteNotice(error instanceof Error?error.message:'No se pudieron guardar los cambios.');return false;}
     finally{setPaletteBusy(false);}

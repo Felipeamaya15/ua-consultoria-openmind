@@ -1,4 +1,5 @@
 import { lazyPage } from '../LazyPage';
+import { SelectedTemplateRedirect } from './SelectedTemplateRedirect';
 const CustomerOrders = lazyPage(() => import('../../features/storefront/pages/CustomerOrders'));
 import { RequireCustomer } from '../../features/storefront/components/store/AccountNavigation';
 const Profile = lazyPage(() => import('../../features/storefront/pages/Profile'));
@@ -105,7 +106,7 @@ export const router = createBrowserRouter([
 
   {
     path: '/',
-    element: <Navigate to="/plantilla/1" replace />,
+    element: <SelectedTemplateRedirect />,
   },
 
 
@@ -183,6 +184,6 @@ export const router = createBrowserRouter([
 
   {
     path: '*',
-    element: <Navigate to="/plantilla/1" replace />,
+    element: <SelectedTemplateRedirect />,
   },
 ]);
