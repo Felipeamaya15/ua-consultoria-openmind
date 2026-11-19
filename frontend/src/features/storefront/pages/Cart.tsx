@@ -3,6 +3,7 @@ import { LoadingState } from '../../../shared/components/states';
 import { Link, useNavigate } from 'react-router-dom';
 
 import { StockFeedback } from '../components/store/StockFeedback';
+import { ActivityCartRows } from '../components/store/ActivityCartPreview';
 import { useCart } from '../context/CartContext';
 import { formatPrice } from '../data/mockData';
 import { Button, EmptyState, Icon } from '../components/ui';
@@ -11,6 +12,7 @@ import { useStorefrontTemplate } from '../hooks/useStorefrontTemplate';
 export default function Cart() {
   const {
     items,
+    activities,
     removeItem,
     updateQuantity,
     subtotal,
@@ -23,7 +25,8 @@ export default function Cart() {
     count,
     loading,
   } = useCart();
-  const shippingLabel = shipping === null ? 'Se calcula en checkout' : shipping === 0 ? 'Gratis' : formatPrice(shipping);
+  const hasItems = items.length > 0 || activities.length > 0;
+  const shippingLabel = !items.length && activities.length ? 'No aplica' : shipping === null ? 'Se calcula en checkout' : shipping === 0 ? 'Gratis' : formatPrice(shipping);
 
   const { route, isMinimal, isVisual, isCatalog } = useStorefrontTemplate();
   const navigate = useNavigate();
@@ -54,10 +57,10 @@ export default function Cart() {
     setPromoSuccess('');
   }, [promoNotice]);
 
-  if (loading && items.length === 0) return <LoadingState spacing="none" className="p-8">Cargando carrito…</LoadingState>;
+  if (loading && !hasItems) return <LoadingState spacing="none" className="p-8">Cargando carrito…</LoadingState>;
 
 
-  if (isCatalog && items.length === 0) {
+  if (isCatalog && !hasItems) {
     return (
       <div className="bg-[var(--visual-page-panel-background)] text-[var(--visual-page-color)]">
         <div className="max-w-[1160px] mx-auto px-5 py-20 md:py-28 text-center">
@@ -89,7 +92,7 @@ export default function Cart() {
   }
 
 
-  if (isVisual && items.length === 0) {
+  if (isVisual && !hasItems) {
     return (
       <div className="bg-[var(--visual-page-panel-background)] text-[var(--visual-page-color)]">
         <div className="max-w-[1180px] mx-auto px-5 md:px-8 py-16 md:py-24">
@@ -123,7 +126,7 @@ export default function Cart() {
   }
 
 
-  if (items.length === 0) {
+  if (!hasItems) {
     return (
       <div
         className={
@@ -161,12 +164,13 @@ export default function Cart() {
             </h1>
 
             <p className="mt-4 text-[13px] text-[var(--visual-page-color)]/45">
-              {count} {count === 1 ? 'producto en tu carrito' : 'productos en tu carrito'}
+              {count} {count === 1 ? 'artículo en tu carrito' : 'artículos en tu carrito'}
             </p>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-6 lg:gap-8 items-start">
             <div className="space-y-3">
+              <ActivityCartRows items={activities} />
               {items.map((item) => {
                 const hasDiscount = Boolean(item.comparePrice);
                 const canIncrease = item.quantity < item.maxStock;
@@ -414,7 +418,7 @@ export default function Cart() {
               </h1>
 
               <p className="mt-3 text-[13px] text-[var(--visual-page-color)]">
-                {count} {count === 1 ? 'producto en tu carrito' : 'productos en tu carrito'}
+                {count} {count === 1 ? 'artículo en tu carrito' : 'artículos en tu carrito'}
               </p>
             </div>
 
@@ -428,6 +432,7 @@ export default function Cart() {
 
           <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-8 lg:gap-12 items-start">
             <div className="flex flex-col gap-4">
+              <ActivityCartRows items={activities} />
               {items.map((item) => {
                 const hasDiscount = Boolean(item.comparePrice);
 
@@ -660,6 +665,7 @@ export default function Cart() {
 
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-8">
         <div className="flex flex-col gap-4">
+          <ActivityCartRows items={activities} />
           {items.map((item) => (
             <article data-page-panel
               key={`${item.productId}-${item.variantId}`}
