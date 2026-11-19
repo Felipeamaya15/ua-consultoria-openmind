@@ -21,6 +21,13 @@ export async function savePalette(value:Pick<StorePalette,'nombre'|'colores'>,id
 export async function deletePalette(id:string) {
   const result=await requestJson(endpoint+'paletas/'+id+'/',{method:'DELETE',headers:auth()}) as {propias:StorePalette[]}; window.dispatchEvent(new Event(PALETTES_CHANGED));return result.propias;
 }
+export async function saveSelectedTemplate(template:TemplateId) {
+  await requestJson(endpoint+'plantilla-seleccionada/',{method:'PUT',headers:auth(),body:JSON.stringify({plantilla_seleccionada:template})});
+}
+export async function fetchSelectedTemplate(signal?:AbortSignal):Promise<string> {
+  const data=await requestJson(endpoint+'plantilla-seleccionada/',{signal,cache:'no-store'}) as {plantilla_seleccionada?:unknown};
+  return typeof data?.plantilla_seleccionada==='string'?data.plantilla_seleccionada:'';
+}
 export async function saveAppearance(plantillas:Appearance) {
   await requestJson(endpoint+'apariencia/',{method:'PUT',headers:auth(),body:JSON.stringify({plantillas})});window.dispatchEvent(new Event(PALETTES_CHANGED));
 }
