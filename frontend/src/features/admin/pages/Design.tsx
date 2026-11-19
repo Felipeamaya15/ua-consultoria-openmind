@@ -160,7 +160,36 @@ const [saved,setSaved]=useState(false);
         const id=key as TemplateId;if(!palette)continue;
         const theme=loadThemeCustomization(id,config.themeEditor?.[id],config,config.visualConfig);
         const base=clearEditorColorOverrides(paletteSource.appearance?.[id]?.visualConfig??theme.visualConfig);
-        const visualConfig={...base,global:{...base?.global,colors:palette.colores}};
+        const editorialButton = id === 'editorial' ? {
+          heroCta: {
+            ...base?.heroCta,
+            background: 'currentColor',
+            textColor: 'currentColor',
+            border: {...base?.heroCta?.border, color: 'currentColor'}
+          },
+          responsive: {
+            ...base?.responsive,
+            tablet: {
+              ...base?.responsive?.tablet,
+              heroCta: {
+                ...base?.responsive?.tablet?.heroCta,
+                background: 'currentColor',
+                textColor: 'currentColor',
+                border: {...base?.responsive?.tablet?.heroCta?.border, color: 'currentColor'}
+              }
+            },
+            mobile: {
+              ...base?.responsive?.mobile,
+              heroCta: {
+                ...base?.responsive?.mobile?.heroCta,
+                background: 'currentColor',
+                textColor: 'currentColor',
+                border: {...base?.responsive?.mobile?.heroCta?.border, color: 'currentColor'}
+              }
+            }
+          }
+        } : {};
+        const visualConfig={...base,...editorialButton,global:{...base?.global,colors:palette.colores}};
         appearances[id]={visualConfig,paleta_id:palette.id.startsWith('system-')?null:palette.id};
         nextConfig.themeEditor[id]=patchThemeCustomization(theme,{visualConfig,paletteName:palette.nombre});
       }
