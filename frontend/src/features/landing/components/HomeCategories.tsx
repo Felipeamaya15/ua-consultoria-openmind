@@ -6,8 +6,16 @@ import { VISUAL_SECTION } from '../../storefront/visual/sectionIds';
 
 
 export function HomeCategories() {
-  const {categories} = useLandingContent();
+  const {categories: selectedCategories} = useLandingContent();
   const {landingProducts} = useStore();
+  const categories = selectedCategories.length
+    ? selectedCategories
+    : Array.from(new Set(
+        landingProducts
+          .filter(product => product.status === 'active')
+          .map(product => product.category)
+          .filter(Boolean)
+      ));
   const {route} = useStorefrontTemplate();
   if (!categories.length) return null;
   return <section data-visual-section={VISUAL_SECTION.categories} data-landing-content className="max-w-7xl mx-auto px-4 py-12 sm:py-16">
