@@ -1594,9 +1594,13 @@ class RetornoTransbankView(APIView):
     PARAMETROS = ("token_ws", "TBK_TOKEN", "TBK_ORDEN_COMPRA", "TBK_ID_SESION")
 
     def _redirigir(self, request):
-        from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
+        from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit, unquote
         from django.http import HttpResponse
         destino = request.query_params.get("destino", "")
+        # Compatibilidad con retornos de Webpay doblemente codificados.
+        # La validacion posterior sigue restringiendo el destino.
+        if destino.lower().startswith(("http%3a%2f%2f", "https%3a%2f%2f")):
+            destino = unquote(destino)
         try:
             destino = IniciarPagoTransbankSerializer().validate_return_url(destino)
         except Exception:
