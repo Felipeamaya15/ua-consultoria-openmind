@@ -16,7 +16,6 @@ class WebpayActivityTests(TestCase):
     payload=helpers.UnifiedOrderDBTests.payload
     post=helpers.UnifiedOrderDBTests.post
     def fixture(self):
-        # Build a reservation in the known local fixture, then set the intended Webpay marker.
         response=self.post(self.payload()); self.assertEqual(response.status_code,201,response.data)
         order=Pedido.objects.get(tienda=self.store)
         order.medio_pago='Transbank';order.metodo_pago='Transbank'

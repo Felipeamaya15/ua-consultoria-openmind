@@ -14,7 +14,7 @@ export function marketingImage(value: unknown): string | null {
     return ['http:', 'https:'].includes(url.protocol) && !url.username && !url.password ? url.href : null;
   } catch { return null; }
 }
-/** Conserva activo/es_activa de variantes, que el adaptador del listado general no expone. */
+
 export function readMarketingProducts(data: unknown): MarketingProduct[] {
   if (!Array.isArray(data)) throw new Error('No pudimos reconocer el catálogo recibido. Intenta actualizarlo.');
   return data.map(item => {

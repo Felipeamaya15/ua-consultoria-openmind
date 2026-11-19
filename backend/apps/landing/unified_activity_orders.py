@@ -48,7 +48,6 @@ def order_line(row):
                            {'etiqueta':'Inicio','valor':row.condiciones['inicio']}])
 
 def resolve_unified_qa(order, *, approve):
-    # Caller must hold the order lock inside transaction.atomic().
     if not is_unified_qa(order): return False
     if not settings.DEBUG:
         raise PermissionDenied('Los pedidos QA se resuelven únicamente en el entorno local.')

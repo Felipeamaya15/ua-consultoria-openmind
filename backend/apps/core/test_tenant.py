@@ -136,7 +136,6 @@ class ResolverTiendaTests(TestCase):
         ajeno = Producto.objects.create(nombre='Ajeno', precio=1, id_tienda=otra)
         Pedido.objects.create(tienda=otra, monto_total=1, correo_contacto='qa@example.test')
         self.request.user = self.owner
-        # Aísla los filtros del Admin de la regla global que rechaza varias tiendas.
         with patch('apps.core.admin.resolver_tienda', return_value=self.shop):
             admin = ProductoAdmin(Producto, AdminSite())
             self.assertEqual(list(admin.get_queryset(self.request)), [propio])

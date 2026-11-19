@@ -42,7 +42,7 @@ function hydrate(config: Record<string, unknown>): AdminConfig {
   };
 }
 
-/** Effective colors are UI conveniences, not implicit persisted overrides. */
+
 function storedOverrides(config: AdminConfig, previous: Record<string, unknown>): Record<string, unknown> {
   const baseline = hydrate(previous);
   const result: Record<string, unknown> = { ...config };
@@ -75,7 +75,7 @@ function storedOverrides(config: AdminConfig, previous: Record<string, unknown>)
   return result;
 }
 
-// Single persistence boundary: replace with the Django repository later.
+
 export const adminRepository = {
   load(identity: StoreIdentity | null = null): AdminConfig {
     return hydrate(withoutPrivateCredentials(readStoredStoreConfig(identity)));

@@ -34,7 +34,7 @@ function load(file, globals) {
   }});
   async function renderGuard() {
     states = []; index = 0; effects = [];
-    assert.equal(RequireAdmin().props.role, 'status'); // No panel mientras se verifica.
+    assert.equal(RequireAdmin().props.role, 'status');
     effects[0](); await new Promise(setImmediate); index = 0; return RequireAdmin();
   }
   assert.equal((await renderGuard()).type, 'Outlet');
@@ -43,7 +43,7 @@ function load(file, globals) {
   token = null;
   assert.equal((await renderGuard()).props.to, '/plantilla/1/ingresar');
 
-  // Vista emprendedor: datos remotos, persistencia confirmada y errores visibles.
+
   let fail = false, savedEmail, changedPassword;
   Object.assign(service, {getSessionStartedAt: () => null, updateEntrepreneurProfile: async email => {if (fail) throw Error('No guardado'); savedEmail = email; return {email};}, changeEntrepreneurPassword: async (old, next) => {changedPassword = [old, next];}});
   const {default: Profile} = load('src/features/admin/pages/Profile.tsx', {require: id => {

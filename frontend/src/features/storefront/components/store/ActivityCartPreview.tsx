@@ -36,7 +36,7 @@ function ActivityRow({item}:{item:ActivityCartItem}){
     <small>Si quitas el último participante, la actividad se elimina del carrito.</small>
   </article>;
 }
-/** Filas que se insertan dentro de la lista del carrito existente. */
+
 export function ActivityCartRows({items}:{items:ActivityCartItem[]}){
   return <>{items.map(item=><ActivityRow key={item.sectionId} item={item}/>)}</>;
 }

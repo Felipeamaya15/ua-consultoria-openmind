@@ -28,7 +28,7 @@ export function CookieConsentBanner() {
     if (!scope) return;
     const check = () => {
       let choice = null;
-      try { choice = readConsent(localStorage, scope); } catch { /* mostrar elección */ }
+      try { choice = readConsent(localStorage, scope); } catch {  }
       if (choice === 'accepted') {
         initGoogleAnalytics(config.gaId);
         if (initMetaPixel(config.pixelId)) trackMetaPixelPageView(`${pathname}${search}`);
@@ -75,13 +75,12 @@ export function CookieConsentBanner() {
   const acceptText = bannerConfig?.acceptText || 'Aceptar cookies';
   const declineText = bannerConfig?.declineText || 'Solo necesarias';
 
-  // COOKIE_PALETTE_V1: el banner esta fuera de StoreVisualRoot,
-  // por eso toma directamente la paleta efectiva de la plantilla.
+
   const colors = visualConfig.global.colors;
   const surface = `color-mix(in srgb, ${colors.primary} 8%, ${colors.background})`;
   const mutedSurface = `color-mix(in srgb, ${colors.primary} 16%, ${colors.background})`;
   const borderColor = `color-mix(in srgb, ${colors.primary} 28%, ${colors.background})`;
-  // COOKIE_PALETTE_V2: mantener la combinacion configurada solo si es legible.
+
   const configuredBackground = colors.button || colors.primary;
   const configuredText = colors.buttonText;
   const validPair = (contrastRatio(configuredText || '', configuredBackground || '') ?? 0) >= 4.5;

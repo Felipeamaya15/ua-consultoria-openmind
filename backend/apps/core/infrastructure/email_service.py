@@ -206,7 +206,6 @@ def enviar_correo(destinatario, asunto, cuerpo, *, preheader='', nombre_remitent
         try:
             entregados = mensaje.send(fail_silently=False)
         except Exception as err:
-            # Fallback si el host 'mailpit' no resuelve por DNS (ej: script o test fuera del contenedor docker)
             if getattr(settings, 'EMAIL_HOST', '') == 'mailpit':
                 fallback_conn = get_connection(
                     backend='django.core.mail.backends.smtp.EmailBackend',
@@ -220,7 +219,7 @@ def enviar_correo(destinatario, asunto, cuerpo, *, preheader='', nombre_remitent
                 entregados = mensaje.send(fail_silently=False)
             else:
                 raise err
-    except Exception as error:  # SMTP caído, credenciales malas, tiempo agotado, etc.
+    except Exception as error:
         motivo = str(error).replace(correo, correo_enmascarado(correo))
         logger.warning('No se pudo enviar el correo (%s) a %s: %s: %s', referencia or 'sin referencia',
                        correo_enmascarado(correo), type(error).__name__, motivo[:200])

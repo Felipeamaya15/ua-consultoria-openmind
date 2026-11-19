@@ -77,7 +77,7 @@ export const OrderTracking = () => {
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-2 pt-4">
-            {/* Se declaran explícitamente los tipos (LineaTiempoPaso y number) para resolver los errores ts(7006) */}
+
             {orderData.linea_tiempo.map((paso: LineaTiempoPaso, idx: number) => (
               <div
                 key={idx}
@@ -95,7 +95,7 @@ export const OrderTracking = () => {
           <div className="pt-4 border-t border-gray-100">
             <h4 className="font-semibold text-sm mb-3">Detalle de productos</h4>
             <ul className="space-y-2 text-sm">
-              {/* Se declaran explícitamente los tipos (any y number) para resolver los errores ts(7006) */}
+
               {orderData.items.map((item: any, i: number) => (
                 <li key={i} className="flex justify-between">
                   <span>{item.nombre} x{item.cantidad}</span>

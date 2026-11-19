@@ -1,4 +1,4 @@
-// Regresión final: las 34 suites solicitadas y 26 suites de consumidores públicos.
+
 const fs = require('node:fs'), path = require('node:path'), { spawnSync } = require('node:child_process');
 const root = path.resolve(__dirname, '..'), out = path.resolve(root, '../docs/qa-final-scrum455456');
 fs.mkdirSync(out, { recursive: true });

@@ -3,13 +3,11 @@ import type { VisualConfig } from './types';
 import { visualConfigToCssVariables } from './cssVariables';
 import './image-hover.css';
 
-// OPENMIND_EFFECT_LIBRARY_V2
+
 import { motionTransform, lightStyle } from './effectLibrary';
 import { isOnlineEffectId, onlineEffectAnimation, ensureOnlineEffect } from './onlineEffects';
-// OPENMIND_ONLINE_EFFECTS_V1: solo se aplican fotogramas CSS permitidos.
 
 
-/** Reutiliza la configuración visual existente y añade variables heredables del carrusel. */
 export function visualConfigWithCarouselVars(config: VisualConfig, targetDocument?: Document): CSSProperties {
   const omOnline = (value: string | undefined, duration = 750): string => {
     if (!isOnlineEffectId(value)) return 'none';
@@ -32,7 +30,7 @@ export function visualConfigWithCarouselVars(config: VisualConfig, targetDocumen
     '--openmind-carousel-interval': String(hero.carouselInterval ?? 5),
     '--openmind-carousel-transition': hero.carouselTransition ?? 'fade',
     '--openmind-carousel-indicators': (hero.carouselIndicators ?? true) ? '1' : '0',
-    // Efectos por grupo de fotografías (producto/categoría).
+
     '--om-hover-featured-transform': motionTransform(hero.hoverFeaturedMotion),
     '--om-hover-featured-overlay-animation': isOnlineEffectId(hero.hoverFeaturedLight) ? omOnline(hero.hoverFeaturedLight, 1100) : lightStyle(hero.hoverFeaturedLight).animation,
     '--om-hover-featured-overlay-background': isOnlineEffectId(hero.hoverFeaturedLight) ? 'radial-gradient(ellipse,rgba(255,255,255,.65),rgba(255,255,255,.08) 70%,transparent 95%)' : lightStyle(hero.hoverFeaturedLight).background,

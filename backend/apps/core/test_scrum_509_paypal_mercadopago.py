@@ -69,7 +69,7 @@ class MercadoPagoTests(BaseTienda):
         self.assertEqual(self.confirmar(EstadoPago.APROBADO).status_code, 200)
         self.pedido.refresh_from_db()
         self.assertEqual(self.pedido.estado, 'pagado')
-        self.assertEqual(self.confirmar(EstadoPago.APROBADO).status_code, 200)  # recarga: idempotente
+        self.assertEqual(self.confirmar(EstadoPago.APROBADO).status_code, 200)
 
     def test_rechazado_o_pendiente_no_confirman(self):
         self.assertEqual(self.confirmar(EstadoPago.RECHAZADO).status_code, 402)
@@ -137,7 +137,7 @@ class PayPalTests(BaseTienda):
         r, llamada = self.iniciar()
         self.assertEqual(r.status_code, 200, r.data)
         self.assertEqual(llamada.kwargs['currency'], 'USD')
-        self.assertEqual(llamada.kwargs['amount'], 20.7)  # 19000 / 918, el monto del cliente se ignora
+        self.assertEqual(llamada.kwargs['amount'], 20.7)
         self.assertEqual(llamada.kwargs['reference_id'], 'ORD-X')
         self.assertEqual(r.data['data']['fx']['monto_usd'], '20.70')
         self.pedido.refresh_from_db()
@@ -171,7 +171,7 @@ class PayPalTests(BaseTienda):
         self.iniciar()
         cache.clear()
         with patch(DESCARGA, return_value=dolar('1000')):
-            r, _ = self.captura()  # con 1.000 CLP/USD el calculo nuevo seria otro; vale lo guardado
+            r, _ = self.captura()
         self.assertEqual(r.status_code, 200, r.data)
 
     def test_captura_fallida_no_confirma(self):
@@ -194,7 +194,7 @@ class PayPalTests(BaseTienda):
         r, capture = self.captura(order_id='AJENA')
         self.assertEqual(r.status_code, 409)
         capture.assert_not_called()
-        Pedido.objects.filter(pk=self.pedido.pk).update(pago_fx={})  # sin conversion guardada
+        Pedido.objects.filter(pk=self.pedido.pk).update(pago_fx={})
         r, capture = self.captura()
         self.assertEqual(r.status_code, 409)
         capture.assert_not_called()
@@ -203,7 +203,7 @@ class PayPalTests(BaseTienda):
 
     def test_se_puede_reintentar_y_solo_vale_la_ultima_orden_de_paypal(self):
         self.iniciar('OID-1')
-        r, _ = self.iniciar('OID-2')  # el comprador reintenta el mismo pedido
+        r, _ = self.iniciar('OID-2')
         self.assertEqual(r.status_code, 200, r.data)
         self.pedido.refresh_from_db()
         self.assertEqual(self.pedido.pago_fx['paypal_order_id'], 'OID-2')

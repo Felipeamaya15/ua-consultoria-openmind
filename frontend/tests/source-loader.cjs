@@ -1,4 +1,4 @@
-// Carga TypeScript real para pruebas Node sin introducir un segundo compilador de producción.
+
 const fs = require('node:fs'), path = require('node:path'), vm = require('node:vm'), ts = require('typescript');
 const root = path.resolve(__dirname, '..');
 function load(file, mocks = {}, globals = {}) {
@@ -9,7 +9,7 @@ function load(file, mocks = {}, globals = {}) {
   const code = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020, jsx: ts.JsxEmit.ReactJSX } }).outputText;
   const req = name => {
     if (name in mocks) return mocks[name];
-    // Vite handles stylesheet side effects; Node's TypeScript harness has no CSS runtime.
+
     if (name.endsWith('.css')) return {};
     if (!name.startsWith('.')) return require(name);
     const target = path.resolve(path.dirname(resolved), name);

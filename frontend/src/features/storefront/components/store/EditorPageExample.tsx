@@ -4,7 +4,7 @@ import { lazy, Suspense, type ReactNode } from 'react';
 import type { Product } from '../../data/mockData';
 const ProductDetail = lazy(() => import('../../pages/ProductDetail'));
 
-// Synthetic examples; the shared product view bypasses public requests and real cart writes.
+
 const art = (color: string) => `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 700 600"><rect width="700" height="600" fill="#f2f0eb"/><path d="M210 190h280l45 285H165z" fill="${color}"/><path d="M280 210v-60a70 70 0 01140 0v60" fill="none" stroke="${color}" stroke-width="22"/></svg>`)}`;
 const images = ['#64786c', '#b18b68', '#758aa0'].map(art);
 const exampleProduct: Product = {

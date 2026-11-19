@@ -36,7 +36,7 @@ export const PayPalConfigForm: React.FC<Props> = ({ tiendaId = 1 }) => {
       setSecretEnmascarado(data.client_secret_enmascarado || '');
       setIsConfigured(data.configurado);
     } catch {
-      // Si aún no está configurado en la base de datos se mantiene estado por defecto
+
       setIsConfigured(false);
     } finally {
       setInitialLoading(false);
@@ -85,7 +85,7 @@ export const PayPalConfigForm: React.FC<Props> = ({ tiendaId = 1 }) => {
 
   return (
     <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm flex flex-col gap-5">
-      {/* Encabezado */}
+
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-[#003087]/10 flex items-center justify-center text-[#003087]">
@@ -106,7 +106,7 @@ export const PayPalConfigForm: React.FC<Props> = ({ tiendaId = 1 }) => {
           </div>
         </div>
 
-        {/* Switch Activación */}
+
         <label className="relative inline-flex items-center cursor-pointer">
           <input
             type="checkbox"
@@ -118,7 +118,7 @@ export const PayPalConfigForm: React.FC<Props> = ({ tiendaId = 1 }) => {
         </label>
       </div>
 
-      {/* Alertas */}
+
       {errorMsg && (
         <div className="p-3 text-sm text-red-700 bg-red-50 border border-red-200 rounded-xl">
           {humanizeAdminError(errorMsg, 'No pudimos guardar la configuración de PayPal. Revisa los datos e intenta nuevamente.')}
@@ -130,7 +130,7 @@ export const PayPalConfigForm: React.FC<Props> = ({ tiendaId = 1 }) => {
         </div>
       )}
 
-      {/* Formulario */}
+
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>

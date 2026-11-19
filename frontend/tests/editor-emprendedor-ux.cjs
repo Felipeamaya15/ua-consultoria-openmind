@@ -1,4 +1,4 @@
-// Run from frontend: node tests/editor-emprendedor-ux.cjs
+
 const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm'),assert=require('node:assert/strict'),ts=require('typescript');
 const root=path.resolve(__dirname,'..');
 function load(relative,mocks={}) {

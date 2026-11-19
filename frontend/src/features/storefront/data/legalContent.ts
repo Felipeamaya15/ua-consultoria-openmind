@@ -1,7 +1,4 @@
-// Legal pages content model — shared between the emprendedor editor (backoffice)
-// and the public store pages. Each page keeps an editable `draft` and the
-// currently live `published` copy so the emprendedor can work without affecting
-// what buyers see until they hit "Publicar".
+
 
 import type { LegalContentVersion } from './legalVersions';
 
@@ -27,7 +24,7 @@ export interface LegalPage {
   title: string;
   draft: string;
   published: string;
-  lastPublished: string | null; // ISO date string
+  lastPublished: string | null;
   version?: number;
   fecha_vigencia?: string | null;
   vigente?: boolean;
@@ -38,7 +35,7 @@ export interface LegalPage {
   currentVersionId?: string | null;
 }
 
-/** Catálogo único de páginas legales disponibles en el e-commerce. */
+
 export const LEGAL_PAGE_DEFINITIONS: readonly LegalPageDefinition[] = [
   {
     type: 'terms',

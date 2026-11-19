@@ -1,4 +1,4 @@
-// Respuestas artificiales basadas en legal.py, serializers y auth/me del candidato.
+
 const http = require('node:http');
 const pages = (store, version=1) => Object.fromEntries(['terms','privacy','refund','cookies'].map(type => [type, {
   title:type, draft:`Vigente tienda ${store} ${type}`, published:`Vigente tienda ${store} ${type}`,

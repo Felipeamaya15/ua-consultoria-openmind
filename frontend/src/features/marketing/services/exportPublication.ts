@@ -53,7 +53,7 @@ async function embeddedFonts(used: Set<string>): Promise<string> {
   return faces.join('\n');
 }
 
-/** Copia solo la pieza con estilos calculados en px: conserva cqw, grid y tipografía sin clonar el editor. */
+
 export async function renderPublication(art: HTMLElement, format: PublicationFormat, type: ExportType, isCurrent: () => boolean = () => true): Promise<Blob> {
   const check = () => {
     if (!art.isConnected || !isCurrent()) throw new Error('La publicación o sesión cambió durante la exportación. Vuelve a descargarla.');
@@ -108,7 +108,7 @@ export async function renderPublication(art: HTMLElement, format: PublicationFor
   check(); return blob;
 }
 export function publicationFilename(template: string, format: PublicationFormat, type: ExportType): string {
-  // Sin nombre de cliente, usuario, SKU, token ni referencias privadas.
+
   const date = new Intl.DateTimeFormat('sv-SE', { timeZone: 'America/Santiago', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
   return `publicacion-${template.replace(/[^a-z-]/g, '')}-${format}-${date}.${type}`;
 }

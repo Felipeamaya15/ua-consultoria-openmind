@@ -164,14 +164,12 @@ class ProbarCorreoEventoAPIView(APIView):
                     status=status.HTTP_404_NOT_FOUND,
                 )
         else:
-            # Buscar el último pedido de la tienda para usar datos reales
             pedido = Pedido.objects.filter(tienda=tienda).prefetch_related('itempedido_set').order_by('-id_pedido').first()
 
         if pedido:
             resultado = enviar_correo_manual(pedido, tipo, destinatario_override=destinatario or None)
             destinatario_reportado = destinatario or correo_comprador(pedido)
         else:
-            # Si la tienda aún no tiene pedidos, renderizar con datos de demostración
             if not destinatario or not correo_valido(destinatario):
                 return error_response(
                     mensaje="Ingresa un correo electrónico de destino válido.",

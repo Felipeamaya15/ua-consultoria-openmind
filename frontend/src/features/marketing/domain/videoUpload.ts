@@ -1,4 +1,4 @@
-/** Browser metadata is an early UX check; the server independently decodes bytes. */
+
 export function validateVideoFile(file: File): Promise<void> {
   if (file.size > 8 * 1024 * 1024) return Promise.reject(new Error('El video supera 8 MB. Comprímelo o selecciona otro archivo.'));
   const mime = /\.webm$/i.test(file.name) ? 'video/webm' : /\.mp4$/i.test(file.name) ? 'video/mp4' : '';

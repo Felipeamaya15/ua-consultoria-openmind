@@ -138,7 +138,6 @@ class ShippingQuoteTests(TestCase):
         self.assertNotIn('3490', str(response.data))
 
     def test_order_saves_quoted_amount_and_destination_even_above_50000(self):
-        # El checkout integrado resuelve promociones persistidas, no cupones fijos.
         Promocion.objects.create(tienda=self.store, nombre='Descuento QA', codigo='VERANO20',
                                 tipo='percentage', valor=20, fecha_inicio=timezone.localdate(timezone=BUSINESS_ZONE), activa=True)
         response = self.submit(cotizacion=self.token(), codigo_promocional='VERANO20')

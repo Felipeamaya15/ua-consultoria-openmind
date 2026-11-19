@@ -1,6 +1,4 @@
 #!/usr/bin/env bash
-# Restaura un respaldo hecho con backup.sh. ATENCIÓN: reemplaza los datos actuales.
-# Uso: bash deploy/restore.sh 20261107-030001     (el identificador que terminó de mostrar backup.sh)
 set -euo pipefail
 AQUI="$(cd "$(dirname "$0")" && pwd)"
 cd "$AQUI"
@@ -16,7 +14,6 @@ for f in "$PG" "$MG" "$IM"; do [ -s "$f" ] || { echo "No encuentro $f"; exit 1; 
 
 echo "Esto REEMPLAZA los datos actuales de la tienda por los del respaldo $FECHA."
 printf "Escribe RESTAURAR para continuar: "; read -r RESPUESTA || true
-# Se ignoran espacios, saltos de línea de Windows (\r) y mayúsculas/minúsculas en lo que escribas.
 RESPUESTA="$(printf '%s' "$RESPUESTA" | tr -d '[:space:]' | tr '[:lower:]' '[:upper:]')"
 [ "$RESPUESTA" = "RESTAURAR" ] || { echo "Cancelado."; exit 1; }
 
@@ -26,7 +23,6 @@ $DC stop web backend
 echo "[2/4] Restaurando PostgreSQL..."
 BD="$(valor POSTGRES_DB)"; USR="$(valor POSTGRES_USER)"
 $DC exec -T db psql -U "$USR" -d postgres -c "DROP DATABASE IF EXISTS \"$BD\" WITH (FORCE)" -c "CREATE DATABASE \"$BD\" OWNER \"$USR\""
-# "-o /dev/null" oculta el detalle interno de PostgreSQL; los errores, si los hubiera, igual se muestran.
 gunzip -c "$PG" | $DC exec -T db psql -U "$USR" -d "$BD" -q -o /dev/null
 
 echo "[3/4] Restaurando MongoDB..."

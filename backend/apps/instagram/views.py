@@ -73,8 +73,6 @@ class InstagramCallbackView(NoStoreActivityView):
 
     def get(self, request):
         if 'inicio' in request.query_params:
-            # Top-level navigation on the callback host establishes its own secure cookie.
-            # No public auth API or third-party cookies are needed across the tunnel domain.
             ticket = request.query_params.get('inicio', '')
             if len(ticket) != 64:
                 return HttpResponse(status=400)
@@ -156,7 +154,6 @@ class InstagramDisconnectView(OwnerView):
             connection.vence_en, connection.emitido_en, connection.autorizado_por = None, None, None
             connection.permisos = []; connection.generacion += 1; connection.save()
             EstadoInstagramOAuth.objects.filter(conexion=connection).delete()
-        # No business_management grant: disconnect locally without managing the portfolio.
         return success_response(data={'conectado': False, 'revocacion_confirmada': False,
             'aviso': 'Acceso eliminado de OpenMind. Para revocar también en Meta, elimina la app de Aplicaciones conectadas del portafolio empresarial.'})
 

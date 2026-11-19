@@ -144,10 +144,9 @@ def confirm(store, pk):
             raise ValidationError('La imagen temporal venció. Prepara otra publicación desde el editor.')
         if PublicacionInstagram.objects.filter(tienda=store, confirmada_en__gte=timezone.now()-timedelta(days=1)).count() >= settings.INSTAGRAM_DAILY_LIMIT:
             raise ValidationError('Se alcanzó el límite diario de publicaciones de esta tienda.')
-        image_url(row)  # Validate the public origin before reserving a remote write.
+        image_url(row)
         row.estado, row.confirmada_en = 'creando', timezone.now()
         row.save(update_fields=['estado', 'confirmada_en', 'actualizado_en'])
-    # The reservation survives a worker crash. Concurrent confirmations cannot create a second container.
     with transaction.atomic():
         Tienda.objects.select_for_update().get(pk=store.pk)
         connection = active_connection(store, lock=True)
@@ -198,7 +197,6 @@ def progress(store, pk):
                 raise provider.InstagramError('estado_contenedor_desconocido')
             row.save(update_fields=['estado', 'codigo', 'publicacion_iniciada_en', 'actualizado_en'])
         except provider.InstagramError as error:
-            # Reading status is safe to repeat. Never turn an uncertain publish into a fresh POST.
             row.codigo = error.code
             row.save(update_fields=['codigo', 'actualizado_en'])
             if error.code == 'reconectar_instagram':
@@ -207,7 +205,6 @@ def progress(store, pk):
             return row
     if row.estado != 'publicando':
         return row
-    # Durable marker committed before calling media_publish.
     with transaction.atomic():
         Tienda.objects.select_for_update().get(pk=store.pk)
         connection = active_connection(store, lock=True)

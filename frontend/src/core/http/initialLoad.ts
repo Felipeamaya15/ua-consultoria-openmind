@@ -20,7 +20,7 @@ function waitForRetry(ms: number, signal?: AbortSignal): Promise<void> {
   });
 }
 
-// Solo GET iniciales que habilitan explícitamente retry. Nunca reintenta un guardado.
+
 export async function fetchInitialLoad(url: string, options: InitialLoadOptions = {}): Promise<Response> {
   const { signal, retry = false, cache, headers } = options;
   for (let attempt = 0; ; attempt++) {

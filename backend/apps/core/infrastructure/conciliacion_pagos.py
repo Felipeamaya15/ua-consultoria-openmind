@@ -14,8 +14,6 @@ from apps.catalog.domain.ports.payment_gateway import EstadoPago
 from apps.core.infrastructure.stock_pedidos import descontar_stock_de_pedido
 logger = logging.getLogger(__name__)
 
-# Una orden de PayPal aprobada que nadie capturo no puede cobrarse sola (la captura la hace este servidor y solo
-# mientras el pedido siga pendiente). Se le da este tiempo extra al comprador antes de darla por abandonada.
 ESPERA_MAXIMA_ORDEN_APROBADA = timedelta(hours=24)
 
 
@@ -34,7 +32,6 @@ def marcar_pedido_pagado(pedido_pk):
         pedido = Pedido.objects.select_for_update().get(pk=pedido_pk)
         from apps.landing.external_activity_orders import is_external
         if is_external(pedido):
-            # This generic route does not carry provider evidence.
             raise ValueError('El pago de actividades exige conciliación específica.')
         pasa_a_pagado = pedido.estado == 'pendiente'
         if pasa_a_pagado:
@@ -82,8 +79,8 @@ def _veredicto_mercadopago(pedido):
                      pedido.pk, [str(p.monto) for p in aprobados])
         return Veredicto.INDETERMINADO
     if any(p.estado == EstadoPago.PENDIENTE for p in pagos):
-        return Veredicto.ESPERAR  # Mercado Pago vence solo sus pagos pendientes; entonces el pedido se cancela
-    return Veredicto.CANCELAR  # sin pagos, o todos rechazados, cancelados o devueltos
+        return Veredicto.ESPERAR
+    return Veredicto.CANCELAR
 
 
 def _veredicto_paypal(pedido, ahora):
@@ -95,12 +92,12 @@ def _veredicto_paypal(pedido, ahora):
     fx = pedido.pago_fx if isinstance(pedido.pago_fx, dict) else {}
     orden_id = str(fx.get('paypal_order_id') or '').strip()
     if not orden_id:
-        return Veredicto.CANCELAR  # nunca se creo una orden en PayPal: no hay nada que cobrar
+        return Veredicto.CANCELAR
     adaptador = _adaptador_paypal(pedido.tienda)
     if not adaptador:
         return Veredicto.CANCELAR
     resultado = adaptador.consultar_pago(orden_id)
-    if resultado.estado == EstadoPago.APROBADO:  # COMPLETED: el cobro ya se hizo
+    if resultado.estado == EstadoPago.APROBADO:
         try:
             esperado = Decimal(str(fx['monto_usd']))
         except (KeyError, InvalidOperation):
@@ -114,5 +111,5 @@ def _veredicto_paypal(pedido, ahora):
         limite = vence_en(pedido)
         ahora = ahora or timezone.now()
         if limite is not None and ahora < limite + ESPERA_MAXIMA_ORDEN_APROBADA:
-            return Veredicto.ESPERAR  # aprobada y sin capturar: el comprador puede estar volviendo a la tienda
+            return Veredicto.ESPERAR
     return Veredicto.CANCELAR

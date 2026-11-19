@@ -62,8 +62,6 @@ class _PagoExternoBase(APIView):
     authentication_classes = []
 
 
-# Mercado Pago
-
 def _adaptador_mp(tienda):
     config = ConfiguracionMercadoPago.objects.filter(id_tienda=tienda, activo=True).first()
     if not config or not str(config.access_token or '').strip():
@@ -80,7 +78,6 @@ def _crear_pago_mercadopago(adaptador, pedido, return_url):
 def _crear_pago_mercadopago_impl(adaptador, pedido, return_url):
     """Preferencia de pago nueva para el pedido (monto del pedido). Lo usan el checkout y 'Pagar ahora'."""
     try:
-        # El enlace de pago vence junto con el pedido: despues de cancelarlo ya no se puede pagar.
         pago = adaptador.iniciar_pago(pedido.identificador, pedido.monto_total, f'Pedido {pedido.identificador}',
                                       return_url, expira_en=vence_en(pedido))
     except PagoGatewayException:
@@ -145,8 +142,6 @@ class ConfirmarPagoMercadoPagoView(_PagoExternoBase):
         return success_response(mensaje='Pago aprobado.', data={
             'orden_compra': pedido.identificador, 'monto': str(pedido.monto_total)})
 
-
-#PayPal 
 
 def _adaptador_paypal(tienda):
     config = ConfiguracionPayPal.objects.filter(id_tienda=tienda, activo=True).first()
@@ -263,8 +258,6 @@ def _datos_pago_paypal(pedido):
     return {'orden_compra': pedido.identificador, 'monto': str(pedido.monto_total),
             'monto_usd': fx.get('monto_usd'), 'tipo_cambio': fx.get('tipo_cambio_aplicado')}
 
-
-# Pagar ahora desde Seguimiento o Mis pedidos.
 
 def iniciar_paypal_pedido(request, pedido, return_url):
     tienda = pedido.tienda

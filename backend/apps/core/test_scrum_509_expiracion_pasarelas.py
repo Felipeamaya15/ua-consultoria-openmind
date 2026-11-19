@@ -80,7 +80,7 @@ class MercadoPagoExpiracionTests(BaseConciliacion):
         pedido = self.pedido('MercadoPago')
         self.assertEqual(self.ciclo()['cancelado'], 1)
         self.assertEqual(self.estado(pedido), 'cancelado')
-        self.assertFalse(Pedido.objects.get(pk=pedido.pk).stock_devuelto)  # RN-03: nunca descontó stock
+        self.assertFalse(Pedido.objects.get(pk=pedido.pk).stock_devuelto)
         self.repositorio.restore_stock.assert_not_called()
         adaptador.return_value.buscar_pagos_por_referencia.assert_called_once_with('ORD-1')
 
@@ -132,7 +132,6 @@ class MercadoPagoExpiracionTests(BaseConciliacion):
             self.assertEqual(self.ciclo()['indeterminado'], 1)
         self.assertEqual(self.estado(pedido), 'pendiente')
         self.repositorio.restore_stock.assert_not_called()
-        # Cuando la pasarela vuelve, en la siguiente pasada se resuelve.
         adaptador.return_value.buscar_pagos_por_referencia.side_effect = None
         adaptador.return_value.buscar_pagos_por_referencia.return_value = []
         self.ciclo()
@@ -147,7 +146,6 @@ class MercadoPagoExpiracionTests(BaseConciliacion):
 
     @patch(MP)
     def test_dentro_del_margen_posterior_al_plazo_no_se_consulta_ni_se_cancela(self, adaptador):
-        # Plazo en linea 2 h + margen de 10 min: a las 2 h 5 min ya vencio para el comprador pero aun no se concilia.
         pedido = self.pedido('MercadoPago', horas=2)
         Pedido.objects.filter(pk=pedido.pk).update(fecha_creacion=timezone.now() - timedelta(hours=2, minutes=5))
         pedido.refresh_from_db()
@@ -179,7 +177,7 @@ class PayPalExpiracionTests(BaseConciliacion):
         self.ciclo()
         self.assertEqual(self.estado(pedido), 'cancelado')
         adaptador.return_value.consultar_pago.assert_called_once_with('PP-1')
-        self.repositorio.restore_stock.assert_not_called()  # RN-03: nunca descontó stock
+        self.repositorio.restore_stock.assert_not_called()
 
     @patch(PP)
     def test_orden_completada_deja_el_pedido_pagado(self, adaptador):
@@ -205,7 +203,7 @@ class PayPalExpiracionTests(BaseConciliacion):
         self.assertEqual(self.estado(reciente), 'pendiente')
         Pedido.objects.filter(pk=reciente.pk).update(fecha_creacion=timezone.now() - timedelta(hours=30))
         self.ciclo()
-        self.assertEqual(self.estado(reciente), 'cancelado')  # sin captura, PayPal no cobra
+        self.assertEqual(self.estado(reciente), 'cancelado')
 
     @patch(PP)
     def test_si_paypal_no_responde_no_se_cancela(self, adaptador):
@@ -227,7 +225,7 @@ class TuuExpiracionTests(BaseConciliacion):
         pedido = self.pedido('TUU')
         self.assertEqual(self.ciclo()['cancelado'], 1)
         self.assertEqual(self.estado(pedido), 'cancelado')
-        self.assertFalse(Pedido.objects.get(pk=pedido.pk).stock_devuelto)  # RN-03: nunca descontó stock
+        self.assertFalse(Pedido.objects.get(pk=pedido.pk).stock_devuelto)
         self.repositorio.restore_stock.assert_not_called()
 
     def test_dentro_del_margen_posterior_al_plazo_no_se_cancela(self):
@@ -389,10 +387,9 @@ class ComandoExpiradorTests(BaseConciliacion):
         def pasada(self_, lote):
             llamadas.append(lote)
             if len(llamadas) == 3:
-                os.kill(os.getpid(), signal.SIGTERM)  # como `docker stop`
+                os.kill(os.getpid(), signal.SIGTERM)
             return {}
 
-        # Intervalo 0 solo en la prueba (en produccion el minimo es de 30 s) para no esperar entre pasadas.
         with patch.object(Command, '_pasada', pasada), patch(f'{COMANDO}.INTERVALO_MINIMO', 0):
             salida = self.ejecutar('--daemon', '--intervalo', '0', '--lote', '7', '--latido', str(latido))
         self.assertEqual(llamadas, [7, 7, 7])
@@ -412,9 +409,9 @@ class ComandoExpiradorTests(BaseConciliacion):
             llamadas.append(lote)
             if len(llamadas) == 2:
                 os.kill(os.getpid(), signal.SIGTERM)
-            return None  # la pasada fallo
+            return None
 
         with patch.object(Command, '_pasada', pasada), patch(f'{COMANDO}.INTERVALO_MINIMO', 0):
             self.ejecutar('--daemon', '--intervalo', '0', '--latido', str(latido))
-        self.assertEqual(len(llamadas), 2)  # la primera pasada fallo y el servicio siguio con la segunda
-        self.assertFalse(latido.exists())  # ninguna pasada termino bien: el healthcheck lo detectaria
+        self.assertEqual(len(llamadas), 2)
+        self.assertFalse(latido.exists())

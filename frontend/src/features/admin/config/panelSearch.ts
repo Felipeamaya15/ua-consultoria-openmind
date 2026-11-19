@@ -491,7 +491,7 @@ export function searchAdminPanel(query: string): AdminSearchResult[] {
         [feature.label, feature.description, ...feature.keywords].join(' '),
       );
       if (matchesAllTokens(featureHaystack, tokens)) return true;
-      // Also match combined module + feature context (e.g. "productos seo" or "ventas excel").
+
       return matchesAllTokens(`${moduleHaystack} ${featureHaystack}`, tokens);
     });
 
@@ -509,7 +509,7 @@ export function searchAdminPanel(query: string): AdminSearchResult[] {
     }
   }
 
-  // Prioritize direct module label matches first, then feature matches.
+
   return results.sort((a, b) => {
     const aDirect = normalizeSearchText(a.module.label).includes(normalized) ? 1 : 0;
     const bDirect = normalizeSearchText(b.module.label).includes(normalized) ? 1 : 0;

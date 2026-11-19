@@ -169,7 +169,6 @@ class PlantillasPersonalizadasTests(PlantillasCorreoBase):
         correo = construir_correo('order_received', pedido)
         self.assertEqual(correo.asunto, 'Gracias Ana')
         self.assertEqual(correo.cuerpo, f'Pedido {pedido.identificador}')
-        # Los demás tipos siguen con su plantilla por defecto.
         self.assertIn('Tu pago fue confirmado', construir_correo('payment_success', self.pedido(estado='pagado')).asunto)
 
     def test_un_tipo_desactivado_no_genera_correo(self):

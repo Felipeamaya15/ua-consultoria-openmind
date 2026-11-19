@@ -28,7 +28,7 @@ interface CartState {
   setShippingMethod: (method: string) => void;
   setCustomShipping: (cost: number | null) => void;
   items: CartItem[];
-  /** Productos físicos y actividades comparten el mismo resumen y checkout. */
+
   activities: ActivityCartItem[];
   count: number;
   subtotal: number;
@@ -78,7 +78,7 @@ function ScopedCartProvider({children,sessionToken,scope}:{children:ReactNode;se
     if (!isActiveEditorPreview() && storageKey && hydratedKey === storageKey) saveGuestCart(storageKey, items);
   }, [storageKey, hydratedKey, items]);
 
-  // 1. Sincronizar el carrito real desde PostgreSQL
+
   const refreshCart = useCallback(async () => {
     if (isActiveEditorPreview()) return;
     if (!sessionToken || currentCartToken() !== sessionToken) return;
@@ -87,7 +87,7 @@ function ScopedCartProvider({children,sessionToken,scope}:{children:ReactNode;se
       const data: any = await cartService.obtenerCarrito();
       if (currentCartToken() !== sessionToken) return;
 
-      // Reconoce si el backend envía la lista directa [...] o envuelta en { items: [...] }
+
       const itemsList: any[] = Array.isArray(data)
         ? data
         : Array.isArray(data?.items)
@@ -106,7 +106,7 @@ function ScopedCartProvider({children,sessionToken,scope}:{children:ReactNode;se
         image: it.imagen ?? '',
         attributes: it.atributos ?? {},
       }));
-      // El carrito SQL legado no contiene las variantes Mongo de esta sesión.
+
       setItems(current => [...persistedItems, ...current.filter(item =>
         /^[a-f\d]{24}$/i.test(item.productId) && !item.id_item_carrito &&
         !persistedItems.some(saved => saved.productId === item.productId && saved.variantId === item.variantId),
@@ -144,12 +144,12 @@ function ScopedCartProvider({children,sessionToken,scope}:{children:ReactNode;se
     await Promise.allSettled(persisted.map(item => cartService.eliminarItem(item.id_item_carrito!)));
   };
 
-  // Tarea: Implementar el agregado de productos y variantes al carrito
+
   const addItem = async (item: CartItem) => {
     if (currentCartToken() !== sessionToken) return;
     if (!Number.isInteger(item.quantity) || item.quantity <= 0 || item.maxStock <= 0) return;
 
-    // Actualización visual inmediata
+
     setItems((prev) => {
       const exists = prev.some(
         (i) => i.productId === item.productId && i.variantId === item.variantId
@@ -228,7 +228,7 @@ function ScopedCartProvider({children,sessionToken,scope}:{children:ReactNode;se
     return () => window.removeEventListener('openmind_restore_cart', checkRestore);
   }, [snapshotKey, sessionToken]);
 
-  // Tarea: Implementar la modificación de cantidades
+
   const updateQuantity = async (
     productId: string,
     variantId: string,
@@ -245,7 +245,7 @@ function ScopedCartProvider({children,sessionToken,scope}:{children:ReactNode;se
       (i) => i.productId === productId && i.variantId === variantId
     );
 
-    // Actualización visual inmediata
+
     setItems((prev) =>
       prev.map((i) =>
         i.productId === productId && i.variantId === variantId
@@ -254,7 +254,7 @@ function ScopedCartProvider({children,sessionToken,scope}:{children:ReactNode;se
       )
     );
 
-    // Persistir en backend
+
     if (target?.id_item_carrito) {
       try {
         await cartService.modificarCantidad(target.id_item_carrito, quantity);
@@ -265,19 +265,19 @@ function ScopedCartProvider({children,sessionToken,scope}:{children:ReactNode;se
     }
   };
 
-  // Tarea: Implementar la eliminación de productos del carrito
+
   const removeItem = async (productId: string, variantId: string) => {
     if (currentCartToken() !== sessionToken) return;
     const target = items.find(
       (i) => i.productId === productId && i.variantId === variantId
     );
 
-    // Actualización visual inmediata
+
     setItems((prev) =>
       prev.filter((i) => i.productId !== productId || i.variantId !== variantId)
     );
 
-    // Persistir en backend
+
     if (target?.id_item_carrito) {
       try {
         await cartService.eliminarItem(target.id_item_carrito);
@@ -298,11 +298,11 @@ function ScopedCartProvider({children,sessionToken,scope}:{children:ReactNode;se
       const known = new Set<string>();
       products.forEach(product => { known.add(String(product.id)); if(product.catalogId)known.add(String(product.catalogId)); });
       setItems(current => {
-        // Only discard identifiers actually inspected, not items added in the meantime.
+
         const next=current.filter(item=>!inspected.has(item.productId)||/^\d+$/.test(item.productId)||known.has(item.productId));
         return next.length===current.length?current:next;
       });
-    }).catch(() => { /* Failure is not proof that a product was deleted. */ });
+    }).catch(() => {});
     return () => { live=false; };
   }, [baseKey,productIdentityList,sessionToken]);
   const { items: activities, clear: clearActivities, ready: activitiesReady } = useActivityCart();

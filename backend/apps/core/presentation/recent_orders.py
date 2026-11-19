@@ -40,7 +40,6 @@ def leer_limite(valor):
     """Devuelve el límite pedido o None si no es un entero entre 1 y LIMITE_MAXIMO."""
     if valor is None:
         return LIMITE_POR_DEFECTO
-    # isdigit() acepta también dígitos de otros alfabetos y superíndices: solo se admiten 0-9.
     if not (valor.isascii() and valor.isdigit()):
         return None
     limite = int(valor)
@@ -118,7 +117,7 @@ class ActualizarEstadoPedidoAPIView(APIView):
         if estado_normalizado in Pedido.ESTADOS_PAGADOS and estado_anterior == 'pendiente':
             descontar_stock_de_pedido(pedido.pk)
         if estado_normalizado == 'cancelado' and estado_anterior in ('pendiente', 'pagado'):
-            devolver_stock_de_pedido_cancelado(pedido)  
+            devolver_stock_de_pedido_cancelado(pedido)
         correo = notificar_cambio_de_estado(pedido, estado_anterior)
 
         return success_response(

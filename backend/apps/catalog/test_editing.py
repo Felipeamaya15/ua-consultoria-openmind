@@ -117,7 +117,7 @@ class ProductEditingTests(CatalogAPITestCase):
             response = self.api.put(self.update_url, {**payload, field: '999'}, format='json')
             self.assertEqual(response.status_code, 400)
         self.api.credentials()
-        self.api.force_authenticate(user=None)  # Retirar también la sesión/cookie creada por peticiones previas.
+        self.api.force_authenticate(user=None)
         for url in ('/api/catalog/productos/admin/listado/', self.detail_url):
             self.assertEqual(self.api.get(url).status_code, 401)
         self.assertEqual(self.api.put(self.update_url, payload, format='json').status_code, 401)

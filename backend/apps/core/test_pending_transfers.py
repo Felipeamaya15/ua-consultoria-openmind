@@ -84,8 +84,6 @@ class TransferenciasPendientesTests(TransferFixtureMixin, TestCase):
         other_store = Tienda.objects.create(nombre='Foreign', id_usuario_propietario=self.other)
         self.create_order(tienda=other_store)
         self.create_order(tienda=None)
-        # El resolver real rechaza instalaciones con varias tiendas (probado aparte).
-        # Aislamos el filtro de la vista manteniendo filas ajenas en PostgreSQL.
         with patch('apps.core.presentation.views.resolver_tienda', return_value=self.store) as resolver:
             response = self.api.get(self.url)
         self.assertEqual(resolver.call_args.kwargs, {'exigir_propietario': True})
@@ -337,7 +335,7 @@ class RegistroTransferenciasTests(TransferFixtureMixin, TestCase):
         self.assertEqual(first.data['data']['id_pedido'], second.data['data']['id_pedido'])
         self.assertEqual(Pedido.objects.count(), 1)
         self.assertEqual(ItemPedido.objects.count(), 1)
-        self.assertEqual(self.repository.descuentos, [])  # RN-03: el stock se descuenta al confirmar el pago
+        self.assertEqual(self.repository.descuentos, [])
         self.product.refresh_from_db()
         self.assertEqual(self.product.stock, 7)
         self.api.force_authenticate(self.owner)
@@ -349,7 +347,7 @@ class RegistroTransferenciasTests(TransferFixtureMixin, TestCase):
         changed = {**self.payload, 'contacto': {**self.payload['contacto'], 'email': 'changed@example.com'}}
         self.assertEqual(self.api.post(self.checkout_url, changed, format='json').status_code, 400)
         self.assertEqual(Pedido.objects.count(), 1)
-        self.assertEqual(self.repository.descuentos, [])  # RN-03: el stock se descuenta al confirmar el pago
+        self.assertEqual(self.repository.descuentos, [])
         self.product.refresh_from_db()
         self.assertEqual(self.product.stock, 7)
 

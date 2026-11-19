@@ -1,4 +1,4 @@
-// SCRUM-431: el propietario ve si el correo de despacho salió al cambiar el estado de un pedido.
+
 const fs = require('node:fs'), path = require('node:path'), vm = require('node:vm');
 const assert = require('node:assert/strict'), ts = require('typescript');
 const root = path.resolve(__dirname, '..');
@@ -16,7 +16,7 @@ function load(relative, mocks = {}, globals = {}) {
   return module.exports;
 }
 
-// Cada módulo se carga en su propio contexto: se compara el contenido, no el prototipo.
+
 const same = (actual, expected, message) => assert.deepEqual(JSON.parse(JSON.stringify(actual)), JSON.parse(JSON.stringify(expected)), message);
 let passed = 0;
 function test(name, fn) { return Promise.resolve().then(fn).then(() => { console.log('OK ' + name); passed++; }); }

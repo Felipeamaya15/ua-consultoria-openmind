@@ -3,7 +3,7 @@ import { formatBusinessDate } from './businessTime';
 export interface ChartBucket { from: string; to: string; sales: number; orders: number; label: string }
 export const displayDashboardDate = formatBusinessDate;
 
-/** Cada registro diario participa exactamente una vez; nunca se recortan fechas al navegar. */
+
 export function dashboardBuckets(history: DashboardData['historico']): { buckets: ChartBucket[]; granularity: string } {
   const monthly = history.length > 100, weekly = history.length > 31 && !monthly;
   const groups = new Map<string, ChartBucket>();

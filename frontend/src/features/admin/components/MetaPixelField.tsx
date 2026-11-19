@@ -6,7 +6,7 @@ interface MetaPixelFieldProps {
   onChange: (value: string) => void;
 }
 
-/** Campo único para configurar el identificador de Meta/Facebook Pixel. */
+
 export function MetaPixelField({ value, onChange }: MetaPixelFieldProps) {
   const validation = validatePixelId(value);
 

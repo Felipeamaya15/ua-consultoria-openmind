@@ -14,7 +14,7 @@ for _name in ('APP_ID', 'APP_SECRET', 'CONFIG_ID'):
 for _name in ('REDIRECT_URI', 'FRONTEND_ORIGIN', 'MEDIA_PUBLIC_ORIGIN', 'TOKEN_ENCRYPTION_KEY'):
     globals()['INSTAGRAM_'+_name] = (_values.get('INSTAGRAM_'+_name) or '').strip().rstrip('/') if _name.endswith('ORIGIN') else (_values.get('INSTAGRAM_'+_name) or '').strip()
 INSTAGRAM_PUBLISHING_ENABLED = _values.get('INSTAGRAM_PUBLISHING_ENABLED') == '1'
-INSTAGRAM_TEST_HTTP_ORIGIN = ''  # Never use synthetic provider responses with real credentials.
+INSTAGRAM_TEST_HTTP_ORIGIN = ''
 MEDIA_ROOT = _output / 'media'
 MEDIA_ROOT.mkdir(parents=True, exist_ok=True)
 STORE_MAIL_EXTERNAL_ENABLED = False

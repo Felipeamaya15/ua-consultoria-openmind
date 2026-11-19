@@ -25,5 +25,5 @@ export function readGuestCart(key: string): CartItem[] {
 
 export function saveGuestCart(key: string, items: CartItem[]): void {
   try { localStorage.setItem(key, JSON.stringify(items)); }
-  catch { /* El carrito sigue disponible en memoria si el navegador bloquea almacenamiento. */ }
+  catch {  }
 }

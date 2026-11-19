@@ -1,6 +1,6 @@
 import { useEffect, useState, useSyncExternalStore } from 'react';
 
-// Token only in memory. Persist neither token nor e-mail in cart keys.
+
 export function currentCartToken(): string | null {
   try { return localStorage.getItem('token') || sessionStorage.getItem('token'); }
   catch { return null; }
@@ -10,7 +10,7 @@ function subscribe(fn: () => void) {
   window.addEventListener(event, fn);
   window.addEventListener('storage', fn);
   window.addEventListener('focus', fn);
-  // Also detects legacy same-tab writes not routed through authService.
+
   const timer = window.setInterval(fn, 700);
   return () => { window.removeEventListener(event, fn); window.removeEventListener('storage', fn); window.removeEventListener('focus', fn); window.clearInterval(timer); };
 }
@@ -22,8 +22,8 @@ function scopeFor(token: string): Promise<string> {
   if (saved) return Promise.resolve(saved);
   const prior = pending.get(token);
   if (prior) return prior;
-  // HTTPS/localhost: stable within the login token. In insecure development use
-  // a unique in-memory namespace (no reuse of anybody else's saved cart).
+
+
   const work = (async () => {
     let scope: string;
     try {

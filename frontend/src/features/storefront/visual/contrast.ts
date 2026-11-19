@@ -1,4 +1,4 @@
-/** Small advisory check, not an automatic replacement of the chosen palette. */
+
 export function contrastRatio(foreground: string, background: string): number | null {
   const luminance = (value: string) => {
     if (!/^#([\da-f]{3}|[\da-f]{6})$/i.test(value)) return null;
@@ -10,7 +10,7 @@ export function contrastRatio(foreground: string, background: string): number | 
   return a === null || b === null ? null : (Math.max(a,b)+.05)/(Math.min(a,b)+.05);
 }
 
-/** Composite supported hex alpha colors over the actual store surface. */
+
 export function institutionalTextColor(background: string, surface = '#ffffff'): string {
   const rgb = (value: string): number[] | null => {
     if (!/^#[\da-f]{3,8}$/i.test(value) || ![4,5,7,9].includes(value.length)) return null;

@@ -1,4 +1,4 @@
-/* Use storefront theme tokens in every template. */
+
 .paid-activity-preview {display:grid;gap:.75rem;padding:1rem;border:1px solid var(--visual-global-border,#cbd5e1);border-radius:12px;overflow-wrap:anywhere;color:var(--visual-page-color,inherit);background:var(--visual-page-panel-background,transparent);}
 .paid-activity-preview p {margin:0;white-space:pre-wrap;}
 .paid-activity-preview label {display:flex;gap:.65rem;align-items:center;flex-wrap:wrap;}
@@ -13,7 +13,7 @@
 .paid-cart-preview .paid-activity-row {display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:.75rem;}
 .paid-cart-preview .paid-activity-row button {text-decoration:underline;}
 
-/* Cart rows are inside the normal cart, not the retired .paid-cart-preview. */
+
 .paid-cart-item {gap:1rem; padding:clamp(1rem,2vw,1.4rem);}
 .paid-cart-head {display:flex;align-items:flex-start;gap:.9rem;min-width:0;}
 .paid-cart-symbol {width:3rem;height:3rem;flex:0 0 3rem;display:grid;place-items:center;background:color-mix(in srgb,var(--primary,currentColor) 10%,transparent);border:1px solid var(--visual-global-border,#cbd5e1);border-radius:.75rem;}
@@ -34,7 +34,7 @@
 @media(max-width:480px){.paid-cart-head {flex-wrap:wrap;}.paid-cart-remove {margin-left:auto;}.paid-cart-bottom {gap:.65rem;}}
 .paid-activity-preview > strong {font-size:1.13rem;}.paid-activity-preview .paid-activity-action {min-height:44px;}.paid-activity-preview [role=alert] {border:1px solid currentColor;padding:.7rem;border-radius:.5rem;}.paid-activity-preview .paid-activity-terms {line-height:1.6;}
 
-/* Public reservation card 4A */
+
 .paid-cart-remove {display:inline-flex;align-items:center;justify-content:center;min-height:36px;min-width:76px;white-space:nowrap;line-height:1.2;color:inherit;background:var(--visual-page-panel-background,transparent);font-family:inherit;font-weight:500;}
 .paid-cart-remove:hover:not(:disabled) {background:color-mix(in srgb,currentColor 7%,transparent);}
 .paid-purchase-card.paid-activity-preview {gap:1.15rem;padding:clamp(1rem,3vw,1.8rem);border-radius:16px;border:1px solid var(--visual-global-border,#cbd5e1);box-shadow:0 4px 18px #00000008;max-width:100%;margin-block:1rem;}

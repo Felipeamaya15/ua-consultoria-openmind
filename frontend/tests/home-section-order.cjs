@@ -8,14 +8,14 @@ const normalize=value=>JSON.parse(JSON.stringify(value));
 
 test('legacy order, unique references, removed blocks and 20 custom sections retain capacity',()=>{
   const content={bloques:[first,second]};
-  // El inicio actual de las cuatro plantillas comparte destacados y categorías.
+
   const active=['sistema:destacados','sistema:categorias'];
   const legacy=['sistema:banner','sistema:mas-productos','sistema:contenido','sistema:descubrir'];
   for (const template of ['editorial','minimal','visual','catalog']) {
     assert.deepEqual(normalize(order.homeSectionOrder(content,template)),[first.id,second.id,...active]);
     const oldSaved=[legacy[0],second.id,active[1],legacy[1],first.id,legacy[2],active[0],legacy[3],second.id,'unknown'];
     assert.deepEqual(normalize(order.homeSectionOrder({...content,orden_apartados:oldSaved},template,true)),[second.id,active[1],first.id,active[0]]);
-    // Los IDs históricos siguen siendo reconocidos al reconciliar; no se activan en el inicio actual.
+
     assert.deepEqual(normalize(order.reconcileHomeOrder(oldSaved,[first,second])),oldSaved.slice(0,8));
   }
   const saved=['sistema:destacados',second.id,'sistema:categorias',first.id];

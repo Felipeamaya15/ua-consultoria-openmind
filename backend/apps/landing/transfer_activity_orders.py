@@ -33,7 +33,6 @@ def contact_email(store):
 
 def checkout_mode(request,store):
     if qa_enabled(request): return 'qa'
-    # Never fall through from a QA deployment to real transactions.
     if os.environ.get('PAID_ACTIVITY_UNIFIED_QA')=='1' or os.environ.get('PAID_ACTIVITY_TEST_CHECKOUT')=='1': return 'disabled'
     if not contact_email(store): return 'disabled'
     webpay=bool(enabled_config(store.pk))
@@ -105,8 +104,6 @@ def state(order,row):
 
 @transaction.atomic
 def change_transfer(store,order_id,reservation_id,actor,action,reason='',reference='',owner=False):
-    # Manual transfers have no reliable external status API. A shop owner must reconcile the bank.
-    # Store-level lock also serializes reference checks and prevents concurrent seat allocations.
     Tienda.objects.select_for_update().get(pk=store.pk)
     from django.db.models import Q
     real=Q(entrega__origen__in=REAL_MARKERS)
@@ -142,7 +139,6 @@ def change_transfer(store,order_id,reservation_id,actor,action,reason='',referen
         try:
             if has_stock_effects(order) or external_meta(order).get('referencia_pago'):raise ValueError()
         except Exception:raise ValidationError('Hay efectos de inventario o pago; se requiere revisión especializada.') from None
-        # The owner must verify the provider has irreversibly closed the original link and no funds remain.
         if Pedido.objects.filter(tienda=store,entrega__contains={'cierre_pago_externo':{'referencia':reference}}).exclude(pk=order.pk).exists():raise ValidationError('La referencia de cierre ya está registrada.')
         ReservaActividadPagada.objects.filter(pk__in=[r.pk for r in rows]).update(estado='liberada')
         order.estado='cancelado';order.entrega={**(order.entrega or {}),'cierre_pago_externo':{'referencia':reference,'motivo':reason,'fecha':timezone.now().isoformat(),'responsable':str(actor.pk)}}
@@ -168,13 +164,11 @@ def change_transfer(store,order_id,reservation_id,actor,action,reason='',referen
                 if expected=='pagado': deduct_locked(order,physical)
                 elif has_stock_effects(order): raise ValueError()
             except Exception: raise ValidationError('Inventario en revisión; no repitas el pago.') from None
-        # Rechazar exige haber comprobado que el dinero no llegó o ya fue restituido.
         ReservaActividadPagada.objects.filter(pk__in=[r.pk for r in rows]).update(estado='confirmada' if expected=='pagado' else 'liberada')
         order.estado=expected
         order.entrega={**(order.entrega or {}),'revision_transferencia_actividad':{'accion':action,'referencia':reference,'motivo':reason,'fecha':timezone.now().isoformat(),'responsable':str(actor.pk)}}
         order.save(update_fields=['estado','entrega'])
         row.refresh_from_db()
-        # Existing transactional emails; only for real orders, after database commit.
         from apps.core.infrastructure.notificaciones_pedido import notificar_cambio_de_estado, notificar_pago_rechazado
         if expected=='pagado': transaction.on_commit(lambda: notificar_cambio_de_estado(order,'pendiente'))
         else: transaction.on_commit(lambda: notificar_pago_rechazado(order))
@@ -202,14 +196,12 @@ def change_transfer(store,order_id,reservation_id,actor,action,reason='',referen
         if old.get('estado')!='solicitada': raise ValidationError('Solo se rechaza una solicitud pendiente de revisión.')
         current[key]={**old,'estado':'rechazada','motivo':reason,'resuelto_en':stamp,'responsable':str(actor.pk)}
     elif action=='autorizar_devolucion':
-        # Entire activity line, not the entire order. No automatic transfer.
         if old.get('estado') not in (None,'solicitada','rechazada'): raise ValidationError('La devolución ya está en gestión.')
         reserved=sum(int(v.get('monto',0)) for k,v in current.items() if k!=key and v.get('estado') in ('autorizada','reembolsada_manual','reembolso_en_revision','reembolsada_webpay','reembolso_externo_revision','reembolsada_externa'))
         if Decimal(reserved+full_amount(row))>order.monto_total: raise ValidationError('El importe excede el total pagado.')
         current[key]={**old,'estado':'autorizada','motivo':reason,'monto':full_amount(row),'fecha':old.get('fecha',stamp),'autorizado_en':stamp,'responsable':str(actor.pk)}
     elif action=='registrar_devolucion':
         if old.get('estado')!='autorizada': raise ValidationError('Primero autoriza la devolución.')
-        # Check reference globally within this store (including other orders).
         for previous in Pedido.objects.filter(real,tienda=store).values_list('entrega',flat=True).iterator():
             if any(v.get('estado')=='reembolsada_manual' and v.get('referencia')==reference for v in (previous.get(LEDGER) or {}).values()):
                 raise ValidationError('La referencia de devolución ya está registrada.')

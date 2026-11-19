@@ -1,6 +1,5 @@
 import math
 
-# Nombres de los campos de la respuesta de Starken.
 CAMPO_MONTO = "valor"
 CAMPO_PLAZO = "plazo_entrega"
 

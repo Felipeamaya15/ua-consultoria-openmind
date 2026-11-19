@@ -34,7 +34,7 @@ async function run() {
   await assert.rejects(authService.getProfile(), /Inicia sesión/);
   assert.equal(calls.length, count);
 
-  // Renderiza y ejecuta handlers con el mismo arnés ligero usado en las pruebas existentes.
+
   let states = [], index = 0, effects = [], rejectSave = false, release;
   const realProfile = { ...profile };
   const service = {

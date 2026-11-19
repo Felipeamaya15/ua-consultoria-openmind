@@ -29,7 +29,6 @@ from apps.core.models import Pedido
 
 logger = logging.getLogger(__name__)
 
-# Qué correo corresponde cuando un pedido llega a cada estado.
 CORREO_POR_ESTADO = {
     'pagado': 'payment_success',
     'en_camino': 'order_shipped',
@@ -41,7 +40,6 @@ CORREO_POR_ESTADO = {
 }
 ESPERA_ENVIO_EN_CURSO = timedelta(minutes=5)
 
-# Códigos del resultado además de los del servicio de correo (enviado, destinatario_invalido, ...).
 NO_CORRESPONDE = 'no_corresponde'
 PLANTILLA_DESACTIVADA = 'plantilla_desactivada'
 YA_ENVIADO = 'ya_enviado'
@@ -130,12 +128,12 @@ def notificar_evento(tipo, pedido):
             logger.exception('Falló la preparación del correo %s del pedido %s', tipo, pedido.pk)
             resultado = ResultadoEnvio(False, ERROR_INESPERADO, 'Error inesperado al preparar el correo.')
         if resultado.codigo in (NO_CORRESPONDE, PLANTILLA_DESACTIVADA):
-            _guardar_marca(pedido, tipo, anterior or None)  # no se intentó: se deja como estaba
+            _guardar_marca(pedido, tipo, anterior or None)
         else:
             _guardar_marca(pedido, tipo, {
                 'enviado': resultado.enviado, 'codigo': resultado.codigo, 'fecha': timezone.now().isoformat(),
                 'intentos': anterior.get('intentos', 0) + 1,
-                'destinatario': correo_enmascarado(correo_comprador(pedido)),  # a quién se avisó, sin el correo completo
+                'destinatario': correo_enmascarado(correo_comprador(pedido)),
                 'manual': False,
             })
         return resultado

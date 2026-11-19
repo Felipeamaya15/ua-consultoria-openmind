@@ -76,7 +76,6 @@ def _gmail(message, connection):
         token = descifrar_token(connection.refresh_token_cifrado)
     except (ValueError, RuntimeError, AttributeError):
         return 'fallida', 'reconectar'
-    # Un fallo al renovar ocurre antes de enviar el MIME y es reintentable.
     try:
         refreshed = requests.post('https://oauth2.googleapis.com/token', data={
             'client_id': client_id, 'client_secret': client_secret,
@@ -129,8 +128,6 @@ def send_store_mail(store, key, recipient, subject, body, *, category, html='', 
         account = state['correo'].lower() if not local else str(settings.DEFAULT_FROM_EMAIL)
         account_hash = hashlib.sha256((provider + ':' + account).encode()).hexdigest()
         if db_connection.vendor == 'postgresql':
-            # Same authenticated provider account can be reused by multiple stores.
-            # Lock its quota reservation even when their store row locks differ.
             advisory_key = int.from_bytes(bytes.fromhex(account_hash[:16]), 'big', signed=True)
             with db_connection.cursor() as cursor:
                 cursor.execute('SELECT pg_advisory_xact_lock(%s)', [advisory_key])
@@ -139,7 +136,6 @@ def send_store_mail(store, key, recipient, subject, body, *, category, html='', 
         for hours, limit in ((1, settings.STORE_MAIL_HOURLY_LIMIT), (24, settings.STORE_MAIL_DAILY_LIMIT)):
             if rows.filter(creado__gte=now-timedelta(hours=hours)).count() >= limit:
                 raise Throttled(detail='Se alcanzó el límite de correos de la tienda. Conservamos los pendientes.')
-        # Provider-account reservations are serialized across stores in this DB.
         if EnvioCorreoTienda.objects.filter(cuenta_hash=account_hash,
                 creado__gte=now-timedelta(days=1)).count() >= settings.STORE_MAIL_PROVIDER_DAILY_LIMIT:
             raise Throttled(detail='Se alcanzó el límite diario del proveedor. Conservamos los pendientes.')
@@ -193,8 +189,6 @@ def send_store_mail(store, key, recipient, subject, body, *, category, html='', 
                         mail.attach(image)
                     status, code = ('aceptada', 'enviado_local') if mail.send() == 1 else ('fallida', 'rechazado_proveedor')
             else:
-                # La reserva ya está confirmada. Volver a bloquear la tienda
-                # serializa el envío con baja, cambio de cuenta y reconexión.
                 with transaction.atomic():
                     current_store = Tienda.objects.select_for_update().get(pk=store.pk)
                     current_connection = ConexionGmailTienda.objects.select_for_update().filter(tienda=store).first()
@@ -210,7 +204,6 @@ def send_store_mail(store, key, recipient, subject, body, *, category, html='', 
                 smtplib.SMTPConnectError, smtplib.SMTPDataError, ConnectionRefusedError, socket.gaierror):
             status, code = 'fallida', 'rechazado_proveedor'
         except Exception:
-            # No tokens, provider bodies, addresses or exception strings in logs/responses.
             status, code = 'indeterminada', 'resultado_incierto'
     entry.estado, entry.codigo, entry.finalizado = status, code, timezone.now()
     entry.save(update_fields=['estado', 'codigo', 'finalizado'])

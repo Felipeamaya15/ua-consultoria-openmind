@@ -47,7 +47,7 @@ export default function Promotions() {
   const mutation = useRef(false)
   const [statusFilter, setStatusFilter] = useState("all")
   const [sort, setSort] = useState("recent")
-  // La API ya ordena por fecha_creacion descendente; conservar ese orden real.
+
   const filteredPromos = promos.filter(promo => statusFilter === "all" || promotionState(promo) === statusFilter)
   if (sort === "oldest") filteredPromos.reverse()
 
@@ -152,8 +152,7 @@ export default function Promotions() {
       active: editPromo.active ?? true,
     }
 
-    // Compare the edited fields before normalization: renaming must preserve
-    // historical codes, free-shipping amounts and complete validity instants.
+
     const changes = original ? Object.fromEntries(Object.entries(draft).filter(([key]) => key !== 'id' && key !== 'usedCount' && editPromo[key as keyof Promotion] !== original[key as keyof Promotion])) : draft;
     mutation.current = true
     setSaving(true)
@@ -410,7 +409,7 @@ export default function Promotions() {
         ))}
       </div>
 
-      {/* Create/Edit Modal */}
+
       <Modal
         open={showModal}
         onClose={() => setShowModal(false)}

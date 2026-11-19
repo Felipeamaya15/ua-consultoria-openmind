@@ -1,4 +1,4 @@
-// Exhaustive functional QA. Real UI/API/Mailpit; synthetic data, external traffic blocked.
+
 const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
 const {chromium,request}=require(process.env.DASHBOARD_PLAYWRIGHT_MODULE||'playwright');
 const out=process.env.MARKETING_FUNCTIONAL_OUTPUT;
@@ -97,7 +97,7 @@ async function campanas(){await owner();await page.goto(base+'/emprendedor/marke
  fs.writeFileSync(path.join(tech,'campaign-session.json'),JSON.stringify({id:row.id,name,runId,mailSubject:name}));
 }
 
-// Each group can be rerun without overwriting the other cases.
+
 const runners={publicaciones,biblioteca,difusion,cliente,campanas};
 async function main(){browser=await chromium.launch({headless:true,channel:'msedge'});client=await request.newContext({baseURL:api,extraHTTPHeaders:{Authorization:'Token '+session.token}});
  assert.equal((await get('/api/tienda/configuracion/')).nombre,'Marketing QA Centralizado');assert.equal((await get('/api/tienda/correo/google/estado/')).modo,'mailpit');

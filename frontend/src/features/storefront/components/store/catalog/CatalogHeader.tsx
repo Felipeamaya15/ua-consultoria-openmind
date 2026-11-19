@@ -24,43 +24,42 @@ export function CatalogHeader() {
   return (
     <header data-visual-section={VISUAL_SECTION.header} className="sticky top-0 z-50 bg-[#050505]/90 backdrop-blur-md py-2.5">
       <div className="max-w-[1160px] mx-auto px-3 sm:px-5">
-        <nav data-visual-part="headerLayout" className="min-h-14 rounded-full bg-[#202022] border border-white/[0.08] px-3.5 sm:px-6 flex flex-row items-center justify-between gap-2 sm:gap-4 shadow-xl shadow-black/25">
-          {/* Izquierda: Logo Universidad al lado del logo y nombre completo de la tienda */}
-          <InstitutionalBadge compact /><Link data-visual-part="logo" onClick={event => {
-            if (!event.ctrlKey && !event.metaKey && !event.shiftKey && !event.altKey) {
-              window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
-            }
-          }}
-            to={route()}
-            aria-label={`Ir al inicio de ${config.name || 'la tienda'}`}
-            className="flex min-w-0 items-center gap-2 text-white hover:text-[var(--primary)] transition-colors"
-          >
-            {config.logo ? <img data-landing-image src={config.logo} alt={`Logo de ${config.name}`} className="block w-auto h-auto max-w-[60px] sm:max-w-[110px] max-h-9 shrink-0 object-contain object-center" /> : <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" className="w-5 h-5 shrink-0" strokeWidth="1.7">
-              <path d="M3 11.5 12 4l9 7.5" />
-              <path d="M5.5 10v10h13V10" />
-              <path d="M9.5 20v-6h5v6" />
-            </svg>}
-            <span className="text-base font-bold whitespace-nowrap">{config.name}</span>
-          </Link>
+        <nav data-visual-part="headerLayout" className="min-h-14 rounded-3xl lg:rounded-full bg-[#202022] border border-white/[0.08] px-3 sm:px-5 lg:px-6 py-1.5 flex flex-row items-center justify-between gap-2 sm:gap-3 lg:gap-4 shadow-xl shadow-black/25">
 
-          {/* Derecha: Catálogo -> Seguimiento -> Iniciar sesión (/ Salir) -> Carrito -> Menú móvil */}
-          <div className="flex shrink-0 items-center gap-3 md:gap-6 text-white">
-            <div data-visual-part="navigation" className="hidden md:flex shrink-0 items-center gap-5 md:gap-6 text-xs font-semibold text-white">
-              <Link to={route('catalogo')} className="hover:text-[var(--primary)] transition-colors">
+          <div className="flex flex-1 min-w-0 items-center gap-2 sm:gap-3">
+            <InstitutionalBadge compact />
+            <Link data-visual-part="logo"
+              to={route()}
+              aria-label={`Ir al inicio de ${config.name || 'la tienda'}`}
+              className="flex min-w-0 flex-1 items-center gap-2 text-white hover:text-[var(--primary)] transition-colors"
+            >
+              {config.logo ? <img data-landing-image src={config.logo} alt={`Logo de ${config.name}`} className="block w-auto h-auto max-w-[48px] sm:max-w-[80px] lg:max-w-[110px] max-h-8 sm:max-h-9 shrink-0 object-contain object-center" /> : <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" className="w-5 h-5 shrink-0" strokeWidth="1.7">
+                <path d="M3 11.5 12 4l9 7.5" />
+                <path d="M5.5 10v10h13V10" />
+                <path d="M9.5 20v-6h5v6" />
+              </svg>}
+              <span className="min-w-0 text-sm sm:text-base font-bold leading-tight break-words">{config.name}</span>
+            </Link>
+          </div>
+
+
+          <div className="flex shrink-0 items-center gap-2 sm:gap-3 lg:gap-5 text-white">
+            <div data-visual-part="navigation" className="hidden md:flex shrink-0 items-center gap-3 lg:gap-6 text-xs font-semibold text-white">
+              <Link to={route('catalogo')} className="whitespace-nowrap hover:text-[var(--primary)] transition-colors">
                 Catálogo
               </Link>
 
-              <Link to={route('seguimiento')} className="hover:text-[var(--primary)] transition-colors">
+              <Link to={route('seguimiento')} className="whitespace-nowrap hover:text-[var(--primary)] transition-colors">
                 Seguimiento
               </Link>
 
-              <AccountNavigation className="underline underline-offset-4 hover:text-[var(--primary)] transition-colors" />
+              <AccountNavigation className="whitespace-nowrap underline underline-offset-4 hover:text-[var(--primary)] transition-colors" />
 
               {user && (
                 <button
                   type="button"
                   onClick={handleLogout}
-                  className="text-xs font-medium text-white/85 hover:text-white transition-colors"
+                  className="text-xs font-medium text-white/85 hover:text-white transition-colors whitespace-nowrap"
                 >
                   Salir
                 </button>

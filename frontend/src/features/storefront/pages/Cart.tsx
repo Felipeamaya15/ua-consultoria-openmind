@@ -1,11 +1,9 @@
-import '../../landing/components/activity-purchase-preview.css';
 import { useEffect, useState } from 'react';
 import { LoadingState } from '../../../shared/components/states';
 import { Link, useNavigate } from 'react-router-dom';
 
 import { StockFeedback } from '../components/store/StockFeedback';
 import { useCart } from '../context/CartContext';
-import { ActivityCartRows } from '../components/store/ActivityCartPreview';
 import { formatPrice } from '../data/mockData';
 import { Button, EmptyState, Icon } from '../components/ui';
 import { useStorefrontTemplate } from '../hooks/useStorefrontTemplate';
@@ -13,8 +11,6 @@ import { useStorefrontTemplate } from '../hooks/useStorefrontTemplate';
 export default function Cart() {
   const {
     items,
-    activities,
-    count,
     removeItem,
     updateQuantity,
     subtotal,
@@ -24,10 +20,10 @@ export default function Cart() {
     total,
     applyPromo,
     promoNotice,
+    count,
     loading,
   } = useCart();
-  const hasItems = items.length > 0 || activities.length > 0;
-  const shippingLabel = !items.length && activities.length ? 'No aplica' : shipping === null ? 'Se calcula en checkout' : shipping === 0 ? 'Gratis' : formatPrice(shipping);
+  const shippingLabel = shipping === null ? 'Se calcula en checkout' : shipping === 0 ? 'Gratis' : formatPrice(shipping);
 
   const { route, isMinimal, isVisual, isCatalog } = useStorefrontTemplate();
   const navigate = useNavigate();
@@ -37,63 +33,6 @@ export default function Cart() {
   const [promoSuccess, setPromoSuccess] = useState('');
 
   const [promoBusy, setPromoBusy] = useState(false);
-  const [pendingRemoveKey, setPendingRemoveKey] = useState<string | null>(null);
-
-  const handleRequestRemove = (item: (typeof items)[number]) => {
-    if (item.quantity <= 1) {
-      setPendingRemoveKey(null);
-      removeItem(item.productId, item.variantId);
-      return;
-    }
-    const key = `${item.productId}-${item.variantId}`;
-    setPendingRemoveKey((current) => (current === key ? null : key));
-  };
-
-  const renderRemoveConfirmBar = (item: (typeof items)[number]) => {
-    const key = `${item.productId}-${item.variantId}`;
-    if (pendingRemoveKey !== key || item.quantity <= 1) return null;
-
-    return (
-      <div
-        role="region"
-        aria-label={`Confirmar eliminación de ${item.name}`}
-        className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-[var(--visual-global-border)]/20 bg-[var(--muted)]/40 px-3 py-2 text-xs text-[var(--visual-page-color)]"
-      >
-        <span className="font-medium">
-          Tienes {item.quantity} unidades. ¿Qué deseas hacer?
-        </span>
-        <div className="flex flex-wrap items-center gap-1.5">
-          <button
-            type="button"
-            onClick={() => {
-              updateQuantity(item.productId, item.variantId, item.quantity - 1);
-              setPendingRemoveKey(null);
-            }}
-            className="rounded-md border border-[var(--visual-global-border)]/25 bg-[var(--visual-page-field-background,white)] px-2.5 py-1 font-medium text-[var(--visual-page-field-color,var(--foreground))] hover:opacity-85 transition-opacity"
-          >
-            Quitar 1
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              removeItem(item.productId, item.variantId);
-              setPendingRemoveKey(null);
-            }}
-            className="rounded-md bg-[var(--error)] px-2.5 py-1 font-semibold text-white hover:brightness-90 transition-all"
-          >
-            Eliminar todo ({item.quantity})
-          </button>
-          <button
-            type="button"
-            onClick={() => setPendingRemoveKey(null)}
-            className="rounded-md px-2 py-1 font-medium opacity-75 hover:opacity-100 transition-opacity"
-          >
-            Cancelar
-          </button>
-        </div>
-      </div>
-    );
-  };
 
   const handleApplyPromo = async () => {
     if (promoBusy) return;
@@ -117,10 +56,8 @@ export default function Cart() {
 
   if (loading && items.length === 0) return <LoadingState spacing="none" className="p-8">Cargando carrito…</LoadingState>;
 
-  // ==========================================================
-  // CARRITO VACÍO — PLANTILLA 4 / CATALOG
-  // ==========================================================
-  if (isCatalog && !hasItems) {
+
+  if (isCatalog && items.length === 0) {
     return (
       <div className="bg-[var(--visual-page-panel-background)] text-[var(--visual-page-color)]">
         <div className="max-w-[1160px] mx-auto px-5 py-20 md:py-28 text-center">
@@ -151,10 +88,8 @@ export default function Cart() {
     );
   }
 
-  // ==========================================================
-  // CARRITO VACÍO — PLANTILLA 3 / VELTA
-  // ==========================================================
-  if (isVisual && !hasItems) {
+
+  if (isVisual && items.length === 0) {
     return (
       <div className="bg-[var(--visual-page-panel-background)] text-[var(--visual-page-color)]">
         <div className="max-w-[1180px] mx-auto px-5 md:px-8 py-16 md:py-24">
@@ -187,10 +122,8 @@ export default function Cart() {
     );
   }
 
-  // ==========================================================
-  // CARRITO VACÍO — PLANTILLAS 1 Y 2
-  // ==========================================================
-  if (!hasItems) {
+
+  if (items.length === 0) {
     return (
       <div
         className={
@@ -213,13 +146,11 @@ export default function Cart() {
     );
   }
 
-  // ==========================================================
-  // CARRITO CON PRODUCTOS — PLANTILLA 4 / CATALOG
-  // ==========================================================
+
   if (isCatalog) {
     return (
       <div className="bg-[var(--visual-page-panel-background)] text-[var(--visual-page-color)]">
-        <div className="max-w-[1160px] mx-auto px-5 py-10 md:py-14 pb-20 md:pb-28">
+        <div className="max-w-[1160px] mx-auto px-4 sm:px-5 py-10 md:py-14 pb-20 md:pb-28">
           <div className="mb-9 md:mb-12">
             <p className="text-[var(--primary)] text-[10px] font-black uppercase tracking-[0.16em]">
               Tu selección
@@ -230,13 +161,12 @@ export default function Cart() {
             </h1>
 
             <p className="mt-4 text-[13px] text-[var(--visual-page-color)]/45">
-              {count} {count === 1 ? 'artículo en tu carrito' : 'artículos en tu carrito'}
+              {count} {count === 1 ? 'producto en tu carrito' : 'productos en tu carrito'}
             </p>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-6 lg:gap-8 items-start">
             <div className="space-y-3">
-              <ActivityCartRows items={activities} />
               {items.map((item) => {
                 const hasDiscount = Boolean(item.comparePrice);
                 const canIncrease = item.quantity < item.maxStock;
@@ -246,33 +176,37 @@ export default function Cart() {
                     key={`${item.productId}-${item.variantId}`}
                     className="rounded-[16px] bg-[var(--visual-page-panel-background)] p-4 sm:p-5 text-[var(--visual-page-color)]"
                   >
-                    <div className="flex gap-4 sm:gap-5">
+                    <div className="flex gap-3 sm:gap-5">
                       <Link data-page-action="outline"
                         to={route(`producto/${item.productId}`)}
-                        className="h-28 w-24 sm:h-32 sm:w-28 flex-shrink-0 overflow-hidden rounded-[11px] bg-[var(--visual-page-panel-background)]"
+                        aria-label={item.name}
+                        className="h-20 w-20 sm:h-32 sm:w-28 flex-shrink-0 overflow-hidden rounded-[12px] bg-[var(--visual-page-panel-background)] flex items-center justify-center"
                       >
-                        <img data-page-item-image
-                          src={item.image}
-                          alt={item.name}
-                          className="w-full h-full object-cover"
-                        />
+                        {item.image && (
+                          <img data-page-item-image
+                            src={item.image}
+                            alt=""
+                            onError={(event) => { event.currentTarget.style.display = 'none'; }}
+                            className="w-full h-full object-cover"
+                          />
+                        )}
                       </Link>
 
                       <div className="min-w-0 flex-1 flex flex-col">
-                        <div className="flex items-start justify-between gap-4">
-                          <div className="min-w-0">
+                        <div className="flex items-start justify-between gap-2 sm:gap-4">
+                          <div className="min-w-0 flex-1">
                             <p className="text-[9px] font-black uppercase tracking-[0.14em] text-[var(--primary)]">
                               Producto
                             </p>
 
                             <Link data-page-action="ghost"
                               to={route(`producto/${item.productId}`)}
-                              className="mt-2 block text-[17px] sm:text-[19px] font-extrabold leading-tight tracking-[-0.02em] hover:opacity-60 transition-opacity"
+                              className="mt-1.5 block text-[16px] sm:text-[19px] font-extrabold leading-snug tracking-[-0.02em] break-words hover:opacity-60 transition-opacity"
                             >
                               {item.name}
                             </Link>
 
-                            <p className="mt-2 text-[10px] leading-5 text-[var(--visual-page-color)]/45">
+                            <p className="mt-1.5 text-[10px] leading-5 text-[var(--visual-page-color)]/45 break-words">
                               {Object.entries(item.attributes)
                                 .map(([key, value]) => `${key}: ${value}`)
                                 .join(' · ')}
@@ -283,21 +217,18 @@ export default function Cart() {
                             <StockFeedback sku={item.sku} maxStock={item.maxStock} quantity={item.quantity} className="mt-2 text-[10px] font-semibold text-[#e04b1a]" />
                           </div>
 
-                          <button
-                    type="button"
-                    onClick={() => handleRequestRemove(item)}
-                    className="paid-cart-remove"
+                          <button data-page-action="danger"
+                            type="button"
+                            onClick={() => removeItem(item.productId, item.variantId)}
+                            className="w-8 h-8 flex-shrink-0 rounded-full flex items-center justify-center text-[var(--visual-page-color)]/35 hover:bg-[var(--visual-page-panel-background)]/[0.06] hover:text-[var(--visual-page-color)] transition-colors"
                             aria-label={`Eliminar ${item.name}`}
-                            title={item.quantity > 1 ? 'Quitar unidad o eliminar producto' : `Eliminar ${item.name}`}
                           >
-                            Eliminar
+                            <span aria-hidden="true">×</span>
                           </button>
                         </div>
 
-                        {renderRemoveConfirmBar(item)}
-
-                        <div className="mt-auto pt-5 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
-                          <div data-page-quantity className="flex h-9 w-[112px] items-center overflow-hidden rounded-[8px] border border-[var(--visual-global-border)]/10 bg-[var(--visual-page-panel-background)]">
+                        <div className="mt-auto pt-4 flex flex-wrap items-center justify-between gap-3 sm:gap-4">
+                          <div data-page-quantity className="flex h-9 w-[108px] shrink-0 items-center overflow-hidden rounded-[8px] border border-[var(--visual-global-border)]/10 bg-[var(--visual-page-panel-background)]">
                             <button data-page-action="ghost"
                               type="button"
                               onClick={() =>
@@ -334,13 +265,13 @@ export default function Cart() {
                             </button>
                           </div>
 
-                          <div className="text-left sm:text-right">
-                            <p data-page-price className="text-[15px] font-black">
-                              {formatPrice(item.price * item.quantity)}<span className="block text-xs font-normal">{formatPrice(item.price)} por unidad</span>
+                          <div className="text-left sm:text-right shrink-0 ml-auto">
+                            <p data-page-price className="text-[15px] font-black whitespace-nowrap">
+                              {formatPrice(item.price * item.quantity)}<span className="block text-xs font-normal whitespace-nowrap">{formatPrice(item.price)} por unidad</span>
                             </p>
 
                             {hasDiscount && item.comparePrice && (
-                              <p className="mt-1 text-[10px] text-[var(--visual-page-color)]/35 line-through">
+                              <p className="mt-1 text-[10px] text-[var(--visual-page-color)]/35 line-through whitespace-nowrap">
                                 {formatPrice(item.comparePrice * item.quantity)}
                               </p>
                             )}
@@ -373,13 +304,13 @@ export default function Cart() {
                 <div className="mt-6 space-y-3 border-b border-[var(--visual-global-border)]/10 pb-5 text-[12px]">
                   <div className="flex justify-between gap-4">
                     <span className="text-[var(--visual-page-color)]/50">Subtotal</span>
-                    <span data-page-price className="font-semibold">{formatPrice(subtotal)}</span>
+                    <span data-page-price className="font-semibold whitespace-nowrap">{formatPrice(subtotal)}</span>
                   </div>
 
                   {discount > 0 && (
                     <div className="flex justify-between gap-4 text-[var(--primary)]">
                       <span>Descuento{promoCode ? ` (${promoCode})` : ''}</span>
-                      <span className="font-semibold">−{formatPrice(discount)}</span>
+                      <span className="font-semibold whitespace-nowrap">−{formatPrice(discount)}</span>
                     </div>
                   )}
 
@@ -437,7 +368,7 @@ export default function Cart() {
                     <p className="mt-1 text-[9px] text-[var(--visual-page-color)]/30">Impuestos incluidos</p>
                   </div>
 
-                  <p data-page-price className="text-[24px] font-black tracking-[-0.03em]">
+                  <p data-page-price className="text-[24px] font-black tracking-[-0.03em] whitespace-nowrap">
                     {formatPrice(total)}
                   </p>
                 </div>
@@ -456,7 +387,7 @@ export default function Cart() {
                       name="box"
                       className="w-4 h-4 mt-0.5 flex-shrink-0 text-[var(--primary)]"
                     />
-                    <p>{items.length ? "El despacho se aplica a los productos físicos." : "Las actividades no requieren despacho."}</p>
+                    <p>Despacho a todo Chile y embalaje seguro para tu pedido.</p>
                   </div>
                 </div>
               </div>
@@ -467,13 +398,11 @@ export default function Cart() {
     );
   }
 
-  // ==========================================================
-  // CARRITO CON PRODUCTOS — PLANTILLA 3 / VELTA
-  // ==========================================================
+
   if (isVisual) {
     return (
       <div className="bg-[var(--visual-page-panel-background)] text-[var(--visual-page-color)]">
-        <div className="max-w-[1180px] mx-auto px-5 md:px-8 py-10 md:py-14">
+        <div className="max-w-[1180px] mx-auto px-4 sm:px-5 md:px-8 py-10 md:py-14">
           <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-9">
             <div>
               <p className="mb-3 text-[9px] font-medium uppercase tracking-[0.18em] text-[var(--visual-page-color)]">
@@ -485,7 +414,7 @@ export default function Cart() {
               </h1>
 
               <p className="mt-3 text-[13px] text-[var(--visual-page-color)]">
-                {count} {count === 1 ? 'artículo en tu carrito' : 'artículos en tu carrito'}
+                {count} {count === 1 ? 'producto en tu carrito' : 'productos en tu carrito'}
               </p>
             </div>
 
@@ -499,41 +428,44 @@ export default function Cart() {
 
           <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-8 lg:gap-12 items-start">
             <div className="flex flex-col gap-4">
-              <ActivityCartRows items={activities} />
               {items.map((item) => {
                 const hasDiscount = Boolean(item.comparePrice);
 
                 return (
                   <article data-page-panel
                     key={`${item.productId}-${item.variantId}`}
-                    className="flex gap-4 md:gap-5 rounded-[10px] bg-[var(--visual-page-panel-background)] p-4 md:p-5"
+                    className="flex gap-3 sm:gap-4 md:gap-5 rounded-[10px] bg-[var(--visual-page-panel-background)] p-4 md:p-5"
                   >
                     <Link data-page-action="outline"
                       to={route(`producto/${item.productId}`)}
-                      className="w-24 h-28 sm:w-28 sm:h-32 flex-shrink-0 overflow-hidden rounded-[8px] bg-[var(--visual-page-panel-background)]"
+                      aria-label={item.name}
+                      className="w-20 h-24 sm:w-28 sm:h-32 flex-shrink-0 overflow-hidden rounded-[8px] bg-[var(--visual-page-panel-background)] flex items-center justify-center"
                     >
-                      <img data-page-item-image
-                        src={item.image}
-                        alt={item.name}
-                        className="w-full h-full object-cover"
-                      />
+                      {item.image && (
+                        <img data-page-item-image
+                          src={item.image}
+                          alt=""
+                          onError={(event) => { event.currentTarget.style.display = 'none'; }}
+                          className="w-full h-full object-cover"
+                        />
+                      )}
                     </Link>
 
                     <div className="flex-1 min-w-0 flex flex-col">
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="min-w-0">
-                          <p className="mb-2 text-[9px] font-medium uppercase tracking-[0.16em] text-[var(--visual-page-color)]">
+                      <div className="flex items-start justify-between gap-2 sm:gap-4">
+                        <div className="min-w-0 flex-1">
+                          <p className="mb-1.5 text-[9px] font-medium uppercase tracking-[0.16em] text-[var(--visual-page-color)]">
                             Producto
                           </p>
 
                           <Link data-page-action="ghost"
                             to={route(`producto/${item.productId}`)}
-                            className="font-serif text-[20px] md:text-[22px] leading-tight hover:opacity-60 transition-opacity"
+                            className="block font-serif text-[18px] sm:text-[20px] md:text-[22px] leading-snug break-words hover:opacity-60 transition-opacity"
                           >
                             {item.name}
                           </Link>
 
-                          <p className="mt-2 text-[11px] leading-5 text-[var(--visual-page-color)]">
+                          <p className="mt-1.5 text-[11px] leading-5 text-[var(--visual-page-color)] break-words">
                             {Object.entries(item.attributes)
                               .map(([key, value]) => `${key}: ${value}`)
                               .join(' · ')}
@@ -544,21 +476,18 @@ export default function Cart() {
                           <StockFeedback sku={item.sku} maxStock={item.maxStock} quantity={item.quantity} className="mt-2 text-[10px] text-[#756b51]" />
                         </div>
 
-                        <button
-                    type="button"
-                    onClick={() => handleRequestRemove(item)}
-                    className="paid-cart-remove"
+                        <button data-page-action="danger"
+                          type="button"
+                          onClick={() => removeItem(item.productId, item.variantId)}
+                          className="w-8 h-8 flex-shrink-0 rounded-full flex items-center justify-center text-[var(--visual-page-color)] hover:bg-[var(--visual-page-panel-background)] hover:text-[var(--visual-page-color)] transition-colors"
                           aria-label={`Eliminar ${item.name}`}
-                          title={item.quantity > 1 ? 'Quitar unidad o eliminar producto' : `Eliminar ${item.name}`}
                         >
-                          Eliminar
+                          <span aria-hidden="true">×</span>
                         </button>
                       </div>
 
-                      {renderRemoveConfirmBar(item)}
-
-                      <div className="mt-auto pt-4 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
-                        <div data-page-quantity className="flex h-9 w-[112px] items-center overflow-hidden rounded-[7px] border border-[var(--visual-global-border)]/15 bg-[var(--visual-page-panel-background)]">
+                      <div className="mt-auto pt-4 flex flex-wrap items-center justify-between gap-3 sm:gap-4">
+                        <div data-page-quantity className="flex h-9 w-[108px] shrink-0 items-center overflow-hidden rounded-[7px] border border-[var(--visual-global-border)]/15 bg-[var(--visual-page-panel-background)]">
                           <button data-page-action="ghost"
                             type="button"
                             onClick={() =>
@@ -595,13 +524,13 @@ export default function Cart() {
                           </button>
                         </div>
 
-                        <div className="text-left sm:text-right">
-                          <p data-page-price className="text-[14px] font-semibold">
-                            {formatPrice(item.price * item.quantity)}<span className="block text-xs font-normal">{formatPrice(item.price)} por unidad</span>
+                        <div className="text-left sm:text-right shrink-0 ml-auto">
+                          <p data-page-price className="text-[14px] font-semibold whitespace-nowrap">
+                            {formatPrice(item.price * item.quantity)}<span className="block text-xs font-normal whitespace-nowrap">{formatPrice(item.price)} por unidad</span>
                           </p>
 
                           {hasDiscount && item.comparePrice && (
-                            <p className="mt-1 text-[10px] text-[var(--visual-page-color)] line-through">
+                            <p className="mt-1 text-[10px] text-[var(--visual-page-color)] line-through whitespace-nowrap">
                               {formatPrice(item.comparePrice * item.quantity)}
                             </p>
                           )}
@@ -626,13 +555,13 @@ export default function Cart() {
                 <div className="flex flex-col gap-3 text-[13px]">
                   <div className="flex justify-between gap-4">
                     <span className="text-[var(--visual-page-color)]">Subtotal</span>
-                    <span data-page-price>{formatPrice(subtotal)}</span>
+                    <span data-page-price className="whitespace-nowrap">{formatPrice(subtotal)}</span>
                   </div>
 
                   {discount > 0 && (
                     <div className="flex justify-between gap-4">
                       <span className="text-[var(--visual-page-color)]">Descuento{promoCode ? ` (${promoCode})` : ''}</span>
-                      <span>−{formatPrice(discount)}</span>
+                      <span className="whitespace-nowrap">−{formatPrice(discount)}</span>
                     </div>
                   )}
 
@@ -685,7 +614,7 @@ export default function Cart() {
 
                 <div className="flex items-baseline justify-between gap-4 mb-6">
                   <span className="font-serif text-[24px]">{shipping === null ? 'Total sin envío' : 'Total'}</span>
-                  <span data-page-price className="text-[20px] font-semibold">{formatPrice(total)}</span>
+                  <span data-page-price className="text-[20px] font-semibold whitespace-nowrap">{formatPrice(total)}</span>
                 </div>
 
                 <button data-page-action="primary"
@@ -699,7 +628,7 @@ export default function Cart() {
                 <div className="mt-5 border-t border-[var(--visual-global-border)]/10 pt-5">
                   <div className="flex items-start gap-3 text-[11px] leading-5 text-[var(--visual-page-color)]">
                     <Icon name="box" className="w-4 h-4 mt-0.5 flex-shrink-0 text-black" />
-                    <p>{items.length ? "El despacho se aplica a los productos físicos." : "Las actividades no requieren despacho."}</p>
+                    <p>Despacho a todo Chile y embalaje seguro para tu pedido.</p>
                   </div>
                 </div>
               </div>
@@ -710,15 +639,13 @@ export default function Cart() {
     );
   }
 
-  // ==========================================================
-  // CARRITO CON PRODUCTOS — PLANTILLAS 1 Y 2
-  // ==========================================================
+
   return (
     <div
       className={
         isMinimal
-          ? 'max-w-6xl mx-auto px-4 md:px-8 py-12'
-          : 'max-w-7xl mx-auto px-4 py-10'
+          ? 'max-w-6xl mx-auto px-3 sm:px-4 md:px-8 py-8 sm:py-12'
+          : 'max-w-7xl mx-auto px-3 sm:px-4 py-8 sm:py-10'
       }
     >
       <h1
@@ -733,34 +660,37 @@ export default function Cart() {
 
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-8">
         <div className="flex flex-col gap-4">
-          <ActivityCartRows items={activities} />
           {items.map((item) => (
             <article data-page-panel
               key={`${item.productId}-${item.variantId}`}
-              className="flex gap-4 rounded-xl border border-[var(--border)] bg-[var(--visual-page-panel-background)] p-4"
+              className="flex gap-3 sm:gap-4 rounded-xl border border-[var(--border)] bg-[var(--visual-page-panel-background)] p-3.5 sm:p-4"
             >
               <Link data-page-action="outline"
                 to={route(`producto/${item.productId}`)}
-                className="w-20 h-20 flex-shrink-0 overflow-hidden rounded-lg bg-[var(--muted)]"
+                aria-label={item.name}
+                className="w-16 h-16 sm:w-20 sm:h-20 flex-shrink-0 overflow-hidden rounded-xl bg-[var(--muted)] flex items-center justify-center"
               >
-                <img data-page-item-image
-                  src={item.image}
-                  alt={item.name}
-                  className="w-full h-full object-cover"
-                />
+                {item.image && (
+                  <img data-page-item-image
+                    src={item.image}
+                    alt=""
+                    onError={(event) => { event.currentTarget.style.display = 'none'; }}
+                    className="w-full h-full object-cover"
+                  />
+                )}
               </Link>
 
               <div className="flex-1 min-w-0">
-                <div className="flex justify-between gap-4">
-                  <div>
+                <div className="flex items-start justify-between gap-2 sm:gap-4">
+                  <div className="min-w-0 flex-1">
                     <Link data-page-action="ghost"
                       to={route(`producto/${item.productId}`)}
-                      className="font-semibold hover:underline"
+                      className="block font-semibold leading-snug break-words hover:underline"
                     >
                       {item.name}
                     </Link>
 
-                    <p className="text-xs text-[var(--muted-foreground)] mt-1">
+                    <p className="text-xs text-[var(--muted-foreground)] mt-1 break-words">
                       {Object.entries(item.attributes)
                         .map(([key, value]) => `${key}: ${value}`)
                         .join(' · ')}
@@ -770,32 +700,28 @@ export default function Cart() {
                     <StockFeedback sku={item.sku} maxStock={item.maxStock} quantity={item.quantity} />
                   </div>
 
-                  <button
+                  <button data-page-action="danger"
                     type="button"
-                    onClick={() => handleRequestRemove(item)}
-                    className="paid-cart-remove"
+                    onClick={() => removeItem(item.productId, item.variantId)}
+                    className="w-7 h-7 flex-shrink-0 flex items-center justify-center text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
                     aria-label={`Eliminar ${item.name}`}
-                    title={item.quantity > 1 ? 'Quitar unidad o eliminar producto' : `Eliminar ${item.name}`}
                   >
-                    Eliminar
+                    ×
                   </button>
                 </div>
 
-                {renderRemoveConfirmBar(item)}
-
-                <div className="flex items-end justify-between gap-4 mt-4">
-                  <div data-page-quantity className="grid grid-cols-3 h-9 w-[112px] items-center border border-[var(--border)] rounded-lg overflow-hidden">
+                <div className="flex flex-wrap items-center justify-between gap-3 sm:gap-4 mt-4">
+                  <div data-page-quantity className="flex w-[108px] shrink-0 items-center border border-[var(--border)] rounded-lg overflow-hidden">
                     <button data-page-action="ghost"
                       type="button"
                       onClick={() =>
                         updateQuantity(item.productId, item.variantId, item.quantity - 1)
                       }
-                      className="h-full w-full flex items-center justify-center"
-                      aria-label={`Disminuir cantidad de ${item.name}`}
+                      className="w-9 h-9"
                     >
                       −
                     </button>
-                    <span className="h-full w-full flex items-center justify-center border-x border-[var(--border)] text-sm font-medium">
+                    <span className="w-9 h-9 flex items-center justify-center border-x border-[var(--border)]">
                       {item.quantity}
                     </span>
                     <button data-page-action="ghost"
@@ -804,19 +730,18 @@ export default function Cart() {
                         updateQuantity(item.productId, item.variantId, item.quantity + 1)
                       }
                       disabled={item.quantity >= item.maxStock}
-                      className="h-full w-full flex items-center justify-center disabled:opacity-30"
-                      aria-label={`Aumentar cantidad de ${item.name}`}
+                      className="w-9 h-9 disabled:opacity-30"
                     >
                       +
                     </button>
                   </div>
 
-                  <div className="text-right">
-                    <p data-page-price className="font-semibold">
-                      {formatPrice(item.price * item.quantity)}<span className="block text-xs font-normal">{formatPrice(item.price)} por unidad</span>
+                  <div className="text-left sm:text-right shrink-0 ml-auto">
+                    <p data-page-price className="font-semibold whitespace-nowrap">
+                      {formatPrice(item.price * item.quantity)}<span className="block text-xs font-normal whitespace-nowrap">{formatPrice(item.price)} por unidad</span>
                     </p>
                     {item.comparePrice && (
-                      <p className="text-xs line-through text-[var(--muted-foreground)]">
+                      <p className="text-xs line-through text-[var(--muted-foreground)] whitespace-nowrap">
                         {formatPrice(item.comparePrice * item.quantity)}
                       </p>
                     )}
@@ -832,19 +757,19 @@ export default function Cart() {
             <h2 className="font-semibold text-lg mb-5">Resumen del pedido</h2>
 
             <div className="space-y-3 text-sm">
-              <div className="flex justify-between">
+              <div className="flex justify-between gap-4">
                 <span className="text-[var(--muted-foreground)]">Subtotal</span>
-                <span data-page-price>{formatPrice(subtotal)}</span>
+                <span data-page-price className="whitespace-nowrap">{formatPrice(subtotal)}</span>
               </div>
 
               {discount > 0 && (
-                <div className="flex justify-between">
+                <div className="flex justify-between gap-4">
                   <span className="text-[var(--muted-foreground)]">Descuento{promoCode ? ` (${promoCode})` : ''}</span>
-                  <span>−{formatPrice(discount)}</span>
+                  <span className="whitespace-nowrap">−{formatPrice(discount)}</span>
                 </div>
               )}
 
-              <div className="flex justify-between">
+              <div className="flex justify-between gap-4">
                 <span className="text-[var(--muted-foreground)]">Envío</span>
                 <span>{shippingLabel}</span>
               </div>
@@ -885,9 +810,9 @@ export default function Cart() {
 
             <div className="border-t border-[var(--border)] my-5" />
 
-            <div className="flex justify-between items-baseline font-semibold text-xl mb-6">
+            <div className="flex justify-between items-baseline gap-4 font-semibold text-xl mb-6">
               <span>{shipping === null ? 'Total sin envío' : 'Total'}</span>
-              <span data-page-price>{formatPrice(total)}</span>
+              <span data-page-price className="whitespace-nowrap">{formatPrice(total)}</span>
             </div>
 
             <button data-page-action="primary"

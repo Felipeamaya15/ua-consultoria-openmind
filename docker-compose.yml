@@ -1,5 +1,4 @@
 services:
-  # 1. BASE DE DATOS RELACIONAL (PostgreSQL)
   db:
     image: postgres:15-alpine
     container_name: postgres_consultoria
@@ -19,7 +18,6 @@ services:
       retries: 12
       start_period: 10s
 
-  # 2. BASE DE DATOS NOSQL (MongoDB)
   mongodb:
     image: mongo:latest
     container_name: mongo_consultoria
@@ -33,7 +31,6 @@ services:
     volumes:
       - mongo_data:/data/db
 
-  # 3. BACKEND (Django REST)
   backend:
     build:
       context: ./backend
@@ -161,7 +158,6 @@ services:
       backend:
         condition: service_started
 
-  # 4. FRONTEND (React + Vite)
   frontend:
     build:
       context: ./frontend
@@ -179,7 +175,6 @@ services:
     depends_on:
       - backend
 
-  # 5. BUZON DE PRUEBA DE CORREO LOCAL (Mailpit): siempre activo en local para ver correos en http://localhost:8025
   mailpit:
     image: axllent/mailpit:latest
     container_name: mailpit_consultoria

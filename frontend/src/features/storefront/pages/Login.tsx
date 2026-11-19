@@ -2,7 +2,7 @@ import { CommercialOptIn } from '../components/store/CommercialOptIn';
 import { requestConsent } from '../services/commercialConsent';
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { useGoogleLogin } from '@react-oauth/google';
+import { useOptionalGoogleLogin as useGoogleLogin, GOOGLE_LOGIN_CONFIGURED } from '../../auth/hooks/useOptionalGoogleLogin';
 import { authService } from '../../auth/services/authService';
 import { CaptchaWidget } from '../../auth/components/CaptchaWidget';
 import { Button, Input, Alert, InstitutionalBadge } from '../components/ui';
@@ -94,7 +94,7 @@ export default function Login() {
     return errors;
   };
 
-  // 1. Hook oficial de Google
+
   const loginConGoogle = useGoogleLogin({
     onSuccess: async (tokenResponse) => {
       setLoading(true);
@@ -144,7 +144,7 @@ export default function Login() {
     }
   };
 
-  // 2. Formulario tradicional conectado a la API
+
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
     setLoading(true);
@@ -207,7 +207,7 @@ export default function Login() {
         return;
       }
 
-      // Validación estricta y sanitización contra SQLi / XSS en Login y Registro
+
       const cleanEmail = email.trim();
       if (!isValidEmail(cleanEmail) || containsSqlOrControlInjection(cleanEmail)) {
         setMessageVariant('error');
@@ -294,14 +294,8 @@ export default function Login() {
 
       authService.setSession(data.data.token, data.data.user);
       if (mode === 'register' && commercial) {
-        let notice: string;
-        try {
-          notice = (await requestConsent(cleanEmail, templateNumber)).mensaje;
-        } catch (e) {
-          notice = 'Tu cuenta fue creada. ' + (e instanceof Error ? e.message : 'Reintenta la preferencia comercial.');
-        }
-        navigate(route('preferencias-comerciales'), { state: { notice } });
-        return;
+        // Send double opt-in confirmation in the background so registration stays in the store flow.
+        void requestConsent(cleanEmail, templateNumber).catch(() => undefined);
       }
 
       redirectAuthenticatedUser(data.data.user);
@@ -381,8 +375,8 @@ export default function Login() {
             ? 'Nueva contraseña'
             : 'Verificación MFA';
 
-  const showGoogle = authSettings.google && (mode === 'login' || mode === 'register');
-  const hasAnyLoginMethod = authSettings.emailPassword || authSettings.google;
+  const showGoogle = GOOGLE_LOGIN_CONFIGURED && authSettings.google && (mode === 'login' || mode === 'register');
+  const hasAnyLoginMethod = authSettings.emailPassword || (GOOGLE_LOGIN_CONFIGURED && authSettings.google);
   const showEmailForm =
     mode === 'forgot' ||
     mode === 'reset' ||

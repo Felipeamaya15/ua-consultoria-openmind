@@ -1,4 +1,4 @@
-// Regression of the rendered purchase summary and the current error boundary.
+
 const assert = require('node:assert/strict');
 const { test } = require('node:test');
 const React = require('react');

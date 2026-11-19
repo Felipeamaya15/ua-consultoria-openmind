@@ -100,8 +100,7 @@ export async function fetchPublicProducts(options?: InitialLoadOptions & { inclu
 
   if (!options?.includeVariants) return body.data.map(adaptProduct);
 
-  // Optimización de carga inicial: si el listado ya incluye las variantes activas,
-  // hidratar directamente en memoria evitando N solicitudes adicionales de detalle.
+
   const products: Array<Product | null> = new Array(body.data.length);
   const missingIndices: number[] = [];
 
@@ -180,7 +179,7 @@ function adaptProductDetail(item: BackendProductDetail): Product {
     };
   });
 
-  // Agrupa los valores de cada atributo (talla, color, etc.) para armar los selectores
+
   const grouped: Record<string, Set<string>> = {};
   variantesRaw.forEach((v) => {
     (v.atributos_variante ?? []).forEach((a) => {

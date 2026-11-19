@@ -17,7 +17,6 @@ WHITESPACE = ' \t\r\n\v\f\x1c\x1d\x1e\x1f\x85\xa0\u1680\u2000\u2001\u2002\u2003\
 
 
 def strip_email(expression):
-    # PostgreSQL BTRIM con los mismos caracteres que str.strip; TRIM solo quita espacios ASCII.
     return Func(expression, Value(WHITESPACE), function='BTRIM', output_field=CharField())
 
 
@@ -85,8 +84,6 @@ def contact_rows(store, params, *, marketing=False):
             rows.append({'email': email_value, 'cantidad_pedidos': row['cantidad_pedidos'],
                          'ultimo_pedido': row['ultimo_pedido'].astimezone(ZONA_COMERCIAL).isoformat(),
                          'consentimiento': 'sin_registro', 'fecha_consentimiento': None})
-    # Opt-ins from registration/preferences are contacts even without a purchase.
-    # Order-date filters intentionally exclude contacts with no orders.
     if state != 'sin_registro' and not start and not end:
         seen = {row['email'] for row in rows}
         extras = matching.exclude(email__in=Subquery(Pedido.objects.filter(tienda=store)
@@ -101,7 +98,6 @@ def contact_rows(store, params, *, marketing=False):
                              'consentimiento': 'sin_registro', 'fecha_consentimiento': None})
                 seen.add(record.email)
     rows.sort(key=lambda row: row['email'])
-    # Una consulta adicional para toda la página agregada; nunca una por contacto.
     records = {r['email']: r for r in evidence.filter(email__in=[r['email'] for r in rows]).values(
         'email', 'estado', 'fecha_actualizacion', 'verificado', 'fecha_autorizacion',
         'fecha_verificacion', 'version_texto', 'referencia_evidencia')}

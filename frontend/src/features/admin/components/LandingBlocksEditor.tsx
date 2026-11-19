@@ -10,7 +10,7 @@ import { FlexibleSectionEditor } from './FlexibleSectionEditor';
 import { SECTION_PRESETS, createFlexibleSection, type SectionPreset } from '../../landing/types/sectionElements';
 import './landing-blocks.css';
 
-// Los identificadores vienen de SYSTEM_SECTIONS: no confundir otros tipos con Minimal.
+
 const TEMPLATE_NAMES: Record<string, string> = {
   catalog: 'Catálogo',
   editorial: 'Editorial',
@@ -119,7 +119,7 @@ export function LandingBlocksEditor({
       if (expanded) localStorage.setItem(expandedKey, expanded);
       else localStorage.removeItem(expandedKey);
     } catch {
-      // El editor sigue funcionando sin almacenamiento.
+
     }
   }, [expanded]);
   const [remove, setRemove] = useState<string>();
@@ -198,7 +198,7 @@ export function LandingBlocksEditor({
   return (
     <section id="secciones-tienda" aria-label="Secciones de mi tienda" className="landing-blocks scroll-mt-24">
       <AdminCard>
-        {/* Encabezado descriptivo con botón de agregar */}
+
         <div className="lb-heading">
           <div>
             <h2>Secciones de mi tienda</h2>
@@ -224,7 +224,7 @@ export function LandingBlocksEditor({
           </button>
         </div>
 
-        {/* Barra de capacidad y visibilidad */}
+
         <div className="lb-toolbar">
           <div className="lb-toolbar-stats">
             <span className="lb-capacity-badge">
@@ -251,7 +251,7 @@ export function LandingBlocksEditor({
           </Link>
         </div>
 
-        {/* Estado inicial sin secciones */}
+
         {value === undefined && (
           <div className="lb-originals">
             <div className="lb-originals-visual">
@@ -276,7 +276,7 @@ export function LandingBlocksEditor({
           </div>
         )}
 
-        {/* Lista vacía */}
+
         {value !== undefined && !blocks.length && (
           <div className="lb-empty">
             <SectionThumbnail type="texto" />
@@ -295,12 +295,12 @@ export function LandingBlocksEditor({
           </div>
         )}
 
-        {/* Listado ordenable de secciones */}
+
         <ol className="lb-list">
           {rows.map((id, index) => {
             const system = SYSTEM_SECTIONS.find(section => section.id === id);
 
-            // Fila de sección del sistema (Catálogo / Productos destacados / Categorías)
+
             if (system && layout) {
               const visible = systemSectionVisible(system.id, layout.flags);
               return (
@@ -381,7 +381,7 @@ export function LandingBlocksEditor({
               );
             }
 
-            // Fila de sección propia configurable
+
             const block = blocks.find(b => b.id === id);
             if (!block) return null;
 
@@ -599,7 +599,7 @@ export function LandingBlocksEditor({
           })}
         </ol>
 
-        {/* Barra inferior y recuperación */}
+
         <div className="lb-bottom">
           <span>
             {blocks.length} de 20 secciones propias creadas · Los apartados comerciales del catálogo no consumen este límite
@@ -615,7 +615,7 @@ export function LandingBlocksEditor({
           )}
         </div>
 
-        {/* Vista previa del orden de navegación */}
+
         {layout && (
           <details className="lb-order-preview">
             <summary>
@@ -656,7 +656,7 @@ export function LandingBlocksEditor({
         )}
       </AdminCard>
 
-      {/* Modal unificado para Agregar Sección */}
+
       <Modal
         open={picker}
         onClose={() => setPicker(false)}
@@ -667,7 +667,7 @@ export function LandingBlocksEditor({
           Elige el tipo de contenido que deseas incorporar. Todo el contenido se adapta automáticamente al diseño de tu tienda.
         </p>
 
-        {/* Pestañas de categoría amigables */}
+
         <div className="lb-modal-tabs" role="tablist" aria-label="Categorías de secciones">
           <button
             type="button"
@@ -737,7 +737,7 @@ export function LandingBlocksEditor({
         </div>
       </Modal>
 
-      {/* Modal secundario para selección directa de flexible presets (por retrocompatibilidad) */}
+
       <Modal
         open={flexiblePicker}
         onClose={() => setFlexiblePicker(false)}
@@ -767,7 +767,7 @@ export function LandingBlocksEditor({
         </Button>
       </Modal>
 
-      {/* Modal de confirmación para eliminar sección */}
+
       <Modal open={!!remove} onClose={() => setRemove(undefined)} title="Eliminar sección" size="sm">
         <p className="text-sm text-slate-600">
           ¿Estás seguro de que deseas eliminar esta sección de tu tienda? El cambio se hará efectivo al guardar la página principal.
@@ -789,7 +789,7 @@ export function LandingBlocksEditor({
         </div>
       </Modal>
 
-      {/* Editor a pantalla completa para servicios, talleres y secciones modulares */}
+
       {fullscreenBlock && (() => {
         const fullscreenTypeLabel = fullscreenBlock.actividad
           ? fullscreenBlock.actividad.tipo === 'taller'

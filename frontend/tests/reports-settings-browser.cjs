@@ -1,5 +1,5 @@
-// Navegador real, aplicación real y respuestas HTTP de prueba interceptadas.
-// No inicia sesión ni escribe en las bases comerciales.
+
+
 const fs = require('node:fs'), path = require('node:path'), assert = require('node:assert/strict');
 const { chromium } = require(process.env.DASHBOARD_PLAYWRIGHT_MODULE || 'playwright');
 const base = process.env.REPORTS_TEST_URL || 'http://127.0.0.1:5180';

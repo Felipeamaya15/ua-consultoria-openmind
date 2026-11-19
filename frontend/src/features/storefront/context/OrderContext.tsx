@@ -28,10 +28,7 @@ function getInitialOrders(): Order[] {
 
     const savedOrders = JSON.parse(stored) as Order[];
 
-    /*
-     * Conservamos los pedidos creados durante la sesión
-     * junto con los pedidos demo.
-     */
+
     const savedIds = new Set(
       savedOrders.map((order) => order.id),
     );
@@ -65,10 +62,7 @@ export function OrderProvider({
       ];
 
       try {
-        /*
-         * Guardamos solamente los pedidos creados,
-         * no es necesario duplicar los mock.
-         */
+
         const demoIds = new Set(
           mockOrders.map(
             (demoOrder) => demoOrder.id,
@@ -86,11 +80,7 @@ export function OrderProvider({
           JSON.stringify(createdOrders),
         );
       } catch {
-        /*
-         * Si sessionStorage no está disponible,
-         * el pedido seguirá funcionando mientras
-         * el contexto permanezca montado.
-         */
+
       }
 
       return updatedOrders;

@@ -5,9 +5,9 @@ const SESSION_STARTED_AT_KEY = 'entrepreneur_session_started_at';
 const SESSION_LAST_ACTIVITY_KEY = 'session_last_activity_at';
 const SESSION_IS_ADMIN_KEY = 'session_is_admin';
 
-export const ADMIN_SESSION_INACTIVITY_LIMIT_MS = 30 * 60 * 1000; // 30 minutos de inactividad para administradores
-export const CUSTOMER_SESSION_INACTIVITY_LIMIT_MS = 30 * 24 * 60 * 60 * 1000; // 30 días para clientes finales (expiración prolongada: 7 a 30 días)
-export const SESSION_INACTIVITY_LIMIT_MS = ADMIN_SESSION_INACTIVITY_LIMIT_MS; // Compatibilidad con pruebas previas
+export const ADMIN_SESSION_INACTIVITY_LIMIT_MS = 30 * 60 * 1000;
+export const CUSTOMER_SESSION_INACTIVITY_LIMIT_MS = 30 * 24 * 60 * 60 * 1000;
+export const SESSION_INACTIVITY_LIMIT_MS = ADMIN_SESSION_INACTIVITY_LIMIT_MS;
 
 export type AuthUserSummary = {
   id?: number | string;
@@ -48,7 +48,7 @@ function safeSetStorage(key: string, value: string) {
       localStorage.setItem(key, value);
     }
   } catch {
-    // Entornos sin almacenamiento disponible
+
   }
 }
 
@@ -61,7 +61,7 @@ function safeRemoveStorage(key: string) {
       sessionStorage.removeItem(key);
     }
   } catch {
-    // Ignorar errores de almacenamiento restringido
+
   }
 }
 
@@ -118,7 +118,7 @@ function throttledTouchActivity() {
   }
 }
 
-// Inicialización de reinicio de temporizador ante clics, navegación y llamadas a la API
+
 let activityListenersInitialized = false;
 export function initActivityListeners(): void {
   if (activityListenersInitialized) return;
@@ -206,8 +206,7 @@ async function profileRequest<T = CustomerProfile>(path: string, method = 'GET',
 export type CustomerOrderItem = { id_item_pedido: number; producto_id: number | string; nombre: string; cantidad: number; precio_unitario: string; subtotal: string; sku?: string; atributos_variante?: {clave: string; etiqueta: string; valor: string}[] };
 export type CustomerOrder = { id_pedido: number; identificador?: string; fecha_creacion: string; estado: string; estado_etiqueta: string; medio_pago?: string; vence_en?: string | null; monto_total: string; cantidad_productos: number; costo_envio?: string; descuento?: string; items?: CustomerOrderItem[]; entrega?: { retiro?: { seleccion?: { fecha: string; hora: string } } } };
 
-// Evita mostrar trazas HTML/JSON a los clientes cuando la API falla.
-// Conserva el formato de error JSON del backend para CAPTCHA, MFA y limites de intentos.
+
 async function readAuthJson(res: Response): Promise<any> {
   if (res.status >= 500) {
     throw new Error('El servicio no esta disponible en este momento. Intenta nuevamente mas tarde.');
@@ -251,7 +250,7 @@ export const authService = {
       const isAdmin = Boolean(user.is_staff || user.is_superuser || user.is_store_owner);
       safeSetStorage(SESSION_IS_ADMIN_KEY, isAdmin ? 'true' : 'false');
     } else {
-      // Si no se especifica usuario, asume política de administración (30 min) por defecto seguro
+
       if (typeof localStorage !== 'undefined' && localStorage.getItem(SESSION_IS_ADMIN_KEY) === null) {
         safeSetStorage(SESSION_IS_ADMIN_KEY, 'true');
       }
@@ -410,9 +409,9 @@ export const authService = {
         'Content-Type': 'application/json'
       }
     });
-    
+
     if (!res.ok) {
-      if (res.status === 401 && getStoredToken() === token) clearStoredSession(); // No cerrar una sesión nueva por una respuesta anterior.
+      if (res.status === 401 && getStoredToken() === token) clearStoredSession();
       return null;
     }
     const json = await res.json();
@@ -441,7 +440,7 @@ export const authService = {
         }).catch(() => {});
       }
     } catch {
-      // Ignorar en entornos de prueba sin red
+
     }
   }
 };

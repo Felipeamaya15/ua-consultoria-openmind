@@ -146,13 +146,15 @@ test('verified customer saves only own preference; unverified customer and visit
     const calls=[];
     const own={email:'buyer@example.test',correo_verificado:verified,estado:'sin_registro',recibir:false};
     const h=hooks('src/features/storefront/pages/CommercialPreferences.tsx','default',{
-      'react-router-dom':{useLocation:()=>({pathname:'/plantilla/2/preferencias-comerciales',hash:'',state:null})},
-      '../hooks/useStorefrontTemplate':{useStorefrontTemplate:()=>({templateNumber:'2'})},
+      'react-router-dom':{Link:'Link',useLocation:()=>({pathname:'/plantilla/2/preferencias-comerciales',hash:'',state:null})},
+      '../hooks/useStorefrontTemplate':{useStorefrontTemplate:()=>({templateNumber:'2',route:(path='')=>path?`/plantilla/2/${path}`:'/plantilla/2'})},
       '../services/commercialConsent':{CONSENT_TEXT:'Autorizo publicidad',hasConsentSession:()=>verified!==null,
         readOwnConsent:async()=>own,saveOwnConsent:async receive=>{calls.push(receive);return{...own,estado:receive?'autorizado':'retirado',recibir:receive}},
         requestConsent:async(...args)=>{calls.push(args);return{mensaje:'Enlace solicitado'}}},
     },{window:{location:{hash:'',pathname:'/plantilla/2/preferencias-comerciales'},history:{replaceState(){}}}});
     let tree=h.render();tree=await h.flush();
+    const homeLink=tree.find(n=>n.type==='Link'&&text(n)==='Ir al inicio de la tienda');
+    assert(homeLink);assert.equal(homeLink.props.to,'/plantilla/2');assert.equal(homeLink.props['data-page-action'],'primary');
     const email=tree.find(n=>n.type==='input'&&n.props.type==='email');
     if(verified) {
       assert.equal(email,undefined,'La gestión directa no permite editar un correo ajeno');

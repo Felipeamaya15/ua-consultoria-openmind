@@ -187,7 +187,7 @@ export function CarouselImagesEditor({blocks=[],products=[]}:{blocks?:BloqueLand
     };
   }, []);
 
-  // Actualizar las fotografías desde Django.
+
   async function refresh() {
     if (busy) return;
 
@@ -207,7 +207,7 @@ export function CarouselImagesEditor({blocks=[],products=[]}:{blocks?:BloqueLand
     }
   }
 
-  // Subir JPG, PNG, WebP, HEIC o HEIF.
+
   async function upload() {
     if (!file || busy || full) return;
 
@@ -216,7 +216,7 @@ export function CarouselImagesEditor({blocks=[],products=[]}:{blocks?:BloqueLand
     setNotice('');
 
     try {
-      // El servicio convierte HEIC/HEIF antes de guardar.
+
       const created = await uploadCarouselImage(
         file,
         description,
@@ -246,7 +246,7 @@ export function CarouselImagesEditor({blocks=[],products=[]}:{blocks?:BloqueLand
     }
   }
 
-  // Cambiar el orden de las imágenes.
+
   async function move(index: number, direction: -1 | 1) {
     if (busy) return;
 
@@ -284,7 +284,7 @@ export function CarouselImagesEditor({blocks=[],products=[]}:{blocks?:BloqueLand
     }
   }
 
-  // Eliminar una fotografía.
+
   async function remove(image: ImagenCarruselLanding) {
     if (busy) return;
 

@@ -24,9 +24,7 @@ export default function VisualHome() {
   const hero = useHeroContent(landing, route);
   return (
     <div data-landing-page="visual" className="min-w-0 overflow-x-hidden">
-      {/* ======================================================
-          HERO
-      ====================================================== */}
+
       <section data-visual-section={VISUAL_SECTION.hero} className="px-4 sm:px-5 md:px-8 pt-4 sm:pt-5">
         <div data-visual-part="heroLayout"
           className="
@@ -124,7 +122,7 @@ export default function VisualHome() {
         </div>
       </section>
 
-      {/* Beneficios compactos: inmediatamente debajo de la portada. */}
+
       {isSectionVisible('Beneficios') && content.beneficios.length > 0 && (
         <section
           aria-label="Beneficios de la tienda"
@@ -173,7 +171,7 @@ export default function VisualHome() {
             </h2>
           </header>
 
-          {/* PRODUCTO PRINCIPAL */}
+
           <div data-visual-section={VISUAL_SECTION.productGrid} data-visual-grid="products" className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
             <VisualHomeProduct product={visualProducts[0]} large />
             {visualProducts.length > 1 && <div data-visual-section={VISUAL_SECTION.productGrid} data-visual-grid="products" className="grid grid-cols-1 gap-4">
@@ -181,7 +179,7 @@ export default function VisualHome() {
             </div>}
           </div>
 
-          {/* SEGUNDA FILA */}
+
           {visualProducts.length > 3 && <div data-visual-section={VISUAL_SECTION.productGrid} data-visual-grid="products" className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div data-visual-section={VISUAL_SECTION.productGrid} data-visual-grid="products" className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {visualProducts.slice(3, 5).map(p => <VisualHomeProduct key={p.id} product={p} />)}
@@ -214,9 +212,6 @@ export default function VisualHome() {
   );
 }
 
-/* ============================================================
-   TARJETA EXCLUSIVA DEL HOME DE VELTA
-============================================================ */
 
 interface VisualHomeProductProps {
   product: {

@@ -36,7 +36,6 @@ class PublicSectionMediaView(APIView):
         result = {}
         for resource in published_resources(request):
             data = dict(MediaOutputSerializer(resource).data)
-            # Public consumers do not receive administrative file IDs or storage paths.
             data['archivo'] = None
             data['imagen_publica'] = request.build_absolute_uri(f'/api/landing/multimedia-publica/{resource.pk}/imagen/') if resource.archivo else None
             result[str(resource.pk)] = data

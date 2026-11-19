@@ -52,7 +52,7 @@ function sectionVariables(config: VisualSections, viewport: Viewport): Record<st
   const h = config.header;
   const logoRadius = (shape: string) => shape === 'circle' || shape === 'pill' ? '9999px' : shape === 'rounded' ? '12px' : '0px';
   add('header', { bg: linked ? structural : h.background, color: linked ? structureText : h.textColor, height: px(h.height), logoSize: px(h.logoSize), storeLogoRadius: logoRadius(h.storeLogoShape), institutionLogoRadius: logoRadius(h.institutionLogoShape), storeLogoPadding: px(h.storeLogoPadding), institutionLogoPadding: px(h.institutionLogoPadding), storeLogoShape: h.storeLogoShape, institutionLogoShape: h.institutionLogoShape,
-      // OPENMIND_LOGO_SHAPES_RENDER_V2: geometría y espacio seguro para logos originales.
+
       storeLogoWidth: h.storeLogoShape === 'original' ? 'auto' : h.storeLogoShape === 'pill' ? `calc(${px(h.logoSize)} * 1.5)` : px(h.logoSize),
       institutionLogoWidth: h.institutionLogoShape === 'original' ? `calc(${px(h.institutionLogoSize)} * 1.3)` : h.institutionLogoShape === 'pill' ? `calc(${px(h.institutionLogoSize)} * 1.5)` : px(h.institutionLogoSize),
       institutionLogoSize: px(h.institutionLogoSize), institutionLogoOrder: h.institutionLogoPosition === 'right' ? '5' : h.institutionLogoPosition === 'center' ? '1' : '-1', institutionLogoGap: px(h.institutionLogoGap),
@@ -61,7 +61,7 @@ function sectionVariables(config: VisualSections, viewport: Viewport): Record<st
       storeLogoSafePadding: h.storeLogoShape === 'circle' ? `max(${px(h.storeLogoPadding)}, calc(${px(h.logoSize)} * 0.18))` : px(h.storeLogoPadding),
       institutionLogoSafePadding: h.institutionLogoShape === 'circle' ? `max(${px(h.institutionLogoPadding)}, calc(var(--ua-logo-base-size) * 0.18))` : h.institutionLogoShape === 'original' ? 'calc(var(--ua-logo-base-size) / 12)' : px(h.institutionLogoPadding), logoOrder: h.logoPosition === 'right' ? '3' : h.logoPosition === 'center' ? '1' : '0', navAlign: flexAlign(h.navAlign), gap: px(h.gap), border: border(h.border, colors.border), shadow: shadows[h.shadow], position: h.sticky ? 'sticky' : 'relative', direction: h.layout === 'centered' ? 'column' : 'row' });
   const hero = config.hero;
-  // OPENMIND_EDITORIAL_PROMO_V1: el color por defecto sigue el acento activo.
+
   add('hero-promo', {
     background: hero.promoBackground === 'currentColor' ? colors.accent : hero.promoBackground,
     color: hero.promoTextColor === 'currentColor' ? institutionalTextColor(hero.promoBackground === 'currentColor' ? colors.accent : hero.promoBackground, colors.background) : hero.promoTextColor,
@@ -108,7 +108,7 @@ function sectionVariables(config: VisualSections, viewport: Viewport): Record<st
   return variables;
 }
 
-/** Variables stay on the template wrapper and never contaminate the admin document. */
+
 export function visualConfigToCssVariables(config: VisualConfig): CSSProperties {
   const result: Record<string, string> = {};
   for (const viewport of VIEWPORTS) {

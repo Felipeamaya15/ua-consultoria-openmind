@@ -75,11 +75,11 @@ class ReportTests(TestCase):
             self.assertEqual(data[key], dashboard[key], key)
 
     def test_chilean_year_and_month_boundaries_in_summer_and_winter(self):
-        self.order('2026-01-01T02:59:59+00:00')  # 2025 en Chile
+        self.order('2026-01-01T02:59:59+00:00')
         self.order('2026-01-01T03:00:00+00:00')
-        self.order('2026-10-01T02:59:59+00:00')  # septiembre
+        self.order('2026-10-01T02:59:59+00:00')
         self.order('2026-10-01T03:00:00+00:00')
-        self.order('2026-07-01T03:59:59+00:00')  # junio: invierno, UTC-4
+        self.order('2026-07-01T03:59:59+00:00')
         self.order('2026-07-01T04:00:00+00:00')
         self.assertEqual(self.data(anio=2025)['total_pedidos'], 1)
         self.assertEqual(self.data(anio=2026)['total_pedidos'], 5)

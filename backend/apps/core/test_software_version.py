@@ -69,13 +69,11 @@ class SoftwareVersionTestCase(APITestCase):
 
     def test_consulta_version_vigente_con_parametro_campo(self):
         """Verifica la consulta con validación de campo específico (?campo=version)."""
-        # Campo válido
         response = self.client.get("/api/software/version-vigente/?campo=version")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertTrue(response.data["exito"])
         self.assertEqual(response.data["data"]["version"], SOFTWARE_VERSION)
 
-        # Campo no existente debe devolver 400 con mensaje de validación
         bad_response = self.client.get("/api/software/version-vigente/?campo=campo_inexistente")
         self.assertEqual(bad_response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertFalse(bad_response.data["exito"])

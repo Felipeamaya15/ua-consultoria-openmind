@@ -50,7 +50,6 @@ class DashboardTests(TestCase):
         self.assertEqual(sum(row['pedidos'] for row in data['historico']), data['total_pedidos'])
 
     def test_pendientes_rechazados_y_cancelados_no_generan_ingresos(self):
-        # El rechazo de transferencia se persiste como cancelado en el sistema.
         self.crear('pendiente')
         self.crear('cancelado')
         self.assertEqual(self.datos()['total_ventas'], '0.00')
@@ -89,8 +88,8 @@ class DashboardTests(TestCase):
         self.assertEqual([row['pedidos'] for row in data['historico']], [0, 1, 0])
 
     def test_cambio_horario_agrupa_por_dia_chileno(self):
-        self.crear(fecha='2026-09-06T03:30:00+00:00')  # 5 de septiembre, antes del salto.
-        self.crear(fecha='2026-09-06T04:30:00+00:00')  # 6 de septiembre, después del salto.
+        self.crear(fecha='2026-09-06T03:30:00+00:00')
+        self.crear(fecha='2026-09-06T04:30:00+00:00')
         data = self.datos({'fecha_desde': '2026-09-05', 'fecha_hasta': '2026-09-06'})
         self.assertEqual([row['pedidos'] for row in data['historico']], [1, 1])
 

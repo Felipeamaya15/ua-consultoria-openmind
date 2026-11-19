@@ -26,7 +26,7 @@ class TipoCambioTests(SimpleTestCase):
             tipo = fx.tipo_cambio_vigente()
         self.assertEqual(tipo.aplicado, Decimal('918.0000'))
         self.assertEqual(tipo.clp_a_usd(Decimal('19000')), Decimal('20.70'))
-        self.assertEqual(tipo.clp_a_usd(Decimal('1')), Decimal('0.01'))  # minimo cobrable
+        self.assertEqual(tipo.clp_a_usd(Decimal('1')), Decimal('0.01'))
 
     def test_margen_invalido_vuelve_al_valor_por_defecto(self):
         for valor in ('abc', '-1', '50', 'nan'):
@@ -38,7 +38,7 @@ class TipoCambioTests(SimpleTestCase):
     @override_settings(PAYPAL_FX_MAX_EDAD_HORAS=96)
     def test_dato_mas_antiguo_que_la_vigencia_no_se_usa(self):
         with patch(DESCARGA, return_value=dato(dias_atras=2)):
-            self.assertIsNotNone(fx.tipo_cambio_vigente())  # fin de semana: sigue vigente
+            self.assertIsNotNone(fx.tipo_cambio_vigente())
         cache.clear()
         with patch(DESCARGA, return_value=dato(dias_atras=6)):
             self.assertIsNone(fx.tipo_cambio_vigente())

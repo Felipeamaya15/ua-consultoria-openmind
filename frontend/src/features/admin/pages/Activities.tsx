@@ -131,7 +131,7 @@ export default function Activities() {
     const query = new URLSearchParams({ tipo: kind, pagina: String(page) });
     if (state) query.set('estado', state);
     if (section) query.set('seccion', section);
-    // Las inscripciones siempre se consultan sin archivar.
+
     if (kind === 'consulta') query.set('archivada', String(archived));
 
     fetchActivityRequests(query, controller.signal)
@@ -222,7 +222,7 @@ export default function Activities() {
 
   return (
     <section aria-label="Servicios y talleres" className="space-y-6 w-full">
-      {/* Encabezado principal */}
+
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-3 border-b border-[var(--border)]">
         <div>
           <h2 className="text-xl font-bold tracking-tight text-[var(--foreground)]">Servicios y talleres</h2>
@@ -242,9 +242,10 @@ export default function Activities() {
 
       <PaidActivitySalesQA />
 
-      {/* Selector de tipo principal (Consultas vs Inscripciones) */}
+
       <div className="bg-white rounded-xl border border-[var(--border)] p-2 shadow-xs">
         <Tabs
+          wrap
           label="Solicitudes de actividades"
           tabs={[
             { id: 'consulta', label: 'Solicitudes de información' },
@@ -277,7 +278,7 @@ export default function Activities() {
         </aside>
       )}
 
-      {/* Sub-pestañas para consultas (Vigentes vs Archivadas) */}
+
       {kind === 'consulta' && (
         <div className="flex items-center gap-2">
           <span className="text-xs font-semibold text-[var(--muted-foreground)] uppercase tracking-wider mr-1">
@@ -308,7 +309,7 @@ export default function Activities() {
         </div>
       )}
 
-      {/* Barra de filtros amigable y limpia */}
+
       <div className="bg-white border border-[var(--border)] rounded-xl p-4 shadow-xs space-y-3">
         <div className="flex flex-wrap items-end gap-3 justify-between">
           <div className="w-full sm:w-80">
@@ -353,7 +354,7 @@ export default function Activities() {
           </div>
         </div>
 
-        {/* Banner de filtro activo por actividad específica */}
+
         {section && (
           <div className="flex flex-wrap items-center justify-between gap-3 bg-indigo-50/80 border border-indigo-200 rounded-lg p-3 text-xs text-indigo-900 animate-fadeIn">
             <div className="flex items-center gap-2">
@@ -372,7 +373,7 @@ export default function Activities() {
           </div>
         )}
 
-        {/* Búsqueda por código de actividad */}
+
         {showAdvancedFilter && (
           <div className="pt-2 border-t border-[var(--border)] animate-fadeIn">
             <div className="max-w-md">
@@ -389,7 +390,7 @@ export default function Activities() {
         )}
       </div>
 
-      {/* Banner informativo de privacidad y condiciones */}
+
       <div className="flex items-start gap-3 p-3.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-600">
         <Icon name="shield" className="w-4 h-4 mt-0.5 text-[var(--primary)] shrink-0" />
         <div>
@@ -400,7 +401,7 @@ export default function Activities() {
         </div>
       </div>
 
-      {/* Mensajes de aviso, carga y error */}
+
       {notice && (
         <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl text-sm flex items-center justify-between gap-2 shadow-2xs" role="status">
           <div className="flex items-center gap-2">
@@ -428,7 +429,7 @@ export default function Activities() {
         </ErrorState>
       )}
 
-      {/* Lista de solicitudes / inscripciones */}
+
       {data && !loading && (
         <>
           <div className="flex items-center justify-between text-xs text-[var(--muted-foreground)] px-1">
@@ -477,7 +478,7 @@ export default function Activities() {
                 return (
                   <AdminCard key={record.id} className="relative overflow-hidden transition-all hover:shadow-sm">
                     <article className="space-y-4">
-                      {/* Cabecera de la tarjeta */}
+
                       <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 pb-3 border-b border-[var(--border)]">
                         <div className="space-y-1">
                           <div className="flex flex-wrap items-center gap-2">
@@ -500,13 +501,13 @@ export default function Activities() {
                           </p>
                         </div>
 
-                        {/* Badge de estado de atención */}
+
                         <div className="flex items-center gap-2 shrink-0">
                           {getStatusBadge(record)}
                         </div>
                       </div>
 
-                      {/* Datos del contacto / participante */}
+
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 bg-slate-50/70 rounded-lg text-sm border border-slate-200">
                         <div className="space-y-1">
                           <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
@@ -549,7 +550,7 @@ export default function Activities() {
                         </div>
                       </div>
 
-                      {/* Mensaje de consulta / notas */}
+
                       {record.mensaje && (
                         <div className="activity-message-bubble text-sm space-y-1">
                           <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider block">
@@ -561,9 +562,9 @@ export default function Activities() {
                         </div>
                       )}
 
-                      {/* Barra de Acciones y Gestión de Estado */}
+
                       <div className="pt-2 border-t border-[var(--border)] flex flex-col md:flex-row md:items-center justify-between gap-3">
-                        {/* Botones de acción rápida e intuitivos */}
+
                         <div className="flex flex-wrap items-center gap-2">
                           {record.tipo === 'consulta' ? (
                             <>
@@ -721,7 +722,7 @@ export default function Activities() {
                           </Button>
                         </div>
 
-                        {/* Dropdown de cambio de estado completo */}
+
                         <div className="flex items-center gap-2 text-xs shrink-0 md:ml-auto">
                           {isBusy && <span className="text-[var(--primary)] font-medium animate-pulse">Guardando…</span>}
                           <div className="w-48">
@@ -749,7 +750,7 @@ export default function Activities() {
             </div>
           )}
 
-          {/* Paginación */}
+
           <nav aria-label="Paginación de solicitudes" className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-[var(--border)]">
             <span className="text-xs text-[var(--muted-foreground)]">
               Página <strong className="text-[var(--foreground)] font-semibold">{data.pagina}</strong> de{' '}

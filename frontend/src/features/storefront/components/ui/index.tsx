@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom';
 import { VISUAL_SECTION } from '../../visual/sectionIds';
 import React, { useState, useId, useEffect, ReactNode, ButtonHTMLAttributes, InputHTMLAttributes, SelectHTMLAttributes, TextareaHTMLAttributes } from 'react';
 
-// ── Button ────────────────────────────────────────────────────────────────────
+
 type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger' | 'accent';
 type ButtonSize = 'sm' | 'md' | 'lg';
 
@@ -47,13 +47,13 @@ export function Button({ variant = 'primary', size = 'md', loading, icon, iconRi
   );
 }
 
-// ── Spinner ───────────────────────────────────────────────────────────────────
+
 export function Spinner({ size = 'md', className = '' }: { size?: 'sm' | 'md' | 'lg'; className?: string }) {
   const s = { sm: 'w-3 h-3', md: 'w-5 h-5', lg: 'w-8 h-8' }[size];
   return <div className={`${s} border-2 border-current border-t-transparent rounded-full animate-spin ${className}`} role="status" aria-label="Cargando" />;
 }
 
-// ── Input ─────────────────────────────────────────────────────────────────────
+
 interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   label?: string;
   error?: string;
@@ -117,7 +117,7 @@ export function Input({ label, error, hint, icon, iconRight, className = '', id,
   );
 }
 
-// ── Textarea ──────────────────────────────────────────────────────────────────
+
 interface TextareaProps extends TextareaHTMLAttributes<HTMLTextAreaElement> {
   label?: string;
   error?: string;
@@ -144,7 +144,7 @@ export function Textarea({ label, error, hint, className = '', id, ...props }: T
   );
 }
 
-// ── Select ────────────────────────────────────────────────────────────────────
+
 interface SelectProps extends SelectHTMLAttributes<HTMLSelectElement> {
   label?: string;
   error?: string;
@@ -173,7 +173,7 @@ export function Select({ label, error, hint, options, className = '', id, ...pro
   );
 }
 
-// ── Badge ─────────────────────────────────────────────────────────────────────
+
 type BadgeVariant = 'default' | 'success' | 'warning' | 'error' | 'info' | 'accent';
 const badgeStyles: Record<BadgeVariant, string> = {
   default: 'bg-[var(--muted)] text-[var(--muted-foreground)]',
@@ -188,7 +188,7 @@ export function Badge({ variant = 'default', children, className = '' }: { varia
   return <span className={`inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full ${badgeStyles[variant]} ${className}`}>{children}</span>;
 }
 
-// ── Card ──────────────────────────────────────────────────────────────────────
+
 export function Card({ children, className = '', onClick }: { children: ReactNode; className?: string; onClick?: () => void }) {
   return (
     <div
@@ -209,7 +209,7 @@ export function Card({ children, className = '', onClick }: { children: ReactNod
   );
 }
 
-// ── Modal ─────────────────────────────────────────────────────────────────────
+
 interface ModalProps {
   open: boolean;
   onClose: () => void;
@@ -245,7 +245,7 @@ export function Modal({ open, onClose, title, children, size = 'md' }: ModalProp
   );
 }
 
-// ── Toast ─────────────────────────────────────────────────────────────────────
+
 type ToastVariant = 'success' | 'error' | 'warning' | 'info';
 const toastIcons: Record<ToastVariant, string> = {
   success: '✓', error: '✕', warning: '⚠', info: 'ℹ',
@@ -268,7 +268,7 @@ export function Toast({ variant, message, onClose }: { variant: ToastVariant; me
   );
 }
 
-// ── Tabs ──────────────────────────────────────────────────────────────────────
+
 interface Tab { id: string; label: string; icon?: ReactNode }
 export function Tabs({ tabs, active, onChange }: { tabs: Tab[]; active: string; onChange: (id: string) => void }) {
   return (
@@ -305,7 +305,7 @@ export function Tabs({ tabs, active, onChange }: { tabs: Tab[]; active: string; 
   );
 }
 
-// ── Pagination ────────────────────────────────────────────────────────────────
+
 export function Pagination({ page, total, pageSize = 12, onChange }: { page: number; total: number; pageSize?: number; onChange: (p: number) => void }) {
   const pages = Math.ceil(total / pageSize);
   if (pages <= 1) return null;
@@ -327,7 +327,7 @@ export function Pagination({ page, total, pageSize = 12, onChange }: { page: num
   );
 }
 
-// ── Breadcrumb ────────────────────────────────────────────────────────────────
+
 export function Breadcrumb({ items }: { items: { label: string; href?: string }[] }) {
   return (
     <nav aria-label="Ruta de navegación">
@@ -347,7 +347,7 @@ export function Breadcrumb({ items }: { items: { label: string; href?: string }[
   );
 }
 
-// ── Stepper ───────────────────────────────────────────────────────────────────
+
 interface Step { id: string; label: string }
 export function Stepper({ steps, current }: { steps: Step[]; current: string }) {
   const idx = steps.findIndex(s => s.id === current);
@@ -376,7 +376,7 @@ export function Stepper({ steps, current }: { steps: Step[]; current: string }) 
   );
 }
 
-// ── Alert ─────────────────────────────────────────────────────────────────────
+
 type AlertVariant = 'success' | 'error' | 'warning' | 'info';
 const alertStyles: Record<AlertVariant, string> = {
   success: 'bg-[var(--success-bg)] border-[var(--success)] text-[var(--success)]',
@@ -396,7 +396,7 @@ export function Alert({ variant, title, children }: { variant: AlertVariant; tit
   );
 }
 
-// ── Empty State ───────────────────────────────────────────────────────────────
+
 export function EmptyState({ icon, title, description, action }: { icon?: ReactNode; title: string; description?: string; action?: ReactNode }) {
   return (
     <div className="flex flex-col items-center justify-center py-16 px-4 text-center gap-4">
@@ -410,7 +410,7 @@ export function EmptyState({ icon, title, description, action }: { icon?: ReactN
   );
 }
 
-// ── Toggle ────────────────────────────────────────────────────────────────────
+
 export function Toggle({ checked, onChange, label, id }: { checked: boolean; onChange: (v: boolean) => void; label?: string; id?: string }) {
   const elId = id ?? label?.toLowerCase().replace(/\s+/g, '-');
   return (
@@ -427,7 +427,7 @@ export function Toggle({ checked, onChange, label, id }: { checked: boolean; onC
 
 import { SoftwareVersionModal } from './SoftwareVersionModal';
 
-// ── Institutional Badge ───────────────────────────────────────────────────────
+
 export function InstitutionalBadge({ compact = false, showVersion = false }: { compact?: boolean; showVersion?: boolean }) {
   const [modalOpen, setModalOpen] = useState(false);
 

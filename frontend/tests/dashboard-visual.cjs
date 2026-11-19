@@ -1,4 +1,4 @@
-// Renderiza los componentes reales con fixtures de prueba y el CSS compilado.
+
 const fs = require('node:fs'), path = require('node:path'), vm = require('node:vm'), os = require('node:os');
 const assert = require('node:assert/strict'), ts = require('typescript');
 const React = require('react'), { renderToStaticMarkup } = require('react-dom/server');

@@ -1,5 +1,5 @@
 import { useHeroContent } from '../hooks/useHeroContent';
-import { useEffect, useState } from 'react'; // OPENMIND_EDITORIAL_PROMO_V1
+import { useEffect, useState } from 'react';
 import { HomeSections } from '../../landing/components/HomeSections';
 import { VISUAL_SECTION } from '../visual/sectionIds';
 import { useLandingContent } from '../../landing/hooks/useLandingContent';
@@ -33,7 +33,7 @@ export default function EditorialHome() {
 
   return (
     <div data-landing-page="editorial" className="min-w-0 overflow-x-hidden">
-      {/* Hero - full-width editorial */}
+
       <section
         data-visual-section={VISUAL_SECTION.hero}
         className="relative h-[64vh] sm:h-[72vh] min-h-[400px] sm:min-h-[480px] overflow-hidden"
@@ -49,7 +49,7 @@ export default function EditorialHome() {
         >
           <div data-visual-part="heroContent" className="w-full min-w-0 max-w-xl animate-fade-in">
             <LandingStatus />
-            {/* OPENMIND_EDITORIAL_PROMO_V1: solo etiqueta, no cambia portada ni carrusel. */}
+
             {promoVisible && promoText.trim() && (
               <div data-promotional-badge className="flex" style={{ justifyContent: 'var(--visual-hero-promo-align)' }}>
                 <span className="inline-block max-w-full break-words px-3 py-1 font-semibold leading-snug" style={{
@@ -82,7 +82,7 @@ export default function EditorialHome() {
         </div>
       </section>
 
-      {/* Benefits strip */}
+
       {isSectionVisible('Beneficios') && content.beneficios.length > 0 && (
         <section
           data-visual-section={VISUAL_SECTION.sections}

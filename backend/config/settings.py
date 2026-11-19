@@ -7,10 +7,8 @@ import os
 from pathlib import Path
 from urllib.parse import quote_plus
 
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# Uploaded files never share the backend source directory as their storage root.
 MEDIA_ROOT = BASE_DIR / 'media'
 MEDIA_URL = '/media/'
 COMMERCIAL_CONSENT_FRONTEND_ORIGIN = os.getenv('COMMERCIAL_CONSENT_FRONTEND_ORIGIN', 'http://localhost:5173')
@@ -19,7 +17,6 @@ STORAGES = {
     'staticfiles': {'BACKEND': 'django.contrib.staticfiles.storage.StaticFilesStorage'},
 }
 
-# Quick-start development settings - unsuitable for production
 SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-*sv5zxk$5@w@5=*jf-a46^pk&1$g)lp(9f97&5th^8+1(a(ftf')
 
 DEBUG = os.getenv('DEBUG', '0') == '1'
@@ -33,15 +30,12 @@ if not DEBUG and (
     raise ImproperlyConfigured(
         'Configura SECRET_KEY con un secreto único antes de desplegar.'
     )
-# Hostnames válidos: en producción definir DJANGO_ALLOWED_HOSTS explícitamente.
 _hosts_default = 'localhost,127.0.0.1,backend,testserver' if DEBUG else ''
 ALLOWED_HOSTS = [host.strip() for host in os.getenv('DJANGO_ALLOWED_HOSTS', _hosts_default).split(',') if host.strip()]
 if not DEBUG and (not ALLOWED_HOSTS or '*' in ALLOWED_HOSTS):
     from django.core.exceptions import ImproperlyConfigured
     raise ImproperlyConfigured('Configura DJANGO_ALLOWED_HOSTS sin comodines antes de desplegar.')
 
-
-# Application definition
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -53,7 +47,6 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework.authtoken',
     'corsheaders',
-    # Apps propias del proyecto
     'apps.core',
     'apps.authentication',
     'apps.catalog',
@@ -95,9 +88,6 @@ TEMPLATES = [
 WSGI_APPLICATION = 'config.wsgi.application'
 
 
-# Database
-# https://docs.djangoproject.com/en/5.2/ref/settings/#databases
-
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
@@ -110,8 +100,6 @@ DATABASES = {
 }
 
 
-# RNF-03: preferir Argon2id (con salt aleatorio único por usuario) para contraseñas nuevas
-# y conservar verificación de hashes BCrypt y PBKDF2 históricos.
 PASSWORD_HASHERS = [
     'django.contrib.auth.hashers.Argon2PasswordHasher',
     'django.contrib.auth.hashers.BCryptSHA256PasswordHasher',
@@ -119,8 +107,6 @@ PASSWORD_HASHERS = [
     'django.contrib.auth.hashers.PBKDF2SHA1PasswordHasher',
 ]
 
-# Password validation
-# https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
 
 AUTH_PASSWORD_VALIDATORS = [
     {
@@ -135,9 +121,6 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 
-# Internationalization
-# https://docs.djangoproject.com/en/5.2/topics/i18n/
-
 LANGUAGE_CODE = 'es'
 
 TIME_ZONE = 'UTC'
@@ -146,9 +129,6 @@ USE_I18N = True
 
 USE_TZ = True
 
-
-# Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/5.2/howto/static-files/
 
 STATIC_URL = 'static/'
 
@@ -163,15 +143,12 @@ CORS_ALLOW_HEADERS = list(default_headers) + [
 ]
 CSRF_TRUSTED_ORIGINS = [origin.strip() for origin in os.getenv('DJANGO_CSRF_TRUSTED_ORIGINS', '').split(',') if origin.strip()]
 
-# Configuración obligatoria de cookies seguras y sesión según perfil de usuario:
-# - Cuentas administrativas (is_staff / admin): 30 minutos de inactividad (1800s).
-# - Clientes finales: expiración prolongada (7 a 30 días, default 30 días = 2592000s) sin cierre por inactividad corta.
 SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SECURE = not DEBUG
 SESSION_COOKIE_SAMESITE = os.getenv('DJANGO_SESSION_COOKIE_SAMESITE', 'Lax')
 ADMIN_SESSION_INACTIVITY_TIMEOUT_SECONDS = int(os.getenv('ADMIN_SESSION_INACTIVITY_TIMEOUT_SECONDS', '1800'))
-ADMIN_SESSION_COOKIE_AGE = int(os.getenv('DJANGO_ADMIN_SESSION_COOKIE_AGE', '1800'))  # 30 minutos
-CUSTOMER_SESSION_COOKIE_AGE = int(os.getenv('DJANGO_CUSTOMER_SESSION_COOKIE_AGE', str(30 * 86400)))  # 30 días
+ADMIN_SESSION_COOKIE_AGE = int(os.getenv('DJANGO_ADMIN_SESSION_COOKIE_AGE', '1800'))
+CUSTOMER_SESSION_COOKIE_AGE = int(os.getenv('DJANGO_CUSTOMER_SESSION_COOKIE_AGE', str(30 * 86400)))
 SESSION_COOKIE_AGE = ADMIN_SESSION_COOKIE_AGE
 SESSION_SAVE_EVERY_REQUEST = True
 SESSION_EXPIRE_AT_BROWSER_CLOSE = True
@@ -183,7 +160,6 @@ CSRF_COOKIE_SAMESITE = os.getenv('DJANGO_CSRF_COOKIE_SAMESITE', 'Lax')
 SECURE_SSL_REDIRECT = os.getenv('DJANGO_SECURE_SSL_REDIRECT', '0') == '1'
 SECURE_HSTS_SECONDS = int(os.getenv('DJANGO_SECURE_HSTS_SECONDS', '0'))
 
-# Django REST Framework
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'apps.authentication.infrastructure.cookie_auth.ActiveSessionTokenAuthentication',
@@ -192,7 +168,6 @@ REST_FRAMEWORK = {
     ],
 }
 
-# Configuración NoSQL (MongoDB)
 MONGO_HOST = os.getenv('MONGO_HOST', 'mongodb')
 MONGO_PORT = int(os.getenv('MONGO_PORT', 27017))
 MONGO_USER = os.getenv('MONGO_USER', 'mongoadmin')
@@ -202,14 +177,8 @@ MONGO_DB_NAME = os.getenv('MONGO_DB_NAME', 'logs_db')
 MONGO_URI = f"mongodb://{quote_plus(MONGO_USER)}:{quote_plus(MONGO_PASSWORD)}@{MONGO_HOST}:{MONGO_PORT}/?authSource=admin"
 
 PAYMENT_CREDENTIALS_KEY = os.getenv('PAYMENT_CREDENTIALS_KEY', '')
-# Content blocks accept bounded inline uploads (2 MB each, 10 MB per save).
-# File content is converted to managed media before JSON persistence.
 DATA_UPLOAD_MAX_MEMORY_SIZE = 16 * 1024 * 1024
 
-# Correo transaccional (SCRUM-423). Sin configurar, los correos se imprimen en el log del backend
-# (docker compose logs backend). Para enviarlos de verdad: EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend
-# y los datos del servidor SMTP en las variables EMAIL_*. Ver docs/correo-despacho.md.
-# Configuración de Correo Transaccional
 
 EMAIL_BACKEND = os.getenv('EMAIL_BACKEND', '').strip() or 'django.core.mail.backends.smtp.EmailBackend'
 
@@ -221,40 +190,19 @@ EMAIL_PORT = int(_email_port) if _email_port.isdigit() else 587
 EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', '')
 EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', '')
 
-# Conversión estricta a booleano
 EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS', '1') in ('1', 'True', 'true', True)
 EMAIL_USE_SSL = os.getenv('EMAIL_USE_SSL', '0') in ('1', 'True', 'true', True)
 
 DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', EMAIL_HOST_USER)
-EMAIL_TIMEOUT = 10  # Timeout en segundos para no colgar el worker si hay microcortes
+EMAIL_TIMEOUT = 10
 
 
-
-
-# ==============================================================================
-# NOTA PARA EQUIPO DE DESPLIEGUE / DEVOPS: CONFIGURACIÓN HTTPS & TLS 1.2+
-# ==============================================================================
-# Este backend está preparado para operar detrás de un proxy inverso o balanceador
-# con terminación SSL/TLS (Nginx, Traefik, AWS ALB, Cloudflare, etc.).
-#
-# REQUERIMIENTOS DE INFRASTRUCTURE AL DESPLEGAR EN PRODUCCIÓN:
-# 1. Configurar la terminación HTTPS en el servidor/proxy con TLS 1.2 o superior.
-# 2. Asegurarse de que el proxy envíe la cabecera: X-Forwarded-Proto: https
-# 3. Establecer la variable de entorno DEBUG=False en el contenedor backend.
-# ==============================================================================
-
-
-
-# Le indica a Django que si el proxy web envía este header, la conexión original fue HTTPS
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
-# Obliga a redirigir tráfico no seguro a HTTPS (solo en producción)
 SECURE_SSL_REDIRECT = not DEBUG
-# Solo viajarán si la conexión es HTTPS (se puede condicionar con una variable DEBUG=False)
 SESSION_COOKIE_SECURE = not DEBUG
 CSRF_COOKIE_SECURE = not DEBUG
 
 
-# Dirección pública de la tienda, base de los enlaces de los correos (SCRUM-434).
 PAYPAL_FX_MARGEN_PCT = os.getenv('PAYPAL_FX_MARGEN_PCT', '2').strip() or '2'
 PAYPAL_FX_MAX_EDAD_HORAS = float(os.getenv('PAYPAL_FX_MAX_EDAD_HORAS') or 96)
 PAYPAL_FX_REFRESCO_HORAS = float(os.getenv('PAYPAL_FX_REFRESCO_HORAS') or 6)
@@ -266,13 +214,11 @@ if not os.getenv('COMMERCIAL_CONSENT_FRONTEND_ORIGIN'):
     COMMERCIAL_CONSENT_FRONTEND_ORIGIN = f'{_consent_origin.scheme}://{_consent_origin.netloc}'
 TUU_CALLBACK_BASE_URL = (os.getenv('TUU_CALLBACK_BASE_URL') or '').rstrip('/')
 
-# Solo habilita respuestas capturadas por Mailpit; no autoriza SMTP real.
 ACTIVITY_REPLIES_MAILPIT_ENABLED = os.getenv("ACTIVITY_REPLIES_MAILPIT_ENABLED", "0") == "1"
 GOOGLE_OAUTH_CLIENT_ID = os.getenv('GOOGLE_OAUTH_CLIENT_ID', '').strip()
 GOOGLE_OAUTH_CLIENT_SECRET = os.getenv('GOOGLE_OAUTH_CLIENT_SECRET', '').strip()
 GOOGLE_OAUTH_REDIRECT_URI = os.getenv('GOOGLE_OAUTH_REDIRECT_URI', '').strip()
 
-# SCRUM-522: Mailpit está permitido; Gmail real requiere habilitación expresa.
 STORE_MAIL_EXTERNAL_ENABLED = os.getenv('STORE_MAIL_EXTERNAL_ENABLED', '0') == '1'
 STORE_MAIL_TRANSPORT = os.getenv('STORE_MAIL_TRANSPORT', 'auto').strip().lower()
 STORE_MAIL_HOURLY_LIMIT = max(1, int(os.getenv('STORE_MAIL_HOURLY_LIMIT', '100')))
@@ -280,7 +226,6 @@ STORE_MAIL_DAILY_LIMIT = max(1, int(os.getenv('STORE_MAIL_DAILY_LIMIT', '500')))
 STORE_MAIL_PROVIDER_DAILY_LIMIT = max(1, int(os.getenv('STORE_MAIL_PROVIDER_DAILY_LIMIT', '500')))
 STORE_MAIL_PUBLIC_API_URL = os.getenv('STORE_MAIL_PUBLIC_API_URL', 'http://localhost:8000').rstrip('/')
 
-# Instagram Unified Login: independiente de Gmail. Publicar requiere autorización operativa expresa.
 INSTAGRAM_APP_ID = os.getenv('META_APP_ID', '').strip()
 INSTAGRAM_APP_SECRET = os.getenv('META_APP_SECRET', '').strip()
 INSTAGRAM_CONFIG_ID = os.getenv('META_CONFIG_ID', '').strip()

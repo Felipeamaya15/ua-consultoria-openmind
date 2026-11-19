@@ -11,12 +11,11 @@ INSTAGRAM_CONFIG_ID = '100000000000002'
 INSTAGRAM_REDIRECT_URI = 'https://localhost:8444/api/instagram/oauth/callback/'
 INSTAGRAM_FRONTEND_ORIGIN = 'https://localhost:8444'
 INSTAGRAM_MEDIA_PUBLIC_ORIGIN = 'https://instagram-qa.example.test'
-# A runtime file supplies the ephemeral tunnel address without editing this checkout.
 _public = Path(os.environ['INSTAGRAM_QA_OUTPUT']) / 'public-origin.txt'
 if _public.exists():
     INSTAGRAM_REDIRECT_URI = _public.read_text().strip() + '/api/instagram/oauth/callback/'
     INSTAGRAM_MEDIA_PUBLIC_ORIGIN = _public.read_text().strip()
-INSTAGRAM_PUBLISHING_ENABLED = True  # Only the HTTP stand-in above can receive writes.
+INSTAGRAM_PUBLISHING_ENABLED = True
 _key = Path(os.environ['INSTAGRAM_QA_OUTPUT']) / 'instagram-qa.key'
 _key.parent.mkdir(parents=True, exist_ok=True)
 if not _key.exists():

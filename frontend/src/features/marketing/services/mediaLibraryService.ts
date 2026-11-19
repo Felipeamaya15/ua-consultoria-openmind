@@ -53,7 +53,6 @@ export async function fetchMediaImage(id: string, signal: AbortSignal): Promise<
 }
 
 
-/** Subida de producto: usa el perfil de 10 s / 3 MB del servidor. */
 export function saveProductVideoResource(
   id: string | null,
   draft: MediaDraft,

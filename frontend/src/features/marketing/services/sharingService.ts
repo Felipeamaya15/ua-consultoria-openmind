@@ -16,7 +16,7 @@ import { sharingKey, type SharingItem, type SharingReference } from '../domain/s
 export interface SharingSources {items:SharingItem[];products?:MarketingProduct[];profiles:SocialProfiles|null;errors:string[]}
 interface Input {products:MarketingProduct[];publicProducts:Product[];landing:LandingConfig|null;promotions:Promotion[];resources:Record<string,SectionResource>;home:string;now?:number}
 const text=(value:string,max=2000)=>value.trim().slice(0,max);
-/** Only adapts authorized public content to the existing renderer; never creates products. */
+
 function editorial(id:string,title:string,description:string,image:string|null,category:string,price?:number):PublicationContent {
   return {productId:id,productName:title,description:description.slice(0,280),category,image,price:price??0,hidePrice:price===undefined,originalPrice:null,discountLabel:null,fromPrice:false,variantLabel:'Contenido de la tienda',hasMultipleVariants:false,source:'product'};
 }
@@ -131,7 +131,7 @@ export async function fetchSharingSources(home:string,signal:AbortSignal):Promis
   signal.throwIfAborted();
   const [products,published,landing,promotions,media,profiles]=results;
   const errors=results.flatMap((result,index)=>result.status==='rejected'?[`No pudimos actualizar ${['los productos','el catálogo público','las secciones publicadas','las promociones','los recursos publicados','los perfiles sociales'][index]}. Reintenta antes de difundir ese contenido.`]:[]);
-  // Product links require BOTH an active administrative item and a public catalog row.
+
   const items=buildSharingItems({home,products:products.status==='fulfilled'?products.value:[],publicProducts:published.status==='fulfilled'?published.value:[],landing:landing.status==='fulfilled'?landing.value:null,promotions:promotions.status==='fulfilled'?promotions.value:[],resources:media.status==='fulfilled'?media.value:{}});
   return {items,errors,products:products.status==='fulfilled'?products.value:[],profiles:profiles.status==='fulfilled'?profiles.value:null};
 }

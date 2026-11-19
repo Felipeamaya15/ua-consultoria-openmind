@@ -14,7 +14,7 @@ const out = path.resolve(__dirname, '../../docs/identidad-visual-plantillas');
     const business = await read('/api/tienda/configuracion/'), landing = await read('/api/landing/configuracion/'), products = await read('/api/catalog/productos/');
     for (const width of [375, 768, 1440]) {
       const context = await browser.newContext({ viewport: { width, height: 950 } });
-      // This read-only real-data audit cannot write business data, even accidentally.
+
       await context.route('**/api/**', route => ['GET', 'HEAD', 'OPTIONS'].includes(route.request().method()) ? route.continue() : route.abort());
       const page = await context.newPage(); const errors = [];
       page.on('pageerror', e => errors.push(e.message));

@@ -16,7 +16,6 @@ GRIS = colors.HexColor('#edf2f7')
 
 
 def clp(value):
-    # Mantener centavos si existen en el modelo, sin pérdida de precisión.
     number = Decimal(value)
     text = f'{number:,.2f}' if number % 1 else f'{number:,.0f}'
     return '$ ' + text.replace(',', '_').replace('.', ',').replace('_', '.') + ' CLP'

@@ -45,11 +45,9 @@ def main():
     if not (root / 'index.html').is_file():
         parser.error('Falta el build del frontend en --root.')
     class Handler(SimpleHTTPRequestHandler):
-        # Windows MIME registry may classify .js as text/plain; modules require JS MIME.
         extensions_map = {**SimpleHTTPRequestHandler.extensions_map, '.js': 'application/javascript', '.css': 'text/css', '.svg': 'image/svg+xml'}
         def __init__(self, *values, **kwargs): super().__init__(*values, directory=str(root), **kwargs)
         def log_message(self, fmt, *values):
-            # OAuth query strings and signed image URLs must not enter local access logs.
             print(self.command, urlsplit(self.path).path, flush=True)
         def proxy(self):
             size = int(self.headers.get('Content-Length', '0'))
@@ -83,7 +81,7 @@ def main():
             self.proxy()
         do_PUT = do_PATCH = do_DELETE = do_POST
     class LocalServer(ThreadingHTTPServer):
-        request_queue_size = 128  # Chromium preloads many modules and styles concurrently.
+        request_queue_size = 128
     server = LocalServer(('127.0.0.1', args.port), Handler)
     tls = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER); tls.load_cert_chain(str(cert), str(key))
     server.socket = tls.wrap_socket(server.socket, server_side=True)

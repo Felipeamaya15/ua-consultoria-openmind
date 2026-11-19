@@ -57,8 +57,6 @@ class CompatibleImageStorage(FileSystemStorage):
 
 
 def serve_image(request, tree, name, legacy_first=False):
-    # Check before normalization: neither separators nor dot segments may escape
-    # the selected image tree. Resolve links as well as lexical traversal.
     parts = PurePosixPath(name).parts
     if (tree not in IMAGE_TREES or not parts or '\\' in name
             or name.startswith('/') or any(p in ('.', '..') or ':' in p for p in name.split('/'))
@@ -69,7 +67,6 @@ def serve_image(request, tree, name, legacy_first=False):
     roots = []
     if settings.MEDIA_ROOT:
         media = Path(settings.MEDIA_ROOT).resolve()
-        # Fail closed even if a caller overrides MEDIA_ROOT with the old value.
         if media != base and not base.is_relative_to(media):
             roots.append((media / 'landing' / tree, media))
     legacy = base / 'landing' / tree
@@ -89,9 +86,6 @@ def serve_image(request, tree, name, legacy_first=False):
 
 
 def media_urlpatterns():
-    # Explicit prefixes, independent of an accidentally broad MEDIA_URL setting.
-    # Cached /landing/... URLs and old block URLs remain readable; new uploads
-    # always use MEDIA_ROOT. Nothing publishes BASE_DIR or a directory index.
     patterns = []
     for tree in IMAGE_TREES:
         for prefix in ('media/landing/', 'landing/'):

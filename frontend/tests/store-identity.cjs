@@ -1,4 +1,4 @@
-// Run: node tests/store-identity.cjs. No network or business writes.
+
 const fs = require('node:fs'), path = require('node:path'), vm = require('node:vm'), ts = require('typescript');
 const assert = require('node:assert/strict');
 const root = path.resolve(__dirname, '..');
@@ -58,7 +58,7 @@ const landing=(tienda,extra={})=>({id:1,tienda,titulo:'Título editorial distint
   await tick();value=h.render();h.commit();
   assert.equal(value.config.name,'Comercial A');assert.equal(value.config.description,'Negocio A');assert.equal(value.landing.descripcion,'Portada distinta');assert.equal(value.config.logo,'/logo-a.png');assert.equal(value.config.primaryColor,'#123456');
   assert.equal(value.legalVerified,true);assert.equal(value.legalPages.terms.published,'Legal A');
-  // A request already in flight must not overwrite a later store or a later refresh.
+
   h.window.dispatchEvent(new Event('focus'));const late=h.requests.slice(first.length);
   h.seed({name:'Otro nombre antiguo',logo:'/local-b.png',primaryColor:'#654321'},'2');
   h.switchStore({apiBaseUrl:'https://installation.test',storeId:'2'});value=h.render();
@@ -70,12 +70,12 @@ const landing=(tienda,extra={})=>({id:1,tienda,titulo:'Título editorial distint
   value=h.render();h.commit();assert.equal(value.config.name,'Comercial B');assert.equal(value.config.logo,'');assert.equal(value.config.description,'');assert.equal(value.landing.tienda,2);
   h.window.dispatchEvent(new Event('landing-saved'));const saved=h.requests.at(-1);saved.resolve(null);await tick();value=h.render();h.commit();assert.equal(value.landing,null);assert.equal(value.config.logo,'');
   h.window.dispatchEvent(new Event('landing-saved'));h.requests.at(-1).resolve(landing(1,{logo:'/wrong-store.png'}));await tick();value=h.render();h.commit();assert.equal(value.landing,null);assert(value.landingError.includes('no corresponde'));assert.equal(value.config.logo,'');
-  // Two saves arriving out of order: only the last request is eligible to publish.
+
   h.window.dispatchEvent(new Event('business-saved'));const slow=h.requests.at(-1);h.window.dispatchEvent(new Event('business-saved'));const fast=h.requests.at(-1);
   fast.resolve({nombre:'B actualizado',descripcion:'Actual'});slow.resolve({nombre:'B obsoleto',descripcion:''});await tick();assert.equal(h.render().config.name,'B actualizado');h.commit();h.cleanup();
   const failed=harness();failed.seed({name:'Nunca publicar',logo:'/local.png'});failed.render();failed.commit();failed.requests.forEach(r=>r.reject(Error('Sin conexión')));await tick();value=failed.render();assert.equal(value.config.name,'');assert.equal(value.config.logo,'');assert(value.landingError);failed.cleanup();
   const unknown=harness();unknown.switchStore(null);value=unknown.render();unknown.commit();assert.equal(unknown.requests.length,0);assert.equal(value.config.name,'');unknown.cleanup();
-  // The existing save contract stays multipart; only successful saves notify mounted views.
+
   const target=new EventTarget();let notifications=0, success=true;
   target.addEventListener('openmind:landing-config-changed',()=>notifications++);
   const serviceModule={exports:require('./source-loader.cjs').load('src/features/landing/services/landingService.ts', {'../../../api':{API_BASE_URL:'https://installation.test'}}, {FormData,Event,window:target,localStorage:{getItem:()=> 'test-token'},sessionStorage:{getItem:()=>null},fetch:async()=>({ok:success,json:async()=>({exito:success,data:landing(1),mensaje:'Error simulado'})})})};

@@ -1,4 +1,4 @@
-// SCRUM-452: estados de error compartidos. Prueba el componente real, el reintento de una pantalla y vigila la consistencia.
+
 const fs = require('node:fs'), path = require('node:path');
 const assert = require('node:assert/strict');
 const React = require('react'), { renderToStaticMarkup } = require('react-dom/server');
@@ -75,7 +75,7 @@ test('la clase del contenedor se agrega y no quedan rastros de valores vacíos',
   assert.ok(!/class="[^"]*  [^"]*"/.test(marcado));
 });
 
-// ---- el reintento de una pantalla real: pedidos del comprador ----
+
 function montarPedidosDelComprador(pedir) {
   const slots = [], efectos = []; let indice = 0, numero = 0;
   const falsoReact = {
@@ -129,7 +129,7 @@ test('una carga exitosa no muestra errores ni botón de reintento', async () => 
   assert.ok(!pagina.nodos(pagina.dibujar()).some(n => n.type === 'ErrorState'));
 });
 
-// ---- guardias ----
+
 test('ninguna pantalla vuelve a armar a mano un error con botón de reintento', () => {
   const sueltos = [];
   for (const { ruta, texto } of pantallas) {
@@ -147,7 +147,7 @@ test('quien usa <ErrorState> lo importa del módulo compartido', () => {
   assert.deepEqual(sin, []);
 });
 
-// Lee cada <ErrorState ...>hijo</ErrorState>, respetando las llaves de las propiedades (por ejemplo las funciones con flecha).
+
 function usosDeErrorState(texto) {
   const usos = [];
   let desde = 0;

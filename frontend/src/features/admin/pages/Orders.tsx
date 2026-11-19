@@ -43,7 +43,7 @@ export default function Orders() {
   const [error, setError] = useState('')
   const [refreshKey, setRefreshKey] = useState(0)
 
-  // Estados para la validación activa de Linkify y cambios de estado
+
   const [verifying, setVerifying] = useState(false)
   const [updatingStatus, setUpdatingStatus] = useState(false)
   const operationPending = useRef(false)
@@ -77,7 +77,7 @@ export default function Orders() {
     return () => controller.abort()
   }, [selectedId, refreshKey])
 
-  // Manejador del botón verificar pagos
+
   const handlePaymentConfirmation = async (order: StoreOrder) => {
     if (operationPending.current) return;
     const isManualTransfer = order.metodo_pago.trim().toLowerCase() === 'transferencia';
@@ -99,7 +99,7 @@ export default function Orders() {
     }
   };
 
-  // El backend valida la actualización; la tabla usa siempre su estado confirmado.
+
   const handleStatusChange = async (pedidoId: number, nuevoEstado: string) => {
     if (operationPending.current) return;
     operationPending.current = true;
@@ -174,7 +174,7 @@ export default function Orders() {
     ? (detail?.id_pedido === selectedId ? detail : pedidos.find((p) => p.id_pedido === selectedId))
     : null
 
-  // Limpiamos el mensaje de alerta si se cambia de pedido
+
   useEffect(() => {
     setVerifyMessage(null);
   }, [selectedId]);
@@ -271,7 +271,7 @@ export default function Orders() {
         <HistoryPagination page={pagination} disabled={cargando || !!error || !!filters.error} onPage={n => updateParams({ pagina: String(n) })} />
       </div>
 
-      {/* Order detail panel */}
+
       {selectedId && <div className="min-w-0 xl:col-span-2">
         {selectedOrder ? (
           <div ref={detailRef} tabIndex={-1} role="region" aria-label={`Detalle del pedido ${selectedOrder.identificador || `#${selectedOrder.id_pedido}`}`} className="bg-white border border-[var(--border)] rounded-xl p-5 sticky top-20 flex flex-col gap-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--primary)]">
@@ -301,7 +301,7 @@ export default function Orders() {
               <div className="bg-[var(--muted)] rounded-lg p-3">
                 <p className="text-[var(--muted-foreground)] mb-1">Estado</p>
 
-                {/* SCRUM-379: Selector de actualización de Estados */}
+
                 <select
                   value={selectedOrder.estado?.toLowerCase() || "pendiente"}
                   aria-label="Estado del pedido"
@@ -376,7 +376,7 @@ export default function Orders() {
               </div>
             </div>
 
-            {/* Avisos por correo al cliente */}
+
             <div className="border-t border-[var(--border)] pt-3">
               <div className="flex items-center justify-between mb-2">
                 <p className="text-xs font-semibold text-[var(--muted-foreground)] uppercase tracking-wider">

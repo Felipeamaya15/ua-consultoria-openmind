@@ -123,7 +123,7 @@ export async function fetchActivityRequests(
   params: URLSearchParams,
   signal?: AbortSignal
 ): Promise<ActivityRequestPage> {
-  // La API usa archivada=false por defecto; para historial enviar archivada=true.
+
   const result = await requestJson(
     `${base}solicitudes-actividades/?${params.toString()}`,
     { headers: headers(true), cache: 'no-store', signal }
@@ -161,7 +161,7 @@ export async function updateActivityState(
   return result;
 }
 
-/** Solo las consultas se pueden archivar: el backend también verifica esta regla. */
+
 export async function updateActivityArchive(
   id: string,
   archivada: boolean

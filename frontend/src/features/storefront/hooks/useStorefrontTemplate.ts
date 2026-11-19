@@ -40,18 +40,7 @@ export function useStorefrontTemplate() {
 
   const config = TEMPLATE_CONFIG[templateNumber];
 
-  /**
-   * Genera una ruta que permanece dentro de la plantilla actual.
-   *
-   * Ejemplo:
-   * route('producto/1')
-   *
-   * En plantilla 1:
-   * /plantilla/1/producto/1
-   *
-   * En plantilla 2:
-   * /plantilla/2/producto/1
-   */
+
   const route = (path = '') => {
     const cleanPath = path.replace(/^\/+/, '');
 

@@ -24,7 +24,7 @@ function harness(template) {
   let states, cursor, refs, refCursor, effects, effectCursor, pending, config, failConfig;
   let quoteCalls, created, request, timerId, timers, now, networkReply, createError;
   class Clock extends Date {static now() {return now;}}
-  const cart = {items: [{productId: 'real-product', variantId: 'SKU', sku: 'SKU', name: 'Real', attributes: {}, price: 60000, quantity: 1, image: ''}],
+  const cart = {activities: [], items: [{productId: 'real-product', variantId: 'SKU', sku: 'SKU', name: 'Real', attributes: {}, price: 60000, quantity: 1, image: ''}],
     subtotal: 60000, discount: 12000, shipping: 3490, total: 51490, promoCode: '', shippingMethod: 'Retiro',
     clearCart: async () => {}, setShippingMethod: value => {cart.shippingMethod = value;}};
   const realShipping = load('src/features/storefront/services/shippingService.ts', {
@@ -50,6 +50,10 @@ function harness(template) {
     localStorage: {getItem: () => '{invalid'}, window: {scrollTo() {}, location: {origin: 'http://localhost'}},
     fetch: async () => networkReply,
     require: name => {
+      if (name.endsWith('.css')) return {};
+      if (name.includes('paidActivityService')) return {formatActivityDate:()=>''};
+      if (name.includes('activityPurchaseMode')) return {useActivityCheckoutOptions:()=>({mode:'disabled',methods:[]})};
+      if (name.includes('useOptionalGoogleLogin')) return {GOOGLE_LOGIN_CONFIGURED:false,useOptionalGoogleLogin:()=>()=>{}};
       if (name.includes('CommercialOptIn')) return {CommercialOptIn: 'CommercialOptIn'};
       if (name.includes('commercialConsent')) return {requestConsent: async () => ({exito: true, mensaje: 'Pendiente de confirmar'})};
       if (name === 'react/jsx-runtime') return {jsx, jsxs: jsx};
@@ -261,7 +265,6 @@ for (const template of [1,2,3,4]) test(`Plantilla ${template}: checkout y despac
 });
 
 
-// ── SCRUM-341 y SCRUM-349: mensajes y manejo de errores de cotización ─────────────────────────────
 const textOf = node => nodes(node).filter(value => typeof value === 'string').join('');
 const buttonWith = (tree, text) => tree.find(node => node.props?.onClick && textOf(node).includes(text));
 const quoteFailure = (codigo, mensaje) => async () => ({ok: false, status: 400, json: async () => ({exito: false,
@@ -276,7 +279,7 @@ test('Servicio: los errores de cotización se clasifican por código y no filtra
     h.request = quoteFailure(code, `Mensaje ${code}`);
     await assert.rejects(quote(), error => error.kind === kind && error.code === code && error.message === `Mensaje ${code}`, code);
   }
-  h.request = async () => ({ok: false, json: async () => ({mensaje: 'Cotización no disponible'})});   // servidor sin códigos
+  h.request = async () => ({ok: false, json: async () => ({mensaje: 'Cotización no disponible'})});
   await assert.rejects(quote(), error => error.kind === 'temporal' && error.message === 'Cotización no disponible');
   h.request = async () => {throw new TypeError('Failed to fetch');};
   await assert.rejects(quote(), error => error.kind === 'temporal' && /No pudimos conectar/.test(error.message) && !/Failed/.test(error.message));
@@ -284,7 +287,7 @@ test('Servicio: los errores de cotización se clasifican por código y no filtra
   await assert.rejects(quote(), error => error.kind === 'temporal' && /No pudimos obtener la tarifa/.test(error.message) && !/Unexpected token/.test(error.message));
   const abort = Object.assign(new Error('cancelado'), {name: 'AbortError'});
   h.request = async () => {throw abort;};
-  await assert.rejects(quote(), error => error === abort);   // la cancelación se propaga para que la pantalla la ignore
+  await assert.rejects(quote(), error => error === abort);
 });
 
 test('Entrega: sin tarifa para el destino ofrece otras alternativas en vez de reintentar', async () => {

@@ -1,4 +1,4 @@
-// SCRUM-401: estructura canónica de páginas legales.
+
 const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');

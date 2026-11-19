@@ -11,7 +11,7 @@ import * as Controls from './controls';
 import { PALETTE_PATHS } from './palettes';
 import type { StorePageId } from '../../storefront/visual/pages';
 import { BannerSizeControl } from './banner';
-import { HeroSpacingControl } from './HeroCarouselInspector'; // OPENMIND_PORTADA_UI_UNIFICADA_V1
+import { HeroSpacingControl } from './HeroCarouselInspector';
 import { InstitutionalNotice } from './help';
 
 type LeafPath<T> = { [K in keyof T & string]: T[K] extends object ? `${K}.${LeafPath<T[K]>}` : K }[keyof T & string];
@@ -20,7 +20,7 @@ type Kind = 'text' | 'color' | 'select' | 'slider' | 'number' | 'toggle' | 'alig
 export interface InspectorField { path: VisualPropertyPath; label: string; kind: Kind; options?: readonly string[]; min?: number; max?: number; step?: number }
 interface Group { label: string; fields: InspectorField[] }
 const n = (path: VisualPropertyPath, label: string, kind: Kind = 'number', max = 2000, min = 0, step = 1): InspectorField => ({ path, label, kind, max, min, step });
-const txt = (path: VisualPropertyPath, label: string): InspectorField => ({ path, label, kind: 'text' }); // OPENMIND_EDITORIAL_PROMO_V1
+const txt = (path: VisualPropertyPath, label: string): InspectorField => ({ path, label, kind: 'text' });
 const c = (path: VisualPropertyPath, label: string): InspectorField => ({ path, label, kind: 'color' });
 const t = (path: VisualPropertyPath, label: string): InspectorField => ({ path, label, kind: 'toggle' });
 const s = (path: VisualPropertyPath, label: string, options: readonly string[], kind: Kind = 'select'): InspectorField => ({ path, label, kind, options });
@@ -82,13 +82,12 @@ g('Precio', [n('pages.login.content.priceSize', 'Tamaño del precio', 'size', 80
     return groups.map(group => ({...group,fields:group.fields.map(field => ({...field,path:field.path.replace('pages.login.', 'pages.'+page+'.') as VisualPropertyPath}))}));
   }
   if (section.startsWith('page')) return INSPECTOR_GROUPS[section].map(group => ({ ...group, fields: group.fields.map(field => ({ ...field, path: field.path.replace('pages.login.', `pages.${page}.`) as VisualPropertyPath })) }));
-  // OPENMIND_PORTADA_UI_UNIFICADA_V1: incluir todos los ajustes del boton dentro de Portada.
-  if (section === 'hero') return INSPECTOR_GROUPS.hero; // OPENMIND_PORTADA_PULIDO_V2: un solo apartado del botón.
+
+  if (section === 'hero') return INSPECTOR_GROUPS.hero;
   return catalogPage && section === 'productCard' ? card('catalog.card') : catalogPage && section === 'productGrid' ? [g('Distribución del catálogo', grid('catalog.grid'))] : INSPECTOR_GROUPS[section];
 }
-// OPENMIND_PORTADA_AJUSTES_V4: edición cómoda del ancho de la zona de contenido.
-// OPENMIND_PROMO_TEXTSIZE_INPUT_V1
-// Permite escribir el tamaño completo antes de validar el rango (8..40 px).
+
+
 function PromotionalTextSizeControl({ value, overridden, disabled, onChange, onReset }: {
   value: number;
   overridden: boolean;
@@ -184,7 +183,7 @@ function PortadaWidthControl({ value, disabled, overridden, onChange, onReset }:
   </div>;
 }
 
-// OPENMIND_PORTADA_PULIDO_V2: todos los ajustes del CTA viven dentro de Botón principal.
+
 const HERO_BUTTON_SUBGROUPS: Group[] = [
   g('Distribución', [
     ...INSPECTOR_GROUPS.hero.find(group => group.label === 'Botón principal')!.fields,
@@ -239,7 +238,7 @@ export function VisualInspector({ section, effective, document, viewport = 'desk
         overridden={readPath(document.overrides, path) !== undefined || readPath(document.storeOverrides, path) !== undefined}
         onChange={next => onEdit(path, next)} onReset={() => onReset(path)} />;
     }
-    // Ancho del botón ajustable visualmente, sin duplicar padding horizontal.
+
     if (field.path === 'heroCta.customWidth') {
       const maxWidth = Math.max(240, Math.min(2000, Math.round(viewportConfig.hero.textMaxWidth)));
       const width = Math.min(maxWidth, Math.max(80, Number(value)));
@@ -257,7 +256,7 @@ export function VisualInspector({ section, effective, document, viewport = 'desk
         <button type="button" onClick={() => onReset(path)} aria-label="Restablecer ancho personalizado">Restablecer ancho ↺</button>
       </div>;
     }
-    if (field.kind === 'text') return <label key={field.path} className="ve-field" style={{display:'flex', flexDirection:'column', gap:6}}><span>{field.label}</span><input type="text" maxLength={100} value={String(value)} onChange={event => onEdit(path, event.target.value)} aria-label={field.label} style={{width:'100%', minHeight:38, padding:'7px 10px', border:'1px solid #cbd5e1', borderRadius:8}}/><small>{String(value).length}/100 caracteres</small></label>; // OPENMIND_EDITORIAL_PROMO_V1
+    if (field.kind === 'text') return <label key={field.path} className="ve-field" style={{display:'flex', flexDirection:'column', gap:6}}><span>{field.label}</span><input type="text" maxLength={100} value={String(value)} onChange={event => onEdit(path, event.target.value)} aria-label={field.label} style={{width:'100%', minHeight:38, padding:'7px 10px', border:'1px solid #cbd5e1', borderRadius:8}}/><small>{String(value).length}/100 caracteres</small></label>;
     return <Control key={field.path} {...field} label={explicitColumns ? 'Productos por fila' : field.label} disabled={disabled || (!filterLayoutAvailable && section === 'catalog' && (field.path === 'catalog.filtersPosition' || field.path.startsWith('categories.')))} value={value} overridden={readPath(document.overrides, path) !== undefined || readPath(document.storeOverrides, path) !== undefined} onChange={next => onEdit(path, next)} onReset={() => onReset(path)} />;
   });
   return <div className="ve-inspector">{warnings.length > 0 && <p className="ve-contrast-warning" role="status">Contraste bajo para texto pequeño: {warnings.map(([label]) => label).join(', ')}. Revisa los colores antes de publicar.</p>}{section === 'hero' && <BannerSizeControl config={effective} viewport={editViewport} editScope={editScope} onEditMany={onEditMany} onEdit={onEdit} onReset={onReset} />}{(section === 'footer' || section === 'topBar') && <InstitutionalNotice />}{['header','footer'].includes(section) && <p className="ve-hint">Encabezado y pie comparten el Color estructural de Estilo general. Desvincula solo si necesitas fondos independientes.</p>}{section === 'global' && <p className="ve-hint">Fondo general: páginas. Alternativo: destacados, contacto y ubicación. Tarjetas: productos y paneles. Bordes generales: botones y cajas de página; cada tarjeta, imagen y sección conserva su control específico.</p>}<p className="ve-hint">{editScope === 'all' ? 'Apariencia general' : `Solo ${Controls.optionLabel(viewport).toLowerCase()}`}{catalogPage ? ' · Catálogo' : ''}.</p>{section === 'catalog' && !filterLayoutAvailable && <p className="ve-hint">Esta plantilla conserva su panel desplegable de filtros. Su posición y las categorías quedan pendientes de integración.</p>}{getInspectorGroups(section, catalogPage, page).filter(group => !groupLabel || group.label === groupLabel).map((group, index) => <details key={`${section}:${page}:${group.label}`} open={opened[section + ':' + page + ':' + group.label] ?? (section === 'global' || index === 0 || false)} onToggle={event => { const open = event.currentTarget.open; const key = section + ':' + page + ':' + group.label; setOpened(current => current[key] === open ? current : {...current, [key]:open}); }}><summary>{group.label}</summary>{section === 'hero' && group.label === 'Distribución' &&

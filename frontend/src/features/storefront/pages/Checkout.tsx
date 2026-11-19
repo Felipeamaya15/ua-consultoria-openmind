@@ -7,7 +7,7 @@ import { trackMetaPixelEvent } from '../services/metaPixelService';
 import { ErrorState, LoadingState } from '../../../shared/components/states';
 import { useEffect, useMemo, useState, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { useGoogleLogin } from '@react-oauth/google';
+import { useOptionalGoogleLogin as useGoogleLogin, GOOGLE_LOGIN_CONFIGURED } from '../../auth/hooks/useOptionalGoogleLogin';
 import { authService } from '../../auth/services/authService';
 
 import { orderService } from '../services/orderService';
@@ -97,7 +97,7 @@ function getAvailableAuthModes(settings: AuthSettings): AuthMode[] {
     modes.push('guest');
   }
 
-  if (settings.google) {
+  if (settings.google && GOOGLE_LOGIN_CONFIGURED) {
     modes.push('google');
   }
 
@@ -169,126 +169,6 @@ const paymentPresentation: PaymentOption[] = [
     desc: 'Verificacion manual en 24-48h',
   },
 ];
-
-const fmtCardNumber = (value: string) =>
-  value
-    .replace(/\D/g, '')
-    .slice(0, 16)
-    .replace(/(.{4})/g, '$1 ')
-    .trim();
-
-const fmtExpiry = (value: string) => {
-  const digits = value.replace(/\D/g, '').slice(0, 4);
-
-  return digits.length > 2
-    ? `${digits.slice(0, 2)}/${digits.slice(2)}`
-    : digits;
-};
-
-const fmtCvv = (value: string) =>
-  value.replace(/\D/g, '').slice(0, 4);
-
-const last4 = (number: string) =>
-  number.replace(/\D/g, '').slice(-4);
-
-interface CardData {
-  number: string;
-  name: string;
-  expiry: string;
-  cvv: string;
-}
-
-function CardFields({
-  prefix,
-  data,
-  onField,
-  errors,
-}: {
-  prefix: string;
-  data: CardData;
-  onField: (
-    key: keyof CardData,
-    value: string,
-  ) => void;
-  errors: Record<string, string>;
-}) {
-  return (
-    <>
-      <Input
-        label="Número de tarjeta"
-        value={data.number}
-        onChange={(event) =>
-          onField(
-            'number',
-            fmtCardNumber(event.target.value),
-          )
-        }
-        placeholder="1234 5678 9012 3456"
-        inputMode="numeric"
-        readOnly
-        autoComplete="off"
-        error={errors[`${prefix}Number`]}
-        iconRight={
-          <Icon
-            name="card"
-            className="w-4 h-4 text-[#667085]"
-          />
-        }
-      />
-
-      <Input
-        label="Nombre del titular"
-        value={data.name}
-        onChange={(event) =>
-          onField(
-            'name',
-            event.target.value.toUpperCase(),
-          )
-        }
-        placeholder="COMO APARECE EN LA TARJETA"
-        readOnly
-        autoComplete="off"
-        error={errors[`${prefix}Name`]}
-      />
-
-      <div className="grid grid-cols-2 gap-3">
-        <Input
-          label="Vencimiento"
-          value={data.expiry}
-          onChange={(event) =>
-            onField(
-              'expiry',
-              fmtExpiry(event.target.value),
-            )
-          }
-          placeholder="MM/AA"
-          inputMode="numeric"
-          readOnly
-          autoComplete="off"
-          error={errors[`${prefix}Expiry`]}
-        />
-
-        <Input
-          label="CVV"
-          type="password"
-          value={data.cvv}
-          onChange={(event) =>
-            onField(
-              'cvv',
-              fmtCvv(event.target.value),
-            )
-          }
-          placeholder="•••"
-          inputMode="numeric"
-          readOnly
-          autoComplete="off"
-          error={errors[`${prefix}Cvv`]}
-          hint="3 o 4 dígitos"
-        />
-      </div>
-    </>
-  );
-}
 
 export default function Checkout() {
   const {
@@ -429,35 +309,11 @@ export default function Checkout() {
     }
   }, [authMode, availableAuthModes]);
 
-  /*
-   * ==========================================================
-   * DATOS DE DEMOSTRACIÓN DE PAGO
-   * ==========================================================
-   */
-  const [transbank, setTransbank] = useState({
-    cardType: 'credito',
-    number: '0000 0000 0000 0000',
-    name: 'CLIENTE DEMO',
-    expiry: '12/30',
-    cvv: '000',
-    rut: '11.111.111-1',
-  });
-
-  const [mercadopago, setMercadopago] =
-    useState({
-      number: '0000 0000 0000 0000',
-      name: 'CLIENTE DEMO',
-      expiry: '12/30',
-      cvv: '000',
-      installments: '1',
-      email: 'demo@example.com',
-    });
-
   const [paymentOptions, setPaymentOptions] = useState<PaymentOption[]>([]);
   const [paymentsLoading, setPaymentsLoading] = useState(true);
   const [paymentsError, setPaymentsError] = useState('');
   const [transferDetails, setTransferDetails] = useState<TransferDetails | null>(null);
-  // PayPal cobra en USD: el servidor informa el tipo de cambio vigente para mostrarlo antes de pagar.
+
   const [paypalFx, setPaypalFx] = useState<{tipo_cambio: string; margen_pct: string; fecha_dato: string; fuente: string} | null>(null);
 
   useEffect(() => {
@@ -538,11 +394,7 @@ export default function Checkout() {
     return () => {active = false;};
   }, [activities.length,activityPurchaseAllowed,activityMode,activityPayments]);
 
-  /*
-   * ==========================================================
-   * LÓGICA DE ACTUALIZACIÓN DEL TOTAL Y DESPACHO
-   * ==========================================================
-   */
+
   const [shippingQuotes, setShippingQuotes] = useState<Record<string, ShippingQuote & {destino: string}>>({});
   const [quoteLoading, setQuoteLoading] = useState(false);
   const [quoteError, setQuoteError] = useState('');
@@ -559,14 +411,14 @@ export default function Checkout() {
   const [consentMessage, setConsentMessage] = useState('');
   const promotionRequest = useRef(0);
   const applyingPromotion = useRef(false);
-  
+
   const destinationKey = JSON.stringify([shippingMethod, address.region, address.city]);
   const selectedShippingOption = onlyActivities ? undefined : shippingOptions.find(option => option.id === shippingMethod);
   const candidateQuote = shippingQuotes[shippingMethod];
   const selectedQuote = candidateQuote?.destino === destinationKey && candidateQuote.vence_en > Date.now() / 1000
     ? candidateQuote : undefined;
-    
-  // => CÁLCULO DEL TOTAL DEL PEDIDO SUMANDO EL COSTO DE DESPACHO <=
+
+
   const quotedShipping = onlyActivities || shippingMethod === 'Retiro' ? 0 : selectedQuote?.monto ?? null;
   const currentPromotionBasis = JSON.stringify([subtotal, quotedShipping, checkoutPromoCode]);
   const currentPromotion = promotionBasis === currentPromotionBasis ? validatedPromotion : null;
@@ -619,12 +471,12 @@ export default function Checkout() {
       if (requestId === promotionRequest.current) { setPromoLoading(false); applyingPromotion.current = false; }
     }
   };
-  
-  // Validamos que exista un costo real de despacho, o sea retiro en tienda.
+
+
   const deliveryReady = onlyActivities || (!shippingLoading && !shippingError && !!selectedShippingOption
     && (shippingMethod === 'Retiro' ? true : (!!selectedQuote && !quoteLoading && !quoteError)));
 
-  // Si no hay tarifa para el destino, reintentar no sirve: se ofrece cambiar de alternativa o de comuna.
+
   const quoteNeedsOtherOption = ['sin_tarifa', 'no_disponible', 'destino'].includes(quoteErrorKind);
   const quoteUnavailable = ['sin_tarifa', 'no_disponible'].includes(quoteErrorKind);
   const otherShippingOptions = shippingOptions.filter(option => option.id !== shippingMethod);
@@ -680,24 +532,6 @@ export default function Checkout() {
     }
   }, [paymentMethod, paymentOptions]);
 
-  const setTbField = (
-    key: keyof CardData,
-    value: string,
-  ) =>
-    setTransbank((current) => ({
-      ...current,
-      [key]: value,
-    }));
-
-  const setMpField = (
-    key: keyof CardData,
-    value: string,
-  ) =>
-    setMercadopago((current) => ({
-      ...current,
-      [key]: value,
-    }));
-
   const [googleLoading, setGoogleLoading] = useState(false);
 
   const loginConGoogle = useGoogleLogin({
@@ -735,7 +569,7 @@ export default function Checkout() {
                 return;
           }
         } catch {
-          // Silenciar
+
         }
         setErrors((current) => ({
           ...current,
@@ -772,11 +606,7 @@ export default function Checkout() {
     return () => { active = false; };
   }, []);
 
-  /*
-   * ==========================================================
-   * VALIDACIONES
-   * ==========================================================
-   */
+
   const validate = (currentStep: string) => {
     const newErrors: Record<string, string> = {};
 
@@ -874,11 +704,7 @@ export default function Checkout() {
     }
   };
 
-  /*
-   * ==========================================================
-   * CONFIRMAR PEDIDO
-   * ==========================================================
-   */
+
   const handleConfirm = async () => {
     if (submitting.current || loading || (!items.length && !activities.length)) return;
     if(activities.length && (!activityPurchaseAllowed||!activityPayments.includes(paymentMethod)||checkoutPromoCode)) {setErrors({payment:'Revisa la disponibilidad, selecciona el medio de pago habilitado y quita el código promocional.'});return;}
@@ -953,7 +779,7 @@ export default function Checkout() {
             identificador: order.identificador, email: contact.email.trim(), monto: Number(order.monto_total),
           }));
         } catch {
-          // Sin almacenamiento, Seguimiento conserva la búsqueda manual.
+
         }
         const returnUrl = `${window.location.origin}${route('pedido-confirmado')}?orderNumber=${orderNumber}&tienda=${order.tienda_id}`;
         const result = await transbankPaymentService.iniciarPago(
@@ -969,8 +795,8 @@ export default function Checkout() {
 
       if (paymentMethod === 'PayPal') {
         const returnUrl = `${window.location.origin}${route('pedido-confirmado')}?orderNumber=${orderNumber}&tienda=${order.tienda_id}&gateway=paypal`;
-        const cancelUrl = `${returnUrl}&cancelado=1`; // PayPal agrega ?token= tambien al cancelar: 'cancelado' evita capturar
-        
+        const cancelUrl = `${returnUrl}&cancelado=1`;
+
         const result = await paypalPaymentService.iniciarPago(
           order.tienda_id, orderNumber, Number(order.monto_total), returnUrl, cancelUrl
         );
@@ -1011,7 +837,7 @@ export default function Checkout() {
         window.location.href = order.url_pago;
         return;
       }
-      
+
       await clearCart();
       navigate(route('pedido-confirmado'), {
         state: {orderNumber, identificador: order.identificador, email: contact.email.trim()}, replace: true,
@@ -1019,7 +845,7 @@ export default function Checkout() {
     } catch (error) {
       const code = (error as {code?: string} | null)?.code;
       if (typeof code === 'string' && code.startsWith('COTIZACION_')) {
-        // La tarifa venció o cambió: se vuelve a cotizar y se devuelve al comprador a Entrega.
+
         setQuoteAttempt(value => value + 1);
         setStep('delivery');
         setErrors({shipping: 'La tarifa de envío venció o cambió. La actualizamos: revisa el total y continúa.'});
@@ -1032,11 +858,7 @@ export default function Checkout() {
     }
   };
 
-  /*
-   * ==========================================================
-   * CARRITO VACÍO
-   * ==========================================================
-   */
+
   if (items.length === 0 && activities.length === 0) {
     return (
       <div
@@ -1062,11 +884,7 @@ export default function Checkout() {
     );
   }
 
-  /*
-   * ==========================================================
-   * LABELS DE PAGO
-   * ==========================================================
-   */
+
   const PAYMENT_LABELS: Record<
     string,
     string
@@ -1085,19 +903,9 @@ export default function Checkout() {
 
   const paymentDetail =
     paymentMethod === 'Transbank'
-      ? `Webpay · Tarjeta ${
-          transbank.cardType
-        } ·••• ${last4(transbank.number)}`
+      ? 'Redirección segura a Webpay'
       : paymentMethod === 'MercadoPago'
-        ? `Mercado Pago ·••• ${last4(
-            mercadopago.number,
-          )} · ${
-            mercadopago.installments
-          } cuota${
-            mercadopago.installments === '1'
-              ? ''
-              : 's'
-          }`
+        ? 'Redirección segura a Mercado Pago'
         : paymentMethod === 'PayPal'
           ? 'Redirección segura a PayPal'
           : paymentMethod ===
@@ -1107,9 +915,7 @@ export default function Checkout() {
               : 'Transferencia bancaria'
             : '';
 
-  /*
-   * Estilos compartidos para los paneles.
-   */
+
   const panelClass = isVisual
     ? 'bg-[#f1f1f0] rounded-[10px] min-w-0 p-4 sm:p-6 flex flex-col gap-5'
     : isMinimal
@@ -1153,9 +959,7 @@ export default function Checkout() {
         </div>
       )}
 
-      {/* =====================================================
-          TÍTULO MINIMAL
-      ====================================================== */}
+
       {isMinimal && (
         <div className="mb-7">
           <p className="text-xs text-[var(--visual-page-color)] mb-2">
@@ -1168,9 +972,7 @@ export default function Checkout() {
         </div>
       )}
 
-      {/* =====================================================
-          STEPPER
-      ====================================================== */}
+
       <div data-page-panel data-checkout-stepper
         className={
           isVisual
@@ -1198,14 +1000,10 @@ export default function Checkout() {
           }
         `}
       >
-        {/* =================================================
-            FORMULARIO
-        ================================================== */}
+
         <div className="lg:col-span-3 min-w-0">
 
-          {/* ===============================================
-              CONTACTO
-          ================================================ */}
+
           {consentMessage && <p role="status" className="my-3 text-sm border rounded p-3">{consentMessage}</p>}
           {step === 'contact' && <div className="mb-4 border rounded p-4">
             <CommercialOptIn checked={commercial} onChange={setCommercial} />
@@ -1404,9 +1202,7 @@ export default function Checkout() {
             </div>
           )}
 
-          {/* ===============================================
-              ENTREGA
-          ================================================ */}
+
           {step === 'delivery' && onlyActivities && (
             <div data-checkout-step-panel tabIndex={-1} data-visual-section="pagePanel" data-page-panel className={panelClass}>
               <h2 className="text-lg font-semibold">Entrega</h2>
@@ -1685,9 +1481,7 @@ export default function Checkout() {
             </div>
           )}
 
-          {/* ===============================================
-              PAGO
-          ================================================ */}
+
           {step === 'payment' && (
             <div data-checkout-step-panel tabIndex={-1} data-visual-section="pagePanel" data-page-panel className={panelClass}>
               <div>
@@ -1801,7 +1595,7 @@ export default function Checkout() {
                 </div>
               )}
 
-              {/* TRANSBANK */}
+
               {paymentMethod === 'Transbank' && (
                 <div data-page-panel
                   className={
@@ -1829,43 +1623,6 @@ export default function Checkout() {
                     </div>
                   </div>
 
-                  <Select
-                    label="Tipo de tarjeta preferida"
-                    value={transbank.cardType}
-                    onChange={(event) =>
-                      setTransbank((current) => ({
-                        ...current,
-                        cardType: event.target.value,
-                      }))
-                    }
-                    options={[
-                      { value: 'credito', label: 'Crédito' },
-                      { value: 'debito', label: 'Débito' },
-                      { value: 'prepago', label: 'Prepago' },
-                    ]}
-                  />
-
-                  <CardFields
-                    prefix="tb"
-                    data={transbank}
-                    onField={setTbField}
-                    errors={errors}
-                  />
-
-                  <Input
-                    readOnly
-                    label="RUT del titular"
-                    value={transbank.rut}
-                    onChange={(event) =>
-                      setTransbank((current) => ({
-                        ...current,
-                        rut: event.target.value,
-                      }))
-                    }
-                    placeholder="12.345.678-9"
-                    error={errors.tbRut}
-                  />
-
                   <p className="flex items-center gap-1.5 text-xs text-[var(--visual-page-color)]">
                     <Icon
                       name="lock"
@@ -1876,7 +1633,7 @@ export default function Checkout() {
                 </div>
               )}
 
-              {/* MERCADO PAGO */}
+
               {paymentMethod === 'MercadoPago' && (
                 <div data-page-panel
                   className={
@@ -1904,57 +1661,17 @@ export default function Checkout() {
                     </div>
                   </div>
 
-                  <CardFields
-                    prefix="mp"
-                    data={mercadopago}
-                    onField={setMpField}
-                    errors={errors}
-                  />
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <Select
-                      label="Cuotas"
-                      value={mercadopago.installments}
-                      onChange={(event) =>
-                        setMercadopago((current) => ({
-                          ...current,
-                          installments: event.target.value,
-                        }))
-                      }
-                      options={[
-                        { value: '1', label: '1 cuota (sin interés)' },
-                        { value: '3', label: '3 cuotas' },
-                        { value: '6', label: '6 cuotas' },
-                        { value: '12', label: '12 cuotas' },
-                      ]}
-                    />
-
-                    <Input
-                      readOnly
-                      label="Correo de Mercado Pago (opcional)"
-                      type="email"
-                      value={mercadopago.email}
-                      onChange={(event) =>
-                        setMercadopago((current) => ({
-                          ...current,
-                          email: event.target.value,
-                        }))
-                      }
-                      placeholder="tu@correo.com"
-                    />
-                  </div>
-
                   <p className="flex items-center gap-1.5 text-xs text-[var(--visual-page-color)]">
                     <Icon
                       name="lock"
                       className="w-3.5 h-3.5"
                     />
-                    Demostración sin conexión a Mercado Pago.
+                    Al confirmar serás redirigido a Mercado Pago para elegir tu medio de pago y las cuotas disponibles. Los datos de tu tarjeta se ingresan en su portal seguro.
                   </p>
                 </div>
               )}
 
-              {/* PAYPAL */}
+
               {paymentMethod === 'PayPal' && (
                 <div data-page-panel
                   className={
@@ -2005,17 +1722,17 @@ export default function Checkout() {
                 </div>
               )}
 
-              {/* TRANSFERENCIA */}
+
               {paymentMethod === 'Transferencia' && transferDetails && (
                 <div data-page-panel
                   className={
                     isMinimal
-                      ? 'bg-[var(--info-bg)] border border-[var(--info)] rounded-[18px] p-5 text-sm space-y-3'
-                      : 'bg-[var(--info-bg)] border border-[var(--info)] rounded-xl p-4 text-sm space-y-3'
+                      ? 'bg-[var(--visual-page-panel-background)] text-[var(--visual-page-color)] border border-[var(--border)] rounded-[18px] p-5 text-sm space-y-3'
+                      : 'bg-[var(--visual-page-panel-background)] text-[var(--visual-page-color)] border border-[var(--border)] rounded-xl p-4 text-sm space-y-3'
                   }
                 >
                   <div>
-                    <p className="font-semibold text-[var(--info)]">
+                    <p className="font-semibold text-[var(--visual-page-color)]">
                       Datos para realizar la transferencia
                     </p>
                     <p className="text-xs text-[var(--visual-page-color)] mt-1">
@@ -2023,7 +1740,7 @@ export default function Checkout() {
                     </p>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-x-3 gap-y-2 text-xs text-[var(--visual-page-color)]">
+                  <div className="grid grid-cols-2 gap-x-3 gap-y-2 text-xs text-[var(--visual-page-color)] [&>span]:min-w-0 [&>span]:break-words">
                     <span className="text-[var(--visual-page-color)]">Banco:</span>
                     <span>{transferDetails.bank_name}</span>
 
@@ -2046,18 +1763,16 @@ export default function Checkout() {
                     <span data-page-price className="font-bold">{formatPrice(total)}</span>
                   </div>
 
-                  <Alert variant="info">
+                  <p className="border-t border-[var(--border)] pt-3 text-[var(--visual-page-color)]">
                     El pago se realiza directamente a la cuenta bancaria informada por el emprendedor.
                     El pedido quedará registrado para su posterior verificación.
-                  </Alert>
+                  </p>
                 </div>
               )}
             </div>
           )}
 
-          {/* ===============================================
-              CONFIRMAR
-          ================================================ */}
+
           {step === 'confirm' && (
             <div data-checkout-step-panel tabIndex={-1} data-visual-section="pagePanel" data-page-panel className={panelClass}>
               <div>
@@ -2192,9 +1907,7 @@ export default function Checkout() {
             </div>
           )}
 
-          {/* ===============================================
-              NAVEGACIÓN
-          ================================================ */}
+
           {step==='confirm' && errors.payment && <Alert variant="error">{errors.payment}</Alert>}
           <div data-checkout-navigation className="flex justify-between items-center gap-3 mt-5">
             {step !== 'contact' ? (
@@ -2285,9 +1998,7 @@ export default function Checkout() {
           </div>
         </div>
 
-        {/* =================================================
-            RESUMEN DEL PEDIDO
-        ================================================== */}
+
         <aside data-visual-section="pagePanel" className="lg:col-span-2 min-w-0 order-first lg:order-last">
           <div data-page-panel
             className={

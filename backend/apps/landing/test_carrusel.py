@@ -36,13 +36,11 @@ class CarruselLandingTests(TestCase):
             password='test-password',
         )
 
-        # Usuario sin autorización sobre la tienda.
         self.other = User.objects.create_user(
             username='carrusel-other',
             password='test-password',
         )
 
-        # OpenMind admite una sola tienda por instalación.
         self.store = Tienda.objects.create(
             nombre='Tienda Carrusel',
             id_usuario_propietario=self.owner,
@@ -93,9 +91,6 @@ class CarruselLandingTests(TestCase):
 
         return response.data['data']['id']
 
-    # ---------------------------------------------------------
-    # 1. SUBIR IMÁGENES
-    # ---------------------------------------------------------
 
     def test_slide_content_is_stable_after_reorder_reload_and_stale_landing_save(self):
         first, second = str(self.uploaded_id()), str(self.uploaded_id('otra.png'))
@@ -120,7 +115,6 @@ class CarruselLandingTests(TestCase):
         old = {'titulo': 'Texto individual guardado', 'texto_boton': 'Ver este'}
         self.assertEqual(self.client.get(endpoint).data['data']['modo'], 'unico')
         self.assertEqual(self.client.patch(self.url + slide_id + '/', {'contenido': old}, format='json').status_code, 200)
-        # Sin configuracion explicita, los datos anteriores mantienen su comportamiento.
         self.assertEqual(self.client.get(endpoint).data['data']['modo'], 'por_imagen')
         self.assertEqual(self.client.patch(endpoint, {'modo': 'unico'}, format='json').status_code, 200)
         self.assertEqual(self.client.get(endpoint).data['data']['modo'], 'unico')
@@ -180,9 +174,6 @@ class CarruselLandingTests(TestCase):
 
         self.assertTrue(imagen.archivo.name)
 
-    # ---------------------------------------------------------
-    # 2. CONSULTAR IMÁGENES
-    # ---------------------------------------------------------
 
     def test_propietario_puede_consultar_imagenes(self):
         self.uploaded_id('primera.png')
@@ -203,9 +194,6 @@ class CarruselLandingTests(TestCase):
             [0, 1],
         )
 
-    # ---------------------------------------------------------
-    # 3. INTEGRACIÓN CON CONFIGURACIÓN LANDING
-    # ---------------------------------------------------------
 
     def test_configuracion_incluye_imagenes(self):
         self.uploaded_id()
@@ -230,9 +218,6 @@ class CarruselLandingTests(TestCase):
             1,
         )
 
-    # ---------------------------------------------------------
-    # 4. REORDENAR IMÁGENES
-    # ---------------------------------------------------------
 
     def test_reordenar_imagenes(self):
         primera = self.uploaded_id('primera.png')
@@ -264,9 +249,6 @@ class CarruselLandingTests(TestCase):
             [UUID(str(value)) for value in nuevo_orden],
         )
 
-    # ---------------------------------------------------------
-    # 5. RECHAZAR ÓRDENES INVÁLIDOS
-    # ---------------------------------------------------------
 
     def test_rechazar_orden_incompleto_o_repetido(self):
         primera = self.uploaded_id('primera.png')
@@ -289,9 +271,6 @@ class CarruselLandingTests(TestCase):
                     response.data,
                 )
 
-    # ---------------------------------------------------------
-    # 6. ELIMINAR IMÁGENES
-    # ---------------------------------------------------------
 
     def test_eliminar_imagen(self):
         imagen_id = self.uploaded_id('eliminar.png')
@@ -324,9 +303,6 @@ class CarruselLandingTests(TestCase):
 
         self.assertFalse(storage.exists(filename))
 
-    # ---------------------------------------------------------
-    # 7. VALIDAR ARCHIVOS
-    # ---------------------------------------------------------
 
     def test_rechazar_archivos_invalidos(self):
         missing = self.client.post(
@@ -370,9 +346,6 @@ class CarruselLandingTests(TestCase):
             0,
         )
 
-    # ---------------------------------------------------------
-    # 8. LÍMITE MÁXIMO DE IMÁGENES
-    # ---------------------------------------------------------
 
     def test_limite_ocho_imagenes(self):
         for index in range(8):
@@ -391,9 +364,6 @@ class CarruselLandingTests(TestCase):
             8,
         )
 
-    # ---------------------------------------------------------
-    # 9. BLOQUEAR USUARIOS QUE NO SON PROPIETARIOS
-    # ---------------------------------------------------------
 
     def test_otro_usuario_no_administra_carrusel(self):
         imagen_id = self.uploaded_id('privada.png')
@@ -444,9 +414,6 @@ class CarruselLandingTests(TestCase):
             ).exists()
         )
 
-    # ---------------------------------------------------------
-    # 10. BLOQUEAR USUARIOS ANÓNIMOS
-    # ---------------------------------------------------------
 
     def test_usuario_anonimo_no_administra_carrusel(self):
         anonimo = APIClient()
@@ -469,9 +436,6 @@ class CarruselLandingTests(TestCase):
             (401, 403),
         )
 
-    # ---------------------------------------------------------
-    # 11. RECHAZAR IDENTIFICADOR DE TIENDA INCORRECTO
-    # ---------------------------------------------------------
 
     def test_rechazar_identificador_tienda_incorrecto(self):
         response = self.client.get(
@@ -485,9 +449,6 @@ class CarruselLandingTests(TestCase):
             response.data,
         )
 
-    # ---------------------------------------------------------
-    # 12. RECHAZAR INSTALACIÓN CON VARIAS TIENDAS
-    # ---------------------------------------------------------
 
     def test_rechazar_configuracion_con_varias_tiendas(self):
         Tienda.objects.create(

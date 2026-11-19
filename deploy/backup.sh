@@ -1,6 +1,4 @@
 #!/usr/bin/env bash
-# Respaldo completo: base de usuarios y pedidos (PostgreSQL), base de productos (MongoDB) e imágenes.
-# Uso: bash deploy/backup.sh        Variables opcionales: BACKUP_DIR (por defecto /var/backups/openmind) y DIAS (por defecto 14)
 set -euo pipefail
 AQUI="$(cd "$(dirname "$0")" && pwd)"
 cd "$AQUI"
@@ -23,10 +21,8 @@ $DC exec -T mongodb mongodump --archive --gzip \
   --authenticationDatabase admin --db "$(valor MONGO_DB_NAME)" > "$BACKUP_DIR/mongo-$FECHA.archive.gz"
 
 echo "[3/3] Respaldando las imágenes subidas..."
-# Las imágenes se comprimen desde dentro del contenedor del backend (que ya tiene ese volumen) y se guardan aquí.
 $DC run --rm -T --no-deps --entrypoint sh backend -c "tar czf - -C /app/media ." > "$BACKUP_DIR/imagenes-$FECHA.tar.gz"
 
-# Si algún archivo quedó vacío, algo falló: avisar en vez de dar el respaldo por bueno.
 for f in "postgres-$FECHA.sql.gz" "mongo-$FECHA.archive.gz" "imagenes-$FECHA.tar.gz"; do
   [ -s "$BACKUP_DIR/$f" ] || { echo "ERROR: el respaldo $f quedó vacío."; exit 1; }
 done

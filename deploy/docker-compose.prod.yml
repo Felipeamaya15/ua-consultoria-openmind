@@ -1,10 +1,5 @@
-# Despliegue de producción de OpenMind E-commerce (5 servicios: db, mongodb, backend, expirador_pedidos y web).
-# Se ejecuta desde la carpeta principal del proyecto:
-#   docker compose -f deploy/docker-compose.prod.yml up -d --build
-# Lee sus variables del archivo deploy/.env (se crea con deploy/preparar_env.sh).
 name: openmind
 
-# Variables compartidas por el backend y el expirador de pedidos (los dos corren el mismo programa).
 x-backend-env: &backend_env
   - DOMAIN=${DOMAIN:?Falta DOMAIN en deploy/.env}
   - SECRET_KEY=${DJANGO_SECRET_KEY:?Falta DJANGO_SECRET_KEY en deploy/.env}
@@ -62,7 +57,6 @@ x-backend-build: &backend_build
   dockerfile: deploy/backend.Dockerfile
 
 services:
-  # Base de datos de usuarios, pedidos y configuración (PostgreSQL).
   db:
     image: postgres:15-alpine
     restart: unless-stopped
@@ -79,7 +73,6 @@ services:
       retries: 12
       start_period: 10s
 
-  # Base de datos de productos e imágenes de productos (MongoDB).
   mongodb:
     image: mongo:8.0
     restart: unless-stopped
@@ -96,7 +89,6 @@ services:
       retries: 12
       start_period: 20s
 
-  # El programa de la tienda (Django con Gunicorn).
   backend:
     build: *backend_build
     restart: unless-stopped
@@ -116,8 +108,6 @@ services:
       retries: 6
       start_period: 120s
 
-  # Cancela los pedidos pendientes que vencieron y devuelve su stock (revisa cada 5 minutos).
-  # Corre el mismo programa que el backend, pero sin Gunicorn ni migraciones: espera a que el backend este sano.
   expirador_pedidos:
     build: *backend_build
     restart: unless-stopped
@@ -140,7 +130,6 @@ services:
       backend:
         condition: service_healthy
 
-  # La página web y el candado HTTPS (Caddy). Es lo único abierto a internet.
   web:
     build:
       context: ..

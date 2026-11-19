@@ -17,7 +17,6 @@ def seed_commercial(store):
         Pedido.objects.filter(pk=order.pk).update(fecha_creacion=datetime.fromisoformat(f'2025-10-{10+index}T15:00:00+00:00'))
         ItemPedido.objects.create(id_pedido=order, nombre_producto='Producto histórico QA', sku=f'HIST-{index}', cantidad=quantity, precio_unitario=price,
                 atributos={'Color': 'Azul'}, atributos_variante=[{'nombre': 'Color', 'valor': 'Azul'}])
-    # Paginación y deduplicación de numerosos pedidos antiguos de un mismo email.
     for index in range(25):
         order = Pedido.objects.create(tienda=store, identificador=f'OLD-{index:03d}', estado='pendiente', monto_total=1000,
             correo_contacto='historico@example.test', nombre_contacto='Histórico QA')

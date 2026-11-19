@@ -66,7 +66,6 @@ class PaletteTests(TestCase):
         self.assertIsNone(APIClient().get(APPEARANCE).data['data']['plantillas']['editorial']['paleta_id'])
 
     def test_editorial_promo_text_with_spaces_is_saved_and_retrieved(self):
-        # El mensaje real no es un token de CSS: incluye espacios y caracteres latinos.
         message = '¡Bienvenidos a EcoCrespo! Noviembre 2026'
         changes = {
             'editorial': {
@@ -101,7 +100,6 @@ class PaletteTests(TestCase):
                 self.assertEqual(
                     self.api.put(APPEARANCE, payload(message), format='json').status_code, 400,
                 )
-        # Otros campos siguen limitados a valores de apariencia seguros.
         invalid = {'plantillas': {'editorial': {
             'visualConfig': {'hero': {'overlayColor': 'Noviembre 2026'}},
             'paleta_id': None,

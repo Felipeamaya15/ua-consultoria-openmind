@@ -89,7 +89,6 @@ def remember_session(order, session_id):
 
 
 def adapter_for(order):
-    # Reconciliation is intentionally available even when new sales are switched off.
     config=ConfiguracionTransbank.objects.filter(id_tienda_id=order.tienda_id).first()
     if not config or any(meta(order).get(k)!=v for k,v in merchant_snapshot(config).items()):
         raise TransbankTransaccionException('La configuración comercial cambió. La tienda debe revisar el pago.')
@@ -127,7 +126,6 @@ def validate_identity(order,result):
 
 def notify(order, approved):
     from apps.core.infrastructure.notificaciones_pedido import notificar_cambio_de_estado
-    # A sandbox payment must never trigger a real customer confirmation email.
     if meta(order).get('ambiente')=='PRODUCCION':
         transaction.on_commit(lambda: notificar_cambio_de_estado(order,'pendiente'))
 
@@ -161,7 +159,6 @@ def cancel_locked(order,rows,reason):
         return 'indeterminado'
     ReservaActividadPagada.objects.filter(pk__in=[r.pk for r in rows]).update(estado='liberada')
     order.estado='cancelado';set_meta(order,motivo=reason,cancelado_en=timezone.now().isoformat())
-    # Keep the original token as audit evidence / prevent replacement.
     order.save(update_fields=['estado','entrega']);notify(order,False)
     return 'cancelado'
 
@@ -182,7 +179,6 @@ def process_order(order_id, *, callback_token=None, consult=True):
     if not order.webpay_token:
         return (cancel_locked(order,rows,'reserva_sin_inicio') if due else 'espera'),None
     if not consult: return 'espera',None
-    # The worker should not contact the provider on every checkout or every second.
     if not callback_token:
         last=meta(order).get('revision_en')
         if last:
@@ -199,7 +195,6 @@ def process_order(order_id, *, callback_token=None, consult=True):
         return cancel_locked(order,rows,status),None
     if status=='INITIALIZED' and callback_token:
         if any(timezone.now()>=r.inicio for r in rows): return 'espera',None
-        # Only the provider return endpoint commits; the worker does not charge cards.
         approved=adapter.confirmar_transaccion(token_ws=order.webpay_token)
         return 'pagado',approve_locked(order,rows,approved)
     set_meta(order,revision_en=timezone.now().isoformat(),ultimo_estado=str(status or 'desconocido'))

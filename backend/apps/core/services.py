@@ -8,8 +8,6 @@ from apps.core.models import Tienda
 @transaction.atomic
 def configurar_tienda(propietario, *, nombre, descripcion=None):
     """Devuelve (tienda, creada) en la configuración privada de esta instalación."""
-    # PostgreSQL: también serializa configuraciones cuando aún no existen filas.
-    # Bloquear solo una fila con select_for_update no protege una tabla vacía.
     with connection.cursor() as cursor:
         tabla = connection.ops.quote_name(Tienda._meta.db_table)
         cursor.execute(f'LOCK TABLE {tabla} IN SHARE ROW EXCLUSIVE MODE')
@@ -18,7 +16,6 @@ def configurar_tienda(propietario, *, nombre, descripcion=None):
         return Tienda.objects.get(), False
     except Tienda.DoesNotExist:
         pass
-    # Si hay datos previos con varias tiendas, get() falla sin elegir ni borrar.
     if (
         not isinstance(propietario, get_user_model())
         or propietario.pk is None

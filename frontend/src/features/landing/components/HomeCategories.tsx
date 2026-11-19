@@ -4,7 +4,7 @@ import { useStore } from '../../storefront/context/StoreContext';
 import { useStorefrontTemplate } from '../../storefront/hooks/useStorefrontTemplate';
 import { VISUAL_SECTION } from '../../storefront/visual/sectionIds';
 
-/** Category tiles reuse the existing landing selection and catalog routes. */
+
 export function HomeCategories() {
   const {categories} = useLandingContent();
   const {landingProducts} = useStore();

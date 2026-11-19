@@ -101,14 +101,13 @@ class CarritoVariantesTests(TestCase):
         response = self.add_by_slug(slug='solo-mongo')
         self.assertEqual(response.status_code, 201)
         producto = Producto.objects.get(nombre='Solo Mongo')
-        self.assertEqual((producto.precio, producto.stock), (8000, 5))  # precio mínimo y stock total
+        self.assertEqual((producto.precio, producto.stock), (8000, 5))
         self.assertEqual(self.documentos['solo-mongo']['id_producto'], producto.pk)
-        self.add_by_slug(slug='solo-mongo')  # ya vinculado: no crea otra fila
+        self.add_by_slug(slug='solo-mongo')
         self.assertEqual(Producto.objects.filter(nombre='Solo Mongo').count(), 1)
         self.assertEqual(ItemCarrito.objects.get().cantidad, 2)
 
     def test_variant_price_is_used_instead_of_base_price(self):
-        # La variante QA-M está en oferta (9000 < 12000); el producto base cuesta 10000.
         added = self.add(sku='QA-M', cantidad=3)
         self.assertEqual(added.data['data']['precio_unitario'], '9000.00')
         item = self.api.get(URL).data['data'][0]
@@ -125,7 +124,7 @@ class CarritoVariantesTests(TestCase):
     def test_add_variant_stores_sku_and_each_variant_is_a_separate_item(self):
         self.assertEqual(self.add(sku='qa-m').status_code, 201)
         self.assertEqual(self.add(sku='QA-L').status_code, 201)
-        self.assertEqual(self.add().status_code, 201)  # producto base
+        self.assertEqual(self.add().status_code, 201)
         self.assertEqual(ItemCarrito.objects.count(), 3)
         self.assertEqual(set(ItemCarrito.objects.values_list('sku', flat=True)), {'QA-M', 'QA-L', None})
 

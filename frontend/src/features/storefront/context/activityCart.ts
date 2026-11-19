@@ -8,9 +8,9 @@ import { isActiveEditorPreview } from '../visual/pages';
 import { validActivityId, canSelectPaidQuote, type PaidQuote } from '../../landing/services/paidActivityService';
 import { trackMetaPixelEvent } from '../services/metaPixelService';
 
-// Preview deliberately limited to local development; no payment or seat hold.
+
 export function activityCartPreviewEnabled() {
-  return typeof window !== 'undefined' && !isActiveEditorPreview(); // El servidor autoriza el modo de compra.
+  return typeof window !== 'undefined' && !isActiveEditorPreview();
 }
 export interface ActivityCartItem {
   sectionId: string; title: string; quantity: number; price: number; version: string; start: string; zone: string;
@@ -31,14 +31,14 @@ function read(key:string|null):ActivityCartItem[] {
   if(!key)return EMPTY;
   if(!cache.has(key)){
     let rows:ActivityCartItem[]=[];
-    try{const raw:unknown=JSON.parse(sessionStorage.getItem(key)||'[]');if(Array.isArray(raw))rows=raw.filter(validItem).filter((item,i,all)=>all.findIndex(x=>x.sectionId===item.sectionId)===i);}catch{/* no storage */}
+    try{const raw:unknown=JSON.parse(sessionStorage.getItem(key)||'[]');if(Array.isArray(raw))rows=raw.filter(validItem).filter((item,i,all)=>all.findIndex(x=>x.sectionId===item.sectionId)===i);}catch{}
     cache.set(key,rows);
   }
   return cache.get(key)||EMPTY;
 }
 function write(key:string,rows:ActivityCartItem[]) {
   cache.set(key,rows);
-  try{sessionStorage.setItem(key,JSON.stringify(rows));}catch{/* memory only */}
+  try{sessionStorage.setItem(key,JSON.stringify(rows));}catch{}
   window.dispatchEvent(new Event(event));
 }
 function subscribe(fn:()=>void){window.addEventListener(event,fn);return()=>window.removeEventListener(event,fn);}

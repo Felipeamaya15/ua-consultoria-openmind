@@ -15,7 +15,7 @@ export function normalizeLandingContent(value?: Partial<ContenidoLanding>): Cont
   };
 }
 
-/** Solo normaliza campos editados; los valores históricos no bloquean otros cambios. */
+
 export function normalizeContactFields(value: ContactoLanding, previous: ContactoLanding) {
   const contact = { ...value };
   if (value.telefono !== previous.telefono) {
@@ -45,7 +45,7 @@ export function contactChannels(c: ContactoLanding) {
   const phone = c.telefono.trim();
   const email = c.correo.trim();
   let website = '';
-  try { const url = new URL(c.sitio_web.trim()); if (['https:', 'http:'].includes(url.protocol) && !url.username && !url.password) website = url.href; } catch { /* Campo opcional o histórico no válido. */ }
+  try { const url = new URL(c.sitio_web.trim()); if (['https:', 'http:'].includes(url.protocol) && !url.username && !url.password) website = url.href; } catch {  }
   return [
     { label: 'Teléfono del negocio', icon: 'phone', text: phone, href: /^\+?[0-9 ()-]{5,40}$/.test(phone) ? `tel:${phone.replace(/[^+0-9]/g, '')}` : '' },
     ...publicSocialLinks(c),

@@ -2,7 +2,7 @@ import type { ContentSource, MarketingProduct, MarketingVariant, PricedVariant, 
 
 export function priceInCents(value: unknown): number | null {
   if (typeof value !== 'number' || !Number.isFinite(value) || value < 0) return null;
-  // Intl halfExpand redondea el valor decimal, también 1.005 -> 1.01, como Decimal(..., ROUND_HALF_UP).
+
   const decimal = new Intl.NumberFormat('en-US', { useGrouping: false, minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value);
   const cents = Number(decimal.replace('.', ''));
   return Number.isSafeInteger(cents) && cents >= 0 ? cents : null;
@@ -20,7 +20,7 @@ export function pricedVariants(product: MarketingProduct): PricedVariant[] {
     if (regular === null) return [];
     if (variant.offerPrice == null) return [{ variant, price: regular, originalPrice: null }];
     const offer = priceInCents(variant.offerPrice);
-    // No publicitar documentos legacy con una oferta inconsistente.
+
     if (offer === null || Number(variant.offerPrice) >= Number(variant.price)) return [];
     return [{ variant, price: offer, originalPrice: offer < regular ? regular : null }];
   });
@@ -53,7 +53,7 @@ export function buildPublication(product: MarketingProduct, source: ContentSourc
     variantLabel: variantDescription(selected.variant), hasMultipleVariants: product.variants.length > 1, source,
   };
 }
-/** Variant photographs take priority when present; existing product photos are shared otherwise. */
+
 export function publicationImages(product: MarketingProduct, sku = '', source: ContentSource = 'product'): string[] {
   const variant = sku ? product.variants.find(row => row.sku === sku) : pricedVariants(product).filter(row => source === 'product' || row.originalPrice !== null).reduce<PricedVariant | null>((best, row) => !best || row.price < best.price ? row : best, null)?.variant;
   return [...new Set([...(variant?.images || []), ...product.images])];

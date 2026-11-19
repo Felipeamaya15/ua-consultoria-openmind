@@ -57,7 +57,6 @@ class InformacionTiendaAPIView(APIView):
                         if connection:
                             invalidate(connection, request.user, 'cuenta_cambiada')
                 except ProgrammingError as exc:
-                    # Conserva el editor original mientras la actualización está pendiente.
                     if getattr(exc.__cause__, 'sqlstate', None) not in ('42703', '42P01'):
                         raise
             serializer.save()

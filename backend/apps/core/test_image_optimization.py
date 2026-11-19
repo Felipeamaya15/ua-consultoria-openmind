@@ -8,7 +8,6 @@ from apps.core import image_processing as ip
 
 
 def _foto_jpeg(ancho, alto, calidad=88, exif=None):
-    # ruido: casi no se comprime, es el peor caso para el peso
     imagen = Image.effect_noise((ancho, alto), 90).convert('RGB')
     salida = io.BytesIO()
     imagen.save(salida, 'JPEG', quality=calidad, **({'exif': exif} if exif else {}))

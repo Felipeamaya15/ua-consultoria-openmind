@@ -11,7 +11,7 @@ interface Props {
   gateway: 'paypal' | 'mercadopago';
   orderNumber: string;
   tiendaId: number;
-  // PayPal: id de la orden (?token=). Mercado Pago: id del pago (?payment_id=).
+
   reference: string;
 }
 
@@ -25,8 +25,8 @@ type Result =
 
 const NAMES = { paypal: 'PayPal', mercadopago: 'Mercado Pago' } as const;
 
-// La captura/consulta solo se hace una vez por pago; el resultado se guarda para que recargar no la repita.
-const cacheKey = (gateway: string, reference: string) => `${gateway}-result:${reference}`;
+
+const cacheKey = (gateway: string, reference: string, tiendaId: number, orderNumber: string) => `${gateway}-result:${tiendaId}:${orderNumber}:${reference}`;
 const PENDING_CART_SNAPSHOT_KEY = 'openmind-pending-payment-cart';
 const RESTORE_CART_FLAG_KEY = 'openmind-restore-cart';
 
@@ -45,13 +45,14 @@ export default function ExternalPaymentReturnResult({ gateway, orderNumber, tien
   const [result, setResult] = useState<Result>({ status: 'loading' });
   const [retrying, setRetrying] = useState(false);
   const [retryError, setRetryError] = useState('');
+  const [verificationAttempt, setVerificationAttempt] = useState(0);
   const name = NAMES[gateway];
 
   useEffect(() => {
     if (started.current) return;
     started.current = true;
 
-    // Sin referencia el comprador volvió sin pagar (cancelado o fallo en la pasarela).
+
     if (!reference) {
       // No tener referencia no demuestra que el pedido
       // esté cancelado ni que se hayan liberado sus reservas.
@@ -62,7 +63,7 @@ export default function ExternalPaymentReturnResult({ gateway, orderNumber, tien
       return;
     }
     try {
-      const cached = sessionStorage.getItem(cacheKey(gateway, reference));
+      const cached = sessionStorage.getItem(cacheKey(gateway, reference, tiendaId, orderNumber));
       if (cached) {
         const parsed = JSON.parse(cached) as Result;
         if (parsed.status === 'rejected') {
@@ -72,7 +73,7 @@ export default function ExternalPaymentReturnResult({ gateway, orderNumber, tien
         return;
       }
     } catch {
-      // Sin caché disponible: se confirma normalmente.
+
     }
 
     const request = gateway === 'paypal'
@@ -98,7 +99,7 @@ export default function ExternalPaymentReturnResult({ gateway, orderNumber, tien
           next = { status: 'error', message: res?.mensaje || 'No pudimos confirmar tu pago.' };
         }
         if (next.status === 'approved' || next.status === 'rejected') {
-          try { sessionStorage.setItem(cacheKey(gateway, reference), JSON.stringify(next)); } catch { /* Sin caché. */ }
+          try { sessionStorage.setItem(cacheKey(gateway, reference, tiendaId, orderNumber), JSON.stringify(next)); } catch {  }
         }
         if (next.status === 'approved' && orderNumber) {
           trackConfirmedMetaPurchase(tiendaId, orderNumber);
@@ -106,7 +107,7 @@ export default function ExternalPaymentReturnResult({ gateway, orderNumber, tien
         setResult(next);
       })
       .catch(() => setResult({ status: 'error', message: 'No se pudo conectar con el servidor para confirmar el pago.' }));
-  }, [gateway, orderNumber, reference, tiendaId, name]);
+  }, [gateway, orderNumber, reference, tiendaId, name, verificationAttempt]);
 
   let identificador = '';
   let email = '';
@@ -117,7 +118,7 @@ export default function ExternalPaymentReturnResult({ gateway, orderNumber, tien
       if ('email' in stored && typeof stored.email === 'string') email = stored.email;
     }
   } catch {
-    // El retorno puede abrirse sin la sesión original: queda la búsqueda manual.
+
   }
   const trackingRoute = identificador
     ? `${route('seguimiento')}?orden=${encodeURIComponent(identificador)}`
@@ -132,7 +133,7 @@ export default function ExternalPaymentReturnResult({ gateway, orderNumber, tien
     error: { glyph: '!', tone: 'bg-red-50 text-red-600', title: 'No pudimos confirmar tu pago' },
   }[result.status];
 
-  // Un pago rechazado o cancelado deja el pedido pendiente: se vuelve a pagar ese mismo pedido (sin duplicarlo).
+
   const canRetry = (result.status === 'rejected' || result.status === 'cancelled') && Boolean(orderNumber);
   const retryPayment = async () => {
     if (retrying || !canRetry) return;
@@ -163,16 +164,23 @@ export default function ExternalPaymentReturnResult({ gateway, orderNumber, tien
           {result.status === 'loading' && `Estamos verificando el resultado con ${name}. No cierres esta página.`}
           {result.status === 'approved' && `Tu pedido${orderNumber ? ` ${orderNumber}` : ''} quedó pagado.${result.usd ? ` Se cobró US$ ${result.usd} (tipo de cambio $${Number(result.tipoCambio).toLocaleString('es-CL', {maximumFractionDigits: 2})} por US$ 1).` : ''}`}
           {result.status === 'rejected' && `${result.message} Tus productos fueron conservados en el carrito para que puedas volver a intentarlo.`}
-          {result.status === 'pending' && `${result.message} Te avisaremos cuando se confirme.`}
+          {result.status === 'pending' && `${result.message} Puedes volver a consultar el estado. No repitas el pago mientras se verifica.`}
           {result.status === 'cancelled' && `Cancelaste el pago en ${name} y no se realizó ningún cobro. Tus productos siguen en tu carrito para que puedas retomar tu compra.`}
           {result.status === 'error' && result.message}
         </p>
       </div>
       {retryError && <p role="alert" className="text-sm text-red-600">{retryError}</p>}
+      {(result.status === 'pending' || result.status === 'error') && reference && (
+        <Button variant="outline" onClick={() => {
+          started.current = false;
+          setResult({ status: 'loading' });
+          setVerificationAttempt(attempt => attempt + 1);
+        }}>Volver a verificar el pago</Button>
+      )}
 
       {result.status !== 'loading' && (
         <div className="flex flex-col sm:flex-row flex-wrap gap-3.5 w-full mt-2">
-          {result.status === 'approved' || result.status === 'pending' ? (
+          {result.status === 'approved' || result.status === 'pending' || result.status === 'error' ? (
             <>
               <Link
                 data-page-action="primary"

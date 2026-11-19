@@ -150,7 +150,6 @@ class ReservaActividadPagada(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     tienda = models.ForeignKey('core.Tienda', on_delete=models.PROTECT)
     seccion_id = models.UUIDField()
-    # Identificador de intento de checkout, NO una autorización del cliente.
     clave_checkout = models.UUIDField()
     cantidad = models.PositiveIntegerField()
     precio_unitario = models.PositiveBigIntegerField()

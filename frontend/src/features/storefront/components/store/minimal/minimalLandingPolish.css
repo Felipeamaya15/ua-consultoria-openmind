@@ -1,8 +1,5 @@
-/* OPENMIND_SOFT_DISCOVERY_COMPACT_HERO_V1
-   Corrección local de la plantilla 2: no afecta a Studio Pop, Velta ni Obsidian.
-   Respeta las imágenes, el contenido, la paleta y las herramientas del editor. */
 
-/* Encabezado compacto en escritorio: logo, navegación y cuenta en la misma fila. */
+
 [data-storefront-visual].template-minimal [data-visual-header-shell] {
   padding-top: 14px;
 }
@@ -34,7 +31,7 @@
   padding: 8px 12px;
 }
 
-/* Portada con jerarquía clara y sin tarjetas flotantes encima. */
+
 [data-storefront-visual].template-minimal [data-landing-page="minimal"] > [data-visual-section="hero"] {
   min-height: 0 !important;
   height: auto !important;
@@ -127,7 +124,7 @@
   object-fit: cover;
 }
 
-/* En el tamaño intermedio, no amontonar logo, navegación y botones. */
+
 @media (min-width: 768px) and (max-width: 1199px) {
   [data-storefront-visual].template-minimal [data-visual-section="header"][data-visual-part="headerLayout"] {
     flex-wrap: wrap !important;
@@ -176,9 +173,7 @@
   }
 }
 
-/* OPENMIND_SOFT_DISCOVERY_RESPONSIVE_SEARCH_V1
-   Separar el CTA editorial del buscador. Los controles no se superponen,
-   incluso en columnas estrechas y pantallas moviles. Solo plantilla 2. */
+
 [data-storefront-visual].template-minimal [data-landing-page="minimal"]
 .om-minimal-hero-copy .om-minimal-hero-cta {
   width: 100% !important;

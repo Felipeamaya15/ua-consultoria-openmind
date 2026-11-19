@@ -137,7 +137,7 @@ class DeliveryConfigurationTests(TestCase):
         self.assertFalse(ConfiguracionEntrega.objects.exists())
 
     def test_save_pickup_and_get_saved_configuration(self):
-        ConfiguracionEntrega.objects.create(tienda=self.store, datos=self.configuration)  # compatibility with saved legacy
+        ConfiguracionEntrega.objects.create(tienda=self.store, datos=self.configuration)
         response = self.api.put(self.url, self.configuration, format='json')
         self.assertEqual(response.status_code, 200, response.data)
         self.assertEqual(ConfiguracionEntrega.objects.get(tienda=self.store).datos, self.configuration)

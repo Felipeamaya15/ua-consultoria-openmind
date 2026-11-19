@@ -86,7 +86,6 @@ class VarianteProductoSerializer(serializers.ModelSerializer):
         return sku_formateado
 
     def validate(self, data):
-        # Al crear una variante, los atributos deben estar definidos.
         if self.instance is None and 'atributos' not in data:
             raise serializers.ValidationError(
                 {
@@ -96,22 +95,16 @@ class VarianteProductoSerializer(serializers.ModelSerializer):
                 }
             )
 
-        # Determinamos el producto desde el contexto o desde
-        # la instancia existente.
         id_producto = self.context.get('id_producto')
 
         if not id_producto and self.instance:
             id_producto = self.instance.id_producto
 
-        # En una actualización parcial, si no se envían atributos,
-        # se conservan los de la variante existente.
         atributos = data.get(
             'atributos',
             self.instance.atributos if self.instance else {},
         )
 
-        # Se mantiene la validación existente para impedir
-        # combinaciones de atributos duplicadas.
         if id_producto and atributos:
             consulta = VarianteProducto.objects.filter(
                 id_producto=id_producto,
@@ -140,8 +133,6 @@ class CompraItemInputSerializer(serializers.Serializer):
             raise serializers.ValidationError({"cantidad": "La cantidad debe ser un entero positivo."})
         return super().to_internal_value(data)
 
-    # El catálogo real vive en MongoDB e identifica cada variante por SKU,
-    # no por un ID de la tabla VarianteProducto (que no se usa en la práctica).
     sku = serializers.CharField(max_length=100)
     cantidad = serializers.IntegerField(min_value=1)
 
@@ -150,7 +141,6 @@ from apps.authentication.presentation.profile import StrictSerializer
 
 
 class RegistrarCompraSerializer(StrictSerializer):
-    # Contacto de la compra; la identidad autenticada procede de request.user.
     clave_checkout = serializers.UUIDField(required=False)
     nombre_contacto = serializers.CharField(max_length=150, required=False, allow_blank=True)
     correo_contacto = serializers.EmailField(max_length=320, required=False, allow_blank=True)
@@ -206,7 +196,6 @@ class RegistrarCompraSerializer(StrictSerializer):
             try:
                 config_pago = ConfiguracionPago.objects.get(tienda_id=tienda_id)
                 datos = config_pago.datos or {}
-                # La UI guarda 'transfer'; se acepta también la clave tal como llega ('Transferencia').
                 metodo = datos.get('transfer') or datos.get(str(value), {})
                 habilitado = (
                     isinstance(metodo, dict)
@@ -306,7 +295,6 @@ class ShippingRateSerializer(StrictSerializer):
 class CarrierConfigurationSerializer(StrictSerializer):
     enabled = DeliveryBooleanField()
     tarifas = ShippingRateSerializer(many=True, required=False, max_length=1000)
-    # Reservados para compatibilidad de forma; las credenciales reales quedan fuera de este sprint.
     accountId = DeliveryStringField(allow_blank=True, max_length=200, required=False)
     apiKey = DeliveryStringField(allow_blank=True, max_length=500, required=False)
     status = serializers.ChoiceField(choices=['not_configured'], required=False)
@@ -360,7 +348,7 @@ class ConfiguracionPagoSerializer(serializers.Serializer):
     }
 
     def to_internal_value(self, data):
-        return data  # Permitimos la estructura dinámica del JSON
+        return data
 
     def validate(self, data):
         if not isinstance(data, dict):
@@ -371,7 +359,7 @@ class ConfiguracionPagoSerializer(serializers.Serializer):
         for method_id, method_data in data.items():
             if not isinstance(method_data, dict):
                 raise serializers.ValidationError({method_id: 'La configuración del método debe ser un objeto.'})
-                
+
             is_enabled = method_data.get('enabled')
             if not isinstance(is_enabled, bool):
                 raise serializers.ValidationError({method_id: 'enabled debe ser un booleano.'})
@@ -445,19 +433,16 @@ class ConfiguracionPagoSerializer(serializers.Serializer):
                 if tuu_errors:
                     errores_metodos[method_id] = ' '.join(tuu_errors)
 
-            # Las credenciales parciales tampoco pueden persistirse con Linkify deshabilitado.
             has_linkify_data = method_id == 'linkify' and any(
                 fields.get(field) not in (None, '') for field in ('idCuenta', 'clavePrivada')
             )
 
-            # Una transferencia parcialmente completada tampoco puede persistirse deshabilitada.
             required_fields = self.REQUIRED_FIELDS_BY_METHOD.get(method_id, [])
             has_transfer_data = method_id == 'transfer' and any(
                 isinstance(value, str) and value.strip() for value in fields.values()
             )
             if is_enabled is True or has_linkify_data or has_transfer_data:
 
-                # Buscamos campos vacíos o inexistentes
                 missing = [key for key in required_fields
                            if not isinstance(fields.get(key), str) or not fields[key].strip()]
 
@@ -491,7 +476,6 @@ class PedidoSerializer(serializers.ModelSerializer):
         read_only_fields = ['identificador']
 
 class TransferenciaPendienteSerializer(serializers.ModelSerializer):
-    # Hasta cuando el comprador puede pagar; None si la tienda dejo el plazo manual en 0 (nunca expira).
     vence_en = serializers.SerializerMethodField()
 
     class Meta:
@@ -516,12 +500,12 @@ class ItemPedidoTiendaSerializer(serializers.ModelSerializer):
 
 class PedidoTiendaSerializer(serializers.ModelSerializer):
     items = ItemPedidoTiendaSerializer(source='itempedido_set', many=True, read_only=True)
-    
+
     class Meta:
         model = Pedido
         fields = [
-            'id_pedido', 'identificador', 'nombre_contacto', 'correo_contacto', 
-            'monto_total', 'estado', 'fecha_creacion', 'metodo_pago', 
+            'id_pedido', 'identificador', 'nombre_contacto', 'correo_contacto',
+            'monto_total', 'estado', 'fecha_creacion', 'metodo_pago',
             'costo_envio', 'descuento', 'items', 'entrega'
         ]
 

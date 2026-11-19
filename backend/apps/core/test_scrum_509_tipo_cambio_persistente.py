@@ -27,7 +27,7 @@ class TipoCambioPersistenteTests(TestCase):
     def test_sin_cache_ni_fuentes_se_usa_el_dato_guardado(self):
         with patch(DESCARGA, return_value=(Decimal('950.5'), date.today(), 'test')):
             fx.tipo_cambio_vigente()
-        cache.clear()  # simula un reinicio del servidor
+        cache.clear()
         with patch(DESCARGA, return_value=None):
             self.assertEqual(fx.tipo_cambio_vigente().observado, Decimal('950.5'))
 

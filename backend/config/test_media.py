@@ -29,7 +29,6 @@ class MediaSecurityTests(SimpleTestCase):
         for root in (self.base, self.media):
             for tree in ('images', 'logos', 'blocks'):
                 (root / 'landing' / tree).mkdir(parents=True)
-        # These are harmless markers, never actual backend/private file content.
         (self.base / 'manage.py').write_text('AUD001 synthetic source marker')
         (self.base / 'outside.png').write_bytes(b'outside-boundary-marker')
 
@@ -106,7 +105,6 @@ class MediaSecurityTests(SimpleTestCase):
         self.assertEqual(self.client.get('/landing/logos/escape/outside.png').status_code, 404)
 
     def test_symlink_replacing_legacy_tree_is_rejected(self):
-        # Only removes an empty directory created in this disposable fixture.
         root = self.base / 'landing/images'
         root.rmdir()
         root.symlink_to(self.base, target_is_directory=True)

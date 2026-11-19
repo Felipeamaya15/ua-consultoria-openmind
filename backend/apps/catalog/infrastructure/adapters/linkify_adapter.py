@@ -40,7 +40,6 @@ class LinkifyAdapter:
         req.add_header("Content-Type", "application/json")
 
         try:
-            # Tiempo máximo de espera: 8 segundos
             with urllib.request.urlopen(req, timeout=8) as response:
                 data_resp = json.loads(
                     response.read().decode("utf-8")

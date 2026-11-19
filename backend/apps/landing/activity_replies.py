@@ -125,7 +125,6 @@ class SendActivityReplyView(NoStoreActivityView):
             attempt = IntentoRespuestaActividad.objects.create(respuesta=reply, numero=reply.intentos.count()+1)
             reply.estado = 'enviando'
             reply.save(update_fields=['estado', 'actualizado'])
-        # El intento se confirma antes de contactar SMTP. Una caída deja enviando: nunca se reintenta a ciegas.
         try:
             result = send_store_mail(store, uuid5(reply.pk, str(attempt.numero)), reply.destinatario,
                 reply.asunto, reply.cuerpo, category='consulta',

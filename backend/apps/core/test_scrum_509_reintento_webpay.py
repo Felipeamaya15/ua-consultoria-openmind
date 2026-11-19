@@ -55,7 +55,7 @@ class ReintentoWebpayTests(TestCase):
         segundo = self.iniciar()
         self.assertEqual(segundo.status_code, 200, segundo.data)
         self.assertEqual(segundo.data['data'], {'token': 'token-dos', 'url': 'https://webpay.test/dos'})
-        self.assertEqual(Pedido.objects.count(), 1)  # mismo pedido, sin duplicar
+        self.assertEqual(Pedido.objects.count(), 1)
 
     @patch(ADAPTADOR)
     def test_tras_anular_el_pago_en_webpay_se_puede_pagar_de_nuevo(self, adaptador):

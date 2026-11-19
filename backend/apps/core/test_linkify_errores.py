@@ -64,7 +64,7 @@ class LinkifyAvisoErroresTests(TestCase):
                                              HTTP_X_LINKIFY_CONFIRMATION=self.firmar(cuerpo))
         self.assertEqual(respuesta.status_code, 500)
         self.assertEqual(respuesta.json()['error']['codigo'], 'ERROR_INTERNO')
-        self.assertNotIn('falla simulada', respuesta.content.decode())  # no se filtra el detalle interno
+        self.assertNotIn('falla simulada', respuesta.content.decode())
         self.assertEqual(Pedido.objects.get(pk=self.pedido.pk).estado, 'pendiente')
 
     def test_los_rechazos_quedan_registrados_con_codigo_y_pedido(self):

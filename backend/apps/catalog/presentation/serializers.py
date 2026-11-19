@@ -1,5 +1,4 @@
 from rest_framework import serializers
-# CAMBIO: Importamos el validador de Base64 que creamos para MongoDB
 from apps.core.domain.validators import validate_base64_image
 from django.core.exceptions import ValidationError as ImageValidationError
 from apps.core.models import Producto
@@ -132,7 +131,6 @@ class ProductPublicDetailSerializer(serializers.Serializer):
 class ProductAdminDetailSerializer(ProductPublicDetailSerializer):
     activo = serializers.BooleanField()
     fecha_creacion = serializers.DateTimeField(required=False)
-    # El panel necesita todos los campos de las variantes, incluidos metadatos legacy.
     variantes = serializers.ListField(child=serializers.DictField(), required=False)
     revision = serializers.SerializerMethodField()
 
@@ -264,7 +262,6 @@ class VarianteStockUpdateSerializer(StockValidationMixin, serializers.Serializer
     )
 
     def to_internal_value(self, data):
-        # DRF acepta 1.0 y True como enteros. El inventario no se redondea.
         if isinstance(data, dict) and 'stock' in data and (isinstance(data['stock'], bool) or isinstance(data['stock'], float)):
             raise serializers.ValidationError({'stock': 'El stock debe ser un entero mayor o igual a cero.'})
         return super().to_internal_value(data)
@@ -461,7 +458,6 @@ class ItemCarritoResponseSerializer(serializers.Serializer):
         return obj.cantidad * self._precio(obj)
 
     def get_stock_disponible(self, obj):
-        # Los casos de uso calculan el stock real (variante o producto base).
         return getattr(obj, 'stock_disponible_calculado', obj.id_producto.stock)
 
     def get_imagen(self, obj):
@@ -474,7 +470,6 @@ class ItemCarritoResponseSerializer(serializers.Serializer):
         return getattr(obj, "producto_mongo_id_calculado", None)
 
     def get_slug(self, obj):
-        # La consulta del carrito lo resuelve desde el catálogo; puede ser None.
         return getattr(obj, 'slug_calculado', None)
 
 

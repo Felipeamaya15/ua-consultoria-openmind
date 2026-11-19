@@ -23,7 +23,7 @@ const real = {id_pedido: 42, identificador: identifier, fecha_creacion: '2026-10
     sku: 'REAL-M', atributos_variante: [{clave: 'talla', etiqueta: 'Talla', valor: 'M'}]}]};
 
 (async () => {
-  // Contrato HTTP: consulta real, correo en el cuerpo, errores y cancelación.
+
   let calls = [], reply = {ok: true, json: async () => ({exito: true, data: real})};
   const {
     orderService, isValidOrderNumber, ORDER_NUMBER_FORMAT_MESSAGE,
@@ -137,7 +137,7 @@ const real = {id_pedido: 42, identificador: identifier, fecha_creacion: '2026-10
     assert.ok(!tree.some(node => node.type === 'Input'), 'El enlace muestra directamente el detalle');
     for (const value of [identifier, 'Producto real', 'Comprador real', 'En camino', '15000']) assert.ok(tree.includes(value), value);
 
-    // Entrada directa: conserva el formulario y consulta solo al pulsar.
+
     resetTracking(); location = {search: '', state: null};
     tree = render(Tracking);
     assert.equal(trackCalls.length, 0);
@@ -168,7 +168,7 @@ const real = {id_pedido: 42, identificador: identifier, fecha_creacion: '2026-10
     }
   }
 
-  // URL sin correo no dispara una consulta incompleta; un cambio de URL sí actualiza la selección.
+
   resetTracking(); location = {search: `?orden=${identifier}`, state: null}; render(Tracking);
   assert.equal(trackCalls.length, 0);
   location = {...location, state: {email}}; render(Tracking); await settle();
@@ -184,7 +184,7 @@ const real = {id_pedido: 42, identificador: identifier, fecha_creacion: '2026-10
   assert.equal(tree.filter(node => node.type === 'Input').length, 2, 'Volver a Seguimiento por separado pide número y correo');
   assert.equal(trackCalls.length, callsBeforeManual);
 
-  // Una respuesta anterior o tras desmontar no sustituye la orden seleccionada.
+
   resetTracking(); let resolveOld;
   request = () => new Promise(resolve => {resolveOld = resolve;});
   location = {search: '?orden=ORD-20261008-OLD1', state: {email}}; render(Tracking);
@@ -198,7 +198,7 @@ const real = {id_pedido: 42, identificador: identifier, fecha_creacion: '2026-10
   hooks.forEach(hook => hook.cleanup?.());
   assert.equal(trackCalls.at(-1)[2].aborted, true);
 
-  // El retorno de Webpay también evita los botones duplicados y recupera el pedido real.
+
   for (template of [1, 2, 3, 4]) {
     resetTracking(); receiptStorage.clear();
     receiptStorage.set(`order-tracking:${identifier}`, JSON.stringify({identificador: identifier, email}));
@@ -214,7 +214,7 @@ const real = {id_pedido: 42, identificador: identifier, fecha_creacion: '2026-10
     assert.equal(result.find(node => node.type === 'Link' && nodes(node).includes('Ver mi pedido')).props.to, `/plantilla/${template}/seguimiento`);
   }
   console.log('OK: confirmación y seguimiento real, seis casos requeridos en cuatro plantillas, contrato, errores y cancelación de consultas.');
-  // SCRUM-355 y SCRUM-356: En tránsito y En reparto, sin códigos crudos del transportista.
+
   const carrier = (estado_actual, historial) => ({numero_seguimiento: 'STK1234567', proveedor: 'Starken', estado_actual,
     descripcion_estado: 'Detalle del operador', fecha_estimada_entrega: '', historial});
   for (template of [1, 2, 3, 4]) {
@@ -229,7 +229,7 @@ const real = {id_pedido: 42, identificador: identifier, fecha_creacion: '2026-10
     }
   }
   liveReply = async () => ({historial: []});
-  // Estado del pedido: etapas canónicas y alias históricos, sin alterar las etiquetas del transportista.
+
   for (template of [1, 2, 3, 4]) {
     for (const [estado, label] of [['en_camino', 'En camino'], ['enviado', 'En camino'], ['en_origen', 'En camino'], ['en_reparto', 'En camino'], ['preparando', 'Pagado/En preparación']]) {
       resetTracking(); request = async () => ({...real, estado}); location = {search: `?orden=${identifier}`, state: {email}};
@@ -241,7 +241,7 @@ const real = {id_pedido: 42, identificador: identifier, fecha_creacion: '2026-10
       assert.ok(tree.some(node => node.type === 'div' && nodes(node).includes(label) && nodes(node).includes('Estado actual')), `${estado}: etapa actual identificada`);
     }
   }
-  // El servicio acepta el estado En reparto.
+
   reply = {ok: true, json: async () => ({exito: true, data: {...real, estado: 'en_reparto'}})};
   assert.equal((await orderService.track(identifier, email)).estado, 'en_reparto');
 })().catch(error => {console.error(error); process.exitCode = 1;});

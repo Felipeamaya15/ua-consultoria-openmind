@@ -369,7 +369,6 @@ class GmailConnectionTests(TestCase):
 class GmailHTTPSimulationTests(GmailConnectionTests):
     """Requests y MIME reales contra servidor HTTP aislado; nunca se llama a Google."""
     def test_status_exposes_no_secret_and_external_sending_is_disabled(self):
-        # Parent's disabled-provider contract remains covered by GmailConnectionTests.
         with override_settings(STORE_MAIL_EXTERNAL_ENABLED=False):
             super().test_status_exposes_no_secret_and_external_sending_is_disabled()
 

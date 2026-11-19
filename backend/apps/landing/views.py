@@ -60,7 +60,6 @@ class ConfiguracionLandingAPIView(APIView):
             request,
             exigir_propietario=True,
         )
-        # Serialize first creation with the social editor as well as later writes.
         Tienda.objects.select_for_update().get(pk=tienda.pk)
 
         configuracion = ConfiguracionLanding.objects.select_for_update().filter(

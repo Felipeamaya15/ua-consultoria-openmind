@@ -17,7 +17,6 @@ urlpatterns = [
     path('api/landing/', include('apps.landing.urls')),
     path('api/instagram/', include('apps.instagram.urls')),
 
-    # Rutas directas de variantes mantenidas por compatibilidad / QA
     path(
         'api/productos/<str:id_producto>/variantes/',
         ProductVariantsView.as_view(),
@@ -42,6 +41,5 @@ urlpatterns = [
     path("api/logistica/", include("apps.shipping.presentation.urls")),
 ]
 
-# Development only; production must serve these same bounded trees separately.
 if settings.DEBUG:
     urlpatterns += media_urlpatterns()

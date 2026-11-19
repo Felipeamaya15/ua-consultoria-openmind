@@ -10,7 +10,7 @@ const post = async (path: string, body: Record<string, unknown>) => {
 };
 
 export const paypalPaymentService = {
-  // El monto lo toma el servidor del pedido; el cliente solo informa el pedido y las URLs de retorno.
+
   iniciarPago: (
     tienda_id: number | string,
     order_number: string,

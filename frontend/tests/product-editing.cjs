@@ -1,4 +1,4 @@
-// Ejecutar desde frontend: node tests/product-editing.cjs
+
 const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
@@ -71,7 +71,7 @@ async function main() {
   reply = ok({ ...raw, id: 'abcdefabcdefabcdefabcdef' });
   await assert.rejects(() => service.updateCatalogProduct(product), /no confirmó/);
 
-  // Carga del formulario/listado mediante efectos, sin consultar mocks o almacenamiento local.
+
   for (const mode of ['detail', 'list', 'failure']) {
     const state = [], effects = [];
     let cursor = 0, queried = 0;

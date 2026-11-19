@@ -7,7 +7,6 @@ import { layerLayoutProblem } from '../services/layerLayout';
 import { PUBLICATION_FORMATS, type PublicationContent, type PublicationDesign, type StoreBrand } from '../domain/types';
 
 
-/** Separa datos de actividades del texto de difusión sin modificar productos. */
 function activityDescription(value: string) {
   const details: { label: string; value: string }[] = [];
   const narrative: string[] = [];
@@ -49,14 +48,14 @@ function activityDescription(value: string) {
   return { narrative: narrative.join('\n'), details };
 }
 
-/** Íconos sencillos para que modalidad, fecha y horario sean fáciles de leer. */
+
 function ActivityFactIcon({label}: {label: string}) {
   if (label.toLowerCase() === 'fecha') return <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7 3v4M17 3v4M3 10h18"/></svg>;
   if (label.toLowerCase() === 'horario' || label.toLowerCase() === 'duración') return <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>;
   return <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8 9h8M8 13h8"/></svg>;
 }
 
-/** Render compartido por la vista previa y su captura de exportación; no consulta ni guarda. */
+
 export function PublicationPreview({ content, brand, design, paletteColors, images = [], onGalleryMode, layerEditing }: { layerEditing?: LayerEditing; paletteColors?:PaletteColors; content: PublicationContent; brand: StoreBrand; design: PublicationDesign; images?: readonly string[]; onGalleryMode?: (mode: GalleryMode) => void }) {
   const [failedImage, setFailedImage] = useState<string | null>(null);
   const [failedGalleryImages, setFailedGalleryImages] = useState<string[]>([]);
@@ -110,8 +109,8 @@ export function PublicationPreview({ content, brand, design, paletteColors, imag
           if (!professional) return regularFits;
           const media = art.querySelector<HTMLElement>('.marketing-art-media');
           const area = art.getBoundingClientRect();
-          // Los fondos absolutos, las sombras y los glifos no deben bloquear una pieza válida.
-          // Comprueba las cajas y el texto comercial reales, incluida la fila de precios.
+
+
           const tolerance = 3;
           const inside = (node: HTMLElement, outer: DOMRect) => {
             const r = node.getBoundingClientRect();
@@ -129,7 +128,7 @@ export function PublicationPreview({ content, brand, design, paletteColors, imag
         const fitsPanel = (node: HTMLElement) => node.scrollHeight <= node.clientHeight + 2 && node.scrollWidth <= node.clientWidth + 2;
         const gallery = art.querySelector<HTMLElement>('.marketing-activity-gallery');
         const layout = art.querySelector<HTMLElement>('.marketing-activity-layout');
-        // A real overflow must still block export. A photo must not collapse into a strip.
+
         return art.scrollHeight <= art.clientHeight + 2 && art.scrollWidth <= art.clientWidth + 2
           && fitsPanel(brandRow) && (!layout || fitsPanel(layout)) && panels.every(fitsPanel)
           && (!gallery || (gallery.clientHeight >= art.clientWidth * .20 && gallery.clientWidth >= art.clientWidth * .20));
@@ -143,7 +142,7 @@ export function PublicationPreview({ content, brand, design, paletteColors, imag
     measure();
     const observer = new ResizeObserver(measure);
     observer.observe(art);
-    // También se vuelve a medir cuando cambia una imagen nueva de las capas.
+
     art.addEventListener('load', measure, true);
     art.addEventListener('error', measure, true);
     void document.fonts?.ready.then(() => { if (!disposed) measure(); });

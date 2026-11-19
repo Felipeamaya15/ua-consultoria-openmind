@@ -4,7 +4,7 @@ import { blockStyleSheet } from '../../storefront/visual/blockAppearance';
 import { PublishedSectionMedia, SectionElements } from './SectionElements';
 import './landing-blocks.css';
 
-/** The same store content is rendered in every template; design stays template scoped. */
+
 export function LandingBlocks({ onlyHistory = false, blockId, mediaProvided = false }: { onlyHistory?: boolean; blockId?: string; mediaProvided?: boolean }) {
   const { landing, blockStyles } = useStore();
   const { template } = useStorefrontTemplate();

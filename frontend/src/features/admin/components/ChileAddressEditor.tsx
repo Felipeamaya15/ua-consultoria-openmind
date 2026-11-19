@@ -5,8 +5,7 @@ import territory from '../data/chileTerritory.json';
 import localities from '../data/chileLocalities.json';
 import { Input, Select } from './ui';
 
-// Fuente: SUBDERE, CUT_2018_v04.xls (incluye Ñuble). La provincia filtra
-// comunas; se puede reconstruir desde la comuna sin añadir campos al backend.
+
 export function ChileAddressEditor({ value, onChange }: { value: UbicacionLanding; onChange: (value: UbicacionLanding) => void }) {
   const normalize = (name: string) => name.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/^region\s+(de\s+|del\s+)?/, '').trim();
   const previousName = normalize(value.region);

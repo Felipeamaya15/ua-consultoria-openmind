@@ -1,4 +1,4 @@
-// SCRUM-434: las variables y los textos por defecto de la pantalla de correos coinciden con los del backend.
+
 const fs = require('node:fs'), path = require('node:path'), vm = require('node:vm');
 const assert = require('node:assert/strict'), ts = require('typescript');
 const root = path.resolve(__dirname, '..');
@@ -13,7 +13,7 @@ const same = (actual, expected, message) => assert.deepEqual(JSON.parse(JSON.str
 let passed = 0;
 function test(name, fn) { fn(); console.log('OK ' + name); passed++; }
 
-// Si cambia VARIABLES_PERMITIDAS o TIPOS en backend/apps/core/domain/plantillas_correo, hay que cambiar esto y la pantalla.
+
 const VARIABLES_DEL_BACKEND = ['customerName', 'customerEmail', 'orderNumber', 'orderTotal', 'orderSummary', 'shippingMethod', 'carrier', 'trackingCode', 'trackingLink', 'storeName'];
 const TIPOS_DEL_BACKEND = ['order_cancelled', 'order_delivered', 'order_received', 'order_shipped', 'payment_success'];
 

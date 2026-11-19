@@ -1,4 +1,4 @@
-// Real browser + real HTTP clients, against the local Postman simulation only.
+
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
@@ -40,7 +40,7 @@ const control = async value => { const response = await fetch(api+'/__qa/control
     const untilVariable = async (name,value) => { await page.waitForFunction(({name,value})=>{const doc=document.querySelector('iframe')?.contentDocument;const root=doc?.querySelector('[data-storefront-visual]');return root && getComputedStyle(root).getPropertyValue(name).trim()===value;},{name,value}); };
     const save = async () => { await page.getByRole('button',{name:'Guardar cambios',exact:true}).click(); await page.getByText('✓ Guardado',{exact:true}).waitFor(); };
 
-    // Default general edits cascade; explicit tablet edits leave desktop/mobile alone.
+
     await chooseSection('topBar');
     await page.getByLabel('Fondo hexadecimal',{exact:true}).fill('#123456');
     for(const [name,viewport] of [['Computadora','desktop'],['Tablet','tablet'],['Móvil','mobile']]){
@@ -59,7 +59,7 @@ const control = async value => { const response = await fetch(api+'/__qa/control
     await untilVariable('--visual-topbar-bg-desktop','#334455'); assert.equal(await variable('--visual-topbar-bg-tablet'),'#abcdef'); assert.equal(await variable('--visual-topbar-bg-mobile'),'#123456');
     console.log('OK cambios generales, tablet exclusiva, deshacer y rehacer');
 
-    // A template comparison preserves unsaved drafts and other template settings.
+
     await page.getByRole('button',{name:'Plantillas',exact:true}).click();
     await page.getByRole('button').filter({hasText:'Soft Discovery'}).click();
     await page.waitForFunction(()=>document.querySelector('iframe')?.getAttribute('src')?.startsWith('/plantilla/2'));
@@ -70,7 +70,7 @@ const control = async value => { const response = await fetch(api+'/__qa/control
     await untilVariable('--visual-topbar-bg-tablet','#abcdef');
     await device('Computadora');
 
-    // Content lives in Página principal; design provides contextual navigation.
+
     await chooseSection('hero');await page.getByRole('button',{name:'Contenido y secciones',exact:true}).click();
     assert.equal(await page.getByLabel('Título principal',{exact:true}).count(),0);
     await page.getByRole('link',{name:'Portada, logo y apartados de Página principal →',exact:true}).click();
@@ -136,7 +136,7 @@ const control = async value => { const response = await fetch(api+'/__qa/control
     }
     console.log('OK zoom, panel plegable, vista ampliada, tablet y móvil sin desbordamiento');
 
-    // Same browser, different backend-confirmed store: no visual or content leakage.
+
     await control({store:2}); await page.reload(); await frame.locator('[data-storefront-visual]').waitFor();
     const store2 = await variable('--visual-topbar-bg-tablet'); assert.notEqual(store2,'#abcdef');
     await choosePage('home'); await frame.getByRole('heading',{name:'Hecho para acompañarte',exact:true}).waitFor();

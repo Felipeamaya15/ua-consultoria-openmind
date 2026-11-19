@@ -31,7 +31,6 @@ class EndToEndPurchaseFlowTests(TestCase):
         self.buyer = User.objects.create_user(username='e2e-buyer', email='comprador.e2e@example.com')
         self.store = Tienda.objects.create(nombre='Tienda E2E', id_usuario_propietario=self.owner)
 
-        # 1. Configurar alternativas de entrega (Retiro y Chilexpress con tarifa para Santiago)
         ConfiguracionEntrega.objects.create(
             tienda=self.store,
             datos={
@@ -50,7 +49,6 @@ class EndToEndPurchaseFlowTests(TestCase):
             },
         )
 
-        # 2. Configurar modalidad de pago (Transferencia bancaria con los 6 campos obligatorios)
         ConfiguracionPago.objects.create(
             tienda=self.store,
             datos={
@@ -61,7 +59,6 @@ class EndToEndPurchaseFlowTests(TestCase):
             },
         )
 
-        # 3. Configurar promoción activa (20% de descuento)
         self.promo = Promocion.objects.create(
             tienda=self.store,
             nombre='Descuento E2E 20%',
@@ -72,7 +69,6 @@ class EndToEndPurchaseFlowTests(TestCase):
             activa=True,
         )
 
-        # 4. Crear producto con variantes y stock independiente en colección Mongo aislada
         self.repo = ProductRepository()
         self.repo.collection = self.repo.db.get_collection('test_e2e_flow_' + uuid4().hex)
         self.addCleanup(self.repo.collection.drop)
@@ -123,7 +119,6 @@ class EndToEndPurchaseFlowTests(TestCase):
         self.api.credentials(HTTP_AUTHORIZATION='Token ' + self.token)
 
     def test_complete_buyer_journey_end_to_end(self):
-        # ETAPA 1 y 2: Ingreso al catálogo público y consulta de detalle/variantes del producto
         catalog_res = self.api.get('/api/catalog/productos/')
         self.assertEqual(catalog_res.status_code, 200)
         self.assertTrue(catalog_res.data['exito'])
@@ -134,7 +129,6 @@ class EndToEndPurchaseFlowTests(TestCase):
         variantes = detail_res.data['data']['variantes']
         self.assertEqual({v['sku'] for v in variantes}, {'POL-M', 'POL-L'})
 
-        # ETAPA 3: Incorporación de variante seleccionada (POL-M) al carrito
         add_res = self.api.post(
             '/api/catalog/carrito/items/',
             {'slug': self.product_id, 'sku': 'POL-M', 'cantidad': 1},
@@ -144,7 +138,6 @@ class EndToEndPurchaseFlowTests(TestCase):
         cart_item_id = add_res.data['data']['id_item_carrito']
         self.assertEqual(add_res.data['data']['precio_unitario'], '15000.00')
 
-        # ETAPA 4: Modificación de cantidades en el carrito (de 1 a 2 unidades -> subtotal $30.000)
         patch_res = self.api.patch(
             f'/api/catalog/carrito/items/{cart_item_id}/',
             {'cantidad': 2},
@@ -155,7 +148,6 @@ class EndToEndPurchaseFlowTests(TestCase):
         self.assertEqual(cart_get.data['data'][0]['cantidad'], 2)
         self.assertEqual(cart_get.data['data'][0]['subtotal'], 30000)
 
-        # ETAPA 7: Consulta de alternativas de entrega y cotización en tiempo real (Chilexpress -> $4.500)
         delivery_res = self.api.get('/api/entregas/alternativas/')
         self.assertEqual(delivery_res.status_code, 200)
         self.assertTrue(delivery_res.data['data']['chilexpress']['enabled'])
@@ -170,7 +162,6 @@ class EndToEndPurchaseFlowTests(TestCase):
         shipping_cost = quote_res.data['data']['tarifas'][0]['monto']
         self.assertEqual(int(shipping_cost), 4500)
 
-        # ETAPA 5: Aplicación y validación de código promocional (20% sobre $30.000 = $6.000 de descuento)
         promo_res = self.api.post(
             '/api/promociones/validar/',
             {'code': 'E2E20', 'subtotal': 30000, 'shipping': int(shipping_cost)},
@@ -179,12 +170,10 @@ class EndToEndPurchaseFlowTests(TestCase):
         self.assertEqual(promo_res.status_code, 200, promo_res.data)
         self.assertEqual(Decimal(promo_res.data['data']['discount']), Decimal('6000.00'))
 
-        # ETAPA 8: Consulta de métodos de pago habilitados
         payments_res = self.api.get('/api/pagos/activos/')
         self.assertEqual(payments_res.status_code, 200)
         self.assertTrue(payments_res.data['data']['transfer']['enabled'])
 
-        # ETAPA 6 y 9: Ingreso de datos del comprador y confirmación del pedido en Checkout
         checkout_payload = {
             'clave_checkout': str(uuid4()),
             'items': [{'producto_id': self.product_id, 'sku': 'POL-M', 'cantidad': 2}],
@@ -212,19 +201,16 @@ class EndToEndPurchaseFlowTests(TestCase):
         self.assertEqual(created['estado'], 'pendiente')
         self.assertEqual(created['descuento'], '6000.00')
         self.assertEqual(created['costo_envio'], '4500.00')
-        self.assertEqual(created['monto_total'], '28500.00')  # 30000 - 6000 + 4500
+        self.assertEqual(created['monto_total'], '28500.00')
         self.assertRegex(created['identificador'], r'^ORD-\d{8}-[A-Z0-9]{4}$')
 
-        # Limpieza del carrito tras confirmar (como ejecuta CartContext.clearCart)
         self.api.delete(f'/api/catalog/carrito/items/{cart_item_id}/')
         self.assertEqual(ItemCarrito.objects.count(), 0)
 
-        # el pedido pendiente no descuenta stock; solo se descuenta al confirmar el pago
         updated_doc = self.repo.get_by_id(str(self.store.pk), self.product_id)
         stocks = {v['sku']: v['stock'] for v in updated_doc['variantes']}
         self.assertEqual(stocks, {'POL-M': 6, 'POL-L': 4})
 
-        # ETAPA 10A: Consulta del pedido en el historial del comprador autenticado (/mis-pedidos)
         history_res = self.api.get('/api/mi-cuenta/pedidos/')
         self.assertEqual(history_res.status_code, 200)
         self.assertEqual(history_res.data['data'][0]['identificador'], created['identificador'])
@@ -234,8 +220,7 @@ class EndToEndPurchaseFlowTests(TestCase):
         self.assertEqual(order_detail_res.data['data']['items'][0]['sku'], 'POL-M')
         self.assertEqual(order_detail_res.data['data']['items'][0]['cantidad'], 2)
 
-        # ETAPA 10B: Consulta pública del pedido en el portal de seguimiento (/seguimiento)
-        self.api.credentials()  # Incluso sin sesión (como invitado)
+        self.api.credentials()
         tracking_res = self.api.post(
             '/api/pedidos/seguimiento/',
             {'identificador': created['identificador'], 'email': 'comprador.e2e@example.com'},

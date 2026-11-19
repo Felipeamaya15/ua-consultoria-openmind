@@ -33,7 +33,6 @@ class LinkifyAdapterFirmaTests(TestCase):
         self.assertFalse(adaptador.firma_valida(b'{"a":2}', firmar(b'{"a":1}')))
 
     def test_clave_vacia_nunca_valida(self):
-        # Con clave vacia cualquiera podria calcular la firma: debe rechazarse siempre.
         adaptador = LinkifyAdapter('CUENTA', '')
         self.assertFalse(adaptador.firma_valida(b'x', firmar(b'x', clave='')))
         self.assertFalse(LinkifyAdapter('CUENTA', CLAVE).firma_valida(b'x', ''))
@@ -65,7 +64,6 @@ class LinkifyNotificacionTests(TestCase):
     def estado(self, pedido=None):
         return Pedido.objects.get(pk=(pedido or self.pedido).pk).estado
 
-    # ---------------------------------------------------------- notificacion
     def test_notificacion_firmada_marca_el_pedido_como_pagado(self):
         respuesta = self.avisar({'action': 'notification', 'monto': 18990})
         self.assertEqual(respuesta.status_code, 200, respuesta.content)
@@ -145,7 +143,6 @@ class LinkifyNotificacionTests(TestCase):
         self.assertEqual(respuesta.status_code, 400)
         self.assertEqual(respuesta.json()['error']['codigo'], 'ACCION_DESCONOCIDA')
 
-    # ------------------------------------------------------------ anulacion
     def test_anulacion_devuelve_el_pedido_a_pendiente(self):
         pagado = self.crear_pedido(estado='pagado')
         respuesta = self.avisar({'action': 'cancellation'}, pedido=pagado)
@@ -163,7 +160,6 @@ class LinkifyNotificacionTests(TestCase):
         self.assertEqual(self.avisar({'action': 'cancellation'}).status_code, 200)
         self.assertEqual(self.estado(), 'pendiente')
 
-    # ------------------------------------------------------------------ GET
     def test_get_firmado_entrega_monto_y_detalle(self):
         consulta = f'id_pago={self.pedido.pk}'
         respuesta = self.client.get(f'{URL}?{consulta}', HTTP_X_LINKIFY_CONFIRMATION=firmar(b''))

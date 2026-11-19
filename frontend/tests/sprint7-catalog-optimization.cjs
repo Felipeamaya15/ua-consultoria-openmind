@@ -1,13 +1,4 @@
-/**
- * Validación de la tarea: Optimizar carga inicial del catálogo.
- * Comprueba:
- * 1) El serializador público del listado en el backend entrega las variantes activas y descripción
- *    en la primera consulta (GET /api/catalog/productos/).
- * 2) fetchPublicProducts({ includeVariants: true }) hidrata todos los productos, variantes, precios,
- *    stock y filtros de atributos en 1 sola petición HTTP (eliminando el problema N+1 de red).
- * 3) Se mantiene el fallback a fetchPublicProductDetail cuando un mock resumido no incluye variantes.
- * 4) ProductCard aplica loading="lazy" y decoding="async" en las imágenes del catálogo.
- */
+
 const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
@@ -127,7 +118,7 @@ test('el serializador del backend incluye variantes activas y ProductCard aplica
     path.join(root, 'src/features/storefront/components/store/ProductCard.tsx'),
     'utf8',
   );
-  // Las tarjetas ahora delegan las imágenes en una sola galería. Verificar ambas capas.
+
   const gallerySource = fs.readFileSync(path.join(root, 'src/features/storefront/components/store/ProductImageGallery.tsx'), 'utf8');
   const galleries = cardSource.match(/<ProductImageGallery\b[\s\S]*?\/>/g) || [];
   assert.ok(galleries.length >= 6, 'Todas las variantes actuales de ProductCard usan la galería');

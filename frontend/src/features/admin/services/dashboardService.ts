@@ -40,7 +40,7 @@ function valid(value: unknown): value is DashboardData {
       && money(value.comparacion.total_ventas) && count(value.comparacion.total_pedidos)
       && percent(value.comparacion.variacion_ventas) && percent(value.comparacion.variacion_pedidos)));
 }
-/** La tienda se resuelve y autoriza en el servidor; el cliente solo envía el período. */
+
 export async function getDashboard(period: DashboardPeriod, signal?: AbortSignal): Promise<DashboardData> {
   const token = authService.getToken();
   if (!token) throw new Error('Inicia sesión como propietario para consultar las estadísticas.');

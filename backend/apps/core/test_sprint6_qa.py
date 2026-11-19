@@ -19,7 +19,7 @@ class PickupCalendarTests(SimpleTestCase):
         self.pickup = {'enabled': True, 'version': 2, 'hours': {
             'mon': {'enabled': True, 'start': '09:15', 'end': '18:10'},
         }}
-        self.now = datetime(2026, 10, 26, 12, 30, 20, tzinfo=timezone.utc)  # 09:30 Chile
+        self.now = datetime(2026, 10, 26, 12, 30, 20, tzinfo=timezone.utc)
 
     def test_selection_with_exact_minutes_and_chile_zone(self):
         for hour in ('09:31', '10:07', '18:10'):

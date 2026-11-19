@@ -22,7 +22,7 @@
 .om-product-gallery{container-type:inline-size}
 @container(max-width:110px){.om-product-gallery__arrow--previous{top:0;left:0;transform:none}.om-product-gallery__arrow--next{top:auto;bottom:0;right:0;transform:none}.om-product-gallery__dots,.om-product-gallery__pause{display:none}}
 
-/* Galeria de ficha: mantener imagen y controles dentro de su espacio */
+
 .om-product-gallery--detail{
   position:relative;
   inset:auto;
@@ -49,9 +49,6 @@
 }
 
 
-
-
-/* Galeria de producto: formas configurables por plantilla */
 .om-product-gallery.om-product-gallery--detail-controls .om-product-gallery__arrow {
   --om-arrow-radius: var(--visual-page-product-gallery-arrow-radius-desktop, 999px);
   --om-arrow-bg: var(--visual-page-product-gallery-arrow-background-desktop, var(--primary));
@@ -108,7 +105,7 @@
     --om-arrow-shadow: var(--visual-page-product-gallery-arrow-shadow-mobile, 0 2px 8px #0003);
   }
 }
-/* OPENMIND_GALLERY_ARROWS_REFINED_V2 */
+
 .om-product-gallery.om-product-gallery--detail-controls .om-product-gallery__arrow {
   box-sizing: border-box;
   width: 42px !important;
@@ -157,7 +154,7 @@
   outline: 2px solid var(--visual-text, #333);
   outline-offset: 2px;
 }
-/* OPENMIND_CENTERED_SVG_ARROWS_V3 */
+
 .om-product-gallery.om-product-gallery--detail-controls .om-product-gallery__arrow {
   display: flex !important;
   align-items: center !important;
@@ -183,7 +180,7 @@
   transform: none;
   pointer-events: none;
 }
-/* OPENMIND_FEATURED_IMAGE_FALLBACK_V1 */
+
 .om-product-gallery--featured .om-product-gallery__fallback {
   position: absolute;
   inset: 0;
@@ -206,9 +203,8 @@
 .om-product-gallery--featured .om-product-gallery__layer {
   z-index: 1;
 }
-/* OPENMIND_FEATURED_FULL_IMAGE_FIX_V2 */
 
-/* La galeria ocupa exactamente el espacio de la tarjeta */
+
 .om-product-gallery--featured {
   position: absolute !important;
   inset: 0 !important;
@@ -218,7 +214,7 @@
   isolation: isolate;
 }
 
-/* El enlace tambien debe cubrir todo el recuadro */
+
 .om-product-gallery--featured .om-product-gallery__link {
   position: absolute !important;
   inset: 0 !important;
@@ -228,14 +224,14 @@
   overflow: hidden !important;
 }
 
-/* Fotografia de respaldo */
+
 .om-product-gallery--featured .om-product-gallery__fallback {
   position: absolute !important;
   inset: 0 !important;
   z-index: 0 !important;
 }
 
-/* La imagen activa debe cubrir todo el espacio */
+
 .om-product-gallery--featured .om-product-gallery__layer {
   position: absolute !important;
   inset: 0 !important;
@@ -249,7 +245,7 @@
   visibility: visible !important;
 }
 
-/* Evitar que la foto se desplace a las esquinas */
+
 .om-product-gallery--featured .om-product-gallery__layer img {
   position: absolute !important;
   inset: 0 !important;
@@ -264,15 +260,14 @@
   visibility: visible !important;
 }
 
-/* Ocultar navegacion manual solamente en Destacados */
+
 .om-product-gallery--featured:not(.om-product-gallery--controls-enabled) .om-product-gallery__arrow,
 .om-product-gallery--featured:not(.om-product-gallery--controls-enabled) .om-product-gallery__dots,
 .om-product-gallery--featured:not(.om-product-gallery--controls-enabled) .om-product-gallery__pause {
   display: none !important;
 }
-/* OPENMIND_FEATURED_TRANSITIONS_V3 */
 
-/* Deslizar: la fotografia nueva entra desde la derecha */
+
 @keyframes om-featured-slide-full {
   from {
     translate: 100% 0;
@@ -282,7 +277,7 @@
   }
 }
 
-/* Fundido: la fotografia nueva aparece suavemente */
+
 @keyframes om-featured-fade-full {
   from {
     filter: opacity(0);
@@ -292,7 +287,7 @@
   }
 }
 
-/* Zoom: entrada suave sin perder el recuadro */
+
 @keyframes om-featured-zoom-full {
   from {
     scale: 1.055;
@@ -304,7 +299,7 @@
   }
 }
 
-/* Transiciones activas solamente durante hover en Inicio */
+
 .om-product-gallery--featured.om-product-gallery--hovering
 .om-product-gallery__layer--slide {
   animation: om-featured-slide-full .38s ease-out both !important;
@@ -320,7 +315,7 @@
   animation: om-featured-zoom-full .38s ease-out both !important;
 }
 
-/* Respetar la preferencia de movimiento reducido */
+
 @media (prefers-reduced-motion: reduce) {
   .om-product-gallery--featured.om-product-gallery--hovering
   .om-product-gallery__layer--slide,
@@ -331,8 +326,8 @@
     animation: none !important;
   }
 }
-/* OPENMIND_TEMPLATE_GALLERY_LAYOUT_FIX_V1 */
-/* Solo ficha de producto: escena estable al cambiar fotos de proporciones distintas. */
+
+
 .om-product-gallery--detail {
   position: absolute;
   inset: 0;
@@ -374,13 +369,8 @@
   object-fit: contain;
   object-position: center;
 }
-/* Los controles existentes permanecen sobre la fotografía. */
 
-/* OPENMIND_PRODUCT_GALLERY_CENTERED_FULL_HEIGHT_V2
-   La regla global [data-page-main-image] impone height:auto y max-height
-   aunque el carrusel de detalle necesita ocupar un visor de tamaño fijo.
-   Sobrescribir SOLO la foto central de la ficha; no afecta catálogo,
-   portada, editor visual, fondo desenfocado ni reproductor de video. */
+
 [data-storefront-visual] .ua-store-page .om-product-gallery--detail .om-product-gallery__layer img[data-page-main-image] {
   position: absolute !important;
   inset: 0 !important;
@@ -398,10 +388,7 @@
   border-radius: 0 !important;
 }
 
-/* OPENMIND_DETAIL_STABLE_ARROW_HIT_TARGET_V1
-   Solo ficha de producto. Una zona de clic fija, amplia y centrada,
-   que no se desplaza durante hover/click ni al cambiar la imagen.
-   La forma y los colores configurados siguen viniendo del editor visual. */
+
 .om-product-gallery.om-product-gallery--detail-controls .om-product-gallery__arrow {
   position: absolute !important;
   top: 50% !important;
@@ -439,11 +426,7 @@
   scale: 1 !important;
 }
 
-/* OPENMIND_DETAIL_VIDEO_FULL_VIEWPORT_V1
-   Solo reproductor de la ficha de producto: la regla global de
-   [data-page-main-image] define height:auto y max-height, pero aqui
-   el video debe ocupar la misma escena estable que las fotografias.
-   object-fit:contain conserva el encuadre del video, sin recortarlo. */
+
 [data-storefront-visual] .ua-store-page .om-product-gallery--detail .om-product-gallery__layer video[data-page-main-image] {
   position: absolute !important;
   inset: 0 !important;
@@ -465,7 +448,7 @@
   pointer-events: auto !important;
 }
 
-/* OPENMIND_PRODUCT_TRANSITION_RUNTIME_V2 */
+
 .om-product-gallery .om-product-gallery__layer[data-gallery-transition="true"] {
   animation: var(--om-gallery-transition) !important;
 }
@@ -476,7 +459,6 @@
 }
 
 
-/* OPENMIND_CATALOG_TRANSITION_FIX */
 [data-storefront-visual] .om-product-gallery[data-photo-area="catalog"]
 .om-product-gallery__layer {
     position: absolute !important;
@@ -504,7 +486,7 @@
     }
 }
 
-/* Ficha: la nueva imagen queda sobre la anterior sin mover los controles. */
+
 .om-product-gallery--detail .om-product-gallery__layer[data-gallery-active="true"] {
   z-index: 2;
 }

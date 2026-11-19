@@ -5,7 +5,7 @@ import { visualConfigWithCarouselVars } from '../../storefront/visual/carouselCo
 import { stableImageKey, findImageSetting, captureOriginalImage, isLegacyEditableImage, restoreOriginalImage, type OriginalImageStyle, type ThemeImageSetting } from '../../storefront/visual/imageSettings';
 import { sectionFromTarget, type VisualSectionId } from './sections';
 
-/** Same-origin protocol v1: data-visual-section IDs + delegated, captured events. */
+
 export function connectVisualPreview(doc: Document, onSelect: (section: VisualSectionId, href?: string, group?: string) => void, onImage: (key: string, src: string, legacyKey?: string) => void, onContentImage?: (institutional: boolean, section?: VisualSectionId) => void, onPresence?: (present: boolean) => void, onBlock?: (id: string) => void) {
   let effective: VisualConfig | null = null;
   let images: Record<string, ThemeImageSetting> = {};
@@ -64,8 +64,8 @@ export function connectVisualPreview(doc: Document, onSelect: (section: VisualSe
     if (block?.dataset.contentBlockId && onBlock) { selectedBlock = block.dataset.contentBlockId; selected = 'global'; apply(); onBlock(selectedBlock); return; }
     selectedBlock = null;
     const directImage = element.closest<HTMLImageElement>('img');
-    // Hero images sit underneath overlays. A click on the empty image area must
-    // still select the image; clicks on its text retain their text tools.
+
+
     const hero = element.closest('[data-visual-section="hero"]');
     const behindOverlay = hero && (imageMode || !element.closest('h1,h2,h3,h4,p,a,button,input,select,textarea'))
       ? hero.querySelector<HTMLImageElement>('img[data-landing-image],img[data-visual-part="heroImage"]') : null;
@@ -88,7 +88,7 @@ export function connectVisualPreview(doc: Document, onSelect: (section: VisualSe
   const observer = Observer ? new Observer(apply) : null;
   observer?.observe(doc.body, { childList: true, subtree: true });
   return {
-    update(config: VisualConfig, nextImages: Record<string, ThemeImageSetting>) { effective = config; // OPENMIND_EDITORIAL_PROMO_V1
+    update(config: VisualConfig, nextImages: Record<string, ThemeImageSetting>) { effective = config;
       const promoEvent = doc.createEvent('CustomEvent');
       promoEvent.initCustomEvent('openmind:editor-promo-preview', false, false, { text: config.hero.promoText, visible: config.hero.promoVisible });
       doc.defaultView?.dispatchEvent(promoEvent); loadVisualFonts(config, doc); variableCss = `[data-storefront-visual]{${Object.entries(visualConfigWithCarouselVars(effective, doc)).map(([key,value]) => `${key}:${value}!important;`).join('')}}`; images = nextImages; apply(); const event = doc.createEvent('CustomEvent'); event.initCustomEvent('openmind:carousel:sync', false, false, config.hero); doc.defaultView?.dispatchEvent(event); },

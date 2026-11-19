@@ -1,7 +1,4 @@
-/**
- * Servicio de integración para Meta / Facebook Pixel.
- * Gestiona validación, inicialización del script oficial y eventos del e-commerce.
- */
+
 
 declare global {
   interface Window {
@@ -19,11 +16,7 @@ export interface PixelValidationResult {
   pixelId: string;
 }
 
-/**
- * Valida el identificador de Meta/Facebook Pixel.
- * Acepta identificadores numéricos de 9 a 16 dígitos (estándar de Meta Pixel).
- * Un valor vacío es válido (indica píxel no configurado o eliminado).
- */
+
 export function validatePixelId(value: unknown): PixelValidationResult {
   if (value === null || value === undefined) {
     return { valid: true, pixelId: '' };
@@ -53,9 +46,7 @@ export function validatePixelId(value: unknown): PixelValidationResult {
   return { valid: true, pixelId: raw };
 }
 
-/**
- * Inicializa el script oficial de Meta / Facebook Pixel en el navegador.
- */
+
 export function initMetaPixel(pixelIdInput: unknown): boolean {
   if (typeof window === 'undefined' || typeof document === 'undefined') {
     return false;
@@ -66,14 +57,14 @@ export function initMetaPixel(pixelIdInput: unknown): boolean {
     return false;
   }
 
-  // Evitar inicializaciones duplicadas para el mismo pixelId.
+
   if (window.__metaPixelId === pixelId && typeof window.fbq === 'function') {
     window.fbq('consent', 'grant');
     window.__metaPixelConsent = 'granted';
     return true;
   }
 
-  // Configurar la cola estándar fbq si aún no existe
+
   if (!window.fbq) {
     const fbq: any = function (...args: any[]) {
       if (fbq.callMethod) {
@@ -90,7 +81,7 @@ export function initMetaPixel(pixelIdInput: unknown): boolean {
     window._fbq = fbq;
   }
 
-  // Insertar script oficial si no está en el DOM
+
   let script = document.getElementById('meta-pixel-script') as HTMLScriptElement | null;
   if (!script) {
     script = document.createElement('script');
@@ -116,17 +107,17 @@ export function initMetaPixel(pixelIdInput: unknown): boolean {
   }
 }
 
-/** Revoca la medición y bloquea eventos posteriores hasta un nuevo consentimiento. */
+
 export function revokeMetaPixelConsent(): void {
   if (typeof window === 'undefined') return;
   if (typeof window.fbq === 'function') {
-    try { window.fbq('consent', 'revoke'); } catch { /* La tienda debe seguir operativa. */ }
+    try { window.fbq('consent', 'revoke'); } catch {  }
   }
   window.__metaPixelConsent = 'revoked';
   window.__metaPixelLastPage = undefined;
 }
 
-/** Registra una vista por ruta en la navegación SPA, evitando duplicados. */
+
 export function trackMetaPixelPageView(path: string): boolean {
   if (
     typeof window === 'undefined'
@@ -146,9 +137,7 @@ export function trackMetaPixelPageView(path: string): boolean {
   }
 }
 
-/**
- * Dispara un evento estándar o personalizado de Meta / Facebook Pixel.
- */
+
 export function trackMetaPixelEvent(
   eventName: 'PageView' | 'ViewContent' | 'AddToCart' | 'InitiateCheckout' | 'Purchase' | string,
   params?: Record<string, unknown>
@@ -168,6 +157,6 @@ export function trackMetaPixelEvent(
       window.fbq('track', eventName);
     }
   } catch {
-    // Si la llamada al pixel falla, no debe bloquear el flujo del e-commerce
+
   }
 }

@@ -43,7 +43,7 @@ export function MinimalHeader() {
     <div data-visual-header-shell className="px-3 sm:px-4 md:px-8 pt-4 sm:pt-5">
       <header data-visual-section={VISUAL_SECTION.header} data-visual-part="headerLayout" className="max-w-6xl mx-auto bg-white rounded-2xl border border-black/5 shadow-sm px-3 sm:px-4 md:px-6 py-2.5 sm:py-3 min-h-16 flex items-center justify-between gap-2 sm:gap-4">
 
-        {/* Nombre */}
+
         <InstitutionalBadge compact /><Link data-visual-part="logo" onClick={event => {
             if (!event.ctrlKey && !event.metaKey && !event.shiftKey && !event.altKey) {
               window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
@@ -57,10 +57,7 @@ export function MinimalHeader() {
           <span className="whitespace-nowrap text-base sm:text-lg font-bold">{config.name}</span>
         </Link>
 
-        {/* Navegación (pastilla clara con texto oscuro legible) */}
-        {/* OPENMIND_STOREFRONT_LAYOUT_FINISH_V1: navegacion en barra lateral y menu movil. */}
 
-        {/* Acciones */}
         <div className="flex shrink-0 items-center gap-2 md:gap-4">
 
 

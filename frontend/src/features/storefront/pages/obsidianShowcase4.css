@@ -1,9 +1,5 @@
-/* OPENMIND_OBSIDIAN_SHOWCASE_UNIVERSAL_V1
-   Solo la portada de la plantilla 4. Usa las variables/paleta de cada tienda.
-   No cambia el encabezado en fichas, catálogo, checkout, otras plantillas.
-   Preserva editor visual, textos por slide, CTA y galería hover existente. */
 
-/* La navegación se superpone a una imagen a toda altura, como el referente. */
+
 [data-storefront-visual].template-catalog:has([data-landing-page="catalog"]) {
   position: relative;
 }
@@ -187,7 +183,7 @@
   z-index: 7;
 }
 
-/* Enlaces que descansan sobre el final del hero; solo se muestran si hay destino. */
+
 [data-storefront-visual].template-catalog [data-landing-page="catalog"] .om-ob-quicklinks {
   position: relative;
   z-index: 5;
@@ -240,7 +236,7 @@
   font-weight: 900;
 }
 
-/* Un mosaico real: una tarjeta protagonista + dos menores. */
+
 [data-storefront-visual].template-catalog [data-landing-page="catalog"] .om-ob-featured {
   max-width: 1380px !important;
   width: min(96%, 1380px) !important;
@@ -381,7 +377,7 @@
 [data-storefront-visual].template-catalog [data-landing-page="catalog"] .om-ob-side-copy strong { font-size: 13px; }
 [data-storefront-visual].template-catalog [data-landing-page="catalog"] .om-ob-side-copy small { color: var(--primary); font-weight: 750; margin-top: 4px; }
 
-/* Categorías 4: más angostas y casi cuadradas, diferentes de las bandas de Velta. */
+
 [data-storefront-visual].template-catalog [data-landing-page="catalog"] [data-visual-section="categories"] {
   max-width: 1380px !important;
   width: min(96%, 1380px) !important;
@@ -460,15 +456,12 @@
   text-shadow: 0 2px 12px rgb(0 0 0 / .46);
 }
 
-/* OPENMIND_OBSIDIAN_WIDTHS_CONSISTENT_V1
-   La portada permanece a pantalla completa. Las demas secciones del inicio
-   usan la MISMA cuadricula centrada. Se limita exclusivamente a plantilla 4.
-   No altera la paleta ni estilos guardados en otras plantillas. */
+
 [data-storefront-visual].template-catalog [data-landing-page="catalog"] {
   --om-ob-content-width: min(92%, 1280px);
 }
 
-/* El header flotante conserva las mismas guias laterales que el contenido. */
+
 [data-storefront-visual].template-catalog:has([data-landing-page="catalog"])
   > [data-visual-section="header"] > div,
 [data-storefront-visual].template-catalog:has([data-landing-page="catalog"])
@@ -479,7 +472,7 @@
   box-sizing: border-box;
 }
 
-/* Accesos, beneficios, destacados y categorias alineados sobre 1280px. */
+
 [data-storefront-visual].template-catalog [data-landing-page="catalog"]
   :is(.om-ob-quicklinks, .om-ob-featured,
       [data-visual-kind="benefits"], [data-visual-section="categories"]) {
@@ -489,7 +482,7 @@
   box-sizing: border-box;
 }
 
-/* Respeta el diseno asimetrico interno, sin crear desbordes. */
+
 [data-storefront-visual].template-catalog [data-landing-page="catalog"]
   .om-ob-featured-grid {
   width: 100% !important;
@@ -502,7 +495,7 @@
   min-width: 0;
 }
 
-/* Las pantallas pequenas conservan margenes respirables e iguales. */
+
 @media (max-width: 640px) {
   [data-storefront-visual].template-catalog [data-landing-page="catalog"] {
     --om-ob-content-width: calc(100% - 32px);
@@ -515,10 +508,7 @@
   }
 }
 
-/* OPENMIND_OBSIDIAN_CLOUD_HEADER_V1
-   El encabezado exterior es transparente y no desenfoca el carrusel.
-   La barra interior tiene una silueta curva organica y usa la paleta activa.
-   No se tocan las transiciones de las imagenes del carrusel. */
+
 [data-storefront-visual].template-catalog:has([data-landing-page="catalog"]) > [data-visual-section="header"] {
   background: transparent !important;
   backdrop-filter: none !important;
@@ -537,7 +527,7 @@
   width: 100% !important;
   max-width: 1280px !important;
   margin-inline: auto !important;
-  /* Contorno suave, asimetrico, sin recortar logos ni menues. */
+
   border-radius: 72px 36px 68px 40px / 46px 36px 46px 36px !important;
   background: var(--visual-header-bg, var(--visual-surface)) !important;
   backdrop-filter: none !important;
@@ -546,7 +536,7 @@
   box-shadow: 0 8px 24px rgb(0 0 0 / .16) !important;
   padding-inline: clamp(16px, 3vw, 40px) !important;
 }
-/* Contraste sin desenfoque: se conserva la foto y la animacion elegida. */
+
 [data-storefront-visual].template-catalog [data-landing-page="catalog"] .om-ob-hero-overlay {
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;

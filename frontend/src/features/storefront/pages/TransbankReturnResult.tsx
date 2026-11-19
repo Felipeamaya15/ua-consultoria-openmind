@@ -21,8 +21,7 @@ type Result =
   | { status: 'cancelled' }
   | { status: 'error'; message: string };
 
-// Webpay solo permite confirmar un token una vez. Guardamos el resultado
-// para que recargar la página no repita la confirmación (y falle).
+
 const cacheKey = (token: string) => `tbk-result:${token}`;
 const PENDING_CART_SNAPSHOT_KEY = 'openmind-pending-payment-cart';
 const RESTORE_CART_FLAG_KEY = 'openmind-restore-cart';
@@ -52,7 +51,7 @@ export default function TransbankReturnResult({
     if (started.current) return;
     started.current = true;
 
-    // Sin token_ws pero con TBK_TOKEN: el cliente abandonó o expiró el pago.
+
     if (!tokenWs) {
       if (tbkToken) {
         const abortKey = `tbk-abort:${tbkToken}`;
@@ -87,7 +86,7 @@ export default function TransbankReturnResult({
         return;
       }
     } catch {
-      // Sin caché disponible: se confirma normalmente.
+
     }
 
     transbankPaymentService
@@ -111,7 +110,7 @@ export default function TransbankReturnResult({
           try {
             sessionStorage.setItem(cacheKey(tokenWs), JSON.stringify(next));
           } catch {
-            // Sin caché disponible.
+
           }
         }
         if (next.status === 'approved' && orderNumber) {
@@ -146,7 +145,7 @@ export default function TransbankReturnResult({
       if ('monto' in stored && typeof stored.monto === 'number') monto = stored.monto;
     }
   } catch {
-    // El retorno puede abrirse sin la sesión original: queda la búsqueda manual.
+
   }
   const trackingRoute = identificador
     ? `${route('seguimiento')}?orden=${encodeURIComponent(identificador)}`

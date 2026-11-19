@@ -10,7 +10,7 @@ test('parche unico y limitado al inicio de Obsidian', () => {
   assert(patch);
   for (const rule of patch.matchAll(/([^{}]+)\{([^{}]+)\}/g)) {
     if (rule[1].trim().startsWith('@')) continue;
-    // Cada selector de este parche contiene el ambito catalog.
+
     assert.match(rule[1], /\.template-catalog/);
     assert.match(rule[1], /\[data-landing-page="catalog"\]/);
   }

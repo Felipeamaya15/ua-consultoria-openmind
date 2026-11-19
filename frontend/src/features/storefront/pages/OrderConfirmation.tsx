@@ -22,8 +22,7 @@ export default function OrderConfirmation() {
   const { route, isMinimal, isVisual, isCatalog } =
     useStorefrontTemplate();
 
-  // Retorno desde Webpay: el resultado llega por la URL (?token_ws=... o
-  // ?TBK_TOKEN=... si el cliente cancela), no por navegación interna.
+
   const query = new URLSearchParams(location.search);
   const tokenWs = query.get('token_ws') ?? '';
   const tbkToken = query.get('TBK_TOKEN') ?? '';
@@ -39,7 +38,7 @@ export default function OrderConfirmation() {
     );
   }
 
-  // Retorno desde PayPal (?token=) o Mercado Pago (?payment_id=): el servidor confirma el pago.
+
   const gateway = query.get('gateway');
   if (gateway === 'paypal' || gateway === 'mercadopago') {
     return (
@@ -53,8 +52,8 @@ export default function OrderConfirmation() {
   }
 
   let editorPreview = false;
-  try { editorPreview = isStorefrontEditorPreview(window.parent !== window, window.parent.location.pathname); } catch { /* Cross-origin parents cannot enable examples. */ }
-  // Presentation-only sample. No order service, storage or payment operation.
+  try { editorPreview = isStorefrontEditorPreview(window.parent !== window, window.parent.location.pathname); } catch {  }
+
   const state = (location.state as ConfirmationState | null) ?? (editorPreview
     ? { orderNumber: 'VISTA-PREVIA', email: 'ejemplo@example.test', identificador: 'VISTA-PREVIA' }
     : null);
@@ -75,11 +74,7 @@ export default function OrderConfirmation() {
     ? `${route('seguimiento')}?orden=${encodeURIComponent(identificador)}`
     : route('seguimiento');
 
-  /*
-   * ==========================================================
-   * PLANTILLA 4 — CATALOG
-   * ==========================================================
-   */
+
   if (isCatalog) {
     return (
       <div className="w-full max-w-[1160px] mx-auto px-5 py-16 md:py-20 text-center text-[var(--visual-page-color)]">
@@ -283,11 +278,7 @@ export default function OrderConfirmation() {
     );
   }
 
-  /*
-   * ==========================================================
-   * PLANTILLA 2 — MINIMAL
-   * ==========================================================
-   */
+
   if (isMinimal) {
     return (
       <div className="w-full max-w-6xl mx-auto px-4 md:px-8 py-16 md:py-20">
@@ -415,11 +406,7 @@ export default function OrderConfirmation() {
     );
   }
 
-  /*
-   * ==========================================================
-   * PLANTILLA 1 — EDITORIAL
-   * ==========================================================
-   */
+
   return (
     <div className="w-full max-w-7xl mx-auto px-4 py-12 text-center flex flex-col items-center gap-6">
 

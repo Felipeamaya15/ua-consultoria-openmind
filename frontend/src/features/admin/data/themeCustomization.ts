@@ -5,7 +5,7 @@ import type { LegacyThemeColors } from '../../storefront/visual/types';
 import type { ThemeTemplateCustomization } from '../types';
 import { readThemeImages } from '../../storefront/visual/imageSettings';
 
-/** Hydrate legacy/partial data without persisting the expanded visual defaults. */
+
 export function loadThemeCustomization(template: TemplateId, value?: unknown, legacyColors?: LegacyThemeColors, storeCustomization?: unknown): ThemeTemplateCustomization {
   const saved = isRecord(value) ? value : {};
   const colors = resolveStoreVisualConfig({ ...legacyColors, visualConfig: storeCustomization }, template, saved).global.colors;
@@ -18,7 +18,7 @@ export function loadThemeCustomization(template: TemplateId, value?: unknown, le
   };
 }
 
-/** Color controls keep explicit v1 color overrides in sync with legacy fields. */
+
 export function patchThemeCustomization(theme: ThemeTemplateCustomization, patch: Partial<ThemeTemplateCustomization>): ThemeTemplateCustomization {
   const next = { ...theme, ...patch, images: patch.images ?? theme.images,
     ...(patch.visualConfig ? { visualConfig: mergeVisualOverrides(theme.visualConfig, patch.visualConfig) } : {}) };

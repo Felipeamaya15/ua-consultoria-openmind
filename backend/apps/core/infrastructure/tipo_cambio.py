@@ -24,7 +24,7 @@ from django.core.cache import cache
 logger = logging.getLogger(__name__)
 
 CACHE_KEY = 'paypal_fx:dolar_observado'
-SERIE_BCCH = 'F073.TCO.PRE.Z.D'  
+SERIE_BCCH = 'F073.TCO.PRE.Z.D'
 URL_BCCH = 'https://si3.bcentral.cl/SieteRestWS/SieteRestWS.ashx'
 URL_MINDICADOR = 'https://mindicador.cl/api/dolar'
 TIMEOUT = 8
@@ -32,10 +32,10 @@ TIMEOUT = 8
 
 @dataclass(frozen=True)
 class TipoCambio:
-    observado: Decimal      
-    fecha_dato: date       
+    observado: Decimal
+    fecha_dato: date
     fuente: str
-    margen_pct: Decimal     
+    margen_pct: Decimal
 
     @property
     def aplicado(self):
@@ -94,7 +94,7 @@ def _desde_bcch():
 
 def _desde_mindicador():
     serie = _leer_json(URL_MINDICADOR).get('serie') or []
-    for punto in serie:  # viene ordenada de la mas reciente a la mas antigua
+    for punto in serie:
         valor = _decimal_positivo(punto.get('valor'))
         if valor:
             return valor, datetime.fromisoformat(str(punto['fecha']).replace('Z', '+00:00')).date(), 'mindicador.cl'

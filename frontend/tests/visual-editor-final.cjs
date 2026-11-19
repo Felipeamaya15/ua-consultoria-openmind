@@ -1,4 +1,4 @@
-// Additional coverage for the final editor features; existing suites keep regression coverage.
+
 const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm'),assert=require('node:assert/strict'),ts=require('typescript');
 const root=path.resolve(__dirname,'..'),cache=new Map(),storage=new Map();
 const localStorage={getItem:key=>storage.get(key)||null,setItem:(key,value)=>storage.set(key,value)};

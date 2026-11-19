@@ -9,11 +9,10 @@ from apps.shipping.domain.services import ShippingDomainService
 
 class CotizarDespachoEcommerceUseCase:
     """
-    Servicio de Aplicación: Orquestador y calculador del servicio 
+    Servicio de Aplicación: Orquestador y calculador del servicio
     de cotización de envíos para el flujo de Checkout.
     """
 
-    # Reglas comerciales de la tienda
     UMBRAL_ENVIO_GRATIS = ShippingDomainService.UMBRAL_ENVIO_GRATIS
     REGIONES_PROMOCION_GRATIS = ShippingDomainService.REGIONES_PROMOCION_GRATIS
 
@@ -61,7 +60,6 @@ class CotizarDespachoEcommerceUseCase:
         except ValueError as exc:
             raise LogisticaException(str(exc)) from exc
 
-        # 1. Construcción de DTOs de dirección
         destino = DireccionDespachoDTO(
             calle=datos_destino.get("calle", ""),
             numero=datos_destino.get("numero", ""),
@@ -78,7 +76,6 @@ class CotizarDespachoEcommerceUseCase:
             region="Metropolitana"
         )
 
-        # 2. Estimación de peso y empaque
         if peso_kg is not None and peso_kg > Decimal("0"):
             peso_final = peso_kg
         else:
@@ -94,10 +91,8 @@ class CotizarDespachoEcommerceUseCase:
             )
         ]
 
-        # 3. Consulta de tarifas crudas al puerto logístico
         cotizaciones_puerto = self.logistics_port.cotizar_envio(origen_bodega, destino, paquetes)
 
-        # 4. Aplicación de políticas comerciales (Envío gratis por compra sobre umbral)
         region_upper = region.upper()
         aplica_envio_gratis = (
             cumple_monto_minimo and
@@ -110,7 +105,6 @@ class CotizarDespachoEcommerceUseCase:
             servicio = cotizacion.servicio
             es_gratis = False
 
-            # Se subsidia el servicio estándar/extendido si cumple las condiciones comerciales
             if aplica_envio_gratis and ("ESTANDAR" in servicio or "EXTENDIDO" in servicio):
                 costo = Decimal("0.00")
                 servicio = f"{cotizacion.servicio} (ENVÍO GRATIS)"
@@ -125,10 +119,8 @@ class CotizarDespachoEcommerceUseCase:
                 "es_gratis": es_gratis
             })
 
-        # 5. Ordenar por menor costo (la opción más económica primero)
         opciones_procesadas.sort(key=lambda item: item["costo"])
 
-        # 6. Retorno estructurado para el Checkout
         return {
             "destino": {
                 "comuna": comuna,
@@ -156,8 +148,7 @@ class ConsultarSeguimientoUseCase:
 
     def execute(self, numero_seguimiento: str) -> Dict[str, Any]:
         codigo_limpio = (numero_seguimiento or "").strip()
-        
-        # Orquestación a través del puerto logístico
+
         detalle = self.logistics_port.consultar_seguimiento(codigo_limpio)
 
         return {
@@ -180,5 +171,4 @@ class ConsultarSeguimientoUseCase:
         }
 
 
-# Alias para mantener coherencia semántica con el nombre del servicio
 ShippingQuotationService = CotizarDespachoEcommerceUseCase

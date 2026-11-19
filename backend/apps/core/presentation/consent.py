@@ -80,8 +80,6 @@ class ConsentRequestView(ConsentView):
         data.is_valid(raise_exception=True)
         if data.validated_data['proposito'] == 'confirmar' and request.user.is_authenticated and Tienda.objects.del_propietario(request.user).exists():
             raise PermissionDenied('El propietario no puede autorizar contactos por otras personas.')
-        # Account email/password registration is not proof of mailbox control.
-        # Authenticated users also complete double opt-in, including changed email.
         email = data.validated_data['email'].strip().lower()
         try:
             consent.request_link(store, email, data.validated_data['proposito'], data.validated_data['plantilla'])

@@ -1,4 +1,4 @@
-/* Resumen de compra: conservamos fuentes, colores y paleta de la tienda. */
+
 [data-checkout-page] [data-checkout-items] {
   gap: 1rem;
 }

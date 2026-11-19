@@ -67,7 +67,6 @@ class SecurityAuthenticationSuiteTests(TestCase):
             last_name="González",
         )
 
-    # ------------------------------------------------------------------ 1. Argon2id + Salt único
     def test_argon2id_hashing_and_unique_salt_per_user(self):
         u1 = UserModel.objects.create_user(username="u1", email="u1@ejemplo.cl", password=self.password)
         u2 = UserModel.objects.create_user(username="u2", email="u2@ejemplo.cl", password=self.password)
@@ -89,7 +88,6 @@ class SecurityAuthenticationSuiteTests(TestCase):
         self.user.refresh_from_db()
         self.assertTrue(self.user.password.startswith("argon2$argon2id$"))
 
-    # ------------------------------------------------------------------ 2. Rate limit 5 intentos / minuto
     def test_rate_limit_blocks_after_5_failed_attempts_per_minute(self):
         for attempt in range(5):
             resp = self.api.post(
@@ -99,7 +97,6 @@ class SecurityAuthenticationSuiteTests(TestCase):
             )
             self.assertEqual(resp.status_code, 401, f"Intento {attempt + 1} debía devolver 401")
 
-        # El 6.º intento dentro del minuto es bloqueado con HTTP 429
         sixth = self.api.post(
             "/api/auth/login/",
             {"username": self.user.email, "password": self.password},
@@ -109,7 +106,6 @@ class SecurityAuthenticationSuiteTests(TestCase):
         self.assertEqual(sixth.data["error"]["codigo"], "LIMITE_INTENTOS_EXCEDIDO")
         self.assertIn("Retry-After", sixth)
 
-    # ------------------------------------------------------------------ 3. CAPTCHA en Login y Registro
     def test_captcha_endpoint_and_anti_replay_verification(self):
         resp = self.api.get("/api/auth/captcha/")
         self.assertEqual(resp.status_code, 200)
@@ -117,7 +113,6 @@ class SecurityAuthenticationSuiteTests(TestCase):
         self.assertTrue(data["captcha_image"].startswith("data:image/svg+xml;base64,"))
         self.assertTrue(data["captcha_token"])
 
-        # Respuesta incorrecta con X-Require-Captcha falla en login y registro
         bad_login = self.api.post(
             "/api/auth/login/",
             {
@@ -131,25 +126,20 @@ class SecurityAuthenticationSuiteTests(TestCase):
         )
         self.assertEqual(bad_login.status_code, 400)
 
-        # Verificación directa y anti-replay
         with patch("apps.authentication.infrastructure.captcha.secrets.choice", return_value="A"):
             ch = generate_captcha_challenge()
         self.assertTrue(verify_captcha_challenge(ch["captcha_token"], "AAAAA"))
         self.assertFalse(verify_captcha_challenge(ch["captcha_token"], "AAAAA"), "No debe permitir reusar el mismo CAPTCHA")
 
-    # ------------------------------------------------------------------ 4. Validación, Allowlists, SQLi y XSS
     def test_strict_validation_allowlists_sqli_and_xss_escaping(self):
-        # Escape XSS: <script> -> &lt;script&gt;
         self.assertEqual(escape_xss("<script>alert(1)</script>"), "&lt;script&gt;alert(1)&lt;/script&gt;")
 
-        # Código postal (Allowlist: solo números y guiones)
         self.assertEqual(validate_strict_postal_code("832-0000"), "832-0000")
         for invalid_postal in ("83200AB", "123<script>", "--1234", "12345-", "12"):
             with self.subTest(invalid_postal=invalid_postal):
                 with self.assertRaises(ValueError):
                     validate_strict_postal_code(invalid_postal, allow_blank=False)
 
-        # Tipos de datos estrictos (entero, fecha, correo, teléfono)
         self.assertEqual(validate_integer_field("42", "Edad", min_value=1, max_value=120), 42)
         with self.assertRaises(ValueError):
             validate_integer_field(True, "Edad")
@@ -159,7 +149,6 @@ class SecurityAuthenticationSuiteTests(TestCase):
         self.assertEqual(validate_strict_email("Cliente.Nuevo@Dominio.CL"), "Cliente.Nuevo@dominio.cl")
         self.assertEqual(validate_strict_phone("+56 (9) 8765-4321"), "+56 (9) 8765-4321")
 
-        # Rechazo de inyecciones SQL en login
         sqli_resp = self.api.post(
             "/api/auth/login/",
             {"username": "' OR '1'='1' UNION SELECT * FROM users --", "password": self.password},
@@ -167,7 +156,6 @@ class SecurityAuthenticationSuiteTests(TestCase):
         )
         self.assertEqual(sqli_resp.status_code, 400)
 
-        # Escapado XSS al registrar o actualizar perfil
         reg_resp = self.api.post(
             "/api/auth/register/",
             {
@@ -184,25 +172,21 @@ class SecurityAuthenticationSuiteTests(TestCase):
         self.assertEqual(reg_resp.data["data"]["user"]["first_name"], "&lt;script&gt;alert(1)&lt;/script&gt;")
         self.assertEqual(UserProfile.objects.get(user__email="nuevo@ejemplo.cl").postal_code, "750-0000")
 
-    # ------------------------------------------------------------------ 5. MFA con TOTP (Google Authenticator / Authy) y Correo 60s
     def test_mfa_totp_and_email_otp_flow(self):
         token = Token.objects.create(user=self.user)
         self.api.credentials(HTTP_AUTHORIZATION=f"Token {token.key}")
 
-        # 1. Configurar MFA
         setup_resp = self.api.post("/api/auth/mfa/setup/", {}, format="json")
         self.assertEqual(setup_resp.status_code, 200)
         secret = setup_resp.data["data"]["secret"]
         self.assertIn("otpauth://totp/", setup_resp.data["data"]["otpauth_url"])
 
-        # 2. Activar MFA con código TOTP válido de 6 dígitos
         valid_totp = generate_totp_code(secret)
         self.assertTrue(verify_totp_code(secret, valid_totp))
         enable_resp = self.api.post("/api/auth/mfa/enable/", {"code": valid_totp}, format="json")
         self.assertEqual(enable_resp.status_code, 200)
         self.assertTrue(UserMFA.objects.get(user=self.user).is_enabled)
 
-        # 3. Al iniciar sesión pide segundo factor (mfa_required: True)
         self.api.credentials()
         login_step1 = self.api.post(
             "/api/auth/login/",
@@ -213,7 +197,6 @@ class SecurityAuthenticationSuiteTests(TestCase):
         self.assertTrue(login_step1.data["data"]["mfa_required"])
         mfa_token = login_step1.data["data"]["mfa_token"]
 
-        # 4. Completar login con código TOTP de Google Authenticator / Authy
         login_step2 = self.api.post(
             "/api/auth/mfa/verify/",
             {"mfa_token": mfa_token, "code": generate_totp_code(secret)},
@@ -222,7 +205,6 @@ class SecurityAuthenticationSuiteTests(TestCase):
         self.assertEqual(login_step2.status_code, 200)
         self.assertIn("token", login_step2.data["data"])
 
-        # 5. También permite recibir y verificar código temporal de 60 segundos por correo
         email_code_resp = self.api.post(
             "/api/auth/mfa/send-email-code/",
             {"mfa_token": mfa_token},
@@ -241,7 +223,6 @@ class SecurityAuthenticationSuiteTests(TestCase):
         )
         self.assertEqual(verify_email_resp.status_code, 200)
 
-    # ------------------------------------------------------------------ 6. Cookies HttpOnly, Secure, SameSite y Expiración según Perfil
     def test_cookie_security_attributes_and_30_minute_inactivity_destruction(self):
         admin_user = UserModel.objects.create_user(
             username="adminprueba",
@@ -266,19 +247,16 @@ class SecurityAuthenticationSuiteTests(TestCase):
 
         token_key = login_resp.data["data"]["token"]
 
-        # Autenticación mediante cookie HttpOnly sin cabecera Authorization
         self.api.credentials()
         me_ok = self.api.get("/api/auth/me/")
         self.assertEqual(me_ok.status_code, 200)
 
-        # Ventana deslizante: petición activa renueva el temporizador (sliding window)
         cache.set(f"auth_session_last_activity:{token_key}", 1000.0, timeout=1800)
         with patch("apps.authentication.infrastructure.cookie_auth.time.time", return_value=1000.0 + 900.0):
             sliding_resp = self.api.get("/api/auth/me/")
             self.assertEqual(sliding_resp.status_code, 200)
             self.assertIn(AUTH_COOKIE_NAME, sliding_resp.cookies, "Debe renovar la cookie con nuevo max-age")
 
-        # Simular 31 minutos (1860 segundos) de inactividad para cuenta admin
         cache.set(f"auth_session_last_activity:{token_key}", 1000.0, timeout=1800)
         with patch("apps.authentication.infrastructure.cookie_auth.time.time", return_value=1000.0 + 1860.0):
             expired_resp = self.api.get("/api/auth/me/")
@@ -287,7 +265,6 @@ class SecurityAuthenticationSuiteTests(TestCase):
         self.assertEqual(expired_resp.cookies[AUTH_COOKIE_NAME].value, "", "La cookie debe borrarse en el cliente")
 
     def test_customer_account_long_lived_cookie_and_no_inactivity_destruction(self):
-        # Cuenta de cliente final (is_staff=False)
         customer_login = self.api.post(
             "/api/auth/login/",
             {"username": self.user.email, "password": self.password},
@@ -308,7 +285,6 @@ class SecurityAuthenticationSuiteTests(TestCase):
         token_key = customer_login.data["data"]["token"]
         self.api.credentials()
 
-        # Simular 31 minutos (1860 segundos) de inactividad: la cuenta de cliente NO debe cerrarse
         cache.set(f"auth_session_last_activity:{token_key}", 1000.0, timeout=30 * 86400)
         with patch("apps.authentication.infrastructure.cookie_auth.time.time", return_value=1000.0 + 1860.0):
             customer_still_active = self.api.get("/api/auth/me/")
@@ -319,7 +295,6 @@ class SecurityAuthenticationSuiteTests(TestCase):
         )
         self.assertTrue(Token.objects.filter(key=token_key).exists())
 
-    # ------------------------------------------------------------------ 7. Olvidé mi contraseña por correo
     def test_forgot_password_sends_email_and_resets_password(self):
         req_resp = self.api.post(
             "/api/auth/password-reset/request/",
@@ -348,7 +323,6 @@ class SecurityAuthenticationSuiteTests(TestCase):
         self.assertTrue(self.user.check_password(new_pwd))
         self.assertTrue(self.user.password.startswith("argon2$argon2id$"))
 
-        # El mismo token no puede reutilizarse una segunda vez
         replay_resp = self.api.post(
             "/api/auth/password-reset/confirm/",
             {"token": reset_token, "new_password": "OtraClaveDistinta2026$!"},
@@ -356,21 +330,16 @@ class SecurityAuthenticationSuiteTests(TestCase):
         )
         self.assertEqual(replay_resp.status_code, 400)
 
-    # ------------------------------------------------------------------ 8. Cookies inválidas/residuales no rompen endpoints públicos
     def test_stale_or_invalid_cookie_does_not_block_captcha_and_clears_cookie(self):
-        # Simular que el navegador envía una cookie de un token que ya no existe (ej. tras logout)
         self.api.cookies[AUTH_COOKIE_NAME] = "token_huerfano_que_no_existe_en_db"
         resp = self.api.get("/api/auth/captcha/")
         self.assertEqual(resp.status_code, 200, "CAPTCHA debe cargar con HTTP 200 aunque la cookie sea inválida")
         self.assertTrue(resp.data.get("exito"))
         self.assertIn("captcha_image", resp.data.get("data", {}))
-        # La respuesta debe indicar al navegador que borre la cookie inválida
         self.assertEqual(resp.cookies[AUTH_COOKIE_NAME].value, "", "La cookie huérfana debe borrarse en el cliente")
 
     def test_stale_or_invalid_cookie_does_not_block_google_login(self):
-        # Simular petición a /api/auth/google/ con cookie inválida
         self.api.cookies[AUTH_COOKIE_NAME] = "token_huerfano_que_no_existe_en_db"
-        # Con token inválido de Google debe devolver 400 o 401 desde GoogleLoginUseCase, NUNCA 'Token inválido' de DRF
         resp = self.api.post(
             "/api/auth/google/",
             {"token": "fake_google_token"},

@@ -1,7 +1,4 @@
-/**
- * Validacion previa de videos cortos de productos.
- * El servidor tambien debe validar el archivo.
- */
+
 
 export const PRODUCT_VIDEO_MAX_SECONDS = 10;
 export const PRODUCT_VIDEO_MAX_BYTES = 20 * 1024 * 1024;

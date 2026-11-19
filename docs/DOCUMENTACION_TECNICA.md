@@ -4,7 +4,7 @@
 
 Plataforma de comercio electrónico para emprendedores, desarrollada bajo SCRUM. Incluye una **tienda pública** (catálogo, carrito, checkout, seguimiento de pedidos) y un **panel de administración** (productos, pedidos, promociones, pagos, envíos, informes, configuración visual).
 
-**Principio de despliegue: una instalación, una tienda.** Cada emprendedor recibe una instalación independiente, con una sola tienda y almacenamiento propio. El backend busca "la única tienda local" y falla si hay ninguna o varias. Detalle: [`scrum-44-identificacion-interna-tienda.md`](scrum-44-identificacion-interna-tienda.md) y [`sprint7/SCRUM-484-configuracion-postgresql.md`](sprint7/SCRUM-484-configuracion-postgresql.md).
+**Principio de despliegue: una instalación, una tienda.** Cada emprendedor recibe una instalación independiente, con una sola tienda y almacenamiento propio. El backend busca "la única tienda local" y falla si hay ninguna o varias. Detalle: [`arquitectura/identificacion-interna-tienda.md`](arquitectura/identificacion-interna-tienda.md) y [`instalacion-y-configuracion/configuracion-postgresql.md`](instalacion-y-configuracion/configuracion-postgresql.md).
 
 ## 2. Stack tecnológico
 
@@ -29,7 +29,7 @@ El backend se organiza en apps de Django que siguen, en lo posible, la separaci�
 - **domain:** entidades, validaciones y errores propios del negocio.
 - **infrastructure:** repositorios, clientes y adaptadores hacia servicios externos.
 
-Los casos de uso no dependen directamente de SDKs ni de proveedores: se comunican con ellos mediante adaptadores reemplazables. Detalle: [`scrum-32-adaptadores-integracion.md`](scrum-32-adaptadores-integracion.md).
+Los casos de uso no dependen directamente de SDKs ni de proveedores: se comunican con ellos mediante adaptadores reemplazables. Detalle: [`arquitectura/adaptadores-integracion.md`](arquitectura/adaptadores-integracion.md).
 
 ### 3.2 Apps del backend (`backend/apps/`)
 
@@ -46,14 +46,14 @@ Los casos de uso no dependen directamente de SDKs ni de proveedores: se comunica
 
 | Base | Qué guarda | Documento |
 | --- | --- | --- |
-| PostgreSQL | Datos transaccionales: tienda, usuarios, pedidos, promociones, carrito y configuración de cada módulo | [`sprint7/SCRUM-484-configuracion-postgresql.md`](sprint7/SCRUM-484-configuracion-postgresql.md) |
-| MongoDB | Catálogo: colecciones `productos` (con variantes e imágenes) y `plantillas_atributos`; control atómico de stock | [`sprint7/SCRUM-485-configuracion-mongodb.md`](sprint7/SCRUM-485-configuracion-mongodb.md), [`scrum-36-modelo-mongodb.md`](scrum-36-modelo-mongodb.md) |
+| PostgreSQL | Datos transaccionales: tienda, usuarios, pedidos, promociones, carrito y configuración de cada módulo | [`instalacion-y-configuracion/configuracion-postgresql.md`](instalacion-y-configuracion/configuracion-postgresql.md) |
+| MongoDB | Catálogo: colecciones `productos` (con variantes e imágenes) y `plantillas_atributos`; control atómico de stock | [`instalacion-y-configuracion/configuracion-mongodb.md`](instalacion-y-configuracion/configuracion-mongodb.md), [`arquitectura/modelo-mongodb.md`](arquitectura/modelo-mongodb.md) |
 
 MongoDB no tiene clave foránea hacia PostgreSQL: cada documento lleva `tienda_id` y la aplicación valida la relación.
 
 ### 3.4 Estándar de la API
 
-Todas las respuestas usan un formato JSON común (`exito`, `mensaje`, `data`, y `paginacion` en listados; en errores, el detalle de validación). Detalle: [`scrum-34-estandar-api.md`](scrum-34-estandar-api.md).
+Todas las respuestas usan un formato JSON común (`exito`, `mensaje`, `data`, y `paginacion` en listados; en errores, el detalle de validación). Detalle: [`arquitectura/estandar-api.md`](arquitectura/estandar-api.md).
 
 ## 4. Estructura del repositorio
 
@@ -79,11 +79,11 @@ ua-consultoria-openmind/
 
 | Tema | Documento |
 | --- | --- |
-| Requisitos de instalación (hardware, versiones, puertos, servicios externos) | [`requisitos-instalacion.md`](requisitos-instalacion.md) |
+| Requisitos de instalación (hardware, versiones, puertos, servicios externos) | [`instalacion-y-configuracion/requisitos-instalacion.md`](instalacion-y-configuracion/requisitos-instalacion.md) |
 | Primera ejecución, variables de entorno y actualización | [`../EJECUCION_LOCAL.md`](../EJECUCION_LOCAL.md) |
-| Configuración del backend | [`sprint7/SCRUM-483-configuracion-backend.md`](sprint7/SCRUM-483-configuracion-backend.md) |
-| Configuración del frontend | [`sprint7/SCRUM-482-configuracion-frontend.md`](sprint7/SCRUM-482-configuracion-frontend.md) |
-| Credenciales externas: inventario, custodia y rotación | [`sprint7/SCRUM-487-credenciales-externas.md`](sprint7/SCRUM-487-credenciales-externas.md) |
+| Configuración del backend | [`instalacion-y-configuracion/configuracion-backend.md`](instalacion-y-configuracion/configuracion-backend.md) |
+| Configuración del frontend | [`instalacion-y-configuracion/configuracion-frontend.md`](instalacion-y-configuracion/configuracion-frontend.md) |
+| Credenciales externas: inventario, custodia y rotación | [`instalacion-y-configuracion/credenciales-externas.md`](instalacion-y-configuracion/credenciales-externas.md) |
 
 **Servicios y puertos en desarrollo (Docker Compose):**
 
@@ -116,27 +116,27 @@ Por defecto el correo se escribe en consola (`console.EmailBackend`); para envia
 
 ### 6.1 Lista de verificación independiente del proveedor
 
-1. **Servicios necesarios:** backend Django, frontend compilado (`npm run build`), PostgreSQL y MongoDB con persistencia y respaldos (ver [SCRUM-484](sprint7/SCRUM-484-configuracion-postgresql.md) y [SCRUM-485](sprint7/SCRUM-485-configuracion-mongodb.md), secciones de respaldo).
+1. **Servicios necesarios:** backend Django, frontend compilado (`npm run build`), PostgreSQL y MongoDB con persistencia y respaldos (ver [Configuración PostgreSQL](instalacion-y-configuracion/configuracion-postgresql.md) y [Configuración MongoDB](instalacion-y-configuracion/configuracion-mongodb.md), secciones de respaldo).
 2. **Variables obligatorias:** `DJANGO_SECRET_KEY` propia y `DJANGO_DEBUG` desactivado; `DJANGO_ALLOWED_HOSTS`, `DJANGO_CORS_ALLOWED_ORIGINS` y `DJANGO_CSRF_TRUSTED_ORIGINS` con el dominio real; contraseñas de bases de datos distintas de las de desarrollo.
 3. **HTTPS:** activar `DJANGO_SECURE_SSL_REDIRECT` y `DJANGO_SECURE_HSTS_SECONDS` una vez que el certificado esté operativo.
 4. **Correo:** configurar un SMTP real (`EMAIL_BACKEND`, `EMAIL_HOST*`) y `STOREFRONT_PUBLIC_URL` con la URL pública.
-5. **Credenciales externas:** generar y custodiar `PAYMENT_CREDENTIALS_KEY` y las claves de pasarelas según [SCRUM-487](sprint7/SCRUM-487-credenciales-externas.md). 
+5. **Credenciales externas:** generar y custodiar `PAYMENT_CREDENTIALS_KEY` y las claves de pasarelas según [Credenciales externas](instalacion-y-configuracion/credenciales-externas.md). 
 6. **Pagos:** cambiar Transbank de ambiente *Integración* a *Producción* con las credenciales comerciales reales, solo cuando el cliente las entregue.
 7. **Una tienda por instalación:** verificar que la tabla `tienda` tenga exactamente una fila.
-8. **Verificación posterior:** repetir los casos de [`pruebas-regresion-final/pruebas-regresion.md`](pruebas-regresion-final/pruebas-regresion.md) sobre la instalación desplegada.
+8. **Verificación posterior:** ejecutar la suite de pruebas del backend (`manage.py test`) y el build/verificación del frontend sobre la instalación desplegada.
 
 
 ## 7. Integraciones externas
 
 | Ámbito | Proveedor / mecanismo | Código | Documento |
 | --- | --- | --- | --- |
-| Pagos | Transbank Webpay Plus (ambientes Integración y Producción) | `catalog/infrastructure/adapters/transbank_adapter.py` | [`sprint7/SCRUM-487-credenciales-externas.md`](sprint7/SCRUM-487-credenciales-externas.md) |
-| Pagos | Transferencia bancaria con aprobación manual | `core/payments.py` | [`scrum-319-320-transferencias.md`](scrum-319-320-transferencias.md) |
-| Pagos | Linkify | `linkify_adapter.py`, `core/infrastructure/linkify_client.py` | [`scrum-319-320-transferencias.md`](scrum-319-320-transferencias.md) |
+| Pagos | Transbank Webpay Plus (ambientes Integración y Producción) | `catalog/infrastructure/adapters/transbank_adapter.py` | [`instalacion-y-configuracion/credenciales-externas.md`](instalacion-y-configuracion/credenciales-externas.md) |
+| Pagos | Transferencia bancaria con aprobación manual | `core/payments.py` | — |
+| Pagos | Linkify | `linkify_adapter.py`, `core/infrastructure/linkify_client.py` | — |
 | Pagos | Mercado Pago y PayPal: adaptadores presentes, aún no habilitados para compras en el checkout | `mercadopago_adapter.py`, `paypal_adapter.py`, `core/payments.py` | — |
-| Envíos | Chilexpress, Starken y retiro en tienda | `apps/shipping`, `catalog/infrastructure/adapters/` | [`shipping-quotes.md`](shipping-quotes.md), [`retiro-tienda-estructurado.md`](retiro-tienda-estructurado.md), [`sprint7/SCRUM-500-pruebas-integracion-logistica.md`](sprint7/SCRUM-500-pruebas-integracion-logistica.md) |
-| Correo | SMTP configurable; Mailpit en desarrollo | `core/infrastructure/email_service.py` | [`correo-despacho.md`](correo-despacho.md) |
-| Autenticación | Google (inicio de sesión) | `authentication/presentation` | [`sprint7/SCRUM-487-credenciales-externas.md`](sprint7/SCRUM-487-credenciales-externas.md) |
+| Envíos | Chilexpress, Starken y retiro en tienda | `apps/shipping`, `catalog/infrastructure/adapters/` | — |
+| Correo | SMTP configurable; Mailpit en desarrollo | `core/infrastructure/email_service.py` | — |
+| Autenticación | Google (inicio de sesión) | `authentication/presentation` | [`instalacion-y-configuracion/credenciales-externas.md`](instalacion-y-configuracion/credenciales-externas.md) |
 
 ## 8. Pruebas y calidad
 
@@ -154,28 +154,9 @@ npm run build
 
 Las pruebas de interfaz del frontend son scripts en `frontend/tests/` expuestos como `npm run test:*` (informes, panel, editor, configuración visual, flujo de compra).
 
-**Registros de QA**
-
-| Registro | Documento |
-| --- | --- |
-| Revisión y mejora general del Frontend — Sprint 8 (SCRUM-508) | [`sprint8/SCRUM-508-revision-general-frontend.md`](sprint8/SCRUM-508-revision-general-frontend.md) |
-| Pruebas de regresión del sprint 7 (automatizadas y manuales, con capturas) | [`pruebas-regresion-final/pruebas-regresion.md`](pruebas-regresion-final/pruebas-regresion.md) |
-| QA final SCRUM-455/456 | [`qa-final-scrum455456/INFORME-QA-FINAL.md`](qa-final-scrum455456/INFORME-QA-FINAL.md) |
-| Revisión integral de estabilidad | [`revision-integral-estabilidad.md`](revision-integral-estabilidad.md) |
-| Pruebas de integración logística | [`sprint7/SCRUM-500-pruebas-integracion-logistica.md`](sprint7/SCRUM-500-pruebas-integracion-logistica.md) |
-| Verificación de accesibilidad | [`sprint7/SCRUM-495-revision-accesibilidad.md`](sprint7/SCRUM-495-revision-accesibilidad.md) |
-| Verificación de carga inicial (< 2,5 s) | [`sprint7/SCRUM-473-verificacion-carga-inicial.md`](sprint7/SCRUM-473-verificacion-carga-inicial.md) |
-| Verificación responsive | [`sprint7/verificacion-requisitos-responsive.md`](sprint7/verificacion-requisitos-responsive.md) |
-| Revisión de criterios de las 17 HU | [`sprint7/SCRUM-502-revision-criterios-HU.md`](sprint7/SCRUM-502-revision-criterios-HU.md) |
-
 ## 9. Índice de documentos de `docs/`
 
 | Categoría | Documentos |
 | --- | --- |
-| Instalación y configuración | [`requisitos-instalacion.md`](requisitos-instalacion.md), [`sprint7/SCRUM-482-configuracion-frontend.md`](sprint7/SCRUM-482-configuracion-frontend.md), [`sprint7/SCRUM-483-configuracion-backend.md`](sprint7/SCRUM-483-configuracion-backend.md), [`sprint7/SCRUM-484-configuracion-postgresql.md`](sprint7/SCRUM-484-configuracion-postgresql.md), [`sprint7/SCRUM-485-configuracion-mongodb.md`](sprint7/SCRUM-485-configuracion-mongodb.md), [`sprint7/SCRUM-487-credenciales-externas.md`](sprint7/SCRUM-487-credenciales-externas.md) |
-| Arquitectura y datos | [`scrum-32-adaptadores-integracion.md`](scrum-32-adaptadores-integracion.md), [`scrum-34-estandar-api.md`](scrum-34-estandar-api.md), [`scrum-36-modelo-mongodb.md`](scrum-36-modelo-mongodb.md), [`scrum-43-propiedad-emprendedor-tienda.md`](scrum-43-propiedad-emprendedor-tienda.md), [`scrum-44-identificacion-interna-tienda.md`](scrum-44-identificacion-interna-tienda.md), [`scrum-137-asociacion-emprendedor-tienda.md`](scrum-137-asociacion-emprendedor-tienda.md), [`scrum-138-identificacion-tienda-solicitudes.md`](scrum-138-identificacion-tienda-solicitudes.md) |
-| Pagos, envíos y correos | [`scrum-319-320-transferencias.md`](scrum-319-320-transferencias.md), [`shipping-quotes.md`](shipping-quotes.md), [`retiro-tienda-estructurado.md`](retiro-tienda-estructurado.md), [`retiro-tienda-manual.md`](retiro-tienda-manual.md), [`correo-despacho.md`](correo-despacho.md) |
-| Catálogo y panel | [`develop-integration-productos.md`](develop-integration-productos.md), [`producto-editor-consistencia-visual.md`](producto-editor-consistencia-visual.md), [`SCRUM-374-375-historial.md`](SCRUM-374-375-historial.md), [`dashboard-interactivo.md`](dashboard-interactivo.md), [`dashboard-operativo-sprint5.md`](dashboard-operativo-sprint5.md), [`dashboard-analitico-checkout.md`](dashboard-analitico-checkout.md) |
-| Configuración visual y UX | [`sprint8/SCRUM-508-revision-general-frontend.md`](sprint8/SCRUM-508-revision-general-frontend.md), [`visual-config-etapa-1.md`](visual-config-etapa-1.md), [`visual-config-etapa-3.md`](visual-config-etapa-3.md), [`visual-config-etapa-4-final.md`](visual-config-etapa-4-final.md), [`editor-emprendedor-ux-noche-1.md`](editor-emprendedor-ux-noche-1.md), [`panel-emprendedor-ux-ayudas.md`](panel-emprendedor-ux-ayudas.md), [`frontend-plantilla-1.md`](frontend-plantilla-1.md) |
-| QA y validaciones | Ver sección 8, más [`SCRUM-58-validacion.md`](SCRUM-58-validacion.md), [`SCRUM-236-251-252-validacion.md`](SCRUM-236-251-252-validacion.md), [`auditoria-merge-09c2b0c.md`](auditoria-merge-09c2b0c.md), [`resolucion-conflictos-develop.md`](resolucion-conflictos-develop.md) |
-| Historial de entregas | [`sprint4-entregas.md`](sprint4-entregas.md) |
+| Instalación y configuración | [`instalacion-y-configuracion/requisitos-instalacion.md`](instalacion-y-configuracion/requisitos-instalacion.md), [`instalacion-y-configuracion/configuracion-frontend.md`](instalacion-y-configuracion/configuracion-frontend.md), [`instalacion-y-configuracion/configuracion-backend.md`](instalacion-y-configuracion/configuracion-backend.md), [`instalacion-y-configuracion/configuracion-postgresql.md`](instalacion-y-configuracion/configuracion-postgresql.md), [`instalacion-y-configuracion/configuracion-mongodb.md`](instalacion-y-configuracion/configuracion-mongodb.md), [`instalacion-y-configuracion/credenciales-externas.md`](instalacion-y-configuracion/credenciales-externas.md) |
+| Arquitectura y datos | [`arquitectura/adaptadores-integracion.md`](arquitectura/adaptadores-integracion.md), [`arquitectura/estandar-api.md`](arquitectura/estandar-api.md), [`arquitectura/modelo-mongodb.md`](arquitectura/modelo-mongodb.md), [`arquitectura/identificacion-interna-tienda.md`](arquitectura/identificacion-interna-tienda.md) |

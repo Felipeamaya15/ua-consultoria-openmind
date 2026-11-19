@@ -14,7 +14,7 @@ from django.utils.crypto import constant_time_compare
 from apps.core.domain.security_validators import CAPTCHA_ALLOWLIST_REGEX
 
 CAPTCHA_SALT = "auth-captcha-challenge-v1"
-CAPTCHA_MAX_AGE_SECONDS = 300  # 5 minutos
+CAPTCHA_MAX_AGE_SECONDS = 300
 _ALPHABET = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ"
 
 

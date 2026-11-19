@@ -21,7 +21,6 @@ def normalize_profile(network, value):
     hosts = {'instagram': ('instagram.com', 'www.instagram.com'),
              'facebook': ('facebook.com', 'www.facebook.com', 'm.facebook.com'),
              'youtube': ('youtube.com', 'www.youtube.com', 'm.youtube.com')}
-    # A domain without scheme is accepted, but cannot be mistaken for a handle.
     if any(value.lower() == host or value.lower().startswith((host + '/', host + ':', host + '?')) for host in hosts[network]):
         value = 'https://' + value
     if '://' not in value:
@@ -50,7 +49,6 @@ def normalize_profile(network, value):
         valid = re.fullmatch(r'@[\w.-]{3,30}', path) or re.fullmatch(r'channel/UC[A-Za-z0-9_-]{22}', path) or re.fullmatch(r'(?:c|user)/[A-Za-z0-9_-]{1,100}', path)
     if not valid:
         raise serializers.ValidationError('Ingresa un identificador o enlace de perfil válido; no una publicación.')
-    # Tracking parameters are not part of profile identity.
     return f'https://{hosts[network][0]}/{path}'
 
 

@@ -1,4 +1,4 @@
-// Prueba en navegador del editor real; servicios externos sustituidos por fixtures explícitas.
+
 const fs = require('node:fs'), path = require('node:path'), os = require('node:os');
 const assert = require('node:assert/strict'), esbuild = require('esbuild');
 const { chromium } = require(process.env.PICKUP_PLAYWRIGHT_MODULE || 'playwright');

@@ -1,4 +1,4 @@
-// OPENMIND_ONLINE_EFFECTS_V1 — Biblioteca externa por grupo, sin catálogos duplicados.
+
 import { useEffect, useState, type CSSProperties, type ChangeEvent } from 'react';
 import type { VisualConfig } from '../../storefront/visual/types';
 import { MOVEMENT_EFFECTS, LIGHT_EFFECTS, motionTransform, lightStyle } from '../../storefront/visual/effectLibrary';
@@ -209,7 +209,7 @@ export function ProductHoverInspector({ hero, suggestedArea, onEdit }: Props) {
   </section>;
 }
 
-// Ficha de producto: solo cambio manual, misma biblioteca, ajuste independiente.
+
 export function ProductDetailTransitionInspector({ transition, onEdit }: {
   transition: NonNullable<VisualConfig['hero']['detailProductImageTransition']>;
   onEdit: (value: NonNullable<VisualConfig['hero']['detailProductImageTransition']>) => void;

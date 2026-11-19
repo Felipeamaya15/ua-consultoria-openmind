@@ -83,12 +83,10 @@ class CorreosEstadosSimplificadosTests(TestCase):
         self.pedido.save(update_fields=['estado'])
         mail.outbox = []
 
-        # Cambio automático -> no envía por estar desactivado
         res_auto = self.api.patch(f'/api/tienda/pedidos/{self.pedido.id_pedido}/estado/', {'estado': 'entregado'}, format='json')
         self.assertEqual(res_auto.status_code, 200)
         self.assertEqual(len(mail.outbox), 0)
 
-        # Envío manual de emergencia -> forzar=True envía igual
         res_manual = notificaciones_pedido.enviar_correo_manual(self.pedido, 'order_delivered')
         self.assertTrue(res_manual.enviado)
         self.assertEqual(len(mail.outbox), 1)
@@ -100,7 +98,6 @@ class CorreosEstadosSimplificadosTests(TestCase):
         for tipo_esperado in ['order_received', 'payment_success', 'order_shipped', 'order_delivered', 'order_cancelled']:
             self.assertIn(tipo_esperado, plantillas)
 
-        # Actualizar asunto de entregado
         plantillas['order_delivered']['subject'] = 'Paquete entregado {{orderNumber}}'
         res_put = self.api.put('/api/tienda/correos/', {'plantillas': plantillas}, format='json')
         self.assertEqual(res_put.status_code, 200)

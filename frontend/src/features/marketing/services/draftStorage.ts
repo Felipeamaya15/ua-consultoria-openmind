@@ -5,7 +5,7 @@ export function draftStorageKey(scope: DraftScope): string {
   if (!/^https?:\/\//.test(scope.apiBaseUrl) || !/^[1-9]\d*$/.test(scope.storeId) || !/^[1-9]\d*$/.test(scope.userId)) throw new Error('No se pudo confirmar la identidad para los borradores.');
   return `ua-marketing-drafts-v1:${encodeURIComponent(scope.apiBaseUrl.replace(/\/+$/, ''))}:store:${scope.storeId}:user:${scope.userId}`;
 }
-/** Solo almacenamiento local: la autorización de catálogo siempre la realiza el servidor. */
+
 export function draftRepository(scope: DraftScope, storage?: Storage) {
   const key = draftStorageKey(scope);
   const list = (): MarketingDraft[] => {

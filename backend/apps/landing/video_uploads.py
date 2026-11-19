@@ -29,7 +29,6 @@ class VideoUpload:
 
 def inspect_local_video(filename, max_seconds=20):
     import av
-    # Limits are applied in the child process, also on Linux.
     with av.open(filename, options={'protocol_whitelist': 'file,pipe'}) as container:
         videos = container.streams.video
         if len(videos) != 1 or len(container.streams) > 2:
@@ -86,7 +85,6 @@ def encode_local_video(filename, destination, kind):
         new_width = max(2, int(width * scale) // 2 * 2)
         new_height = max(2, int(height * scale) // 2 * 2)
 
-    # Bajar bitrate solo si el archivo no entra en el limite final.
     for bitrate in (1_400_000, 900_000, 560_000):
         with av.open(filename, options={'protocol_whitelist': 'file,pipe'}) as source:
             input_stream = source.streams.video[0]
@@ -131,7 +129,6 @@ def encode_local_video(filename, destination, kind):
                     raise ValueError('format')
                 for packet in stream.encode():
                     output.mux(packet)
-        # Re-validar archivo final; no se persiste nada si falla.
         if Path(destination).stat().st_size <= profile['bytes']:
             result = inspect_local_video(destination, profile['seconds'])
             if result['extension'] != output_format:

@@ -28,7 +28,7 @@ if not USUARIO or not CLAVE:
     sys.exit('Faltan SEED_USUARIO y SEED_CLAVE (el correo y la contraseña de la dueña de la tienda).')
 
 S = requests.Session()
-S.headers.update({'Host': HOST, 'X-Forwarded-Proto': 'https', 'Content-Type': 'application/json'})  # como si llegara por HTTPS desde Caddy
+S.headers.update({'Host': HOST, 'X-Forwarded-Proto': 'https', 'Content-Type': 'application/json'})
 resumen = []
 
 
@@ -67,17 +67,14 @@ def nombres_de(obj, acumulado=None):
 
 print(f'Cargando la tienda de demostración en {BASE} (host {HOST})')
 
-# 1. Inicio de sesión de la dueña
 r = llamar('POST', '/api/auth/login/', data=json.dumps({'username': USUARIO, 'password': CLAVE}))
 if r.status_code != 200 or 'token' not in (r.json().get('data') or {}):
     sys.exit(f'No pude iniciar sesión como {USUARIO}: HTTP {r.status_code} {detalle(r)}')
 S.headers['Authorization'] = 'Token ' + r.json()['data']['token']
 print(f'  [OK ] Sesión iniciada como {USUARIO}')
 
-# 2. Datos de la tienda
 paso('Datos de la tienda (nombre, descripción, correo)', llamar('PUT', '/api/tienda/configuracion/', data=json.dumps(TIENDA)))
 
-# 3. Medios de pago: Transbank (ambiente de integración) y transferencia
 r = llamar('GET', '/api/pagos/mi-tienda/')
 id_tienda = (r.json().get('data') or {}).get('id_tienda') if r.status_code == 200 else None
 if id_tienda:
@@ -89,7 +86,6 @@ datos_pago = (r.json().get('data') or {}) if r.status_code == 200 else {}
 datos_pago['transfer'] = {'enabled': True, 'fields': PAGO_TRANSFERENCIA}
 paso('Transferencia bancaria', llamar('PUT', '/api/pagos/configuracion/', data=json.dumps(datos_pago)))
 
-# 4. Despachos: tarifas por región y comuna (nombres oficiales) y retiro en tienda
 with open(os.path.join(AQUI, 'chileTerritory.json'), encoding='utf-8') as f:
     territorio = {reg['nombre']: [c for prov in reg['provincias'] for c in prov['comunas']] for reg in json.load(f)}
 
@@ -106,15 +102,12 @@ def tarifas(indice):
 envios = {'chilexpress': {'enabled': True, 'tarifas': tarifas(0)}, 'starken': {'enabled': True, 'tarifas': tarifas(1)}, 'pickup': RETIRO}
 paso(f'Despachos: Chilexpress y Starken ({len(envios["chilexpress"]["tarifas"])} destinos cada uno) y retiro en tienda', llamar('PUT', '/api/entregas/configuracion/', data=json.dumps(envios)))
 
-# 5. Promociones y códigos de descuento
 for promo in PROMOCIONES:
     paso(f'Promoción {promo["code"]}', llamar('POST', '/api/promociones/', data=json.dumps(promo)), tolerar=(409,))
 
-# 6. Textos legales
 for tipo, texto in LEGAL.items():
     paso(f'Texto legal publicado: {tipo}', llamar('PUT', '/api/legal/configuracion/', data=json.dumps({'accion': 'publish', 'tipo': tipo, 'content': texto})))
 
-# 7. Productos con fotos, variantes y stock
 r = llamar('GET', '/api/catalog/productos/admin/')
 existentes = nombres_de(r.json()) if r.status_code == 200 else set()
 
@@ -155,7 +148,6 @@ for p in PRODUCTOS:
     if paso(f'Producto {p["nombre"]} ({p["categoria"]}, {len(p["colores"]) * len(p["tallas"] or [1])} variantes, {p["fotos"]} fotos, {time.time() - t0:.1f} s)', r):
         creados += 1
 
-# 7b. Reemplazar solo las fotos de los productos ya cargados (SEED_FOTOS=1), sin borrar nada
 if os.environ.get('SEED_FOTOS') == '1':
     print('\nActualizando las fotos de los productos ya cargados')
     pub = requests.get(BASE + '/api/catalog/productos/', headers={'Host': HOST, 'X-Forwarded-Proto': 'https'}, timeout=120).json()
@@ -191,13 +183,11 @@ if os.environ.get('SEED_FOTOS') == '1':
         r = llamar('PATCH', f'/api/catalog/productos/{fila["id"]}/actualizar/', data=json.dumps({'revision': revision, 'imagenes': [foto(p['slug'], n) for n in range(1, p['fotos'] + 1)]}))
         paso(f'Fotos nuevas de {p["nombre"]} ({p["fotos"]})', r)
 
-# 8. Clientes de prueba
 for c in CLIENTES:
     nombre, apellido = c['nombre'].split(' ', 1)
     r = llamar('POST', '/api/auth/register/', data=json.dumps({'username': c['correo'], 'email': c['correo'], 'password': CLAVE_CLIENTES, 'first_name': nombre, 'last_name': apellido}))
     paso(f'Cliente de prueba {c["correo"]}', r, tolerar=(400, 409))
 
-# 9. Comprobación final, como la vería un cliente
 print('\nComprobación final')
 cat = requests.get(BASE + '/api/catalog/productos/', headers={'Host': HOST, 'X-Forwarded-Proto': 'https'}, timeout=120)
 publicos = nombres_de(cat.json()) if cat.status_code == 200 else set()

@@ -29,7 +29,6 @@ class GruposDeEstadosTests(TestCase):
         self.assertIn('entregado', Pedido.ESTADOS_EN_DESPACHO)
 
     def test_los_cambios_de_estados_tienen_migracion(self):
-        # Falla si alguien cambia Pedido.ESTADO_CHOICES y olvida generar la migracion.
         call_command('makemigrations', 'core', check=True, dry_run=True, verbosity=0)
 
 
@@ -48,7 +47,6 @@ class EstadosDeDespachoTests(TestCase):
     def estado(self, pedido):
         return Pedido.objects.get(pk=pedido.pk).estado
 
-    # ------------------------------------------------ avisos de Linkify
     def avisar(self, pedido, accion, monto=18990):
         cuerpo = json.dumps({'id_pago': pedido.pk, 'action': accion, 'monto': monto}).encode()
         firma = hmac.new(CLAVE.encode(), cuerpo, hashlib.sha256).hexdigest()
@@ -87,7 +85,6 @@ class EstadosDeDespachoTests(TestCase):
                                             HTTP_X_LINKIFY_CONFIRMATION=firma)
                 self.assertEqual(respuesta.status_code, esperado, respuesta.content)
 
-    # ------------------------------------- verificacion manual de Linkify
     def test_la_verificacion_manual_no_retrocede_un_pedido_en_despacho(self):
         api = APIClient()
         api.credentials(HTTP_AUTHORIZATION='Token ' + Token.objects.create(user=self.propietario).key)
@@ -99,7 +96,6 @@ class EstadosDeDespachoTests(TestCase):
                 self.assertEqual(respuesta.json()['error']['codigo'], 'ESTADO_PEDIDO_INVALIDO')
                 self.assertEqual(self.estado(pedido), estado)
 
-    # ------------------------------------------------------ Webpay
     def cobro(self, pedido):
         return {'orden_compra': pedido.identificador, 'monto': 18990}
 

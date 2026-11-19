@@ -43,7 +43,6 @@ class SeguimientoSeguroTests(TestCase):
             cambios['identificador'] = identificador
         return [self.consultar(**cambios).status_code for _ in range(veces)]
 
-    # ------------------------------------------------------------------ la ruta
     def test_la_ruta_la_atiende_la_vista_segura_y_no_acepta_datos_en_la_direccion(self):
         self.assertIs(resolve(self.url).func.view_class, order_tracking.OrderTrackingAPIView)
         for datos in ({'numero_orden': self.pedido.id_pedido, 'email': 'buyer@example.com'},
@@ -60,14 +59,12 @@ class SeguimientoSeguroTests(TestCase):
             self.assertNotIn('Comprador', respuesta.content.decode())
 
     def test_una_orden_sin_correo_guardado_no_se_entrega_con_cualquier_correo(self):
-        # La base exige algun dato del comprador; aqui esta solo en `contacto`, con `correo_contacto` vacio.
         sin_correo = self.crear_pedido('ORD-20261008-SINC', '', contacto={'email': 'buyer@example.com'})
         for correo in ('cualquiera@example.com', 'buyer@example.com'):
             respuesta = self.consultar(identificador=sin_correo.identificador, email=correo)
             self.assertEqual(respuesta.status_code, 404, correo)
             self.assertNotIn('Comprador', respuesta.content.decode())
 
-    # ------------------------------------------------------------------ bloqueo por orden
     def test_tras_cinco_fallos_la_orden_se_bloquea_incluso_con_las_credenciales_correctas(self):
         self.assertEqual(self.fallar(5), [404] * 5)
         for cambios in ({'email': 'wrong@example.com'}, {}):
@@ -120,24 +117,19 @@ class SeguimientoSeguroTests(TestCase):
         self.assertEqual(respuesta.status_code, 200)
         self.assertEqual(respuesta.json()['data']['identificador'], otra.identificador)
 
-    # ------------------------------------------------------------------ bloqueo por correo
     def test_recorrer_numeros_de_orden_con_un_mismo_correo_tambien_se_bloquea(self):
         for numero in range(10):
             self.assertEqual(self.consultar(identificador=f'ORD-20261008-B{numero:03d}', email='scanner@example.com').status_code, 404)
         self.assertEqual(self.consultar(identificador='ORD-20261008-B999', email='scanner@example.com').status_code, 429)
-        # Otro correo no se ve afectado.
         self.assertEqual(self.consultar().status_code, 200)
 
     def test_quien_conoce_el_correo_de_otro_solo_puede_bloquearle_la_consulta_por_un_rato(self):
-        # Compromiso del bloqueo por correo: frena a quien recorre números de orden con un correo ajeno,
-        # y a cambio ese correo queda sin consultar hasta que termina la ventana.
         for numero in range(10):
             self.consultar(identificador=f'ORD-20261008-B{numero:03d}')
         self.assertEqual(self.consultar().status_code, 429)
         with patch('time.time', return_value=time.time() + 16 * 60):
             self.assertEqual(self.consultar().status_code, 200)
 
-    # ------------------------------------------------------------------ duración y configuración
     def test_el_bloqueo_dura_la_ventana_completa_y_luego_se_levanta(self):
         self.fallar(5)
         ahora = time.time()
@@ -156,7 +148,6 @@ class SeguimientoSeguroTests(TestCase):
         self.assertEqual(respuesta.status_code, 429)
         self.assertEqual(respuesta.json()['mensaje'], 'Demasiados intentos fallidos. Vuelve a intentarlo en 1 minuto.')
 
-    # ------------------------------------------------------------------ privacidad
     def test_el_bloqueo_se_registra_sin_correo_ni_numero_de_orden(self):
         with self.assertLogs(LOGGER, level='WARNING') as registro:
             self.fallar(5)
@@ -174,7 +165,6 @@ class SeguimientoSeguroTests(TestCase):
             for privado in ('wrong', '@', 'example', 'ORD-', 'YOXM'):
                 self.assertNotIn(privado, clave, clave)
 
-    # ------------------------------------------------------------------ límite por IP
     def test_el_limite_por_ip_avisa_en_espanol_y_con_los_segundos(self):
         for numero in range(20):
             self.assertEqual(self.consultar(identificador=f'ORD-20261008-A{numero:03d}', email=f'otro{numero}@example.com').status_code, 404)
@@ -188,7 +178,6 @@ class SeguimientoSeguroTests(TestCase):
         self.assertTrue(1 <= espera <= 60, espera)
         self.assertEqual(respuesta['Retry-After'], str(espera))
 
-    # ------------------------------------------------------------------ textos de espera
     def test_la_espera_se_expresa_en_segundos_o_minutos_redondeando_hacia_arriba(self):
         casos = {1: '1 segundo', 2: '2 segundos', 45: '45 segundos', 59: '59 segundos', 60: '1 minuto',
                  61: '2 minutos', 120: '2 minutos', 121: '3 minutos', 900: '15 minutos', 0: '1 segundo', 0.2: '1 segundo'}

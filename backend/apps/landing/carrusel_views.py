@@ -106,7 +106,6 @@ class ImagenesCarruselLandingAPIView(APIView):
             order = config.imagenes_carrusel.aggregate(last=Max('orden'))['last']
             row = ImagenCarruselLanding.objects.create(configuracion=config, archivo=image, orden=0 if order is None else order + 1, texto_alternativo=text.strip())
             new_id = str(row.pk)
-        # New slides append even after an earlier manual reorder.
         persist_json(config, 'carrusel_orden', [*[item['id'] for item in items], new_id])
         result = next(item for item in carousel_items(config, request, private=True) if item['id'] == new_id)
         return success_response(data=result, status=status.HTTP_201_CREATED)

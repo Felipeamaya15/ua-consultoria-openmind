@@ -82,10 +82,9 @@ class OrderTrackingAPIView(APIView):
         guard.register_success()
         order = matches[0]
         if pedido_expirado(order) and expirar_pedido_pendiente(order.pk, consultar_pasarela=False):
-            order.refresh_from_db() 
+            order.refresh_from_db()
         data = OrderDetailSerializer(order).data
 
-        # --- SCRUM-377: Construcción de Línea de Tiempo (RF-02.4) ---
         alias_estado = {
             'preparacion': 'pagado',
             'preparando': 'pagado',
@@ -123,7 +122,6 @@ class OrderTrackingAPIView(APIView):
                 paso['completado'] = i <= indice_actual
                 paso['actual'] = i == indice_actual
             linea_tiempo = pasos
-        # -------------------------------------------------------------
 
         data.update(
             identificador=order.identificador,

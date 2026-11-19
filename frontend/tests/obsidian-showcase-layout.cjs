@@ -1,4 +1,4 @@
-// La plantilla 4 conserva rutas reales, paleta dinámica y galería multimagen.
+
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');

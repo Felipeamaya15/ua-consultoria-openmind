@@ -3,7 +3,7 @@ import { categories, mockProducts, formatPrice } from '../data/mockData';
 import { ProductCard } from '../components/store/ProductCard';
 import { useCart } from '../context/CartContext';
 
-// Pantallas de apoyo para navegar el inicio. Su diseño final se implementa por separado.
+
 export function CatalogPreview() {
   const [params] = useSearchParams();
   const category = params.get('cat') || 'Todos';

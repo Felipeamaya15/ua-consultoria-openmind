@@ -32,7 +32,7 @@ export type BackgroundEffect = 'plain' | 'gradient' | 'glow' | 'pattern';
 export type GalleryMode = 'auto' | 'single' | 'collage';
 export type EditorialBlock = 'heading' | 'subtitle' | 'cta';
 export type TextBlock = EditorialBlock | 'title' | 'price' | 'variant' | 'brand' | 'description';
-// Reutiliza el catálogo de la tienda, conservando los tres alias de Marketing 1/2.
+
 export const FONT_FAMILIES = { ...fonts, sans: 'Arial, sans-serif', serif: 'Georgia, serif', mono: '"Courier New", monospace', jakarta: fonts.sans, display: fonts.serif } as const;
 export interface Appearance {
   radius: number | null; borderStyle: 'original' | 'none' | 'solid' | 'dashed'; borderWidth: number; borderColor: string | null;
@@ -86,7 +86,7 @@ export function defaultDesign(template: Template = 'photo'): DesignState {
 const hex = (v: unknown): string | null => typeof v === 'string' && /^#[a-f\d]{6}$/i.test(v) ? v : null;
 const choice = <T extends string>(v: unknown, options: readonly T[], fallback: T): T => options.includes(v as T) ? v as T : fallback;
 const bound = (v: unknown, low: number, high: number, fallback: number) => typeof v === 'number' && Number.isFinite(v) ? Math.min(high, Math.max(low, Math.round(v))) : fallback;
-/** Lista cerrada: no acepta HTML, CSS, URLs ni campos comerciales en el documento editable. */
+
 export function normalizeDesign(value: DesignState): DesignState {
   const defaults = defaultDesign();
   const textStyles = { ...defaults.textStyles };
@@ -128,7 +128,7 @@ export function normalizeDesign(value: DesignState): DesignState {
     zoom: bound(value.zoom, 1, 400, 100), spacing: choice(value.spacing, ['compact', 'comfortable'], 'comfortable'),
     alignment: choice(value.alignment, ['left', 'center', 'right'], 'left'), mediaSide: choice(value.mediaSide, ['start', 'end'], 'start') };
 }
-/** Los campos editoriales no sirven para introducir ofertas/condiciones alternativas. El nombre real siempre se conserva. */
+
 export function editorialProblem(text: string): string | null {
   const normalized = text.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
   return /[<>$€%\d]|\b(gratis|descuento|oferta|stock|envio|vence|vigencia|ultim[oa]s?)\b/i.test(normalized)
@@ -166,7 +166,7 @@ export function designHistory(state: DesignHistory, action: DesignAction): Desig
 
 export interface TemplateHistory { active: Template; documents: Record<Template, DesignHistory> }
 export const initialTemplateHistory = (): TemplateHistory => ({ active: 'photo', documents: { photo: initialHistory('photo'), feature: initialHistory('feature'), minimal: initialHistory('minimal') } });
-/** Cambiar plantilla restaura su documento e historial; nunca copia ajustes de la anterior. */
+
 export function templateHistory(state: TemplateHistory, action: DesignAction): TemplateHistory {
   if (action.type === 'change' && action.next.template !== state.active) {
     return TEMPLATES.some(t => t.id === action.next.template) ? { ...state, active: action.next.template } : state;

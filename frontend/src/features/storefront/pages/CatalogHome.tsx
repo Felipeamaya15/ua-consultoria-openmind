@@ -25,7 +25,7 @@ export default function CatalogHome() {
   const mochila = featured[0];
   const showcaseSide = featured.slice(1, 3);
   const discover = featured.slice(3);
-  // Bloques publicados: si no hay talleres/servicios, no aparecen accesos falsos.
+
   const visibleBlocks = landing?.contenido?.bloques?.filter(block => block.visible) ?? [];
   const workshopBlock = visibleBlocks.find(block => /taller|curso|workshop/i.test(
     `${block.titulo ?? ''} ${block.subtitulo ?? ''}`
@@ -37,7 +37,7 @@ export default function CatalogHome() {
   const hero = useHeroContent(landing, route);
   return (
     <div data-landing-page="catalog" className="bg-[var(--visual-background)] text-[var(--visual-text)] overflow-hidden min-w-0">
-      {/* OPENMIND_OBSIDIAN_SHOWCASE_UNIVERSAL_V1: portada inmersiva, distinta a las plantillas 1-3. */}
+
       <section data-visual-section={VISUAL_SECTION.hero} className="om-ob-hero" aria-label="Portada de la tienda">
         <div data-visual-part="heroFrame" className={`om-ob-hero-frame ${heroHasPhoto ? 'om-ob-hero-frame--photo' : 'om-ob-hero-frame--plain'}`}>
           <HeroCarousel landing={landing} onContentChange={hero.onChange} />
@@ -65,7 +65,7 @@ export default function CatalogHome() {
           <span className="om-ob-hero-scroll" aria-hidden="true">DESCUBRE MÁS ↓</span>
         </div>
       </section>
-      {/* Navegación funcional: catálogo real, destacados y secciones publicadas. */}
+
       <nav className="om-ob-quicklinks" aria-label="Explora esta tienda">
         <Link to={route('catalogo')} className="om-ob-quicklink">
           <span className="om-ob-quicklink-number">01</span>
@@ -89,7 +89,7 @@ export default function CatalogHome() {
         </a>}
       </nav>
 
-      {/* BENEFICIOS: una sola vez, justo debajo de la portada */}
+
       {isSectionVisible('Beneficios') && content.beneficios.length > 0 && (
         <section
           aria-label="Beneficios de la tienda"
