@@ -1,4 +1,4 @@
-// SCRUM-402: estructura e invariantes de versiones de contenido legal.
+
 const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');

@@ -24,12 +24,10 @@ def system_palette(name, primary, secondary, accent):
         primary, secondary, accent, '#fafafa', secondary, '#ffffff', '#18202e', '#596579', primary, primary, '#ffffff', '#cdd4de')))}
 
 
-# Original visual-editor palettes, verified against HEAD's visualEditor/palettes.tsx.
 SYSTEM_PALETTES = [system_palette(*values) for values in (
     ('Océano', '#2563eb', '#eff6ff', '#0ea5e9'), ('Bosque', '#15803d', '#f0fdf4', '#84cc16'),
     ('Ciruela', '#7e22ce', '#faf5ff', '#d946ef'), ('Grafito', '#1f2937', '#f3f4f6', '#f97316'),
 )]
-# Read-only compatibility for saved Marketing documents. These never become picker cards.
 LEGACY_SYSTEM_PALETTES = [system_palette(*values) for values in (
     ('Original', '#1a3a6b', '#eef1f8', '#e04b1a'), ('Tinta y papel', '#172b3a', '#f3e9d2', '#bd8845'),
     ('Moderna', '#111111', '#f2f2f2', '#ff5a1f'), ('Minimal', '#5433eb', '#f0edff', '#6d5dfc'),
@@ -116,8 +114,6 @@ class AppearanceAPIView(APIView):
         templates = request.data.get('plantillas')
         if not isinstance(templates, dict) or set(templates) - set(TEMPLATES) or len(json.dumps(templates)) > 200000:
             raise serializers.ValidationError('Envía ajustes de las cuatro plantillas compatibles.')
-        # OPENMIND_SAFE_ONLINE_EFFECTS_V1: compatibilidad con Magic CSS y presets previos.
-        # No habilita CSS o JavaScript arbitrarios en ninguna propiedad.
         effect_fields = frozenset((
             'carouselTransition',
             'hoverFeaturedMotion', 'hoverFeaturedLight',
@@ -127,8 +123,6 @@ class AppearanceAPIView(APIView):
         magic_id = re.compile(r'magic:[a-zA-Z][a-zA-Z0-9]{1,47}\Z')
 
         def valid_legacy_presets(serialized):
-            # Compatibilidad con un dato existente de una versión anterior del editor.
-            # Solo se aceptan recetas declarativas en el formato que ya generaba OpenMind.
             if len(serialized) > 24000:
                 return False
             try:
@@ -193,10 +187,6 @@ class AppearanceAPIView(APIView):
                 return 0 <= value <= 10000
             if not isinstance(value, str):
                 return False
-            # OPENMIND_PROMO_TEXT_PERSISTENCE_FIX_V1
-            # Texto de la etiqueta: el frontend permite hasta 100 caracteres,
-            # incluidos espacios, tildes y signos. Es texto plano, NO CSS.
-            # Solo se acepta en la propiedad de etiqueta del hero.
             if path in (
                 ('hero', 'promoText'),
                 ('responsive', 'tablet', 'hero', 'promoText'),

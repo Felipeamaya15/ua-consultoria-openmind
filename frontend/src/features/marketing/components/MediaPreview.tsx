@@ -28,13 +28,13 @@ function InstagramEmbed({ url }: { url: string }) {
 }
 
 export function MediaPreview({ resource, publicImageUrl, initiallyOpen = false }: { resource: MediaResource; publicImageUrl?: string; initiallyOpen?: boolean }) {
-  // OPENMIND_PUBLIC_MEDIA_PREVIEW_V1
+
   const pathname = typeof window !== 'undefined'
     ? window.location.pathname
     : '';
   const isPublicStorefront = /^\/plantilla\/[1-4](?:\/|$)/.test(pathname);
-  // OPENMIND_PUBLIC_MEDIA_PREVIEW_V2
-  // Identificar el recurso por su enlace, no solamente por su ID.
+
+
   const normalizedUrl = (resource.url || '')
     .trim()
     .split(/[?#]/)[0]
@@ -46,7 +46,7 @@ export function MediaPreview({ resource, publicImageUrl, initiallyOpen = false }
   const previewKey =
     `openmind:public-media-preview:v2:${storePath}:${resource.tipo}:${normalizedUrl || resource.id}`;
 
-  // Compatibilidad con preferencias guardadas anteriormente.
+
   const legacyPreviewKey =
     `openmind:public-media-preview:${resource.id}`;
 
@@ -83,7 +83,7 @@ export function MediaPreview({ resource, publicImageUrl, initiallyOpen = false }
       try {
         localStorage.setItem(previewKey, next ? 'open' : 'closed');
       } catch {
-        // La vista previa sigue funcionando.
+
       }
     }
   }

@@ -66,7 +66,6 @@ class CommercialConsentTests(TestCase):
         response = self.client.get(EXPORT, {'uso': 'marketing', 'formato': fmt, **extra})
         self.assertEqual(response.status_code, 200)
         value = b''.join(response.streaming_content)
-        # Django's test-client streaming wrapper closes the response on exhaustion.
         self.client.force_authenticate(None)
         if fmt == 'csv':
             return list(csv.reader(StringIO(value.decode('utf-8-sig'))))
@@ -313,7 +312,6 @@ class CommercialConsentTests(TestCase):
                     entrega={'metodo': 'Starken', 'codigo_seguimiento': 'SYNTHETIC-TRACKING'})
                 before = len(mail.outbox)
                 self.assertTrue(notificar_recepcion(order).enviado)
-                # A rejected attempt precedes successful payment; preserve develop's state guards.
                 self.assertTrue(notificar_pago_rechazado(order).enviado)
                 order.estado = 'pagado'
                 order.save(update_fields=['estado'])

@@ -12,5 +12,5 @@ urlpatterns = [
     path("seguimiento/starken/<str:numero_seguimiento>/", SeguimientoLogisticoView.as_view(proveedor_fijo="starken"), name="shipping-seguimiento-starken"),
     path("seguimiento/starken/<str:numero_seguimiento>", SeguimientoLogisticoView.as_view(proveedor_fijo="starken")),
     path("seguimiento/<str:numero_seguimiento>/", SeguimientoLogisticoView.as_view(), name="shipping-seguimiento"),
-    path("seguimiento/<str:numero_seguimiento>", SeguimientoLogisticoView.as_view()),  # Soporte sin barra final
+    path("seguimiento/<str:numero_seguimiento>", SeguimientoLogisticoView.as_view()),
 ]

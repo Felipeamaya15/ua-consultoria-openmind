@@ -1,4 +1,4 @@
-// Real browser -> dedicated Django/PostgreSQL/MongoDB/Mailpit. All output outside Git.
+
 const assert = require('node:assert/strict'), fs = require('node:fs'), path = require('node:path');
 const {chromium, request} = require(process.env.DASHBOARD_PLAYWRIGHT_MODULE || 'playwright');
 const out = process.env.MARKETING_QA_OUTPUT;

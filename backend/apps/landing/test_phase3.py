@@ -334,6 +334,6 @@ class RegisteredCustomerConversationTests(TestCase):
         self.assertEqual(parseaddr(mail.outbox[0].from_email)[1], parseaddr(settings.DEFAULT_FROM_EMAIL)[1])
         self.assertEqual(IntentoRespuestaActividad.objects.count(), 1)
         buyer.credentials()
-        buyer.cookies.clear()  # Retirar también la cookie de sesión establecida por el registro.
+        buyer.cookies.clear()
         self.assertEqual(buyer.get('/api/auth/me/').status_code, 401)
         self.assertEqual(other.get('/api/auth/me/').data['data']['email'], 'client-c@example.test')

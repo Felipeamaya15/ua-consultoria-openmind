@@ -2,7 +2,6 @@
 Pruebas de regresión por área -> genera docs/qa-regresion.md
 Uso (desde la raíz del repo, con Docker corriendo y `docker compose up` activo):
   powershell -ExecutionPolicy Bypass -File scripts/regression-report.ps1
-#>
 $ErrorActionPreference = "Continue"
 $commit = (git rev-parse --short HEAD).Trim()
 $branch = (git rev-parse --abbrev-ref HEAD).Trim()
@@ -25,7 +24,7 @@ foreach ($area in $areas.Keys) {
   Write-Host "==> $area" -ForegroundColor Cyan
   $out = docker compose exec -T backend python manage.py test @($areas[$area]) --noinput 2>&1 | Out-String
   $ran = if ($out -match "Ran (\d+) tests?") { $Matches[1] } else { "?" }
-  $ok  = ($out -match "(?m)^OK") 
+  $ok  = ($out -match "(?m)^OK")
   $res = if ($ok) { "CUMPLE" } else { "NO CUMPLE" }
   $filas += "| $area | $ran | $res |"
   if (-not $ok) {
@@ -36,7 +35,6 @@ foreach ($area in $areas.Keys) {
 }
 
 $md = @"
-# Registro de pruebas de regresión
 
 - Rama: $branch | Commit probado: $commit | Fecha: $fecha
 
@@ -44,7 +42,6 @@ $md = @"
 | --- | --- | --- |
 $($filas -join "`n")
 
-## Detalle de NO CUMPLE
 $(if ($detalle) { $detalle -join "`n" } else { "Sin regresiones detectadas." })
 
 > Pendiente: añadir evidencia (capturas) y enlazar bugs de Jira para cada NO CUMPLE.

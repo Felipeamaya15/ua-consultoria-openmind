@@ -41,7 +41,6 @@ def _iniciar_webpay(request, pedido, return_url):
     from apps.catalog.presentation.views import url_retorno_webpay
 
     try:
-        # El caso de uso vuelve a validar pedido, correo y estado, y toma el monto del pedido.
         resultado = IniciarPagoTransbankUseCase().execute({
             'id_tienda': pedido.tienda_id, 'orden_compra': pedido.identificador,
             'email': pedido.correo_contacto, 'monto': int(pedido.monto_total),
@@ -69,7 +68,6 @@ def _iniciar_mercadopago(request, pedido, return_url):
     return iniciar_mercadopago_pedido(request, pedido, return_url)
 
 
-# Medio de pago del pedido -> funcion que inicia un cobro nuevo y devuelve a donde llevar al comprador.
 PASARELAS = {'Transbank': _iniciar_webpay, 'PayPal': _iniciar_paypal, 'MercadoPago': _iniciar_mercadopago}
 
 
@@ -79,7 +77,6 @@ class _Entrada(serializers.Serializer):
     return_url = serializers.URLField()
 
     def validate_return_url(self, value):
-        # Solo se vuelve a la tienda configurada (la misma regla que el inicio de pago de Webpay).
         from apps.catalog.presentation.serializers import IniciarPagoTransbankSerializer
         return IniciarPagoTransbankSerializer().validate_return_url(value)
 

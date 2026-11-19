@@ -7,7 +7,6 @@ import html
 import re
 from typing import Optional, Union
 
-# Longitudes máximas estrictas
 MAX_EMAIL_LENGTH = 254
 MAX_USERNAME_LENGTH = 150
 MAX_NAME_LENGTH = 150
@@ -16,35 +15,28 @@ MAX_POSTAL_CODE_LENGTH = 12
 MAX_PASSWORD_LENGTH = 128
 MAX_TEXT_LENGTH = 500
 
-# Expresiones regulares estrictas (Listas blancas / Allowlists)
 EMAIL_ALLOWLIST_REGEX = re.compile(
     r"^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,24}$"
 )
 PHONE_ALLOWLIST_REGEX = re.compile(
     r"^\+?[0-9 ()\-]{7,20}$"
 )
-# Código postal: lista blanca estricta que solo permite números y guiones
 POSTAL_CODE_ALLOWLIST_REGEX = re.compile(
     r"^[0-9\-]{3,12}$"
 )
-# Nombres y apellidos: letras (incluyendo tildes/ñ), espacios, apóstrofes y guiones
 PERSON_NAME_ALLOWLIST_REGEX = re.compile(
     r"^[a-zA-ZáéíóúÁÉÍÓÚàèìòùÀÈÌÒÙäëïöüÄËÏÖÜñÑçÇ\s'\-]{1,150}$"
 )
-# Username: alfanumérico y caracteres seguros . _ @ -
 USERNAME_ALLOWLIST_REGEX = re.compile(
     r"^[a-zA-Z0-9._@\-]{2,150}$"
 )
-# Código OTP / MFA: exclusivamente 6 dígitos numéricos
 OTP_ALLOWLIST_REGEX = re.compile(
     r"^[0-9]{6}$"
 )
-# Respuesta CAPTCHA: exclusivamente caracteres alfanuméricos o signo menos para resultados numéricos
 CAPTCHA_ALLOWLIST_REGEX = re.compile(
     r"^[a-zA-Z0-9]{2,10}$"
 )
 
-# Patrones de detección temprana de intentos de inyección SQL en entradas de texto
 _SQL_INJECTION_PATTERNS = re.compile(
     r"(?:"
     r"\b(?:UNION\s+(?:ALL\s+)?SELECT|SELECT\s+.+\s+FROM|INSERT\s+INTO|UPDATE\s+\w+\s+SET|DELETE\s+FROM|DROP\s+(?:TABLE|DATABASE)|ALTER\s+TABLE|EXEC(?:UTE)?\s+| xp_cmdshell|SLEEP\s*\(|BENCHMARK\s*\(|WAITFOR\s+DELAY)\b"
@@ -57,7 +49,6 @@ _SQL_INJECTION_PATTERNS = re.compile(
     re.IGNORECASE,
 )
 
-# Caracteres de control peligrosos (excepto tab, salto de línea estándar cuando aplique)
 _CONTROL_CHARS_REGEX = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")
 
 
@@ -247,7 +238,6 @@ def validate_strict_person_name(value: object, field_name: str = "Nombre", *, al
         raise ValueError(f"{field_name}: No puede superar los {MAX_NAME_LENGTH} caracteres.")
     if contains_sql_injection(raw):
         raise ValueError(f"{field_name}: Contiene patrones no permitidos por seguridad.")
-    # Si contiene caracteres HTML como < o >, los escapamos a texto plano (&lt;script&gt;)
     if any(ch in raw for ch in ("<", ">", "&", '"')):
         return escape_xss(raw)
     if not PERSON_NAME_ALLOWLIST_REGEX.fullmatch(raw):

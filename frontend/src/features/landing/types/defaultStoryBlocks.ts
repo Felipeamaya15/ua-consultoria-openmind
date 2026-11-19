@@ -1,6 +1,6 @@
 import type { BloqueLanding } from './landing.types';
 
-/** Stable identities preserve style settings when restoring a removed default. */
+
 export const DEFAULT_STORY_BLOCKS: BloqueLanding[] = [
   {
     id:'706d696e-6400-4000-8000-000000000001', tipo:'historia', visible:true,
@@ -17,7 +17,7 @@ export const DEFAULT_STORY_BLOCKS: BloqueLanding[] = [
   },
 ];
 export const defaultStoryBlocks = () => DEFAULT_STORY_BLOCKS.map(block => ({...block,imagenes:block.imagenes.map(image => ({...image}))}));
-/** Demo content is opt-in; public storefronts only render saved sections. */
+
 export const editableLandingBlocks = (blocks?: BloqueLanding[]) => blocks ?? [];
 export function restoreStoryBlocks(blocks?: BloqueLanding[]): BloqueLanding[] {
   const current = editableLandingBlocks(blocks);

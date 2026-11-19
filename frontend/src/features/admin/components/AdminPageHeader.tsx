@@ -9,7 +9,7 @@ export function AdminPageHeader({ title, description, help, action }: { title: s
     <div id={id} hidden={!showHelp}><p>{description}</p>{help}</div>
   </section>;
 }
-/** Only optional explanations belong here; never wrap errors or operational warnings. */
+
 export function AdminHelp({ children }: { children: ReactNode }) {
   const { showHelp } = useAdminHelp();
   return showHelp ? <p className="admin-context-help">{children}</p> : null;

@@ -39,7 +39,6 @@ class HistorialTests(TestCase):
         response = self.get(url, parametros, 400)
         return response.json()['error']['codigo']
 
-    # --- acceso ---
 
     def test_sin_sesion_y_con_comprador(self):
         for url in (VENTAS, PEDIDOS):
@@ -48,21 +47,20 @@ class HistorialTests(TestCase):
             self.assertEqual(self.api.get(url).status_code, 403)
             self.api.force_authenticate(self.dueno)
 
-    # --- historial de ventas: contrato y cálculos ---
 
     def test_contrato_y_resumen_de_ventas(self):
         self.crear('2026-10-10T12:00:00-03:00', '18990.00')
         self.crear('2026-10-11T12:00:00-03:00', '1010.00', estado='entregado')
-        self.crear('2026-10-12T12:00:00-03:00', '500.00', estado='pendiente')   # no es venta
-        self.crear('2026-10-12T13:00:00-03:00', '700.00', estado='cancelado')   # no es venta
-        self.crear('2026-10-12T14:00:00-03:00', '9999.00', propia=False)        # sin tienda
+        self.crear('2026-10-12T12:00:00-03:00', '500.00', estado='pendiente')
+        self.crear('2026-10-12T13:00:00-03:00', '700.00', estado='cancelado')
+        self.crear('2026-10-12T14:00:00-03:00', '9999.00', propia=False)
         response = self.get(VENTAS)
         data = response.json()['data']
         self.assertEqual(response['Cache-Control'], 'no-store')
         self.assertEqual(data['resumen'], {'cantidad_ventas': 2, 'total_vendido': '20000.00', 'ticket_promedio': '10000.00'})
         self.assertEqual(data['agrupacion'], 'mes')
         self.assertEqual(data['serie'], [{'periodo': '2026-10', 'cantidad_ventas': 2, 'total_vendido': '20000.00'}])
-        self.assertEqual([fila['monto_total'] for fila in data['ventas']], ['1010.00', '18990.00'])   # la más reciente primero
+        self.assertEqual([fila['monto_total'] for fila in data['ventas']], ['1010.00', '18990.00'])
         self.assertEqual(response.json()['paginacion'], {'pagina': 1, 'tamano': 20, 'total': 2, 'total_paginas': 1})
         suma = Pedido.objects.filter(tienda=self.tienda, estado__in=Pedido.ESTADOS_PAGADOS).aggregate(t=Sum('monto_total'))['t']
         self.assertEqual(format(suma, '.2f'), data['resumen']['total_vendido'])
@@ -91,7 +89,6 @@ class HistorialTests(TestCase):
         self.assertEqual(len(response.json()['data']['ventas']), 2)
         self.assertEqual(response.json()['paginacion'], {'pagina': 2, 'tamano': 2, 'total': 5, 'total_paginas': 3})
 
-    # --- validaciones ---
 
     def test_validaciones_de_la_consulta(self):
         self.assertEqual(self.codigo_de_error(VENTAS, {'tamano': 101}), 'TAMANO_INVALIDO')
@@ -107,10 +104,8 @@ class HistorialTests(TestCase):
         self.assertEqual(self.codigo_de_error(VENTAS, {'fecha_desde': '2026-02-30'}), 'FECHA_INVALIDA')
         self.get(VENTAS, {'agrupacion': 'dia', 'fecha_desde': '2026-10-01', 'fecha_hasta': '2026-10-31'})
 
-    # --- hora de Chile ---
 
     def test_la_venta_nocturna_cuenta_en_su_dia_y_mes_en_hora_de_chile(self):
-        # 31/08 22:30 en Chile = 01/09 02:30 UTC
         self.crear('2026-08-31T22:30:00-04:00', '18990.00')
         dia = {'fecha_desde': '2026-08-31', 'fecha_hasta': '2026-08-31'}
         historial = self.get(VENTAS, dia).json()['data']
@@ -129,7 +124,6 @@ class HistorialTests(TestCase):
         dia = {'fecha_desde': '2026-08-31', 'fecha_hasta': '2026-08-31'}
         self.assertEqual(self.get(PEDIDOS, dia).json()['paginacion']['total'], 1)
 
-    # --- historial de pedidos ---
 
     def test_historial_de_pedidos_filtros_y_orden(self):
         self.crear('2026-10-10T12:00:00-03:00', '3000.00', estado='pendiente')
@@ -146,10 +140,10 @@ class HistorialTests(TestCase):
         self.assertEqual(self.codigo_de_error(PEDIDOS, {'orden': 'azar'}), 'ORDEN_INVALIDO')
 
     def test_historial_de_pedidos_con_serie_por_dia_y_mes(self):
-        self.crear('2026-08-31T22:30:00-04:00', estado='pendiente')   # 01/09 UTC, 31/08 en Chile
+        self.crear('2026-08-31T22:30:00-04:00', estado='pendiente')
         self.crear('2026-09-01T10:00:00-04:00', estado='cancelado')
         self.crear('2026-09-01T12:00:00-04:00', estado='pagado')
-        self.crear('2026-09-01T12:00:00-04:00', estado='pagado', propia=False)   # sin tienda
+        self.crear('2026-09-01T12:00:00-04:00', estado='pagado', propia=False)
         rango = {'fecha_desde': '2026-08-01', 'fecha_hasta': '2026-09-30'}
         sin_serie = self.get(PEDIDOS, rango).json()
         self.assertNotIn('serie', sin_serie)

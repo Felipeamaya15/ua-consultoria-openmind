@@ -23,7 +23,7 @@ if r.status_code != 200:
     sys.exit(f'No pude iniciar sesión: HTTP {r.status_code}')
 H['Authorization'] = 'Token ' + r.json()['data']['token']
 demo = {p['nombre'] for p in PRODUCTOS}
-publico = {k: v for k, v in H.items() if k not in ('Authorization', 'Content-Type')}   # el listado se pide como un cliente
+publico = {k: v for k, v in H.items() if k not in ('Authorization', 'Content-Type')}
 respuesta = requests.get(BASE + '/api/catalog/productos/', headers=publico, timeout=120).json()
 lista = respuesta if isinstance(respuesta, list) else (respuesta.get('data') or respuesta.get('productos') or [])
 lista = lista.get('productos', []) if isinstance(lista, dict) else lista

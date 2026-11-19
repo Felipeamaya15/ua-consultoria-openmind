@@ -56,9 +56,7 @@ export default function Cart() {
 
   if (loading && items.length === 0) return <LoadingState spacing="none" className="p-8">Cargando carrito…</LoadingState>;
 
-  // ==========================================================
-  // CARRITO VACÍO — PLANTILLA 4 / CATALOG
-  // ==========================================================
+
   if (isCatalog && items.length === 0) {
     return (
       <div className="bg-[var(--visual-page-panel-background)] text-[var(--visual-page-color)]">
@@ -90,9 +88,7 @@ export default function Cart() {
     );
   }
 
-  // ==========================================================
-  // CARRITO VACÍO — PLANTILLA 3 / VELTA
-  // ==========================================================
+
   if (isVisual && items.length === 0) {
     return (
       <div className="bg-[var(--visual-page-panel-background)] text-[var(--visual-page-color)]">
@@ -126,9 +122,7 @@ export default function Cart() {
     );
   }
 
-  // ==========================================================
-  // CARRITO VACÍO — PLANTILLAS 1 Y 2
-  // ==========================================================
+
   if (items.length === 0) {
     return (
       <div
@@ -152,9 +146,7 @@ export default function Cart() {
     );
   }
 
-  // ==========================================================
-  // CARRITO CON PRODUCTOS — PLANTILLA 4 / CATALOG
-  // ==========================================================
+
   if (isCatalog) {
     return (
       <div className="bg-[var(--visual-page-panel-background)] text-[var(--visual-page-color)]">
@@ -406,9 +398,7 @@ export default function Cart() {
     );
   }
 
-  // ==========================================================
-  // CARRITO CON PRODUCTOS — PLANTILLA 3 / VELTA
-  // ==========================================================
+
   if (isVisual) {
     return (
       <div className="bg-[var(--visual-page-panel-background)] text-[var(--visual-page-color)]">
@@ -649,9 +639,7 @@ export default function Cart() {
     );
   }
 
-  // ==========================================================
-  // CARRITO CON PRODUCTOS — PLANTILLAS 1 Y 2
-  // ==========================================================
+
   return (
     <div
       className={

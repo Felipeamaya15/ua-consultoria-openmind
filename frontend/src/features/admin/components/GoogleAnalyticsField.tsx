@@ -6,7 +6,7 @@ interface GoogleAnalyticsFieldProps {
   onChange: (value: string) => void;
 }
 
-/** Campo único para configurar el identificador de medición GA4 de la tienda. */
+
 export function GoogleAnalyticsField({ value, onChange }: GoogleAnalyticsFieldProps) {
   const validation = validateGoogleAnalyticsId(value);
 

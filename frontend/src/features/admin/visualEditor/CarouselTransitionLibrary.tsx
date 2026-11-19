@@ -1,4 +1,4 @@
-// OPENMIND_ONLINE_EFFECTS_V1: búsqueda real y segura en Magic CSS.
+
 import { useEffect, useState, type CSSProperties, type ChangeEvent } from 'react';
 import {
   CAROUSEL_TRANSITIONS, isCarouselTransitionId,

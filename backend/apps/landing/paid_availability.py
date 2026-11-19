@@ -15,7 +15,6 @@ from apps.landing.models import ConfiguracionLanding, ReservaActividadPagada, So
 
 
 def sale_snapshot(section, details):
-    # Capture the exact terms and schedule. Never include a private meeting link.
     blocks = section.get('componentes', [])
     return {
         'titulo': activity_title(section),
@@ -38,7 +37,6 @@ def sale_version(snapshot):
 
 
 def occupied_seats(store, section_id, now):
-    # Never release seats during uncertain/in-flight payments just because a clock expired.
     active = ReservaActividadPagada.objects.filter(tienda=store, seccion_id=section_id).filter(
         Q(estado__in=['en_pago','confirmada','revision_pago']) | Q(estado='reservada', vence__gt=now))
     paid = active.aggregate(total=Sum('cantidad'))['total'] or 0
@@ -73,7 +71,6 @@ def reserve_activity(store, section_id, *, checkout_key, quantity, accepted_vers
         section_id = UUID(str(section_id))
     except (TypeError, ValueError, AttributeError):
         raise ValidationError('Identificador inválido.') from None
-    # Same lock order as the existing free registrations and landing writes.
     Tienda.objects.select_for_update().get(pk=store.pk)
     config = ConfiguracionLanding.objects.select_for_update().filter(tienda=store).first()
     now = now or timezone.now()

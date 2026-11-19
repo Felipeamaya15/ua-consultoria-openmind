@@ -10,7 +10,6 @@ from apps.catalog.test_creation import CatalogAPITestCase
 
 
 class MarketingMediaTests(TestCase):
-    # Reuse the existing isolated upload fixtures, without inheriting their tests.
     setUp = MediaLibraryTests.setUp
     url = MediaLibraryTests.url
     create = MediaLibraryTests.create

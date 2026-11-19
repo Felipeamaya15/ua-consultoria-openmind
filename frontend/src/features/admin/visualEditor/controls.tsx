@@ -26,16 +26,8 @@ export function SelectControl(props: ControlProps) {
 export function NumberControl(props: ControlProps) {
   return <Field {...props}><input disabled={props.disabled} aria-label={props.label} type="number" value={Number(props.value)} min={props.min ?? 0} max={props.max ?? 10000} step={props.step ?? 1} onChange={e => { const value = e.target.valueAsNumber; if (Number.isFinite(value) && value >= (props.min ?? 0) && value <= (props.max ?? 10000)) props.onChange(value); }} /></Field>;
 }
-/** Keep exact values available while offering a useful first choice. */
-/** OPENMIND_LOGO_SIZE_PRESETS_FIX_V5
- * Controles reales y distintos para cada logo; la entrada Personalizado es editable.
- * El mínimo se aplica a los rangos definidos para evitar tres valores iguales.
- */
-/** OPENMIND_LOGO_CUSTOM_INPUT_V6
- * El usuario puede borrar el valor completo y escribir otro sin que el min/max
- * bloqueen caracteres intermedios. Se confirma al salir o pulsar Enter.
- * Botones +/- siempre disponibles aunque el navegador o CSS oculten flechas.
- */
+
+
 export function FriendlySizeControl(props: ControlProps) {
   const [custom, setCustom] = useState(false);
   const [draft, setDraft] = useState<string | null>(null);

@@ -1,4 +1,4 @@
-// UI real + API Django real + bases efímeras. Solo la identidad del montaje QA se inyecta.
+
 const fs = require('node:fs'), path = require('node:path'), http = require('node:http'), assert = require('node:assert/strict');
 const esbuild = require('esbuild');
 const runtime = process.env.QA_NODE_MODULES || 'C:/Users/maria/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules';

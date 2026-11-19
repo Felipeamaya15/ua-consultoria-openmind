@@ -19,7 +19,7 @@ export function ViewportVideo({ src, ...props }: Props) {
           video.src = src;
         }
         void video.play().catch(() => {
-          // El usuario puede iniciar el video con los controles.
+
         });
       } else {
         video.pause();

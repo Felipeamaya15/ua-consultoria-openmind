@@ -59,7 +59,7 @@
   color: #166534;
 }
 
-/* Modo explicito de texto de portada, compartido entre las cuatro plantillas. */
+
 .lp-carousel-text-mode {
   border: 1px solid #cbd5e1;
   border-radius: 0.75rem;
@@ -189,7 +189,7 @@
 
 .lp-slide-content{margin-block:12px;padding:10px;border:1px solid #dbe3ee;border-radius:8px}.lp-slide-content summary{cursor:pointer;font-weight:600}.lp-slide-content fieldset{display:grid;gap:10px;min-width:0;margin-top:12px}.lp-carousel-item>video{width:100%;max-height:180px;object-fit:contain}
 
-/* OPENMIND_SLIDE_DESTINATION_V1 */
+
 .lp-slide-content, .lp-slide-content fieldset, .lp-slide-destination {min-width:0;max-width:100%;box-sizing:border-box;}
 .lp-slide-content fieldset {width:100%;}
 .lp-slide-content input:not([type=checkbox]):not([type=radio]), .lp-slide-content textarea, .lp-slide-content select {max-width:100%;min-width:0;box-sizing:border-box;}

@@ -1,5 +1,5 @@
-// Solo QA local. Contratos: responses.py, store_configuration.py, legal.py,
-// recent_orders.py, promotions.py y serializers de catálogo. Todos los datos son ficticios.
+
+
 const http = require('node:http');
 const id = '000000000000000000000001';
 const pixel = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/ScLbtAAAAABJRU5ErkJggg==';

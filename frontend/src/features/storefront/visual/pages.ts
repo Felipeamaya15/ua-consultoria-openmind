@@ -1,4 +1,4 @@
-/** Shared public routes; design changes never replace route guards or business state. */
+
 export const STORE_PAGES = [
   { id: 'catalog', label: 'Catálogo', path: 'catalogo' },
   { id: 'product', label: 'Producto', path: 'producto' },
@@ -24,8 +24,8 @@ export function checkoutPreviewStep(search: string, embedded: boolean, parentPat
   const value = new URLSearchParams(search).get('visualStep');
   return isStorefrontEditorPreview(embedded, parentPath) && CHECKOUT_PREVIEW_STEPS.some(step => step === value) ? value! : 'contact';
 }
-// OPENMIND_REAL_TEMPLATE_PREVIEW_V1
-/** Solo el panel de Diseño puede abrir miniaturas sin banner/analytics. La URL pública sola no basta. */
+
+
 export function isTemplateThumbnailPreview(embedded: boolean, parentPath: string, search: string): boolean {
   return embedded && parentPath === '/emprendedor/diseno' && new URLSearchParams(search).get('miniatura') === '1';
 }
@@ -50,7 +50,7 @@ export function previewPath(page: PreviewPageId, productId = '', register = fals
   return page === 'login' && register ? `${path}?modo=registro` : path;
 }
 
-/** A public query parameter cannot activate synthetic examples. */
+
 export function isActiveEditorPreview(): boolean {
   try { return isStorefrontEditorPreview(window.parent !== window, window.parent.location.pathname); }
   catch { return false; }

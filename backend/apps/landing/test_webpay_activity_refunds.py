@@ -78,7 +78,6 @@ class WebpayRefundDBTests(TestCase):
         self.assertEqual(order.estado,'pagado')
         self.assertEqual(row.estado,'liberada');self.assertEqual(second.estado,'confirmada')
         self.assertEqual(records(order)[str(row.pk)]['saldo_posterior'],int(first_amount))
-        # Only the remaining amount can be refunded, not the original total again.
         ledger=records(order);ledger[str(second.pk)]={'estado':'autorizada','monto':int(first_amount)}
         order.entrega={**order.entrega,LEDGER:ledger};order.save(update_fields=['entrega'])
         with patch('apps.landing.webpay_activity_refunds.adapter_for'),patch('apps.landing.webpay_activity_refunds.status_raw',return_value={**raw,'status':'PARTIALLY_NULLIFIED','balance':int(first_amount)}),patch('apps.landing.webpay_activity_refunds._request_refund',return_value={**response,'balance':0}) as refund:

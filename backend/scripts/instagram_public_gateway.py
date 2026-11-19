@@ -22,7 +22,6 @@ def permitted(target):
     if any(len(values) != 1 for values in query.values()):
         return False
     if url.path == CALLBACK:
-        # The optional one-use inicio ticket sets the public-domain OAuth cookie before Meta.
         if 'inicio' in query:
             return set(query) == {'inicio'} and bool(re.fullmatch(r'[A-Za-z0-9_-]{64}', query['inicio'][0]))
         return (set(query) <= {'state', 'code', 'error', 'error_reason', 'error_description'}
@@ -37,7 +36,6 @@ def make_handler(api_port):
         def setup(self):
             super().setup(); self.connection.settimeout(15)
         def log_message(self, *_):
-            # Never log callback codes, state, inicio tickets, cookies or signed image URLs.
             pass
         def reject(self, status=404):
             self.send_response(status); self.send_header('Content-Length', '0')

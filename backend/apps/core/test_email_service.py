@@ -21,7 +21,6 @@ class EnvioDeCorreoTests(SimpleTestCase):
     def html(self, mensaje):
         return next(contenido for contenido, tipo in mensaje.alternatives if tipo == 'text/html')
 
-    # ------------------------------------------------------------------ envío correcto
     def test_envia_un_correo_con_version_de_texto_y_html(self):
         resultado = enviar_correo(DESTINO, 'Tu pedido fue despachado', 'Hola María,\n\nTu pedido va en camino.')
         self.assertEqual(resultado, ResultadoEnvio(True, 'enviado'))
@@ -58,7 +57,6 @@ class EnvioDeCorreoTests(SimpleTestCase):
             enviar_correo(DESTINO, 'Asunto', 'Cuerpo')
         conexion.assert_called_once_with(timeout=settings.EMAIL_TIMEOUT)
 
-    # ------------------------------------------------------------------ contenido HTML
     def test_el_html_escapa_el_contenido_y_no_ejecuta_codigo(self):
         enviar_correo(DESTINO, 'Asunto', 'Hola <script>alert(1)</script>\n\n<img src=x onerror=alert(2)> & "comillas"')
         html = self.html(mail.outbox[0])
@@ -102,7 +100,6 @@ class EnvioDeCorreoTests(SimpleTestCase):
         enviar_correo(DESTINO, 'Asunto', 'Cuerpo', preheader='   ')
         self.assertNotIn('display:none', self.html(mail.outbox[1]))
 
-    # ------------------------------------------------------------------ seguridad de las cabeceras
     def test_el_asunto_queda_en_una_sola_linea_y_no_permite_inyectar_cabeceras(self):
         resultado = enviar_correo(DESTINO, 'Hola\r\nBcc: espia@evil.test\nSubject: otro', 'Cuerpo')
         self.assertTrue(resultado.enviado)
@@ -135,7 +132,6 @@ class EnvioDeCorreoTests(SimpleTestCase):
             self.assertEqual((resultado.enviado, resultado.codigo), (False, 'contenido_invalido'), repr((asunto, cuerpo)))
         self.assertEqual(mail.outbox, [])
 
-    # ------------------------------------------------------------------ fallas del servicio de correo
     def test_una_falla_del_servidor_no_lanza_y_se_informa_en_el_resultado(self):
         fallas = [smtplib.SMTPAuthenticationError(535, b'credenciales incorrectas'), smtplib.SMTPServerDisconnected('cortado'),
                   ConnectionRefusedError('rechazado'), TimeoutError('agotado'), OSError('red caída'), RuntimeError('inesperado')]
@@ -179,7 +175,6 @@ class EnvioDeCorreoTests(SimpleTestCase):
 
 class ConfiguracionDeCorreoTests(SimpleTestCase):
     def test_la_configuracion_por_defecto_es_segura_para_desarrollo(self):
-        # En las pruebas Django usa el buzón en memoria; lo que se comprueba es que existan todas las opciones.
         for nombre in ('EMAIL_BACKEND', 'EMAIL_HOST', 'EMAIL_PORT', 'EMAIL_HOST_USER', 'EMAIL_HOST_PASSWORD',
                        'EMAIL_USE_TLS', 'EMAIL_USE_SSL', 'EMAIL_TIMEOUT', 'DEFAULT_FROM_EMAIL'):
             self.assertTrue(hasattr(settings, nombre), nombre)

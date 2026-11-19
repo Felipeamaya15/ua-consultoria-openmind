@@ -20,7 +20,7 @@ TOTP_PERIOD_SECONDS = 30
 TOTP_DIGITS = 6
 EMAIL_OTP_TTL_SECONDS = 60
 MFA_CHALLENGE_SALT = "auth-mfa-challenge-v1"
-MFA_CHALLENGE_TTL_SECONDS = 300  # 5 minutos para completar el segundo factor
+MFA_CHALLENGE_TTL_SECONDS = 300
 
 
 def generate_totp_secret() -> str:

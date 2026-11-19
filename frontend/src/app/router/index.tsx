@@ -102,21 +102,13 @@ const sharedChildren = [
 export const router = createBrowserRouter([
   adminRoute,
   { path: "/landing", element: <Navigate to="/" replace /> },
-  /*
-   * ==========================================================
-   * INICIO
-   * ==========================================================
-   */
+
   {
     path: '/',
     element: <Navigate to="/plantilla/1" replace />,
   },
 
-  /*
-   * ==========================================================
-   * PLANTILLA 1 — EDITORIAL
-   * ==========================================================
-   */
+
   {
     path: '/plantilla/1',
     element: (
@@ -133,11 +125,7 @@ export const router = createBrowserRouter([
     ],
   },
 
-  /*
-   * ==========================================================
-   * PLANTILLA 2 — MINIMAL
-   * ==========================================================
-   */
+
   {
     path: '/plantilla/2',
     element: (
@@ -154,11 +142,7 @@ export const router = createBrowserRouter([
     ],
   },
 
-  /*
-   * ==========================================================
-   * PLANTILLA 3 — VISUAL / VELTA
-   * ==========================================================
-   */
+
   {
     path: '/plantilla/3',
     element: (
@@ -179,11 +163,7 @@ export const router = createBrowserRouter([
     ],
   },
 
-  /*
-   * ==========================================================
-   * PLANTILLA 4 — CATALOG
-   * ==========================================================
-   */
+
   {
     path: '/plantilla/4',
     element: (
@@ -201,11 +181,6 @@ export const router = createBrowserRouter([
   },
 
 
-  /*
-   * ==========================================================
-   * FALLBACK
-   * ==========================================================
-   */
   {
     path: '*',
     element: <Navigate to="/plantilla/1" replace />,

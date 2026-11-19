@@ -1,4 +1,4 @@
-// Extiende el recorrido de Parte 1; mismas respuestas HTTP interceptadas, nunca datos comerciales.
+
 const assert = require('node:assert/strict'), path = require('node:path');
 module.exports = async function verifyEditor(page, { width, out, pid, choose, formats }) {
   const art = page.locator('.marketing-art');
@@ -104,7 +104,7 @@ module.exports = async function verifyEditor(page, { width, out, pid, choose, fo
   await page.locator('.marketing-preview').screenshot({ path: path.join(out, `editor-bloqueo-${width}.png`) });
   await choose(1); await valid('regreso al producto');
   await page.getByRole('radio', { name: /Publicación cuadrada/ }).check();
-  // Teclado en selector de secciones y plantilla, además de los radios de formato del recorrido base.
+
   await section('Plantilla'); await page.getByRole('radio', { name: /Fotografía/ }).focus(); await page.keyboard.press('ArrowRight');
   assert(await page.getByRole('radio', { name: /Destacado/ }).isChecked());
   await page.getByRole('radio', { name: /Fotografía/ }).check();

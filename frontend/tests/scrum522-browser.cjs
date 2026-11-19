@@ -1,5 +1,5 @@
-// E2E real: servidor QA dedicado + PostgreSQL/MongoDB sintéticos + Mailpit.
-// Requiere el entorno descrito en docs/scrum-522/INFORME-FINAL.md.
+
+
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');

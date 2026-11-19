@@ -1,5 +1,5 @@
-/* OpenMind · efectos opcionales de fotografías de productos. Sin JavaScript por hover. */
-/* Valores separados para productos destacados, catálogo y categorías. */
+
+
 [data-storefront-visual] [data-visual-section="productCard"] {
   --om-product-transform: var(--om-hover-catalog-transform, none);
   --om-product-overlay-animation: var(--om-hover-catalog-overlay-animation, none);
@@ -21,7 +21,7 @@
 }
 
 @media (hover: hover) and (pointer: fine) {
-  /* No animar el carrusel, ni la galería del detalle de un producto. */
+
   [data-storefront-visual] [data-visual-section="productCard"] img,
   [data-storefront-visual] [data-visual-kind="featured"] a:has(> img) > img,
   [data-storefront-visual] [data-visual-part="categoryItem"] img {
@@ -35,7 +35,7 @@
     transform: var(--om-product-transform, none);
   }
 
-  /* Capa de efecto en contenedores de imágenes existentes. No intercepta clics. */
+
   [data-storefront-visual] [data-visual-section="productCard"] :is(a,div):has(> img),
   [data-storefront-visual] [data-visual-section="productCard"]:has(> img),
   [data-storefront-visual] [data-visual-kind="featured"] a:has(> img),
@@ -78,8 +78,7 @@
   30% { opacity: .75; }
   65% { opacity: .15; }
 }
-/* Resplandor neutro V1.3: luz blanca concentrada en el borde.
-   Visible también en la vista previa reducida, sin alterar el centro de la foto. */
+
 @keyframes om-product-glow {
   from {
     opacity: .70;
@@ -99,8 +98,7 @@
   45% { opacity: .9; transform: scale(1.01); }
 }
 
-/* OPENMIND_EFFECT_LIBRARY_V2 */
-/* Nuevas iluminaciones compatibles con los contenedores de V1.3. */
+
 @keyframes om-product-beam {
   0% { opacity: 0; transform: translateX(-110%); }
   25% { opacity: .7; }
@@ -135,7 +133,7 @@
   }
 }
 
-/* OPENMIND_ONLINE_EFFECTS_V1: animación de la fotografía desde fuente validada. */
+
 [data-storefront-visual] [data-visual-section="productCard"] {
  --om-online-product-motion:var(--om-hover-catalog-online-motion,none);
 }
@@ -161,7 +159,7 @@
  }
 }
 
-/* Las capas de galería no interceptan punteros; el hover pertenece a la tarjeta. */
+
 @media (hover:hover) and (pointer:fine) {
  [data-storefront-visual] [data-visual-section="productCard"]:is(:hover,:focus-within) .om-product-gallery__layer:not([aria-hidden])::after {
   opacity: var(--om-product-overlay-opacity, 0);
@@ -169,12 +167,7 @@
  }
 }
 
-/* OPENMIND_CATEGORIES_COMPACT_AND_GALLERY_HOVER_V2
-   El producto principal de Obsidian ahora usa ProductImageGallery (varias fotos).
-   Las reglas anteriores solo reconocían el selector a:has(> img), por lo que
-   el cambio de foto funcionaba pero el efecto de luz desaparecía.
-   Se usan los ajustes existentes del editor; no se agregan efectos obligatorios.
-*/
+
 @media (hover: hover) and (pointer: fine) {
   [data-storefront-visual] [data-landing-page="catalog"] [data-ob-featured-gallery] {
     position: relative;
@@ -215,7 +208,7 @@
   }
 }
 
-/* OPENMIND_PRODUCT_HOVER_RUNTIME_V2: movimiento y transicion en capas distintas. */
+
 @media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
   [data-storefront-visual] .om-product-gallery:not(.om-product-gallery--detail) [data-gallery-active] > img,
   [data-storefront-visual] [data-visual-part="categoryItem"] img {

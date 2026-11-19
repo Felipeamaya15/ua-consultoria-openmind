@@ -73,7 +73,7 @@ class PickupTests(TestCase):
     @patch('apps.core.infrastructure.pickup_address.requests.get')
     def test_manual_address_without_provider_persists_as_manual_not_google(self, external):
         self.config['pickup']['location']['verification'] = ''
-        self.config['pickup']['validation_method'] = 'google'  # el cliente no decide la procedencia
+        self.config['pickup']['validation_method'] = 'google'
         response = self.save()
         saved = response.data['data']['pickup']
         self.assertEqual(saved['validation_method'], 'manual')
@@ -215,7 +215,7 @@ class PickupTests(TestCase):
         self.config['pickup']['location']['verification'] = 'fake'
         ConfiguracionEntrega.objects.create(tienda=self.store, datos=self.config)
         self.assertFalse(delivery_for_store(self.store)['pickup']['enabled'])
-        self.assertTrue(self.api.get(self.url).data['data']['pickup']['enabled'])  # editable privately
+        self.assertTrue(self.api.get(self.url).data['data']['pickup']['enabled'])
 
     def test_nested_patch_validates_merged_data_without_losing_other_days(self):
         self.save()

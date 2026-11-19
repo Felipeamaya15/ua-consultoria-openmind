@@ -101,7 +101,6 @@ class PublicVariantRegressionTests(SimpleTestCase):
 
 
 class CheckoutVariantRegressionTests(CheckoutOrderTests):
-    # Reutiliza únicamente la fixture; la suite original se ejecuta por separado.
     def test_checkout_rejects_legacy_soft_deleted_variant_without_order_or_stock_change(self):
         from apps.core.models import Pedido
         from bson import ObjectId
@@ -117,7 +116,7 @@ class CheckoutVariantRegressionTests(CheckoutOrderTests):
         self.repo.collection.update_one({'_id': ObjectId(self.product_id)}, {'$set': {'id_producto': product.pk}})
         self.assertEqual(self.create().status_code, 201)
         product.refresh_from_db()
-        self.assertEqual(product.stock, 0)  # RN-03: el stock (SQL y Mongo) se sincroniza al pagar, no al crear el pedido.
+        self.assertEqual(product.stock, 0)
 
 
 def load_tests(loader, tests, pattern):

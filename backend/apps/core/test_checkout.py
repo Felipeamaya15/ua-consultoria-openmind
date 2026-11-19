@@ -29,7 +29,6 @@ class CheckoutOrderTests(TestCase):
         })
         ConfiguracionPago.objects.create(tienda=self.store, datos={'transfer': {'enabled': True,
             'fields': {field: 'qa' for field in TRANSFER_PUBLIC_FIELDS}}})
-        # Colección real y aislada: jamás utiliza ni borra productos de la tienda.
         self.repo = ProductRepository()
         self.repo.collection = self.repo.db.get_collection('test_checkout_' + uuid4().hex)
         self.addCleanup(self.repo.collection.drop)

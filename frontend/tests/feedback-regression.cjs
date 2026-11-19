@@ -1,4 +1,4 @@
-// Regresión reproducible. Conserva exit 1 ante cualquier fallo, incluso previo a estas tareas.
+
 const fs = require('node:fs'), path = require('node:path'), { spawnSync } = require('node:child_process');
 const tests = ['api-request', 'promotions', 'product-creation', 'product-editing', 'product-seo', 'order-email-notice', 'recent-orders', 'tracking-states', 'manual-transfer-rejection', 'linkify-validation', 'transfer-validation', 'store-identity', 'landing-editor', 'landing-content', 'landing-blocks', 'marketing', 'marketing-editor', 'marketing-drafts', 'visual-config', 'visual-editor', 'visual-editor-final', 'legal-pages', 'legal-page-structure', 'legal-current-version', 'legal-content-versions', 'profile', 'entrepreneur-profile', 'email-variables', 'seo-pixel', 'google-analytics-persistence', 'meta-pixel-field', 'reports', 'commercial-history', 'error-state'];
 const root = path.resolve(__dirname, '..'), out = path.resolve(root, '../docs/scrum455456');

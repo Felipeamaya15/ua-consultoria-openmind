@@ -1,4 +1,4 @@
-/* OPENMIND_TEMPLATE_GALLERY_LAYOUT_FIX_V1 */
+
 import { PaletteLibrary } from '../../../shared/PaletteLibrary';
 import { VISUAL_PRESETS } from '../../storefront/visual/presets';
 import { VISUAL_DEFAULTS } from '../../storefront/visual/defaults';
@@ -50,15 +50,13 @@ const TEMPLATES: {
   },
 ]
 
-// OPENMIND_REAL_TEMPLATE_PREVIEW_V1
-// La miniatura reutiliza la tienda pública REAL de cada ruta; no altera la plantilla activa.
-// Solo monta el iframe cerca del área visible y lo desmonta al alejarse.
+
 const THUMBNAIL_BROWSER_WIDTH = 1280;
-const THUMBNAIL_BROWSER_HEIGHT = 720; // 16:9: encaja con aspect-video sin bandas internas
+const THUMBNAIL_BROWSER_HEIGHT = 720;
 
 function StorefrontTemplateThumbnail({ template, name }: { template: TemplateId; name: string }) {
   const hostRef = useRef<HTMLDivElement>(null);
-  const [scale, setScale] = useState(0.5); // El contenedor reduce todo el viewport proporcionalmente
+  const [scale, setScale] = useState(0.5);
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {

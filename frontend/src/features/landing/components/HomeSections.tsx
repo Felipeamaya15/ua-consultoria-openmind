@@ -6,7 +6,7 @@ import { LandingBlocks } from './LandingBlocks';
 import { PublishedSectionMedia } from './SectionElements';
 import { blockStyleSheet } from '../../storefront/visual/blockAppearance';
 
-/** Templates provide their existing commerce markup; this is the single ordering boundary. */
+
 export function HomeSections({ commerce }: { commerce: Partial<Record<SystemSectionId, ReactNode>> }) {
   const {landing, blockStyles} = useStore();
   const {template} = useStorefrontTemplate();

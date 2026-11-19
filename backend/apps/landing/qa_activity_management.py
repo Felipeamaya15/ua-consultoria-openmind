@@ -122,7 +122,6 @@ def change_record(store,order_id,reservation_id,actor,action,reason='',owner=Fal
     if not owner and action!='solicitar': raise PermissionDenied('Solo la tienda puede resolver devoluciones.')
     if owner and action=='solicitar': raise ValidationError('Usa la gestión de devolución de la tienda.')
     if old.get('estado')=='reembolsada_simulada':
-        # Replaying the same action never releases or credits a second time.
         if owner and action=='simular_devolucion': return describe(order,row,True)
         raise ValidationError('Esta inscripción ya tiene una devolución simulada.')
     if action=='solicitar' and old.get('estado')=='solicitada': return describe(order,row)
@@ -138,7 +137,6 @@ def change_record(store,order_id,reservation_id,actor,action,reason='',owner=Fal
         records[key]={**old,'estado':'rechazada','motivo':reason,'resuelto_en':stamp,'responsable':str(actor.pk)}
     elif action=='simular_devolucion':
         if not reason: raise ValidationError('Indica el motivo de devolución.')
-        # QA has no discounts, no FX and no real money; fail closed otherwise.
         if order.descuento or order.medio_pago!='Transferencia': raise ValidationError('Este pedido no cumple el contrato QA sin descuentos.')
         previous=sum(int(v.get('monto',0)) for v in records.values() if v.get('estado')=='reembolsada_simulada')
         if Decimal(previous+amount(row))>order.monto_total-order.costo_envio:

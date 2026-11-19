@@ -8,11 +8,7 @@ const API_BASE = (API_BASE_URL || import.meta.env.VITE_API_URL || 'http://localh
 
 export type ShippingErrorKind = 'sin_tarifa' | 'no_disponible' | 'destino' | 'vencida' | 'temporal';
 
-/**
- * Error de cotización con una categoría, para decidir qué mostrarle al comprador:
- * 'sin_tarifa' | 'no_disponible' | 'destino' -> cambiar de alternativa o de comuna (reintentar no sirve);
- * 'vencida' | 'temporal' -> volver a cotizar.
- */
+
 export class ShippingError extends Error {
   kind: ShippingErrorKind;
   code?: string;
@@ -37,7 +33,7 @@ const KIND_BY_CODE: Record<string, ShippingErrorKind> = {
 
 const isAbort = (error: unknown) => (error as {name?: string} | null)?.name === 'AbortError';
 
-/** Lee la respuesta como JSON sin dejar escapar errores técnicos (por ejemplo, una página HTML de error). */
+
 async function readJson(response: Response): Promise<any> {
   try {
     const body = await response.json();
@@ -235,9 +231,7 @@ export const shippingService = {
     );
   },
 
-  /**
-   * Implementa la solicitud de cotización a Chilexpress
-   */
+
   async quoteChilexpress(params: Omit<CotizacionParams, 'proveedor'>): Promise<ResultadoCotizacion> {
     return requestCarrierQuote(
       '/api/logistica/cotizar/chilexpress/',
@@ -250,9 +244,7 @@ export const shippingService = {
     );
   },
 
-  /**
-   * Implementa la solicitud de cotización a Starken
-   */
+
   async quoteStarken(params: Omit<CotizacionParams, 'proveedor'>): Promise<ResultadoCotizacion> {
     return requestCarrierQuote(
       '/api/logistica/cotizar/starken/',
@@ -266,7 +258,6 @@ export const shippingService = {
   },
 };
 
-// ── Métodos de develop para configuración y cotizaciones en tienda ─────────
 
 export type ShippingConfiguration = AdminConfig['shippingConfiguration'];
 export class ShippingConfigurationError extends Error {

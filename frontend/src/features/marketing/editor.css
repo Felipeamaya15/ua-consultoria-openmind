@@ -87,8 +87,7 @@
 @media(min-width:1280px){.marketing-studio>.marketing-controls{grid-column:1;grid-row:1}.marketing-studio>.marketing-preview-panel{grid-column:2;grid-row:1/3}.marketing-studio>.marketing-editor{grid-column:1;grid-row:2}}
 @media(max-width:480px){.marketing-editor{padding:12px}.marketing-editor-sections button{flex:1 0 auto}}
 
-/* Talleres y servicios: mantiene la personalización original del editor.
-   Evitar !important: la apariencia, plantilla, formato y controles deben funcionar. */
+
 .marketing-activity-view-switch{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0 12px}
 .marketing-activity-view-switch button{font:inherit;font-weight:600;font-size:13px;cursor:pointer;color:#234434;background:#fff;border:1px solid #a7bcad;border-radius:999px;padding:8px 14px}
 .marketing-activity-view-switch button[aria-pressed="true"]{background:#214b38;border-color:#214b38;color:#fff}
@@ -177,7 +176,7 @@
 .marketing-art.is-editable[data-editorial-type="activity"][data-align="center"] .marketing-activity-fact{justify-content:center}
 .marketing-art.is-editable[data-editorial-type="activity"][data-align="right"] .marketing-activity-fact{justify-content:flex-end}
 
-/* Plantilla Fotografía: composición editorial de dos columnas. */
+
 .marketing-art.is-editable[data-editorial-type="activity"][data-template="feature"]:not([data-format="story"]):not([data-format="banner"]) .marketing-art-composition.marketing-activity-layout{
   grid-template-columns:minmax(0,var(--mk-activity-photo-fr)) minmax(0,var(--mk-activity-info-fr));
   grid-template-rows:minmax(0,1fr) auto;
@@ -191,12 +190,12 @@
 .marketing-art.is-editable[data-editorial-type="activity"][data-template="feature"] .marketing-activity-footer{grid-template-columns:minmax(0,1fr);gap:.7cqw}
 .marketing-art.is-editable[data-editorial-type="activity"][data-template="feature"] .marketing-activity-action{justify-self:start}
 
-/* Plantilla minimalista: fotografía limpia y menos decoración. */
+
 .marketing-art.is-editable[data-editorial-type="activity"][data-template="minimal"]{border-top:1.2cqw solid var(--mk-secondary)}
 .marketing-art.is-editable[data-editorial-type="activity"][data-template="minimal"] .marketing-activity-chip{border-radius:.35cqw}
 .marketing-art.is-editable[data-editorial-type="activity"][data-template="minimal"] .marketing-activity-gallery{border-radius:0}
 
-/* Historia vertical: más espacio para título y fotos, información al pie. */
+
 .marketing-art.is-editable[data-editorial-type="activity"][data-format="story"]{
   padding:4.6cqw;gap:2cqw;grid-template-rows:minmax(0,11cqw) minmax(0,1fr)
 }
@@ -216,7 +215,7 @@
 .marketing-art.is-editable[data-editorial-type="activity"][data-format="story"] .marketing-activity-footer{grid-template-columns:minmax(0,1fr);gap:2.3cqw}
 .marketing-art.is-editable[data-editorial-type="activity"][data-format="story"] .marketing-activity-action{max-width:none;font-size:calc(2.7cqw * var(--mk-fit) * var(--mk-block-size,1));padding:2.2cqw}
 
-/* Banner 16:9: disposición lateral con textos compactos para que no se recorten. */
+
 .marketing-art.is-editable[data-editorial-type="activity"][data-format="banner"]{
   padding:2.1cqw;gap:.8cqw;grid-template-rows:5cqw minmax(0,1fr)
 }
@@ -244,18 +243,16 @@
   grid-template-areas:"head" "footer";grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,1fr) auto
 }
 
-/* Si existe desbordamiento, advertir sin ocultar la vista previa del taller.
-   data-blocked sigue activo para que la exportación pueda rechazar recortes. */
+
 .marketing-art.is-editable[data-editorial-type="activity"][data-blocked="true"]>*{visibility:visible}
 .marketing-art.is-editable[data-editorial-type="activity"][data-blocked="true"]::after{display:none}
-/* Clearer template hierarchy, scoped to the publication renderer only. */
+
 .marketing-art.is-editable[data-template=photo] .marketing-art-media{border:1px solid color-mix(in srgb,var(--mk-on-primary) 12%,transparent)}
 .marketing-art.is-editable[data-template=feature] .marketing-art-copy{border-radius:2cqw;border-width:1.5px}
 .marketing-template{transition:background-color .15s,border-color .15s}.marketing-template.is-selected{border-color:var(--primary);background:var(--secondary);box-shadow:inset 0 0 0 1px var(--primary)}
 @media(prefers-reduced-motion:reduce){.marketing-template{transition:none}}
 
-/* OPENMIND: ajuste de formatos actividad v1 */
-/* Solo actividades: evitar columnas implicitas y reservar espacio para la imagen. */
+
 .marketing-art.is-editable[data-editorial-type="activity"] .marketing-activity-footer {
   grid-template-columns: minmax(0, 1fr);
   align-content: start;
@@ -289,7 +286,7 @@
   grid-column: 1 / -1;
   box-sizing: border-box;
 }
-/* Cuadrado: cabecera, fotografia amplia, datos y llamada a la accion. */
+
 .marketing-art.is-editable[data-editorial-type="activity"][data-format="square"] {
   padding: 3cqw;
   gap: 1.1cqw;
@@ -329,7 +326,7 @@
 .marketing-art.is-editable[data-editorial-type="activity"][data-format="square"] .marketing-activity-fact-text strong {
   font-size: calc(1.95cqw * var(--mk-fit) * var(--mk-block-size, 1));
 }
-/* Banner: el logo debe caber dentro de su fila (antes 6cqw en una fila de 5cqw). */
+
 .marketing-art.is-editable[data-editorial-type="activity"][data-format="banner"] {
   grid-template-rows: minmax(0, 6.4cqw) minmax(0, 1fr);
   padding: 2.1cqw;
@@ -379,13 +376,12 @@
   font-size: calc(1.7cqw * var(--mk-fit) * var(--mk-block-size, 1));
   padding: .9cqw 1cqw;
 }
-/* Historia: conservar el formato aprobado. */
+
 .marketing-art.is-editable[data-editorial-type="activity"][data-format="story"] .marketing-activity-footer {
   gap: 2.3cqw;
 }
 
 
-/* OPENMIND_MARKETING_ACTIONS_V1: jerarquia y acciones secundarias */
 .marketing-publication-actions .mk-publication-heading {
   display:flex; align-items:center; justify-content:space-between; gap:12px;
   flex-wrap:wrap; max-width:none; margin-bottom:12px;
@@ -417,7 +413,6 @@
 }
 
 
-/* OPENMIND_MARKETING_ART_DIRECTION_V1 — same DOM for preview and image export. */
 .marketing-style-grid{grid-column:1/-1;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,130px),1fr));gap:10px;min-width:0;border:0;padding:0;margin:0}
 .marketing-style-grid legend{font-weight:700;font-size:13px;margin-bottom:10px}
 .marketing-style-choice{display:flex;flex-direction:column;align-items:stretch;gap:6px;text-align:left;padding:9px;border:1px solid #d5dce5;border-radius:10px;background:white;color:#172033;min-width:0;cursor:pointer}
@@ -429,7 +424,7 @@
 .marketing-style-swatch[data-art-direction=boutique]{background:#f3dfe1}.marketing-style-swatch[data-art-direction=boutique] i{border-radius:22px 22px 4px 4px;background:linear-gradient(150deg,#aa756b,#e3b796)}.marketing-style-swatch[data-art-direction=boutique] b{border-radius:8px;background:#754652}
 .marketing-style-swatch[data-art-direction=impact]{background:#fadd7d;border-left:8px solid #293536}.marketing-style-swatch[data-art-direction=impact] i{background:#e17945}.marketing-style-swatch[data-art-direction=impact] b{height:17px;background:#293536}
 .marketing-style-swatch[data-art-direction=organic]{background:#e3eddd}.marketing-style-swatch[data-art-direction=organic] i{border-radius:50% 50% 10% 10%;background:#7e9d6d}.marketing-style-swatch[data-art-direction=organic] b{background:#456948;border-radius:9px}
-/* Explicit properties chosen by the entrepreneur remain inline and take priority. */
+
 .marketing-art.is-editable[data-art-direction=editorial] .marketing-art-brand{border-bottom:1px solid currentColor;padding-bottom:1cqw}
 .marketing-art.is-editable[data-art-direction=editorial] :is(.marketing-art-title,.marketing-activity-title,.marketing-art-heading){font-family:Georgia,serif;letter-spacing:-.045em;line-height:1.12}
 .marketing-art.is-editable[data-art-direction=editorial] .marketing-art-copy{border:0;border-top:1px solid currentColor;padding-top:1.8cqw}
@@ -451,7 +446,7 @@
 .marketing-art.is-editable .marketing-product-photo{min-width:0;min-height:0;overflow:hidden}
 .marketing-art.is-editable .marketing-product-photo img{display:block;width:100%;height:100%;max-width:none;max-height:none;box-sizing:border-box;transform-origin:center}
 
-/* Capas libres: coordenadas relativas, sin alterar la cuadrícula de la plantilla. */
+
 .marketing-free-board{position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:5;isolation:isolate}
 .marketing-free-layer{position:absolute;box-sizing:border-box;touch-action:none;user-select:none;transform-origin:center}
 .marketing-free-layer[data-selected=true]::after{content:"";position:absolute;inset:0;border:2px solid #357bf5;box-shadow:0 0 0 1px #fff;pointer-events:none}
@@ -468,7 +463,7 @@
 .marketing-free-controls>label:not(.marketing-range):not(.marketing-color){display:grid;gap:5px;font-size:13px}
 .marketing-free-controls input[type=text],.marketing-free-controls select{width:100%;min-height:38px;border:1px solid #bdc9d6;border-radius:7px;padding:7px;color:#253a51;background:white}
 
-/* OPENMIND_CAMPAIGN_LAYOUTS_V1 — estructuras publicitarias, independientes de la ficha clásica. */
+
 .marketing-campaign-mini{position:relative;display:block;aspect-ratio:1.35;min-height:70px;overflow:hidden;border-radius:5px;background:#f4eadc;color:#392b38}
 .marketing-campaign-mini i,.marketing-campaign-mini b,.marketing-campaign-mini em,.marketing-campaign-mini small{position:absolute;display:block;pointer-events:none}
 .marketing-campaign-mini i{background:linear-gradient(145deg,#c8aa85,#7c555f 55%,#49382e);inset:12% 8% 39%}
@@ -481,7 +476,7 @@
 .marketing-campaign-mini[data-campaign=artisan]{background:#e7eddf;color:#354d3d}.marketing-campaign-mini[data-campaign=artisan] i{inset:10% 5% 8% 51%;border-radius:60% 60% 6% 6%;background:linear-gradient(145deg,#a1b68b,#526b4e)}.marketing-campaign-mini[data-campaign=artisan] b{width:39%;bottom:40%}.marketing-campaign-mini[data-campaign=artisan] em{bottom:17%;border-radius:99px;background:#799365}
 .marketing-campaign-mini[data-campaign=blank]{background:#fafafa;border:1px dashed #c1c9ce}.marketing-campaign-mini[data-campaign=blank] i{inset:26% 27%;background:none;border:1px dashed #c1c9ce}.marketing-campaign-mini[data-campaign=blank] b{bottom:12%;width:40%;height:3%;box-shadow:none}.marketing-campaign-mini[data-campaign=blank] em{bottom:9%;left:68%;width:23%;height:5%}
 
-/* Las reglas de campaña tienen prioridad estructural; los ajustes explícitos inline siguen vigentes. */
+
 .marketing-art.is-editable[data-editorial-type=regular][data-campaign]:not([data-campaign=classic]){padding:4.8cqw;gap:2.2cqw;grid-template-rows:minmax(0,7cqw) minmax(0,1fr);border-top:0;box-sizing:border-box;isolation:isolate}
 .marketing-art.is-editable[data-editorial-type=regular][data-campaign]:not([data-campaign=classic]) .marketing-art-brand{position:relative;z-index:2;width:fit-content;max-width:100%;border:0;padding:0;gap:1.2cqw;align-self:center;min-width:0}
 .marketing-art.is-editable[data-editorial-type=regular][data-campaign]:not([data-campaign=classic]) .marketing-art-brand img{height:4.6cqw;padding:.45cqw;border-radius:.6cqw}
@@ -497,36 +492,36 @@
 .marketing-art.is-editable[data-editorial-type=regular][data-campaign]:not([data-campaign=classic]) :is(.marketing-art-description,.marketing-art-subtitle,.marketing-art-variant,.marketing-art-original){font-size:calc(2.3cqw * var(--mk-fit) * var(--mk-block-size,1));line-height:1.2}
 .marketing-art.is-editable[data-editorial-type=regular][data-campaign]:not([data-campaign=classic]) .marketing-art-cta[data-campaign-cta=editorial]{background:transparent!important;color:inherit!important;border:0!important;padding:.65cqw 0!important;width:fit-content!important;font-size:calc(2cqw * var(--mk-fit) * var(--mk-block-size,1));letter-spacing:.035em;text-decoration:underline;text-underline-offset:.5cqw}
 .marketing-art.is-editable[data-editorial-type=regular][data-campaign]:not([data-campaign=classic]) .marketing-art-cta[data-campaign-cta=editorial]>span{padding-left:.3cqw}
-/* Premium: composición de portada con foto protagonista y firma pequeña. */
+
 .marketing-art.is-editable[data-editorial-type=regular][data-campaign][data-campaign=premium] .marketing-art-composition{grid-template-rows:minmax(0,1fr) auto;gap:2.8cqw}
 .marketing-art.is-editable[data-editorial-type=regular][data-campaign][data-campaign=premium] .marketing-art-media{border-radius:.5cqw;order:0!important}
 .marketing-art.is-editable[data-editorial-type=regular][data-campaign][data-campaign=premium] .marketing-art-copy{order:1!important;border-top:1px solid currentColor;padding-top:2.1cqw;gap:calc(.85cqw * var(--mk-fit))}
 .marketing-art.is-editable[data-editorial-type=regular][data-campaign][data-campaign=premium] .marketing-art-copy .marketing-art-prices{gap:.7cqw 1.6cqw}
-/* Inmersivo: toda la superficie fotográfica, degradado real en el DOM y texto de alto contraste. */
+
 .marketing-art.is-editable[data-editorial-type=regular][data-campaign][data-campaign=immersive] .marketing-art-composition{display:flex;align-items:flex-end;min-height:0;position:static}
 .marketing-art.is-editable[data-editorial-type=regular][data-campaign][data-campaign=immersive] .marketing-art-media{position:absolute;inset:0;z-index:0;border-radius:0!important;order:0!important;overflow:hidden}
 .marketing-art.is-editable[data-editorial-type=regular][data-campaign][data-campaign=immersive] .marketing-campaign-shade{position:absolute;inset:0;background:linear-gradient(180deg,var(--mk-campaign-shade-solid) -42%,transparent 30%,transparent 44%,var(--mk-campaign-shade) 100%);pointer-events:none;z-index:0}
 .marketing-art.is-editable[data-editorial-type=regular][data-campaign][data-campaign=immersive] .marketing-art-brand{background:var(--mk-campaign-shade);padding:1cqw 1.6cqw;border-radius:1.5cqw}
 .marketing-art.is-editable[data-editorial-type=regular][data-campaign][data-campaign=immersive] .marketing-art-copy{width:100%;max-height:100%;padding:3.2cqw;border-radius:1.4cqw;order:1!important;gap:calc(1.1cqw * var(--mk-fit))}
 .marketing-art.is-editable[data-editorial-type=regular][data-campaign][data-campaign=immersive] .marketing-art-title{font-size:calc(7.1cqw * var(--mk-fit) * var(--mk-block-size,1))}
-/* Comercial: composición lateral y sello de precio, sin botón de tienda como protagonista. */
+
 .marketing-art.is-editable[data-editorial-type=regular][data-campaign][data-campaign=commercial] .marketing-art-composition{grid-template-columns:minmax(0,1fr) minmax(0,var(--mk-campaign-media));grid-template-rows:minmax(0,1fr);gap:2.5cqw}
 .marketing-art.is-editable[data-editorial-type=regular][data-campaign][data-campaign=commercial] .marketing-art-media{order:1!important;border-radius:12cqw 1cqw 1cqw 1cqw;background:var(--mk-secondary)}
 .marketing-art.is-editable[data-editorial-type=regular][data-campaign][data-campaign=commercial] .marketing-art-copy{order:0!important;gap:calc(1.6cqw * var(--mk-fit));padding:1.2cqw 0}
 .marketing-art.is-editable[data-editorial-type=regular][data-campaign][data-campaign=commercial] .marketing-art-title{font-size:calc(6cqw * var(--mk-fit) * var(--mk-block-size,1));letter-spacing:-.065em}
 .marketing-art.is-editable[data-editorial-type=regular][data-campaign][data-campaign=commercial] .marketing-art-price{background:var(--mk-label);color:var(--mk-on-label);padding:1.25cqw 2cqw;border-radius:99px;font-size:calc(5.6cqw * var(--mk-fit) * var(--mk-block-size,1));max-width:100%}
-/* Artesanal: arco, fotografía vertical, tipografía cálida y composición asimétrica. */
+
 .marketing-art.is-editable[data-editorial-type=regular][data-campaign][data-campaign=artisan] .marketing-art-composition{grid-template-columns:minmax(0,1fr) minmax(0,var(--mk-campaign-media));grid-template-rows:minmax(0,1fr);gap:3.8cqw;align-items:stretch}
 .marketing-art.is-editable[data-editorial-type=regular][data-campaign][data-campaign=artisan] .marketing-art-media{order:1!important;border-radius:48% 48% 1.8cqw 1.8cqw / 29% 29% 1.8cqw 1.8cqw;margin:2cqw 0 1cqw;background:var(--mk-secondary)}
 .marketing-art.is-editable[data-editorial-type=regular][data-campaign][data-campaign=artisan] .marketing-art-copy{order:0!important;gap:calc(1.4cqw * var(--mk-fit));padding:1.8cqw 0;justify-content:center}
 .marketing-art.is-editable[data-editorial-type=regular][data-campaign][data-campaign=artisan] .marketing-art-title{font-size:calc(6.2cqw * var(--mk-fit) * var(--mk-block-size,1));line-height:1.06}
 .marketing-art.is-editable[data-editorial-type=regular][data-campaign][data-campaign=artisan] .marketing-art-price{font-family:var(--mk-campaign-display);font-size:calc(5.3cqw * var(--mk-fit) * var(--mk-block-size,1))}
-/* Lienzo libre: la fuente comercial queda como firma inferior; los elementos libres ocupan el centro. */
+
 .marketing-art.is-editable[data-editorial-type=regular][data-campaign][data-campaign=blank] .marketing-art-composition{display:flex;align-items:flex-end}
 .marketing-art.is-editable[data-editorial-type=regular][data-campaign][data-campaign=blank] .marketing-art-copy{width:100%;max-height:100%;border-top:1px solid currentColor;padding-top:1.5cqw;gap:.7cqw}
 .marketing-art.is-editable[data-editorial-type=regular][data-campaign][data-campaign=blank] .marketing-art-title{font-size:calc(3.5cqw * var(--mk-fit) * var(--mk-block-size,1))}
 .marketing-art.is-editable[data-editorial-type=regular][data-campaign][data-campaign=blank] .marketing-art-price{font-size:calc(3.8cqw * var(--mk-fit) * var(--mk-block-size,1))}
-/* Formatos vertical y horizontal: misma jerarquía, redistribución real. */
+
 .marketing-art.is-editable[data-editorial-type=regular][data-format=story][data-campaign]:not([data-campaign=classic]){padding:6cqw;gap:4cqw;grid-template-rows:minmax(0,9cqw) minmax(0,1fr)}
 .marketing-art.is-editable[data-editorial-type=regular][data-format=story][data-campaign]:not([data-campaign=classic]) .marketing-art-brand>span{font-size:calc(3cqw * var(--mk-fit) * var(--mk-block-size,1))}
 .marketing-art.is-editable[data-editorial-type=regular][data-format=story][data-campaign]:not([data-campaign=classic]) .marketing-art-title{font-size:calc(9cqw * var(--mk-fit) * var(--mk-block-size,1))}
@@ -548,24 +543,24 @@
 .marketing-art.is-editable[data-editorial-type=regular][data-format=banner][data-campaign][data-campaign=immersive] .marketing-art-copy{width:52%;padding:2cqw}
 .marketing-art.is-editable[data-editorial-type=regular][data-format=banner][data-campaign][data-campaign=immersive] .marketing-campaign-shade{background:linear-gradient(90deg,var(--mk-campaign-shade) 0%,transparent 78%)}
 .marketing-art.is-editable[data-editorial-type=regular][data-format=banner][data-campaign][data-campaign=blank] .marketing-art-copy{width:50%}
-/* Sin foto, no se reserva espacio para una columna inexistente. */
+
 .marketing-art.is-editable[data-editorial-type=regular][data-image=none][data-campaign]:not([data-campaign=classic]):not([data-campaign=blank]) .marketing-art-composition{display:flex;align-items:center;justify-content:center}
 .marketing-art.is-editable[data-editorial-type=regular][data-image=none][data-campaign]:not([data-campaign=classic]):not([data-campaign=blank]) .marketing-art-copy{width:100%;max-height:100%}
 
-/* Cambia el lado del bloque sin volver a la estructura de ficha. */
+
 .marketing-art.is-editable[data-editorial-type=regular]:not([data-format=story]):is([data-campaign=commercial],[data-campaign=artisan])[data-media-side=start] .marketing-art-composition{grid-template-columns:minmax(0,var(--mk-campaign-media)) minmax(0,1fr)}
 .marketing-art.is-editable[data-editorial-type=regular]:not([data-format=story]):is([data-campaign=commercial],[data-campaign=artisan])[data-media-side=start] .marketing-art-media{order:0!important}
 .marketing-art.is-editable[data-editorial-type=regular]:not([data-format=story]):is([data-campaign=commercial],[data-campaign=artisan])[data-media-side=start] .marketing-art-copy{order:1!important}
 .marketing-art.is-editable[data-editorial-type=regular][data-format=banner][data-campaign][data-campaign=immersive][data-media-side=end] .marketing-art-composition{justify-content:flex-end}
 .marketing-art.is-editable[data-editorial-type=regular][data-format=banner][data-campaign][data-campaign=immersive][data-media-side=end] .marketing-campaign-shade{background:linear-gradient(270deg,var(--mk-campaign-shade) 0%,transparent 78%)}
 
-/* Acabados de campaña: fondos con intención, respetando el efecto manual elegido. */
+
 .marketing-art.is-editable[data-editorial-type=regular][data-campaign][data-campaign=commercial]{background-image:linear-gradient(130deg,transparent 45%,color-mix(in srgb,var(--mk-secondary) 33%,var(--mk-primary)) 45%,color-mix(in srgb,var(--mk-secondary) 33%,var(--mk-primary)) 100%)}
 .marketing-art.is-editable[data-editorial-type=regular][data-campaign][data-campaign=artisan]{background-image:radial-gradient(ellipse at 95% 6%,color-mix(in srgb,var(--mk-secondary) 23%,transparent),transparent 59%)}
 .marketing-art.is-editable[data-editorial-type=regular][data-campaign][data-campaign=artisan] .marketing-art-media{border:1px solid color-mix(in srgb,var(--mk-on-primary) 18%,transparent)}
 .marketing-art.is-editable[data-editorial-type=regular][data-campaign][data-campaign=premium] .marketing-art-media{background:color-mix(in srgb,var(--mk-primary) 91%,var(--mk-secondary))}
 
-/* Corrección de medición: las composiciones profesionales tienen su propia geometría. */
+
 .marketing-art.is-editable[data-editorial-type=regular][data-campaign]:not([data-campaign=classic]) .marketing-art-brand{box-sizing:border-box;min-height:0;max-width:100%}
 .marketing-art.is-editable[data-editorial-type=regular][data-campaign]:not([data-campaign=classic]) .marketing-art-brand>span{min-width:0;white-space:normal;overflow-wrap:anywhere}
 .marketing-art.is-editable[data-editorial-type=regular][data-campaign]:not([data-campaign=classic]) .marketing-art-category{white-space:normal;overflow-wrap:anywhere;overflow:visible;text-overflow:clip}
@@ -575,12 +570,11 @@
 .marketing-art.is-editable[data-editorial-type=regular][data-image=present][data-campaign][data-campaign=immersive] .marketing-art-media{width:auto;height:auto;margin:0;position:absolute;inset:0}
 .marketing-art.is-editable[data-editorial-type=regular][data-campaign][data-campaign=immersive] .marketing-art-brand{padding:.65cqw 1.2cqw}
 .marketing-art.is-editable[data-editorial-type=regular][data-format=banner][data-campaign][data-campaign=immersive] .marketing-art-brand{padding:.25cqw .8cqw}
-/* No ocultar el contenido editable. Exportación conserva su bloqueo si hay recortes reales. */
+
 .marketing-art.is-editable[data-editorial-type=regular][data-campaign]:not([data-campaign=classic])[data-blocked=true]>*{visibility:visible}
 .marketing-art.is-editable[data-editorial-type=regular][data-campaign]:not([data-campaign=classic])[data-blocked=true]::after{display:none}
 
 
-/* Campañas para talleres y servicios: los datos informativos conservan su jerarquía. */
 .marketing-art.is-editable[data-activity-campaign=true] .marketing-campaign-activity-facts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:calc(.65cqw * var(--mk-fit)) 1.4cqw;min-width:0;width:100%;padding-block:calc(.8cqw * var(--mk-fit));border-block:1px solid currentColor;line-height:1.2;font-size:calc(2.15cqw * var(--mk-fit) * var(--mk-block-size,1));text-align:inherit;box-sizing:border-box}
 .marketing-art.is-editable[data-activity-campaign=true] .marketing-campaign-activity-fact{display:flex;flex-direction:column;gap:.15cqw;min-width:0;overflow-wrap:anywhere;white-space:normal;line-height:1.2}
 .marketing-art.is-editable[data-activity-campaign=true] .marketing-campaign-activity-fact[data-wide=true]{grid-column:1/-1}

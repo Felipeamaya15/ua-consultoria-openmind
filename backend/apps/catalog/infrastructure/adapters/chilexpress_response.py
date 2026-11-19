@@ -1,6 +1,5 @@
 import math
 
-# Estructura de la respuesta de Chilexpress
 CAMPO_DATOS = "data"
 CAMPO_SERVICIOS = "courierServiceOptions"
 CAMPO_MONTO = "serviceValue"

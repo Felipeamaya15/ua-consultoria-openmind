@@ -1,6 +1,4 @@
 #!/usr/bin/env bash
-# Actualiza la tienda a la última versión aprobada: respalda, descarga el código, reconstruye y verifica.
-# Uso (desde la carpeta principal del proyecto):  bash deploy/actualizar.sh
 set -euo pipefail
 AQUI="$(cd "$(dirname "$0")" && pwd)"
 DC="docker compose -f $AQUI/docker-compose.prod.yml"

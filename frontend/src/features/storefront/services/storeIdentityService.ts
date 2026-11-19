@@ -3,7 +3,7 @@ import { fetchInitialLoad } from '../../../core/http/initialLoad';
 import { isRecord } from '../visual/resolveVisualConfig';
 import type { StoreIdentity } from '../visual/storage';
 
-/** Identity comes from the same tenant resolver as the public storefront APIs. */
+
 export async function fetchStoreIdentity(signal?: AbortSignal): Promise<StoreIdentity> {
   const response = await fetchInitialLoad(`${API_BASE_URL}/api/visual-config/plantilla-seleccionada/`, { retry: true, signal });
   if (!response.ok) {

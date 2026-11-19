@@ -102,7 +102,7 @@
 @media(min-width:1200px){.campaign-workspace>fieldset{grid-template-columns:minmax(240px,.65fr) minmax(0,1.35fr)}}
 .instagram-publish-review{display:grid;gap:14px;min-width:0}.instagram-publish-review>img{max-height:420px;object-fit:contain}.instagram-connection p{overflow-wrap:anywhere}.instagram-connection button,.instagram-publish-review button{white-space:normal;height:auto;min-height:40px}.instagram-publish-review textarea{max-width:100%;min-width:0}
 
-/* Resultados inmediatos del catálogo; buscar no modifica la publicación seleccionada. */
+
 .marketing-product-search{display:grid;gap:10px;min-width:0}
 .marketing-product-current{display:grid;gap:3px;background:var(--secondary);border:1px solid var(--border);border-radius:10px;padding:10px 12px;overflow-wrap:anywhere}
 .marketing-product-current>span{font-size:11px;color:var(--muted-foreground)}

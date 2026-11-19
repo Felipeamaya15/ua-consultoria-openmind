@@ -57,7 +57,6 @@ class CommercialHistoryTests(TestCase):
         self.assertEqual(response.status_code, 200, getattr(response, 'data', None))
         self.assertEqual(response['Cache-Control'], 'no-store')
         content = b''.join(response.streaming_content)
-        # El wrapper del cliente de Django cierra el stream al consumirlo.
         return content
 
     def workbook(self, url, params=None):
@@ -235,7 +234,6 @@ class CommercialHistoryTests(TestCase):
         self.assertEqual(response.status_code, 200); self.assertLessEqual(len(queries), 6)
         with CaptureQueriesContext(connection) as queries:
             response = self.api.get(CONTACTS)
-        # One bounded query also includes opt-ins without an order (no N+1).
         self.assertEqual(response.status_code, 200); self.assertLessEqual(len(queries), 5)
 
     def test_22_multiple_product_matches_do_not_duplicate_order_totals(self):
@@ -270,9 +268,7 @@ class CommercialHistoryTests(TestCase):
         foreign = Tienda.objects.create(nombre='Otro tenant QA', id_usuario_propietario=self.other)
         order = self.order('FOREIGN', email='foreign@example.com'); order.tienda = foreign; order.save(update_fields=['tienda'])
         ConsentimientoComercial.objects.create(tienda=foreign, email='buyer@example.com', estado='autorizado', version_texto='qa-v1', referencia_evidencia='other-tenant')
-        # La instalación con dos tiendas falla de forma cerrada.
         self.assertEqual(self.api.get(CONTACTS).status_code, 503)
-        # Defensa de consulta independiente del resolver: incluso autorizada una tienda, no mezcla fuentes.
         with patch('apps.core.presentation.commercial_exports.resolver_tienda', return_value=self.store):
             rows = self.get_data(CONTACTS)['data']
             self.assertNotIn('foreign@example.com', [row['email'] for row in rows])

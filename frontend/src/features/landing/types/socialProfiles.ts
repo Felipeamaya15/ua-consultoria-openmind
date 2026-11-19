@@ -1,4 +1,4 @@
-/** Public profile identity only. OAuth credentials belong to a separate future contract. */
+
 export const SOCIAL_NETWORKS = ['instagram', 'facebook', 'youtube', 'whatsapp'] as const;
 export type SocialNetwork = typeof SOCIAL_NETWORKS[number];
 export interface SocialProfile { perfil: string; activo: boolean; mensaje: string }
@@ -21,7 +21,7 @@ export function profileLink(network: SocialNetwork, input: string, message = '')
   if (!value.includes('://')) value = `https://${hosts[0]}/${network === 'youtube' ? '@' : ''}${value.replace(/^@/, '')}`;
   let url: URL;
   try { url = new URL(value); } catch { return invalid(); }
-  // URL normalizes explicit default ports; also reject them before normalization.
+
   if (!['http:', 'https:'].includes(url.protocol) || !hosts.includes(url.hostname) || url.username || url.password || /:\d+(?:\/|$)/.test(value) || url.hash) return invalid('Usa un enlace de perfil de la red indicada.');
   let path: string;
   try { path = decodeURIComponent(url.pathname).replace(/^\/+|\/+$/g, ''); } catch { return invalid(); }
@@ -50,7 +50,7 @@ export function publicSocialLinks(contact: Partial<Record<SocialNetwork, string>
     const metadata = contact.redes_sociales?.[network];
     if (!profile || metadata?.activo === false) return [];
     const result = profileLink(network, profile, metadata?.mensaje);
-    // Legacy valid HTTP(S) links remain visible even if they use an older profile format.
+
     const legacy = !metadata ? network === 'whatsapp' && /^\+?[0-9 ()-]{5,40}$/.test(profile) ? `https://wa.me/${profile.replace(/\D/g, '')}` : network !== 'whatsapp' && /^https?:\/\//i.test(profile) ? profile : '' : '';
     const href = result.url || legacy;
     return href ? [{ label: SOCIAL_LABELS[network], icon: network === 'whatsapp' ? 'chat' : network, text: profile, href }] : [];

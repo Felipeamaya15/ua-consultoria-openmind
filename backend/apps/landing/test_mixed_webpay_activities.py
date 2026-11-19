@@ -37,7 +37,6 @@ class MixedWebpayTests(TestCase):
     def test_disabled_refuses_order(self): self.register(False)
     def exercise(self,initial_stock):
         order=self.register()
-        # Isolated collection: never use the real catalog. Verify actual Mongo atomic update semantics.
         db=get_mongo_db();coll=db['qa_mixed_'+uuid4().hex];self.addCleanup(coll.drop)
         coll.insert_one({'_id':self.pid,'tienda_id':str(self.store.pk),'variantes':[{'sku':'MIX-1','stock':initial_stock}]})
         approved={'buy_order':order.identificador,'session_id':'mixed-session','amount':35000,'status':'AUTHORIZED','response_code':0,'authorization_code':'ABC123'}

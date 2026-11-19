@@ -6,7 +6,7 @@ Este documento describe cómo configurar, levantar, verificar y actualizar la pl
 
 ## 1. Requisitos previos
 
-> El detalle completo (hardware, versiones, imágenes Docker, dependencias, puertos y servicios externos) está en [`docs/requisitos-instalacion.md`](docs/requisitos-instalacion.md).
+> El detalle completo (hardware, versiones, imágenes Docker, dependencias, puertos y servicios externos) está en [`docs/instalacion-y-configuracion/requisitos-instalacion.md`](docs/instalacion-y-configuracion/requisitos-instalacion.md).
 
 - Docker Desktop iniciado y Docker Compose disponible.
 - Git y una terminal PowerShell (Windows).

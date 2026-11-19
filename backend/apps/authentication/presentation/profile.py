@@ -155,7 +155,6 @@ class PasswordAPIView(APIView):
         return success_response(data={}, mensaje='Contraseña actualizada correctamente.')
 
 
-# Comparte persistencia y validadores con el perfil comprador, con permisos propios.
 from apps.authentication.permissions import IsStoreOwner
 
 

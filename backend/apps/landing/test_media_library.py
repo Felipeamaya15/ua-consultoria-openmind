@@ -267,7 +267,6 @@ class MediaLibraryTests(TestCase):
         item = RecursoMultimedia.objects.create(tienda=foreign, titulo='Ajeno', tipo='imagen', archivo=foreign_file)
         self.assertEqual(self.client.get(self.url).status_code, 503)
         self.assertEqual(self.client.delete(self.url + str(item.pk) + '/').status_code, 503)
-        # Exercise the resource query with the store already resolved by an installation.
         with patch('apps.landing.media_views.resolver_tienda', return_value=self.store):
             self.assertEqual(self.client.get(self.url).data['data']['total'], 0)
             self.assertEqual(self.client.patch(self.url + str(item.pk) + '/', {'titulo': 'No'}, format='json').status_code, 404)

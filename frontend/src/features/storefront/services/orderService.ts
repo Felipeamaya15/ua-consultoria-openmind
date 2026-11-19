@@ -29,7 +29,7 @@ export interface LineaTiempoPaso {
   actual: boolean;
 }
 
-// Se mantienen estado_label y linea_tiempo para OrderTracking.tsx
+
 export type TrackedOrder = Omit<CustomerOrder, 'items'>
   & Pick<CreatedOrder, 'identificador' | 'costo_envio' | 'descuento'> & {
     nombre_contacto: string;

@@ -1,6 +1,4 @@
 #!/usr/bin/env bash
-# Crea deploy/.env con claves y contraseñas aleatorias ya generadas.
-# Uso (desde la carpeta principal del proyecto):  bash deploy/preparar_env.sh tutienda.cl [ID_DE_CLIENTE_DE_GOOGLE]
 set -eu
 cd "$(dirname "$0")"
 
@@ -16,7 +14,6 @@ if [ -f .env ]; then
   exit 1
 fi
 
-# 'texto' recibe cuántos caracteres; 'clave_fernet' genera una clave válida para cifrar credenciales.
 texto() { head -c 120 /dev/urandom | base64 | tr -d '/+=\n' | cut -c1-"$1"; }
 clave_fernet() { head -c 32 /dev/urandom | base64 | tr '+/' '-_' | tr -d '\n'; }
 

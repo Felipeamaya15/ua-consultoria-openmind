@@ -1,4 +1,4 @@
-// Real frontend and HTTP clients against the isolated local Postman simulation.
+
 const assert=require('node:assert/strict'), fs=require('node:fs'),path=require('node:path');
 const {chromium}=require(process.env.DASHBOARD_PLAYWRIGHT_MODULE || 'C:/Users/maria/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright');
 const base=process.env.EDITOR_TEST_URL || 'http://127.0.0.1:5188', api=process.env.EDITOR_TEST_API || 'http://127.0.0.1:4918/openmind';
@@ -35,7 +35,7 @@ const remote=async()=> (await (await fetch(api+'/api/landing/configuracion/')).j
   await add('Galería');await page.getByLabel('Agregar imagen a la sección',{exact:true}).setInputFiles(file);await page.getByLabel('Agregar imagen a la sección',{exact:true}).setInputFiles(file);
   await page.getByRole('button',{name:'Mover imagen antes',exact:true}).last().click();
   await add('Cita destacada');
-  // Order, hide, delete confirmation, undo, redo and discard operate in this form.
+
   await page.getByRole('button',{name:'Subir sección 5',exact:true}).click();
   await page.getByRole('checkbox',{name:'Mostrar sección 4',exact:true}).uncheck({force:true});
   await page.getByRole('button',{name:'Eliminar sección 5',exact:true}).click();
@@ -67,7 +67,7 @@ const remote=async()=> (await (await fetch(api+'/api/landing/configuracion/')).j
   const until=async(name,value)=>{await page.waitForFunction(({id,name,value})=>{const el=document.querySelector('iframe')?.contentDocument?.querySelector(`[data-content-block-id="${id}"]`);return el&&getComputedStyle(el).getPropertyValue(name).trim()===value;},{id:storyId,name,value});};
   const saveDesign=async()=>{await page.getByRole('button',{name:'Guardar cambios',exact:true}).click();await page.getByText('✓ Guardado',{exact:true}).waitFor();};
   await selectBlock();
-  // Content entry points are links, with no title or image replacement form.
+
   assert.equal(await page.getByLabel('Título principal',{exact:true}).count(),0);
   assert.equal(await page.getByLabel('Título de la sección',{exact:true}).count(),0);
   await page.getByLabel('Distribución',{exact:true}).selectOption('right');await until('--lb-image-order','2');
@@ -94,7 +94,7 @@ const remote=async()=> (await (await fetch(api+'/api/landing/configuracion/')).j
   await page.screenshot({path:path.join(out,'editor-secciones.png')});
   console.log('OK apariencia: selección por clic, distribución, textos, imágenes, herencia, variantes independientes, deshacer/rehacer, fallo recuperable, publicación y recarga');
 
-  // A visitor in a fresh browser context sees published styles without local storage.
+
   const visitor=await browser.newContext(),publicPage=await visitor.newPage();
   for(const [index,template] of ['editorial','minimal','visual','catalog'].entries()){
     for(const [width,device] of [[1440,'desktop'],[768,'tablet'],[375,'mobile']]){
@@ -115,7 +115,7 @@ const remote=async()=> (await (await fetch(api+'/api/landing/configuracion/')).j
   await visitor.close();
   console.log('OK 4 plantillas × 3 dispositivos: historia publicada, apariencia sin almacenamiento local, sin desbordamiento y logo original protegido arriba y abajo');
 
-  // Institutional container follows the actual bar controls, in all templates.
+
   for (const template of ['editorial','minimal','visual','catalog']) {
     await page.goto(base+'/emprendedor/diseno/editor?plantilla='+template);
     await frame.locator('[data-institutional-branding]').first().waitFor();
@@ -148,7 +148,7 @@ const remote=async()=> (await (await fetch(api+'/api/landing/configuracion/')).j
   await page.locator('[data-visual-section="footer"]').screenshot({path:path.join(out,'logo-institucional-pie.png')});
   console.log('OK logo original: fondos claro/oscuro con controles reales, 4 plantillas × 3 dispositivos, tamaño 56 × 48, contenedor transparente y contraste >= 4.5');
 
-  // Landing and editor shells on narrow real screens; store isolation in same browser.
+
   await page.goto(base+'/emprendedor/landing');await manager.waitFor();
   for(const width of [768,375]){await page.setViewportSize({width,height:1000});assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));await manager.screenshot({path:path.join(out,`pagina-principal-${width}.png`)});}
   await control({store:2});await page.reload();await manager.waitFor();assert.equal(await manager.locator('[data-block-id]').count(),0);await page.goto(base+'/emprendedor/diseno/editor?plantilla=editorial');await frame.locator('[data-storefront-visual]').waitFor();assert.equal(await frame.locator('[data-content-block-id]').count(),0);

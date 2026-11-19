@@ -1,4 +1,4 @@
-// Ejecutar desde frontend: node tests/product-seo.cjs
+
 const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
@@ -20,7 +20,7 @@ function loadModule(file, globals = {}) {
 
   const defaultRequire = (id) => {
     if (id === '../../../shared/services/apiRequest') {
-      // El test ejecuta TypeScript transpiliado en VM: simular la frontera HTTP.
+
       return {
         requestJson: async (url, options) => {
           const response = await globals.fetch(url, options);
@@ -96,7 +96,7 @@ function testSeoService() {
     seoDescription: 'Compra la mejor polera de algodón orgánico con envío a todo Chile.',
   };
 
-  // 1. Aplicar SEO personalizado
+
   const cleanup = seoService.updateProductSeo(productWithSeo, 'Tienda Demo');
   assert.equal(mockDocument.title, 'Polera de Algodón Orgánico Exclusiva · Tienda Demo');
 
@@ -108,11 +108,11 @@ function testSeoService() {
   assert.notEqual(ogTitle, null);
   assert.equal(ogTitle.getAttribute('content'), 'Polera de Algodón Orgánico Exclusiva');
 
-  // 2. Limpieza al desmontar
+
   cleanup();
   assert.equal(mockDocument.title, 'Tienda Original');
 
-  // 3. Fallback a nombre y descripción estándar cuando seoTitle y seoDescription están vacíos
+
   const productWithoutSeo = {
     name: 'Taza Cerámica',
     description: 'Taza artesanal hecha a mano.',
@@ -126,7 +126,7 @@ function testSeoService() {
   assert.equal(descFallback.getAttribute('content'), 'Taza artesanal hecha a mano.');
   cleanupFallback();
 
-  // Una página de producto sin descripción no debe conservar la de otra página.
+
   const restoreStore = seoService.updateStoreSeo({
     name: 'Mi Tienda',
     metaTitle: 'Portada',
@@ -175,14 +175,14 @@ async function testProductServiceSeoPayload() {
     seoDescription: '  Meta Descripción Personalizada para Google  ',
   };
 
-  // Crear producto con SEO
+
   await service.createPublicProduct(product);
   const sentPayload = JSON.parse(request.options.body);
 
   assert.equal(sentPayload.seo.meta_titulo, 'Meta Título Personalizado');
   assert.equal(sentPayload.seo.meta_descripcion, 'Meta Descripción Personalizada para Google');
 
-  // Detalle de producto mapea campos de SEO
+
   const rawMongoProduct = {
     id: '0123456789abcdef01234567',
     nombre: 'Polera Desde Mongo',
@@ -208,7 +208,7 @@ async function testProductServiceSeoPayload() {
   assert.equal(adapted.seoTitle, 'Título Guardado en DB');
   assert.equal(adapted.seoDescription, 'Descripción Guardada en DB');
 
-  // Actualizar producto preserva y envía campos SEO actualizados
+
   adapted.seoTitle = 'Título Modificado';
   adapted.seoDescription = 'Descripción Modificada';
 

@@ -23,8 +23,6 @@ parser.add_argument('--in-container', action='store_true')
 parser.add_argument('--commercial', action='store_true', help='Añadir datos ficticios para históricos y contactos')
 args = parser.parse_args()
 if args.from_docker:
-    # Se reutilizan imagen, red y fuentes; las conexiones permanecen dentro de Docker.
-    # Variables sensibles pasan por entorno, sin incluir valores en comandos o archivos.
     spec = json.loads(subprocess.check_output(['docker', 'inspect', 'django_backend']))[0]
     environment = dict(item.split('=', 1) for item in spec['Config']['Env'])
     network = next(iter(spec['NetworkSettings']['Networks']))
@@ -83,7 +81,6 @@ try:
     product = repo.create(str(store.pk), {'nombre': 'Producto QA', 'activo': True, 'categoria': 'Pruebas', 'variantes': [
         {'sku': 'QA-E2E', 'precio': 10000, 'stock': 200, 'atributos_variante': []}]})
     mongo_created = True
-    # Una venta confirmada para verificar montos, decimales y PDF de históricos.
     Pedido.objects.create(tienda=store, nombre_contacto='Cliente QA', correo_contacto='qa@example.test', monto_total='12500.50', estado='pagado')
     date = timezone.localdate() + timedelta(days=7)
     date += timedelta(days=(0 - date.weekday()) % 7)

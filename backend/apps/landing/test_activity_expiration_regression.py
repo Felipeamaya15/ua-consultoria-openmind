@@ -45,7 +45,6 @@ class ActivityExpirationRegressionTests(TransactionTestCase):
         normal = self.order({})
         self.assertIsNone(reconcile(normal.pk))
         external = self.order({'origen': MARKER}, method='MercadoPago')
-        # No reservation in this fixture; no provider operation should occur.
         self.assertEqual(reconcile(external.pk), 'espera')
         external.refresh_from_db()
         self.assertEqual(external.estado, 'pendiente')

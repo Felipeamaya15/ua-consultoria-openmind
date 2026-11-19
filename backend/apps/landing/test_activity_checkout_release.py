@@ -48,7 +48,6 @@ class ReleaseActivityCheckoutTest(TestCase):
         self.assertEqual(order.entrega['origen'],WEBPAY_MARKER)
         self.assertEqual(order.entrega[META]['ambiente'],'INTEGRACION')
         self.assertEqual(order.estado,'pendiente')
-        # Stub provider only; order and reservations came from real checkout route.
         order.entrega[META]['sesion']='session-release'
         order.webpay_token='test-token'
         order.webpay_url='https://example.com/webpay'

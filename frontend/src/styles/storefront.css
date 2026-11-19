@@ -29,11 +29,11 @@
 }
 
 :root {
-  /* Universidad Autónoma de Chile institutional navy */
+
   --institutional: #1a3a6b;
   --institutional-light: #2a5aab;
 
-  /* Core palette (contraste reforzado en textos secundarios) */
+
   --background: #f7f8fb;
   --foreground: #0f1623;
   --card: #ffffff;
@@ -53,7 +53,7 @@
   --ring: #1a3a6b;
   --radius: 8px;
 
-  /* Status colors */
+
   --success: #15803d;
   --success-bg: #f0fdf4;
   --warning: #b45309;
@@ -63,7 +63,7 @@
   --info: #1d4ed8;
   --info-bg: #eff6ff;
 
-  /* Shadows */
+
   --shadow-sm: 0 1px 2px rgba(10, 20, 50, 0.06);
   --shadow-md: 0 4px 12px rgba(10, 20, 50, 0.08);
   --shadow-lg: 0 8px 28px rgba(10, 20, 50, 0.12);
@@ -87,26 +87,26 @@ body {
   line-height: 1.6;
 }
 
-/* Scrollbar styling */
+
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--muted-foreground); }
 
-/* Focus rings */
+
 :focus-visible {
   outline: 2px solid var(--ring);
   outline-offset: 2px;
 }
 
-/* Indicador de foco por teclado de alto contraste en toda la tienda */
+
 [data-storefront-visual] :is(a, button, input, select, textarea, summary, [role="button"], [tabindex="0"]):focus-visible {
   outline: 2px solid var(--ring, #1a3a6b) !important;
   outline-offset: 2px !important;
   box-shadow: 0 0 0 2px #ffffff, 0 0 0 4px var(--ring, #1a3a6b) !important;
 }
 
-/* En cabeceras y pies de página (donde el fondo suele ser primario/oscuro), usa el color de texto del bloque para garantizar contraste */
+
 [data-storefront-visual] [data-visual-section="header"] :is(a, button, input, select, summary, [tabindex="0"]):focus-visible {
   outline: 2px solid var(--visual-header-color, #ffffff) !important;
   outline-offset: 3px !important;
@@ -121,7 +121,7 @@ body {
   border-radius: 6px;
 }
 
-/* Elementos dentro de contenedores con overflow:hidden usan borde interno para que nunca se recorte */
+
 [data-storefront-visual] [data-visual-card] > a:first-child:focus-visible,
 [data-storefront-visual] [data-visual-part="categoryItem"]:focus-visible {
   outline: 3px solid var(--ring, #1a3a6b) !important;
@@ -129,22 +129,22 @@ body {
   box-shadow: inset 0 0 0 3px #ffffff, inset 0 0 0 5px var(--ring, #1a3a6b) !important;
 }
 
-/* Opciones de entrega y pago enfocadas con teclado en Checkout */
+
 [data-checkout-page] [data-checkout-option]:focus-within {
   outline: 2px solid var(--ring, #1a3a6b) !important;
   outline-offset: 2px !important;
   box-shadow: 0 0 0 2px #ffffff, 0 0 0 4px var(--ring, #1a3a6b) !important;
 }
 
-/* Template font utilities */
+
 .font-display { font-family: 'DM Serif Display', Georgia, serif; }
 .font-sans { font-family: 'Plus Jakarta Sans', system-ui, sans-serif; }
 
-/* Custom utility classes */
+
 .shadow-card { box-shadow: var(--shadow-md); }
 .shadow-modal { box-shadow: var(--shadow-xl); }
 
-/* Template CSS variables that can be overridden per-template */
+
 .template-editorial {
   --t-hero-height: 72vh;
   --t-card-radius: 4px;
@@ -174,9 +174,7 @@ body {
   --t-heading-font: 'Plus Jakarta Sans', sans-serif;
 }
 
-/* ==========================================================================
-   APROVECHAMIENTO DEL ESPACIO HORIZONTAL EN LAS 4 PLANTILLAS
-   ========================================================================== */
+
 [data-storefront-visual] {
   --storefront-wide-width: min(96%, 1760px);
   --storefront-focused-width: min(96%, 1280px);
@@ -228,7 +226,7 @@ body {
   width: 100%;
 }
 
-/* Evitar que el nombre de la tienda se corte o se superponga con la navegación */
+
 [data-storefront-visual] [data-visual-part="logo"] {
   max-width: 100% !important;
   min-width: 0 !important;
@@ -244,9 +242,7 @@ body {
   text-overflow: clip !important;
 }
 
-/* ==========================================================================
-   PLANTILLA 2 (MINIMAL): CENTRADO DE HERO, BUSCADOR EN LÍNEA Y PASTILLA DE NAV LEGIBLE
-   ========================================================================== */
+
 [data-storefront-visual].template-minimal [data-visual-layout="stack"] {
   align-items: center !important;
   text-align: center !important;
@@ -284,7 +280,7 @@ body {
   white-space: nowrap !important;
 }
 
-/* Pastilla blanca de navegación debajo del logo en MinimalHeader: texto oscuro 100% legible */
+
 [data-storefront-visual].template-minimal [data-visual-section="header"] [data-minimal-nav-pill] {
   background-color: #f4f4f4 !important;
   color: #0f1623 !important;
@@ -305,9 +301,7 @@ body {
   margin-inline: auto;
 }
 
-/* ==========================================================================
-   PLANTILLA 4 (CATALOG): HEADER EN UNA SOLA FILA COMPACTA SIN SUPERPOSICIÓN
-   ========================================================================== */
+
 [data-storefront-visual].template-catalog [data-visual-section="header"] {
   background: transparent !important;
   border-bottom: 0 !important;
@@ -361,7 +355,7 @@ body {
   }
 }
 
-/* Pies de página de las 4 plantillas: 4 columnas alineadas a la izquierda en escritorio (ejemplo Plantilla 1) */
+
 @media (min-width: 768px) {
   [data-storefront-visual] [data-visual-part="footerLayout"] {
     grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
@@ -374,17 +368,17 @@ body {
   }
 }
 
-/* Plantilla 3 (Visual): mantener 1 columna en la sub-grilla apilada junto al producto destacado grande */
+
 [data-landing-page="visual"] [data-visual-grid="products"] > [data-visual-grid="products"].grid-cols-1 {
   grid-template-columns: minmax(0, 1fr) !important;
 }
 
-/* Plantilla 3 (Visual) Catálogo: cuando se despliega el panel superior de filtros, ocupa el 100% del ancho */
+
 [data-catalog-page="visual"] [data-visual-part="catalogFilters"] {
   width: 100%;
 }
 
-/* Plantilla 4 (Catalog) Catálogo: en escritorio mantiene la barra lateral de filtros a la izquierda y resultados a la derecha */
+
 @media (min-width: 768px) {
   [data-catalog-page="visual"] [data-visual-part="catalogLayout"],
   [data-catalog-page="catalog"] [data-visual-part="catalogLayout"] {
@@ -440,9 +434,7 @@ body {
   grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
 }
 
-/* ==========================================================================
-   PÁGINAS LEGALES: BOTONES CON ESTILO UNIFICADO Y OPCIÓN SELECCIONADA SUBRAYADA
-   ========================================================================== */
+
 [data-storefront-visual] [data-legal-switcher] a[data-page-action="primary"] {
   background-color: var(--visual-page-button-background, var(--primary, #1a3a6b)) !important;
   color: var(--visual-page-button-color, var(--on-primary, #ffffff)) !important;
@@ -456,9 +448,7 @@ body {
   font-weight: 700 !important;
 }
 
-/* ==========================================================================
-   LOGO INSTITUCIONAL UNIVERSIDAD AUTÓNOMA (GRANDE Y LEGIBLE EN LAS 4 PLANTILLAS)
-   ========================================================================== */
+
 [data-storefront-visual] [data-visual-part="headerLayout"] {
   min-height: 70px;
   padding-block: 6px;
@@ -468,7 +458,7 @@ body {
   min-height: 48px;
 }
 
-/* Tamaño general y en cabeceras en escritorio/tablet (50px alto × ~96px ancho) */
+
 [data-storefront-visual] .ua-institutional-badge img,
 [data-storefront-visual] [data-visual-section="header"] .ua-institutional-badge img {
   width: auto !important;
@@ -484,7 +474,7 @@ body {
   opacity: 0.96;
 }
 
-/* Tamaño en pies de página (64px alto × ~121px ancho) */
+
 [data-storefront-visual] [data-visual-section="footer"] .ua-institutional-badge img {
   width: auto !important;
   height: 64px !important;
@@ -493,7 +483,7 @@ body {
   padding: 2px 4px !important;
 }
 
-/* Tamaño destacado en Login y Registro (88px alto × ~166px ancho) */
+
 [data-storefront-visual] [data-visual-page="login"] [data-login-header] .ua-institutional-badge img {
   width: auto !important;
   height: 88px !important;
@@ -504,14 +494,14 @@ body {
   opacity: 1;
 }
 
-/* En superficies claras (Login sobre fondo claro), pastilla institucional para contraste del logo blanco */
+
 [data-storefront-visual]:not(.template-catalog) [data-visual-page="login"] [data-login-header] .ua-institutional-badge img {
   background: var(--primary, #1a3a6b) !important;
   box-shadow: 0 2px 6px rgba(10, 20, 50, 0.12) !important;
   opacity: 1;
 }
 
-/* En MinimalHeader, asegurar que el ícono del carrito sobre fondo primario conserve su color blanco */
+
 [data-storefront-visual].template-minimal [data-visual-section="header"] a[aria-label*="carrito"] {
   color: var(--on-primary, #ffffff) !important;
 }
@@ -565,9 +555,7 @@ body {
   }
 }
 
-/* ==========================================================================
-   CARRITO EN MÓVIL Y TABLET: PRECIOS EN 1 LÍNEA Y TÍTULOS SIN CORTE POR LETRAS
-   ========================================================================== */
+
 [data-storefront-visual] .ua-store-page :where(h1, h2, h3, p, span, label, a, li) {
   overflow-wrap: break-word !important;
   word-break: normal !important;
@@ -601,9 +589,7 @@ body {
   }
 }
 
-/* ==========================================================================
-   VISIBILIDAD Y DISTRIBUCIÓN DE TEXTOS Y WIDGETS EN LAS 4 PLANTILLAS
-   ========================================================================== */
+
 [data-storefront-visual] :is(.text-\[9px\], .text-\[10px\], .text-\[11px\]) {
   font-size: 0.75rem !important;
   line-height: 1.4 !important;
@@ -624,12 +610,12 @@ body {
   opacity: 0.9 !important;
 }
 
-/* Corrección de contraste en Plantilla 4 (Catalog - fondo oscuro) para textos que usaban text-black */
+
 [data-storefront-visual].template-catalog .ua-store-page :is(.text-black, .text-black\/80, .text-black\/60, .text-\[\#151515\]):not([data-page-action="primary"]) {
   color: var(--visual-page-color, #ffffff) !important;
 }
 
-/* Distribución uniforme en widgets de Beneficios, Contacto, Horarios y Ubicación en las 4 plantillas */
+
 [data-storefront-visual] [data-visual-kind="benefits"] > div,
 [data-storefront-visual] section[aria-label="Beneficios de la tienda"] > div {
   display: grid !important;
@@ -660,7 +646,7 @@ body {
   font-size: 0.875rem !important;
 }
 
-/* Legibilidad reforzada en textos sobre imágenes Hero */
+
 [data-storefront-visual] [data-visual-section="hero"] :is(h1, [data-visual-part="heroSubtitle"]) {
   text-shadow: 0 2px 12px rgba(0, 0, 0, 0.35);
 }
@@ -669,7 +655,7 @@ body {
   text-shadow: none;
 }
 
-/* Respetar el centrado explícito en encabezados de Login, Registro, Seguimiento, Confirmación y estados vacíos */
+
 [data-storefront-visual] .ua-store-page .text-center :is(h1, h2, p),
 [data-storefront-visual] .ua-store-page :is(h1, h2, p).text-center,
 [data-storefront-visual] [data-visual-page="login"] [data-login-header],
@@ -690,7 +676,7 @@ body {
   background: transparent !important;
 }
 
-/* Animation utilities */
+
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(8px); }
   to { opacity: 1; transform: translateY(0); }
@@ -708,12 +694,12 @@ body {
 .animate-fade-in { animation: fadeIn 0.3s ease-out; }
 .animate-slide-in { animation: slideIn 0.3s ease-out; }
 
-/* Stepper styles */
+
 .step-complete { color: var(--success); }
 .step-active { color: var(--primary); font-weight: 600; }
 .step-pending { color: var(--muted-foreground); }
 
-/* Timeline */
+
 .timeline-dot-complete { background: var(--success); }
 .timeline-dot-active { background: var(--primary); box-shadow: 0 0 0 4px rgba(26, 58, 107, 0.2); }
 .timeline-dot-pending { background: var(--border); }
@@ -722,9 +708,7 @@ button:not(:disabled), a { cursor: pointer; }
 button:disabled { cursor: not-allowed; opacity: .65; }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; } }
 
-/* ==========================================================================
-   NAVEGACIÓN MÓVIL EN LAS 4 PLANTILLAS (#mobile-navigation y .store-mobile-navigation)
-   ========================================================================== */
+
 [data-storefront-visual] [data-visual-section="header"] #mobile-navigation {
   display: flex;
   flex-direction: column;
@@ -820,14 +804,14 @@ button:disabled { cursor: not-allowed; opacity: .65; }
   }
 }
 
-/* Landing Page móvil y Catálogo móvil */
+
 [data-landing-page],
 [data-catalog-page] {
   width: 100%;
   min-width: 0;
 }
 
-/* Fix 1: Evitar botón de filtros duplicado dentro del aside en Plantilla 3 (Visual) */
+
 [data-catalog-page="visual"] [data-visual-part="catalogFilters"] [data-visual-part="catalogFiltersToggle"] {
   display: none !important;
 }
@@ -873,7 +857,7 @@ button:disabled { cursor: not-allowed; opacity: .65; }
     font-size: 0.75rem !important;
   }
 
-  /* SCRUM-463: Tarjetas de "Explorar por categoría" amplias y legibles en móvil (Editorial y Minimal) */
+
   [data-landing-page="editorial"] [data-visual-section="categories"] [data-visual-part="categoryList"] {
     display: grid !important;
     grid-template-columns: repeat(auto-fit, minmax(155px, 1fr)) !important;
@@ -920,7 +904,7 @@ button:disabled { cursor: not-allowed; opacity: .65; }
     justify-content: center !important;
   }
 
-  /* SCRUM-464: Evitar tarjetas de producto estrechas en dos columnas en móvil */
+
   [data-storefront-visual] [data-visual-grid="catalog"],
   [data-storefront-visual] [data-visual-grid="products"] {
     grid-template-columns: minmax(0, 1fr) !important;
@@ -948,13 +932,13 @@ button:disabled { cursor: not-allowed; opacity: .65; }
     width: 100%;
   }
 
-  /* Fix 3: Grilla de productos relacionados en Detalle de Producto a 1 columna en móvil */
+
   [data-visual-page="product"] section .grid.grid-cols-2 {
     grid-template-columns: minmax(0, 1fr);
   }
 }
 
-/* SCRUM-465: Checkout móvil. Solo aplica al flujo real /plantilla/:id/compra. */
+
 [data-checkout-page] {
   width: 100%;
   min-width: 0;
@@ -964,7 +948,7 @@ button:disabled { cursor: not-allowed; opacity: .65; }
   overflow-wrap: anywhere;
 }
 
-/* Fix 5: Celdas de datos de Transferencia Bancaria sin desbordamiento horizontal en pantallas angostas */
+
 [data-checkout-page] [data-page-panel] .grid.grid-cols-2 {
   min-width: 0;
 }

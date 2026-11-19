@@ -40,7 +40,7 @@ export function Sharing({active,home,isCurrent,onDirty,onPrepare,onOpenSocial}:P
         await navigator.share({title,text:caption,url:current.url});setNotice('El navegador completó la acción de compartir. OpenMind no puede confirmar una publicación en redes.');
       }else{
         const opened=window.open(whatsappShareUrl(content),'_blank','noopener,noreferrer');
-        // noopener can return null even when the tab opened: never claim delivery.
+
         setNotice(opened?'Se solicitó abrir WhatsApp con el texto preparado. Revisa el destinatario y confirma allí.':'Se solicitó abrir WhatsApp. Si no aparece, el navegador pudo bloquear la ventana; utiliza Copiar texto.');
       }
     }catch(cause){if(!controller.signal.aborted&&isCurrent())setError(cause instanceof Error&&cause.name==='AbortError'?'Se canceló la acción de compartir.':humanizeAdminError(cause instanceof Error?cause.message:''));}

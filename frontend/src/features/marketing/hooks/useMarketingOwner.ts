@@ -4,7 +4,7 @@ import { useStoreIdentity } from '../../storefront/context/StoreIdentityContext'
 import type { DraftScope } from '../domain/drafts';
 
 function sessionToken() { try { return authService.getToken(); } catch { return null; } }
-/** La identidad del usuario procede de /me autenticado, nunca de un ID local. */
+
 export function useMarketingOwner() {
   const { identity } = useStoreIdentity();
   const [token, setToken] = useState(sessionToken);

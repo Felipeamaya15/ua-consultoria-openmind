@@ -165,7 +165,7 @@ const result = {id_pedido: 42, identificador: 'PEDIDO-BACKEND-42', tienda_id: 9,
     identificador: result.identificador, email: 'buyer@example.com', monto: Number(result.monto_total),
   });
   for (const method of ['PayPal', 'MercadoPago']) {
-    // Un medio deshabilitado no crea pedidos ni contacta al proveedor.
+
     reset(); states[8] = method; states[11] = [];
     await confirm()();
     assert.equal(createCalls.length, 0);
@@ -174,7 +174,7 @@ const result = {id_pedido: 42, identificador: 'PEDIDO-BACKEND-42', tienda_id: 9,
     assert.equal(navigateCalls.length, 0);
     assert.equal(paymentLocation.href, '');
 
-    // Habilitado: si el proveedor falla, el pedido existe pero no se limpia el carrito.
+
     reset(); states[8] = method; states[11] = [{id: method, label: method}]; gatewayFailure = true;
     await confirm()();
     assert.equal(createCalls.length, 1);

@@ -41,8 +41,6 @@ class TiendaNoAutorizadaException(CatalogException):
     """Lanzada cuando un usuario intenta acceder o modificar la configuración de una tienda no asignada."""
     pass
 
-# Alias de compatibilidad por si algún módulo importa DominioException
-
 
 class PagoGatewayException(CatalogException):
     """Lanzada cuando una pasarela de pagos falla o rechaza una operación."""
@@ -65,11 +63,6 @@ class TransbankRechazoException(CatalogException):
 class TransbankConfiguracionFaltanteException(CatalogException):
     """Lanzada cuando la tienda no tiene credenciales de Transbank activas o configuradas."""
     pass
-
-
-
-
-
 
 
 DominioException = CatalogException

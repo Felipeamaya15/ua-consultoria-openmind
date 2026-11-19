@@ -1,4 +1,3 @@
-# Vistas del módulo Core (PostgreSQL)
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.views import APIView
 from rest_framework.exceptions import APIException
@@ -25,7 +24,6 @@ from apps.core.models import Pedido
 from apps.core.pickup import validate_pickup, prepare_pickup_for_save
 from copy import deepcopy
 from rest_framework import generics, serializers
-# Compatibilidad: una sola implementación de seguimiento con validación y aislamiento por tienda.
 from apps.core.presentation.order_tracking import OrderTrackingAPIView
 from .serializers import PedidoTiendaSerializer, TransferenciaPendienteSerializer
 
@@ -108,7 +106,6 @@ class ConfiguracionEntregaAPIView(APIView):
             return error_response('Configuración de entrega inválida.', 'ERROR_VALIDACION',
                                   serializer.errors, status=400)
         with transaction.atomic():
-            # Serializa PATCH concurrentes, incluso antes de existir la configuración.
             Tienda.objects.select_for_update().get(pk=tienda.pk)
             config = ConfiguracionEntrega.objects.filter(tienda=tienda).first()
             datos = delivery_data(config.datos if config else None)
@@ -178,7 +175,7 @@ class WebhookLinkifyAPIView(LinkifyNotificacionView):
 
 class VerificarTransferenciaLinkifyAPIView(APIView):
     """
-    Endpoint activo para que el administrador solicite a Linkify que 
+    Endpoint activo para que el administrador solicite a Linkify que
     busque una transferencia en su cartola bancaria bajo demanda.
     """
     permission_classes = [IsAuthenticated]
@@ -188,20 +185,20 @@ class VerificarTransferenciaLinkifyAPIView(APIView):
         try:
             tienda = resolver_tienda(request, exigir_propietario=True)
             pedido = Pedido.objects.get(id_pedido=pedido_id, tienda=tienda)
-            
+
             from apps.landing.external_activity_orders import is_external
             if is_external(pedido):
                 return error_response('La confirmación de actividades Linkify requiere el aviso firmado de la pasarela.', 'ACTIVIDAD_REVISION', status=409)
             metodo = (pedido.medio_pago or pedido.metodo_pago or '').strip().lower()
             if metodo != 'linkify':
                 return error_response('El pedido no corresponde a Linkify.', 'PEDIDO_NO_LINKIFY', status=409)
-            
+
             if pedido.estado in ('cancelado', *Pedido.ESTADOS_EN_DESPACHO):
                 return error_response('El pedido requiere revisión manual.', 'ESTADO_PEDIDO_INVALIDO', status=409)
-            
+
             config_pago = ConfiguracionPago.objects.get(tienda=tienda)
             linkify_config = config_pago.datos_descifrados.get("linkify", {})
-            
+
 
             fields = linkify_config.get("fields", {})
             api_key = fields.get("clavePrivada") or fields.get("apiKey") or linkify_config.get("api_key")
@@ -211,7 +208,7 @@ class VerificarTransferenciaLinkifyAPIView(APIView):
 
             from apps.catalog.infrastructure.adapters.linkify_adapter import LinkifyAdapter
             adapter = LinkifyAdapter(api_key=api_key)
-            
+
             identificador = pedido.identificador or str(pedido.id_pedido)
             resultado = adapter.verificar_transferencia(identificador, float(pedido.monto_total))
             if not resultado.get("exito"):
@@ -242,7 +239,7 @@ class VerificarTransferenciaLinkifyAPIView(APIView):
                     detalles=resultado.get("mensaje"),
                     status=400
                 )
-                
+
         except Pedido.DoesNotExist:
             return error_response(mensaje="Pedido no encontrado", codigo="PEDIDO_NO_ENCONTRADO", status=404)
         except Exception as e:
@@ -381,7 +378,6 @@ class RechazarTransferenciaManualAPIView(APIView):
             data={'id_pedido': pedido.pk, 'estado': pedido.estado},
             mensaje='Transferencia rechazada y pedido cancelado.',
         )
-
 
 
 class TiendaPedidosAPIView(generics.ListAPIView):

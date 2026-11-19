@@ -3,10 +3,10 @@ import { useLocation } from 'react-router-dom';
 import type { CarouselSlideContent, LandingConfig } from '../../landing/types/landing.types';
 
 export function resolveHeroContent(landing: LandingConfig | null | undefined, content: CarouselSlideContent, route: (path: string) => string) {
-  // El modo compartido ignora temporalmente los textos individuales, sin borrarlos.
+
   const effectiveContent: CarouselSlideContent = landing?.contenido?.carrusel_texto_modo === 'unico' ? {} : content;
   const raw = effectiveContent.enlace?.trim() || 'catalogo';
-  // Backend validates too; cached/legacy values never become script or protocol-relative links.
+
   const safe = !/[\\<>\x00-\x20]/.test(raw) && !raw.startsWith('//') && (!raw.includes(':') || raw.startsWith('https://'));
   const href = safe ? raw.startsWith('https://') || raw.startsWith('/') || raw.startsWith('#') ? raw : route(raw) : route('catalogo');
   return {

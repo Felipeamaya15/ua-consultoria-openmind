@@ -1,5 +1,5 @@
-// Navegador real, aplicación real y respuestas HTTP de prueba interceptadas.
-// No inicia sesión ni escribe en las bases comerciales.
+
+
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
@@ -76,7 +76,7 @@ const envelope = data => ({ exito: true, mensaje: '', data });
       assert.equal(await page.getByRole('heading', { name: 'Página principal y contacto', exact: true }).count(), 0);
       assert.equal(await page.getByRole('heading', { name: 'Información del negocio', exact: true }).count(), 1);
       assert.equal(await page.getByRole('button', { name: /Recuperar.*(navegador|locales)/ }).count(), 0);
-      // La eliminación es solo de la interfaz: la configuración local y sus estilos sobreviven.
+
       assert(await page.evaluate(() => Object.keys(localStorage).some(key => {
         const raw = localStorage.getItem(key);
         return key.startsWith('ua-entrepreneur-demo-v1:store:') && raw.includes('Nombre anterior local');

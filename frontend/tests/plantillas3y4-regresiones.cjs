@@ -1,4 +1,4 @@
-// Regresiones: categorías legibles y producto principal con galería real.
+
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
@@ -38,7 +38,7 @@ test('el producto principal de Obsidian cambia fotos usando ProductImageGallery'
   assert.match(featured, /<ProductImageGallery\s+images=\{mochila\.images\}/);
   assert.doesNotMatch(featured, /src=\{mochila\.images\[0\]\}/);
   assert.match(featured, /pointer-events-none p-6 sm:p-8 md:p-12/);
-  // El enlace de la tarjeta es uno solo: no crear un <a> dentro de otro <a>.
+
   assert.match(featured, /to=\{route\(`producto\/\$\{mochila\.id\}`\)\}/);
   assert.match(gallery, /onPointerEnter=/);
   assert.match(gallery, /setHovered\(true\)/);

@@ -20,7 +20,6 @@ class ConfiguracionTiendaInvalida(ErrorConfiguracionTienda):
 
 
 def _comprobar_tienda_enviada(request, tienda_id):
-    # Los identificadores del cliente solo se contrastan; nunca seleccionan tienda.
     fuentes = (
         getattr(request, 'query_params', getattr(request, 'GET', {})),
         getattr(request, 'data', getattr(request, 'POST', {})),

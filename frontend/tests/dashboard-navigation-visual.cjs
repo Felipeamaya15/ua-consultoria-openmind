@@ -1,4 +1,4 @@
-// Navegación real con BrowserRouter, Dashboard y Orders; API aislada por Playwright.
+
 const fs = require('node:fs'), path = require('node:path'), http = require('node:http'), os = require('node:os');
 const assert = require('node:assert/strict'), esbuild = require('esbuild');
 const { chromium } = require(process.env.DASHBOARD_PLAYWRIGHT_MODULE || 'playwright');

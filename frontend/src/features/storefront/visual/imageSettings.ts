@@ -1,14 +1,14 @@
 import { isRecord } from './resolveVisualConfig';
 
-/** Business content images belong to the landing editor, not legacy DOM-index overrides. */
+
 export function isLegacyEditableImage(image: Pick<HTMLElement, 'hasAttribute' | 'closest'>): boolean {
   return !image.hasAttribute('data-landing-image') && !image.closest('[data-landing-content], [data-institutional-branding]');
 }
 export interface ThemeImageSetting { src: string; scale: number; x: number; y: number; radius: number; fit?: 'cover' | 'contain'; alt?: string }
 
 export interface OriginalImageStyle { src: string | null; position: string; transform: string; origin: string; radius: string; fit?: string; alt: string | null }
-// The editor and its same-origin iframe must share the baseline captured before publication.
-// A module-local WeakMap would be different in each window. This state lives only on the DOM node.
+
+
 const ORIGINAL_IMAGE = Symbol.for('ua.visual.original-image.v1');
 export function captureOriginalImage(img: HTMLImageElement): OriginalImageStyle {
   const node = img as HTMLImageElement & { [ORIGINAL_IMAGE]?: OriginalImageStyle };
@@ -22,7 +22,7 @@ export function restoreOriginalImage(img: HTMLImageElement, original: OriginalIm
   if (original.alt === null) img.removeAttribute('alt'); else img.setAttribute('alt', original.alt);
 }
 
-/** Explicit IDs win; legacy decorative assets otherwise use original source + semantic role. */
+
 export function stableImageKey(img: HTMLImageElement): string {
   const original = captureOriginalImage(img);
   const explicit = img.getAttribute('data-theme-image-id');
@@ -38,7 +38,7 @@ export function findImageSetting(settings: Record<string, ThemeImageSetting>, im
 
 export const DEFAULT_IMAGE_SETTING: ThemeImageSetting = { src: '', scale: 100, x: 50, y: 50, radius: 0 };
 
-/** Normalize legacy image overrides at the same boundary for editor and storefront. */
+
 export function readThemeImages(value: unknown): Record<string, ThemeImageSetting> {
   if (!isRecord(value)) return {};
   const images: Record<string, ThemeImageSetting> = {};

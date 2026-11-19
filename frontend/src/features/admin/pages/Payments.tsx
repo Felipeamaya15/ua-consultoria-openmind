@@ -22,35 +22,31 @@ import {
 } from '../services/transferValidation';
 
 
-
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 
-
-// Credenciales de prueba publicadas por TUU (https://developers.tuu.cl/docs/payment-intent). Solo sirven en integración.
 const TUU_TEST_ACCOUNT_ID = '62224230';
 const TUU_TEST_SECRET_KEY = 'yAk0dXTJLQzkeEWODsQWVpPX0bn7ND50qwoQrXgqqNiUyEpgxIPxPtoCgKeLNeh1upTw72JZx5O9x5IaAtPIGUAVcMNcsUSg3M0M8tgWdUb4F8qkS8I7rHpOUmZqzvfS';
 const TUU_TEST_ACCOUNT_IDS = [TUU_TEST_ACCOUNT_ID, '26274343'];
 
-// Métodos de demostración secundarios restantes
 
 const otherMethods = [
-  { 
-    id: 'linkify', 
-    name: 'Linkify', 
-    desc: 'Validación automática de transferencias bancarias', 
+  {
+    id: 'linkify',
+    name: 'Linkify',
+    desc: 'Validación automática de transferencias bancarias',
     fields: [],
   },
   {
     id: 'tuu',
     name: 'TUU Pago Online',
-    desc: 'Pago con tarjeta mediante TUU (Haulmer)', 
+    desc: 'Pago con tarjeta mediante TUU (Haulmer)',
     fields: ['accountId', 'secretKey'],
   },
   {
     id: 'transfer',
     name: 'Transferencia bancaria',
-    desc: 'Transferencia directa a la cuenta de tu tienda', 
+    desc: 'Transferencia directa a la cuenta de tu tienda',
     fields: [
       'bank_name',
       'account_type',
@@ -148,9 +144,6 @@ export default function Payments() {
   const savedTransfer = useRef<{ enabled: boolean; fields: Record<string, string> } | null>(null);
 
 
-
-  // Estados reactivos: Transbank
-
   const [tbActivo, setTbActivo] = useState(true);
 
   const [tbCodigo, setTbCodigo] = useState('');
@@ -170,9 +163,6 @@ export default function Payments() {
   const [tbFeedback, setTbFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
 
-
-  // Estados reactivos: PayPal
-
   const [ppActivo, setPpActivo] = useState(false);
 
   const [ppClientId, setPpClientId] = useState('');
@@ -191,9 +181,6 @@ export default function Payments() {
 
   const [ppFeedback, setPpFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
-
-
-  // Estados reactivos: Mercado Pago
 
   const [mpActivo, setMpActivo] = useState(false);
 
@@ -224,7 +211,6 @@ export default function Payments() {
   const [tiendaError, setTiendaError] = useState<string | null>(null);
 
 
-  // Estados genéricos / Linkify y Transferencia
   const [isSyncing, setIsSyncing] = useState(false);
   const [backendError, setBackendError] = useState('');
   const [validationError, setValidationError] = useState('');
@@ -242,7 +228,6 @@ export default function Payments() {
     };
 
   };
-
 
 
   useEffect(() => {
@@ -376,9 +361,6 @@ export default function Payments() {
   }, [setForm]);
 
 
-
-  // Guardar Transbank
-
   const handleSaveTransbank = async () => {
     if (pendingSaves.current.has('transbank')) return false;
     if (!tiendaId) {
@@ -415,7 +397,6 @@ export default function Payments() {
       activo: tbActivo,
 
     };
-
 
 
     pendingSaves.current.add('transbank');
@@ -470,9 +451,6 @@ export default function Payments() {
   };
 
 
-
-  // Guardar PayPal
-
   const handleSavePayPal = async () => {
     if (pendingSaves.current.has('paypal')) return false;
     if (!tiendaId) {
@@ -484,7 +462,6 @@ export default function Payments() {
     setPpSaving(true);
 
     setPpFeedback(null);
-
 
 
     if (
@@ -503,7 +480,6 @@ export default function Payments() {
     }
 
 
-
     const payload = {
 
       client_id: ppClientId.trim(),
@@ -515,7 +491,6 @@ export default function Payments() {
       activo: ppActivo,
 
     };
-
 
 
     pendingSaves.current.add('paypal');
@@ -570,9 +545,6 @@ export default function Payments() {
   };
 
 
-
-  // Guardar Mercado Pago
-
   const handleSaveMercadoPago = async () => {
     if (pendingSaves.current.has('mercadopago')) return false;
     if (!tiendaId) {
@@ -584,7 +556,6 @@ export default function Payments() {
     setMpSaving(true);
 
     setMpFeedback(null);
-
 
 
     if (
@@ -603,7 +574,6 @@ export default function Payments() {
     }
 
 
-
     const payload = {
 
       public_key: mpPublicKey.trim(),
@@ -615,7 +585,6 @@ export default function Payments() {
       activo: mpActivo,
 
     };
-
 
 
     pendingSaves.current.add('mercadopago');
@@ -641,7 +610,6 @@ export default function Payments() {
         setMpAccessToken('');
 
         setMpIsConfigured(data.data.configurado);
-
 
 
         if (form && setForm) {
@@ -696,7 +664,6 @@ export default function Payments() {
     }
 
   };
-
 
 
   const handleSaveTransfer = async () => {
@@ -760,14 +727,14 @@ export default function Payments() {
 
   const updateEnabled = (id: string, enabled: boolean) => {
     const current = form[id] ?? { enabled: false, fields: {} };
-    
+
     if (enabled) {
       if (id === 'linkify') {
         const validation = validateLinkifyFields(current.fields);
         setLinkifyFieldErrors(validation.errors);
         if (validation.invalidFields.length > 0) {
           setValidationError(validation.message);
-          return; 
+          return;
         }
       } else {
         const validation = id === 'transfer'
@@ -802,7 +769,7 @@ export default function Payments() {
       const bank = findTransferBank(value, transferBanks);
       if (!bank?.account_types.includes(nextFields.account_type)) nextFields.account_type = '';
     }
-    
+
     let shouldDisable = false;
     if (id === 'transfer' && current.enabled && !nextFields.account_type?.trim()) shouldDisable = true;
     if (current.enabled && !value.trim()) {
@@ -815,8 +782,8 @@ export default function Payments() {
 
     setForm({
       ...form,
-      [id]: { 
-        ...current, 
+      [id]: {
+        ...current,
         enabled: shouldDisable ? false : current.enabled,
         fields: nextFields,
       },
@@ -1103,7 +1070,7 @@ export default function Payments() {
     } else {
       setLinkifyFieldErrors({});
     }
-    // Apagado sin clave escrita: el backend conserva las credenciales ya guardadas.
+
     const fieldsToSend = current.enabled || String(current.fields?.clavePrivada ?? '').trim()
       ? { ...(current.fields ?? {}) }
       : {};
@@ -1194,7 +1161,6 @@ export default function Payments() {
   };
 
 
-
   return (
     <form className="flex min-w-0 w-full flex-col gap-5 max-w-2xl" onSubmit={handleSubmit} noValidate>
       <div className="pb-2 border-b border-[var(--border)]">
@@ -1211,7 +1177,7 @@ export default function Payments() {
       {validationError && <Alert variant="error">{validationError}</Alert>}
       {backendError && <Alert variant="error">{backendError}</Alert>}
 
-      {/* ================= TARJETA: WEBPAY / TRANSBANK ================= */}
+
       <AdminCard>
         <div className="flex items-center justify-between gap-3 mb-3">
           <div className="flex items-center gap-3">
@@ -1313,7 +1279,7 @@ export default function Payments() {
         )}
       </AdminCard>
 
-      {/* ================= TARJETA: MERCADO PAGO ================= */}
+
       <AdminCard>
         <div className="flex items-center justify-between gap-3 mb-3">
           <div className="flex items-center gap-3">
@@ -1402,7 +1368,7 @@ export default function Payments() {
         )}
       </AdminCard>
 
-      {/* ================= TARJETA: PAYPAL ================= */}
+
       <AdminCard>
         <div className="flex items-center justify-between gap-3 mb-3">
           <div className="flex items-center gap-3">
@@ -1504,7 +1470,7 @@ export default function Payments() {
         )}
       </AdminCard>
 
-      {/* ================= TARJETAS SECUNDARIAS ================= */}
+
       {otherMethods.map((method) => {
         const current = form[method.id] || { enabled: false, fields: {} };
 

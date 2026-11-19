@@ -47,7 +47,6 @@ class ExportBook:
     def cell(self, sheet, value, *, header=False, money=False):
         cell = WriteOnlyCell(sheet, value=safe_text(value) if isinstance(value, str) else value)
         if isinstance(value, str):
-            # Nunca interpretar nombres, SKU o email como fórmulas, hipervínculos o errores Excel.
             cell.data_type = 's'
         cell.font = Font(name='Calibri', size=11, color='FFFFFF' if header else '172B4D', bold=header)
         cell.alignment = Alignment(vertical='top', wrap_text=isinstance(value, str))
@@ -141,7 +140,6 @@ def export_orders(store, query, label, filename, *, report=None, series=None, fi
     def line_rows():
         for order in query.prefetch_related('itempedido_set').iterator(chunk_size=200):
             for line in order.itempedido_set.all():
-                # Descuento de línea no disponible: no se reparte ni se repite el descuento del pedido.
                 attributes = line.atributos_variante or line.atributos
                 import json
                 yield (order.identificador or f'#{order.pk}', local_date(order.fecha_creacion), line.nombre_producto,

@@ -30,7 +30,6 @@ def amount_for(order, current, row):
     total=Decimal(order.monto_total); usd=Decimal((order.pago_fx or {})['monto_usd'])
     previous_clp=sum((Decimal(v['monto']) for v in prior),Decimal(0))
     previous_usd=sum((Decimal(v['monto_pasarela']) for v in prior),Decimal(0))
-    # Cumulative allocation absorbs rounding only on the final line; never use today's FX.
     target=((previous_clp+clp)*usd/total).quantize(Decimal('.01'),rounding=ROUND_HALF_UP)
     return target-previous_usd, 'USD'
 
@@ -108,7 +107,6 @@ def change_external_refund(store,order_id,row_id,actor,action,reason,owner):
     if not owner:raise PermissionDenied('Solo la tienda puede gestionar devoluciones.')
     if action not in ('reembolsar_externo','consultar_reembolso_externo'):raise ValidationError('Acción no disponible.')
     key=str(row_id)
-    # Persist BEFORE any financial POST. Durable prohibits accidental enclosing transactions.
     with transaction.atomic(durable=True):
         order,rows,row=locked(store,order_id,row_id); current=records(order); old=current.get(key) or {}
         if old.get('estado')==DONE:return order,row
@@ -131,7 +129,6 @@ def change_external_refund(store,order_id,row_id,actor,action,reason,owner):
             if amount<=0 or (currency=='CLP' and amount!=amount.to_integral_value()):raise ValidationError('El monto requiere revisión.')
             operation={**old,'estado':REVIEW,'operacion':str(uuid4()),'monto_pasarela':str(amount),'moneda':currency,'motivo':reason,'responsable':str(actor.pk),'inicio_operacion':timezone.now().isoformat()}
             current[key]=operation;save(order,current)
-    # No second POST for the same line, even after a lost response. Consult only.
     if not consult:
         try:
             result=request_refund(order,gateway(order),operation)

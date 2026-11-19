@@ -153,7 +153,6 @@ class CheckoutOrderAPIView(ErroresDeCotizacionMixin, APIView):
                          if method != 'pickup' else None)
 
 
-                # El retiro nunca hereda cotizaciones ni costos enviados por el cliente.
                 shipping = PICKUP_SHIPPING_COST if method == 'pickup' else Decimal(quote['monto'])
 
                 delivery_snapshot = {'metodo': data['metodo_entrega'], 'direccion': data.get('direccion', {})}
@@ -194,17 +193,17 @@ class CheckoutOrderAPIView(ErroresDeCotizacionMixin, APIView):
                 except (ValueError, InvalidOperation, KeyError) as exc:
                     raise ValidationError({'items': str(exc)}) from exc
                 lines[key] = dict(
-                    producto_mongo_id=key[0], 
+                    producto_mongo_id=key[0],
                     id_producto_id=product.get('id_producto'),
-                    nombre_producto=product['nombre'], 
+                    nombre_producto=product['nombre'],
                     sku=item['sku'],
-                    atributos_variante=variant.get('atributos_variante', []), 
+                    atributos_variante=variant.get('atributos_variante', []),
                     cantidad=quantity,
                     atributos={a.get('etiqueta') or a.get('clave'): a.get('valor')
                                for a in variant.get('atributos_variante', [])},
                     precio_unitario=price.quantize(Decimal('.01'), rounding=ROUND_HALF_UP)
                 )
-                
+
             reservations = []
             if activities:
                 from apps.landing.unified_activity_orders import reserve_lines, order_line
@@ -257,7 +256,7 @@ class CheckoutOrderAPIView(ErroresDeCotizacionMixin, APIView):
             if promotion_amounts.promotion:
                 Promocion.objects.filter(pk=promotion_amounts.promotion.pk).update(usos=F('usos') + 1)
             result = self.result(order, self._url_pago(order, tienda))
-            if activity_marker != 'actividad_unificada_qa_v1' and not (activity_marker=='actividad_webpay_v1' and delivery_snapshot.get('webpay_actividad',{}).get('ambiente')!='PRODUCCION') and not (activity_marker=='actividad_pasarela_v1' and delivery_snapshot.get('pago_actividad_externo',{}).get('ambiente') in ('SANDBOX','INTEGRACION')):  # No enviar correos de pruebas.
+            if activity_marker != 'actividad_unificada_qa_v1' and not (activity_marker=='actividad_webpay_v1' and delivery_snapshot.get('webpay_actividad',{}).get('ambiente')!='PRODUCCION') and not (activity_marker=='actividad_pasarela_v1' and delivery_snapshot.get('pago_actividad_externo',{}).get('ambiente') in ('SANDBOX','INTEGRACION')):
                 transaction.on_commit(lambda: notificar_recepcion(order))
             return success_response(data=result, mensaje='Pedido creado correctamente.', status=201)
 
@@ -337,11 +336,10 @@ class CheckoutOrderAPIView(ErroresDeCotizacionMixin, APIView):
         if url_pago:
             data['url_pago'] = url_pago
         return data
-        
+
 
 class GuestCheckoutOrderAPIView(CheckoutOrderAPIView):
     def order_data(self, request, tienda):
-        # La ruta entrante también acepta el contrato canónico del checkout.
         if 'contacto' in request.data:
             return request.data
         from apps.core.presentation.serializers import RegistrarCompraSerializer

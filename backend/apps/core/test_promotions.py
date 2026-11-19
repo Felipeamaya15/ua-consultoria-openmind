@@ -157,7 +157,6 @@ class PromocionesAdminTests(TestCase):
         )
         self.client.credentials()
 
-        # Subtotal menor al mínimo -> rechaza con mensaje claro y código PROMOCION_INVALIDA
         below = self.client.post('/api/promociones/validar/', {
             'code': 'GRATIS25', 'subtotal': '24999.00', 'shipping': '4500.00',
         }, format='json')
@@ -165,7 +164,6 @@ class PromocionesAdminTests(TestCase):
         self.assertEqual(below.data['error']['codigo'], 'PROMOCION_INVALIDA')
         self.assertIn('25000', below.data['mensaje'])
 
-        # Subtotal exactamente igual al mínimo -> aplica envío gratis ($0.00)
         exact = self.client.post('/api/promociones/validar/', {
             'code': ' gratis25 ', 'subtotal': '25000.00', 'shipping': '4500.00',
         }, format='json')
@@ -174,7 +172,6 @@ class PromocionesAdminTests(TestCase):
         self.assertEqual(exact.data['data']['discount'], '0.00')
         self.assertEqual(exact.data['data']['shipping'], '0.00')
 
-        # Subtotal superior al mínimo -> aplica envío gratis ($0.00)
         above = self.client.post('/api/promociones/validar/', {
             'code': 'GRATIS25', 'subtotal': '40000.00', 'shipping': '4500.00',
         }, format='json')
@@ -211,7 +208,6 @@ class PromocionesAdminTests(TestCase):
             }
             repo.decrease_stock.return_value = True
 
-            # 1 unidad ($15.000 < $30.000) -> Checkout rechaza y no descuenta stock ni crea pedido
             under_min = self.client.post('/api/checkout/pedidos/', {
                 'clave_checkout': str(uuid4()),
                 'items': [{'producto_id': 'prod-1', 'sku': 'SKU-1', 'cantidad': 1}],
@@ -224,7 +220,6 @@ class PromocionesAdminTests(TestCase):
             self.assertFalse(Pedido.objects.exists())
             repo.decrease_stock.assert_not_called()
 
-            # 2 unidades ($30.000 == $30.000) -> Checkout aprueba y deja costo_envio en 0.00
             meets_min = self.client.post('/api/checkout/pedidos/', {
                 'clave_checkout': str(uuid4()),
                 'items': [{'producto_id': 'prod-1', 'sku': 'SKU-1', 'cantidad': 2}],

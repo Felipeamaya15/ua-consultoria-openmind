@@ -29,7 +29,6 @@ mongo_available = False
 try:
     get_mongo_client().admin.command('ping')
     mongo_available = True
-    # Esquema efímero creado directamente, sin manage.py migrate ni historial SQL.
     with connection.schema_editor() as schema:
         for model in apps.get_models():
             if model._meta.managed and not model._meta.proxy:
@@ -45,8 +44,6 @@ try:
         'apps.core.test_variante_atributos', 'apps.core.test_delivery', 'apps.core.test_estados_pedido',
         'apps.shipping.tests', 'apps.shipping.test_cotizacion_errores',
     ])
-    # Este caso llama explícitamente código de una migración histórica. No ejecutar
-    # ni siquiera esa función de datos durante esta auditoría sin migraciones.
     import unittest
     def without_migration_cases(tests):
         result = unittest.TestSuite()
@@ -59,7 +56,6 @@ try:
     result = runner.run_suite(without_migration_cases(suite))
     exit_code = runner.suite_result(suite, result)
 finally:
-    # Solo la base temporal elegida por este proceso, jamás la base de negocio.
     if mongo_available:
         get_mongo_client().drop_database(settings.MONGO_DB_NAME)
     runner.teardown_test_environment()

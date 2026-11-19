@@ -90,22 +90,18 @@ class LegalPagesAPITestCase(APITestCase):
             self.assertEqual(response.status_code, status.HTTP_200_OK, f"Fallo al consultar {endpoint}")
             self.assertEqual(response.data['data']['title'], title_expected)
 
-        # Consulta con tipo inválido devuelve 404
         bad_response = self.client.get('/api/legal/invalido/')
         self.assertEqual(bad_response.status_code, status.HTTP_404_NOT_FOUND)
 
     def test_configuracion_admin_requiere_propietario(self):
         """Verifica que usuarios anónimos o clientes no puedan acceder a la configuración del editor."""
-        # Anónimo
         response = self.client.get('/api/legal/configuracion/')
         self.assertIn(response.status_code, [status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN])
 
-        # Usuario no propietario
         self.client.credentials(HTTP_AUTHORIZATION=f'Token {self.token_otro.key}')
         response_otro = self.client.get('/api/legal/configuracion/')
         self.assertEqual(response_otro.status_code, status.HTTP_403_FORBIDDEN)
 
-        # Propietario autorizado
         self.client.credentials(HTTP_AUTHORIZATION=f'Token {self.token_propietario.key}')
         response_owner = self.client.get('/api/legal/configuracion/')
         self.assertEqual(response_owner.status_code, status.HTTP_200_OK)
@@ -124,10 +120,8 @@ class LegalPagesAPITestCase(APITestCase):
         res = self.client.put('/api/legal/configuracion/', payload, format='json')
         self.assertEqual(res.status_code, status.HTTP_200_OK)
         self.assertEqual(res.data['data']['terms']['draft'], nuevo_borrador)
-        # Lo publicado debe seguir siendo el original
         self.assertNotEqual(res.data['data']['terms']['published'], nuevo_borrador)
 
-        # La consulta pública todavía no debe ver el borrador
         public_res = self.client.get('/api/legal/terms/')
         self.assertNotIn('Texto aún no publicado', public_res.data['data']['published'])
 
@@ -146,7 +140,6 @@ class LegalPagesAPITestCase(APITestCase):
         self.assertEqual(res.data['data']['terms']['published'], texto_publicado)
         self.assertEqual(res.data['data']['terms']['draft'], texto_publicado)
 
-        # Consulta pública ahora muestra el texto actualizado
         public_res = self.client.get('/api/legal/terms/')
         self.assertIn('Condiciones vigentes para compras online', public_res.data['data']['published'])
 
@@ -208,10 +201,8 @@ class LegalPagesAPITestCase(APITestCase):
         """Verifica la acción de restaurar plantilla base en el borrador."""
         self.client.credentials(HTTP_AUTHORIZATION=f'Token {self.token_propietario.key}')
 
-        # Modificamos el borrador primero
         self.client.put('/api/legal/configuracion/', {'tipo': 'terms', 'draft': 'Texto temporal', 'accion': 'draft'}, format='json')
 
-        # Restauramos
         res = self.client.put('/api/legal/configuracion/', {'tipo': 'terms', 'accion': 'restore'}, format='json')
         self.assertEqual(res.status_code, status.HTTP_200_OK)
         self.assertEqual(res.data['data']['terms']['draft'], TERMS_DEFAULT)
@@ -231,7 +222,6 @@ class LegalPagesAPITestCase(APITestCase):
         """Implementar la creación de contenido legal: POST responde 201 CREATED."""
         self.client.credentials(HTTP_AUTHORIZATION=f'Token {self.token_propietario.key}')
 
-        # 1. Creación en /api/legal/configuracion/
         payload = {
             'tipo': 'terms',
             'title': 'Términos Oficiales 2026',
@@ -244,7 +234,6 @@ class LegalPagesAPITestCase(APITestCase):
         self.assertEqual(res.data['data']['terms']['title'], 'Términos Oficiales 2026')
         self.assertEqual(res.data['data']['terms']['draft'], '**1. Cláusula inicial**\n\nTexto de prueba creado.')
 
-        # 2. Creación en /api/legal/
         payload_privacy = {
             'tipo': 'privacy',
             'title': 'Privacidad Personalizada',
@@ -258,7 +247,6 @@ class LegalPagesAPITestCase(APITestCase):
         """Implementar la actualización del contenido legal: PUT y PATCH responden 200 OK."""
         self.client.credentials(HTTP_AUTHORIZATION=f'Token {self.token_propietario.key}')
 
-        # PUT
         payload_put = {
             'tipo': 'refund',
             'draft': '**1. Reembolsos actualizados**\n\nNueva política.',
@@ -271,7 +259,6 @@ class LegalPagesAPITestCase(APITestCase):
         self.assertEqual(res_put.data['data']['refund']['draft'], '**1. Reembolsos actualizados**\n\nNueva política.')
         self.assertEqual(res_put.data['data']['refund']['title'], 'Política de Reembolso Express')
 
-        # PATCH
         payload_patch = {
             'tipo': 'refund',
             'draft': '**1. Reembolsos parcheados**\n\nVersión parcheada.',
@@ -284,7 +271,6 @@ class LegalPagesAPITestCase(APITestCase):
         """Implementar la publicación de contenido legal: endpoint dedicado POST responde 200 OK y refleja en público."""
         self.client.credentials(HTTP_AUTHORIZATION=f'Token {self.token_propietario.key}')
 
-        # Publicar vía /api/legal/configuracion/publicar/
         payload_pub = {
             'tipo': 'privacy',
             'content': '**1. Política Oficial Publicada**\n\nVisible inmediatamente en la tienda.',
@@ -294,12 +280,10 @@ class LegalPagesAPITestCase(APITestCase):
         self.assertEqual(res_pub.data['mensaje'], 'Contenido legal publicado correctamente.')
         self.assertEqual(res_pub.data['data']['privacy']['published'], payload_pub['content'])
 
-        # Verificar en endpoint público
         res_public = self.client.get('/api/legal/privacy/')
         self.assertEqual(res_public.status_code, status.HTTP_200_OK)
         self.assertEqual(res_public.data['data']['published'], payload_pub['content'])
 
-        # Publicar vía /api/legal/<tipo>/publicar/
         res_pub_tipo = self.client.post(
             '/api/legal/terms/publicar/',
             {'content': '**1. Términos Vía URL Específica**\n\nPublicado directo.'},
@@ -402,14 +386,12 @@ class LegalPagesAPITestCase(APITestCase):
             self.assertIsNotNone(item['fecha_vigencia'])
             self.assertNotIn('draft', item, 'La consulta de versión vigente jamás debe exponer borradores.')
 
-        # Verificar alias /api/legal/version-vigente/
         res_alias = self.client.get('/api/legal/version-vigente/')
         self.assertEqual(res_alias.status_code, status.HTTP_200_OK)
         self.assertEqual(res_alias.data['data']['terms']['title'], 'Términos y Condiciones')
 
     def test_consulta_version_vigente_por_tipo_y_alias(self):
         """Implementar la consulta de la versión vigente por tipo específico, alias y query params."""
-        # Consulta por URL canónica y en español
         test_cases = [
             ('/api/legal/vigente/terms/', 'terms', 'Términos y Condiciones'),
             ('/api/legal/vigente/terminos/', 'terms', 'Términos y Condiciones'),
@@ -434,23 +416,19 @@ class LegalPagesAPITestCase(APITestCase):
             self.assertEqual(data['estado'], 'vigente')
             self.assertIn('content', data)
 
-        # Consulta con query param ?tipo=terms
         res_param = self.client.get('/api/legal/vigente/?tipo=refund')
         self.assertEqual(res_param.status_code, status.HTTP_200_OK)
         self.assertEqual(res_param.data['data']['tipo'], 'refund')
 
-        # Consulta con tipo no existente devuelve 404
         bad_res = self.client.get('/api/legal/vigente/tipo_inexistente/')
         self.assertEqual(bad_res.status_code, status.HTTP_404_NOT_FOUND)
         self.assertFalse(bad_res.data['exito'])
 
     def test_consulta_version_vigente_incrementa_version_al_publicar(self):
         """La versión vigente incrementa su número de versión al publicar nuevo contenido."""
-        # 1. Versión inicial es 1
         res_v1 = self.client.get('/api/legal/vigente/terms/')
         self.assertEqual(res_v1.data['data']['version'], 1)
 
-        # 2. Publicar nuevo contenido
         self.client.credentials(HTTP_AUTHORIZATION=f'Token {self.token_propietario.key}')
         nuevo_texto_v2 = "**1. Cláusula Actualizada v2**\n\nNuevos términos vigentes 2026."
         pub_res = self.client.post(
@@ -460,7 +438,6 @@ class LegalPagesAPITestCase(APITestCase):
         )
         self.assertEqual(pub_res.status_code, status.HTTP_200_OK)
 
-        # 3. La consulta de la versión vigente ahora reporta versión 2
         res_v2 = self.client.get('/api/legal/vigente/terms/')
         self.assertEqual(res_v2.status_code, status.HTTP_200_OK)
         self.assertEqual(res_v2.data['data']['version'], 2)
@@ -468,7 +445,6 @@ class LegalPagesAPITestCase(APITestCase):
         self.assertEqual(res_v2.data['data']['published'], nuevo_texto_v2)
         self.assertTrue(res_v2.data['data']['vigente'])
 
-        # 4. Publicar de nuevo genera versión 3
         nuevo_texto_v3 = "**1. Cláusula Actualizada v3**\n\nTercera versión vigente."
         self.client.post(
             '/api/legal/terms/publicar/',
@@ -481,7 +457,6 @@ class LegalPagesAPITestCase(APITestCase):
 
     def test_consulta_version_vigente_no_expone_borradores(self):
         """Verifica que la versión vigente se mantiene inmutable ante cambios en borradores."""
-        # Publicar una versión oficial conocida
         self.client.credentials(HTTP_AUTHORIZATION=f'Token {self.token_propietario.key}')
         self.client.post(
             '/api/legal/privacy/publicar/',
@@ -489,14 +464,12 @@ class LegalPagesAPITestCase(APITestCase):
             format='json'
         )
 
-        # Guardar un borrador de prueba no publicado
         self.client.put(
             '/api/legal/configuracion/',
             {'tipo': 'privacy', 'draft': '**1. Borrador Secreto**\n\nNo debe verse en la versión vigente.', 'accion': 'draft'},
             format='json'
         )
 
-        # La consulta de la versión vigente debe seguir mostrando el texto publicado oficial
         res = self.client.get('/api/legal/vigente/privacy/')
         self.assertEqual(res.status_code, status.HTTP_200_OK)
         self.assertIn('Texto público vigente', res.data['data']['content'])

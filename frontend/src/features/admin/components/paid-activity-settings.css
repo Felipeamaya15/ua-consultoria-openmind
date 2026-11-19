@@ -1,4 +1,4 @@
-/* Scoped to owner editor; no global theme changes. */
+
 .paid-sale-editor {border:1px solid #93a9cb!important;border-radius:12px;padding:16px!important;display:grid!important;gap:14px!important;background:var(--card,#fff);color:var(--foreground,#172033);}
 .paid-sale-heading strong {font-size:1.1rem;font-weight:700;}.paid-sale-heading p,.paid-sale-price p {font-size:.85rem;line-height:1.45;margin:5px 0;}
 .paid-sale-validation {border:1px solid;padding:12px 14px;border-radius:9px;font-size:.88rem;line-height:1.5;}.paid-sale-validation strong {display:block;font-size:.94rem;}.paid-sale-validation ul {list-style:disc;padding-left:20px;margin:6px 0 0;}.paid-sale-validation li {margin:3px 0;}

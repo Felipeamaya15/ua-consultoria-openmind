@@ -17,28 +17,28 @@ if(!fontFile)throw new Error('Define MARKETING_TEST_FONT con la fuente de QA Plu
     const art=page.locator('.marketing-art');await art.waitFor();
     await button('Textos');await page.getByLabel('Encabezado adicional (opcional)',{exact:true}).fill('Diseñado para acompañarte en cada nueva aventura');
     await page.getByRole('radio',{name:/Historia vertical/}).check();
-    // Fuente real de Google Fonts, embebida de forma determinista desde la carpeta externa de QA.
+
     await page.addStyleTag({content:`@font-face{font-family:'Plus Jakarta Sans';src:url(data:font/ttf;base64,${fs.readFileSync(fontFile).toString('base64')}) format('truetype');font-style:normal;font-weight:200 800;}`});
     await page.getByLabel('Tipografía de la publicación').selectOption('jakarta');
     await page.evaluate(async()=>{await document.fonts.load('700 20px "Plus Jakarta Sans"');await document.fonts.ready;});
     let event=page.waitForEvent('download');await button('Descargar PNG');await(await event).saveAs(path.join(out,'fuente-web-texto-largo.png'));
-    // La aplicación espera las fuentes y no entrega un archivo mientras siguen pendientes.
+
     await page.evaluate(()=>{window.qaLoad=FontFaceSet.prototype.load;const hold=new Promise(resolve=>window.qaRelease=resolve);FontFaceSet.prototype.load=function(...args){return hold.then(()=>window.qaLoad.apply(this,args));};});
     let count=downloads;event=page.waitForEvent('download');await button('Descargar PNG');await page.waitForTimeout(200);assert.equal(downloads,count);assert(await page.getByRole('button',{name:'Descargar PNG',exact:true}).isDisabled());
     await page.evaluate(()=>{FontFaceSet.prototype.load=window.qaLoad;window.qaRelease();});await(await event).saveAs(path.join(out,'espera-fuentes.png'));
     await page.evaluate(()=>{window.qaLoad=FontFaceSet.prototype.load;FontFaceSet.prototype.load=()=>Promise.reject(new Error('font failed'));});
     count=downloads;await button('Descargar PNG');await page.getByRole('alert').filter({hasText:'No pudimos cargar la fuente'}).waitFor();assert.equal(downloads,count);
     await page.evaluate(()=>FontFaceSet.prototype.load=window.qaLoad);
-    // También espera imágenes y evita codificaciones vacías.
+
     await page.evaluate(()=>{window.qaDecode=HTMLImageElement.prototype.decode;const hold=new Promise(resolve=>window.qaRelease=resolve);HTMLImageElement.prototype.decode=function(){return hold.then(()=>window.qaDecode.call(this));};});
     count=downloads;event=page.waitForEvent('download');await button('Descargar JPG');await page.waitForTimeout(200);assert.equal(downloads,count);
     await page.evaluate(()=>{HTMLImageElement.prototype.decode=window.qaDecode;window.qaRelease();});await(await event).saveAs(path.join(out,'espera-imagenes.jpg'));
     await page.evaluate(()=>{window.qaToBlob=HTMLCanvasElement.prototype.toBlob;HTMLCanvasElement.prototype.toBlob=function(cb){cb(new Blob([],{type:'image/png'}));};});
     count=downloads;await button('Descargar PNG');await page.getByRole('alert').filter({hasText:'archivo completo'}).waitFor();assert.equal(downloads,count);
     await page.evaluate(()=>HTMLCanvasElement.prototype.toBlob=window.qaToBlob);
-    // Cancelar una navegación conserva el diseño; la confirmación de salida es accesible nativa.
+
     permit=false;const cancelled=page.waitForEvent('dialog');await page.getByRole('link',{name:'Administrar productos →',exact:true}).click();await cancelled;await settleDialog;assert(page.url().includes('/marketing'));permit=true;
-    // Los controles nuevos y los nombres largos no generan desplazamiento horizontal.
+
     const longName='Colección para acompañarte en cada aventura de primavera y verano';
     await page.getByLabel('Nombre del borrador',{exact:true}).fill(longName);await button('Guardar borrador');await button('Mis borradores');
     for(const width of [375,768]){
@@ -48,14 +48,14 @@ if(!fontFile)throw new Error('Define MARKETING_TEST_FONT con la fuente de QA Plu
       await downloaded.saveAs(path.join(out,`exportacion-${width}.png`));
     }
     await page.setViewportSize({width:1440,height:1000});await button('Mis borradores');
-    // Producto con nombre largo: fuente, imagen y precio permanecen completos en el archivo.
+
     let extreme=false;
     await page.route('**/api/catalog/productos/admin/listado/',async route=>{const response=await route.fetch(),body=await response.json();body.data[0].nombre=extreme?'Texto comercial excepcionalmente extenso '.repeat(400):'Mochila de materiales resistentes con bolsillos interiores y detalles especiales para acompañarte en cada recorrido de la ciudad';await route.fulfill({json:body});});
     await button('Actualizar datos');await page.waitForTimeout(300);assert.equal(await art.getAttribute('data-blocked'),'false');
     event=page.waitForEvent('download');await button('Descargar PNG');await(await event).saveAs(path.join(out,'producto-nombre-largo.png'));
     extreme=true;await button('Actualizar datos');await page.getByText('Esta combinación no cabe de forma legible.',{exact:false}).waitFor();
     count=downloads;await button('Descargar PNG');await page.getByRole('alert').filter({hasText:'Ajusta el contenido:'}).waitFor();assert.equal(downloads,count);
-    // Una sesión que cambia durante una exportación pendiente cancela el archivo anterior.
+
     extreme=false;await button('Actualizar datos');await page.waitForTimeout(250);
     await page.evaluate(()=>{window.qaLoad=FontFaceSet.prototype.load;const hold=new Promise(resolve=>window.qaRelease=resolve);FontFaceSet.prototype.load=function(...args){return hold.then(()=>window.qaLoad.apply(this,args));};});
     count=downloads;await button('Descargar PNG');await page.evaluate(()=>{localStorage.setItem('token','qa-owner-eight');window.dispatchEvent(new StorageEvent('storage',{key:'token'}));});
@@ -63,4 +63,3 @@ if(!fontFile)throw new Error('Define MARKETING_TEST_FONT con la fuente de QA Plu
     console.log('OK adicionales: fuente web real y textos largos, espera de fuentes e imágenes, errores sin descarga, PNG/JPG no vacíos, navegación cancelada, 375/768 px, nombres largos, bloqueo y sesión cambiada durante exportación.');
   }finally{await context.close();await browser.close();}
 })().catch(error=>{console.error(error);process.exitCode=1;});
-

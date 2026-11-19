@@ -12,7 +12,7 @@ export const WEB_FONTS = {
 export type WebFont = keyof typeof WEB_FONTS;
 export const webFontStack = (key: WebFont) => `"${WEB_FONTS[key][0]}", ${WEB_FONTS[key][1] === 'Serif' ? 'Georgia, serif' : WEB_FONTS[key][1] === 'Monoespaciada' ? 'monospace' : 'sans-serif'}`;
 
-/** One stylesheet per requested family and document. No catalog-wide downloads. */
+
 export function loadFont(key: string, doc: Document) {
   const family = key === 'sans' ? 'Plus Jakarta Sans' : key === 'serif' ? 'DM Serif Display' : WEB_FONTS[key as WebFont]?.[0];
   if (!family || doc.querySelector(`link[data-openmind-font="${key}"]`)) return;

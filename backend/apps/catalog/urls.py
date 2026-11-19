@@ -2,12 +2,10 @@ from django.urls import path
 from apps.catalog.presentation.product_media import PublicProductVideoView
 
 from apps.catalog.presentation.views import (
-    # Catálogo público
     PublicProductListAPIView,
     PublicProductDetailAPIView,
     PublicProductAttributesAPIView,
     ValidarDisponibilidadAPIView,
-    # Administración de productos
     ProductoCreateView,
     ProductoAdminDetailView,
     ProductoUpdateView,
@@ -15,14 +13,11 @@ from apps.catalog.presentation.views import (
     ProductDeleteAPIView,
     ProductPermanentDeleteAPIView,
     ProductoAdminListView,
-    # Gestión de variantes
     ProductVariantsView,
     VarianteStockUpdateView,
     VariantPurchaseView,
-    # Carrito de compras
     CarritoItemsView,
     ModificarCantidadItemAPIView,
-    # Pasarelas de pago
     ConfiguracionTransbankView,
     IniciarPagoTransbankView,
     ConfirmarPagoTransbankView,
@@ -35,9 +30,6 @@ from apps.catalog.presentation.views import (
 urlpatterns = [
     path('productos/<str:slug>/video/', PublicProductVideoView.as_view(), name='producto-video-publico'),
     path('productos/admin/listado/', ProductoAdminDetailView.as_view(), name='producto-admin-list'),
-    # ==========================================
-    # 1. Catálogo Público
-    # ==========================================
     path(
         "productos/",
         PublicProductListAPIView.as_view(),
@@ -69,9 +61,6 @@ urlpatterns = [
         name="producto-disponibilidad",
     ),
 
-    # ==========================================
-    # 2. Administración de Productos
-    # ==========================================
     path(
         "productos/<str:id_producto>/admin/",
         ProductoAdminDetailView.as_view(),
@@ -98,9 +87,6 @@ urlpatterns = [
         name="producto-eliminar-definitivo",
     ),
 
-    # ==========================================
-    # 3. Variantes de Producto
-    # ==========================================
     path(
         "productos/<str:id_producto>/variantes/",
         ProductVariantsView.as_view(),
@@ -127,16 +113,11 @@ urlpatterns = [
         name="variante-compra",
     ),
 
-    # ==========================================
-    # 4. Flujo de Carrito de Compras
-    # ==========================================
-    # POST: Agregar producto o variante al carrito
     path(
         "carrito/items/",
         CarritoItemsView.as_view(),
         name="carrito-items-collection",
     ),
-    # PATCH: Modificar cantidad de un ítem existente
     path(
         "carrito/items/<int:id_item_carrito>/",
         ModificarCantidadItemAPIView.as_view(),
@@ -144,9 +125,6 @@ urlpatterns = [
     ),
 
 
-    # ==========================================
-    # 5. Configuración y Pasarelas de Pagos
-    # ==========================================
     path(
         "tiendas/<int:id_tienda>/configuracion/transbank/",
         ConfiguracionTransbankView.as_view(),

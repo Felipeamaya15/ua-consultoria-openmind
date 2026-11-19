@@ -10,7 +10,7 @@ import type { LandingConfig } from '../../landing/types/landing.types';
 export interface EditorDocument {
   paletteId?: string | null;
   blockStyles?: BlockStyles;
-  /** Shared landing draft, persisted through the existing landing endpoint. */
+
   landing?: LandingConfig;
   storeOverrides: VisualConfigOverrides;
   overrides: VisualConfigOverrides;
@@ -18,7 +18,7 @@ export interface EditorDocument {
   templateColors: LegacyThemeColors;
   images: Record<string, ThemeImageSetting>;
 }
-/** Device tools write visual leaves only; tablet edits do not spill into mobile. */
+
 export function editScopedProperty(document: EditorDocument, template: TemplateId, path: string, value: string | number | boolean, scope: 'all' | 'device' = 'all', viewport: 'desktop' | 'tablet' | 'mobile' = 'desktop'): EditorDocument {
   if (scope === 'device' && path.includes('.columns.')) return editProperty(document, path, value);
   if (scope === 'device' && viewport === 'desktop' && !path.startsWith('responsive.')) {
@@ -39,7 +39,7 @@ export function editScopedProperty(document: EditorDocument, template: TemplateI
     return typeof mobile === 'string' || typeof mobile === 'number' || typeof mobile === 'boolean' ? editProperty(next, `responsive.mobile.${leaf}`, mobile) : next;
   }
   if (path.startsWith('responsive.')) return editProperty(document, path, value);
-  // An explicit general edit re-establishes inheritance for this property only.
+
   let next = document;
   for (const device of ['tablet', 'mobile']) next = resetProperty(next, `responsive.${device}.${path}`);
   next = editProperty(next, path, value);
@@ -56,8 +56,8 @@ function colors(value: unknown): LegacyThemeColors {
   const record = isRecord(value) ? value : {};
   return Object.fromEntries(colorKeys.filter(key => typeof record[key] === 'string').map(key => [key, record[key]]));
 }
-// OPENMIND_CAROUSEL_PRESERVE_V3
-/** Las nuevas propiedades del carrusel no deben perderse al fusionar apariencia. */
+
+
 function carouselFields(hero?: VisualConfigOverrides['hero']) {
   return {
     ...(hero?.productImageMode !== undefined ? {productImageMode: hero.productImageMode} : {}),
@@ -99,7 +99,7 @@ export function readPath(value: unknown, path: string): unknown {
   return path.split('.').reduce<unknown>((current, key) => isRecord(current) ? current[key] : undefined, value);
 }
 export function editProperty(document: EditorDocument, path: string, value: string | number | boolean): EditorDocument {
-  // Preserva las propiedades del carrusel sin pasar por filtros de claves del resolvedor.
+
   if (/^hero\.(productImageMode|productImageInterval|productImageTransition|catalogProductImageMode|catalogProductImageInterval|catalogProductImageTransition|detailProductImageTransition|carouselMode|carouselInterval|carouselTransition|carouselIndicators|importedEffectPresets|hoverFeaturedMotion|hoverFeaturedLight|hoverCatalogMotion|hoverCatalogLight|hoverCategoryMotion|hoverCategoryLight)$/.test(path)) {
     const field = path.slice('hero.'.length);
     return {...document, overrides: {...document.overrides, hero: {...document.overrides.hero, [field]: value}} as VisualConfigOverrides};
@@ -126,7 +126,7 @@ export function restorePreset(document: EditorDocument): EditorDocument {
   return { ...document, overrides: {}, storeOverrides: {}, storeColors: {}, templateColors: {}, blockStyles: {} };
 }
 export const isEditorDirty = (document: EditorDocument, baseline: EditorDocument) => JSON.stringify(document) !== JSON.stringify(baseline);
-/** Sparse legacy fields are deleted at the persistence boundary; repository rehydrates UI. */
+
 export function publishEditorDocument(config: AdminConfig, template: TemplateId, document: EditorDocument): AdminConfig {
   const next = { ...config, template, visualConfig: document.storeOverrides, themeEditor: { ...config.themeEditor, [template]: { ...config.themeEditor[template], visualConfig: document.overrides, images: document.images, ...(document.blockStyles ? {blockStyles:readBlockStyles(document.blockStyles)} : {}) } } };
   for (const key of colorKeys) {

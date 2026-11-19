@@ -18,7 +18,7 @@ export type RecentOrdersState =
   | { status: 'error'; message: string }
   | { status: 'ready'; orders: RecentOrder[] };
 
-/** Tabla de las últimas órdenes: solo dibuja el estado que recibe (cargando, error, vacío o lista). */
+
 export function RecentOrdersView({ state, onRetry }: { state: RecentOrdersState; onRetry: () => void }) {
   return (
     <div className="bg-white border border-[var(--border)] rounded-2xl p-6 shadow-sm">
@@ -103,7 +103,7 @@ function errorMessage(error: unknown): string {
   return GENERIC_ERROR;
 }
 
-/** Últimas órdenes registradas de la tienda, consultadas al servidor (SCRUM-371). */
+
 export default function RecentOrders() {
   const [state, setState] = useState<RecentOrdersState>({ status: 'loading' });
   const [attempt, setAttempt] = useState(0);

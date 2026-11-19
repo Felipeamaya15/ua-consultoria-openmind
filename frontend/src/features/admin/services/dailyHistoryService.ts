@@ -33,7 +33,7 @@ async function getSerie(path: string, from: string, to: string, signal?: AbortSi
   return { serie, data: body.data };
 }
 
-/** Días AAAA-MM-DD entre dos fechas, ambas incluidas. */
+
 export function daysBetween(from: string, to: string): string[] {
   const days: string[] = [];
   for (let time = Date.parse(`${from}T00:00:00Z`); time <= Date.parse(`${to}T00:00:00Z`); time += 86_400_000) {

@@ -11,14 +11,12 @@ from django.utils import timezone
 
 logger = logging.getLogger(__name__)
 
-# Pasarela en linea: el comprador paga en minutos y Webpay avisa del resultado, asi que el plazo es corto.
 MEDIOS_EN_LINEA = ('Transbank',)
-# Pago manual: el comprador necesita tiempo para transferir y el aviso depende de la tienda o de Linkify.
 MEDIOS_MANUALES = ('Transferencia', 'Linkify')
 MEDIOS_EXTERNOS = ('PayPal', 'MercadoPago')
 MEDIOS_CON_CALLBACK = ('TUU',)
 MEDIOS_EXPIRABLES = MEDIOS_EN_LINEA + MEDIOS_EXTERNOS + MEDIOS_CON_CALLBACK + MEDIOS_MANUALES
-MOTIVO_PLAZO_VENCIDO = 'plazo_vencido' 
+MOTIVO_PLAZO_VENCIDO = 'plazo_vencido'
 
 
 def vigencia_token():
@@ -46,14 +44,14 @@ def vence_en(pedido):
     from apps.landing.external_activity_orders import is_external, deadline as external_deadline
     if is_external(pedido): return external_deadline(pedido)
     if (pedido.entrega or {}).get('origen') == 'actividad_transferencia_v1':
-        return None  # El propietario debe conciliar el banco antes de liberar.
+        return None
     if isinstance(pedido.entrega, dict) and pedido.entrega.get('origen') == 'actividad_unificada_qa_v1':
         if pedido.estado != 'pendiente':
             return None
         from apps.landing.models import ReservaActividadPagada
         return ReservaActividadPagada.objects.filter(tienda_id=pedido.tienda_id, clave_checkout=pedido.clave_checkout, estado='en_pago').order_by('vence').values_list('vence',flat=True).first()
     if isinstance(pedido.entrega, dict) and pedido.entrega.get('origen') == 'actividad_prueba_v1':
-        return None  # ruta de prueba anterior: no modificar pedidos históricos
+        return None
     if pedido.estado != 'pendiente' or pedido.medio_pago not in MEDIOS_EXPIRABLES or not pedido.fecha_creacion:
         return None
     plazo = plazo_pedido_pendiente(pedido)
@@ -63,7 +61,7 @@ def vence_en(pedido):
 def token_webpay_vigente(pedido, ahora=None):
     if not (pedido.webpay_token and pedido.webpay_url):
         return False
-    inicio = pedido.webpay_iniciado_en or pedido.fecha_creacion  
+    inicio = pedido.webpay_iniciado_en or pedido.fecha_creacion
     return (ahora or timezone.now()) - inicio < vigencia_token()
 
 
@@ -97,7 +95,7 @@ def _devolver_stock(pedido_pk, tienda_id, lineas):
     repositorio = ProductRepository()
     for linea in lineas:
         if not linea['producto_mongo_id']:
-            continue 
+            continue
         try:
             if not repositorio.restore_stock(tienda_id, linea['producto_mongo_id'], linea['sku'], linea['cantidad']):
                 raise RuntimeError('No se encontro la reserva a restituir.')
@@ -188,19 +186,16 @@ def _procesar_pedido(pedido_pk, consultar_pasarela=True):
 def _avisar_cancelacion(pedido):
     from apps.core.infrastructure.notificaciones_pedido import notificar_cambio_de_estado
 
-    notificar_cambio_de_estado(pedido, 'pendiente')  # nunca lanza
+    notificar_cambio_de_estado(pedido, 'pendiente')
 
 
 def _candidatos(limite=None, externos=True, **filtros):
     from apps.core.models import Pedido
 
     nunca = Q(medio_pago__in=MEDIOS_MANUALES, tienda__horas_expiracion_pedido_manual=0)
-    # QA has no money in flight: use the real reservation's 15-minute deadline.
     qa = Q(entrega__contains={'origen':'actividad_unificada_qa_v1'})
     from apps.landing.models import ReservaActividadPagada
     expired_qa = ReservaActividadPagada.objects.filter(estado='en_pago', vence__lte=timezone.now()).values('clave_checkout')
-    # JSON key lookup negation excludes missing keys (SQL UNKNOWN).
-    # Containment returns false for ordinary orders without an origin.
     webpay = (Q(entrega__contains={'origen': 'actividad_webpay_v1'})
               | Q(entrega__contains={'origen': 'actividad_pasarela_v1'}))
     normal = Q(fecha_creacion__lte=timezone.now()-timedelta(hours=1)) & ~nunca & ~qa & ~webpay

@@ -23,7 +23,7 @@ export function FlexibleSectionEditor({
   fullScreen?: boolean;
 }) {
   const elements = section.componentes || [];
-  // OPENMIND_PERSIST_PREVIEW_V1
+
   const [kind, setKind] = useState<ElementKind>('titulo');
   const [picker, setPicker] = useState<string | null>(null);
 
@@ -43,7 +43,7 @@ export function FlexibleSectionEditor({
     try {
       localStorage.setItem(previewKey, next ? 'visible' : 'hidden');
     } catch {
-      // La vista previa sigue funcionando sin almacenamiento.
+
     }
   }
   const [resources, setResources] = useState<MediaResource[] | null>(null), [loading, setLoading] = useState(false), [error, setError] = useState(''), [attempt, setAttempt] = useState(0);

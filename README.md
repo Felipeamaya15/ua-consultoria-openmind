@@ -52,7 +52,7 @@ Este proyecto consiste en el diseño, desarrollo e implementación de una plataf
 - **Pruebas y Calidad:** `node --test` y `tsc` en frontend, `Django TestCase` en backend, y validación de APIs con Postman
 - **Entorno de Desarrollo:** Visual Studio Code
 
-> **Instalación:** requisitos en [`docs/requisitos-instalacion.md`](docs/requisitos-instalacion.md) y procedimiento en [`EJECUCION_LOCAL.md`](EJECUCION_LOCAL.md).
+> **Instalación:** requisitos en [`docs/instalacion-y-configuracion/requisitos-instalacion.md`](docs/instalacion-y-configuracion/requisitos-instalacion.md) y procedimiento en [`EJECUCION_LOCAL.md`](EJECUCION_LOCAL.md).
 > **Documentacion tecnica:** punto de entrada en [`docs/DOCUMENTACION_TECNICA.md`](docs/DOCUMENTACION_TECNICA.md).
 
 ---

@@ -35,7 +35,6 @@ class RegisterUserUseCase:
         self.user_repository = user_repository
 
     def execute(self, dto: RegisterUserDTO) -> UserEntity:
-        # Validación de política de contraseñas capturada como excepción de dominio
         try:
             validar_password_segura(dto.password)
         except ValueError as err:
@@ -73,7 +72,6 @@ class GoogleLoginUseCase:
         self.user_repository = user_repository
 
     def execute(self, token: str) -> UserEntity:
-        # Consultamos el perfil del usuario en Google usando el Access Token
         try:
             response = requests.get(
                 "https://www.googleapis.com/oauth2/v3/userinfo",
@@ -94,15 +92,12 @@ class GoogleLoginUseCase:
         if not email:
             raise InvalidCredentialsException("El token de Google no contiene un email válido.")
 
-        # Buscar si el usuario ya existe en Postgres
         user = self.user_repository.get_by_email(email)
 
         if not user:
-            # Si no existe, lo registramos con una contraseña aleatoria segura
             alphabet = string.ascii_letters + string.digits + string.punctuation
             random_password = ''.join(secrets.choice(alphabet) for _ in range(20))
 
-            # Usamos el email como username por defecto
             username = email.split('@')[0]
             if self.user_repository.get_by_username(username):
                 username = f"{username}_{secrets.token_hex(4)}"

@@ -5,9 +5,9 @@ import { guestCartKey } from '../services/guestCartStorage';
 import { isActiveEditorPreview } from '../visual/pages';
 import { validActivityId, canSelectPaidQuote, type PaidQuote } from '../../landing/services/paidActivityService';
 
-// Preview deliberately limited to local development; no payment or seat hold.
+
 export function activityCartPreviewEnabled() {
-  return typeof window !== 'undefined' && !isActiveEditorPreview(); // El servidor autoriza el modo de compra.
+  return typeof window !== 'undefined' && !isActiveEditorPreview();
 }
 export interface ActivityCartItem {
   sectionId: string; title: string; quantity: number; price: number; version: string; start: string; zone: string;
@@ -28,14 +28,14 @@ function read(key:string|null):ActivityCartItem[] {
   if(!key)return EMPTY;
   if(!cache.has(key)){
     let rows:ActivityCartItem[]=[];
-    try{const raw:unknown=JSON.parse(sessionStorage.getItem(key)||'[]');if(Array.isArray(raw))rows=raw.filter(validItem).filter((item,i,all)=>all.findIndex(x=>x.sectionId===item.sectionId)===i);}catch{/* no storage */}
+    try{const raw:unknown=JSON.parse(sessionStorage.getItem(key)||'[]');if(Array.isArray(raw))rows=raw.filter(validItem).filter((item,i,all)=>all.findIndex(x=>x.sectionId===item.sectionId)===i);}catch{}
     cache.set(key,rows);
   }
   return cache.get(key)||EMPTY;
 }
 function write(key:string,rows:ActivityCartItem[]) {
   cache.set(key,rows);
-  try{sessionStorage.setItem(key,JSON.stringify(rows));}catch{/* memory only */}
+  try{sessionStorage.setItem(key,JSON.stringify(rows));}catch{}
   window.dispatchEvent(new Event(event));
 }
 function subscribe(fn:()=>void){window.addEventListener(event,fn);return()=>window.removeEventListener(event,fn);}
@@ -43,7 +43,7 @@ export function useActivityCart(){
   const {identity}=useStoreIdentity();
   const base=guestCartKey(identity);
   const {token, scope}=useCartSession();
-  // Deliberately do not migrate the old shared key: owner of those rows is unknown.
+
   const key=activityCartPreviewEnabled()&&base&&scope?`${base}:activity-v2:${scope}`:null;
   const snapshot=useCallback(()=>read(key),[key]);
   const items=useSyncExternalStore(subscribe,snapshot,()=>EMPTY);
@@ -53,7 +53,7 @@ export function useActivityCart(){
     write(key,[...read(key).filter(x=>x.sectionId!==sectionId),item]);
   },[key,token]);
   const remove=useCallback((id:string)=>{if(key&&currentCartToken()===token)write(key,read(key).filter(x=>x.sectionId!==id));},[key,token]);
-  // Reducing a selection never requires a fresh quote: no seats are held at this stage.
+
   const reduce=useCallback((id:string)=>{
     if(!key||currentCartToken()!==token)return;
     const rows=read(key);

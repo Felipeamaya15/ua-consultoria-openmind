@@ -1,4 +1,4 @@
-// Real browser -> isolated Django -> dedicated PostgreSQL/MongoDB. No external publishing.
+
 const assert = require('node:assert/strict'), fs = require('node:fs'), path = require('node:path');
 const { chromium, request } = require(process.env.DASHBOARD_PLAYWRIGHT_MODULE || 'playwright');
 const out = process.env.SCRUM521_QA_OUTPUT;

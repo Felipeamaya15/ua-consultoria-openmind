@@ -251,17 +251,12 @@ export default function Catalog() {
     );
   }
 
-  /*
-   * ==========================================================
-   * PLANTILLA 4 — CATALOG / DARK EDITORIAL
-   * ==========================================================
-   */
 
   if (isCatalog) {
     return (
       <div data-catalog-page="catalog" data-visual-section={VISUAL_SECTION.catalog} data-visual-catalog className="bg-[var(--visual-background)] text-[var(--visual-text)] min-w-0">
         <section className="max-w-[1160px] mx-auto px-4 sm:px-5 pt-8 sm:pt-10 md:pt-14 pb-16 sm:pb-20 md:pb-28">
-          {/* CABECERA */}
+
           <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-5 sm:gap-7 mb-7 sm:mb-9">
             <div className="min-w-0">
               <p className="text-[var(--accent)] text-[10px] font-extrabold uppercase tracking-[0.16em] mb-3">
@@ -343,7 +338,7 @@ export default function Catalog() {
           </button>
 
           <div data-visual-part="catalogLayout" className="grid grid-cols-12 gap-5 md:gap-7 items-start">
-            {/* FILTROS */}
+
             <aside data-visual-part="catalogFilters" data-visual-open={filtersOpen}
               className={`col-span-12 md:col-span-3 min-w-0 ${
                 filtersOpen ? 'block' : 'hidden'
@@ -465,7 +460,7 @@ export default function Catalog() {
               </div>
             </aside>
 
-            {/* PRODUCTOS */}
+
             <main data-visual-part="catalogResults" className="col-span-12 md:col-span-9 min-w-0">
               {appliedFilters}
 
@@ -515,11 +510,6 @@ export default function Catalog() {
     );
   }
 
-  /*
-   * ==========================================================
-   * PLANTILLA 3 — VISUAL / VELTA
-   * ==========================================================
-   */
 
   if (isVisual) {
     return (
@@ -627,7 +617,7 @@ export default function Catalog() {
             <span aria-hidden="true">{filtersOpen ? '−' : '+'}</span>
           </button>
 
-          {/* FILTROS */}
+
           <div data-visual-part="catalogLayout" className="grid grid-cols-12 gap-5 md:gap-7 items-start">
             <aside
               data-visual-part="catalogFilters"
@@ -802,11 +792,6 @@ export default function Catalog() {
     );
   }
 
-  /*
-   * ==========================================================
-   * PLANTILLAS 1 Y 2
-   * ==========================================================
-   */
 
   return (
     <div
@@ -818,7 +803,7 @@ export default function Catalog() {
           : 'max-w-7xl mx-auto px-4 py-6 sm:py-8 min-w-0'
       }
     >
-      {/* CABECERA */}
+
 
       <div
         className={`
@@ -863,11 +848,9 @@ export default function Catalog() {
           </p>
         </div>
 
-        {/* Herramientas */}
 
         <div data-catalog-toolbar className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
 
-          {/* Buscar */}
 
           <div data-catalog-search className="relative w-full sm:w-auto">
             <Icon
@@ -909,7 +892,6 @@ export default function Catalog() {
             />
           </div>
 
-          {/* Orden */}
 
           <select
             aria-label="Ordenar productos"
@@ -940,7 +922,6 @@ export default function Catalog() {
             ))}
           </select>
 
-          {/* Grid / lista */}
 
           <div
             className={`
@@ -1001,7 +982,6 @@ export default function Catalog() {
         </div>
       </div>
 
-      {/* Filtros móvil */}
 
       <button
         type="button"
@@ -1026,7 +1006,6 @@ export default function Catalog() {
         Filtros{activeFiltersCount > 0 && ` (${activeFiltersCount})`} {filtersOpen ? '−' : '+'}
       </button>
 
-      {/* CONTENIDO */}
 
       <div data-visual-part="catalogLayout"
         className={`
@@ -1035,7 +1014,7 @@ export default function Catalog() {
           ${isMinimal ? 'gap-5 md:gap-7' : 'gap-6'}
         `}
       >
-        {/* FILTROS */}
+
 
         <aside data-visual-part="catalogFilters" data-visual-open={filtersOpen}
           className={`
@@ -1061,7 +1040,7 @@ export default function Catalog() {
               }
             `}
           >
-            {/* Encabezado fijo con Limpiar filtros */}
+
 
             <div
               className={`
@@ -1086,7 +1065,7 @@ export default function Catalog() {
             </div>
 
             <div className="flex-1 overflow-y-auto p-4">
-              {/* Categorías */}
+
 
               <p
                 className={`
@@ -1134,7 +1113,6 @@ export default function Catalog() {
                 ))}
               </div>
 
-              {/* Disponibilidad */}
 
               <div className="border-t border-[var(--border)] mt-4 pt-4">
                 <p className="text-xs font-semibold uppercase tracking-wider text-[var(--muted-foreground)] mb-3">
@@ -1177,7 +1155,6 @@ export default function Catalog() {
                 )}
               </div>
 
-              {/* Precio */}
 
               <div className="border-t border-[var(--border)] mt-4 pt-4">
                 <p className="text-xs font-semibold uppercase tracking-wider text-[var(--muted-foreground)] mb-3">
@@ -1249,7 +1226,6 @@ export default function Catalog() {
           </div>
         </aside>
 
-        {/* PRODUCTOS */}
 
         <main data-visual-part="catalogResults" className="col-span-12 md:col-span-9 min-w-0">
           {appliedFilters}

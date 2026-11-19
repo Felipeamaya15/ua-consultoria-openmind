@@ -90,7 +90,7 @@ test('failed or malformed writes cannot claim a successful save or refresh the p
   }
 });
 
-// Small hook runner executes the real card's event handlers and async state changes.
+
 let runtime;
 const hooks = {
   useState(initial) { const index = runtime.index++, instance = runtime; if (!(index in instance.slots)) instance.slots[index] = typeof initial === 'function' ? initial() : initial; return [instance.slots[index], value => { instance.slots[index] = typeof value === 'function' ? value(instance.slots[index]) : value; }]; },

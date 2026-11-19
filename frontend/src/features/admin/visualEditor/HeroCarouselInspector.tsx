@@ -33,7 +33,7 @@ const transitions = [
   { value: 'reveal', title: 'Revelar', description: 'Barrido horizontal' },
 ] as const;
 
-/** Los archivos viven en Página principal. Aquí solo se configura el comportamiento visual. */
+
 export function HeroCarouselInspector({ hero, imageCount, onEdit }: Props) {
   const mode = hero.carouselMode ?? 'automatic';
   const interval = hero.carouselInterval ?? 5;
@@ -183,7 +183,7 @@ export function HeroCarouselInspector({ hero, imageCount, onEdit }: Props) {
   );
 }
 
-// OPENMIND_PORTADA_UI_UNIFICADA_V1: control unico de espaciado dentro de Portada.
+
 export function HeroSpacingControl({ value, onChange }: { value: number; onChange: (value: number) => void }) {
   const gap = Math.min(72, Math.max(0, Math.round(value ?? 24)));
   return (

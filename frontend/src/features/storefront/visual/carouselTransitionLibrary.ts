@@ -1,8 +1,4 @@
-/**
- * Biblioteca cerrada de transiciones para las portadas OpenMind.
- * Las IDs están validadas; NO se ejecuta código CSS o JS importado por usuarios.
- * El carrusel público, el editor y el guardado comparten estos identificadores.
- */
+
 export type CarouselTransitionId =
   | 'fade' | 'slide' | 'zoom' | 'blur' | 'rise' | 'reveal'
   | 'curtain' | 'curtain-up' | 'drop' | 'flip'

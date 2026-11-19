@@ -1,4 +1,4 @@
-// Edge + real Django/PostgreSQL + restricted public HTTPS callback + local provider stand-in.
+
 const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
 const {chromium,request}=require(process.env.DASHBOARD_PLAYWRIGHT_MODULE||'playwright');
 const out=process.env.INSTAGRAM_QA_OUTPUT;
@@ -34,7 +34,7 @@ async function main(){
    const response=await route.fetch({maxRedirects:0});assert.equal(response.status(),302);
    oauth=new URL(response.headers().location);assert.equal(oauth.origin,'https://www.facebook.com');
    assert.equal(oauth.searchParams.get('config_id'),'100000000000002');assert(!oauth.searchParams.has('scope'));
-   // Simulate consent at the browser boundary; do not even navigate to the real Meta dialog.
+
    return route.fulfill({response,headers:{...response.headers(),location:oauth.searchParams.get('redirect_uri')+'?code=qa-browser-code&state='+encodeURIComponent(oauth.searchParams.get('state'))}});
   }
   if(u.origin==='https://www.facebook.com'&&u.pathname==='/dialog/oauth'){

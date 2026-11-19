@@ -3,7 +3,7 @@ import { LoadingState } from '../../../shared/components/states';
 import { AdminCard, Alert, Button, Input } from './ui';
 import { fetchOrderExpiration, saveOrderExpiration } from '../../storefront/services/storeInformationService';
 
-const MAX_HOURS = 720; // 30 días
+const MAX_HOURS = 720;
 type Draft = { online: string; manual: string };
 
 function parse(value: string, min: number): number | null {
@@ -12,7 +12,7 @@ function parse(value: string, min: number): number | null {
   return number >= min && number <= MAX_HOURS ? number : null;
 }
 
-/** Cuánto espera un pedido sin pagar antes de cancelarse y devolver su stock (SCRUM-509). Guarda aparte del resto del formulario de pagos. */
+
 export function OrderExpirationSettings() {
   const [draft, setDraft] = useState<Draft>({ online: '2', manual: '48' });
   const [saved, setSaved] = useState<Draft>({ online: '2', manual: '48' });

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 
 export const validTime = (value: string) => /^(?:[01]\d|2[0-3]):[0-5]\d$/.test(value);
 
-/** Selector explícito de horas y minutos en 24 h, independiente del idioma del navegador. */
+
 export default function TimePicker({ id, label, value, onChange, disabled = false, times, error, native = false, clock = false }: {
   id: string; label: string; value: string; onChange: (value: string) => void;
   disabled?: boolean; times?: string[]; error?: string; native?: boolean; clock?: boolean;

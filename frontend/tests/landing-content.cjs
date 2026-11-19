@@ -1,4 +1,4 @@
-// Ejecutar desde frontend: node tests/landing-content.cjs
+
 const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
@@ -32,7 +32,7 @@ function req(id) {
   if (id.endsWith('.css')) return {};
   if (id.includes('landingContent')) return load('src/features/landing/types/landingContent.ts');
   if (id.includes('useStorefrontTemplate')) return { useStorefrontTemplate: () => ({ template, route: p => `/plantilla/1/${p}`, isCatalog: template === 'catalog', isVisual: template === 'visual' }) };
-  if (id.includes('mockData')) return { formatPrice: String }; // Solo la función de formato, sin productos demo.
+  if (id.includes('mockData')) return { formatPrice: String };
   return new Proxy({}, { get: (_, key) => key });
 }
 function nodes(tree, result = []) {
@@ -57,7 +57,7 @@ state.landing.contenido.categorias.push('missing');
 assert.equal(hook().featured.length, 3);
 assert.equal(hook().categories.length, 2);
 state.landingProducts = products.slice(1);
-assert.equal(hook().featured.length, 2); // Un producto retirado no se sustituye.
+assert.equal(hook().featured.length, 2);
 
 for (const name of ['EditorialHome', 'MinimalHome', 'VisualHome', 'CatalogHome']) {
   const Component = load(`src/features/storefront/pages/${name}.tsx`).default;
@@ -103,7 +103,7 @@ assert(schedule('Lunes: 22:00–02:00')[0].overnight);
 assert.equal(schedule('Horario anterior libre'), null);
 for (const key of Object.keys(state.landing.secciones)) state.landing.secciones[key] = false;
 assert.equal(nodes(Details({ includeBenefits: true })).filter(n => n.type === 'section').length, 0);
-// La nueva presentación respeta los mismos switches en las cuatro variantes.
+
 for (template of ['editorial', 'minimal', 'visual', 'catalog']) {
   reset();
   state.landing.contenido = { ...empty, contacto: { ...empty.contacto, correo: 'qa@example.test', horario: 'Lunes: 09:00–20:00' }, ubicacion: { ...empty.ubicacion, direccion: 'Calle 123', comuna: 'Comuna', ciudad: 'Ciudad', region: 'Región' } };
@@ -129,7 +129,7 @@ for (template of ['editorial', 'minimal', 'visual', 'catalog']) {
   assert(!nodes(Details({})).some(n => n.props?.href?.includes('youtube.com')), `${template}: visibilidad de sección`);
 }
 template = 'editorial';
-// El editor conserva contenido cuando se desactiva; agregar/quitar y límites.
+
 reset();
 const Editor = load('src/features/admin/components/LandingContentEditor.tsx').LandingContentEditor;
 let edited;
@@ -156,11 +156,10 @@ async function verifyMultipart() {
   assert.equal(captured.method, 'PUT');
   assert.equal(captured.headers.Authorization, 'Token test-token');
   assert.equal(JSON.parse(captured.body.get('contenido')).productos_destacados[0], products[0].catalogId);
-  assert(!captured.body.has('imagen_principal')); // Conservar archivo existente.
+  assert(!captured.body.has('imagen_principal'));
   assert(!captured.body.has('logo'));
   await module.exports.saveLandingConfig({ ...input, imagen_principal: null, logo: null });
   assert.equal(captured.body.get('imagen_principal'), '');
   assert.equal(captured.body.get('logo'), '');
 }
 verifyMultipart().then(() => console.log('OK: selección por IDs, 0/1/3/6 productos en 4 plantillas, flags, hero, contactos/Maps, vacíos, editor y guardado multipart.')).catch(error => { console.error(error); process.exitCode = 1; });
-

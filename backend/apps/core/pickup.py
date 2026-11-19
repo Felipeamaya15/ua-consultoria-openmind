@@ -30,7 +30,6 @@ def validate_pickup_selection(pickup, selection, now=None):
         calendar = datetime.strptime(f'{date} {hour}', '%Y-%m-%d %H:%M')
         zone = ZoneInfo('America/Santiago')
         selected = calendar.replace(tzinfo=zone)
-        # El salto de horario de verano puede eliminar minutos del calendario local.
         if selected.astimezone(datetime_timezone.utc).astimezone(zone).replace(tzinfo=None) != calendar:
             raise ValueError()
         current = (now or timezone.now()).astimezone(zone)

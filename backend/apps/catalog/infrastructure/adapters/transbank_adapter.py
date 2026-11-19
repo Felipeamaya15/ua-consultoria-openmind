@@ -175,8 +175,6 @@ class TransbankWebpayAdapter(TransbankGatewayPort):
         response_code = datos.get("response_code")
         status = datos.get("status")
 
-        # Un pago solo se aprueba cuando Transbank confirma
-        # ambos valores esperados.
         if response_code != 0 or status != "AUTHORIZED":
             raise TransbankRechazoException(
                 "La transaccion fue rechazada. "

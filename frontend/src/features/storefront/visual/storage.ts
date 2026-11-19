@@ -1,6 +1,6 @@
 import { isRecord } from './resolveVisualConfig';
 
-/** The v1 envelope remains compatible; its key now includes installation and store. */
+
 export const STORE_CONFIG_STORAGE_KEY = 'ua-entrepreneur-demo-v1';
 export const STORE_CONFIG_CHANGED_EVENT = 'ua-store-config-changed';
 export interface StoreIdentity { apiBaseUrl: string; storeId: string }
@@ -33,7 +33,7 @@ export function readStoredStoreConfig(identity: StoreIdentity | null): Record<st
     if (!storage) return {};
     const scoped = storage.getItem(getStoreConfigKey(identity));
     if (scoped !== null) return parseConfig(scoped, identity);
-    // Unscoped legacy data has no provable owner. Only identity-tagged v1 is reusable.
+
     return parseConfig(storage.getItem(STORE_CONFIG_STORAGE_KEY), identity);
   } catch { return {}; }
 }

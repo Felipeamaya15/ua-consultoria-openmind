@@ -1,4 +1,4 @@
-// SCRUM-451: estados de carga compartidos. Prueba el componente real y vigila que ninguna pantalla vuelva a dibujar la carga a mano.
+
 const fs = require('node:fs'), path = require('node:path');
 const assert = require('node:assert/strict');
 const React = require('react'), { renderToStaticMarkup } = require('react-dom/server');
@@ -14,7 +14,7 @@ function test(name, fn) { fn(); console.log('OK ' + name); passed++; }
 function archivos(carpeta) {
   return fs.readdirSync(carpeta, { withFileTypes: true }).flatMap(entrada => {
     const ruta = path.join(carpeta, entrada.name);
-    // Match the app's tsconfig: historical backup copies are not active screens.
+
     return entrada.isDirectory() ? archivos(ruta) : /\.tsx$/.test(entrada.name) && !/\.BACKUP\.tsx$/.test(entrada.name) ? [ruta] : [];
   });
 }
@@ -82,7 +82,7 @@ test('el módulo es independiente: solo importa tipos de React', () => {
 test('ninguna pantalla vuelve a dibujar la carga a mano', () => {
   const sueltos = [];
   for (const { ruta, texto } of pantallas) {
-    if (ruta === 'src/features/storefront/components/ui/index.tsx') continue; // el Spinner del botón
+    if (ruta === 'src/features/storefront/components/ui/index.tsx') continue;
     texto.split('\n').forEach((linea, i) => {
       if (/<(p|Alert|div|span)\b[^>]*>\s*Cargando\b/.test(linea) || /^\s*Cargando\s[^<{]*$/.test(linea)) sueltos.push(`${ruta}:${i + 1}  ${linea.trim().slice(0, 90)}`);
     });

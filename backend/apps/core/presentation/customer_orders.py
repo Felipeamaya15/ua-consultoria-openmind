@@ -79,7 +79,7 @@ class CustomerOrdersAPIView(APIView):
         if any(key in request.query_params for key in ('user_id', 'id_usuario', 'comprador', 'comprador_id')):
             raise ValidationError('El comprador se determina exclusivamente desde la sesión autenticada.')
         tienda = resolver_tienda(request)
-        liberar_vencidos_de_tienda(tienda.pk)  # el comprador no ve como pendiente un pedido ya vencido
+        liberar_vencidos_de_tienda(tienda.pk)
         orders = Pedido.objects.filter(Q(tienda=tienda) | Q(tienda__isnull=True), comprador=request.user).prefetch_related(
             Prefetch('itempedido_set', queryset=ItemPedido.objects.select_related('id_producto'))
         ).order_by('-fecha_creacion', '-id_pedido')

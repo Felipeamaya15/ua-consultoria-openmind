@@ -49,7 +49,7 @@ function loadTs(relative, globals = {}) {
 }
 
 async function run() {
-  // 1. Validación estricta, Allowlists y escape XSS (<script> -> &lt;script&gt;)
+
   const security = loadTs('src/shared/utils/security.ts');
   assert.equal(
     security.escapeHtml('<script>alert("xss")</script>'),
@@ -69,7 +69,7 @@ async function run() {
     true,
   );
 
-  // 2. Ojito para ocultar/mostrar contraseña en el componente Input
+
   const ui = loadTs('src/features/storefront/components/ui/index.tsx', {
     mocks: {
       'react-router-dom': { Link: 'a' },
@@ -89,7 +89,7 @@ async function run() {
   assert.match(passwordInputHtml, /data-password-toggle="true"/);
   assert.match(passwordInputHtml, /aria-label="Mostrar contraseña"/);
 
-  // 3. authService: inactividad de 30 minutos, CAPTCHA, MFA y Olvidé mi contraseña
+
   const store = new Map();
   const calls = [];
   let mockResponse = {
@@ -121,16 +121,16 @@ async function run() {
   authService.setSession('tok-activo');
   assert.equal(authService.hasSession(), true);
 
-  // Reinicio de temporizador: al haber actividad reciente se renueva la ventana de 30m
+
   store.set(
     'session_last_activity_at',
     new Date(Date.now() - 25 * 60 * 1000).toISOString(),
   );
   authService.touchActivity();
-  // Al tocar actividad, el temporizador vuelve a 0 y no expira a los 31m del inicio original
+
   assert.equal(authService.hasSession(), true);
 
-  // Simular más de 30 minutos de inactividad para cuenta administrativa
+
   store.set(
     'session_last_activity_at',
     new Date(Date.now() - 31 * 60 * 1000).toISOString(),
@@ -138,7 +138,7 @@ async function run() {
   assert.equal(authService.hasSession(), false);
   assert.equal(store.get('token'), undefined);
 
-  // Cuenta de cliente final: NO se cierra tras 30 minutos de inactividad
+
   authService.setSession('tok-cliente', { is_staff: false, is_store_owner: false });
   assert.equal(authService.hasSession(), true);
   store.set(
@@ -148,7 +148,7 @@ async function run() {
   assert.equal(authService.hasSession(), true, 'La sesión de cliente final NO debe expirar tras 30 min de inactividad');
   assert.equal(authService.getToken(), 'tok-cliente');
 
-  // Solo expira tras vencer el plazo prolongado (30 días)
+
   store.set(
     'session_last_activity_at',
     new Date(Date.now() - 31 * 24 * 60 * 60 * 1000).toISOString(),
@@ -156,7 +156,7 @@ async function run() {
   assert.equal(authService.hasSession(), false, 'La sesión de cliente expira tras superar el plazo prolongado (30 días)');
   assert.equal(store.get('token'), undefined);
 
-  // Verificar llamadas de recuperación de contraseña, MFA y CAPTCHA
+
   await authService.requestPasswordReset('cliente@ejemplo.cl', 2);
   assert.equal(
     calls[calls.length - 1].url,
@@ -177,7 +177,7 @@ async function run() {
   assert.equal(calls[calls.length - 1].url, 'http://test/api/auth/mfa/verify/');
   assert.equal(authService.getToken(), 'tok-123');
 
-  // Nunca exponer HTML, respuestas malformadas ni rastros internos al cliente.
+
   mockResponse = {
     ok: false, status: 500,
     headers: { get: () => 'text/html; charset=utf-8' },

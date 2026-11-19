@@ -1,4 +1,4 @@
-// Ejecuta TypeScript real. No credenciales ni escrituras externas.
+
 const assert = require('node:assert/strict');
 const { test } = require('node:test');
 const { load } = require('./source-loader.cjs');
@@ -84,5 +84,5 @@ test('cancelaciones antes, durante y al leer son AbortError; no son errores de r
 test('401 en una operación administrativa no elimina credenciales ni redirige', async () => {
   const api = make(async () => response(401, {}));
   await assert.rejects(api.requestJson('/admin'), /sesión/);
-  // El módulo se ejecuta sin acceso a window ni a storage: estas acciones fallarían.
+
 });

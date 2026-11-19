@@ -59,7 +59,7 @@ export default function ProductDetail({ previewProduct }: { previewProduct?: Pro
     setNotFound(false);
     setProduct(null);
 
-    // Editor sample uses the public presentation without fetching or writing real products/cart.
+
     if (previewProduct) {
       setProduct(previewProduct);
       setSelectedAttrs(previewProduct.variants[0]?.attributes ?? {});
@@ -103,7 +103,7 @@ export default function ProductDetail({ previewProduct }: { previewProduct?: Pro
             );
           })
           .catch(() => {
-            // Los relacionados son un extra: si fallan, no bloquean la vista.
+
           });
       })
       .catch(() => {
@@ -118,11 +118,7 @@ export default function ProductDetail({ previewProduct }: { previewProduct?: Pro
     };
   }, [id, previewProduct]);
 
-  /*
-   * ==========================================================
-   * CARGANDO
-   * ==========================================================
-   */
+
   if (loading) {
     return (
       <div
@@ -139,11 +135,7 @@ export default function ProductDetail({ previewProduct }: { previewProduct?: Pro
     );
   }
 
-  /*
-   * ==========================================================
-   * PRODUCTO NO ENCONTRADO
-   * ==========================================================
-   */
+
   if (!product || notFound) {
     return (
       <div
@@ -173,11 +165,7 @@ export default function ProductDetail({ previewProduct }: { previewProduct?: Pro
       </div>
     );
   }
-  /*
-   * ==========================================================
-   * VARIANTE SELECCIONADA
-   * ==========================================================
-   */
+
   const attributeKeys = Object.keys(product.attributes);
   const completeSelection = attributeKeys.every((key) => selectedAttrs[key]);
 
@@ -211,10 +199,7 @@ export default function ProductDetail({ previewProduct }: { previewProduct?: Pro
     ? Math.round((1 - price / comparePrice) * 100)
     : 0;
 
-  /*
-   * Comprueba si una opción de variante puede seleccionarse
-   * considerando los otros atributos ya escogidos.
-   */
+
   const isVariantAvailable = (
     attr: string,
     value: string,
@@ -245,11 +230,7 @@ export default function ProductDetail({ previewProduct }: { previewProduct?: Pro
 
   const remaining = Math.max(0, stock - inCart);
   const hasCartItems = previewProduct ? true : items.length > 0;
-  /*
-   * ==========================================================
-   * AGREGAR AL CARRITO
-   * ==========================================================
-   */
+
   const handleAddToCart = () => {
     if (
       !selectedVariant ||
@@ -287,14 +268,6 @@ export default function ProductDetail({ previewProduct }: { previewProduct?: Pro
     };
 
 
-
-
-  /*
-   * ==========================================================
-   * PLANTILLA 4 — CATALOG / DARK EDITORIAL
-   * ==========================================================
-   */
-
   if (isCatalog) {
     return (
       <div className="bg-[var(--visual-page-panel-background)] text-[var(--visual-page-color)]">
@@ -308,7 +281,7 @@ export default function ProductDetail({ previewProduct }: { previewProduct?: Pro
           </Link>
 
           <div data-page-columns className="grid grid-cols-1 lg:grid-cols-[1.08fr_0.92fr] gap-9 lg:gap-14 items-start">
-            {/* GALERÍA */}
+
             <div>
               <div data-page-panel className="relative overflow-hidden rounded-[22px] bg-[var(--visual-page-panel-background)] aspect-[4/4.25]">
                 <ProductImageGallery videoUrl={product.videoUrl} images={product.images} alt={product.name} detail index={activeImg} onSelect={setActiveImg} imageClassName="w-full h-full object-cover" />
@@ -357,7 +330,7 @@ export default function ProductDetail({ previewProduct }: { previewProduct?: Pro
               )}
             </div>
 
-            {/* INFORMACIÓN */}
+
             <div className="lg:pt-2">
               <div className="flex flex-wrap items-center gap-3 mb-4">
                 <span className="text-[10px] font-black uppercase tracking-[0.16em] text-[var(--primary)]">
@@ -403,7 +376,7 @@ export default function ProductDetail({ previewProduct }: { previewProduct?: Pro
 
               <ProductAttributes slug={product.id} previewAttributes={previewProduct ? previewAttributes : undefined} />
 
-              {/* VARIANTES */}
+
               {Object.entries(product.attributes).map(([attrName, values]) => (
                 <div key={attrName} className="border-t border-[var(--visual-global-border)]/10 mt-7 pt-6">
                   <div className="flex items-center justify-between gap-4 mb-4">
@@ -453,7 +426,7 @@ export default function ProductDetail({ previewProduct }: { previewProduct?: Pro
                 </div>
               ))}
 
-              {/* STOCK */}
+
               {selectedVariant && completeSelection && <StockFeedback sku={selectedVariant.sku} maxStock={selectedVariant.stock} quantity={inCart} className="mt-5 rounded-[10px] border border-[#ff5a1f]/25 bg-[var(--accent)]/10 px-4 py-3 text-[11px] text-[#ffb291]" />}
 
               {!inStock && (
@@ -462,7 +435,7 @@ export default function ProductDetail({ previewProduct }: { previewProduct?: Pro
                 </div>
               )}
 
-              {/* CANTIDAD + CARRITO */}
+
               <div className="border-t border-[var(--visual-global-border)]/10 mt-7 pt-6">
                 <p className="mb-3 text-[10px] font-black uppercase tracking-[0.15em] text-[var(--visual-page-color)]/75">
                   Cantidad
@@ -508,7 +481,7 @@ export default function ProductDetail({ previewProduct }: { previewProduct?: Pro
                 )}
               </div>
 
-              {/* ENTREGA */}
+
               <div data-page-panel className="mt-8 rounded-[14px] bg-[var(--visual-page-panel-background)] p-5 text-[var(--visual-page-color)]">
                 <p className="mb-4 text-[9px] font-black uppercase tracking-[0.16em] text-[var(--visual-page-color)]/45">
                   Compra y entrega
@@ -534,7 +507,7 @@ export default function ProductDetail({ previewProduct }: { previewProduct?: Pro
             </div>
           </div>
 
-          {/* RELACIONADOS */}
+
           {related.length > 0 && (
             <section className="mt-20 md:mt-24 border-t border-[var(--visual-global-border)]/10 pt-12">
               <div className="flex items-end justify-between gap-4 mb-8">
@@ -584,7 +557,7 @@ export default function ProductDetail({ previewProduct }: { previewProduct?: Pro
           </Link>
 
           <div data-page-columns className="grid grid-cols-1 lg:grid-cols-[1.08fr_0.92fr] gap-10 lg:gap-16 items-start">
-            {/* Galería */}
+
             <div>
               <div data-page-panel className="relative overflow-hidden rounded-[12px] bg-[var(--visual-page-panel-background)] aspect-[4/4.15]">
                 <ProductImageGallery videoUrl={product.videoUrl} images={product.images} alt={product.name} detail index={activeImg} onSelect={setActiveImg} imageClassName="w-full h-full object-cover" />
@@ -627,7 +600,7 @@ export default function ProductDetail({ previewProduct }: { previewProduct?: Pro
               )}
             </div>
 
-            {/* Información */}
+
             <div className="lg:pt-3">
               <div className="flex flex-wrap items-center gap-3 mb-4">
                 <span className="text-[9px] font-medium uppercase tracking-[0.18em] text-[var(--visual-page-color)]">
@@ -673,7 +646,7 @@ export default function ProductDetail({ previewProduct }: { previewProduct?: Pro
 
               <ProductAttributes slug={product.id} previewAttributes={previewProduct ? previewAttributes : undefined} />
 
-              {/* Variantes */}
+
               {Object.entries(product.attributes).map(([attrName, values]) => (
                 <div key={attrName} className="border-t border-[var(--visual-global-border)]/10 mt-7 pt-6">
                   <div className="flex items-center justify-between gap-4 mb-4">
@@ -731,7 +704,7 @@ export default function ProductDetail({ previewProduct }: { previewProduct?: Pro
                 </div>
               )}
 
-              {/* Cantidad + carrito */}
+
               <div className="border-t border-[var(--visual-global-border)]/10 mt-7 pt-6">
                 <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.16em]">
                   Cantidad
@@ -777,7 +750,7 @@ export default function ProductDetail({ previewProduct }: { previewProduct?: Pro
                 )}
               </div>
 
-              {/* Entrega */}
+
               <div data-page-panel className="mt-8 rounded-[10px] bg-[var(--visual-page-panel-background)] p-5">
                 <p className="mb-4 text-[9px] font-semibold uppercase tracking-[0.18em]">
                   Compra y entrega
@@ -803,7 +776,7 @@ export default function ProductDetail({ previewProduct }: { previewProduct?: Pro
             </div>
           </div>
 
-          {/* Relacionados */}
+
           {related.length > 0 && (
             <section className="mt-20 md:mt-24 border-t border-[var(--visual-global-border)]/10 pt-12">
               <div className="flex items-end justify-between gap-4 mb-8">
@@ -847,9 +820,7 @@ export default function ProductDetail({ previewProduct }: { previewProduct?: Pro
           : 'max-w-7xl mx-auto px-4 py-8'
       }
     >
-      {/* =====================================================
-          BREADCRUMB
-      ====================================================== */}
+
       <Breadcrumb
         items={[
           {
@@ -870,18 +841,14 @@ export default function ProductDetail({ previewProduct }: { previewProduct?: Pro
         ]}
       />
 
-      {/* =====================================================
-          PRODUCTO
-      ====================================================== */}
+
       <div data-page-columns
         className={`
           grid grid-cols-1 lg:grid-cols-2
           ${isMinimal ? 'mt-7 gap-8 lg:gap-12' : 'mt-6 gap-10'}
         `}
       >
-        {/* =================================================
-            GALERÍA
-        ================================================== */}
+
         <div className="flex flex-col gap-3">
           <div data-page-panel
             className={`
@@ -942,9 +909,7 @@ export default function ProductDetail({ previewProduct }: { previewProduct?: Pro
           )}
         </div>
 
-        {/* =================================================
-            INFORMACIÓN
-        ================================================== */}
+
         <div
           className={
             isMinimal
@@ -952,7 +917,7 @@ export default function ProductDetail({ previewProduct }: { previewProduct?: Pro
               : 'flex flex-col gap-5'
           }
         >
-          {/* Categoría + nombre */}
+
           <div>
             <div className="flex items-center gap-2 flex-wrap mb-3">
               {isMinimal ? (
@@ -1002,9 +967,7 @@ export default function ProductDetail({ previewProduct }: { previewProduct?: Pro
             </p>
           </div>
 
-          {/* =================================================
-              PRECIO
-          ================================================== */}
+
           <div className="flex items-baseline gap-3">
             <span data-page-price
               className={
@@ -1029,9 +992,7 @@ export default function ProductDetail({ previewProduct }: { previewProduct?: Pro
             )}
           </div>
 
-          {/* =================================================
-              VARIANTES
-          ================================================== */}
+
           {Object.entries(product.attributes).map(
             ([attrName, values]) => (
               <div
@@ -1109,9 +1070,7 @@ export default function ProductDetail({ previewProduct }: { previewProduct?: Pro
             ),
           )}
 
-          {/* =================================================
-              STOCK
-          ================================================== */}
+
           {selectedVariant && completeSelection && <StockFeedback sku={selectedVariant.sku} maxStock={selectedVariant.stock} quantity={inCart} />}
 
           {!inStock && (
@@ -1120,9 +1079,7 @@ export default function ProductDetail({ previewProduct }: { previewProduct?: Pro
             </Alert>
           )}
 
-          {/* =================================================
-              CANTIDAD + CARRITO
-          ================================================== */}
+
           <div
             className={
               isMinimal
@@ -1193,9 +1150,7 @@ export default function ProductDetail({ previewProduct }: { previewProduct?: Pro
             </div>
           </div>
 
-          {/* =================================================
-              DESCRIPCIÓN
-          ================================================== */}
+
           <div className="border-t border-[var(--border)] pt-5">
             <h2
               className={
@@ -1214,9 +1169,7 @@ export default function ProductDetail({ previewProduct }: { previewProduct?: Pro
 
           <ProductAttributes slug={product.id} previewAttributes={previewProduct ? previewAttributes : undefined} />
 
-          {/* =================================================
-              ENTREGA
-          ================================================== */}
+
           <div data-page-panel
             className={
               isMinimal
@@ -1266,9 +1219,7 @@ export default function ProductDetail({ previewProduct }: { previewProduct?: Pro
         </div>
       </div>
 
-      {/* =====================================================
-          PRODUCTOS RELACIONADOS
-      ====================================================== */}
+
       {related.length > 0 && (
         <section
           className={

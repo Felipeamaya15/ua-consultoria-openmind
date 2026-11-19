@@ -1,5 +1,4 @@
-/* OPENMIND_TEMPLATE4_CLOUD_HEADER_V2 */
-/* Override visual para la plantilla 4: header tipo nube y hero sin blur global */
+
 
 :root {
   --om-p4-cloud-bg: color-mix(in srgb, var(--surface, #ead8ee) 88%, white 12%);
@@ -7,7 +6,7 @@
   --om-p4-cloud-shadow: 0 14px 36px rgba(43, 24, 54, 0.18);
 }
 
-/* Plantilla 4 / Obsidian / Showcase */
+
 .template-4 .storefront-header,
 .template-4-header,
 [data-template='4'] .storefront-header,
@@ -30,7 +29,7 @@
   overflow: visible;
 }
 
-/* Forma orgánica tipo nube: bultitos arriba y abajo */
+
 .template-4 .storefront-header::before,
 .template-4-header::before,
 [data-template='4'] .storefront-header::before,
@@ -61,7 +60,7 @@
   background-repeat: no-repeat;
 }
 
-/* Nubes superiores */
+
 .template-4 .storefront-header::before,
 .template-4-header::before,
 [data-template='4'] .storefront-header::before,
@@ -85,7 +84,7 @@
     radial-gradient(circle at 93% 100%, var(--om-p4-cloud-bg) 0 18px, transparent 19px);
 }
 
-/* Nubes inferiores */
+
 .template-4 .storefront-header::after,
 .template-4-header::after,
 [data-template='4'] .storefront-header::after,
@@ -108,7 +107,7 @@
     radial-gradient(circle at 87% 0%, var(--om-p4-cloud-bg) 0 16px, transparent 17px);
 }
 
-/* Evitar blur sobre el resto del hero */
+
 .template-4 .hero,
 .template-4 .hero::before,
 .template-4 .hero::after,
@@ -125,7 +124,7 @@
   -webkit-backdrop-filter: none !important;
 }
 
-/* Si existe una capa borrosa por pseudo-elemento, dejarla como overlay nítido */
+
 .template-4 .hero::before,
 [data-template='4'] .hero::before,
 .obsidian-showcase .hero::before,
@@ -134,7 +133,7 @@
   background: linear-gradient(180deg, rgba(24,14,28,0.20) 0%, rgba(24,14,28,0.28) 55%, rgba(24,14,28,0.34) 100%) !important;
 }
 
-/* Ajustes móviles para que la nube no se deforme */
+
 @media (max-width: 840px) {
   .template-4 .storefront-header,
   .template-4-header,

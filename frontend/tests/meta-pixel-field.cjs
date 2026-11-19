@@ -1,4 +1,4 @@
-// Ejecutar desde frontend: node tests/meta-pixel-field.cjs
+
 const fs = require('node:fs');
 const path = require('node:path');
 const assert = require('node:assert/strict');

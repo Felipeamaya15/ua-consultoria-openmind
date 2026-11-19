@@ -20,7 +20,7 @@ export function MinimalSidebar() {
 
   return (
     <aside className="fixed left-0 top-0 bottom-0 z-50 hidden md:flex w-20 flex-col items-center bg-white border-r border-black/10 px-1.5 py-4">
-      {/* Botón superior: Iniciar sesión / Cuenta / Cerrar sesión */}
+
       <div className="w-full flex flex-col items-center gap-1.5">
         <AccountNavigation className="w-full min-h-10 px-1.5 py-1.5 rounded-xl bg-[var(--primary)] text-[var(--on-primary)] flex items-center justify-center text-[10px] leading-tight font-semibold text-center break-words whitespace-normal shadow-2xs hover:opacity-90 transition-opacity" />
         {!user && <Link to={route('ingresar?modo=registro')} className="om-minimal-register">Registrarse</Link>}
@@ -35,7 +35,7 @@ export function MinimalSidebar() {
         )}
       </div>
 
-      {/* Navegación lateral */}
+
       <nav
         className="flex flex-col items-center gap-3 mt-10"
         aria-label="Navegación lateral"

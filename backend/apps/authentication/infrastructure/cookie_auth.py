@@ -16,8 +16,8 @@ from rest_framework.authentication import TokenAuthentication
 from rest_framework.authtoken.models import Token
 
 AUTH_COOKIE_NAME = "auth_token"
-ADMIN_SESSION_INACTIVITY_TIMEOUT_SECONDS = 1800  # 30 minutos de inactividad para administradores
-CUSTOMER_SESSION_COOKIE_AGE = 30 * 86400  # 30 días para clientes finales (expiración prolongada: 7 a 30 días)
+ADMIN_SESSION_INACTIVITY_TIMEOUT_SECONDS = 1800
+CUSTOMER_SESSION_COOKIE_AGE = 30 * 86400
 SESSION_INACTIVITY_TIMEOUT_SECONDS = ADMIN_SESSION_INACTIVITY_TIMEOUT_SECONDS
 
 
@@ -194,9 +194,6 @@ class ActiveSessionTokenAuthentication(TokenAuthentication):
 
         django_request = getattr(request, "_request", request)
 
-        # Si la cookie contiene un token, intentamos autenticarlo de forma segura.
-        # Si el token es inválido, inexistente en la BD o huérfano tras un logout,
-        # nunca debemos bloquear endpoints públicos (AllowAny). Marcamos la cookie para borrado y retornamos None.
         try:
             user, token = self.authenticate_credentials(cookie_token)
         except exceptions.AuthenticationFailed:
@@ -222,8 +219,6 @@ class ActiveSessionTokenAuthentication(TokenAuthentication):
                 "La sesión expiró por 30 minutos de inactividad. Inicia sesión nuevamente."
             )
 
-        # Only renew the sliding auth cookie when the request already carried it,
-        # keeping stateless header-only Token API calls free of unsolicited Set-Cookie headers.
         has_matching_cookie = request.COOKIES.get(AUTH_COOKIE_NAME, "").strip() == token.key
         return self._mark_token_active(
             request,

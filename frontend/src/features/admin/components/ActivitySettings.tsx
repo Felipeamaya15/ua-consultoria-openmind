@@ -4,7 +4,7 @@ import { Input, Select, Toggle } from './ui';
 import type { BloqueLanding } from '../../landing/types/landing.types';
 import { newActivity, newSectionElement, newPaidActivitySettings, type PaidActivitySettings, type SectionActivity, type ElementKind, type SectionElement } from '../../landing/types/sectionElements';
 
-/** Operational settings live on the same section; visual content stays in its blocks. */
+
 export function ActivitySettings({section,onChange}:{section:BloqueLanding;onChange:(section:BloqueLanding)=>void}) {
   const activity=section.actividad;
   const update=(patch:Partial<SectionActivity>)=>onChange({...section,actividad:{...activity!,...patch}});

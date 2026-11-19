@@ -48,7 +48,6 @@ class ExpiracionYTokenTests(TestCase):
     def token_guardado(self):
         return Pedido.objects.get(pk=self.pedido.pk).webpay_token
 
-    # --- Manejo del token anterior ---
     @patch(ADAPTADOR)
     def test_dos_pestañas_a_la_vez_reciben_el_mismo_token_y_webpay_se_llama_una_vez(self, adaptador):
         adaptador.return_value.iniciar_transaccion.return_value = _transaccion(1)
@@ -66,7 +65,7 @@ class ExpiracionYTokenTests(TestCase):
         self.assertEqual(r.data['data']['token'], 'token-2')
         self.assertEqual(self.token_guardado(), 'token-2')
         llamadas = adaptador.return_value.iniciar_transaccion.call_args_list
-        self.assertEqual(llamadas[0].kwargs['orden_compra'], llamadas[1].kwargs['orden_compra'])  # mismo pedido
+        self.assertEqual(llamadas[0].kwargs['orden_compra'], llamadas[1].kwargs['orden_compra'])
         self.assertEqual(Pedido.objects.count(), 1)
 
     @patch(ADAPTADOR)
@@ -84,7 +83,6 @@ class ExpiracionYTokenTests(TestCase):
                        fecha_creacion=timezone.now() - timedelta(minutes=90))
         self.assertEqual(self.pagar().data['data']['token'], 'token-2')
 
-    # --- Expiracion y stock ---
     @patch(ADAPTADOR)
     def test_un_pedido_vencido_no_se_envia_a_webpay_y_se_cancela_sin_tocar_el_stock(self, adaptador):
         self.envejecer(fecha_creacion=timezone.now() - timedelta(hours=3))
@@ -123,31 +121,31 @@ class ExpiracionYTokenTests(TestCase):
         en_curso = nuevo('c@example.com', 'Transbank', webpay_token='t', webpay_url='https://webpay.test/t',
                          webpay_iniciado_en=timezone.now() - timedelta(minutes=5))
         pagado = nuevo('e@example.com', 'Transbank', estado='pagado')
-        transf_3h = nuevo('d@example.com', 'Transferencia')       # manual: aun dentro de sus 48 h
+        transf_3h = nuevo('d@example.com', 'Transferencia')
         transf_50h = nuevo('f@example.com', 'Transferencia')
         linkify_50h = nuevo('g@example.com', 'Linkify')
-        paypal_viejo = nuevo('h@example.com', 'PayPal')           # sin orden en PayPal: nada que cobrar
+        paypal_viejo = nuevo('h@example.com', 'PayPal')
         hace = lambda horas: timezone.now() - timedelta(hours=horas)
         Pedido.objects.filter(pk__in=[self.pedido.pk, en_curso.pk, pagado.pk, transf_3h.pk]).update(fecha_creacion=hace(3))
         Pedido.objects.filter(pk__in=[transf_50h.pk, linkify_50h.pk, paypal_viejo.pk]).update(fecha_creacion=hace(50))
         with patch(REPOSITORIO, return_value=repositorio), self.captureOnCommitCallbacks(execute=True):
             call_command('expirar_pedidos_pendientes', stdout=MagicMock())
         estados = {p.pk: p.estado for p in Pedido.objects.all()}
-        self.assertEqual(estados[self.pedido.pk], 'cancelado')    # en linea, 3 h > 2 h
-        self.assertEqual(estados[transf_50h.pk], 'cancelado')     # manual, 50 h > 48 h
+        self.assertEqual(estados[self.pedido.pk], 'cancelado')
+        self.assertEqual(estados[transf_50h.pk], 'cancelado')
         self.assertEqual(estados[linkify_50h.pk], 'cancelado')
         self.assertEqual(estados[reciente.pk], 'pendiente')
-        self.assertEqual(estados[en_curso.pk], 'pendiente')       # pago de Webpay en curso: no se toca
-        self.assertEqual(estados[transf_3h.pk], 'pendiente')      # la transferencia todavia tiene plazo
+        self.assertEqual(estados[en_curso.pk], 'pendiente')
+        self.assertEqual(estados[transf_3h.pk], 'pendiente')
         self.assertEqual(estados[pagado.pk], 'pagado')
-        self.assertEqual(estados[paypal_viejo.pk], 'cancelado')   # nunca se creo la orden de PayPal
+        self.assertEqual(estados[paypal_viejo.pk], 'cancelado')
 
     @patch(ADAPTADOR)
     def test_el_plazo_lo_define_cada_tienda(self, adaptador):
         adaptador.return_value.iniciar_transaccion.return_value = _transaccion(1)
         self.envejecer(fecha_creacion=timezone.now() - timedelta(hours=3))
         Tienda.objects.filter(pk=self.tienda.pk).update(horas_expiracion_pedido_en_linea=6)
-        self.assertEqual(self.pagar().status_code, 200)  # con 6 h, un pedido de 3 h sigue vigente
+        self.assertEqual(self.pagar().status_code, 200)
         Tienda.objects.filter(pk=self.tienda.pk).update(horas_expiracion_pedido_en_linea=2)
         Pedido.objects.filter(pk=self.pedido.pk).update(webpay_token='', webpay_url='')
         with patch(REPOSITORIO, return_value=MagicMock()):
@@ -280,7 +278,7 @@ class PlazoManualSinVencimientoYStockTests(TestCase):
         self.assertCountEqual(ids, [vigente.pk, otro.pk])
         self.assertEqual(Pedido.objects.get(pk=otro.pk).estado, 'pendiente')
         self.assertFalse(Pedido.objects.get(pk=otro.pk).stock_devuelto)
-        self.repositorio.restore_stock.assert_not_called()  # los pendientes vencidos no descontaron stock
+        self.repositorio.restore_stock.assert_not_called()
         self.assertTrue(all(fila['vence_en'] for fila in r.data['data']))
         from apps.core.infrastructure.expiracion_pedidos import expirar_pedidos_pendientes
         with patch(REPOSITORIO, return_value=self.repositorio), self.captureOnCommitCallbacks(execute=True):

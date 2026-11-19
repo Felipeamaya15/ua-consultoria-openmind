@@ -93,7 +93,6 @@ class ChilexpressAdapterTestCase(SimpleTestCase):
         self.assertEqual(servicios["CHILEXPRESS_EXTENDIDO"].costo, Decimal("9490"))
 
     def test_cotizar_envio_recargo_peso(self):
-        # 3.5 kg -> 2.0 kg extra * 950 = +1900
         paquetes = [
             PaqueteDTO(
                 peso_kg=Decimal("3.5"),
@@ -406,7 +405,6 @@ class StarkenAdapterTestCase(SimpleTestCase):
         self.assertEqual(servicios["STARKEN_EXPRESS"].costo, Decimal("10800"))
 
     def test_cotizar_envio_recargo_peso(self):
-        # 3.5 kg -> 1.5 kg extra * 850 = +1275
         paquetes = [
             PaqueteDTO(
                 peso_kg=Decimal("3.5"),

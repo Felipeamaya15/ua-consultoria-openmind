@@ -81,16 +81,15 @@ class LinkifyNotificacionView(APIView):
     """Endpoint que Linkify invoca para consultar un cobro o avisar su resultado."""
 
     permission_classes = [AllowAny]
-    authentication_classes = []  # La autenticidad la entrega la firma, no un usuario.
+    authentication_classes = []
 
     def get(self, request):
         return self._atender(lambda: self._consultar(request))
 
     def post(self, request):
-        cuerpo = request.body  # Debe leerse antes de acceder a request.data.
+        cuerpo = request.body
         return self._atender(lambda: self._avisar(request, cuerpo))
 
-    # ------------------------------------------------------------ respuesta
 
     @staticmethod
     def _atender(accion):
@@ -105,11 +104,9 @@ class LinkifyNotificacionView(APIView):
             return error_response("No se pudo procesar el aviso. Reintenta mas tarde.", "ERROR_INTERNO",
                                   status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-    # ------------------------------------------------------------- acciones
 
     def _consultar(self, request):
         pedido = self._pedido(_dato(request.query_params, *CAMPOS_ID_PAGO))
-        # Sin cuerpo en un GET: se acepta la firma del cuerpo vacio o de la query string.
         self._verificar_firma(request, pedido, request.body, request.META.get("QUERY_STRING", "").encode())
         if pedido.medio_pago != "Linkify" or pedido.estado not in ("pendiente", *Pedido.ESTADOS_PAGADOS):
             raise _Rechazo("PEDIDO_NO_DISPONIBLE", "El pedido no admite este cobro.", status.HTTP_409_CONFLICT, pedido)
@@ -122,7 +119,7 @@ class LinkifyNotificacionView(APIView):
     def _avisar(self, request, cuerpo):
         try:
             datos = request.data
-        except APIException:  # JSON mal formado o tipo de contenido no admitido
+        except APIException:
             raise _Rechazo("CUERPO_INVALIDO", "El cuerpo de la peticion no es valido.", status.HTTP_400_BAD_REQUEST)
 
         if not isinstance(datos, Mapping):
@@ -138,7 +135,6 @@ class LinkifyNotificacionView(APIView):
             return self._pago_anulado(pedido)
         raise _Rechazo("ACCION_DESCONOCIDA", "La accion indicada no es valida.", status.HTTP_400_BAD_REQUEST, pedido)
 
-    # ---------------------------------------------------------------- helpers
 
     @staticmethod
     def _pedido(id_pago):
@@ -153,8 +149,6 @@ class LinkifyNotificacionView(APIView):
         linkify = (config.datos_descifrados.get("linkify") or {}) if config else {}
         campos = linkify.get("fields") or {}
         id_cuenta, clave = campos.get("idCuenta"), campos.get("clavePrivada")
-        # No se exige "enabled": un pago en curso debe poder cerrarse aunque
-        # el emprendedor haya desactivado Linkify despues.
         if not id_cuenta or not clave:
             raise _Rechazo("LINKIFY_NO_CONFIGURADO", "Linkify no esta configurado para la tienda de este pedido.",
                            status.HTTP_409_CONFLICT, pedido)
@@ -164,7 +158,6 @@ class LinkifyNotificacionView(APIView):
         if not any(adaptador.firma_valida(cuerpo, firma) for cuerpo in firmados):
             raise _Rechazo("FIRMA_INVALIDA", "La firma de la peticion no es valida.", status.HTTP_401_UNAUTHORIZED, pedido)
 
-    # ----------------------------------------------------------------- estados
 
     def _pago_recibido(self, pedido, monto):
         if (pedido.medio_pago or pedido.metodo_pago or "").strip().lower() != "linkify":
@@ -189,7 +182,6 @@ class LinkifyNotificacionView(APIView):
                 pedido.estado = "pagado"
                 pedido.save(update_fields=["estado"])
                 logger.info("Linkify: pedido %s marcado como pagado", pedido.pk)
-            # Ya pagado (o en despacho): el aviso ya se habia procesado (es idempotente).
         if pedido.estado in Pedido.ESTADOS_PAGADOS:
             descontar_stock_de_pedido(pedido.pk)
         if pasa_a_pagado:

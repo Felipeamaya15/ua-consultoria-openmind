@@ -182,7 +182,7 @@ test('AdminSidebar shows default nav when empty, filters modules & features on i
   assert(html.includes('href="/emprendedor/actividades"'));
   assert(!html.includes('admin-search-results'));
 
-  // Type "servicios" into search input
+
   const input = findElement(tree, (el) => el.props.id === 'admin-sidebar-search');
   assert(input, 'Search input must exist');
   input.props.onChange({ target: { value: 'servicios' } });
@@ -194,7 +194,7 @@ test('AdminSidebar shows default nav when empty, filters modules & features on i
   assert(html.includes('Servicios y talleres'));
   assert(html.includes('/emprendedor/landing#secciones-tienda'));
 
-  // Click clear button
+
   const clearBtn = findElement(tree, (el) => el.props['aria-label'] === 'Limpiar búsqueda');
   assert(clearBtn, 'Clear button must appear when query is non-empty');
   clearBtn.props.onClick();
@@ -261,14 +261,14 @@ test('LandingBlocksEditor opens modular/service/workshop sections in fullscreen 
     currentBlocks = next;
   };
 
-  // Initial render: nothing open
+
   harness.resetPass();
   let tree = LandingBlocksEditor({ value: currentBlocks, onChange });
   let html = renderToStaticMarkup(tree);
   assert(!html.includes('lb-fullscreen-overlay'));
   assert(!html.includes('class="lb-fields"'));
 
-  // Expand the workshop/service section (section 1) -> opens fullscreen overlay (not inline lb-fields)
+
   const tallerExpand = findElement(
     tree,
     (el) => el.props.className === 'lb-expand' && el.props['aria-label'] === 'Editar sección 1',
@@ -287,7 +287,7 @@ test('LandingBlocksEditor opens modular/service/workshop sections in fullscreen 
   assert(html.includes('data-fullscreen="true"'));
   assert(!html.includes(`id="lb-fields-${tallerBlock.id}"`));
 
-  // Close via "Volver a secciones"
+
   const backBtn = findElement(tree, (el) => el.props.className === 'lb-fullscreen-back');
   assert(backBtn, 'Fullscreen back button must exist');
   backBtn.props.onClick();
@@ -297,7 +297,7 @@ test('LandingBlocksEditor opens modular/service/workshop sections in fullscreen 
   html = renderToStaticMarkup(tree);
   assert(!html.includes('lb-fullscreen-overlay'));
 
-  // Creating a new workshop via Plantillas configurables directly opens fullscreen editor
+
   const presetsContainer = findElement(
     tree,
     (el) => el.props['aria-label'] === 'Plantillas configurables',
@@ -316,7 +316,7 @@ test('LandingBlocksEditor opens modular/service/workshop sections in fullscreen 
   assert.equal(currentBlocks.length, 3);
   assert(html.includes('lb-fullscreen-overlay'));
 
-  // Close fullscreen, then open standard text block -> expands inline inside .lb-fields
+
   findElement(tree, (el) => el.props.className === 'lb-fullscreen-back').props.onClick();
   harness.resetPass();
   tree = LandingBlocksEditor({ value: currentBlocks, onChange });
@@ -383,7 +383,7 @@ test('FlexibleSectionEditor adds is-fullscreen layout panes when fullScreen=true
   assert(htmlFull.includes('flexible-config-pane'));
   assert(htmlFull.includes('flexible-blocks-pane'));
 
-  // Toggle preview in fullscreen -> shows .flexible-section-preview alongside panes
+
   const previewBtn = findElement(tree, (el) => el.props.children === 'Ver vista previa');
   assert(previewBtn, 'Preview toggle button must exist');
   previewBtn.props.onClick();

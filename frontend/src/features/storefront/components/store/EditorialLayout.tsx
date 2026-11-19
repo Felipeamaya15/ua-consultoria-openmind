@@ -86,10 +86,10 @@ export function EditorialLayout() {
 
   return (
     <StoreVisualRoot className="template-editorial min-h-screen bg-[#fafaf8] flex flex-col">
-      {/* HEADER */}
+
       <header data-visual-section={VISUAL_SECTION.header} className="bg-white border-b border-[var(--border)] sticky top-0 z-40">
         <div data-visual-part="headerLayout" className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between gap-6">
-          {/* Logo / nombre de tienda */}
+
           <InstitutionalBadge compact /><Link data-visual-part="logo" onClick={event => {
             if (!event.ctrlKey && !event.metaKey && !event.shiftKey && !event.altKey) {
               window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
@@ -119,7 +119,7 @@ export function EditorialLayout() {
             </span>
           </Link>
 
-          {/* NAVEGACIÓN DESKTOP */}
+
           <nav data-visual-part="navigation"
             className="hidden md:flex items-center gap-6"
             aria-label="Navegación principal"
@@ -141,9 +141,9 @@ export function EditorialLayout() {
             </Link>
           </nav>
 
-          {/* ACCIONES */}
+
           <div className="flex shrink-0 items-center gap-3">
-            {/* Carrito */}
+
             <Link
               to="carrito"
               className="text-[var(--foreground)] hover:text-[var(--primary)] transition-colors"
@@ -152,7 +152,7 @@ export function EditorialLayout() {
               <CartIcon count={count} />
             </Link>
 
-            {/* Login / Usuario Desktop */}
+
             {user ? (
               <div className="hidden sm:flex items-center gap-4 border-l border-[var(--border)] pl-4 ml-2">
                 <span className="text-sm font-semibold text-[var(--foreground)]">
@@ -170,7 +170,7 @@ export function EditorialLayout() {
               <AccountNavigation className="hidden sm:block text-sm font-medium text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition-colors ml-2" />
             )}
 
-            {/* Botón menú móvil */}
+
             <button
               type="button"
               data-mobile-menu-toggle
@@ -198,7 +198,7 @@ export function EditorialLayout() {
           </div>
         </div>
 
-        {/* NAVEGACIÓN MÓVIL */}
+
         {mobileOpen && (
           <nav
             id="mobile-navigation"
@@ -255,15 +255,15 @@ export function EditorialLayout() {
         )}
       </header>
 
-      {/* CONTENIDO DE LA PÁGINA */}
+
       <main id="main-content" tabIndex={-1} className="flex-1">
         <StorePageContent><Outlet /></StorePageContent>
       </main>
 
-      {/* FOOTER */}
+
       <footer data-visual-section={VISUAL_SECTION.footer} className="bg-[var(--primary)] text-[var(--on-primary)] mt-16">
         <div data-visual-part="footerLayout" className="max-w-7xl mx-auto px-4 py-10 grid grid-cols-1 md:grid-cols-4 gap-8">
-          {/* Información de tienda */}
+
           <div className="md:col-span-2">
             {config.logo && <img data-landing-image className="store-footer-logo" src={config.logo} alt={`Logo de ${config.name}`} />}
             <p data-visual-part="footerTitle" className="font-display text-2xl mb-2">
@@ -272,7 +272,7 @@ export function EditorialLayout() {
             <StoreBusinessDescription className="text-sm leading-relaxed" />
           </div>
 
-          {/* Tienda */}
+
           <div>
             <p data-visual-part="footerTitle" className="text-xs font-semibold uppercase tracking-wider text-[color-mix(in_srgb,currentColor_60%,transparent)] mb-3">
               Tienda
@@ -293,7 +293,7 @@ export function EditorialLayout() {
             </div>
           </div>
 
-          {/* Legal */}
+
           <div>
             <p data-visual-part="footerTitle" className="text-xs font-semibold uppercase tracking-wider text-[color-mix(in_srgb,currentColor_60%,transparent)] mb-3">
               Legal
@@ -327,7 +327,7 @@ export function EditorialLayout() {
           </div>
         </div>
 
-        {/* Copyright */}
+
         <div data-visual-part="branding" className="border-t border-[color-mix(in_srgb,currentColor_10%,transparent)] py-4 text-xs text-[color-mix(in_srgb,currentColor_60%,transparent)] px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
           <InstitutionalBadge compact showVersion={true} />
           <p className="text-center sm:text-right">© {new Date().getFullYear()} {config.name} · OpenMind</p>

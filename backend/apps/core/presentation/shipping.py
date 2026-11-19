@@ -43,7 +43,6 @@ class ShippingQuoteAPIView(ErroresDeCotizacionMixin, APIView):
         try:
             quote = issue_quote(tienda, **serializer.validated_data)
         except ErrorCotizacion as error:
-            # Queda registrado: un TARIFA_NO_DISPONIBLE repetido indica comunas sin tarifa en la tienda.
             logger.info("Cotizacion de envio rechazada: codigo=%s tienda=%s operador=%s",error.codigo_error,
                 tienda.pk,serializer.validated_data.get("operador"),
             )

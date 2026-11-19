@@ -14,7 +14,7 @@ from apps.core.infrastructure.expiracion_pedidos import ejecutar_ciclo_de_expira
 
 logger = logging.getLogger(__name__)
 
-CLAVE_BLOQUEO = 509_001  # identifica a este proceso en pg_advisory_lock
+CLAVE_BLOQUEO = 509_001
 INTERVALO_MINIMO = 30
 LATIDO_POR_DEFECTO = '/tmp/expirador_pedidos.heartbeat'
 
@@ -73,7 +73,7 @@ class Command(BaseCommand):
                 resumen = ejecutar_ciclo_de_expiracion(limite=lote)
         except Exception:
             logger.exception('Fallo la pasada de expiracion de pedidos.')
-            connections.close_all()  # la proxima pasada abre una conexion nueva
+            connections.close_all()
             return None
         detalle = ', '.join(f'{clave}={valor}' for clave, valor in sorted(resumen.items())) or 'sin pedidos vencidos'
         self.stdout.write(f'Expiracion de pedidos: {detalle} ({time.monotonic() - inicio:.1f} s).')
@@ -81,7 +81,6 @@ class Command(BaseCommand):
             logger.warning('Expiracion de pedidos con casos sin resolver: %s', dict(resumen))
         return resumen
 
-    # ------------------------------------------------------------------ servicio permanente
     def _servicio(self, options):
         parar = threading.Event()
 

@@ -1,7 +1,7 @@
 import { Input, Select } from '../../admin/components/ui';
 import { defaultAppearance, type Appearance } from '../domain/editor';
 
-/** Mismo contrato y controles para las tres composiciones; sin editar datos de catálogo. */
+
 export function AppearanceControls({ value, onChange, group, hasImage, hasLogo, palette }: {
   value: Appearance; onChange: (next: Appearance) => void; group: 'image' | 'composition'; hasImage: boolean; hasLogo: boolean;
   palette: { copyBackground: string; copyText: string; buttonBackground: string };

@@ -1,7 +1,4 @@
-/**
- * Biblioteca local de efectos seguros para fotografías de productos.
- * Solo se admiten identificadores de esta lista; no se ejecuta CSS ni JS externo.
- */
+
 export type MotionEffectId =
   | 'none' | 'zoom' | 'lift' | 'tilt' | 'rotate'
   | 'pop' | 'slide' | 'lean' | 'shrink';

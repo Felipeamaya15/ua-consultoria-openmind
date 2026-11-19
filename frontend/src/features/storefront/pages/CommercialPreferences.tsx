@@ -8,7 +8,7 @@ export default function CommercialPreferences() {
   const location = useLocation();
   const [link, setLink] = useState(() => {
     const values = new URLSearchParams(window.location.hash.slice(1));
-    // Bearer tokens never reach the server's URL/access log, referrer or storage.
+
     const value = {token: values.get('token') || '', action: values.get('accion') || ''};
     return value;
   });

@@ -70,7 +70,6 @@ class ConfiguracionLandingTests(TestCase):
     def test_rechaza_referencia_a_tienda_inexistente(self):
         with self.assertRaises(IntegrityError), transaction.atomic():
             ConfiguracionLanding.objects.create(tienda_id=self.tienda.pk + 1000, titulo='Inválida')
-            # PostgreSQL difiere la comprobación de esta FK hasta cerrar la transacción.
             transaction.get_connection().check_constraints()
         self.assertFalse(ConfiguracionLanding.objects.exists())
 

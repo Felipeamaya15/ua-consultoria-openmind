@@ -1,4 +1,4 @@
-// Contratos de servicio, descarga real y render accesible de los agregados.
+
 const fs = require('node:fs'), path = require('node:path'), vm = require('node:vm');
 const assert = require('node:assert/strict'), { test } = require('node:test'), ts = require('typescript');
 const React = require('react'), { renderToStaticMarkup } = require('react-dom/server');

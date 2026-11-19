@@ -1,4 +1,4 @@
-/** Isolated visual QA entry, never imported by the application. No backend writes. */
+
 const image = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="900" height="700"><rect width="900" height="700" fill="#c7d2fe"/><circle cx="450" cy="330" r="170" fill="#818cf8"/><text x="450" y="580" text-anchor="middle" font-size="40" fill="#312e81">Producto de prueba</text></svg>');
 const originalFetch = window.fetch.bind(window);
 if (new URLSearchParams(location.search).get('cart-preview') === '1') localStorage.setItem('ua-visual-review-cart', '1');
@@ -34,9 +34,9 @@ window.fetch = async (input, init) => {
   if (path === '/api/landing/configuracion/') return json({ id: 1, tienda: 987654, titulo: 'Tu próxima historia', descripcion: 'Datos sintéticos para revisar selección, diseño y persistencia local.', texto_boton: 'Ver productos', imagen_principal: image, logo: image, secciones: {}, contenido: { productos_destacados: ['1','2','3','4','5','6'], categorias: ['Ropa','Accesorios'], beneficios: [{ titulo: 'Envío disponible', descripcion: 'Contenido de prueba', icono: 'truck' }], contacto: { telefono: '+56 9 0000 0000', correo: 'qa@example.test', horario: '', whatsapp: '', instagram: '', facebook: '', sitio_web: '' }, ubicacion: { direccion: 'Dirección de prueba', comuna: 'Comuna', ciudad: 'Ciudad', region: 'Región', enlace_maps: '' } } });
   return json([]);
 };
-// Dedicated QA origin/entry; this token is only accepted by the fixture above.
+
 localStorage.setItem('token', 'visual-review-synthetic-token');
-// Explicit QA-only scenario: emulate old raw data before the real resolver reads it.
+
 if (new URLSearchParams(location.search).get('legacy-branding') === '1') {
   const { readStoredStoreConfig, saveStoredStoreConfig } = await import('../../src/features/storefront/visual/storage');
   const identity = { apiBaseUrl: 'http://visual-review.example.test', storeId: '987654' };

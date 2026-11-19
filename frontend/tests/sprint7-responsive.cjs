@@ -1,4 +1,4 @@
-/** Contrato responsive y revisión general del Frontend: Landing, Catálogo, Detalle, Carrito, Checkout, Login y Panel Admin. */
+
 const fs = require('node:fs');
 const path = require('node:path');
 const assert = require('node:assert/strict');

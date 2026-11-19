@@ -65,7 +65,6 @@ class PromotionContractTests(TestCase):
         other=Tienda.objects.create(nombre='B',id_usuario_propietario=self.b)
         copy=Promocion.objects.create(tienda=other,nombre='Otro',codigo='CODIGO',tipo='fixed',valor=10)
         self.assertNotEqual(row['id'],copy.pk)
-        # La arquitectura resuelve una tienda por instalación: dos tiendas físicas no eligen un tenant automáticamente.
         self.assertEqual(self.api.get('/api/promociones/').status_code,503)
 
     def test_negative_contract_400_and_no_naive_or_bad_ranges(self):

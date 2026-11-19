@@ -6,7 +6,7 @@ import { matchesSharing, sharingKey, type SharingItem } from '../domain/sharing'
 import { formatMarketingMoney, pricedVariants, variantDescription } from '../domain/content';
 import type { CampaignContentSelection } from '../../admin/services/campaignService';
 
-/** Same published sources as Difusión; selections contain references, never client prices. */
+
 export function PublishedContentPicker({ home, mode = 'campaign', selection, onSelect }: {
   home: string; mode?: 'campaign' | 'activities'; selection?: CampaignContentSelection;
   onSelect: (selection: CampaignContentSelection, item: SharingItem) => void | Promise<unknown>;

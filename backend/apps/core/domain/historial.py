@@ -62,7 +62,6 @@ class Pagina:
 
 
 def _entero(valor, nombre, codigo, maximo=None):
-    # isdigit() acepta también dígitos de otros alfabetos y superíndices: solo se admiten 0-9.
     if not (valor.isascii() and valor.isdigit()) or int(valor) < 1 or (maximo is not None and int(valor) > maximo):
         limite = f' y {maximo}' if maximo else ''
         raise ParametroInvalido(f'{nombre} debe ser un número entero entre 1{limite}.' if maximo

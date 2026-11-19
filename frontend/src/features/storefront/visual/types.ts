@@ -17,7 +17,7 @@ export type Viewport = typeof VIEWPORTS[number];
 export type FontFamily = typeof FONT_FAMILIES[number];
 export type DeepPartial<T> = { [K in keyof T]?: T[K] extends object ? DeepPartial<T[K]> : T[K] };
 
-/** Numeric dimensions are CSS pixels; ratio is width / height; opacity is 0..1. */
+
 export interface BorderConfig { width: number; color: string; style: 'none' | 'solid' | 'dashed' }
 export interface ProductGridConfig {
   columns: Record<Viewport, number>;
@@ -89,11 +89,11 @@ export interface VisualSections {
     logoSize: number;
     storeLogoShape: LogoShape;
     institutionLogoShape: LogoShape;
-    /** Tamaño base de la identidad universitaria en píxeles. */
+
     institutionLogoSize: number;
-    /** Ubicación de la marca institucional respecto a los elementos del encabezado. */
+
     institutionLogoPosition: Alignment;
-    /** Separación horizontal del logo institucional (px). */
+
     institutionLogoGap: number;
     storeLogoPadding: number;
     institutionLogoPadding: number;
@@ -107,7 +107,7 @@ export interface VisualSections {
     sticky: boolean;
   };
   hero: {
-    /** OPENMIND_EDITORIAL_PROMO_V1 - etiqueta opcional, por plantilla. */
+
     promoText: string;
     promoVisible: boolean;
     promoAlign: Alignment;
@@ -130,10 +130,10 @@ export interface VisualSections {
     textMaxWidth: number;
     gap: number;
     ctaPosition: 'inline' | 'below';
-    /** Personalización de portada por plantilla; los valores omitidos usan defaults. */
+
     carouselMode?: 'static' | 'manual' | 'automatic';
     carouselInterval?: number;
-    // OPENMIND_ONLINE_EFFECTS_V1: valores comprobados en el proveedor Magic CSS.
+
     carouselTransition?: import('./onlineEffects').CarouselChoice;
     carouselIndicators?: boolean;
     productImageMode?: 'static' | 'hover' | 'automatic';
@@ -143,10 +143,10 @@ export interface VisualSections {
     catalogProductImageInterval?: number;
     catalogProductImageTransition?: import('./onlineEffects').CarouselChoice;
     detailProductImageTransition?: 'none' | import('./onlineEffects').CarouselChoice;
-    /** Recetas JSON seguras importadas por la tienda y compartidas por sus plantillas. */
+
     importedEffectPresets?: string;
-    // OPENMIND_PRODUCT_HOVER_V1
-    /** Efectos de fotografías; opcionales y compartidos por las cuatro plantillas. */
+
+
     hoverFeaturedMotion?: import('./onlineEffects').ProductMotionChoice;
     hoverFeaturedLight?: import('./onlineEffects').ProductLightChoice;
     hoverCatalogMotion?: import('./onlineEffects').ProductMotionChoice;
@@ -198,7 +198,7 @@ export interface VisualSections {
     padding: number;
     titleSize: number;
     showTitles: boolean;
-    /** Legacy read compatibility; effective value is always true. Not editable. */
+
     brandingVisible: boolean;
     maxWidth: number;
     paddingTop: number;
@@ -218,7 +218,7 @@ export interface VisualSections {
   };
 }
 
-/** Only overrides are persisted. Mobile inherits tablet, which inherits desktop. */
+
 export interface VisualConfig extends VisualSections {
   version: 1;
   responsive: { tablet: DeepPartial<VisualSections>; mobile: DeepPartial<VisualSections> };

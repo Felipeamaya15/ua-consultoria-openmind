@@ -54,8 +54,7 @@ async function settled(component, props = {}) {
   const stylesheet = fs.readFileSync(path.join(root, 'src/styles/storefront.css'), 'utf8');
   assert.match(stylesheet, /@media\s*\(min-width:\s*768px\)\s*\{\s*\.store-mobile-navigation,[^{]+\{\s*display:\s*none\s*!important;/, 'Menú compacto se oculta en escritorio');
 
-  // Ejecutar los dos consumidores reales: conservan el componente compartido de
-  // roles y cada botón Salir limpia sesión, notifica y vuelve al inicio de plantilla 2.
+
   const {load} = require('./source-loader.cjs');
   const nodes = tree => !tree || typeof tree !== 'object' ? [] : Array.isArray(tree)
     ? tree.flatMap(nodes) : [tree, ...nodes(tree.props?.children)];

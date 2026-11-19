@@ -70,8 +70,6 @@ def process_one(store, campaign_id):
         recipient.save(update_fields=['estado'])
         row.estado = 'procesando'
         row.save(update_fields=['estado', 'actualizado'])
-    # Same store/campaign/consent lock order in all writers. Withdrawal and cancel
-    # cannot complete between the final check and submission to the provider.
     try:
         with transaction.atomic():
             Tienda.objects.select_for_update().get(pk=store.pk)

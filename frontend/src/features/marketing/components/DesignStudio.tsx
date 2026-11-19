@@ -8,7 +8,7 @@ import { FreeLayerControls, type LayerEditing } from './FreeLayers';
 
 interface Props { sourceData: PublicationContent | null; brandData: StoreBrand | null; design: PublicationDesign; images: readonly string[]; selection: ReactNode; notices: ReactNode; empty: ReactNode; sourceKey: string;
   session: TemplateHistory; onAction: (action: DesignAction) => void; previewRef: RefObject<HTMLDivElement>; busy: boolean }
-/** Solo el documento cambia de sesión; la búsqueda del selector conserva su estado. */
+
 export function DesignStudio({ sourceData, brandData, design, images, notices, empty, session, onAction: dispatch, selection, sourceKey, previewRef, busy }: Props) {
   const {library}=usePaletteLibrary();
   const history = session.documents[session.active];

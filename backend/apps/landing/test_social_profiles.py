@@ -189,7 +189,6 @@ class SocialProfilesTests(TestCase):
         self.assertEqual(self.patch({'instagram': None}).status_code, 503)
         second.refresh_from_db()
         self.assertEqual(second.contenido['contacto']['instagram'], 'https://instagram.com/ajena')
-        # Simulate the other installation resolving only its own store.
         self.store.delete()
         self.client.force_authenticate(self.other)
         self.assertEqual(self.client.get(self.url).data['data']['instagram']['perfil'], 'https://instagram.com/ajena')

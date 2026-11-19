@@ -1,9 +1,4 @@
-/**
- * OPENMIND_ONLINE_EFFECTS_V1
- * Proveedor web real: Magic CSS, https://github.com/miniMAC/magic (MIT).
- * El archivo remoto SOLO se analiza como datos. Nunca se inserta CSS remoto
- * completo ni JS de terceros; únicamente keyframes con propiedades permitidas.
- */
+
 export type OnlineEffectId = `magic:${string}`;
 export type ProductMotionChoice = import('./effectLibrary').MotionEffectId | OnlineEffectId;
 export type ProductLightChoice = import('./effectLibrary').LightEffectId | OnlineEffectId;
@@ -82,7 +77,7 @@ function cleanKeyframes(rule: CSSKeyframesRule): { css: string; light: boolean }
     }
     if (properties.length > 0) parts.push(`${key}{${properties.join(';')}}`);
   }
-  // No importar animaciones que hagan desaparecer las fotos al terminar.
+
   if (!parts.length || (terminalOpacity !== null && terminalOpacity < .5)) return null;
   const css = parts.join('');
   return css.length <= 6000 ? { css, light } : null;
@@ -98,7 +93,7 @@ function category(name: string): string {
   return 'Animaciones';
 }
 
-/** Fetch real de la biblioteca online. No lista fija de efectos. */
+
 export async function loadOnlineEffects(): Promise<OnlineEffect[]> {
   if (pending) return pending;
   pending = (async () => {
@@ -114,7 +109,7 @@ export async function loadOnlineEffects(): Promise<OnlineEffect[]> {
     const css = await response.text();
     if (css.length > MAX_CSS_BYTES) throw new Error('La biblioteca remota supera el tamaño permitido.');
     const detached = new CSSStyleSheet();
-    detached.replaceSync(css); // NO se adopta ni se aplica la hoja remota.
+    detached.replaceSync(css);
     const results: OnlineEffect[] = [];
     definitions.clear();
     for (let i = 0; i < detached.cssRules.length; i++) {
@@ -133,7 +128,7 @@ export async function loadOnlineEffects(): Promise<OnlineEffect[]> {
   return pending;
 }
 
-/** Solo inyecta keyframes regenerados con propiedades y valores admitidos. */
+
 export async function ensureOnlineEffect(value: string | undefined, targetDocument?: Document): Promise<boolean> {
   if (!isOnlineEffectId(value)) return false;
   const doc = targetDocument ?? (typeof document !== 'undefined' ? document : undefined);

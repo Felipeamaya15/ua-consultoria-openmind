@@ -63,7 +63,7 @@ function load(file, globals) {
   const routes = fs.readFileSync(path.join(root, 'src/app/router/index.tsx'), 'utf8');
   for (const route of ['mis-pedidos', 'mis-pedidos/:id']) assert.ok(routes.includes(`path: '${route}', element: <RequireCustomer>`));
 
-  // Pedidos del propietario: historial paginado, base configurada y errores visibles.
+
   const storeOrder = {id_pedido: 42, identificador: 'PEDIDO-42', nombre_contacto: 'Comprador', correo_contacto: 'buyer@example.test',
     monto_total: '40.00', estado: 'pendiente', fecha_creacion: '2026-10-02T12:00:00Z', metodo_pago: 'Transferencia',
     estado_etiqueta: 'Pendiente', pago_estado: 'pendiente', moneda: 'CLP',

@@ -196,7 +196,7 @@ export default function Tracking() {
     return () => {requestRef.current?.abort();};
   }, [incomingNumber, incomingEmail, search]);
 
-  // Los alias históricos conservan la etapa canónica del pedido.
+
   const legacySteps: Record<string, string> = {
     preparando: 'pagado', en_origen: 'en_camino', enviado: 'en_camino', en_reparto: 'en_camino',
   };
@@ -226,9 +226,7 @@ export default function Tracking() {
               : 'w-full max-w-7xl mx-auto px-4 py-12'
       }
     >
-      {/* =====================================================
-          ENCABEZADO
-      ====================================================== */}
+
       <div
         className={
           isCatalog
@@ -282,9 +280,7 @@ export default function Tracking() {
         </p>
       </div>
 
-      {/* =====================================================
-          BUSCADOR
-      ====================================================== */}
+
       {!isAutomaticLookup && <div data-page-form data-page-panel
         className={`
           ${panelClass}
@@ -388,9 +384,7 @@ export default function Tracking() {
         </p>
       </div>}
 
-      {/* =====================================================
-          NO ENCONTRADO
-      ====================================================== */}
+
       {loading && <p role="status">Consultando pedido…</p>}
       {error && (
         <Alert variant="error" title="No se pudo consultar el pedido">
@@ -403,9 +397,7 @@ export default function Tracking() {
         </Alert>
       )}
 
-      {/* =====================================================
-          SEGUIMIENTO EN VIVO (CHILEXPRESS / STARKEN / CENTRAL)
-      ====================================================== */}
+
       {liveTracking && (
         <div className={isCatalog
           ? 'flex flex-col gap-5 animate-fade-in text-[#151515] [&_.text-[var\(--muted-foreground\)]]:text-black/60 [&_.text-[var\(--foreground\)]]:text-[#151515]'
@@ -470,7 +462,7 @@ export default function Tracking() {
               )}
             </div>
 
-            {/* Historial de eventos */}
+
             <div>
               <h4 className="text-xs font-bold uppercase tracking-wider text-[var(--muted-foreground)] mb-4">
                 Historial de Movimientos
@@ -480,7 +472,7 @@ export default function Tracking() {
                 {liveTracking.historial.map((evento, idx) => (
                   <div key={idx} className="relative">
                     <div className="absolute -left-[31px] top-1 w-3.5 h-3.5 rounded-full border-2 border-white bg-blue-600 shadow-sm" />
-                    
+
                     <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-1">
                       <p className="text-sm font-semibold text-[var(--foreground)]">
                         {evento.descripcion}
@@ -491,7 +483,7 @@ export default function Tracking() {
                         })}
                       </span>
                     </div>
-                    
+
                     <p className="text-xs text-[var(--muted-foreground)] mt-0.5">
                       📍 {evento.ubicacion} · <span className="text-[11px] font-medium">{describeTrackingState(evento.estado).label}</span>
                     </p>
@@ -503,18 +495,14 @@ export default function Tracking() {
         </div>
       )}
 
-      {/* =====================================================
-          PEDIDO ENCONTRADO
-      ====================================================== */}
+
       {order && (
         <div className={isCatalog
           ? 'flex flex-col gap-5 animate-fade-in text-[var(--visual-page-color)] [&_.text-\[var\(--muted-foreground\)\]]:text-[var(--visual-page-color)]/45 [&_.text-\[var\(--foreground\)\]]:text-[var(--visual-page-color)]'
           : 'flex flex-col gap-5 animate-fade-in'
         }>
 
-          {/* ===============================================
-              INFORMACIÓN DEL PEDIDO
-          ================================================ */}
+
           <div data-page-panel
             className={`
               ${panelClass}
@@ -625,9 +613,7 @@ export default function Tracking() {
             </div>
           </div>
 
-          {/* ===============================================
-              ESTADO
-          ================================================ */}
+
           <div data-page-panel
             className={`
               ${panelClass}
@@ -796,9 +782,7 @@ export default function Tracking() {
             </div>
           </div>
 
-          {/* ===============================================
-              PRODUCTOS
-          ================================================ */}
+
           <div data-page-panel
             className={`
               ${panelClass}

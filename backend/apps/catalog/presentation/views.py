@@ -10,18 +10,15 @@ from pymongo.errors import DuplicateKeyError, PyMongoError
 from bson import ObjectId
 
 
-# 1. Framework & Librerías de terceros (DRF)
 from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from apps.authentication.permissions import IsStoreOwner
 from rest_framework.views import APIView
 
-# 2. Módulos Core (Infraestructura, Modelos y Respuestas comunes)
 from apps.core.infrastructure.tenant import resolver_tienda, resolver_tienda_id
 from apps.core.presentation.responses import error_response, success_response
 
-# 3. Catálogo - Capa de Dominio (Excepciones)
 from apps.catalog.domain.exceptions import (
     CantidadInvalidaException,
     ItemCarritoNoEncontradoException,
@@ -30,14 +27,12 @@ from apps.catalog.domain.exceptions import (
     VarianteNoEncontradaException,
     ConfiguracionPagoInvalidaException,
     TiendaNoAutorizadaException,
-    # Nuevas excepciones - Adaptador Transbank
     TransbankTransaccionException,
     TransbankServicioNoDisponibleException,
     TransbankRechazoException,
     TransbankConfiguracionFaltanteException,
 )
 
-# 4. Catálogo - Capa de Aplicación (Servicios y Casos de Uso)
 from apps.catalog.application.services import VariantService
 from apps.catalog.application.use_cases import (
     ActualizarProductoAdminUseCase,
@@ -60,30 +55,25 @@ from apps.catalog.application.use_cases import (
     HardDeleteProductUseCase,
     SoftDeleteProductUseCase,
     ValidarDisponibilidadProductoUseCase,
-    # Nuevos Casos de Uso y DTOs - Adaptador Transbank
     IniciarPagoTransbankDTO,
     IniciarPagoTransbankUseCase,
     ConfirmarPagoTransbankUseCase,
     RegistrarPagoAbortadoTransbankUseCase,
-    #PayPal
     GuardarConfiguracionPayPalDTO,
     ObtenerConfiguracionPayPalUseCase,
     GuardarConfiguracionPayPalUseCase,
-    #MercadoPago
     GuardarConfiguracionMercadoPagoDTO,
     ObtenerConfiguracionMercadoPagoUseCase,
     GuardarConfiguracionMercadoPagoUseCase,
 
 )
 
-# 5. Catálogo - Capa de Infraestructura (Repositorios y Filtros)
 from apps.catalog.infrastructure.attribute_filters import (
     FiltrosAtributosInvalidos,
     parse_attribute_params,
 )
 from apps.catalog.infrastructure.repositories import ProductRepository
 
-# 6. Catálogo - Capa de Presentación (Serializadores)
 from .serializers import AgregarItemCarritoRequestSerializer, ConfiguracionTransbankInputSerializer, ConfiguracionTransbankResponseSerializer, ItemCarritoResponseSerializer, ModificarCantidadRequestSerializer, ProductoAdminDetailSerializer, ProductoCreateSerializer, ProductoStockUpdateSerializer, ProductoUpdateSerializer, VarianteStockUpdateSerializer, IniciarPagoTransbankSerializer, ConfirmarPagoTransbankSerializer, PagoAbortadoTransbankSerializer, ConfiguracionPayPalInputSerializer, ConfiguracionPayPalResponseSerializer, ConfiguracionMercadoPagoInputSerializer, ConfiguracionMercadoPagoResponseSerializer
 
 
@@ -156,20 +146,6 @@ class ConfiguracionMercadoPagoView(StorePaymentConfigurationView):
             )
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 class ConfiguracionPayPalView(StorePaymentConfigurationView):
     """
     GET: Consulta la configuración actual de PayPal para la tienda.
@@ -227,13 +203,6 @@ class ConfiguracionPayPalView(StorePaymentConfigurationView):
                 },
                 status=status.HTTP_400_BAD_REQUEST,
             )
-
-
-
-
-
-
-
 
 
 class ConfiguracionTransbankView(StorePaymentConfigurationView):
@@ -325,10 +294,6 @@ class ConfiguracionTransbankView(StorePaymentConfigurationView):
                 {"exito": False, "mensaje": "No se pudo guardar la configuración de Webpay.", "error": {"codigo": "ERROR_INTERNO", "detalles": None}},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
-
-
-
-
 
 
 class CarritoItemsView(APIView):
@@ -867,7 +832,6 @@ class ProductoUpdateView(APIView):
             revision = request.data.get('revision')
             if not isinstance(revision, str) or not revision:
                 return error_response("Recarga el producto antes de editar: falta revision.", "ERROR_VALIDACION")
-            # Validar el documento completo también para PATCH; no perder campos omitidos.
             serializer = ProductCreateSerializer(
                 data={**original, **request.data},
                 context={
@@ -1025,7 +989,6 @@ class ProductVariantsView(VariantTenantMixin, APIView):
 
         try:
 
-            # Si la ruta incluye SKU, retorna esa variante específica
 
             if sku:
 
@@ -1033,8 +996,6 @@ class ProductVariantsView(VariantTenantMixin, APIView):
 
                 return Response(variante, status=status.HTTP_200_OK)
 
-
-            # Si no hay SKU, lista todas las variantes del producto
 
             variantes = self.service.get_variants(pid)
 
@@ -1168,8 +1129,6 @@ class ProductVariantsView(VariantTenantMixin, APIView):
             )
 
 
-        # Validaciones para el caso de datos inválidos (HTTP 400)
-
         errores = {}
 
 
@@ -1221,8 +1180,6 @@ class ProductVariantsView(VariantTenantMixin, APIView):
 
             )
 
-
-        # Campos permitidos para edición
 
         campos_permitidos = [
             "precio",
@@ -1371,7 +1328,6 @@ class ProductVariantsView(VariantTenantMixin, APIView):
 
                     )
 
-                # Rechazo controlado cuando el stock es 0 o insuficiente
 
                 return Response(
 
@@ -1394,8 +1350,6 @@ class ProductVariantsView(VariantTenantMixin, APIView):
 
         data = request.data
 
-
-        # --- 1. Validaciones para el caso inválido de QA (HTTP 400) ---
 
         errores = {}
 
@@ -1470,8 +1424,6 @@ class ProductVariantsView(VariantTenantMixin, APIView):
 
             )
 
-
-        # --- 2. Persistencia con VariantService (HTTP 201) ---
 
         payload = {
 
@@ -1798,7 +1750,6 @@ class PagoAbortadoTransbankView(APIView):
         RegistrarPagoAbortadoTransbankUseCase().execute(
             serializer.validated_data["id_tienda"], serializer.validated_data["tbk_token"]
         )
-        # La respuesta no revela si el token corresponde a un pedido.
         return Response({"exito": True, "mensaje": "Anulación del pago registrada."}, status=status.HTTP_200_OK)
 
 

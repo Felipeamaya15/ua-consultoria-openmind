@@ -71,7 +71,6 @@ class DjangoUserRepository(IUserRepository):
         check_password() previene timing attacks, valida hashes Argon2id, BCrypt o PBKDF2,
         y actualiza automáticamente hashes antiguos a Argon2id con un nuevo salt único.
         """
-        # Buscar usuario por email o por username usando consultas parametrizadas del ORM
         user_obj = UserModel.objects.filter(email__iexact=username_or_email).first()
         if not user_obj:
             user_obj = UserModel.objects.filter(username=username_or_email).first()

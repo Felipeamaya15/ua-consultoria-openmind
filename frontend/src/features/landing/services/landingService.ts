@@ -22,10 +22,7 @@ export const LANDING_CONFIG_CHANGED =
 
 const endpoint = `${API_BASE_URL}/api/landing/configuracion/`;
 
-/**
- * Convierte las rutas de imágenes de Django
- * en URLs que puedan utilizarse en el frontend.
- */
+
 export function normalizeMediaUrl(
   value: string | null
 ): string | null {
@@ -33,7 +30,7 @@ export function normalizeMediaUrl(
     return null;
   }
 
-  // URLs absolutas e imágenes Base64.
+
   if (
     value.startsWith('http://') ||
     value.startsWith('https://') ||
@@ -42,7 +39,7 @@ export function normalizeMediaUrl(
     return value;
   }
 
-  // Rutas absolutas de Django, como /media/landing/.
+
   if (value.startsWith('/')) {
     return `${API_BASE_URL}${value}`;
   }
@@ -50,10 +47,7 @@ export function normalizeMediaUrl(
   return `${API_BASE_URL}/${value}`;
 }
 
-/**
- * Normaliza la configuración de la página principal,
- * incluyendo las fotografías del carrusel.
- */
+
 function normalizeConfig(
   data: LandingConfig | null
 ): LandingConfig | null {
@@ -80,7 +74,7 @@ function normalizeConfig(
   return {
     ...data,
 
-    // Mantener la normalización de bloques existentes.
+
     ...(data.contenido
       ? {
           contenido: {
@@ -128,12 +122,12 @@ function normalizeConfig(
         }
       : {}),
 
-    // Imagen principal antigua: compatibilidad.
+
     imagen_principal: normalizeMediaUrl(
       data.imagen_principal
     ),
 
-    // Nuevo carrusel de fotografías.
+
     imagenes_carrusel: Array.isArray(
       data.imagenes_carrusel
     )
@@ -145,14 +139,12 @@ function normalizeConfig(
           .sort((a, b) => a.orden - b.orden)
       : [],
 
-    // Logo de la tienda.
+
     logo: normalizeMediaUrl(data.logo),
   };
 }
 
-/**
- * Lee y valida la respuesta del backend.
- */
+
 async function readResponse(
   response: Response
 ): Promise<LandingConfig | null> {
@@ -163,9 +155,7 @@ async function readResponse(
   return normalizeConfig(data);
 }
 
-/**
- * Obtiene la configuración pública de la tienda.
- */
+
 export async function fetchLandingConfig(
   options?: InitialLoadOptions
 ): Promise<LandingConfig | null> {
@@ -177,9 +167,7 @@ export async function fetchLandingConfig(
   );
 }
 
-/**
- * Obtiene la configuración para el propietario.
- */
+
 export async function fetchPrivateLandingConfig(
   options?: InitialLoadOptions
 ): Promise<LandingConfig | null> {
@@ -204,12 +192,7 @@ export async function fetchPrivateLandingConfig(
   );
 }
 
-/**
- * Guarda el contenido de la página principal.
- *
- * El carrusel se administra mediante endpoints
- * independientes. No se incluye en este guardado.
- */
+
 export async function saveLandingConfig(
   config: LandingInput
 ): Promise<LandingConfig> {
@@ -241,8 +224,7 @@ export async function saveLandingConfig(
     );
   }
 
-  // Mantener el comportamiento anterior para
-  // la imagen principal y el logo.
+
   for (const field of [
     'imagen_principal',
     'logo',
@@ -277,8 +259,7 @@ export async function saveLandingConfig(
       body.append(field, '');
     }
 
-    // Si existe una URL, no se vuelve a subir.
-    // Django conserva el archivo almacenado.
+
   }
 
   const saved = normalizeConfig(
@@ -306,10 +287,7 @@ export async function saveLandingConfig(
   return saved;
 }
 
-/**
- * Guarda los estilos visuales de los bloques.
- * No reemplaza el contenido de la página principal.
- */
+
 export async function saveBlockStyles(
   template: string,
   styles: import(

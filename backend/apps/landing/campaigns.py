@@ -47,7 +47,7 @@ def product_snapshot(store, product_id, previous):
     if not product_id:
         return {}
     if previous.get('id') == product_id:
-        return previous  # Conservar el producto ya elegido aunque cambie el catálogo.
+        return previous
     from apps.catalog.infrastructure.repositories import ProductRepository
     from pymongo.errors import PyMongoError
     try:
@@ -159,7 +159,6 @@ class CampaignsView(NoStoreActivityView):
         row.diseno = design
         row.save()
         valid = set(eligible_consents(store).filter(pk__in=ids).values_list('pk', flat=True))
-        # Solo sustituye la selección del borrador; nunca borra contactos, consentimientos ni envíos.
         row.destinatarios.all().delete()
         DestinatarioCampana.objects.bulk_create([DestinatarioCampana(campana=row, consentimiento=record,
             revision_consentimiento=record.revision, email=record.email,

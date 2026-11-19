@@ -2,7 +2,7 @@ import { useId, useState } from 'react';
 import { Icon } from '../ui/Icon';
 import { groupPickupHours, type PickupConfiguration } from '../../../admin/services/pickupConfiguration';
 
-/** Solo presentación: no cambia selección, precio, disponibilidad ni configuración. */
+
 export default function PickupDetails({ pickup }: { pickup: PickupConfiguration }) {
   const [expanded, setExpanded] = useState(false);
   const id = useId();

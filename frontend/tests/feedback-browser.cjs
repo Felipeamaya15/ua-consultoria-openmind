@@ -1,4 +1,4 @@
-// Frontend completo en Vite, servicios reales contra la simulación local de Postman.
+
 const assert = require('node:assert/strict'), fs = require('node:fs'), path = require('node:path');
 const { chromium } = require(process.env.DASHBOARD_PLAYWRIGHT_MODULE || 'C:/Users/maria/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright');
 const base = process.env.FEEDBACK_URL || 'http://127.0.0.1:5195', api = process.env.FEEDBACK_API || 'http://127.0.0.1:4915/openmind';

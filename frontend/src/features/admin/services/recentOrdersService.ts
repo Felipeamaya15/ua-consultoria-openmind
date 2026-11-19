@@ -3,7 +3,7 @@ import { API_BASE_URL } from '../../../api';
 import { authService } from '../../auth/services/authService';
 import { requestJson } from '../../../shared/services/apiRequest';
 
-/** Cantidad de órdenes recientes que muestra el dashboard. */
+
 export const RECENT_ORDERS_LIMIT = 5;
 const MAX_LIMIT = 20;
 
@@ -47,7 +47,7 @@ function isAbort(error: unknown): boolean {
   return isRecord(error) && error.name === 'AbortError';
 }
 
-/** Trae las órdenes más recientes de la tienda (solo el propietario). */
+
 export async function getRecentOrders(limit: number = RECENT_ORDERS_LIMIT, signal?: AbortSignal): Promise<RecentOrder[]> {
   const token = authService.getToken();
   if (!token) throw new Error('Inicia sesión como propietario para consultar las últimas órdenes.');
@@ -63,7 +63,7 @@ export async function getRecentOrders(limit: number = RECENT_ORDERS_LIMIT, signa
     throw new Error('No se pudo conectar con el servidor. Revisa tu conexión e inténtalo nuevamente.');
   }
   let body: unknown = null;
-  try { body = await response.json(); } catch { /* respuesta sin JSON: se informa más abajo */ }
+  try { body = await response.json(); } catch {  }
   const data = isRecord(body) ? body : {};
   if (response.status === 401) throw new Error('Tu sesión venció. Vuelve a iniciar sesión.');
   if (response.status === 403) throw new Error('Solo el propietario de la tienda puede ver las últimas órdenes.');
@@ -76,7 +76,7 @@ export async function getRecentOrders(limit: number = RECENT_ORDERS_LIMIT, signa
   return data.data;
 }
 
-/** Fecha y hora del pedido en America/Santiago, sin depender del navegador. */
+
 export function formatRecentOrderDate(value: string): string {
   return formatBusinessDate(value, true);
 }
@@ -114,7 +114,7 @@ export interface OrderEmailOutcome {
   codigo: string;
 }
 
-/** Frase sobre el aviso por correo al comprador tras cambiar un estado; vacía si ese cambio no genera correo. */
+
 export function describeShipmentEmail(correo: OrderEmailOutcome | null | undefined): { text: string; failed: boolean } {
   if (!correo) return { text: '', failed: false };
   if (correo.enviado) return { text: 'Se envió el aviso de despacho al comprador por correo.', failed: false };
