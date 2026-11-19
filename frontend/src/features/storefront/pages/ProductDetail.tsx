@@ -275,14 +275,6 @@ export default function ProductDetail({ previewProduct }: { previewProduct?: Pro
       maxStock: selectedVariant.stock,
     });
 
-    trackMetaPixelEvent('AddToCart', {
-      content_name: product.name,
-      content_ids: [product.catalogId || product.id],
-      content_type: 'product',
-      value: selectedVariant.price,
-      currency: 'CLP',
-    });
-
     setAdded(true);
     };
 

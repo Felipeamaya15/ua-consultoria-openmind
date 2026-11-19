@@ -21,6 +21,8 @@ import { useStorefrontTemplate } from '../hooks/useStorefrontTemplate';
 import { shippingService, type DetalleSeguimiento } from '../services/shippingService';
 import { describeTrackingState } from '../data/trackingStates';
 import { PagarPedidoPendiente } from '../components/checkout/PagarPedidoPendiente';
+import { useStoreIdentity } from '../context/StoreIdentityContext';
+import { trackConfirmedMetaPurchase } from '../services/metaPurchaseTracking';
 
 const STATUS_STEPS = [
   {
@@ -110,6 +112,7 @@ function isDirectTrackingNumber(value: string): boolean {
 
 export default function Tracking() {
   const location = useLocation();
+  const { identity } = useStoreIdentity();
   const { isMinimal, isVisual, isCatalog } = useStorefrontTemplate();
   const locationState = location.state as TrackingState | null;
   const incomingNumber = new URLSearchParams(location.search).get('orden')
@@ -159,6 +162,23 @@ export default function Tracking() {
         if (!controller.signal.aborted) {
           lookupEmail.current = customerEmail.trim();
           setOrder(found);
+
+          // TRACK_ASYNC_PURCHASE_V1
+          const paidStates = new Set([
+            'pagado', 'preparando', 'en_camino',
+            'en_origen', 'enviado', 'en_reparto', 'entregado',
+          ]);
+
+          if (
+            identity?.storeId &&
+            found.identificador &&
+            paidStates.has(found.estado)
+          ) {
+            trackConfirmedMetaPurchase(
+              Number(identity.storeId),
+              found.identificador
+            );
+          }
         }
       }
     } catch (err: any) {
@@ -168,7 +188,7 @@ export default function Tracking() {
     } finally {
       if (!controller.signal.aborted) setLoading(false);
     }
-  }, []);
+  }, [identity?.storeId]);
 
   const isDirectTracking = isDirectTrackingNumber(orderNumber);
   const invalidOrderNumber = Boolean(

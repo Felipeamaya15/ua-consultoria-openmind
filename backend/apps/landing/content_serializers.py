@@ -116,6 +116,18 @@ class ContenidoLandingSerializer(serializers.Serializer):
                 import copy
                 block['actividad'] = copy.deepcopy(previous[block['id']]['actividad'])
             validate_activity(block)
+
+            portada = (block.get('actividad') or {}).get('portada') or ''
+            tienda = self.context.get('tienda')
+            if tienda and portada.startswith('/media/landing/blocks/'):
+                prefix = (
+                    f"/media/landing/blocks/{tienda.pk}/"
+                    f"{block['id']}/"
+                )
+                if not portada.startswith(prefix):
+                    raise serializers.ValidationError(
+                        'La portada debe pertenecer a esta tienda y actividad.'
+                    )
             activity = block.get('actividad') or {}
             if activity.get('cupos') and self.context.get('tienda'):
                 from apps.landing.models import SolicitudActividad
@@ -128,6 +140,12 @@ class ContenidoLandingSerializer(serializers.Serializer):
             raise serializers.ValidationError('Los identificadores de las secciones deben ser únicos.')
         uploads = [image['src'] for block in value for container in [block, *block.get('componentes', [])]
                    for image in container.get('imagenes', []) if image['src'].startswith('data:')]
+        uploads += [
+            block['actividad']['portada']
+            for block in value
+            if block.get('actividad')
+            and block['actividad'].get('portada', '').startswith('data:')
+        ]
         if sum(len(src) for src in uploads) > 14000000:
             raise serializers.ValidationError('Guarda las imágenes en grupos de hasta 10 MB.')
         from apps.landing.section_elements import validate_media_references

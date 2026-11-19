@@ -26,6 +26,18 @@ class WebpayActivityTests(TestCase):
         return order
     def approved(self,order):
         return {'buy_order':order.identificador,'session_id':'session-qa','amount':int(order.monto_total),'status':'AUTHORIZED','response_code':0,'authorization_code':'123456'}
+    def test_version_preserved_for_old_token_and_saved_for_new(self):
+        from apps.landing.webpay_activity_orders import api_version, remember_session, configure_version
+        from apps.catalog.infrastructure.adapters.transbank_adapter import TransbankWebpayAdapter
+        order=self.fixture()
+        adapter=TransbankWebpayAdapter('test','secret','INTEGRACION')
+        self.assertEqual(api_version(order),'1.0')
+        self.assertIn('/v1.0/transactions',configure_version(adapter,api_version(order)).base_url)
+        remember_session(order,'new-session');order.refresh_from_db()
+        self.assertEqual(api_version(order),'1.2')
+        self.assertIn('/v1.2/transactions',configure_version(adapter,api_version(order)).base_url)
+        self.assertIn('/v1.0/transactions',TransbankWebpayAdapter('test','secret','INTEGRACION').base_url)
+
     def test_callback_is_idempotent_and_seats_confirm_once(self):
         order=self.fixture()
         with patch('apps.landing.webpay_activity_orders.adapter_for') as adapter,patch('apps.landing.webpay_activity_orders.status_raw',return_value=self.approved(order)) as status:

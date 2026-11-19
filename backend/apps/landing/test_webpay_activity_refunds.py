@@ -31,11 +31,23 @@ class WebpayRefundDBTests(TestCase):
             process_order(order.pk,callback_token='test-token')
         order.refresh_from_db()
         row=ReservaActividadPagada.objects.get(clave_checkout=order.clave_checkout)
-        order.entrega={**order.entrega,LEDGER:{str(row.pk):{'estado':'autorizada','monto':int(order.monto_total)}}}
+        from apps.landing.webpay_activity_orders import META, NEW_API_VERSION
+        order.entrega={**order.entrega,META:{**order.entrega[META],'api_version':NEW_API_VERSION},LEDGER:{str(row.pk):{'estado':'autorizada','monto':int(order.monto_total)}}}
         order.save(update_fields=['entrega'])
         return order,row
     def action(self,order,row,action='reembolsar_webpay'):
         return change_webpay_refund(self.store,order.pk,row.pk,SimpleNamespace(pk=1),action,'Prueba',True)
+    def test_legacy_refund_does_not_contact_provider(self):
+        from apps.landing.webpay_activity_orders import META
+        order,row=self.prepare()
+        order.entrega[META].pop('api_version');order.save(update_fields=['entrega'])
+        with patch('apps.landing.webpay_activity_refunds.adapter_for') as adapter,patch('apps.landing.webpay_activity_refunds._request_refund') as refund:
+            with self.assertRaises(ValidationError):self.action(order,row)
+            adapter.assert_not_called();refund.assert_not_called()
+        order.refresh_from_db();row.refresh_from_db()
+        self.assertEqual(records(order)[str(row.pk)]['estado'],'autorizada')
+        self.assertEqual(row.estado,'confirmada')
+
     def test_refund_only_once(self):
         order,row=self.prepare()
         with patch('apps.landing.webpay_activity_refunds.adapter_for'),patch('apps.landing.webpay_activity_refunds.status_raw',return_value=self.approved(order)),patch('apps.landing.webpay_activity_refunds._request_refund',return_value={'type':'REVERSED'}) as refund:

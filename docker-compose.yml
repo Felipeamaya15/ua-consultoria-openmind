@@ -65,6 +65,8 @@ services:
       - PAID_ACTIVITY_EXTERNAL_ALLOW_LIVE=${PAID_ACTIVITY_EXTERNAL_ALLOW_LIVE:-0}
       - PAID_ACTIVITY_EXTERNAL_REFUNDS_ENABLED=${PAID_ACTIVITY_EXTERNAL_REFUNDS_ENABLED:-0}
       - PAID_ACTIVITY_MIXED_TRANSFER_ENABLED=${PAID_ACTIVITY_MIXED_TRANSFER_ENABLED:-0}
+      - CART_REMINDERS_ENABLED=${CART_REMINDERS_ENABLED:-0}
+      - CART_REMINDER_PUBLIC_STORE_URL=${CART_REMINDER_PUBLIC_STORE_URL:-}
       - DJANGO_ALLOWED_HOSTS=${DJANGO_ALLOWED_HOSTS:-localhost,127.0.0.1,backend,testserver}
       - DJANGO_CORS_ALLOWED_ORIGINS=${DJANGO_CORS_ALLOWED_ORIGINS:-http://localhost:5173,http://127.0.0.1:5173}
       - DJANGO_CSRF_TRUSTED_ORIGINS=${DJANGO_CSRF_TRUSTED_ORIGINS:-}
@@ -114,6 +116,23 @@ services:
       mongodb:
         condition: service_started
       mailpit:
+        condition: service_started
+
+  recordatorios_carrito:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: django_recordatorios_carrito
+    restart: unless-stopped
+    init: true
+    command: ["python", "manage.py", "procesar_carritos_abandonados", "--daemon", "--intervalo", "300"]
+    volumes:
+      - ./backend:/app
+    environment: *backend_env
+    depends_on:
+      db:
+        condition: service_healthy
+      backend:
         condition: service_started
 
   expirador_pedidos:

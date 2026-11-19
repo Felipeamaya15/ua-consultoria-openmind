@@ -1,4 +1,5 @@
 """Activities reuse saved section UUIDs and their editable visual blocks."""
+import re
 from datetime import date, datetime, time, timedelta, timezone as dt_timezone
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
@@ -33,6 +34,7 @@ class ActivityConfigSerializer(StrictSerializer):
     inscripciones = serializers.BooleanField(default=False)
     cupos = serializers.IntegerField(min_value=1, max_value=10000, allow_null=True, default=None)
     confirmacion = serializers.ChoiceField(choices=('manual', 'automatica'), default='manual')
+    portada = serializers.CharField(max_length=1500000, allow_blank=True, required=False, default='')
     venta = PaidActivitySettingsSerializer(required=False, allow_null=True)
 
     def validate_zona_horaria(self, value):
@@ -41,6 +43,33 @@ class ActivityConfigSerializer(StrictSerializer):
         except (ZoneInfoNotFoundError, ValueError):
             raise serializers.ValidationError('Selecciona una zona horaria IANA válida.') from None
         return value
+
+
+    def validate_portada(self, value):
+        if not value:
+            return ''
+
+        if value.startswith('data:image/'):
+            from apps.core.image_processing import process_data_url
+            from django.core.exceptions import ValidationError as DjangoValidationError
+            try:
+                process_data_url(value, max_mb=1)
+            except (DjangoValidationError, ValueError, TypeError):
+                raise serializers.ValidationError(
+                    'La portada debe ser una imagen válida de máximo 1 MB.'
+                ) from None
+            return value
+
+        if re.fullmatch(
+            r'/media/landing/blocks/\d+/[0-9a-fA-F-]{36}/'
+            r'[0-9a-f]{64}\.(?:png|jpe?g|webp)',
+            value
+        ):
+            return value
+
+        raise serializers.ValidationError(
+            'Sube una imagen de portada desde el editor.'
+        )
 
     def validate_enlace_reunion(self, value):
         return media_url('enlace', value) if value else ''
@@ -133,6 +162,8 @@ def validate_activity(section):
         raise ValidationError('Servicios y talleres requieren una sección configurable.')
     if config['gratuito'] and any(item['tipo'] == 'precio' and int(item.get('importe') or 0) > 0 for item in section.get('componentes', [])):
         raise ValidationError('Un taller o servicio gratuito no puede tener un precio positivo.')
+    if section.get('visible') and not config.get('portada'):
+        raise ValidationError('Agrega una imagen de portada antes de publicar el servicio o taller.')
     if section.get('visible') and not activity_title(section):
         raise ValidationError('Agrega un título público antes de publicar el servicio o taller.')
     schedule = activity_schedule(section)

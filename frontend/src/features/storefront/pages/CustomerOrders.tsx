@@ -9,10 +9,13 @@ import { formatBusinessDate } from '../../admin/services/businessTime';
 import { formatReportMoney } from '../../admin/services/reportFormatting';
 import { PickupSelectionSummary } from '../components/checkout/PickupSchedule';
 import { PagarPedidoPendiente } from '../components/checkout/PagarPedidoPendiente';
+import { useStoreIdentity } from '../context/StoreIdentityContext';
+import { trackConfirmedMetaPurchase } from '../services/metaPurchaseTracking';
 
 export default function CustomerOrders() {
   const { id } = useParams();
   const { route } = useStorefrontTemplate();
+  const { identity } = useStoreIdentity();
   const [data, setData] = useState<CustomerOrder[] | null>(null);
   const [error, setError] = useState('');
   const [attempt, setAttempt] = useState(0);
@@ -21,10 +24,33 @@ export default function CustomerOrders() {
     let active = true;
     setData(null); setError('');
     const request = id ? authService.getCustomerOrder(id).then(order => [order]) : authService.getCustomerOrders();
-    request.then(orders => {if (active) setData(orders);})
+    request.then(orders => {
+      if (!active) return;
+      setData(orders);
+
+      // TRACK_ASYNC_PURCHASE_V1
+      // Solo estados pagados confirmados por el servidor.
+      if (identity?.storeId) {
+        const paidStates = new Set([
+          'pagado', 'preparando', 'en_camino',
+          'en_origen', 'enviado', 'en_reparto', 'entregado',
+        ]);
+        for (const order of orders) {
+          if (
+            order.identificador &&
+            paidStates.has(order.estado)
+          ) {
+            trackConfirmedMetaPurchase(
+              Number(identity.storeId),
+              order.identificador
+            );
+          }
+        }
+      }
+    })
       .catch(err => {if (active) setError(err instanceof Error ? err.message : 'No se pudieron cargar los pedidos.');});
     return () => {active = false;};
-  }, [id, attempt]);
+  }, [id, attempt, identity?.storeId]);
 
   const mainOrderNumber = id && data?.[0] ? (data[0].identificador || `Pedido #${id}`) : (id ? `Pedido #${id}` : 'Mis pedidos');
 

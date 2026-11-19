@@ -34,3 +34,17 @@
   background: #f1f5f9;
   border-radius: 12px;
 }
+
+/* Portada compacta: deja espacio para las fotos y videos adicionales. */
+.activity-cover {
+  margin: 0;
+  width: min(100%, 420px);
+}
+.activity-cover img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  max-height: 236px;
+  object-fit: cover;
+  border-radius: 12px;
+}

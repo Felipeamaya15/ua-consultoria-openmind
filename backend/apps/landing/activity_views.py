@@ -90,12 +90,15 @@ class ActivitySubmissionView(NoStoreActivityView):
                 if capacity is not None and SolicitudActividad.objects.filter(tienda=store, seccion_id=pk, tipo=self.tipo).exclude(estado='cancelada').count() >= capacity:
                     raise ValidationError('No quedan cupos disponibles para este taller.')
                 state = 'confirmada' if section['actividad']['confirmacion'] == 'automatica' else 'pendiente'
-            SolicitudActividad.objects.create(tienda=store, seccion_id=pk, titulo_actividad=activity_title(section),
+            record = SolicitudActividad.objects.create(tienda=store, seccion_id=pk, titulo_actividad=activity_title(section),
                 tipo_actividad=section['actividad']['tipo'], tipo=self.tipo,
                 usuario=request.user if request.user.is_authenticated else None,
                 estado=state, solicitud_id=request_id, huella=fingerprint,
                 consentimiento_version=CONSENT_VERSION + ('-consulta' if self.tipo == 'consulta' else '-inscripcion'),
                 consentimiento_fecha=timezone.now(), **values)
+            if self.tipo == 'consulta' and store.correo_negocio:
+                from apps.landing.activity_owner_notifications import programar_aviso_consulta
+                programar_aviso_consulta(record.pk)
         # Same response for new/duplicate, no personal data or enrollment-status oracle.
         return success_response(data={'recibida': True}, mensaje='Recibimos tus datos. Si ya existía una solicitud, se conserva sin duplicarla. La tienda gestionará tu solicitud; esto no acredita pagos.', status=202)
 

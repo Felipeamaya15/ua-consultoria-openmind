@@ -39,6 +39,21 @@ def store_block_images(content, store_id):
     storage = block_storage()
     content = copy.deepcopy(content)
     for block in content['bloques']:
+
+        activity = block.get('actividad')
+        portada = (activity or {}).get('portada') or ''
+
+        if portada.startswith('data:image/'):
+            from apps.core.image_processing import process_data_url
+            image = process_data_url(portada, max_mb=1)
+            name = (
+                f"{store_id}/{block['id']}/"
+                f"{hashlib.sha256(image.data).hexdigest()}.{image.extension}"
+            )
+            if not storage.exists(name):
+                name = storage.save(name, ContentFile(image.data))
+            activity['portada'] = storage.url(name)
+
         for container in [block, *block.get('componentes', [])]:
             for image in container.get('imagenes', []):
                 if image['src'].startswith('data:'):

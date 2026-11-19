@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import './paid-activity-settings.css';
 import { Input, Select, Toggle } from './ui';
+import { ImageUpload } from './ui/ImageUpload';
 import type { BloqueLanding } from '../../landing/types/landing.types';
 import { newActivity, newSectionElement, newPaidActivitySettings, type PaidActivitySettings, type SectionActivity, type ElementKind, type SectionElement } from '../../landing/types/sectionElements';
 
@@ -39,6 +40,24 @@ export function ActivitySettings({section,onChange}:{section:BloqueLanding;onCha
     <Select label="Tipo de actividad" value={activity?.tipo||''} options={[{value:'',label:'Contenido general'},{value:'servicio',label:'Servicio'},{value:'taller',label:'Taller o actividad'}]} onChange={event=>onChange({...section,actividad:event.target.value?{...newActivity(event.target.value as SectionActivity['tipo']),...(activity||{}),tipo:event.target.value as SectionActivity['tipo'],inscripciones:false}:null})} />
     {activity&&<>
       <div className="activity-settings-grid"><Input label="Clasificación (opcional)" value={activity.categoria} maxLength={100} onChange={event=>update({categoria:event.target.value})} /><Select label="Estado de la actividad" value={activity.estado} options={[{value:'activa',label:'Activa'},{value:'cancelada',label:'Cancelada'}]} onChange={event=>update({estado:event.target.value as SectionActivity['estado']})} /></div>
+
+      <div className="activity-cover-editor">
+        <ImageUpload
+          label="Imagen de portada (obligatoria para publicar)"
+          value={activity.portada || ''}
+          maxMB={1}
+          onChange={portada => update({ portada })}
+        />
+        <p className="flexible-help">
+          JPG, PNG o WebP. Máximo 1 MB.
+          La portada es independiente de las imágenes y videos adicionales.
+        </p>
+        {section.visible && !activity.portada && (
+          <p role="alert">
+            Agrega una imagen de portada antes de publicar esta actividad.
+          </p>
+        )}
+      </div>
       <p>Publica u oculta esta actividad con el interruptor de la sección. El título, descripción, imágenes, duración, condiciones, precio y contacto se editan en sus bloques.</p>
       <div className="activity-settings-grid"><Input label="Zona horaria" value={activity.zona_horaria} required maxLength={80} placeholder="America/Santiago" onChange={event=>update({zona_horaria:event.target.value})} /><Input label="Plataforma de reunión (opcional)" value={activity.plataforma} maxLength={100} placeholder="Zoom, Google Meet…" onChange={event=>update({plataforma:event.target.value})} /></div>
       <Input label="Enlace privado de reunión (opcional)" type="url" value={activity.enlace_reunion||''} maxLength={2000} onChange={event=>update({enlace_reunion:event.target.value})} />

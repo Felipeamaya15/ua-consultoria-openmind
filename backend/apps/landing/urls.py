@@ -1,4 +1,5 @@
 from apps.landing.activity_replies import ActivityRepliesView, SendActivityReplyView
+from apps.landing.cart_reminders import RegistroCarritoView
 from django.urls import path
 from apps.landing.views import ConfiguracionLandingAPIView, AparienciaBloquesAPIView, RedesSocialesAPIView
 from apps.landing.media_views import MediaLibraryView, MediaResourceView, MediaImageView
@@ -11,6 +12,7 @@ from apps.landing.qa_activity_management import OwnerActivitySales, CustomerActi
 from apps.landing.transfer_activity_orders import ActivityCheckoutModeView
 
 urlpatterns = [
+    path('recordatorio-carrito/', RegistroCarritoView.as_view(), name='recordatorio-carrito'),
     path('modo-compra-actividades/', ActivityCheckoutModeView.as_view(), name='modo-compra-actividades'),
     path('ventas-actividades-qa/', OwnerActivitySales.as_view(), name='ventas-actividades-qa'),
     path('ventas-actividades-qa/pedido/<int:pedido_id>/', CustomerActivitySales.as_view(), name='ventas-actividades-cliente-qa'),
@@ -35,4 +37,22 @@ urlpatterns = [
     path('carrusel/orden/', OrdenImagenesCarruselLandingAPIView.as_view(), name='orden-imagenes-carrusel'),
     path('carrusel/modo-texto/', ModoTextoCarruselAPIView.as_view(), name='modo-texto-carrusel'),
     path('carrusel/<uuid:pk>/', ImagenCarruselLandingDetalleAPIView.as_view(), name='detalle-imagen-carrusel'),
+]
+
+from apps.landing.activity_cart_sync_views import (
+    CartActivityListView,
+    CartActivityItemView,
+)
+
+urlpatterns += [
+    path(
+        'carrito-actividades/',
+        CartActivityListView.as_view(),
+        name='carrito-actividades',
+    ),
+    path(
+        'carrito-actividades/<uuid:pk>/',
+        CartActivityItemView.as_view(),
+        name='carrito-actividades-item',
+    ),
 ]

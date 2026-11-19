@@ -1,5 +1,6 @@
 from django.db import models
 from django.conf import settings
+from django.utils import timezone
 import uuid
 from apps.core.domain.validators import validate_image_format_and_size
 
@@ -255,3 +256,55 @@ class EnvioCorreoTienda(models.Model):
     class Meta:
         constraints = [models.UniqueConstraint(fields=['tienda', 'clave'], name='envio_tienda_clave_unica')]
         indexes = [models.Index(fields=['tienda', 'creado'], name='envio_tienda_fecha')]
+
+
+class RegistroCarritoAbandonado(models.Model):
+    """Actividad de carrito por tienda y cliente autenticado."""
+    tienda = models.ForeignKey('core.Tienda', on_delete=models.CASCADE)
+    usuario = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    email = models.EmailField(max_length=320)
+    items = models.JSONField(default=list)
+    ruta = models.CharField(max_length=300, default='/carrito')
+    huella = models.CharField(max_length=64, default='')
+    ultima_actividad = models.DateTimeField(default=timezone.now)
+    estado = models.CharField(max_length=20, default='activo')
+    creado = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['tienda', 'usuario'],
+                name='uq_recordatorio_carrito_usuario'
+            )
+        ]
+        indexes = [
+            models.Index(
+                fields=['estado', 'ultima_actividad'],
+                name='carrito_record_estado_fecha'
+            )
+        ]
+
+class SeleccionCarritoActividad(models.Model):
+    """Selección del comprador. No reserva cupos ni acredita pagos."""
+    tienda = models.ForeignKey(
+        'core.Tienda', on_delete=models.CASCADE
+    )
+    usuario = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE
+    )
+    seccion_id = models.UUIDField()
+    cantidad = models.PositiveSmallIntegerField()
+    titulo = models.CharField(max_length=200)
+    precio = models.PositiveBigIntegerField()
+    version = models.CharField(max_length=64)
+    inicio = models.DateTimeField()
+    zona = models.CharField(max_length=80)
+    actualizado = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['tienda', 'usuario', 'seccion_id'],
+                name='carrito_actividad_usuario_unico',
+            ),
+        ]

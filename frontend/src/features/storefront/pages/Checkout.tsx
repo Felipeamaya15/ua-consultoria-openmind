@@ -2,7 +2,8 @@ import './checkout-order-summary.css';
 import {useActivityCheckoutOptions} from '../../landing/services/activityPurchaseMode';
 import { CommercialOptIn } from '../components/store/CommercialOptIn';
 import { requestConsent } from '../services/commercialConsent';
-import { checkoutPreviewStep } from '../visual/pages';
+import { checkoutPreviewStep, isActiveEditorPreview } from '../visual/pages';
+import { trackMetaPixelEvent } from '../services/metaPixelService';
 import { ErrorState, LoadingState } from '../../../shared/components/states';
 import { useEffect, useMemo, useState, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
@@ -302,6 +303,32 @@ export default function Checkout() {
   } = useCart();
 
   const onlyActivities = !items.length && activities.length > 0;
+
+  const checkoutTracked = useRef(false);
+
+  useEffect(() => {
+    if (
+      checkoutTracked.current ||
+      (!items.length && !activities.length)
+    ) return;
+
+    checkoutTracked.current = true;
+
+    if (!isActiveEditorPreview()) {
+      trackMetaPixelEvent('InitiateCheckout', {
+        content_ids: [
+          ...items.map(item => String(item.productId)),
+          ...activities.map(item => `activity:${item.sectionId}`),
+        ],
+        content_type: 'product',
+        num_items:
+          items.reduce((sum, item) => sum + item.quantity, 0) +
+          activities.reduce((sum, item) => sum + item.quantity, 0),
+        value: subtotal,
+        currency: 'CLP',
+      });
+    }
+  }, [items, activities, subtotal]);
   const {mode:activityMode,methods:activityPayments}=useActivityCheckoutOptions(activities.length>0,!onlyActivities);
   const activityPurchaseAllowed=activityMode!=='disabled';
   const submitting = useRef(false);
@@ -878,6 +905,38 @@ export default function Checkout() {
       });
 
       const orderNumber = String(order.identificador || order.id_pedido);
+
+      // Preparar medición de compra; no se registra Purchase aquí.
+      // El pedido puede seguir pendiente de pago.
+      try {
+        const paidValue = Number(order.monto_total);
+        if (Number.isFinite(paidValue) && paidValue > 0) {
+          const contents = [
+            ...items.map(item => ({
+              id: String(item.productId),
+              quantity: item.quantity,
+              item_price: item.price,
+            })),
+            ...activities.map(item => ({
+              id: `activity:${item.sectionId}`,
+              quantity: item.quantity,
+              item_price: item.price,
+            })),
+          ];
+
+          sessionStorage.setItem(
+            `meta-order:${order.tienda_id}:${orderNumber}`,
+            JSON.stringify({
+              value: paidValue,
+              currency: 'CLP',
+              contents,
+              content_ids: contents.map(item => item.id),
+            })
+          );
+        }
+      } catch {
+        // El almacenamiento de analítica no bloquea una compra.
+      }
 
       if (paymentMethod === 'PayPal' || paymentMethod === 'MercadoPago') {
         try {

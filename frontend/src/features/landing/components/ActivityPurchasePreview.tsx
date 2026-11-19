@@ -6,6 +6,8 @@ import { formatPrice } from '../../storefront/data/mockData';
 import { fetchPaidQuote,canSelectPaidQuote,formatActivityDate,paidStatusLabel,type PaidQuote } from '../services/paidActivityService';
 import './activity-purchase-preview.css';
 import {useActivityPurchaseMode} from '../services/activityPurchaseMode';
+import { trackMetaPixelEvent } from '../../storefront/services/metaPixelService';
+import { isActiveEditorPreview } from '../../storefront/visual/pages';
 
 export function ActivityPurchasePreview({sectionId}:{sectionId:string}){
   const {route}=useStorefrontTemplate();
@@ -14,6 +16,27 @@ export function ActivityPurchasePreview({sectionId}:{sectionId:string}){
   const [quote,setQuote]=useState<PaidQuote|null>(null),[error,setError]=useState(''),[notice,setNotice]=useState('');
   const [quantity,setQuantity]=useState(1),[accepted,setAccepted]=useState(''),[busy,setBusy]=useState(false),[expired,setExpired]=useState(false);
   const request=useRef<AbortController|null>(null);
+  const trackedView=useRef<string|null>(null);
+
+  useEffect(()=>{
+    if (!quote || quote.estado!=='disponible') return;
+    if (isActiveEditorPreview()) return;
+    if (typeof window==='undefined' ||
+        window.__metaPixelConsent!=='granted') return;
+
+    if (trackedView.current===sectionId) return;
+
+    trackMetaPixelEvent('ViewContent', {
+      content_ids: [`activity:${sectionId}`],
+      content_name: quote.titulo,
+      content_type: 'product',
+      content_category: quote.tipo,
+      value: quote.precio,
+      currency: 'CLP',
+    });
+
+    trackedView.current=sectionId;
+  },[quote,sectionId]);
   useEffect(()=>{
     let active=true;
     const refresh=async()=>{
@@ -39,7 +62,7 @@ export function ActivityPurchasePreview({sectionId}:{sectionId:string}){
     try{
       const fresh=await fetchPaidQuote(sectionId);setQuote(fresh);setExpired(Date.parse(fresh.hora_servidor)>=Date.parse(fresh.cierre));
       if(!canSelectPaidQuote(fresh,quantity,accepted))throw new Error('La disponibilidad o condiciones cambiaron. Revisa nuevamente antes de agregar.');
-      put(sectionId,fresh,quantity,accepted);setNotice('Actividad agregada a tu carrito. Los cupos aún no están reservados.');
+      await put(sectionId,fresh,quantity,accepted);setNotice('Actividad agregada a tu carrito. Los cupos aún no están reservados.');
     }catch(e){setError(e instanceof Error?e.message:'No pudimos agregar la actividad.');}
     finally{setBusy(false);}
   }

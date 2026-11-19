@@ -123,7 +123,21 @@ export function SectionMediaItem({
 export function SectionElements({ elements, ownerResources, activity, sectionId }: { elements: SectionElement[]; ownerResources?: Record<string, MediaResource>; activity?:SectionActivity|null; sectionId?:string }) {
   const published = useContext(PublishedMedia);
   const resources = ownerResources ?? published;
-  return <div className="section-elements">{activity&&<div className="activity-details">{activity.categoria&&<span>{activity.categoria}</span>}{activity.plataforma&&<span>Plataforma: {activity.plataforma}</span>}{activity.tipo==='taller'&&<span>Zona horaria: {activity.zona_horaria}</span>}{activity.gratuito&&<span>Gratuito</span>}{activity.estado==='cancelada'&&<span className="activity-status-message">Actividad cancelada</span>}</div>}{elements.filter(element => element.visible).map(element => {
+  return <div className="section-elements">
+    {activity?.portada && (
+      <figure className="activity-cover">
+        <img
+          src={
+            activity.portada.startsWith('/media/')
+              ? `${API_BASE_URL}${activity.portada}`
+              : activity.portada
+          }
+          alt={`Portada del ${activity.tipo === 'taller' ? 'taller' : 'servicio'}`}
+          loading="lazy"
+        />
+      </figure>
+    )}
+    {activity&&<div className="activity-details">{activity.categoria&&<span>{activity.categoria}</span>}{activity.plataforma&&<span>Plataforma: {activity.plataforma}</span>}{activity.tipo==='taller'&&<span>Zona horaria: {activity.zona_horaria}</span>}{activity.gratuito&&<span>Gratuito</span>}{activity.estado==='cancelada'&&<span className="activity-status-message">Actividad cancelada</span>}</div>}{elements.filter(element => element.visible).map(element => {
     const { tipo, texto = '' } = element;
     let content: ReactNode = null;
     if (tipo === 'titulo') content = texto && <h2 className="store-block-title">{texto}</h2>;

@@ -8,6 +8,8 @@ import { validatePromotion } from '../services/promotionService';
 import { useActivityCart, type ActivityCartItem } from './activityCart';
 import { useCartSession, currentCartToken } from './cartSession';
 import { fetchPublicProducts } from '../services/catalogService';
+import { useStorefrontTemplate } from '../hooks/useStorefrontTemplate';
+import { trackMetaPixelEvent } from '../services/metaPixelService';
 
 export interface CartItem extends BaseCartItem {
   id_item_carrito?: number;
@@ -64,6 +66,7 @@ function ScopedCartProvider({children,sessionToken,scope}:{children:ReactNode;se
   const storageKey = !hasToken && baseKey ? `${baseKey}:guest-v2` : null;
   const snapshotKey = `${PENDING_CART_SNAPSHOT_KEY}:${baseKey || 'store'}:${scope}`;
   const [hydratedKey, setHydratedKey] = useState<string | null>(null);
+  const [cartSynced, setCartSynced] = useState(false);
 
   useEffect(() => {
     if (isActiveEditorPreview() || !storageKey) return;
@@ -108,6 +111,7 @@ function ScopedCartProvider({children,sessionToken,scope}:{children:ReactNode;se
         /^[a-f\d]{24}$/i.test(item.productId) && !item.id_item_carrito &&
         !persistedItems.some(saved => saved.productId === item.productId && saved.variantId === item.variantId),
       )]);
+      setCartSynced(true);
 
     } catch (err: any) {
       console.warn('No se pudo sincronizar el carrito con el backend:', err.message);
@@ -129,7 +133,9 @@ function ScopedCartProvider({children,sessionToken,scope}:{children:ReactNode;se
     } catch {}
     const persisted = items.filter(item => item.id_item_carrito);
     setItems([]);
-    clearActivities();
+    await clearActivities().catch(() => {
+      console.warn('No se pudo limpiar el carrito de actividades en el servidor.');
+    });
     setPromoCode('');
     setPromoDiscount(0);
     setPromoNotice('');
@@ -156,6 +162,20 @@ function ScopedCartProvider({children,sessionToken,scope}:{children:ReactNode;se
           )
         : [...prev, { ...item, quantity: Math.min(item.quantity, item.maxStock) }];
     });
+
+    if (!isActiveEditorPreview()) {
+      trackMetaPixelEvent('AddToCart', {
+        content_ids: [item.productId],
+        content_type: 'product',
+        contents: [{
+          id: item.productId,
+          quantity: item.quantity,
+          item_price: item.price
+        }],
+        value: item.price * item.quantity,
+        currency: 'CLP',
+      });
+    }
 
     try {
       const prodId = Number(item.productId);
@@ -285,7 +305,79 @@ function ScopedCartProvider({children,sessionToken,scope}:{children:ReactNode;se
     }).catch(() => { /* Failure is not proof that a product was deleted. */ });
     return () => { live=false; };
   }, [baseKey,productIdentityList,sessionToken]);
-  const { items: activities, clear: clearActivities } = useActivityCart();
+  const { items: activities, clear: clearActivities, ready: activitiesReady } = useActivityCart();
+
+  const { route } = useStorefrontTemplate();
+
+  useEffect(() => {
+    if (isActiveEditorPreview() || !cartSynced || !activitiesReady || !sessionToken) return;
+    if (currentCartToken() !== sessionToken) return;
+
+    const authToken =
+      localStorage.getItem('token') ||
+      sessionStorage.getItem('token');
+
+    if (!authToken) return;
+
+    const apiBase = (
+      import.meta.env.VITE_API_URL || 'http://localhost:8000'
+    ).replace(/\/+$/, '');
+
+    const cartItems = [
+      ...items.map(item => ({
+        nombre: String(item.name || 'Producto').slice(0, 120),
+        cantidad: item.quantity,
+      })),
+      ...activities.map(item => ({
+        nombre: String(item.title || 'Actividad').slice(0, 120),
+        cantidad: item.quantity,
+      })),
+    ];
+
+    const send = (actividad = false) => {
+      if (document.visibilityState !== 'visible') return;
+
+      fetch(`${apiBase}/api/landing/recordatorio-carrito/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Token ${authToken}`,
+        },
+        body: JSON.stringify({
+          items: cartItems,
+          ruta: route('carrito'),
+          actividad,
+        }),
+      }).catch(() => {
+        // El carrito sigue operativo si falla el registro.
+      });
+    };
+
+    const initial = window.setTimeout(() => send(), 1500);
+
+    let lastInteractionSent = 0;
+
+    const noteInteraction = () => {
+      if (!cartItems.length) return;
+      const now = Date.now();
+
+      // Registrar acciones reales, máximo una vez cada 5 minutos.
+      if (now - lastInteractionSent < 5 * 60 * 1000) return;
+
+      lastInteractionSent = now;
+      send(true);
+    };
+
+    window.addEventListener('pointerdown', noteInteraction);
+    window.addEventListener('keydown', noteInteraction);
+
+    return () => {
+      window.clearTimeout(initial);
+      window.removeEventListener('pointerdown', noteInteraction);
+      window.removeEventListener('keydown', noteInteraction);
+    };
+  }, [cartSynced, activitiesReady, sessionToken, items, activities, route]);
+
   const count = items.reduce((sum, i) => sum + i.quantity, 0) + activities.reduce((sum,i)=>sum+i.quantity,0);
   const subtotal = items.reduce((sum, i) => sum + i.price * i.quantity, 0)
     + activities.reduce((sum,i)=>sum+i.quantity*i.price,0);

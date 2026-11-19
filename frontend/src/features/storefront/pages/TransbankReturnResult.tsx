@@ -5,6 +5,7 @@ import { Button } from '../components/ui';
 import { useStorefrontTemplate } from '../hooks/useStorefrontTemplate';
 import { formatPrice } from '../data/mockData';
 import { transbankPaymentService } from '../../checkout/services/transbankPaymentService';
+import { trackConfirmedMetaPurchase } from '../services/metaPurchaseTracking';
 
 interface Props {
   orderNumber: string;
@@ -63,8 +64,12 @@ export default function TransbankReturnResult({
         } catch {
           transbankPaymentService.pagoAbortado(tiendaId, tbkToken).catch(() => undefined);
         }
-        triggerCartRestore();
-        setResult({ status: 'cancelled' });
+        // El retorno no confirma por sí solo la cancelación.
+        // El servidor debe reconciliar el estado del pago.
+        setResult({
+          status: 'error',
+          message: 'El pago fue interrumpido. Consulta el estado de tu pedido antes de intentar pagar nuevamente.',
+        });
       } else {
         setResult({ status: 'error', message: 'No recibimos la información del pago.' });
       }
@@ -75,7 +80,7 @@ export default function TransbankReturnResult({
       const cached = sessionStorage.getItem(cacheKey(tokenWs));
       if (cached) {
         const parsed = JSON.parse(cached) as Result;
-        if (parsed.status === 'rejected' || parsed.status === 'cancelled') {
+        if (parsed.status === 'rejected') {
           triggerCartRestore();
         }
         setResult(parsed);
@@ -107,6 +112,14 @@ export default function TransbankReturnResult({
             sessionStorage.setItem(cacheKey(tokenWs), JSON.stringify(next));
           } catch {
             // Sin caché disponible.
+          }
+        }
+        if (next.status === 'approved' && orderNumber) {
+          const confirmedOrder = String(
+            res?.data?.orden_compra || orderNumber
+          );
+          if (confirmedOrder === orderNumber) {
+            trackConfirmedMetaPurchase(tiendaId, orderNumber);
           }
         }
         setResult(next);

@@ -15,6 +15,8 @@ from apps.catalog.domain.exceptions import (ConfiguracionPagoInvalidaException,
 logger=logging.getLogger(__name__)
 WEBPAY_MARKER='actividad_webpay_v1'
 META='webpay_actividad'
+NEW_API_VERSION='1.2'
+LEGACY_API_VERSION='1.0'
 
 
 def is_webpay_activity(order):
@@ -67,8 +69,22 @@ def assert_start_allowed(order):
     return config
 
 
+def api_version(order):
+    version=meta(order).get('api_version',LEGACY_API_VERSION)
+    if version not in (LEGACY_API_VERSION,NEW_API_VERSION):
+        raise TransbankTransaccionException('Versión de Webpay desconocida. Revisa el pedido.')
+    return version
+
+
+def configure_version(adapter, version):
+    if version not in (LEGACY_API_VERSION,NEW_API_VERSION):
+        raise TransbankTransaccionException('Versión de Webpay desconocida.')
+    adapter.base_url=adapter.base_url.replace('/v1.0/transactions',f'/v{version}/transactions').replace('/v1.2/transactions',f'/v{version}/transactions')
+    return adapter
+
+
 def remember_session(order, session_id):
-    set_meta(order,sesion=str(session_id))
+    set_meta(order,sesion=str(session_id),api_version=NEW_API_VERSION)
     order.save(update_fields=['entrega'])
 
 
@@ -77,7 +93,8 @@ def adapter_for(order):
     config=ConfiguracionTransbank.objects.filter(id_tienda_id=order.tienda_id).first()
     if not config or any(meta(order).get(k)!=v for k,v in merchant_snapshot(config).items()):
         raise TransbankTransaccionException('La configuración comercial cambió. La tienda debe revisar el pago.')
-    return TransbankWebpayAdapter(codigo_comercio=config.codigo_comercio,api_key=config.api_key,ambiente=config.ambiente)
+    adapter=TransbankWebpayAdapter(codigo_comercio=config.codigo_comercio,api_key=config.api_key,ambiente=config.ambiente)
+    return configure_version(adapter,api_version(order))
 
 
 def status_raw(adapter, token):

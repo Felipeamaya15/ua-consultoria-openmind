@@ -512,7 +512,8 @@ class IniciarPagoTransbankUseCase:
             )
             if not pedido or pedido.medio_pago != "Transbank" or pedido.estado != "pendiente":
                 raise ConfiguracionPagoInvalidaException("El pedido no está disponible para pagar con Webpay.")
-            from apps.landing.webpay_activity_orders import is_webpay_activity, assert_start_allowed, remember_session
+            from apps.landing.webpay_activity_orders import (is_webpay_activity, assert_start_allowed, remember_session,
+                configure_version, NEW_API_VERSION)
             webpay_activity=is_webpay_activity(pedido)
             if webpay_activity: assert_start_allowed(pedido)
             monto = pedido.monto_total
@@ -540,6 +541,8 @@ class IniciarPagoTransbankUseCase:
                 api_key=config.api_key,
                 ambiente=config.ambiente,
             )
+            if webpay_activity:
+                adaptador=configure_version(adaptador,NEW_API_VERSION)
             respuesta = adaptador.iniciar_transaccion(
                 orden_compra=orden_compra,
                 session_id=session_id,

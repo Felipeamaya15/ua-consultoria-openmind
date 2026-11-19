@@ -17,7 +17,7 @@ from apps.authentication.presentation.profile import IsCustomer, StrictSerialize
 from apps.landing.models import ReservaActividadPagada
 from apps.landing.unified_activity_orders import MARKER, qa_enabled
 from apps.landing.transfer_activity_orders import TRANSFER_MARKER, REAL_MARKERS, contact_email, is_transfer_activity, state as transfer_state, change_transfer
-from apps.landing.webpay_activity_orders import WEBPAY_MARKER, meta as webpay_meta
+from apps.landing.webpay_activity_orders import WEBPAY_MARKER, meta as webpay_meta, NEW_API_VERSION
 
 LEDGER='devoluciones_actividades_qa'
 
@@ -58,7 +58,7 @@ def describe(order,row,owner=False):
             if owner: result['reembolso_externo']=enabled(order)
         if webpay:
             result['ambiente']=webpay_meta(order).get('ambiente')
-            if owner: result['reembolso_total_webpay']=(row.precio_unitario*row.cantidad<=order.monto_total and not order.descuento and ((not order.costo_envio and not order.itempedido_set.exclude(producto_mongo_id='').exists()) or order.stock_descontado))
+            if owner: result['reembolso_total_webpay']=(webpay_meta(order).get('api_version')==NEW_API_VERSION and row.precio_unitario*row.cantidad<=order.monto_total and not order.descuento and ((not order.costo_envio and not order.itempedido_set.exclude(producto_mongo_id='').exists()) or order.stock_descontado))
     if owner:
         result.update(comprador=order.nombre_contacto,correo=order.correo_contacto)
     return result

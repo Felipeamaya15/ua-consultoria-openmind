@@ -27,9 +27,10 @@ export const newPaidActivitySettings = (): PaidActivitySettings => ({
 export interface SectionActivity {
   tipo:'servicio'|'taller'; estado:'activa'|'cancelada'; categoria:string; zona_horaria:string;
   plataforma:string; enlace_reunion?:string; gratuito:boolean; inscripciones:boolean; cupos:number|null; confirmacion:'manual'|'automatica';
+  portada?: string;
   venta?: PaidActivitySettings | null;
 }
-export const newActivity=(tipo:SectionActivity['tipo']):SectionActivity=>({tipo,estado:'activa',categoria:'',zona_horaria:'America/Santiago',plataforma:'',enlace_reunion:'',gratuito:false,inscripciones:false,cupos:null,confirmacion:'manual'});
+export const newActivity=(tipo:SectionActivity['tipo']):SectionActivity=>({tipo,estado:'activa',categoria:'',zona_horaria:'America/Santiago',plataforma:'',enlace_reunion:'',gratuito:false,inscripciones:false,cupos:null,confirmacion:'manual',portada:''});
 export const TEXT_ELEMENTS: ElementKind[] = ['titulo', 'subtitulo', 'texto', 'nombre', 'caracteristicas', 'informacion', 'duracion', 'requisitos', 'condiciones'];
 export function newSectionElement(tipo: ElementKind): SectionElement {
   const base = { id: crypto.randomUUID(), tipo, visible: true };

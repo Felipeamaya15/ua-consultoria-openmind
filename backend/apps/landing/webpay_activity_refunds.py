@@ -8,7 +8,8 @@ from django.utils import timezone
 from rest_framework.exceptions import ValidationError, PermissionDenied
 from apps.core.models import Pedido, Tienda
 from apps.landing.models import ReservaActividadPagada
-from apps.landing.webpay_activity_orders import WEBPAY_MARKER, meta, adapter_for, status_raw, normalize_status, validate_identity
+from apps.landing.webpay_activity_orders import (WEBPAY_MARKER, meta, adapter_for, status_raw, normalize_status,
+    validate_identity, api_version, configure_version, NEW_API_VERSION)
 
 logger=logging.getLogger(__name__)
 PROCESSING='reembolso_en_revision'
@@ -115,17 +116,16 @@ def _finish(store,order_id,reservation_id,actor,proof):
 def _request_refund(adapter,order,amount=None):
     # The public Webpay Plus API uses v1.2 /transactions/{token}/refunds.
     # Keep the merchant credentials and host of the original transaction.
-    base=adapter.base_url.replace('/v1.0/transactions','/v1.2/transactions')
+    if api_version(order)!=NEW_API_VERSION:
+        raise ValueError('legacy refund requires merchant review')
+    base=adapter.base_url
     response=requests.post(f'{base}/{quote(order.webpay_token,safe="")}/refunds',
         headers=adapter._get_headers(),json={'amount':int(order.monto_total if amount is None else amount)},timeout=20,allow_redirects=False)
     if response.status_code!=200: raise ValueError('refund HTTP')
     return response.json()
 
 def refund_status(adapter,token):
-    from copy import copy
-    current=copy(adapter)
-    current.base_url=adapter.base_url.replace('/v1.0/transactions','/v1.2/transactions')
-    return status_raw(current,token)
+    return status_raw(adapter,token)
 
 def change_webpay_refund(store,order_id,reservation_id,actor,action,reason,owner):
     if not owner: raise PermissionDenied('Solo el propietario autorizado puede realizar devoluciones.')
@@ -148,6 +148,8 @@ def change_webpay_refund(store,order_id,reservation_id,actor,action,reason,owner
                 raise ValidationError('La operación comercial no está habilitada.')
             if meta(order).get('ambiente') not in ('INTEGRACION','PRODUCCION'):
                 raise ValidationError('Entorno comercial inválido.')
+            if api_version(order)!=NEW_API_VERSION:
+                raise ValidationError('Esta venta fue creada con Webpay anterior. Gestiona la devolución en el portal del comercio y registra el comprobante. No se enviará un abono automático.')
             amount=line_amount(row); before=_balance_before(order,ledger)
             if amount>before or _number(old.get('monto'))!=amount:
                 raise ValidationError('El monto autorizado supera el saldo o no corresponde a la inscripción.')
@@ -179,6 +181,10 @@ def change_webpay_refund(store,order_id,reservation_id,actor,action,reason,owner
             if not is_confirmed_refund(raw,amount,before,order.monto_total): raise ValueError('refund not confirmed')
             proof={'tipo':raw.get('type'),'autorizacion':str(raw.get('authorization_code') or '')[:32]}
         else:
+            # Legacy in-flight records may have sent a refund to v1.2 before version tracking.
+            # Consult only; never issue another refund POST.
+            if api_version(order)!=NEW_API_VERSION:
+                adapter=configure_version(adapter,NEW_API_VERSION)
             raw=refund_status(adapter,order.webpay_token)
             if not _confirmed_status(order,raw,amount,before,before-amount): raise ValueError('refund not confirmed')
             proof={'tipo':raw.get('status'),'origen':'consulta_estado'}

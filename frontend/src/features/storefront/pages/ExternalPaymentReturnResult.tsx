@@ -5,6 +5,7 @@ import { Button } from '../components/ui';
 import { useStorefrontTemplate } from '../hooks/useStorefrontTemplate';
 import { mercadoPagoPaymentService } from '../../checkout/services/mercadoPagoPaymentService';
 import { paypalPaymentService } from '../../checkout/services/paypalPaymentService';
+import { trackConfirmedMetaPurchase } from '../services/metaPurchaseTracking';
 
 interface Props {
   gateway: 'paypal' | 'mercadopago';
@@ -52,15 +53,19 @@ export default function ExternalPaymentReturnResult({ gateway, orderNumber, tien
 
     // Sin referencia el comprador volvió sin pagar (cancelado o fallo en la pasarela).
     if (!reference) {
-      triggerCartRestore();
-      setResult({ status: 'cancelled' });
+      // No tener referencia no demuestra que el pedido
+      // esté cancelado ni que se hayan liberado sus reservas.
+      setResult({
+        status: 'error',
+        message: 'No recibimos confirmación del pago. Consulta el estado de tu pedido antes de intentar nuevamente.',
+      });
       return;
     }
     try {
       const cached = sessionStorage.getItem(cacheKey(gateway, reference));
       if (cached) {
         const parsed = JSON.parse(cached) as Result;
-        if (parsed.status === 'rejected' || parsed.status === 'cancelled') {
+        if (parsed.status === 'rejected') {
           triggerCartRestore();
         }
         setResult(parsed);
@@ -94,6 +99,9 @@ export default function ExternalPaymentReturnResult({ gateway, orderNumber, tien
         }
         if (next.status === 'approved' || next.status === 'rejected') {
           try { sessionStorage.setItem(cacheKey(gateway, reference), JSON.stringify(next)); } catch { /* Sin caché. */ }
+        }
+        if (next.status === 'approved' && orderNumber) {
+          trackConfirmedMetaPurchase(tiendaId, orderNumber);
         }
         setResult(next);
       })
