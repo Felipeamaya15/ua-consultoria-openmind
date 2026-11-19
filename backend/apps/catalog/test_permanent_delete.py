@@ -114,19 +114,16 @@ class ProductPermanentDeleteTests(CatalogAPITestCase):
         )
         self.assertEqual(response.status_code, 200, response.data)
 
-        # Producto eliminado definitivamente de MongoDB, SQL Producto, Carrito y destacados
         self.assertIsNone(self.read(self.pk))
         self.assertFalse(Producto.objects.filter(pk=sql_product.pk).exists())
         self.assertFalse(ItemCarrito.objects.filter(id_carrito=carrito).exists())
         landing = ConfiguracionLanding.objects.get(tienda=self.store)
         self.assertEqual(landing.contenido['productos_destacados'], [])
 
-        # Listado admin y catálogo público ya no contienen el producto
         admin_list = self.api.get('/api/catalog/productos/admin/listado/')
         self.assertEqual(admin_list.status_code, 200)
         self.assertEqual(admin_list.data['data'], [])
 
-        # Pedidos, ítems históricos y reportes de ventas se conservan 100% intactos
         self.assertTrue(Pedido.objects.filter(pk=pedido.pk).exists())
         saved_item = ItemPedido.objects.get(pk=item.pk)
         self.assertIsNone(saved_item.id_producto_id)

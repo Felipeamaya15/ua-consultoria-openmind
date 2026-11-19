@@ -1,6 +1,6 @@
 import type { UbicacionLanding } from './landing.types';
 
-/** Solo destinos de Google Maps HTTPS; nunca URLs de redirección arbitrarias. */
+
 export function safeMapsLink(value: string): string {
   try {
     const url = new URL(value.trim());

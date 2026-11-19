@@ -1,5 +1,5 @@
-// E2E con componentes, servicios, PostgreSQL y MongoDB reales en el servidor QA temporal.
-// Antes: backend/venv/Scripts/python.exe backend/scripts/serve_sprint6_qa.py --from-docker
+
+
 const fs = require('node:fs'), path = require('node:path'), http = require('node:http'), assert = require('node:assert/strict');
 const esbuild = require('esbuild');
 const runtime = process.env.QA_NODE_MODULES || 'C:/Users/maria/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules';
@@ -52,7 +52,7 @@ const results = [], errors = [];
     await p.getByRole('radio', { name: 'Retiro en tienda', exact: true }).check({ force: true });
   }
   async function pickup(p) {
-    // La elección de retiro no exige reservar fecha/hora. Sí muestra la información del local.
+
     const option = p.getByRole('radio', { name: 'Retiro en tienda', exact: true });
     assert.equal(await option.isChecked(), true);
     await p.getByText('La tienda te informará cuando tu pedido esté listo para retirar.', { exact: false }).waitFor();
@@ -121,8 +121,8 @@ const results = [], errors = [];
     assert.ok(shipped.request().postDataJSON().cotizacion); results.push('PASS despacho real + envío gratis con cotización y persistencia');
     await p.close();
     const admin = await page(375); await admin.goto(`${base}/emprendedor/entregas`);
-     // Editor compacto: el reloj circular solo cambia el formulario;
-     // Guardar entregas es la operación que persiste en el backend.
+
+
      await admin.locator('summary').filter({ hasText: 'Lunes' }).click();
      const startClock = admin.locator('#pickup-mon-start');
      await startClock.click();

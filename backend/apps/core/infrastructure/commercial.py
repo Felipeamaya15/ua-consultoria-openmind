@@ -48,7 +48,6 @@ def order_query(store, params, *, sales=False):
     if delivery not in ('', 'retiro', 'envio'):
         raise reglas.ParametroInvalido('Selecciona retiro o envío.', 'ENTREGA_INVALIDA')
     if delivery:
-        # El checkout conserva exactamente estos valores en el snapshot.
         query = query.filter(entrega__metodo='Retiro') if delivery == 'retiro' else query.filter(entrega__metodo__in=('Chilexpress', 'Starken'))
     method = params.get('metodo_pago', '').strip()
     if len(method) > 50:
@@ -104,7 +103,6 @@ def paid_summary(query):
 
 
 def export_check(query):
-    # Primero se comprueba el tamaño; nunca se devuelve un archivo parcial.
     if query.count() > MAX_ORDERS or ItemPedido.objects.filter(id_pedido__in=query.values('pk')).count() > MAX_LINES:
         raise reglas.ParametroInvalido(f'Reduce el período: máximo {MAX_ORDERS:,} pedidos y {MAX_LINES:,} líneas por exportación.', 'EXPORTACION_DEMASIADO_GRANDE')
 

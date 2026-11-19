@@ -48,9 +48,7 @@ const API_BASE = (API_BASE_URL || 'http://localhost:8000').replace(/\/+$/, '');
 let cachedVersion: SoftwareVersionInfo | null = null;
 
 export const softwareVersionService = {
-  /**
-   * Implementa la consulta de la versión vigente del software de la plataforma.
-   */
+
   async getSoftwareVersion(signal?: AbortSignal): Promise<SoftwareVersionInfo> {
     if (cachedVersion) {
       return cachedVersion;
@@ -84,9 +82,7 @@ export const softwareVersionService = {
     }
   },
 
-  /**
-   * Limpia la caché en memoria para forzar una consulta fresca de la versión vigente del software.
-   */
+
   clearCache(): void {
     cachedVersion = null;
   },

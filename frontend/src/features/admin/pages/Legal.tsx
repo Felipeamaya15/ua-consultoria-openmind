@@ -59,7 +59,7 @@ function ScopedLegalEditor({ isCurrent, storageKey }: { isCurrent: () => boolean
         : action === 'restored' && historicContent === undefined ? await legalService.restore(target, controller.signal)
         : await legalService.saveDraft(target, text, undefined, undefined, controller.signal);
       if (!alive.current || !isCurrent()) return;
-      // Solo reemplaza la página que guardó; no descarta ediciones de otra pestaña legal.
+
       setPages(previous => ({ ...previous, [target]: data[target] }));
       if (selected.current === target) setNotice(historicContent !== undefined ? 'recovered' : action);
       if (action === 'published') window.dispatchEvent(new CustomEvent(STORE_CONFIG_CHANGED_EVENT, { detail: { storageKey } }));

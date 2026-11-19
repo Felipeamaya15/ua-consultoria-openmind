@@ -43,7 +43,6 @@ def deduct_locked(order,lines):
     try:
         for line in lines:
             base=base_query(order,line);operation=marker(order,line)
-            # Use acknowledged majority writes; marker and decrement cannot be separated by a rollback.
             from pymongo.write_concern import WriteConcern
             collection=repo.collection.with_options(write_concern=WriteConcern(w='majority',j=True))
             result=collection.update_one({**base,OPS:{'$ne':operation},'variantes':{'$elemMatch':{'sku':line.sku,'stock':{'$gte':line.cantidad}}}},
@@ -57,8 +56,6 @@ def deduct_locked(order,lines):
         order.stock_descontado=True
         order.save(update_fields=['stock_descontado'])
     except Exception:
-        # Do not compensate blind or charge again. The pending checkout retains the hold;
-        # reconciliation resumes the missing atomic operations. Never log token/credentials.
         raise TransbankTransaccionException('El pago puede estar autorizado. El inventario está en revisión; no vuelvas a pagar.') from None
 
 def has_stock_effects(order):

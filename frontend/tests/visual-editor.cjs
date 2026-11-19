@@ -1,4 +1,4 @@
-// Run from frontend: node tests/visual-editor.cjs
+
 const fs = require('node:fs'), path = require('node:path'), vm = require('node:vm'), assert = require('node:assert/strict'), ts = require('typescript');
 const root = path.resolve(__dirname, '..'), cache = new Map(), storage = new Map();
 const localStorage = { getItem: key => storage.get(key) ?? null, setItem: (key, value) => storage.set(key, value) };
@@ -95,8 +95,8 @@ test('all inspector property paths exist in the resolver schema', async () => { 
 test('emitted variables have responsive aliases or documented direct/derived consumers', async () => {
   const source=fs.readFileSync(path.join(root,'src/styles/visual-config.css'),'utf8');
   const gallery=fs.readFileSync(path.join(root,'src/features/storefront/components/store/productImageGallery.css'),'utf8');
-  // Los consumidores incluyen estilos en JSX (p. ej., etiqueta promocional Editorial),
-  // no solamente las hojas CSS. No se cuentan comentarios ni archivos de pruebas.
+
+
   function readConsumers(dir) {
     return fs.readdirSync(dir,{withFileTypes:true}).flatMap(entry=>{
       const file=path.join(dir,entry.name);
@@ -121,7 +121,7 @@ test('emitted variables have responsive aliases or documented direct/derived con
     const base=key.replace(/-(desktop|tablet|mobile)$/,'');
     assert(typeof vars[key]==='string'&&vars[key].length&&!/undefined|NaN|Infinity/.test(vars[key]),key);
     if(productArrows.test(key)) {assert(references(gallery,key),key);direct++;continue;}
-    if(inactiveArrows.test(key)) {inactive++;continue;} // esquema compartido; el inspector de flechas corresponde a Producto.
+    if(inactiveArrows.test(key)) {inactive++;continue;}
     if(logoMetadata.test(key)) {
       const [,owner,property,view]=key.match(logoMetadata),derived=`--visual-header-${owner}-logo-${property==='shape'?'radius':'safe-padding'}`;
       assert(Object.hasOwn(vars,`${derived}-${view}`),key);
@@ -132,7 +132,7 @@ test('emitted variables have responsive aliases or documented direct/derived con
     if(base.startsWith('--visual')) assert(references(consumers,base),base);
   }
   assert.equal(direct,15);assert.equal(derivedCount,12);assert.equal(inactive,180);
-  // Comprueba la configuración real de flechas en cada tamaño, sin cambiar su posición ni hit target.
+
   const styles=css(resolver.resolveVisualConfig({customization:{pages:{product:{content:{galleryArrowStyle:'circulares'}}},responsive:{tablet:{pages:{product:{content:{galleryArrowStyle:'redondeadas'}}}},mobile:{pages:{product:{content:{galleryArrowStyle:'solo-flechas'}}}}}}}));
   for(const [view,radius] of [['desktop','999px'],['tablet','10px'],['mobile','0px']]) assert.equal(styles[`--visual-page-product-gallery-arrow-radius-${view}`],radius);
   assert.equal(styles['--visual-page-product-gallery-arrow-background-mobile'],'transparent');

@@ -1,8 +1,4 @@
-/**
- * OpenMind · intercambio seguro de presets (versión 1).
- * Importa RECETAS de efectos ya admitidos, nunca CSS, HTML ni JavaScript.
- * Los datos validados se guardan en la apariencia compartida de las 4 plantillas.
- */
+
 import { isCarouselTransitionId, type CarouselTransitionId } from './carouselTransitionLibrary';
 import { MOVEMENT_EFFECTS, LIGHT_EFFECTS, type MotionEffectId, type LightEffectId } from './effectLibrary';
 
@@ -84,7 +80,7 @@ function normalizePreset(input: unknown, id: string): ImportedEffectPreset {
   throw new Error('Tipo de preset desconocido. Usa carousel o product.');
 }
 
-/** Texto proporcionado por el emprendedor; no ejecutamos ni interpretamos código. */
+
 export function importEffectPreset(source: string): ImportedEffectPreset {
   if (new TextEncoder().encode(source).length > MAX_IMPORT_BYTES) {
     throw new Error('El archivo JSON supera el límite de 12 KB.');
@@ -95,10 +91,7 @@ export function importEffectPreset(source: string): ImportedEffectPreset {
   return normalizePreset(parsed, crypto.randomUUID());
 }
 
-/**
- * Al leer datos guardados volvemos a validar TODO el contenido.
- * Se admite una librería vacía cuando una tienda todavía no ha importado presets.
- */
+
 export function readImportedPresets(serialized: string | undefined): ImportedEffectPreset[] {
   if (!serialized || serialized.length > 24000) return [];
   try {

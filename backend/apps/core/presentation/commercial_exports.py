@@ -18,7 +18,6 @@ from apps.core.presentation.responses import error_response, success_response
 
 
 def _pending_contact_schema(error):
-    # A failed server-side cursor can wrap the original missing column/table error.
     seen = set()
     while error is not None and id(error) not in seen:
         seen.add(id(error))

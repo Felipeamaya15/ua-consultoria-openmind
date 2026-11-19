@@ -1,4 +1,4 @@
-// Commercial dates must not inherit the browser/OS zone. Run: node tests/business-time.cjs.
+
 const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm'),assert=require('node:assert/strict'),ts=require('typescript');
 const root=path.resolve(__dirname,'..');
 function load(file){

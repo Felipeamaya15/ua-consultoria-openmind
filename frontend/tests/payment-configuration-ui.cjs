@@ -1,7 +1,4 @@
-/** SCRUM-510: UI real + endpoints existentes de Django en una BD efímera.
- * Requiere payment-configuration-api.py y Vite con VITE_API_URL apuntando a esa API.
- * Playwright se instala aparte; no agrega dependencias al producto.
- */
+
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
@@ -30,7 +27,7 @@ const checks = [];
   let writes = 0;
   page.on('request', request => { if (request.method() === 'PUT' && request.url().endsWith('/api/pagos/configuracion/')) writes++; });
   const card = name => page.locator('section').filter({ has: page.getByRole('heading', { name, exact: true }) });
-  // Se captura cada tarjeta completa, sin que la cabecera sticky la tape durante la captura.
+
   const capture = (target, name) => target.screenshot({ path: path.join(output, name), style: '.admin-header { visibility: hidden !important; }' });
   const transfer = card('Transferencia bancaria');
   const bank = page.locator('#transfer-bank_name');
@@ -150,7 +147,7 @@ const checks = [];
     }
     checks.push('Panel y formularios sin desbordamiento horizontal a 1440, 390 y 320 px.');
 
-    // Una configuración histórica desconocida sigue siendo visible y no se borra.
+
     const historical = { transfer: { enabled: true, fields: {
       bank_name: 'Banco histórico QA', account_type: 'Tipo histórico QA', account_number: '12345678',
       holder_rut: '12.345.678-9', holder_name: 'Titular anterior QA', confirmation_email: 'pagos@example.test',

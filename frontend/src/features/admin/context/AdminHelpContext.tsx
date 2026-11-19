@@ -7,7 +7,7 @@ export function readAdminHelpPreference(): boolean {
 }
 export function saveAdminHelpPreference(value: boolean): void {
   try { localStorage.setItem(ADMIN_HELP_KEY, String(value)); }
-  catch { /* Help remains usable when browser storage is unavailable. */ }
+  catch {  }
 }
 const AdminHelpContext = createContext({ showHelp: true, toggleHelp: () => {} });
 export function AdminHelpProvider({ children }: { children: ReactNode }) {

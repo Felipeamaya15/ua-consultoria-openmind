@@ -1,4 +1,4 @@
-// Requiere: postman simulation run tests/feedback.sim.yaml --port 4915 --no-history
+
 const assert = require('node:assert/strict');
 const { load } = require('./source-loader.cjs');
 const base = process.env.FEEDBACK_API || 'http://127.0.0.1:4915/openmind';

@@ -1,4 +1,4 @@
-// Ejecuta la prueba histórica y sus módulos src desde Git, sin cambiar de rama ni archivos.
+
 const path = require('node:path'), Module = require('node:module'), { execFileSync } = require('node:child_process');
 const ref = process.argv[2] || 'f5c880e', file = path.join(__dirname, 'store-identity.cjs');
 let source = execFileSync('git', ['show', `${ref}:frontend/tests/store-identity.cjs`], { encoding: 'utf8' });

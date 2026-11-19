@@ -11,7 +11,7 @@ export interface PickupConfiguration {
   version?: 2; location?: PickupLocation;
   hours?: Record<PickupDay, { enabled: boolean; start: string; end: string }>;
   legacy_address?: string; legacy_schedule?: string;
-  /** Procedencia calculada por el servidor; manual no significa verificada por Google. */
+
   validation_method?: 'manual' | 'google' | 'unverified';
 }
 export const emptyLocation = (): PickupLocation => ({ region: '', comuna: '', street: '', number: '', reference: '', verification: '' });

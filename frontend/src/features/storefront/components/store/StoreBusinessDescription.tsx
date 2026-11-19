@@ -1,6 +1,6 @@
 import { useStore } from '../../context/StoreContext';
 
-/** Business information comes from Django, independently of the landing hero. */
+
 export function StoreBusinessDescription({ className = '' }: { className?: string }) {
   const { config } = useStore();
   if (!config.description?.trim()) return null;

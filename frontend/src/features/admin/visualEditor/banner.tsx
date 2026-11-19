@@ -3,7 +3,7 @@ import { resolveVisualViewport } from '../../storefront/visual/resolveVisualConf
 import { NumberControl } from './controls';
 import { FieldHelp } from './help';
 
-/** Friendly choices write existing height leaves, not another visual default. */
+
 export const BANNER_SIZES = {
   small: { label: 'Pequeño', desktop: 320, tablet: 280, mobile: 260 },
   medium: { label: 'Mediano', desktop: 480, tablet: 400, mobile: 340 },
@@ -18,7 +18,7 @@ export function bannerSizeFor(config: VisualConfig, viewport: Viewport): BannerS
 export function BannerSizeControl({ config, viewport, editScope = 'all', onEditMany, onEdit, onReset }: { config: VisualConfig; viewport: Viewport; editScope?: 'all' | 'device'; onEditMany?: (edits: Record<string, number>) => void; onEdit: (path: string, value: number) => void; onReset: (path: string) => void }) {
   const path = viewport === 'desktop' ? 'hero.height' : `responsive.${viewport}.hero.height`;
   const selected = bannerSizeFor(config, viewport);
-  const height = resolveVisualViewport(config, viewport).hero.height; // OPENMIND_PORTADA_PULIDO_V2
+  const height = resolveVisualViewport(config, viewport).hero.height;
   return <div className="ve-banner-control">
     <div className="ve-control-label"><label htmlFor="ve-banner-size">Tamaño del banner principal</label><FieldHelp label="Tamaño del banner principal">Define cuánto espacio ocupa la imagen principal al entrar a tu tienda. Las opciones ajustan computadora, tablet y móvil; el contenido puede ampliar la altura para no recortarse.</FieldHelp></div>
     <select id="ve-banner-size" value={selected === 'custom' ? '' : selected} onChange={event => {

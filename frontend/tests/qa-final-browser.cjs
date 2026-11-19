@@ -1,4 +1,4 @@
-// QA adicional sobre el frontend completo. Escrituras exclusivas al mock Postman local.
+
 const assert = require('node:assert/strict'), fs = require('node:fs'), path = require('node:path');
 const { chromium } = require(process.env.DASHBOARD_PLAYWRIGHT_MODULE || 'C:/Users/maria/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright');
 const base = process.env.FEEDBACK_URL || 'http://127.0.0.1:5196', api = process.env.FEEDBACK_API || 'http://127.0.0.1:4916/openmind';
@@ -11,7 +11,7 @@ const read = async () => (await (await fetch(api + '/__qa/state')).json()).data;
   const context = await browser.newContext({ viewport: { width: 1440, height: 1000 }, acceptDownloads: true });
   await context.addInitScript(() => localStorage.setItem('token', 'qa-final-only'));
   const page = await context.newPage(); page.setDefaultTimeout(10000); page.on('dialog', d => d.accept()); page.on('pageerror', e => errors.push(e.message));
-  // No solicitud de escritura puede alcanzar un destino ajeno al servidor de pruebas.
+
   await context.route('**/*', route => {
     const request = route.request();
     if (!['GET', 'HEAD', 'OPTIONS'].includes(request.method()) && !request.url().startsWith(api + '/')) return route.abort();

@@ -27,8 +27,6 @@ class ConsentMigrationTests(TransactionTestCase):
                 referencia_evidencia='legacy-reference', fecha_actualizacion=instant)
             client = APIClient()
             client.force_authenticate(get_user_model().objects.get(pk=user.pk))
-            # Isolate this consent migration from later Tienda columns. Ownership
-            # has separate API tests; current Tienda queries cannot run on 0026.
             current_store = Tienda(pk=store.pk, nombre=store.nombre, id_usuario_propietario_id=user.pk)
             with patch('apps.core.presentation.commercial_exports.resolver_tienda', return_value=current_store):
                 unavailable = client.get('/api/tienda/contactos/')

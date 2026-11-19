@@ -49,7 +49,7 @@
 .admin-page-intro [hidden]{display:none}
 @media(max-width:600px){.admin-page-intro h2{font-size:20px}.admin-page-intro-heading{align-items:flex-start}.admin-context-help{font-size:13px}}
 
-/* Product and order lists share the same controls and visual rhythm. */
+
 .admin-create-product{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:10px 16px;border-radius:10px;background:var(--primary);color:#fff;font-size:13px;font-weight:600}
 .admin-create-product:hover{background:#10294d}.admin-create-product:focus-visible{outline:3px solid var(--primary);outline-offset:3px}
 .admin-list-panel{min-width:0;padding:20px;border:1px solid var(--border);border-radius:16px;background:#fff;box-shadow:0 2px 5px #182c4903}
@@ -90,4 +90,3 @@
 .catalog-permanent-delete-btn:focus-visible{outline:2px solid #dc2626;outline-offset:2px;border-radius:3px}
 .catalog-permanent-delete-btn:disabled{opacity:.45;cursor:not-allowed}
 @media(max-width:639px){.admin-list-panel{padding:16px}.orders-search-row{grid-template-columns:minmax(0,1fr)}.orders-search-row>button{justify-self:start}.orders-advanced-filters{grid-template-columns:minmax(0,1fr);gap:12px}.orders-status-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));width:100%}.orders-status-list button{padding:9px 8px;font-size:12px}.orders-other-status{width:100%;justify-content:space-between}.orders-other-status select{flex:1;min-width:0}.catalog-overview{grid-template-columns:minmax(0,1fr)}.catalog-overview>div{padding:14px 12px}.catalog-overview>div+div{border-left:0;border-top:1px solid #edf0f6}.catalog-overview span{font-size:12px}.catalog-overview strong{font-size:22px}.admin-list-panel-footer>button{width:100%}.admin-page-intro-actions{gap:8px}}
-/* Mobile drawer visibility is handled at max-width:1023px above. */

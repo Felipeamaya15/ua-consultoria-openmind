@@ -1,4 +1,4 @@
-/** SCRUM-497: el cliente no depende de que la API devuelva los secretos. */
+
 const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');

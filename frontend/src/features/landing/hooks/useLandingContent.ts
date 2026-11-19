@@ -7,7 +7,7 @@ export function useLandingContent() {
   const { landing, landingProducts, landingCatalogError } = useStore();
   const content = normalizeLandingContent(landing?.contenido);
   const byId = new Map(landingProducts.map(p => [p.catalogId, p]));
-  // OPENMIND_FEATURED_FULL_IMAGES_V2
+
   const baseFeatured = content.productos_destacados
     .map(id => byId.get(id))
     .filter((p): p is NonNullable<typeof p> => !!p)

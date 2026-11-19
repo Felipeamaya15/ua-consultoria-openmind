@@ -24,7 +24,6 @@ from apps.core.presentation.exceptions import custom_exception_handler
 
 logger = logging.getLogger(__name__)
 
-# Valores por defecto; se pueden cambiar en settings con estos mismos nombres.
 MAX_FALLOS_POR_ORDEN = 5
 MAX_FALLOS_POR_CORREO = 10
 VENTANA_SEGUNDOS = 15 * 60
@@ -43,12 +42,10 @@ class TrackingLocked(Throttled):
     """Demasiados intentos fallidos para esta orden o este correo."""
 
     def __init__(self, espera):
-        # No se pasa `wait` al constructor: DRF le agregaria al mensaje su propio texto
-        # ("Se espera que esté disponible en N segundos") y el tiempo quedaría repetido.
         super().__init__(
             detail=f'Demasiados intentos fallidos. Vuelve a intentarlo en {describir_espera(espera)}.',
         )
-        self.wait = math.ceil(espera)  # lo usa DRF para la cabecera Retry-After
+        self.wait = math.ceil(espera)
 
 
 class _ContadorDeFallos:
@@ -76,7 +73,6 @@ class _ContadorDeFallos:
         try:
             return cache.incr(self.clave)
         except ValueError:
-            # La ventana venció justo entre las dos operaciones: se empieza una nueva.
             cache.set(self.clave_fin, ahora + self.ventana, self.ventana)
             cache.set(self.clave, 1, self.ventana)
             return 1
@@ -124,7 +120,6 @@ def tracking_exception_handler(exc, context):
     if response is not None and isinstance(exc, Throttled):
         espera = math.ceil(exc.wait) if exc.wait else None
         if not isinstance(exc, TrackingLocked):
-            # El límite por IP de DRF trae su texto en inglés ("Request was throttled...").
             response.data['mensaje'] = (
                 f'Demasiadas consultas seguidas. Vuelve a intentarlo en {describir_espera(espera)}.'
                 if espera else 'Demasiadas consultas seguidas. Inténtalo de nuevo en unos minutos.'

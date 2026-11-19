@@ -1,7 +1,4 @@
-/**
- * Servicio SEO para actualización dinámica de títulos y meta-etiquetas
- * en el navegador y motores de búsqueda.
- */
+
 
 export interface ProductSeoData {
   name: string;
@@ -22,7 +19,7 @@ export interface ResolvedSeoMetadata {
   description: string;
 }
 
-/** Consulta y normaliza los metadatos SEO configurados para la tienda. */
+
 export function resolveStoreSeoMetadata(store: StoreSeoData): ResolvedSeoMetadata {
   return {
     title: store.metaTitle?.trim() || store.name?.trim() || 'Tienda en línea',
@@ -48,7 +45,7 @@ function setMetaAttribute(
   return { element, created, previous };
 }
 
-/** Aplica el SEO general en páginas públicas que no tienen metadatos más específicos. */
+
 export function updateStoreSeo(store: StoreSeoData): () => void {
   if (typeof document === 'undefined') return () => {};
 
@@ -72,10 +69,7 @@ export function updateStoreSeo(store: StoreSeoData): () => void {
   };
 }
 
-/**
- * Actualiza dinámicamente el document.title y las meta-etiquetas de descripción y OpenGraph.
- * Retorna una función de limpieza para restaurar los valores anteriores.
- */
+
 export function updateProductSeo(product: ProductSeoData, storeName?: string): () => void {
   if (typeof document === 'undefined') return () => {};
 
@@ -87,8 +81,8 @@ export function updateProductSeo(product: ProductSeoData, storeName?: string): (
     : rawTitle;
 
   const description = product.seoDescription?.trim() || product.description?.trim() || '';
-  // Siempre reemplazar contenido, también cuando esté vacío, para no heredar
-  // la descripción de otra página o de un producto visitado previamente.
+
+
   const entries = [
     setMetaAttribute('meta[name="description"]', 'name', 'description', description),
     setMetaAttribute('meta[property="og:title"]', 'property', 'og:title', rawTitle),

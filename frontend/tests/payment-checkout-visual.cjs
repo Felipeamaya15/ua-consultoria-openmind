@@ -1,4 +1,4 @@
-// Componentes reales con APIs aisladas. No crea pedidos ni consulta proveedores externos.
+
 const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),os=require('node:os');
 const assert=require('node:assert/strict'),esbuild=require('esbuild');
 const {chromium}=require(process.env.DASHBOARD_PLAYWRIGHT_MODULE||'playwright');

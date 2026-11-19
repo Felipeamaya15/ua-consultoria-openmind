@@ -47,7 +47,7 @@ export function ProductList() {
   )
 
   useEffect(() => {
-    // Consumir el mensaje una sola vez, sin modificar manualmente el historial de React Router.
+
     if ((location.state as { successMessage?: string } | null)?.successMessage) {
       navigate(`${location.pathname}${location.search}${location.hash}`, {
         replace: true,
@@ -380,7 +380,7 @@ export function ProductEditor({ initial, editing }: { initial: AdminProduct; edi
   useEffect(() => {
     let active = true
     fetchAdminProducts().then(data => { if (active) setCatalogProducts(data) })
-      .catch(() => {}) // La unicidad entre productos también se valida en el backend.
+      .catch(() => {})
     return () => { active = false }
   }, [])
 

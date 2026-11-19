@@ -1,3 +1,0 @@
-
-> frontend@0.0.0 typecheck
-> tsc --project tsconfig.app.json --noEmit --incremental false --pretty false && tsc --project tsconfig.node.json --noEmit --incremental false --pretty false

@@ -1,4 +1,4 @@
-/** Se comprueba también en la exportación: los elementos libres no pueden tapar datos de la ficha. */
+
 export function layerLayoutProblem(art: HTMLElement): string | null {
   if (art.querySelector('[data-layer-dragging=true]')) return 'Termina de mover el elemento antes de exportar.';
   const layers = [...art.querySelectorAll<HTMLElement>('[data-free-layer]')];

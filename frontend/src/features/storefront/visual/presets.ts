@@ -2,7 +2,7 @@ import type { TemplateId } from '../data/mockData';
 import type { VisualPreset } from './types';
 import { STORE_PAGES } from './pages';
 
-/** Each preset extends the complete baseline; stable IDs retain legacy routes/storage. */
+
 export const VISUAL_PRESETS: Record<TemplateId, VisualPreset> = {
   editorial: { id: 'editorial', name: 'Studio Pop', config: {
     global: { radius: 8, density: 'normal', colors: { background: '#fafaf8' } },
@@ -55,8 +55,7 @@ export const VISUAL_PRESETS: Record<TemplateId, VisualPreset> = {
   } },
 };
 
-// Page consumers inherit each preset's existing geometry. Explicit page overrides
-// still enter later through the single central resolver.
+
 for (const preset of Object.values(VISUAL_PRESETS)) {
   const radius = preset.config.global?.radius;
   preset.config.pages = Object.fromEntries(STORE_PAGES.map(({ id }) => [id, {

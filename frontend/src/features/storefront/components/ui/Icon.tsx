@@ -1,7 +1,6 @@
 import React from 'react';
 
-// Shared line-icon set (stroke, currentColor) used across buyer, selector and
-// backoffice views so the whole product shares one visual language.
+
 const PATHS: Record<string, React.ReactNode> = {
   leaf: <><path d="M20 3C9 2 3 8 5 15s15 7 15-12Z" /><path d="m3 21 12-12M8 16v-5M8 16h5" /></>,
   gift: <><rect x="3" y="8" width="18" height="4" rx="1" /><path d="M5 12v9h14v-9M12 8v13" /><path d="M12 8C5 9 5 2 8 3c3 0 4 5 4 5s1-5 4-5c3-1 3 6-4 5Z" /></>,

@@ -290,7 +290,7 @@ function MarketingWorkspace({ scope, isCurrent }: { scope: DraftScope; isCurrent
         {missingVariant && <div role="status" className="marketing-notice">La variante guardada ya no está disponible. Selecciona otra para continuar. <Button type="button" size="sm" onClick={() => setSku('')}>Usar una variante disponible</Button></div>}
         </>} empty={<div className="marketing-preview-empty"><span className="marketing-empty-mark" aria-hidden="true">↗</span><h3>Tu próxima publicación empieza aquí</h3><p>{sources.loading ? 'Estamos consultando los datos de tu tienda.' : sources.brandError ? 'Carga la identidad de tu tienda para generar la vista previa.' : 'Selecciona un producto, servicio o taller publicado para ver su composición.'}</p></div>} />
     <div className="marketing-publication-actions" aria-label="Acciones de publicación" aria-busy={busy}>
-      {/* OPENMIND_MARKETING_ACTIONS_V1 */}
+
       <div className="mk-publication-heading"><strong>Tu publicación</strong><span>{dirty ? 'Cambios sin guardar' : 'Sin cambios pendientes'}</span></div>
       <Input label="Nombre del borrador" value={name} maxLength={80} disabled={busy} onChange={event => { setNotice(''); setName(event.target.value); }} placeholder="Ej.: Colección de primavera" />
       <p className="marketing-hint">Descarga tu diseño y publícalo en cualquier red social, o utiliza la integración oficial de Instagram si tu cuenta está autorizada.</p>

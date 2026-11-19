@@ -115,7 +115,6 @@ class Promocion(models.Model):
         ]
 
     def save(self, *args, **kwargs):
-        # No cambia tipos/códigos históricos al editar otro atributo.
         self.fecha_inicio = promotion_instant(self.fecha_inicio)
         self.fecha_fin = promotion_instant(self.fecha_fin, end=True)
         super().save(*args, **kwargs)
@@ -144,7 +143,6 @@ class Producto(models.Model):
 
 class Carrito(models.Model):
     id_carrito = models.BigAutoField(primary_key=True)
-    # OneToOneField asegura que la relación sea ÚNICA (UK) como en tu diagrama
     id_usuario = models.OneToOneField(Usuario, on_delete=models.CASCADE, db_column='id_usuario')
     fecha_actualizacion = models.DateTimeField(auto_now=True)
 
@@ -186,21 +184,19 @@ class Pedido(models.Model):
         ('entregado', 'Entregado'),
         ('cancelado', 'Cancelado'),
     ]
-    # Ya pagado: un aviso o una confirmacion repetida del pago es inofensiva.
     ESTADOS_PAGADOS = ('pagado', 'en_camino', 'entregado', 'preparando', 'en_origen', 'enviado', 'en_reparto')
-    # Ya se empezo a preparar o despachar: revertir o reconciliar el pago exige revision manual.
     ESTADOS_EN_DESPACHO = ('en_camino', 'entregado', 'preparando', 'en_origen', 'enviado', 'en_reparto')
     id_pedido = models.BigAutoField(primary_key=True)
-    
+
     identificador = models.CharField(
-        max_length=20, 
+        max_length=20,
         unique=False,
-        default=generar_identificador_orden, 
+        default=generar_identificador_orden,
         editable=False,
         verbose_name="Número de Orden",
         null=True
     )
-    
+
     id_usuario = models.ForeignKey(Usuario, on_delete=models.CASCADE, db_column='id_usuario', null=True, blank=True)
     comprador = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
@@ -217,7 +213,6 @@ class Pedido(models.Model):
     tienda = models.ForeignKey(Tienda, on_delete=models.PROTECT, null=True, blank=True)
     clave_checkout = models.UUIDField(unique=True, null=True, blank=True)
     huella_checkout = models.CharField(max_length=64, blank=True, default='')
-    # Se conserva el inicio exitoso de Webpay para que un reintento no cree otro cobro.
     webpay_token = models.CharField(max_length=512, blank=True, default='')
     webpay_url = models.CharField(max_length=2048, blank=True, default='')
     webpay_iniciado_en = models.DateTimeField(null=True, blank=True)
@@ -480,7 +475,6 @@ class ConfiguracionPago(models.Model):
         on_delete=models.CASCADE,
         related_name='configuracion_pago'
     )
-    # Almacenará el JSON con los métodos (Transbank, PayPal, etc.) y su estado 'enabled'
     datos = models.JSONField(default=dict, blank=True)
     fecha_actualizacion = models.DateTimeField(auto_now=True)
 

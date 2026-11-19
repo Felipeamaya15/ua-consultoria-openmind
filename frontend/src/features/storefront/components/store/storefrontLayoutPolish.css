@@ -1,13 +1,10 @@
-/* OPENMIND_STOREFRONT_LAYOUT_FINISH_V1
-   Las portadas 1 y 4 conservan el hero de borde a borde.
-   Bandas de color a ancho completo; su contenido comparte la misma guia.
-   El editor conserva colores, tipografia, altura, contenido y orden. */
+
 [data-storefront-visual]:is(.template-editorial,.template-catalog):has([data-landing-page]) {
   --om-landing-gutter: clamp(16px, 3vw, 48px);
   --om-landing-rail: min(calc(100% - var(--om-landing-gutter) - var(--om-landing-gutter)), 1440px);
   --om-landing-inset: max(var(--om-landing-gutter), calc((100% - 1440px) / 2));
 }
-/* Alineacion de las bandas completas. No limita la portada ni su imagen. */
+
 [data-storefront-visual]:is(.template-editorial,.template-catalog) #main-content [data-landing-page] > :is(
   [data-visual-kind="benefits"], [data-visual-kind="featured"],
   [data-visual-kind="content"], [data-visual-section="categories"], .landing-details
@@ -18,7 +15,7 @@
   padding-inline: var(--om-landing-inset) !important;
   box-sizing: border-box;
 }
-/* Evita aplicar dos veces los margenes al anidar contenedores. */
+
 [data-storefront-visual]:is(.template-editorial,.template-catalog) #main-content [data-landing-page] > :is(
   [data-visual-kind="benefits"], [data-visual-section="categories"], .landing-details
 ) > div,
@@ -30,8 +27,7 @@
   padding-inline: 0 !important;
   box-sizing: border-box;
 }
-/* Mantiene la configuracion individual de ancho de un bloque personalizado,
-   si existe, dentro de la guia comun (sin duplicar padding lateral). */
+
 [data-storefront-visual]:is(.template-editorial,.template-catalog) #main-content [data-landing-page] .store-content-blocks {
   width: 100%;
   box-sizing: border-box;
@@ -42,7 +38,7 @@
   max-width: min(100%, var(--lb-width, 100%)) !important;
   margin-inline: auto !important;
 }
-/* Studio Pop: logo/menu y texto de portada sobre la misma guia del contenido. */
+
 [data-storefront-visual].template-editorial:has([data-landing-page="editorial"]) > [data-visual-section="header"] > [data-visual-part="headerLayout"],
 [data-storefront-visual].template-editorial #main-content [data-landing-page="editorial"] [data-visual-part="heroLayout"] {
   width: var(--om-landing-rail) !important;
@@ -50,8 +46,7 @@
   padding-inline: 0 !important;
   margin-inline: auto !important;
 }
-/* Obsidian: el header flotante y los accesos usan la misma guia que el mosaico.
-   No altera su forma, altura, superposicion ni comportamiento. */
+
 [data-storefront-visual].template-catalog:has([data-landing-page="catalog"]) > header[data-visual-section="header"] {
   padding-inline: 0 !important;
 }
@@ -76,7 +71,7 @@
   max-width: none !important;
   margin-inline: 0 !important;
 }
-/* Pie de pagina de Studio Pop y Obsidian: banda completa, contenido alineado. */
+
 [data-storefront-visual]:is(.template-editorial,.template-catalog):has([data-landing-page]) > footer[data-visual-section="footer"] {
   width: 100%;
   box-sizing: border-box;
@@ -88,8 +83,7 @@
   margin-inline: 0 !important;
   padding-inline: 0 !important;
 }
-/* Soft Discovery: solo marca y carrito en la barra superior. El menu compacto
-   existente sigue disponible cuando la barra lateral no aparece (<768px). */
+
 [data-storefront-visual].template-minimal [data-visual-header-shell] > [data-visual-part="headerLayout"] {
   justify-content: flex-start !important;
   flex-wrap: nowrap !important;
@@ -115,8 +109,7 @@
   outline: 2px solid var(--primary);
   outline-offset: 2px;
 }
-/* Las cuatro portadas: eliminar solo el margen externo previo al footer.
-   No tocar su relleno interior, enlaces, branding ni las otras rutas. */
+
 [data-storefront-visual] #main-content:has([data-landing-page]) + footer[data-visual-section="footer"] {
   margin-top: 0 !important;
   margin-block-start: 0 !important;
@@ -133,11 +126,6 @@
 }
 
 
-/* OPENMIND_MINIMAL_FULL_WIDTH_BANDS_V1
-   Soft Discovery: las bandas del inicio llegan hasta los mismos bordes que
-   contacto y footer. El ancho se mide dentro del layout, no del viewport,
-   para respetar la barra lateral. Se mantienen los padding internos,
-   colores, orden, grillas y anchos individuales de los bloques propios. */
 [data-storefront-visual].template-minimal #main-content [data-landing-page="minimal"]
   > :is([data-visual-kind="benefits"], [data-visual-kind="featured"], [data-visual-section="categories"]):not([data-content-block-id]) {
   box-sizing: border-box;
@@ -145,4 +133,3 @@
   max-width: none !important;
   margin-inline: 0 !important;
 }
-/* END OPENMIND_MINIMAL_FULL_WIDTH_BANDS_V1 */

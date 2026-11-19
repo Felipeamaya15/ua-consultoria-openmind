@@ -1,4 +1,4 @@
-// Ejecutar desde frontend: node tests/google-analytics-validation.cjs
+
 const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');

@@ -22,7 +22,7 @@ export function restoreSession(value: PublicationSnapshot): TemplateHistory {
   for (const t of TEMPLATES) session.documents[t.id].present = normalizeDesign({ ...value.designs[t.id], template: t.id });
   return session;
 }
-/** Lista cerrada: nunca persiste precios, recursos, credenciales ni respuestas del servidor. */
+
 export function readSnapshot(value: unknown): PublicationSnapshot {
   const reference=record(value)?readSharingReference(value.sharingReference):null;
   if (!record(value) || (value.sharingReference!==undefined&&!reference) || typeof value.productId !== 'string' || !(reference&&value.productId==='' || /^[a-f\d]{24}$/i.test(value.productId))

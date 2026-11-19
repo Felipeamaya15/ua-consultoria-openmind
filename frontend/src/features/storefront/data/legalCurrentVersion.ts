@@ -27,10 +27,7 @@ function isPublishedVersion(value: unknown, pageType: LegalType): value is Legal
   );
 }
 
-/**
- * Resuelve únicamente la versión señalada como vigente. No elige la más nueva
- * automáticamente: una versión recién creada no debe hacerse pública por accidente.
- */
+
 export function resolveCurrentLegalVersion(
   versions: unknown,
   currentVersionId: unknown,
@@ -45,7 +42,7 @@ export function resolveCurrentLegalVersion(
   return current ? { ...current } : null;
 }
 
-/** Cambia el puntero vigente solo si la versión existe, pertenece a la página y está publicada. */
+
 export function selectCurrentLegalVersion(
   versions: unknown,
   versionId: string,

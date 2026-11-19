@@ -1,4 +1,4 @@
-// Matriz real de controles: reutiliza el transporte interceptado de Marketing, sin persistir ni exportar.
+
 const assert = require('node:assert/strict'), fs = require('node:fs'), path = require('node:path');
 module.exports = async (page, { width, choose, formats, out }) => {
   const art = page.locator('.marketing-art');
@@ -16,8 +16,8 @@ module.exports = async (page, { width, choose, formats, out }) => {
     assert.deepEqual(await art.evaluate(node => [...node.querySelectorAll('.marketing-art-copy > *, .marketing-art-brand')]
       .filter(n => getComputedStyle(n).display !== 'none').filter(n => { const r=n.getBoundingClientRect(), a=node.getBoundingClientRect(); return n.scrollWidth > n.clientWidth + 1 || r.bottom > a.bottom+1 || r.top < a.top-1 || r.right > a.right+1 || r.left < a.left-1; }).map(n => ({name:n.className, width:n.clientWidth, scrollWidth:n.scrollWidth, height:n.clientHeight, scrollHeight:n.scrollHeight, rect:n.getBoundingClientRect().toJSON(), outer:node.getBoundingClientRect().toJSON()}))), [], `${label}: texto completo`);
   };
-  // Un producto nuevo inicia las tres sesiones sin arrastrar el recorrido previo.
-  const logoData = 'data:image/png;base64,' + fs.readFileSync(path.resolve(__dirname, '../../docs/marketing-parte1/evidencias/producto-qa.png')).toString('base64');
+
+  const logoData = 'data:image/png;base64,' + fs.readFileSync(path.resolve(__dirname, 'fixtures/producto-qa.png')).toString('base64');
   const logoRoute = route => route.fulfill({ json: { exito:true,data:{tienda:1,id:1,logo:logoData,contenido:{},secciones:{}} } });
   await page.route('**/api/landing/configuracion/', logoRoute);
   await page.getByRole('button', { name:'Actualizar datos', exact:true }).click();
@@ -53,7 +53,7 @@ module.exports = async (page, { width, choose, formats, out }) => {
         assert.equal(await element.evaluate(n => getComputedStyle(n).fontStyle), 'italic');
         assert.equal(await element.evaluate(n => getComputedStyle(n).textAlign), 'center');
         assert.equal(await element.evaluate(n => getComputedStyle(n).color), block === 'cta' ? 'rgb(0, 0, 0)' : 'rgb(255, 255, 255)', 'el botón claro aplica contraste seguro');
-        // Volver a valores moderados evita confundir controles acumulados con capacidad de cabida.
+
         await page.getByLabel('Cursiva del bloque', { exact: true }).uncheck();
         await page.getByLabel('Tamaño del bloque').fill('90');
         if (block === 'description') {
@@ -83,7 +83,7 @@ module.exports = async (page, { width, choose, formats, out }) => {
       await section('Composición');
       await page.getByLabel('Espaciado de la pieza').selectOption('compact');
       await page.getByLabel('Alineación de la ficha').selectOption('right');
-      // Un control de orden antes ignorado en Esencial debe cambiar la geometría en los tres formatos.
+
       for (const side of ['start','end']) {
         await page.getByLabel('Posición de la imagen', { exact: true }).selectOption(side); await pause();
         const boxes = await art.evaluate(n => ({ image: n.querySelector('.marketing-art-media').getBoundingClientRect().toJSON(), copy: n.querySelector('.marketing-art-copy').getBoundingClientRect().toJSON() }));
@@ -111,7 +111,7 @@ module.exports = async (page, { width, choose, formats, out }) => {
       await page.getByLabel('Mostrar llamada a la acción', { exact: true }).check();
       await page.getByLabel('Llamada a la acción a todo el ancho').check();
       await page.getByLabel('Estilo de llamada a la acción').selectOption('solid');
-      // Ficha independiente: geometría y contraste se comprueban en el DOM real.
+
       const copy = art.locator('.marketing-art-copy'), cta = art.locator('.marketing-art-cta');
       await color('Fondo de la ficha', '#ffffff');
       await page.getByLabel('Bordes de la ficha (%)', {exact:true}).fill('2');
@@ -158,13 +158,13 @@ module.exports = async (page, { width, choose, formats, out }) => {
       assert.equal(await cta.evaluate(n => getComputedStyle(n).borderTopWidth), '2px');
       assert.equal(await cta.evaluate(n => getComputedStyle(n).borderTopColor), 'rgb(0, 0, 0)', 'borde visible aun con color incompatible');
       if (width === 1440 && format === 'story') await page.locator('.marketing-preview').screenshot({path:path.join(out,`ficha-cta-${id}.png`)});
-      // Recuperar una composición moderada para las verificaciones de cabida posteriores.
+
       await page.getByRole('button', {name:'Restaurar apariencia original',exact:true}).click();
       await page.getByRole('button', {name:'Deshacer',exact:true}).click();
       assert.equal(await page.getByLabel('Estilo del borde de la ficha').inputValue(), 'dashed');
       await page.getByRole('button', {name:'Rehacer',exact:true}).click();
       assert.equal(await page.getByLabel('Estilo del borde de la ficha').inputValue(), 'original');
-      // Conservar la expectativa de undo/redo del control compartido de Parte 2.
+
       await page.getByLabel('Estilo de llamada a la acción').selectOption('ghost');
       await page.getByLabel('Estilo de llamada a la acción').selectOption('solid');
       await measure(`${name}/${format}`);
@@ -180,13 +180,13 @@ module.exports = async (page, { width, choose, formats, out }) => {
       console.log(`OK personalización ${width}px ${name}/${format}: ocho bloques, fuentes, imagen, logo, ficha, bordes, sombra, CTA, paletas, undo/redo`);
     }
   }
-  // Recuperación independiente: no basta con que el selector muestre otra etiqueta.
+
   for (const name of ['Fotografía','Destacado','Esencial']) {
     await section('Plantilla'); await template(name);
     assert.equal(await art.locator('.marketing-art-heading').innerText(), `Diseño ${name}`);
   }
   assert.equal(await page.evaluate(() => JSON.stringify(Object.entries(localStorage))), storageBefore, 'editar no altera identidad, tienda ni persistencia');
-  // Sin imagen y precio normal: las tres plantillas y formatos siguen siendo composiciones de texto.
+
   await choose(5);
   for (const name of ['Fotografía','Destacado','Esencial']) {
     await section('Plantilla'); await template(name);
@@ -213,7 +213,7 @@ module.exports = async (page, { width, choose, formats, out }) => {
       }
     }
   }
-  // Independencia entre tiendas, con otra página en el mismo navegador y catálogo simulado.
+
   const other = await page.context().newPage();
   await other.route('**/api/visual-config/plantilla-seleccionada/', route => route.fulfill({ json: { exito:true, data:{tienda_id:2,plantilla_seleccionada:'minimal'} } }));
   await other.route('**/api/tienda/configuracion/', route => route.fulfill({ json: { exito:true, data:{nombre:'Otra tienda QA',descripcion:''} } }));
@@ -225,6 +225,6 @@ module.exports = async (page, { width, choose, formats, out }) => {
   await page.unroute('**/api/landing/configuracion/', logoRoute);
   await page.getByRole('button', { name:'Actualizar datos', exact:true }).click();
   await page.getByText('Cargando productos e identidad de tu tienda...', {exact:true}).waitFor({state:'hidden'});
-  await choose(1); // Dejar el recorrido de Parte 1 intacto y con ajustes originales.
+  await choose(1);
   console.log(`OK ${width}px: independencia de plantilla/tienda, sin imagen × 9, nombres/precios extensos × 9 y bloqueo extremo × 9; sin guardado ni exportación`);
 };

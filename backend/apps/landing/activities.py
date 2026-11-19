@@ -15,7 +15,6 @@ CONSENT_VERSION = 'actividad-gestion-v1'
 
 
 class PaidActivitySettingsSerializer(StrictSerializer):
-    # Configuration only. Checkout will use authoritative server-side availability.
     cierre_minutos = serializers.IntegerField(min_value=0, max_value=10080, default=60)
     tolerancia_minutos = serializers.IntegerField(min_value=0, max_value=120, default=15)
     cancelacion = serializers.ChoiceField(choices=('evaluacion', 'anticipada'), default='evaluacion')

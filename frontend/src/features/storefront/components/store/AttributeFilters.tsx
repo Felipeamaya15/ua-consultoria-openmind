@@ -11,21 +11,21 @@ interface AttributeFiltersProps {
 }
 
 const STYLES = {
-  // Plantilla 4
+
   catalog: {
     wrapper: 'border-t border-black/10 mt-5 pt-5',
     title: 'mb-3 text-[10px] font-black uppercase tracking-[0.16em] text-black/60',
     label: 'flex items-center gap-2.5 py-1.5 text-[12px] cursor-pointer',
     input: 'accent-[var(--primary)]',
   },
-  // Plantilla 3
+
   visual: {
     wrapper: 'min-w-0',
     title: 'mb-3 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#111111]',
     label: 'flex items-center gap-2.5 py-1 text-[13px] text-[#111111] cursor-pointer',
     input: 'accent-black',
   },
-  // Plantillas 1 y 2
+
   default: {
     wrapper: 'border-t border-[var(--border)] mt-4 pt-4',
     title: 'text-xs font-semibold uppercase tracking-wider text-[var(--muted-foreground)] mb-3',

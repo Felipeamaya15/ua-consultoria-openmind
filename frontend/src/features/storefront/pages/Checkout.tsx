@@ -286,7 +286,7 @@ export default function Checkout() {
   const [paymentsLoading, setPaymentsLoading] = useState(true);
   const [paymentsError, setPaymentsError] = useState('');
   const [transferDetails, setTransferDetails] = useState<TransferDetails | null>(null);
-  // PayPal cobra en USD: el servidor informa el tipo de cambio vigente para mostrarlo antes de pagar.
+
   const [paypalFx, setPaypalFx] = useState<{tipo_cambio: string; margen_pct: string; fecha_dato: string; fuente: string} | null>(null);
 
   useEffect(() => {
@@ -367,11 +367,7 @@ export default function Checkout() {
     return () => {active = false;};
   }, [activities.length,activityPurchaseAllowed,activityMode,activityPayments]);
 
-  /*
-   * ==========================================================
-   * LÓGICA DE ACTUALIZACIÓN DEL TOTAL Y DESPACHO
-   * ==========================================================
-   */
+
   const [shippingQuotes, setShippingQuotes] = useState<Record<string, ShippingQuote & {destino: string}>>({});
   const [quoteLoading, setQuoteLoading] = useState(false);
   const [quoteError, setQuoteError] = useState('');
@@ -388,14 +384,14 @@ export default function Checkout() {
   const [consentMessage, setConsentMessage] = useState('');
   const promotionRequest = useRef(0);
   const applyingPromotion = useRef(false);
-  
+
   const destinationKey = JSON.stringify([shippingMethod, address.region, address.city]);
   const selectedShippingOption = onlyActivities ? undefined : shippingOptions.find(option => option.id === shippingMethod);
   const candidateQuote = shippingQuotes[shippingMethod];
   const selectedQuote = candidateQuote?.destino === destinationKey && candidateQuote.vence_en > Date.now() / 1000
     ? candidateQuote : undefined;
-    
-  // => CÁLCULO DEL TOTAL DEL PEDIDO SUMANDO EL COSTO DE DESPACHO <=
+
+
   const quotedShipping = onlyActivities || shippingMethod === 'Retiro' ? 0 : selectedQuote?.monto ?? null;
   const currentPromotionBasis = JSON.stringify([subtotal, quotedShipping, checkoutPromoCode]);
   const currentPromotion = promotionBasis === currentPromotionBasis ? validatedPromotion : null;
@@ -448,12 +444,12 @@ export default function Checkout() {
       if (requestId === promotionRequest.current) { setPromoLoading(false); applyingPromotion.current = false; }
     }
   };
-  
-  // Validamos que exista un costo real de despacho, o sea retiro en tienda.
+
+
   const deliveryReady = onlyActivities || (!shippingLoading && !shippingError && !!selectedShippingOption
     && (shippingMethod === 'Retiro' ? true : (!!selectedQuote && !quoteLoading && !quoteError)));
 
-  // Si no hay tarifa para el destino, reintentar no sirve: se ofrece cambiar de alternativa o de comuna.
+
   const quoteNeedsOtherOption = ['sin_tarifa', 'no_disponible', 'destino'].includes(quoteErrorKind);
   const quoteUnavailable = ['sin_tarifa', 'no_disponible'].includes(quoteErrorKind);
   const otherShippingOptions = shippingOptions.filter(option => option.id !== shippingMethod);
@@ -546,7 +542,7 @@ export default function Checkout() {
                 return;
           }
         } catch {
-          // Silenciar
+
         }
         setErrors((current) => ({
           ...current,
@@ -583,11 +579,7 @@ export default function Checkout() {
     return () => { active = false; };
   }, []);
 
-  /*
-   * ==========================================================
-   * VALIDACIONES
-   * ==========================================================
-   */
+
   const validate = (currentStep: string) => {
     const newErrors: Record<string, string> = {};
 
@@ -685,11 +677,7 @@ export default function Checkout() {
     }
   };
 
-  /*
-   * ==========================================================
-   * CONFIRMAR PEDIDO
-   * ==========================================================
-   */
+
   const handleConfirm = async () => {
     if (submitting.current || loading || (!items.length && !activities.length)) return;
     if(activities.length && (!activityPurchaseAllowed||!activityPayments.includes(paymentMethod)||checkoutPromoCode)) {setErrors({payment:'Revisa la disponibilidad, selecciona el medio de pago habilitado y quita el código promocional.'});return;}
@@ -732,7 +720,7 @@ export default function Checkout() {
             identificador: order.identificador, email: contact.email.trim(), monto: Number(order.monto_total),
           }));
         } catch {
-          // Sin almacenamiento, Seguimiento conserva la búsqueda manual.
+
         }
         const returnUrl = `${window.location.origin}${route('pedido-confirmado')}?orderNumber=${orderNumber}&tienda=${order.tienda_id}`;
         const result = await transbankPaymentService.iniciarPago(
@@ -748,8 +736,8 @@ export default function Checkout() {
 
       if (paymentMethod === 'PayPal') {
         const returnUrl = `${window.location.origin}${route('pedido-confirmado')}?orderNumber=${orderNumber}&tienda=${order.tienda_id}&gateway=paypal`;
-        const cancelUrl = `${returnUrl}&cancelado=1`; // PayPal agrega ?token= tambien al cancelar: 'cancelado' evita capturar
-        
+        const cancelUrl = `${returnUrl}&cancelado=1`;
+
         const result = await paypalPaymentService.iniciarPago(
           order.tienda_id, orderNumber, Number(order.monto_total), returnUrl, cancelUrl
         );
@@ -790,7 +778,7 @@ export default function Checkout() {
         window.location.href = order.url_pago;
         return;
       }
-      
+
       await clearCart();
       navigate(route('pedido-confirmado'), {
         state: {orderNumber, identificador: order.identificador, email: contact.email.trim()}, replace: true,
@@ -798,7 +786,7 @@ export default function Checkout() {
     } catch (error) {
       const code = (error as {code?: string} | null)?.code;
       if (typeof code === 'string' && code.startsWith('COTIZACION_')) {
-        // La tarifa venció o cambió: se vuelve a cotizar y se devuelve al comprador a Entrega.
+
         setQuoteAttempt(value => value + 1);
         setStep('delivery');
         setErrors({shipping: 'La tarifa de envío venció o cambió. La actualizamos: revisa el total y continúa.'});
@@ -811,11 +799,7 @@ export default function Checkout() {
     }
   };
 
-  /*
-   * ==========================================================
-   * CARRITO VACÍO
-   * ==========================================================
-   */
+
   if (items.length === 0 && activities.length === 0) {
     return (
       <div
@@ -841,11 +825,7 @@ export default function Checkout() {
     );
   }
 
-  /*
-   * ==========================================================
-   * LABELS DE PAGO
-   * ==========================================================
-   */
+
   const PAYMENT_LABELS: Record<
     string,
     string
@@ -876,9 +856,7 @@ export default function Checkout() {
               : 'Transferencia bancaria'
             : '';
 
-  /*
-   * Estilos compartidos para los paneles.
-   */
+
   const panelClass = isVisual
     ? 'bg-[#f1f1f0] rounded-[10px] min-w-0 p-4 sm:p-6 flex flex-col gap-5'
     : isMinimal
@@ -922,9 +900,7 @@ export default function Checkout() {
         </div>
       )}
 
-      {/* =====================================================
-          TÍTULO MINIMAL
-      ====================================================== */}
+
       {isMinimal && (
         <div className="mb-7">
           <p className="text-xs text-[var(--visual-page-color)] mb-2">
@@ -937,9 +913,7 @@ export default function Checkout() {
         </div>
       )}
 
-      {/* =====================================================
-          STEPPER
-      ====================================================== */}
+
       <div data-page-panel data-checkout-stepper
         className={
           isVisual
@@ -967,14 +941,10 @@ export default function Checkout() {
           }
         `}
       >
-        {/* =================================================
-            FORMULARIO
-        ================================================== */}
+
         <div className="lg:col-span-3 min-w-0">
 
-          {/* ===============================================
-              CONTACTO
-          ================================================ */}
+
           {consentMessage && <p role="status" className="my-3 text-sm border rounded p-3">{consentMessage}</p>}
           {step === 'contact' && <div className="mb-4 border rounded p-4">
             <CommercialOptIn checked={commercial} onChange={setCommercial} />
@@ -1173,9 +1143,7 @@ export default function Checkout() {
             </div>
           )}
 
-          {/* ===============================================
-              ENTREGA
-          ================================================ */}
+
           {step === 'delivery' && onlyActivities && (
             <div data-checkout-step-panel tabIndex={-1} data-visual-section="pagePanel" data-page-panel className={panelClass}>
               <h2 className="text-lg font-semibold">Entrega</h2>
@@ -1454,9 +1422,7 @@ export default function Checkout() {
             </div>
           )}
 
-          {/* ===============================================
-              PAGO
-          ================================================ */}
+
           {step === 'payment' && (
             <div data-checkout-step-panel tabIndex={-1} data-visual-section="pagePanel" data-page-panel className={panelClass}>
               <div>
@@ -1570,7 +1536,7 @@ export default function Checkout() {
                 </div>
               )}
 
-              {/* TRANSBANK */}
+
               {paymentMethod === 'Transbank' && (
                 <div data-page-panel
                   className={
@@ -1608,7 +1574,7 @@ export default function Checkout() {
                 </div>
               )}
 
-              {/* MERCADO PAGO */}
+
               {paymentMethod === 'MercadoPago' && (
                 <div data-page-panel
                   className={
@@ -1646,7 +1612,7 @@ export default function Checkout() {
                 </div>
               )}
 
-              {/* PAYPAL */}
+
               {paymentMethod === 'PayPal' && (
                 <div data-page-panel
                   className={
@@ -1697,7 +1663,7 @@ export default function Checkout() {
                 </div>
               )}
 
-              {/* TRANSFERENCIA */}
+
               {paymentMethod === 'Transferencia' && transferDetails && (
                 <div data-page-panel
                   className={
@@ -1747,9 +1713,7 @@ export default function Checkout() {
             </div>
           )}
 
-          {/* ===============================================
-              CONFIRMAR
-          ================================================ */}
+
           {step === 'confirm' && (
             <div data-checkout-step-panel tabIndex={-1} data-visual-section="pagePanel" data-page-panel className={panelClass}>
               <div>
@@ -1884,9 +1848,7 @@ export default function Checkout() {
             </div>
           )}
 
-          {/* ===============================================
-              NAVEGACIÓN
-          ================================================ */}
+
           {step==='confirm' && errors.payment && <Alert variant="error">{errors.payment}</Alert>}
           <div data-checkout-navigation className="flex justify-between items-center gap-3 mt-5">
             {step !== 'contact' ? (
@@ -1977,9 +1939,7 @@ export default function Checkout() {
           </div>
         </div>
 
-        {/* =================================================
-            RESUMEN DEL PEDIDO
-        ================================================== */}
+
         <aside data-visual-section="pagePanel" className="lg:col-span-2 min-w-0 order-first lg:order-last">
           <div data-page-panel
             className={

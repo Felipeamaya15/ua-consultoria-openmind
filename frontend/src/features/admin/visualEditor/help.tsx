@@ -1,6 +1,6 @@
 import { useId, useState } from 'react';
 
-/** Text help usable with mouse, focus, touch and Escape; no media dependency. */
+
 export function FieldHelp({ label, children }: { label: string; children: string }) {
   const id = useId();
   const [hover, setHover] = useState(false), [focus, setFocus] = useState(false), [pinned, setPinned] = useState(false), [dismissed, setDismissed] = useState(false);

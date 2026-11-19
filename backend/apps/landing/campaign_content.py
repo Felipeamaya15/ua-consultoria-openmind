@@ -54,7 +54,6 @@ def content_snapshot(store, selection, previous):
         raise ValidationError('La selección de variantes no es válida.')
     if not isinstance(indices, list) or len(indices) > 6 or any(type(index) is not int or index < 0 for index in indices) or len(set(indices)) != len(indices):
         raise ValidationError('Selecciona hasta seis imágenes disponibles.')
-    # A saved snapshot is retained when only editorial text or recipients change.
     if previous.get('seleccion') == selection:
         return previous
     brand = identity(store)
@@ -119,7 +118,6 @@ def content_snapshot(store, selection, previous):
             if item['tipo'] == 'biblioteca':
                 resource = RecursoMultimedia.objects.filter(pk=item.get('recurso_id'), tienda=store, activo=True, eliminado=False, tipo='imagen').first()
                 if resource:
-                    # Use the same URL as Difusión to keep indices stable; the sender embeds the stored file.
                     images.append(('library:' + str(resource.pk)) if resource.archivo else resource.url)
         price = next((money(item.get('importe')) for item in elements if item['tipo'] == 'precio'), None)
         if (block.get('actividad') or {}).get('gratuito'):

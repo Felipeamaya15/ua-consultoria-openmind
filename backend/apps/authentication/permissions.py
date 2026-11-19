@@ -10,7 +10,6 @@ class IsStoreOwner(BasePermission):
     def has_permission(self, request, view):
         if not request.user.is_authenticated or not Tienda.objects.del_propietario(request.user).exists():
             return False
-        # Identificadores ajenos nunca autorizan ni seleccionan otra tienda.
         for source in (request.query_params, request.data):
             for key in ('tienda_id', 'id_tienda'):
                 if key in source and str(source[key]) not in {str(pk) for pk in Tienda.objects.del_propietario(request.user).values_list('pk', flat=True)}:

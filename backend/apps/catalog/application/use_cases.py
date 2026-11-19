@@ -38,8 +38,6 @@ from apps.catalog.domain.exceptions import (
     ConfiguracionPagoInvalidaException,
 )
 
-# CONFIGURACIÓN MERCADO PAGO (ADMIN)
-# ==========================================================
 
 class GuardarConfiguracionMercadoPagoDTO:
     def __init__(
@@ -165,16 +163,6 @@ class GuardarConfiguracionMercadoPagoUseCase:
         return self.execute(*args, **kwargs)
 
 
-
-
-
-
-
-
-# ==========================================================
-# CONFIGURACIÓN DE PAYPAL (ADMIN)
-# ==========================================================
-
 class GuardarConfiguracionPayPalDTO:
     """
     DTO flexible compatible con instanciación directa o desempaquetado de serializer.
@@ -283,7 +271,6 @@ class GuardarConfiguracionPayPalUseCase:
         config.ambiente = ambiente
         config.activo = activo
 
-        # Solo actualizar secret si no viene enmascarado
         if client_secret and not client_secret.startswith("****"):
             config.client_secret = client_secret
 
@@ -302,9 +289,6 @@ class GuardarConfiguracionPayPalUseCase:
     def ejecutar(self, *args, **kwargs) -> Dict[str, Any]:
         return self.execute(*args, **kwargs)
 
-# ==========================================================
-# CONFIGURACIÓN TRANSBANK (PANEL EMPRENDEDOR / ADMIN)
-# ==========================================================
 
 class GuardarConfiguracionTransbankDTO:
     """
@@ -460,10 +444,6 @@ class GuardarConfiguracionTransbankUseCase:
         return self.execute(*args, **kwargs)
 
 
-# ==========================================================
-# PROCESAMIENTO WEBPAY PLUS (CHECKOUT)
-# ==========================================================
-
 @dataclass
 class IniciarPagoTransbankDTO:
     id_tienda: int
@@ -501,8 +481,6 @@ class IniciarPagoTransbankUseCase:
         from apps.core.models import Pedido
 
         with transaction.atomic():
-            # Este bloqueo serializa intentos simultáneos para el mismo pedido.
-            # El adaptador limita a 15 s la espera de Webpay.
             pedido = (
                 Pedido.objects.select_for_update().filter(
                     identificador=orden_compra,
@@ -620,7 +598,7 @@ class ConfirmarPagoTransbankUseCase:
             ).first()
             if pedido:
                 from apps.landing.webpay_activity_orders import is_webpay_activity
-                if is_webpay_activity(pedido): return  # Reconcile status; never reuse token.
+                if is_webpay_activity(pedido): return
                 try:
                     notificar_pago_rechazado(pedido)
                 finally:
@@ -662,7 +640,6 @@ class ConfirmarPagoTransbankUseCase:
             from apps.core.infrastructure.stock_pedidos import descontar_stock_de_pedido
             descontar_stock_de_pedido(pedido.pk)
         if pasa_a_pagado:
-            # Correo de pago exitoso al comprador (SCRUM-429); no interrumpe la confirmación si falla.
             from apps.core.infrastructure.notificaciones_pedido import notificar_cambio_de_estado
             notificar_cambio_de_estado(pedido, "pendiente")
 
@@ -680,10 +657,6 @@ class RegistrarPagoAbortadoTransbankUseCase:
         tienda_pk = getattr(id_tienda, "id_tienda", None) or getattr(id_tienda, "pk", None) or id_tienda
         ConfirmarPagoTransbankUseCase._avisar_pago_rechazado(tienda_pk, tbk_token)
 
-
-# ==========================================================
-# CASOS DE USO EXISTENTES DE CATÁLOGO Y CARRITO
-# ==========================================================
 
 class ListPublicProductsUseCase:
 
@@ -751,7 +724,6 @@ class GetPublicProductAttributesUseCase:
 
 class SoftDeleteProductUseCase:
     def execute(self, id_producto: int, tienda_id: str) -> dict:
-        # Los productos documentales se desactivan por su ObjectId y tienda.
         if ObjectId.is_valid(str(id_producto)):
             repository = ProductRepository()
             product = repository.get_by_id(str(tienda_id), str(id_producto))
@@ -766,7 +738,6 @@ class SoftDeleteProductUseCase:
             id_producto = int(id_producto)
         except (TypeError, ValueError):
             raise ValueError("El producto no existe en el catálogo.") from None
-        # 1. Soft Delete en PostgreSQL
         try:
             producto_pg = Producto.objects.get(id_producto=id_producto, id_tienda=tienda_id)
             if not producto_pg.activo:
@@ -811,8 +782,6 @@ class HardDeleteProductUseCase:
                 producto_mongo_id="",
             ).update(producto_mongo_id=mongo_id)
 
-        # Desvincular ItemPedido antes de borrar Producto porque ItemPedido.id_producto usa CASCADE;
-        # así se conserva íntegro el historial de pedidos y reportes de ventas.
         ItemPedido.objects.filter(id_producto_id=sql_product.pk).update(id_producto=None)
         ItemCarrito.objects.filter(id_producto_id=sql_product.pk).delete()
         sql_product.delete()
@@ -954,8 +923,6 @@ class CrearProductoUseCase:
         if 'stock' in datos_validados:
             validate_stock(datos_validados['stock'])
 
-        # Separamos los campos que sí pertenecen al modelo Producto (Postgres)
-        # de los que solo existen para el catálogo (Mongo).
         datos = dict(datos_validados)
         categoria = datos.pop('categoria', '') or 'Sin categoría'
         descripcion = datos.pop('descripcion', '')
@@ -966,8 +933,6 @@ class CrearProductoUseCase:
             **datos
         )
 
-        # Creamos el documento equivalente en Mongo, vinculado por id_producto,
-        # para que el catálogo público y la gestión de variantes funcionen.
         slug_base = slugify(producto.nombre) or f"producto-{producto.id_producto}"
         slug = slug_base
         sufijo = 1
@@ -1007,7 +972,6 @@ class UpdateCatalogProductUseCase:
             existing = self.repository.get_by_sku(tienda_id, variant['sku'])
             if existing and existing['_id'] != original['_id']:
                 raise ValueError(f"El SKU '{variant['sku']}' ya existe en esta tienda.")
-        # Mantener metadatos legacy de variantes que siguen existiendo.
         if 'variantes' in data:
             previous = {v['sku']: v for v in original.get('variantes', [])}
             data = {**data, 'variantes': [
@@ -1318,7 +1282,6 @@ class AgregarItemCarritoUseCase:
             if not is_variant_active(variante):
                 raise VarianteNoEncontradaException('La variante ya no está disponible.')
 
-            # SKU canónico de la variante (get_variant_by_sku también acepta id o índice)
             sku_normalizado = str(variante.get("sku") or sku_normalizado).strip().upper()
             stock_disponible = int(variante.get("stock", 0))
             if stock_disponible <= 0:
@@ -1330,7 +1293,6 @@ class AgregarItemCarritoUseCase:
             if stock_disponible <= 0:
                 raise StockInsuficienteException("El producto seleccionado se encuentra agotado.")
 
-        # sku=None se traduce a IS NULL: el producto base y cada variante son ítems distintos.
         item_existente = ItemCarrito.objects.filter(
             id_carrito=carrito,
             id_producto=producto,

@@ -69,7 +69,7 @@
   font-weight: 600;
 }
 
-/* Mejoras visuales para tarjetas de gestión de actividades */
+
 .activity-message-bubble {
   border-left: 3px solid var(--primary, #4f46e5);
   background-color: #f8fafc;
@@ -118,8 +118,7 @@
   }
 }
 
-/* OPENMIND_THEME_ACTIVITY_MODAL_V1: la identidad visual viene de la tienda,
-   no del panel admin; el diálogo nativo permanece dentro del tema. */
+
 .activity-request-dialog {
   --primary: var(--visual-button, #5433eb);
   --on-primary: var(--visual-button-text, #fff);

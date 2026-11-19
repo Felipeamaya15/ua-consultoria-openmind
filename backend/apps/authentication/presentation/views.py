@@ -85,7 +85,7 @@ from .serializers import (
 
 UserModel = get_user_model()
 PASSWORD_RESET_SALT = "auth-password-reset-v1"
-PASSWORD_RESET_MAX_AGE_SECONDS = 1800  # 30 minutos
+PASSWORD_RESET_MAX_AGE_SECONDS = 1800
 
 AUTH_ERROR_CODES = {
     UserAlreadyExistsException: "USUARIO_YA_EXISTE",
@@ -239,7 +239,6 @@ class LoginAPIView(APIView):
             )
             django_user = UserModel.objects.get(pk=user_entity.id)
 
-            # Verificar si el usuario tiene MFA (TOTP) habilitado
             mfa = UserMFA.objects.filter(user=django_user, is_enabled=True).first()
             if mfa:
                 if otp_code:

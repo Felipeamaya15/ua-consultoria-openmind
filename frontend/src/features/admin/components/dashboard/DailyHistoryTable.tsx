@@ -15,7 +15,7 @@ export type DailyHistoryState =
 const focus = 'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--primary)] rounded';
 const panel = 'bg-white border border-[var(--border)] rounded-2xl p-5 sm:p-6 shadow-sm min-w-0';
 
-/** Tabla diaria de ventas y pedidos. */
+
 export function DailyHistoryView({ state, period, onRetry }: { state: DailyHistoryState; period: string; onRetry: () => void }) {
   if (state.status === 'loading') return <LoadingState spacing="none" className="py-5">Cargando el historial…</LoadingState>;
   if (state.status === 'error') return <ErrorState className="mt-4" onRetry={onRetry} retryLabel="Reintentar historial">{humanizeAdminError(state.message)}</ErrorState>;
@@ -27,7 +27,7 @@ export function DailyHistoryView({ state, period, onRetry }: { state: DailyHisto
     </table></div>;
 }
 
-/** Trae el histórico de los endpoints de ventas y pedidos solo cuando se abre el detalle. */
+
 export default function DailyHistoryTable({ from, to, period }: { from: string; to: string; period: string }) {
   const [opened, setOpened] = useState(false);
   const [attempt, setAttempt] = useState(0);

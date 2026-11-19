@@ -10,7 +10,7 @@ interface Props {
   gateway: 'paypal' | 'mercadopago';
   orderNumber: string;
   tiendaId: number;
-  // PayPal: id de la orden (?token=). Mercado Pago: id del pago (?payment_id=).
+
   reference: string;
 }
 
@@ -24,7 +24,7 @@ type Result =
 
 const NAMES = { paypal: 'PayPal', mercadopago: 'Mercado Pago' } as const;
 
-// La captura/consulta solo se hace una vez por pago; el resultado se guarda para que recargar no la repita.
+
 const cacheKey = (gateway: string, reference: string, tiendaId: number, orderNumber: string) => `${gateway}-result:${tiendaId}:${orderNumber}:${reference}`;
 const PENDING_CART_SNAPSHOT_KEY = 'openmind-pending-payment-cart';
 const RESTORE_CART_FLAG_KEY = 'openmind-restore-cart';
@@ -51,7 +51,7 @@ export default function ExternalPaymentReturnResult({ gateway, orderNumber, tien
     if (started.current) return;
     started.current = true;
 
-    // Sin referencia el comprador volvió sin pagar (cancelado o fallo en la pasarela).
+
     if (!reference) {
       triggerCartRestore();
       setResult({ status: 'cancelled' });
@@ -68,7 +68,7 @@ export default function ExternalPaymentReturnResult({ gateway, orderNumber, tien
         return;
       }
     } catch {
-      // Sin caché disponible: se confirma normalmente.
+
     }
 
     const request = gateway === 'paypal'
@@ -94,7 +94,7 @@ export default function ExternalPaymentReturnResult({ gateway, orderNumber, tien
           next = { status: 'error', message: res?.mensaje || 'No pudimos confirmar tu pago.' };
         }
         if (next.status === 'approved' || next.status === 'rejected') {
-          try { sessionStorage.setItem(cacheKey(gateway, reference, tiendaId, orderNumber), JSON.stringify(next)); } catch { /* Sin caché. */ }
+          try { sessionStorage.setItem(cacheKey(gateway, reference, tiendaId, orderNumber), JSON.stringify(next)); } catch {  }
         }
         setResult(next);
       })
@@ -110,7 +110,7 @@ export default function ExternalPaymentReturnResult({ gateway, orderNumber, tien
       if ('email' in stored && typeof stored.email === 'string') email = stored.email;
     }
   } catch {
-    // El retorno puede abrirse sin la sesión original: queda la búsqueda manual.
+
   }
   const trackingRoute = identificador
     ? `${route('seguimiento')}?orden=${encodeURIComponent(identificador)}`
@@ -125,7 +125,7 @@ export default function ExternalPaymentReturnResult({ gateway, orderNumber, tien
     error: { glyph: '!', tone: 'bg-red-50 text-red-600', title: 'No pudimos confirmar tu pago' },
   }[result.status];
 
-  // Un pago rechazado o cancelado deja el pedido pendiente: se vuelve a pagar ese mismo pedido (sin duplicarlo).
+
   const canRetry = (result.status === 'rejected' || result.status === 'cancelled') && Boolean(orderNumber);
   const retryPayment = async () => {
     if (retrying || !canRetry) return;

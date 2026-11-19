@@ -1,4 +1,4 @@
-// Ejecutar desde frontend: node tests/storefront-variants.cjs
+
 const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
@@ -111,7 +111,7 @@ async function main() {
       assert.equal(harness.cart[0].comparePrice, undefined);
       assert.equal(harness.cart[0].maxStock, 8);
       assert.equal(harness.cart[0].attributes.talla, 'L');
-      // Aunque se fuerce el evento de una opción disabled, no permite comprar stock cero.
+
       walk(tree, n => n.type === 'select')[0].props.onChange({ target: { value: 'QA-PANT-XL' } });
       tree = harness.render();
       add = walk(tree, n => n.type === 'button' && n.props['aria-label']?.startsWith('Agregar '))[0];

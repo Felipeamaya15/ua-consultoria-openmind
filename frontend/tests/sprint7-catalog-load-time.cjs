@@ -1,12 +1,4 @@
-/**
- * Medición y validación del tiempo de carga inicial del catálogo.
- * Evalúa directamente el servicio real catalogService.ts sin modificar código de producción:
- * 1) Carga inicial resumida (includeVariants: false).
- * 2) Carga inicial completa con variantes y concurrencia acotada (includeVariants: true).
- * 3) Contrato de carga inicial en Catalog.tsx.
- * 4) Medición HTTP contra el backend local si está activo en localhost:8000,
- *    generando el reporte de evidencia en docs/medicion-carga-inicial-catalogo.json.
- */
+
 const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
@@ -169,7 +161,7 @@ test('mide el tiempo de carga inicial del catálogo (listado y variantes) y cump
     `La hidratación de variantes respeta concurrencia máxima de 4 (observado: ${maxConcurrentDetailRequests})`,
   );
 
-  // Si el backend local está corriendo en localhost:8000, medir también contra el endpoint en vivo.
+
   let liveBackendMeasurement = null;
   try {
     const liveStart = performance.now();
@@ -186,7 +178,7 @@ test('mide el tiempo de carga inicial del catálogo (listado y variantes) y cump
       };
     }
   } catch {
-    // El backend en vivo es opcional cuando la prueba se ejecuta sin servidor levantado.
+
   }
 
   const report = {

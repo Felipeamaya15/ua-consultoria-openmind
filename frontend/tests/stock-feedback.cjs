@@ -1,4 +1,4 @@
-// Ejecutar desde frontend: node tests/stock-feedback.cjs
+
 const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
@@ -130,7 +130,7 @@ for (const template of ['catalog', 'visual', 'minimal', 'editorial']) {
   walk(tree, n => n.type === 'button' && text(n) === 'L')[0].props.onClick();
   assert.ok(!text(detail.render()).includes('Has alcanzado'));
 }
-// Reducir/eliminar una variante no cambia el stock ni la cantidad de la otra.
+
 context().updateQuantity('polera', 'QA-PANT-M', 0);
 assert.equal(context().items.length, 1);
 assert.equal(context().items[0].sku, 'QA-PANT-L');

@@ -52,12 +52,12 @@ class PagarPedidoPendienteTests(TestCase):
         self.assertEqual(r.status_code, 200, r.data)
         self.assertEqual(r.data['data'], {'metodo': 'Transbank', 'accion': 'formulario', **WEBPAY})
         llamada = adaptador.return_value.iniciar_transaccion.call_args.kwargs
-        self.assertEqual(llamada['monto'], Decimal('10000'))  # el monto sale del pedido
+        self.assertEqual(llamada['monto'], Decimal('10000'))
         self.assertEqual(llamada['orden_compra'], self.pedido.identificador)
         destino = parse_qs(urlsplit(llamada['return_url']).query)['destino'][0]
         consulta = parse_qs(urlsplit(destino).query)
         self.assertEqual(consulta['orderNumber'], [self.pedido.identificador])
-        self.assertEqual(consulta['tienda'], [str(self.tienda.pk)])  # lo fija el servidor, no el cliente
+        self.assertEqual(consulta['tienda'], [str(self.tienda.pk)])
         self.assertEqual(r['Cache-Control'], 'no-store')
 
     @patch(ADAPTADOR)

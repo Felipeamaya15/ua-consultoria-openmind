@@ -3,7 +3,7 @@ import type { UbicacionLanding } from '../types/landing.types';
 import { mapLocation } from '../types/mapLocation';
 import './LandingDetails.css';
 
-/** Misma dirección y destino en el panel y en las cuatro tiendas públicas. */
+
 export function LocationPreview({ value, enabled = true }: { value: UbicacionLanding; enabled?: boolean }) {
   const location = mapLocation(value);
   const id = useId();

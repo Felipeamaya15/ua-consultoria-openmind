@@ -94,13 +94,11 @@ def media_url(kind, value):
                 'Usa un enlace válido de Instagram.'
             )
 
-        # Publicaciones, reels y videos tradicionales.
         publicacion = re.fullmatch(
             r'(?:p|reel|tv)/[A-Za-z0-9_-]{5,64}',
             path
         )
 
-        # Enlaces generados por la opción Compartir.
         compartido = re.fullmatch(
             r'share/(?:p|reel)/[A-Za-z0-9_-]{5,128}',
             path
@@ -111,7 +109,6 @@ def media_url(kind, value):
                 'Usa el enlace de una publicación o reel de Instagram.'
             )
 
-        # Eliminar parámetros de seguimiento.
         return f'https://www.instagram.com/{path}/'
 
     if kind == 'facebook':

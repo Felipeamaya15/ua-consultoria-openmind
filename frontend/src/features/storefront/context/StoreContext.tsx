@@ -55,9 +55,8 @@ function readTheme(saved: Record<string, unknown>, template: TemplateId): Record
     return null;
   }
 }
-// OPENMIND_PUBLIC_CAROUSEL_TRANSITION_V5
-// La apariencia general valida colores, pero los identificadores del carrusel
-// no son colores. Recuperar SOLO transiciones reconocidas del valor guardado.
+
+
 function allowedSavedCarouselTransition(value: unknown): VisualConfig['hero']['carouselTransition'] | undefined {
   if (typeof value !== 'string') return undefined;
   if (isOnlineEffectId(value)) return value;
@@ -122,7 +121,7 @@ export function StoreProvider({
     const appearance = paletteSource.appearance?.[activeTemplate];
     const remote = paletteOverrides(appearance, paletteSource.library);
     const local = readTheme(savedConfig, activeTemplate);
-    // Mantener ajustes promocionales locales si una API antigua omite esos campos.
+
     const localVisual = isRecord(local?.visualConfig) ? local.visualConfig : {};
     const localHero = isRecord(localVisual.hero) ? localVisual.hero : {};
     const remoteHero: Record<string, unknown> = isRecord(remote?.hero) ? remote.hero : {};
@@ -133,9 +132,8 @@ export function StoreProvider({
       hero: { ...remoteHero, ...recoveredPromo },
     } : undefined;
     const resolved = resolveStoreVisualConfig(savedConfig, activeTemplate, compatibleRemote ? { ...local, visualConfig: compatibleRemote } : undefined);
-    // El editor guarda los valores especiales directamente en visualConfig.hero.
-    // paletteOverrides / resolveStoreVisualConfig pueden descartarlos al validar
-    // campos de color; se conserva solo una transicion permitida.
+
+
     const transition = readSavedCarouselTransition(appearance?.visualConfig)
       ?? readSavedCarouselTransition(local?.visualConfig)
       ?? readSavedCarouselTransition(savedConfig.visualConfig);
@@ -143,7 +141,7 @@ export function StoreProvider({
       ? { ...resolved, hero: { ...resolved.hero, carouselTransition: transition } }
       : resolved;
   }, [activeTemplate, savedConfig, paletteSource.appearance, paletteSource.library]);
-  // Async results are usable only for their confirmed installation and store.
+
   const [businessResult, setBusiness] = useState<{ key: string; value: StoreInformation } | null>(null);
   const business = businessResult?.key === storageKey ? businessResult.value : null;
   useEffect(() => {
@@ -155,7 +153,7 @@ export function StoreProvider({
       controller = request;
       void fetchStoreInformation(request.signal).then(value => {
         if (!request.signal.aborted) setBusiness({ key: storageKey, value });
-      }).catch(() => { /* Keep only the last confirmed value for this same store. */ });
+      }).catch(() => {});
     };
     refresh();
     window.addEventListener(STORE_INFORMATION_CHANGED, refresh);
@@ -253,8 +251,8 @@ export function StoreProvider({
       }
     };
   }, [pathname, savedConfig]);
-  // OPENMIND_PUBLIC_THEME_BOOTSTRAP_V1
-  // Evitar mostrar el tema por defecto antes de recibir la apariencia publica.
+
+
   const publicStorefront = pathname.startsWith('/plantilla/') && !isActiveEditorPreview();
   const initialPalettePending = identityLoading ||
     (identity !== null && !paletteSource.library && !paletteSource.error);

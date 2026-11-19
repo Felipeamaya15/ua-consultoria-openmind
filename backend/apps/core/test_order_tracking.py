@@ -120,8 +120,6 @@ class OrderTrackingTests(TestCase):
         self.assertEqual(self.lookup().status_code, 404)
 
     def test_repeated_lookups_are_throttled(self):
-        # Cada intento usa otro numero de orden y otro correo: asi solo actua el limite por IP
-        # (los limites por orden y por correo se prueban en test_tracking_security.py).
         for index in range(20):
             respuesta = self.lookup(identificador=f'ORD-20261008-A{index:03d}', email=f'wrong{index}@example.com')
             self.assertEqual(respuesta.status_code, 404)

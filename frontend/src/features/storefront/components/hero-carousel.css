@@ -29,7 +29,7 @@
   }
 }
 
-/* Indicadores adaptados a la paleta activa */
+
 .hero-carousel__dots {
   position: absolute;
   z-index: 30;
@@ -44,10 +44,10 @@
   padding: 3px 8px;
   border-radius: 999px;
 
-  /* Color principal de la tienda */
+
   background: var(--primary, #1d4ed8);
 
-  /* Transparencia conservando el color de la paleta */
+
   background: color-mix(
     in srgb,
     var(--primary, #1d4ed8) 88%,
@@ -68,7 +68,7 @@
   box-shadow: 0 3px 12px rgba(0, 0, 0, 0.12);
 }
 
-/* Área de interacción */
+
 .hero-carousel__dot {
   display: flex;
   justify-content: center;
@@ -85,7 +85,7 @@
   cursor: pointer;
 }
 
-/* Indicadores inactivos */
+
 .hero-carousel__dot span {
   display: block;
   width: 6px;
@@ -102,7 +102,7 @@
     background-color 250ms ease;
 }
 
-/* Indicador de fotografía activa */
+
 .hero-carousel__dot.is-active span {
   width: 20px;
 
@@ -110,7 +110,7 @@
   opacity: 1;
 }
 
-/* Interacción */
+
 .hero-carousel__dot:hover span {
   opacity: 1;
 }
@@ -120,7 +120,7 @@
   outline-offset: -2px;
 }
 
-/* Adaptación para dispositivos móviles */
+
 @media (max-width: 480px) {
   .hero-carousel__dots {
     right: 10px;
@@ -134,7 +134,7 @@
   }
 }
 
-/* Accesibilidad: movimiento reducido */
+
 @media (prefers-reduced-motion: reduce) {
   .hero-carousel__image {
     animation: none;
@@ -145,7 +145,7 @@
   }
 }
 
-/* Transición alternativa elegible desde el editor visual. */
+
 .hero-carousel__image--slide {
   animation: hero-carousel-slide-in 500ms ease-out both;
 }
@@ -159,7 +159,7 @@
   .hero-carousel__image--slide { animation: none; }
 }
 
-/* OPENMIND_CAROUSEL_TRANSITIONS_V2: seis efectos disponibles en todas las plantillas. */
+
 .hero-carousel .hero-carousel__image--outgoing { animation: none !important; pointer-events: none; }
 .hero-carousel .hero-carousel__image--transition-fade { animation: openmind-carrusel-fade 700ms ease-in-out both; }
 .hero-carousel .hero-carousel__image--transition-slide { animation: openmind-carrusel-slide 700ms cubic-bezier(.25,.8,.25,1) both; }
@@ -182,7 +182,7 @@
   .hero-carousel .hero-carousel__image--transition-reveal { animation: none !important; filter: none; transform: none; clip-path: none; }
 }
 
-/* OPENMIND_CAROUSEL_LIBRARY_V1: transiciones adicionales compartidas por editor y tienda. */
+
 .hero-carousel .hero-carousel__image--transition-curtain {
   animation: openmind-carrusel-curtain 700ms ease-in-out both;
 }
@@ -254,7 +254,7 @@
   }
 }
 
-/* OPENMIND_ONLINE_EFFECTS_V1: soportar nombres magic:<efecto> en las cuatro plantillas. */
+
 [data-storefront-visual] .hero-carousel .hero-carousel__image[class*="hero-carousel__image--transition-magic:"] {
  animation: var(--om-online-carousel-animation,none);
 }
@@ -264,7 +264,7 @@
  }
 }
 
-/* Reproducción accesible: los puntos no detienen el carrusel; botón aparte. */
+
 .hero-carousel__playback {
   flex: 0 0 auto;
   color: inherit;
@@ -281,8 +281,7 @@
 .hero-carousel__playback:hover { background: rgba(255,255,255,.18); }
 .hero-carousel__playback:focus-visible { outline: 2px solid currentColor; outline-offset: 1px; }
 
-/* OPENMIND_CARRUSEL_PUBLICO_V4 — control independiente y discreto.
-   No invade los indicadores ni aparece como el carácter romano "Ⅱ". */
+
 .hero-carousel .hero-carousel__playback {
   position: absolute;
   z-index: 31;
@@ -316,29 +315,7 @@
 @media (hover: none) { .hero-carousel .hero-carousel__playback { opacity: .58; } }
 @media (prefers-reduced-motion: reduce) { .hero-carousel .hero-carousel__playback { transition: none; } }
 
-/* OPENMIND_MAGIC_LOCAL_V1
-The MIT License (MIT)
 
-Copyright (c) 2022 Christian Pucci
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-*/
 @keyframes puffIn {
   0% {
     opacity: 0;

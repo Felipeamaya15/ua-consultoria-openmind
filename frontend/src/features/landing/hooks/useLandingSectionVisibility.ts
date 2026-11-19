@@ -10,6 +10,6 @@ export type LandingSection =
 
 export function useLandingSectionVisibility() {
   const { landing } = useStore();
-  // Las configuraciones anteriores sin esta bandera conservan su visibilidad.
+
   return (section: LandingSection) => section === 'Horarios de atención' && landing?.secciones?.[section] === undefined ? landing?.secciones?.['Información de contacto'] !== false : landing?.secciones?.[section] !== false;
 }

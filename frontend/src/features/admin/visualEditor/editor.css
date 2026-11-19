@@ -5,7 +5,7 @@
 @media(max-width:1100px){.ve-workspace{grid-template-columns:155px minmax(0,1fr) 270px}.ve-toolbar{font-size:12px}.ve-properties,.ve-sidebar{padding:10px}}
 @media(max-width:760px){.ve-workspace{display:flex;flex-direction:column;overflow:auto}.ve-sidebar{flex-shrink:0;overflow:visible}.ve-sidebar nav{display:flex;overflow:auto}.ve-sidebar nav button{white-space:nowrap}.ve-sidebar>button{width:auto;font-size:11px;margin:6px 8px 0 0}.ve-sidebar .ve-hint{display:none}.ve-preview{height:45vh;min-height:300px;flex-shrink:0}.ve-properties{overflow:visible}.ve-toolbar strong{display:none}.ve-toolbar{gap:6px;padding:8px}.ve-frame-wrap iframe{min-height:260px}.ve-control{max-width:100%}}
 .ve-editor :focus-visible{outline:3px solid #818cf8;outline-offset:2px}
-/* Entrepreneur workspace: clear destinations, a generous canvas, quiet controls. */
+
 .ve-editor{height:100dvh;background:#eef1f6;font-size:14px}
 .ve-editor button{min-height:40px;transition:background .15s,border-color .15s}
 .ve-toolbar{padding:14px 22px;gap:10px;box-shadow:0 1px 8px #17203306;z-index:2}

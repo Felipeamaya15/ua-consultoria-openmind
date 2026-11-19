@@ -1,4 +1,4 @@
-﻿"""Conexión OAuth de Gmail administrada por el propietario de la tienda."""
+"""Conexión OAuth de Gmail administrada por el propietario de la tienda."""
 
 import hashlib
 import logging
@@ -129,7 +129,6 @@ class GmailGoogleCallbackView(APIView):
             ):
                 return _resultado(False)
 
-            # Consumir el estado una sola vez, antes de contactar a Google.
             conexion.estado_oauth_expira = None
             conexion.save(update_fields=[
                 "estado_oauth_expira",
@@ -152,7 +151,6 @@ class GmailGoogleCallbackView(APIView):
                     .get(pk=conexion_id)
                 )
 
-                # Impedir reconectar si se canceló o inició otro flujo.
                 if (
                     conexion.estado_oauth_hash != hash_recibido
                     or conexion.estado_oauth_expira is not None
@@ -258,7 +256,6 @@ class GmailGooglePruebaView(NoStoreActivityView):
         values = MailTestInput(data=request.data)
         values.is_valid(raise_exception=True)
         state = connection_state(tienda)
-        # El cliente no elige destinatarios arbitrarios para pruebas.
         recipient = state['correo'] or request.user.email
         try:
             result = send_store_mail(tienda, values.validated_data['clave'], recipient,

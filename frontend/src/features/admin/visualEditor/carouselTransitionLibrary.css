@@ -1,4 +1,4 @@
-/* Biblioteca de transiciones: funcionalidad; sin rediseñar el editor existente. */
+
 .ve-properties .ve-carousel-library {
   border: 1px solid #dbe3f1;
   background: #f8faff;
@@ -70,4 +70,3 @@
   .ve-carousel-library .hero-carousel__image--transition-fade { animation: none !important; }
 }
 
-/* OPENMIND_ONLINE_EFFECTS_V1: la vista previa se amplía en onlineTransitionLibrary.css. */

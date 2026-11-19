@@ -1,4 +1,4 @@
-/** Validación de navegación mediante teclado en tienda pública y panel de administración. */
+
 const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');

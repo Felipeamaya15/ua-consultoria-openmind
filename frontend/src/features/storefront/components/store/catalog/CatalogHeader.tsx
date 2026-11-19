@@ -25,7 +25,7 @@ export function CatalogHeader() {
     <header data-visual-section={VISUAL_SECTION.header} className="sticky top-0 z-50 bg-[#050505]/90 backdrop-blur-md py-2.5">
       <div className="max-w-[1160px] mx-auto px-3 sm:px-5">
         <nav data-visual-part="headerLayout" className="min-h-14 rounded-3xl lg:rounded-full bg-[#202022] border border-white/[0.08] px-3 sm:px-5 lg:px-6 py-1.5 flex flex-row items-center justify-between gap-2 sm:gap-3 lg:gap-4 shadow-xl shadow-black/25">
-          {/* Izquierda: Logo Universidad al lado del logo y nombre completo de la tienda */}
+
           <div className="flex flex-1 min-w-0 items-center gap-2 sm:gap-3">
             <InstitutionalBadge compact />
             <Link data-visual-part="logo"
@@ -42,7 +42,7 @@ export function CatalogHeader() {
             </Link>
           </div>
 
-          {/* Derecha: Catálogo -> Seguimiento -> Iniciar sesión (/ Salir) -> Carrito -> Menú móvil */}
+
           <div className="flex shrink-0 items-center gap-2 sm:gap-3 lg:gap-5 text-white">
             <div data-visual-part="navigation" className="hidden md:flex shrink-0 items-center gap-3 lg:gap-6 text-xs font-semibold text-white">
               <Link to={route('catalogo')} className="whitespace-nowrap hover:text-[var(--primary)] transition-colors">

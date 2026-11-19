@@ -233,7 +233,6 @@ class ActivityTests(TestCase):
         self.assertEqual(self.submit().status_code, 503)
         self.assertEqual(self.management().status_code, 503)
 
-    # QA Sprint 8: historial y archivado de consultas (sin alterar inscripciones).
     def archive(self, record, archivada, **extra):
         return self.owner_client.patch(
             f'/api/landing/solicitudes-actividades/{record.pk}/',
@@ -315,7 +314,6 @@ class ActivityTests(TestCase):
         self.assertEqual(self.management(tipo='inscripcion').data['data']['total'], 1)
         self.assertEqual(self.management(tipo='inscripcion', archivada='true').data['data']['total'], 0)
 
-        # La inscripción sigue ocupando un cupo tras el intento fallido.
         self.assertEqual(
             self.submit('inscripciones', submission(email='segunda@example.test')).status_code,
             202,
@@ -361,9 +359,6 @@ class ActivityTests(TestCase):
         record.refresh_from_db()
         self.assertFalse(record.archivada)
 
-        # Simular un registro que pertenece a otra tienda. Forzamos la
-        # resolución de la tienda del propietario para aislar el control del
-        # queryset, independientemente de la selección de tenant en desarrollo.
         other_owner = get_user_model().objects.create_user(username='other-activity-owner')
         other_store = Tienda.objects.create(
             nombre='Otra tienda con consultas',

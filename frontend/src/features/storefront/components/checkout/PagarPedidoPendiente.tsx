@@ -11,7 +11,7 @@ interface Props {
   orderNumber?: string;
   estado?: string;
   medioPago?: string;
-  // Correo de la compra (Seguimiento). Con sesion iniciada no hace falta: el servidor comprueba que el pedido sea del cliente.
+
   email?: string;
   conSesion?: boolean;
   venceEn?: string | null;

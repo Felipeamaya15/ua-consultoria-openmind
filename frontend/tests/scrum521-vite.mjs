@@ -1,4 +1,4 @@
-// QA runner: no Vite config bundles, cache or build output inside the checkout.
+
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { build, createServer } from 'vite';

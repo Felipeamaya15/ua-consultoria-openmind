@@ -20,8 +20,7 @@ async function readResponse(
     );
   }
 
-  // La API confirma el guardado sin reenviar credenciales sensibles.
-  // No se debe leer un secreto de vuelta desde la respuesta.
+
 }
 
 export async function savePaymentConfiguration(
@@ -48,6 +47,6 @@ export async function savePaymentConfiguration(
       }),
     }),
   );
-  // La configuración proporcionada sigue disponible solo en la sesión de edición.
+
   return paymentConfiguration;
 }

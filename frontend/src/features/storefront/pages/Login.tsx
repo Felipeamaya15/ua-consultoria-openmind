@@ -94,7 +94,7 @@ export default function Login() {
     return errors;
   };
 
-  // 1. Hook oficial de Google
+
   const loginConGoogle = useGoogleLogin({
     onSuccess: async (tokenResponse) => {
       setLoading(true);
@@ -144,7 +144,7 @@ export default function Login() {
     }
   };
 
-  // 2. Formulario tradicional conectado a la API
+
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
     setLoading(true);
@@ -207,7 +207,7 @@ export default function Login() {
         return;
       }
 
-      // Validación estricta y sanitización contra SQLi / XSS en Login y Registro
+
       const cleanEmail = email.trim();
       if (!isValidEmail(cleanEmail) || containsSqlOrControlInjection(cleanEmail)) {
         setMessageVariant('error');

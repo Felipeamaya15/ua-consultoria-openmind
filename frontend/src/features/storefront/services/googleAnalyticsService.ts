@@ -14,10 +14,7 @@ declare global {
   }
 }
 
-/**
- * Normaliza y valida un identificador de medición de un flujo web de GA4.
- * Un valor vacío es válido porque la integración es opcional.
- */
+
 export function validateGoogleAnalyticsId(value: unknown): GoogleAnalyticsIdValidation {
   if (value === null || value === undefined) {
     return { valid: true, measurementId: '' };
@@ -47,7 +44,7 @@ export function validateGoogleAnalyticsId(value: unknown): GoogleAnalyticsIdVali
   return { valid: true, measurementId };
 }
 
-/** Carga el Google tag para la tienda pública después de obtener consentimiento. */
+
 export function initGoogleAnalytics(value: unknown): boolean {
   if (typeof window === 'undefined' || typeof document === 'undefined') return false;
 
@@ -78,7 +75,7 @@ export function initGoogleAnalytics(value: unknown): boolean {
   return true;
 }
 
-/** Revoca la escritura de datos analíticos cuando se eligen sólo cookies necesarias. */
+
 export function disableGoogleAnalytics(): void {
   if (typeof window === 'undefined' || typeof window.gtag !== 'function') return;
   window.gtag('consent', 'update', { analytics_storage: 'denied' });

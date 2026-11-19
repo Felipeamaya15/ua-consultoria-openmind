@@ -69,7 +69,6 @@ def configured_quote(tienda, operador, region, comuna):
                               'TARIFA_NO_DISPONIBLE')
     rate = rates[0]
     amount, days = rate.get('monto'), rate.get('plazo_dias')
-    # Defensa también ante datos históricos escritos fuera del serializer de configuración.
     if (type(amount) is not int or not 0 <= amount <= 9999999999
             or (days is not None and (type(days) is not int or not 1 <= days <= 365))):
         raise ErrorCotizacion('cotizacion', 'La tarifa no está disponible. Contacta a la tienda.', 'TARIFA_NO_DISPONIBLE')

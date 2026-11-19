@@ -1,4 +1,4 @@
-/** Datos comerciales independientes de marca, diseño y React. Solo proceden del catálogo autorizado. */
+
 export interface MarketingVariant {
   sku: string;
   price: unknown;
@@ -17,11 +17,11 @@ export interface MarketingProduct {
 export type ContentSource = 'product' | 'promotion';
 export interface PricedVariant { variant: MarketingVariant; price: number; originalPrice: number | null }
 export interface PublicationContent {
-  /** Informational sources reuse the same renderer without inventing a sale price. */
+
   hidePrice?: boolean;
   productId: string; productName: string; category: string; image: string | null;
   description?: string;
-  /** Importes en centavos CLP, redondeados como el checkout (half-up). */
+
   price: number; originalPrice: number | null; discountLabel: string | null;
   fromPrice: boolean; variantLabel: string; hasMultipleVariants: boolean; source: ContentSource;
 }

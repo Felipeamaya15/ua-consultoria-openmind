@@ -68,7 +68,7 @@ async function verifyPageLoading() {
   } }).default;
   const render = () => { index = 0; return nodes(Page()); };
   assert(render().includes('Cargando configuración...'));
-  // React runs every mounted effect; retaining only the last one skipped initial loading.
+
   const cleanups = effects.map(effect => effect());
   const cleanup = () => cleanups.forEach(fn => { if (typeof fn === 'function') fn(); });
   assert.equal(requested.length, 2); assert(requested.every(o => o.retry && o.signal));
@@ -121,5 +121,4 @@ async function verifyRetries() {
   assert.equal(abortedCalls, 1); assert(cleared);
 }
 Promise.all([verifyRetries(), verifyPageLoading()]).then(() => console.log('OK: reintentos limitados, recuperación, errores definitivos, cancelación, horario semanal, filtros de Chile y valores anteriores.')).catch(e => { console.error(e); process.exitCode = 1; });
-
 

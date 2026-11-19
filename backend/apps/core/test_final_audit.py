@@ -112,7 +112,7 @@ class FinalPaymentAuditTests(TestCase):
         self.assertEqual(response.status_code, 409, response.data)
         response = self.api.post('/api/pagos/paypal/capturar/', {'order_number': self.order.identificador,
             'order_id': 'unbound-remote-order'}, format='json')
-        self.assertEqual(response.status_code, 404, response.data)  # el pedido no es de PayPal
+        self.assertEqual(response.status_code, 404, response.data)
         adapter.assert_not_called()
         from uuid import uuid4
         with patch('apps.core.presentation.checkout.ProductRepository') as repository:

@@ -54,7 +54,7 @@ export const emptyMediaDraft = (): MediaDraft => ({
   activo: true
 });
 
-/** Only fixed official provider endpoints can become embeds; never accepts HTML. */
+
 export function inspectMediaUrl(
   kind: MediaKind,
   value: string

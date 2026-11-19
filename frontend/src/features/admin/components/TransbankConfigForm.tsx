@@ -90,7 +90,7 @@ export const TransbankConfigForm: React.FC<Props> = ({ idTienda = 1 }) => {
         setFormData((prev) => ({ ...prev, api_key: '' }));
         setIsConfigured(true);
 
-        // Checkout obtiene los métodos activos del backend; no duplica pagos en storage.
+
       } else {
         const errorDetail = res.error?.detalles
           ? Object.values(res.error.detalles).flat().join(' ')

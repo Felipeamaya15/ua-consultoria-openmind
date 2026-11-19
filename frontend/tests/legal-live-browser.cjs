@@ -1,4 +1,4 @@
-// Auditoría de solo lectura sobre la aplicación local y sus datos legales existentes.
+
 const assert = require('node:assert/strict'), fs = require('node:fs'), path = require('node:path');
 const { chromium } = require(process.env.DASHBOARD_PLAYWRIGHT_MODULE || 'C:/Users/maria/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright');
 const base = process.env.LEGAL_LIVE_URL || 'http://127.0.0.1:5173', api = process.env.LEGAL_LIVE_API || 'http://127.0.0.1:8000';

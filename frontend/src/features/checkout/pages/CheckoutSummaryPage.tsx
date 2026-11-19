@@ -24,7 +24,7 @@ export const CheckoutSummaryPage: React.FC = () => {
   const [loadingPayments, setLoadingPayments] = useState(true);
 
   useEffect(() => {
-    // SCRUM-295: Integración real: solicitamos los medios de pago ACTIVOS al backend
+
     const fetchActivePayments = async () => {
       try {
         const response = await fetch(`${API_BASE_URL}/api/pagos/activos/`);

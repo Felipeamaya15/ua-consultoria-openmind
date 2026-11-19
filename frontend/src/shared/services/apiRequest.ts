@@ -55,7 +55,7 @@ const statusMessages: Record<number, string> = {
 
 export const isRequestCancelled = (cause: unknown): boolean => !!cause && typeof cause === 'object' && 'name' in cause && cause.name === 'AbortError';
 
-/** Contrato común de Django: { exito: true, data }. Nunca muestra cuerpos completos. */
+
 export async function readApiEnvelope(response: Response, fallback = 'No pudimos completar la operación. Intenta nuevamente.'): Promise<Record<string, unknown>> {
   if ([401, 403, 404].includes(response.status)) throw new ApiError(statusMessages[response.status], response.status);
   if (response.status >= 500) throw new ApiError('El servicio no está disponible en este momento. Intenta nuevamente más tarde.', response.status);
@@ -118,7 +118,7 @@ export async function readApiResponse(response: Response, fallback?: string): Pr
   return (await readApiEnvelope(response, fallback)).data;
 }
 
-/** Una solicitud por acción. No reintenta escrituras: el formulario decide cómo recuperar. */
+
 export async function requestEnvelope(url: string, init: RequestInit = {}, fallback = 'No pudimos completar la operación. Intenta nuevamente.', timeoutMs = 15000): Promise<Record<string, unknown>> {
   const controller = new AbortController();
   const cancel = () => controller.abort();

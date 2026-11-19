@@ -1,4 +1,4 @@
-// Regresión: formulario real de entregas, hook real y servicio REST real.
+
 const fs = require('node:fs'), path = require('node:path'), vm = require('node:vm');
 const assert = require('node:assert/strict'), { test } = require('node:test'), ts = require('typescript');
 const root = path.resolve(__dirname, '..');

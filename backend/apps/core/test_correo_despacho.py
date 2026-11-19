@@ -147,7 +147,6 @@ class CuandoNoSeEnviaTests(CorreoDeDespachoBase):
         self.assertEqual(respuesta.json()['data']['correo'], {'enviado': False, 'codigo': 'plantilla_desactivada'})
         self.assertEqual(mail.outbox, [])
         self.assertNotIn('notificaciones', self.refrescar(pedido).entrega)
-        # Al volver a activarlo, el siguiente despacho sí lo envía.
         ConfiguracionCorreo.objects.filter(tienda=self.tienda).update(plantillas={})
         self.cambiar(pedido, 'pendiente')
         self.cambiar(pedido, 'enviado')
@@ -186,7 +185,7 @@ class CuandoNoSeEnviaTests(CorreoDeDespachoBase):
         pedido.estado = 'enviado'
         pedido.save(update_fields=['estado'])
         primera = Pedido.objects.get(pk=pedido.pk)
-        segunda = Pedido.objects.get(pk=pedido.pk)  # las dos creyeron que el estado anterior era en_origen
+        segunda = Pedido.objects.get(pk=pedido.pk)
         self.assertEqual(notificar_cambio_de_estado(primera, 'en_origen'), ResultadoEnvio(True, 'enviado'))
         self.assertEqual(notificar_cambio_de_estado(segunda, 'en_origen'), ResultadoEnvio(False, 'ya_enviado'))
         self.assertEqual(len(mail.outbox), 1)

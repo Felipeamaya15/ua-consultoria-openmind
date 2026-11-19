@@ -56,7 +56,7 @@ async function response(path: string, params: URLSearchParams, signal?: AbortSig
     if (result.status === 400) throw new Error('Revisa los filtros. Para archivos grandes, reduce el período de exportación.');
     if (result.status === 503 && path.startsWith('contactos/')) {
       let body: unknown;
-      try { body = await result.json(); } catch { /* A proxy may return a non-JSON outage page. */ }
+      try { body = await result.json(); } catch {  }
       if (record(body) && record(body.error) && body.error.codigo === 'CONTACTOS_ACTUALIZACION_PENDIENTE')
         throw new Error('Contactos necesita una actualización de la aplicación. Pide al administrador que la complete y vuelve a intentar.');
       throw new Error('La consulta de contactos no está disponible temporalmente. Intenta nuevamente más tarde.');

@@ -1,4 +1,4 @@
-/** Códigos aceptados por BeneficioSerializer y el juego compartido de iconos. */
+
 export const BENEFIT_ICONS = {
   truck: 'Envío', lock: 'Protección', return: 'Devoluciones', chat: 'Atención',
   store: 'Retiro en tienda', leaf: 'Sostenibilidad', gift: 'Regalo',

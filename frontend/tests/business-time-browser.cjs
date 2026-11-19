@@ -1,4 +1,4 @@
-// Actual app with synthetic HTTP responses. Never sends business mutations.
+
 const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
 let chromium;
 try { ({chromium}=require(process.env.DASHBOARD_PLAYWRIGHT_MODULE||'playwright')); }

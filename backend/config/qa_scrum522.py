@@ -16,7 +16,6 @@ COMMERCIAL_CONSENT_FRONTEND_ORIGIN = 'http://localhost:5174'
 STOREFRONT_PUBLIC_URL = 'http://localhost:5174/plantilla/1'
 STORE_MAIL_PUBLIC_API_URL = 'http://localhost:8001'
 MEDIA_ROOT = BASE_DIR / '.pytest_cache' / 'scrum522-qa-media'
-# Credenciales y cifrado exclusivos de fixtures; jamás conectan una cuenta real.
 GOOGLE_OAUTH_CLIENT_ID = 'scrum522-synthetic-client'
 GOOGLE_OAUTH_CLIENT_SECRET = 'scrum522-synthetic-secret'
 GOOGLE_OAUTH_REDIRECT_URI = 'http://localhost:8001/api/tienda/correo/google/callback/'

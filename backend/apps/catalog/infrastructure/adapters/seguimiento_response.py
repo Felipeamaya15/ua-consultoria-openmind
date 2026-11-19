@@ -1,4 +1,3 @@
-# Campos de respuesta de cada operador.
 CAMPOS = {
     "Chilexpress": {
         "ruta_eventos": ("data", "statusList"),

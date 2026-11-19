@@ -60,11 +60,9 @@ class CotizacionErroresTests(TestCase):
         self.assertEqual(cuerpo['error']['codigo'], codigo)
         return cuerpo
 
-    # ------------------------------------------------------------ cotizar
     def test_comuna_sin_tarifa_tiene_su_propio_codigo(self):
         cuerpo = self.assert_codigo(self.quote(comuna='Santiago'), 'TARIFA_NO_DISPONIBLE')
         self.assertIn('No hay una tarifa disponible', cuerpo['mensaje'])
-        # Se conserva el formato de siempre: el frontend sigue leyendo los detalles por campo.
         self.assertIn('cotizacion', cuerpo['error']['detalles'])
 
     def test_transportista_deshabilitado(self):
@@ -89,7 +87,7 @@ class CotizacionErroresTests(TestCase):
     def test_errores_de_formato_no_cambian(self):
         respuesta = self.quote(operador='Otro')
         self.assertEqual(respuesta.status_code, 400)
-        self.assertIn('operador', respuesta.json())  # formato de siempre de DRF, sin codigo propio
+        self.assertIn('operador', respuesta.json())
 
     def test_error_inesperado_responde_json_sin_filtrar_detalles(self):
         with patch('apps.core.presentation.shipping.issue_quote', side_effect=RuntimeError('clave interna secreta')):
@@ -103,7 +101,6 @@ class CotizacionErroresTests(TestCase):
             self.quote(comuna='Santiago')
         self.assertIn('TARIFA_NO_DISPONIBLE', ' '.join(registro.output))
 
-    # ---------------------------------------------- confirmar el pedido
     def test_cotizacion_vigente_permite_confirmar(self):
         respuesta = self.submit(cotizacion=self.token())
         self.assertEqual(respuesta.status_code, 201, respuesta.content)

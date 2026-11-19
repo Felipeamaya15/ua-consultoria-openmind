@@ -4,7 +4,7 @@ import { ErrorState, LoadingState } from '../../../shared/components/states';
 import { SOCIAL_LABELS, SOCIAL_NETWORKS, profileLink, type SocialProfiles } from '../../landing/types/socialProfiles';
 import { fetchSocialProfiles } from '../services/socialProfilesService';
 
-/** Read-only summary; the contact editor remains the single configuration source. */
+
 export function SocialStatus({ active, isCurrent }: { active: boolean; isCurrent: () => boolean }) {
   const [profiles, setProfiles] = useState<SocialProfiles | null>(null), [error, setError] = useState(''), [loading, setLoading] = useState(false), [attempt, setAttempt] = useState(0);
   useEffect(() => {

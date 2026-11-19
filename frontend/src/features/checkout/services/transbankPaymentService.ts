@@ -37,7 +37,7 @@ export const transbankPaymentService = {
     return res.json();
   },
 
-  // Redirige al cliente a la pantalla oficial de Webpay Plus
+
   redirigirAWebpay(url: string, token: string) {
     const form = document.createElement('form');
     form.method = 'POST';

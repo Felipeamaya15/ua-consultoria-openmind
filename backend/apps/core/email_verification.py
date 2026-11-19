@@ -14,7 +14,6 @@ def record_verified_email(user_id, email, method):
 
 
 def record_google_email(user_id, email):
-    # Una migración pendiente nunca debe romper el acceso existente del equipo.
     try:
         record_verified_email(user_id, email, 'google_email_verified')
     except (ProgrammingError, OperationalError):

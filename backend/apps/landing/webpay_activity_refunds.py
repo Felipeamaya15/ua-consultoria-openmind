@@ -21,7 +21,6 @@ def _number(value):
     except (InvalidOperation,ValueError,TypeError): return None
 
 def is_full_refund(raw, amount):
-    # Reversal has no code or authorization fields; only valid for full amount.
     if not isinstance(raw,dict): return False
     if raw.get('type')=='REVERSED': return True
     return (raw.get('type')=='NULLIFIED' and raw.get('response_code')==0
@@ -33,7 +32,6 @@ def line_amount(row):
 
 
 def _balance_before(order, ledger):
-    # Refunds recorded manually may have been processed outside Webpay; do not infer their provider balance.
     if any((v or {}).get('estado')=='reembolsada_manual' for v in ledger.values()):
         raise ValidationError('Existe una devolución manual. Concilia las siguientes devoluciones en el portal del comercio.')
     refunded=Decimal(0)
@@ -48,7 +46,6 @@ def _balance_before(order, ledger):
 
 
 def _expected(order,row,record):
-    # Backward compatibility for an in-flight full refund created before this change.
     amount=_number(record.get('monto'))
     before=_number(record.get('saldo_anterior',order.monto_total))
     if amount!=line_amount(row) or before is None or not (0<amount<=before<=order.monto_total):
@@ -113,8 +110,6 @@ def _finish(store,order_id,reservation_id,actor,proof):
         return order,row
 
 def _request_refund(adapter,order,amount=None):
-    # The public Webpay Plus API uses v1.2 /transactions/{token}/refunds.
-    # Keep the merchant credentials and host of the original transaction.
     base=adapter.base_url.replace('/v1.0/transactions','/v1.2/transactions')
     response=requests.post(f'{base}/{quote(order.webpay_token,safe="")}/refunds',
         headers=adapter._get_headers(),json={'amount':int(order.monto_total if amount is None else amount)},timeout=20,allow_redirects=False)
@@ -151,7 +146,6 @@ def change_webpay_refund(store,order_id,reservation_id,actor,action,reason,owner
             amount=line_amount(row); before=_balance_before(order,ledger)
             if amount>before or _number(old.get('monto'))!=amount:
                 raise ValidationError('El monto autorizado supera el saldo o no corresponde a la inscripción.')
-            # Check status before reserving the only possible POST. No second attempt even if a timeout occurs.
             try:
                 adapter=adapter_for(order)
                 raw=refund_status(adapter,order.webpay_token)
@@ -171,7 +165,6 @@ def change_webpay_refund(store,order_id,reservation_id,actor,action,reason,owner
             raise ValidationError('No existe una devolución automática en revisión.')
         else:
             amount,before,_=_expected(order,row,old)
-    # The durable marker is committed BEFORE the network call. A crash or ambiguous response can only be reconciled by GET.
     try:
         adapter=adapter_for(order)
         if action=='reembolsar_webpay':
@@ -184,6 +177,5 @@ def change_webpay_refund(store,order_id,reservation_id,actor,action,reason,owner
             proof={'tipo':raw.get('status'),'origen':'consulta_estado'}
         return _finish(store,order_id,reservation_id,actor,proof)
     except Exception:
-        # Never log card data, token or raw response; preserve the durable processing state.
         logger.warning('Reembolso de actividad en revisión: pedido %s.',order_id)
         raise ValidationError('El reembolso no pudo confirmarse. Los cupos siguen reservados. Consulta su estado o revisa en el portal; NO vuelvas a devolver dinero.') from None

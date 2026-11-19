@@ -23,7 +23,6 @@ def validate_markers(text):
         if key not in VARIABLES_PERMITIDAS:
             raise ValueError(f'El campo automático {{{{{key}}}}} no existe. Selecciona un campo válido.')
     remainder = _MARCADOR.sub('', text)
-    # Only recognizable system markers are protected; normal braces remain text.
     for key in VARIABLES_PERMITIDAS:
         if re.search(r'\{\{?\s*' + re.escape(key) + r'\b|\b' + re.escape(key) + r'\s*\}\}?', remainder):
             raise ValueError(f'El campo automático {key} está incompleto. Insértalo desde Campos automáticos.')

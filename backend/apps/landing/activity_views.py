@@ -59,7 +59,6 @@ class ActivitySubmissionView(NoStoreActivityView):
     @transaction.atomic
     def post(self, request, pk):
         store = resolver_tienda(request)
-        # Same lock order as landing writes; capacity/status cannot race a publication edit.
         Tienda.objects.select_for_update().get(pk=store.pk)
         config = ConfiguracionLanding.objects.select_for_update().filter(tienda=store).first()
         section = find_activity(config, pk)
@@ -75,7 +74,6 @@ class ActivitySubmissionView(NoStoreActivityView):
             'dia': timezone.localdate().isoformat(), **values}, sort_keys=True, ensure_ascii=True)).hexdigest()
         existing_key = SolicitudActividad.objects.filter(tienda=store, solicitud_id=request_id).first()
         if existing_key and existing_key.huella != fingerprint:
-            # Reuse after midnight remains safe if the immutable submitted payload matches.
             same = existing_key.seccion_id == pk and existing_key.tipo == self.tipo and all(getattr(existing_key, key) == value for key, value in values.items())
             if not same:
                 raise ValidationError('La clave de reintento ya pertenece a otra solicitud. Actualiza el formulario.')
@@ -96,7 +94,6 @@ class ActivitySubmissionView(NoStoreActivityView):
                 estado=state, solicitud_id=request_id, huella=fingerprint,
                 consentimiento_version=CONSENT_VERSION + ('-consulta' if self.tipo == 'consulta' else '-inscripcion'),
                 consentimiento_fecha=timezone.now(), **values)
-        # Same response for new/duplicate, no personal data or enrollment-status oracle.
         return success_response(data={'recibida': True}, mensaje='Recibimos tus datos. Si ya existía una solicitud, se conserva sin duplicarla. La tienda gestionará tu solicitud; esto no acredita pagos.', status=202)
 
 
@@ -126,7 +123,6 @@ class ActivityStateSerializer(StrictSerializer):
     archivada = serializers.BooleanField(required=False)
 
     def validate(self, attrs):
-        # Only one operation per PATCH; status changes never archive automatically.
         if ('estado' in attrs) == ('archivada' in attrs):
             raise serializers.ValidationError('Envía solamente el estado o la opción de archivar.')
         return attrs
@@ -148,7 +144,6 @@ class ActivityRequestsView(NoStoreActivityView):
         query = ActivityManagementQuery(data=request.query_params)
         query.is_valid(raise_exception=True)
         filters = query.validated_data
-        # By default the inbox excludes archived consultations.
         records = SolicitudActividad.objects.filter(tienda=store, archivada=filters['archivada'])
         for field in ('tipo', 'estado'):
             if field in filters:

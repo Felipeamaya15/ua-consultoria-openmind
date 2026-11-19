@@ -95,7 +95,6 @@ class MergeCompatibilityTests(TestCase):
             self.assertEqual(self.api.get(url, {'tienda_id': self.store.pk + 1}).status_code, 403 if url == '/api/promociones/' else 400)
 
     def test_histories_and_reports_share_approved_santiago_periods(self):
-        # Los períodos comerciales usan Chile, incluso si TIME_ZONE global sigue en UTC.
         self.order('MERGE-BOUNDARY', '2026-10-01T02:30:00+00:00')
         history = self.api.get('/api/tienda/ventas/historial/', {'fecha_desde': '2026-10-01', 'fecha_hasta': '2026-10-31'})
         october = self.api.get('/api/tienda/informes/', {'anio': 2026, 'mes': 10})
@@ -114,8 +113,6 @@ class MergeCompatibilityTests(TestCase):
                 response = self.api.post('/api/promociones/', payload, format='json')
                 self.assertEqual(response.status_code, 400, response.data)
                 self.assertIn('code', response.data)
-                # La validación de cupones de QA también admite promociones de precio sin código;
-                # el error de código obligatorio para cupones se genera al validar el objeto.
                 self.assertEqual(response.data['code'][0].code, 'invalid')
                 self.assertFalse(self.store.promociones.exists())
 

@@ -1,4 +1,4 @@
-/** Shared presentation; stock limits and cart updates remain owned by the product page. */
+
 export function QuantityControl({ value, onDecrease, onIncrease, increaseDisabled }: {
   value: number; onDecrease: () => void; onIncrease: () => void; increaseDisabled: boolean;
 }) {

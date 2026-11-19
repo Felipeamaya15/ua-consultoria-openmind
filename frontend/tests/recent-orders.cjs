@@ -1,4 +1,4 @@
-// SCRUM-371 y SCRUM-376: últimas órdenes registradas en el dashboard del emprendedor.
+
 const fs = require('node:fs'), path = require('node:path'), vm = require('node:vm');
 const assert = require('node:assert/strict'), ts = require('typescript');
 const React = require('react'), { renderToStaticMarkup } = require('react-dom/server');
@@ -17,7 +17,7 @@ function load(relative, mocks = {}, globals = {}) {
   return module.exports;
 }
 
-// Cada módulo se carga en su propio contexto: se compara el contenido, no el prototipo.
+
 const same = (actual, expected, message) => assert.deepEqual(JSON.parse(JSON.stringify(actual)), JSON.parse(JSON.stringify(expected)), message);
 let passed = 0;
 function test(name, fn) { return Promise.resolve().then(fn).then(() => { console.log('OK ' + name); passed++; }); }
@@ -25,7 +25,7 @@ function test(name, fn) { return Promise.resolve().then(fn).then(() => { console
 const orden = (n, extra = {}) => ({ id_pedido: n, identificador: `ORD-20261013-A${n}BC`, nombre_contacto: `Cliente ${n}`, estado: 'pendiente', estado_etiqueta: 'Pendiente', monto_total: `${1000 + n}.00`, fecha_creacion: new Date(2026, 9, 13, 15, 5).toISOString(), ...extra });
 const ESTADOS = ['pendiente', 'pagado', 'en_camino', 'entregado', 'cancelado', 'preparando', 'en_origen', 'enviado', 'en_reparto'];
 
-// ------------------------------------------------------------------ servicio
+
 function servicio(opciones = {}) {
   const { fetchImpl } = opciones;
   const token = 'token' in opciones ? opciones.token : 'abc';
@@ -143,7 +143,7 @@ async function pruebasDelServicio() {
   });
 }
 
-// ------------------------------------------------------------------ estados y fechas
+
 const estados = load('src/features/admin/data/orderStatus.ts');
 const fechas = load('src/features/admin/services/recentOrdersService.ts', { '../../../api': { API_BASE_URL: '' }, '../../auth/services/authService': { authService: { getToken: () => null } } });
 
@@ -170,7 +170,7 @@ async function pruebasDeEstadosYFechas() {
   });
 }
 
-// ------------------------------------------------------------------ vista y componente
+
 const uiMocks = {
   'react-router-dom': { useSearchParams: () => [new URLSearchParams(), () => {}], Link: ({ to, children }) => React.createElement('a', { href: to }, children) },
   '../ui': {
@@ -305,7 +305,7 @@ async function pruebasDelComponente() {
   });
 }
 
-// ------------------------------------------------------------------ el dashboard
+
 async function pruebasDelDashboard() {
   await test('el dashboard muestra las órdenes reales y ya no las de ejemplo', async () => {
     const mockOrders = [{ id: 'o1', number: 'MOCK-0001', createdAt: '2026-10-01T10:00:00Z', total: 12345, status: 'paid', customer: { name: 'Cliente De Ejemplo' } }];

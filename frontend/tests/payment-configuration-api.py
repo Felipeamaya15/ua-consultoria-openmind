@@ -47,12 +47,10 @@ def app(environ, start):
         start('200 OK', [('Content-Type', 'application/json')])
         return [json.dumps({'storeId': store.pk, 'token': token}).encode()]
     if environ['PATH_INFO'] == '/__qa_transfer/' and environ['REQUEST_METHOD'] == 'POST':
-        # Solo existe en este servidor efímero, permite cargar una configuración histórica.
         body = json.loads(environ['wsgi.input'].read(int(environ.get('CONTENT_LENGTH') or 0)))
         ConfiguracionPago.objects.update_or_create(tienda=store, defaults={'datos': body})
         start('200 OK', [('Content-Type', 'application/json')])
         return [b'{}']
-    # La identidad visual usa Mongo en producción; esta prueba de pagos solo necesita su ID SQL.
     if environ['PATH_INFO'] == '/api/visual-config/plantilla-seleccionada/':
         start('200 OK', [('Content-Type', 'application/json'), ('Access-Control-Allow-Origin', '*')])
         return [json.dumps({'exito': True, 'data': {'tienda_id': store.pk, 'plantilla_id': 1}}).encode()]

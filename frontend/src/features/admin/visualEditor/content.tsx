@@ -66,7 +66,7 @@ export function ContentInspector({
 
       {landing && onChange && (
         <>
-          {/* Textos de la portada */}
+
           {!imagesOnly && hero && (
             <>
               <label>
@@ -119,7 +119,7 @@ export function ContentInspector({
             </>
           )}
 
-          {/* Fotografías: se administran solo en Página principal */}
+
           {(hero || imagesOnly) && (
             <div>
               <h3>Fotografías de portada</h3>
@@ -155,7 +155,7 @@ export function ContentInspector({
             </div>
           )}
 
-          {/* Logo del emprendimiento: se conserva la edición actual */}
+
           {(logo || imagesOnly) && (
             <div>
               <h3>Logo del emprendimiento</h3>
@@ -175,7 +175,7 @@ export function ContentInspector({
             </div>
           )}
 
-          {/* Visibilidad de información de la tienda */}
+
           {showContact && !imagesOnly && (
             <div>
               <h3>Visibilidad de información</h3>
@@ -218,7 +218,7 @@ export function ContentInspector({
         </>
       )}
 
-      {/* Acceso a administración de contenido */}
+
       <Link
         className="ve-content-link"
         to="/emprendedor/landing#pagina-principal"

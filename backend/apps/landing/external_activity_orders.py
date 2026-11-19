@@ -69,7 +69,7 @@ def snapshot(store, method, active=True):
         if not cfg:
             return None
         account, secret = cfg
-        environment = 'PRODUCCION'  # no assumed sandbox for this provider
+        environment = 'PRODUCCION'
     else:
         return None
     if not account or not secret:
@@ -232,7 +232,6 @@ def confirm_paypal(order_pk, adapter, reference, capture=False):
     if raw.get('status') == 'COMPLETED':
         return verify_paypal_locked(order, raw, reference)
     if capture and raw.get('status') == 'APPROVED' and order.estado == 'pendiente' and deadline(order) and timezone.now() < deadline(order):
-        # Capture only on explicit customer return. Verify authoritative GET afterwards.
         units=raw.get('purchase_units') or []
         if len(units)!=1 or raw.get('id')!=reference or units[0].get('reference_id')!=order.identificador or units[0].get('amount',{}).get('currency_code')!='USD' or not amount_equal(units[0].get('amount',{}).get('value'),order.pago_fx.get('monto_usd')):
             raise ErrorPago('La orden PayPal no coincide con el pedido.','PAGO_NO_COINCIDE',409)
@@ -246,7 +245,6 @@ def confirm_paypal(order_pk, adapter, reference, capture=False):
 
 @transaction.atomic
 def reconcile(order_pk, consult=True):
-    # Ordinary orders must not acquire the external payment lock.
     if not Pedido.objects.filter(pk=order_pk, entrega__contains={'origen': MARKER}).exists():
         return None
     return _reconcile_external_locked(order_pk, consult)
@@ -270,7 +268,6 @@ def _reconcile_external_locked(order_pk, consult=True):
     save_meta(order,ultima_revision=timezone.now().isoformat())
     try:
         data = meta(order)
-        # TUU/Linkify links can be paid asynchronously; never cancel blindly.
         if order.medio_pago in ('TUU','Linkify'):
             return 'indeterminado'
         if not data.get('inicio'):
@@ -301,7 +298,6 @@ def _reconcile_external_locked(order_pk, consult=True):
                     with transaction.atomic():
                         verify_paypal_locked(order,raw,reference)
                     return 'pagado'
-        # Absence of evidence is not an irreversible cancellation.
         return 'indeterminado'
     except Exception:
         return 'indeterminado'

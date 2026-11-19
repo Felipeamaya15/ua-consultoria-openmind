@@ -105,7 +105,7 @@ export default function LandingPageContent() {
     try {
       localStorage.setItem('openmind:landing:active-panel', active);
     } catch {
-      // La navegacion sigue funcionando sin almacenamiento.
+
     }
   }, [active]);
   useEffect(() => {
@@ -184,8 +184,8 @@ export default function LandingPageContent() {
       setForm(next);setBaseline(next);setPast([]);setFuture([]);setSavedAt(new Date().toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit'}));
       setConfirmation(businessDirty && !contentDirty ? 'Información de tu tienda guardada correctamente.' : 'Cambios de la página principal guardados correctamente.');
     } catch (err) {
-      // Los errores de catálogo pertenecen al apartado Secciones.
-      // Cambiar la pestaña no recarga el contenido ni descarta el borrador.
+
+
       if (
         err instanceof ApiError &&
         (err.issueField === 'productos_destacados' || err.issueField === 'categorias')

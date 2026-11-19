@@ -1,5 +1,5 @@
-/* OPENMIND_EDITORIAL_PROMO_V1: alias responsivos de la etiqueta. */
-/* Responsive aliases generated from the visual variable contract. */
+
+
 [data-storefront-visual] {
   --primary: var(--primary-desktop);
   --secondary: var(--secondary-desktop);
@@ -1980,7 +1980,7 @@
   row-gap: var(--visual-catalog-grid-gap-y);
   max-width: min(var(--visual-content-width), var(--visual-catalog-grid-max-width));
 }
-/* Catalog cards have independent overrides; other templates retain the shared card config. */
+
 [data-storefront-visual] [data-visual-catalog] {
   --visual-card-radius: var(--visual-catalog-card-radius);
   --visual-card-padding: var(--visual-catalog-card-padding);
@@ -2020,7 +2020,7 @@
   overflow-wrap: anywhere;
 }
 
-/* Stage 2 consumers shared by the editor iframe and the public storefront. */
+
 [data-storefront-visual] {
   --border: var(--visual-global-border);
   --background: var(--visual-background);
@@ -2138,7 +2138,7 @@
   padding: 4px 0; border-radius: 0; background: transparent; color: inherit;
   font: 600 12px/1.5 system-ui,sans-serif; text-align: left; opacity: 1; visibility: visible;
 }
-/* Only the badge container is transparent. Preserve the original logo on its white surface. */
+
 [data-storefront-visual] .ua-institutional-badge img { display: block; width: 56px; height: 48px; min-width: 56px; max-width: 56px; flex-shrink: 0; object-fit: contain; object-position: center; transform: none; border-radius: 6px; background: #fff; padding: 4px; box-shadow: 0 1px 2px #0000000d; }
 [data-storefront-visual] .ua-institutional-badge span { display: block; color: inherit; font: inherit; overflow-wrap: anywhere; }
 @media(max-width:639px) {
@@ -2149,7 +2149,7 @@
 
 [data-storefront-visual] [data-visual-part="categoryItem"][aria-pressed="true"] { background: var(--primary); color: #fff; border-color: var(--primary); }
 
-/* Public page consumers share the same contract and scoped preview variables. */
+
 [data-storefront-visual] .ua-store-page {
   width: 100%; max-width: min(100%,var(--visual-page-width)); margin-inline: auto;
   padding: var(--visual-page-padding); background: var(--visual-page-background); color: var(--visual-page-color);
@@ -2174,7 +2174,7 @@
 [data-storefront-visual] .ua-store-page :where(input,select,textarea,button) { font-family: var(--visual-body-font); }
 [data-storefront-visual] .ua-store-page button.bg-white { background: var(--visual-page-field-background); color: var(--visual-page-field-color); }
 
-/* Stage 3: shared roles; business statuses retain their semantic colors. */
+
 [data-storefront-visual] { --muted: var(--visual-global-surface); --muted-foreground: var(--visual-text); }
 [data-storefront-visual] :where(h4,h5,h6,.font-serif,.font-display) { font-family: var(--visual-heading-font); }
 [data-storefront-visual] .ua-store-page :where(p,span,label,a,li,td,th) { overflow-wrap: anywhere; }
@@ -2218,8 +2218,6 @@
 }
 
 
-
-/* Shared by safe examples and real storefront pages. No business handlers are replaced. */
 [data-storefront-visual] .ua-store-page [data-page-columns] { display:grid; grid-template-columns:var(--visual-page-content-columns); gap:var(--visual-page-gap); align-items:start; }
 [data-storefront-visual] .ua-store-page [data-page-main-image] { display:block; width:100%; height:min(var(--visual-page-image-size),80vw); object-fit:contain; border-radius:var(--visual-page-image-radius); }
 [data-storefront-visual] .ua-store-page [data-page-panel]:has(> [data-page-main-image]) { aspect-ratio:auto; }
@@ -2238,7 +2236,6 @@
 @media(max-width:639px) { [data-storefront-visual] .ua-store-page [data-page-columns] { grid-template-columns:minmax(0,1fr); } }
 
 
-
 [data-storefront-visual] .ua-store-page [data-page-main-image] {height:auto; aspect-ratio:var(--visual-page-image-ratio); max-height:var(--visual-page-image-size);}
 [data-storefront-visual] .ua-store-page [data-page-quantity] {width:var(--visual-page-quantity-width); max-width:100%;}
 [data-storefront-visual] .ua-store-page [data-page-quantity] input {width:100%;}
@@ -2246,7 +2243,7 @@
 [data-storefront-visual] .ua-store-page [data-page-action="choice"]:not([data-page-gallery-item]) {font-size:var(--visual-page-option-size);}
 [data-storefront-visual] .ua-store-page [data-page-form] {margin-left:var(--visual-page-form-margin-left); margin-right:var(--visual-page-form-margin-right);}
 
-/* Product public view and editor sample share these roles and dimensions. */
+
 [data-storefront-visual] [data-visual-page="product"] [data-page-columns] > * { min-width:0; }
 [data-storefront-visual] [data-visual-page="product"] .product-quantity {
   display:grid; grid-template-columns:44px minmax(40px,1fr) 44px;
@@ -2287,8 +2284,6 @@
 }
 
 
-
-/* Mandatory institutional identity follows its bar, including responsive colors. */
 [data-storefront-visual] [data-institutional-bar] { color: var(--visual-topbar-brand-color); }
 [data-storefront-visual] [data-visual-section="footer"] .ua-institutional-badge { color: var(--visual-footer-brand-color); }
 [data-storefront-visual] .ua-institutional-badge button { color: inherit; background: transparent; border-color: currentColor; box-shadow: none; }
@@ -2296,7 +2291,7 @@
 [data-storefront-visual] { --visual-topbar-brand-color: var(--visual-topbar-brand-color-desktop); --visual-footer-brand-color: var(--visual-footer-brand-color-desktop); }
 @media(max-width:1023px) { [data-storefront-visual] { --visual-topbar-brand-color: var(--visual-topbar-brand-color-tablet); --visual-footer-brand-color: var(--visual-footer-brand-color-tablet); } }
 @media(max-width:639px) { [data-storefront-visual] { --visual-topbar-brand-color: var(--visual-topbar-brand-color-mobile); --visual-footer-brand-color: var(--visual-footer-brand-color-mobile); } }
-/* Shared palette roles and integrated institutional identity. */
+
 [data-storefront-visual]{--foreground:var(--visual-text);--muted-foreground:var(--visual-muted);--muted:var(--visual-alternate);--border:var(--visual-border)}
 [data-storefront-visual] [data-visual-section="header"] .ua-institutional-badge{flex:0 0 auto;order:-1;margin-right:4px;padding:0;border:0;min-width:0}
 [data-storefront-visual] .ua-institutional-badge img{width:32px;height:32px;min-width:32px;max-width:32px;padding:3px}
@@ -2328,7 +2323,7 @@
  .store-mobile-navigation[open] nav{display:grid;gap:14px;padding:16px;border:1px solid currentColor;border-radius:10px;background:var(--visual-header-bg);position:absolute;right:14px;top:34px;z-index:50;min-width:200px;box-shadow:0 4px 20px #0002}
 }
 
-/* Generated page aliases start */
+
 [data-storefront-visual] [data-visual-page="catalog"] {
   --visual-page-image-ratio: var(--visual-page-catalog-image-ratio);
   --visual-page-option-size: var(--visual-page-catalog-option-size);
@@ -2810,9 +2805,8 @@
   --visual-page-button-padding-y: var(--visual-page-story-button-padding-y);
   --visual-page-button-font-size: var(--visual-page-story-button-font-size);
 }
-/* Generated page aliases end */
 
-/* Compact layout takes precedence over the earlier generic information grid. */
+
 [data-storefront-visual] [data-visual-section="contact"] .landing-details__contacts{grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr))}
 [data-storefront-visual] [data-visual-section="location"] .landing-details__location-card{display:flex;flex-wrap:wrap;gap:18px}
 @media(min-width:1024px){[data-storefront-visual] [data-visual-section="location"] .landing-details__location-card--map{display:grid;grid-template-columns:auto minmax(0,1fr) minmax(280px,1fr)}}
@@ -2821,9 +2815,7 @@
 [data-storefront-visual] [data-visual-section="header"]{--foreground:var(--visual-header-color);--muted-foreground:var(--visual-header-color)}
 [data-storefront-visual] [data-visual-section="header"] button{color:inherit}
 
-/* OPENMIND_HERO_SPACING_V2
-   El valor hero.gap del editor controla de verdad la separación entre
-   título, subtítulo y botones en las cuatro plantillas. */
+
 [data-storefront-visual] [data-visual-section="hero"] [data-visual-part="heroContent"] {
   display: flex;
   flex-direction: column;
@@ -2843,9 +2835,6 @@
 }
 
 
-/* OPENMIND_LOGO_SHAPES_RENDER_V2
-   Configuración independiente de la identidad comercial e institucional.
-   El contenedor cambia de forma, pero el archivo original nunca se recorta. */
 [data-storefront-visual] [data-visual-section="header"] [data-visual-part="logo"] img[data-landing-image] {
   box-sizing: border-box;
   width: var(--visual-header-store-logo-width, auto) !important;
@@ -2860,7 +2849,7 @@
   flex-shrink: 0;
 }
 
-/* También en los pies de página; el tamaño propio del pie sigue siendo independiente. */
+
 [data-storefront-visual] [data-visual-section="footer"] img.store-footer-logo {
   box-sizing: border-box;
   width: var(--visual-header-store-logo-width, auto);
@@ -2874,7 +2863,7 @@
   background: var(--visual-header-store-logo-background, transparent);
 }
 
-/* Aplica solo en la tienda pública: no cambia los logos de panel admin ni login. */
+
 [data-storefront-visual] [data-visual-section="header"] .ua-institutional-badge--compact,
 [data-storefront-visual] [data-visual-section="footer"] .ua-institutional-badge--compact {
   --ua-logo-base-size: 24px;
@@ -2899,9 +2888,7 @@
   flex-shrink: 0;
 }
 
-/* OPENMIND_INSTITUTION_LOGO_SIZE_V3
-   Tamaño independiente, preservando TODO el escudo y el texto del PNG original.
-   Afecta solo al encabezado/pie de las tiendas, no al panel de administración. */
+
 [data-storefront-visual] [data-visual-section="header"] .ua-institutional-badge,
 [data-storefront-visual] [data-visual-section="footer"] .ua-institutional-badge {
   --ua-logo-base-size: var(--visual-header-institution-logo-size, 48px);
@@ -2917,10 +2904,7 @@
   object-position: center;
 }
 
-/* OPENMIND_INSTITUTIONAL_LOGO_CONTROLS_V4
-   La marca institucional NO se puede ocultar ni sustituir.
-   El ancho no queda bloqueado por los limites anteriores de 26/32/56px.
-   Siempre se contiene el escudo + texto completo en su contenedor. */
+
 [data-storefront-visual] [data-visual-section="header"] .ua-institutional-badge,
 [data-storefront-visual] [data-visual-section="footer"] .ua-institutional-badge {
   width: max-content;
@@ -2950,15 +2934,12 @@
   flex: none;
 }
 
-/* OPENMIND_PORTADA_PULIDO_V2
-   En el modo «En línea» el grupo del botón se ajusta a su contenido;
-   justify-content no lo desplaza. align-self permite izquierda/centro/derecha.
-   En «Debajo del texto», el contenedor sigue ocupando el ancho completo. */
+
 [data-storefront-visual] [data-visual-section="hero"] [data-visual-part="heroCtaLayout"] {
   align-self: var(--visual-cta-align, flex-start);
 }
 
-/* OPENMIND_PORTADA_V3: el ancho del CTA se mide contra el área disponible del hero. */
+
 [data-storefront-visual] [data-visual-section="hero"] [data-visual-part="heroCtaLayout"] {
   width: 100%;
   max-width: 100%;
@@ -2972,16 +2953,13 @@
   min-width: 0;
 }
 
-/* OPENMIND_PORTADA_AJUSTES_V4: En línea usa el ancho de la portada,
-   mientras que Debajo del texto sólo alcanza la columna de contenido. */
+
 [data-storefront-visual] [data-landing-page="editorial"] [data-visual-section="hero"] [data-visual-part="heroCtaLayout"] {
   width: var(--visual-hero-cta-area-width, 100%);
   max-width: none;
 }
 
-/* OPENMIND_PORTADA_AJUSTES_V4: tipografía regulable en el CTA.
-   Editorial usa una fuente serif de peso limitado; el texto del botón adopta
-   la fuente de cuerpo, que admite cambios visibles de grosor. */
+
 [data-storefront-visual] [data-visual-section="hero"] [data-visual-section="heroCta"] {
   font-family: var(--visual-body-font, system-ui, sans-serif);
   font-weight: var(--visual-cta-font-weight, 600) !important;

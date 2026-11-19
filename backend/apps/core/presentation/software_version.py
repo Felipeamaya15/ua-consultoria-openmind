@@ -16,7 +16,6 @@ class SoftwareVersionAPIView(APIView):
     def get(self, request):
         info = get_software_version_info()
 
-        # Validación de consulta por campo específico opcional (?campo=version)
         campo = request.query_params.get("campo")
         if campo:
             campo_limpio = campo.strip().lower()

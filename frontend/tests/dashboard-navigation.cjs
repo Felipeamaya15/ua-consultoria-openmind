@@ -1,4 +1,4 @@
-// Contrato de navegación y filtrado real del listado autorizado.
+
 const fs = require('node:fs'), path = require('node:path'), vm = require('node:vm');
 const assert = require('node:assert/strict'), { test } = require('node:test'), ts = require('typescript');
 const root = path.resolve(__dirname, '..');
@@ -15,7 +15,7 @@ const filter = query => api.readOrderFilters(new URLSearchParams(query));
 const ids = rows => Array.from(rows, row => row.id);
 
 test('accesos de fecha incluyen hoy en Chile y cruzan mes/año sin depender de UTC', () => {
-  const now = new Date('2026-10-27T02:59:59Z'); // 26 October in Chile.
+  const now = new Date('2026-10-27T02:59:59Z');
   for (const [preset, from] of [['today', '2026-10-26'], ['7', '2026-10-20'], ['30', '2026-09-27'], ['60', '2026-08-28'], ['90', '2026-07-29'], ['month', '2026-10-01']]) {
     const range = api.orderDateRange(preset, now);
     assert.equal(range.from, from, preset); assert.equal(range.to, '2026-10-26');

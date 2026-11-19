@@ -16,7 +16,7 @@ export interface TransferBank {
   account_types: string[];
 }
 
-// Catálogo del panel, mantenido en código. Fuentes y alcance: SCRUM-510-configuracion-pagos.md.
+
 const accountTypes = ['Cuenta corriente', 'Cuenta vista', 'Cuenta de ahorro'];
 export const transferBanks: TransferBank[] = [
   { code: '001', name: 'Banco de Chile', aliases: ['Banco Chile', 'Banco Edwards', 'Banco Edwards Citi', 'CrediChile'] },

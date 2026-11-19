@@ -19,7 +19,7 @@ export function CatalogFooter() {
         data-visual-part="footerLayout"
         className="max-w-[1160px] mx-auto px-5 py-10 grid grid-cols-1 md:grid-cols-4 gap-8 text-left items-start"
       >
-        {/* Información de tienda */}
+
         <div className="md:col-span-2 text-left">
           {config.logo && <img data-landing-image className="store-footer-logo" src={config.logo} alt={`Logo de ${config.name}`} />}
           <p
@@ -31,7 +31,7 @@ export function CatalogFooter() {
           <StoreBusinessDescription className="text-sm leading-relaxed text-[color-mix(in_srgb,currentColor_85%,transparent)] text-left" />
         </div>
 
-        {/* Tienda */}
+
         <div className="text-left">
           <p data-visual-part="footerTitle" className="text-xs font-semibold uppercase tracking-wider text-[color-mix(in_srgb,currentColor_70%,transparent)] mb-3 text-left">
             Tienda
@@ -52,7 +52,7 @@ export function CatalogFooter() {
           </div>
         </div>
 
-        {/* Legal */}
+
         <div className="text-left">
           <p data-visual-part="footerTitle" className="text-xs font-semibold uppercase tracking-wider text-[color-mix(in_srgb,currentColor_70%,transparent)] mb-3 text-left">
             Legal
@@ -86,7 +86,7 @@ export function CatalogFooter() {
         </div>
       </div>
 
-      {/* Copyright siguiendo el ejemplo de la Plantilla 1 */}
+
       <div
         data-visual-part="branding"
         className="max-w-[1160px] mx-auto border-t border-[color-mix(in_srgb,currentColor_15%,transparent)] py-4 px-5 text-xs text-[color-mix(in_srgb,currentColor_75%,transparent)] flex flex-col sm:flex-row items-center justify-between gap-3"

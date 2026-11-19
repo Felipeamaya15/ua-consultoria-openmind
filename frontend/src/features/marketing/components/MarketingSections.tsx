@@ -17,7 +17,7 @@ const sections = [
   { id: 'campaigns', label: 'Campañas' },
 ];
 
-/** Keep the workspace mounted: changing sections never discards its draft/history. */
+
 export function MarketingSections({ children, busy = false, isCurrent, onMediaDirty, onCampaignDirty, home='', onSharingDirty=()=>{}, onPrepare, products, catalogStatus, onSelectProduct, onUseImage }: { children: ReactNode; busy?: boolean; isCurrent: () => boolean; onCampaignDirty: (dirty: boolean) => void; onMediaDirty: (dirty: boolean) => void; home?:string; onSharingDirty?:(dirty:boolean)=>void; onPrepare?:(item:SharingItem,format:PublicationFormat)=>Promise<boolean>; products?: MarketingProduct[]; catalogStatus?: CatalogStatus; onSelectProduct?: (selection: CatalogSelection) => boolean; onUseImage?: (id: string) => Promise<boolean> }) {
   const location = useLocation(), navigate = useNavigate();
   const sectionFromHash = (hash:string) => hash === '#campanas' ? 'campaigns' : hash === '#difusion' ? 'sharing' : hash === '#biblioteca' ? 'media' : 'publications';

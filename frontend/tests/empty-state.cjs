@@ -1,4 +1,4 @@
-// SCRUM-454: estados vacíos compartidos. Prueba el componente real, la decisión "vacío o sin resultados" y vigila la consistencia.
+
 const fs = require('node:fs'), path = require('node:path');
 const assert = require('node:assert/strict');
 const React = require('react'), { renderToStaticMarkup } = require('react-dom/server');
@@ -23,7 +23,7 @@ function archivos(carpeta) {
 const pantallas = archivos(path.join(root, 'src')).map(ruta => ({ ruta: path.relative(root, ruta).replaceAll('\\', '/'), texto: fs.readFileSync(ruta, 'utf8').replace(/\r/g, '') }))
   .filter(f => f.ruta !== 'src/shared/components/states.tsx');
 
-// ---- el componente ----
+
 test('se anuncia como estado y muestra el mensaje', () => {
   const marcado = html({}, 'Aún no tienes pedidos.');
   assert.match(marcado, /role="status"/);
@@ -62,7 +62,7 @@ test('el texto se escapa, la clase extra se agrega y no quedan rastros de valore
   assert.ok(!/class="[^"]*  [^"]*"/.test(peligroso));
 });
 
-// ---- la decisión: vacío o sin resultados ----
+
 test('no hay estado vacío mientras carga, si falló la carga o si hay filas', () => {
   const base = { loading: false, error: '', shown: 0, searching: false };
   assert.equal(emptyKind({ ...base, loading: true }), null);
@@ -98,7 +98,7 @@ test('los filtros que reconoce son los mismos que borra el botón "Limpiar filtr
   assert.deepEqual([...ORDER_FILTER_KEYS].sort(), borradas);
 });
 
-// ---- Mis pedidos del comprador: vacío con una acción útil ----
+
 function montarPedidos(pedir, id) {
   const slots = [], efectos = []; let indice = 0, numero = 0;
   const falsoReact = {
@@ -147,7 +147,7 @@ test('el detalle de un pedido no muestra "Aún no tienes pedidos"', async () => 
   assert.ok(!detalle.nodos(detalle.dibujar()).some(n => n.type === 'EmptyListState'));
 });
 
-// ---- guardias ----
+
 const CONVERTIDOS = [
   ['src/features/admin/components/dashboard/RecentOrders.tsx', 'Aún no hay órdenes registradas en tu tienda.'],
   ['src/features/admin/components/dashboard/DailyHistoryTable.tsx', 'No hay pedidos en el período seleccionado.'],
@@ -164,7 +164,7 @@ const CONVERTIDOS = [
   ['src/features/storefront/pages/CustomerOrders.tsx', 'Aún no tienes pedidos.'],
 ];
 
-// Lee cada <EmptyListState ...>hijo</EmptyListState>, respetando las llaves de las propiedades (por ejemplo los enlaces de la acción).
+
 function hijosDeEmptyListState(texto) {
   const hijos = [];
   let desde = 0;

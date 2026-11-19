@@ -1,4 +1,4 @@
-// Ejecutar desde frontend: node tests/visual-config.cjs
+
 const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
@@ -104,7 +104,7 @@ test('resolving does not mutate defaults, presets or input', () => {
   value.productCard.radius = 55; value.contact.border.width = 99; value.responsive.tablet.hero.titleSize = 100;
   assert.deepEqual(plain(VISUAL_DEFAULTS), beforeDefaults); assert.deepEqual(plain(VISUAL_PRESETS), beforePresets); assert.deepEqual(input, beforeInput);
   assert.equal(resolve({ template: 'minimal', customization: input }).productCard.radius, 9);
-  assert.equal(value.info.border.width, 1); // No shared nested references.
+  assert.equal(value.info.border.width, 1);
 });
 test('responsive overrides cascade desktop → tablet → mobile', () => {
   const value = resolve({ customization: { header: { height: 90 }, responsive: { tablet: { header: { height: 75, shadow: 'soft' } }, mobile: { header: { height: 50 } } } } });
@@ -220,7 +220,7 @@ test('StoreContext resolves routes, legacy data and live storage updates', () =>
   assert.equal(value.visualConfig.global.colors.background, '#050505'); assert.equal(value.visualConfig.topBar.visible, true);
   assert.equal(value.visualConfig.productCard.radius, 14);
   listeners.get('ua-store-config-changed')(new TestCustomEvent('ua-store-config-changed', { detail: { storageKey: storageApi.getStoreConfigKey(identityB) } }));
-  assert.equal(slots[0], 1); // Other stores do not invalidate this provider.
+  assert.equal(slots[0], 1);
   cleanupImages(); cleanupStorage();
   assert.equal(image.src, '/original.png'); assert.equal(image.style.transform, 'rotate(5deg)'); assert.equal(image.style.objectPosition, '20% 30%');
   assert.equal(disconnected, 1); assert.equal(listeners.size, 0);
@@ -360,13 +360,11 @@ test('CSS variables are valid strings, consistently named and preserve line clam
     path.join(root, 'src/features/storefront/components/store/productImageGallery.css'),
     'utf8'
   );
-  // Acepta tanto var(--clave) como var(--clave, valor-alternativo).
+
   const references = (source, key) =>
     source.includes(`var(${key})`) || source.includes(`var(${key},`);
 
-  // Estas páginas comparten el esquema de configuración, pero no utilizan
-  // controles de flechas de galería. Si se incorpora una nueva página,
-  // la prueba exigirá revisar expresamente su conexión con el CSS.
+
   const pagesWithoutGalleryArrows = [
     'catalog', 'login', 'cart', 'checkout', 'confirmation', 'tracking',
     'profile', 'orders', 'terms', 'privacy', 'refund', 'story'
@@ -375,7 +373,7 @@ test('CSS variables are valid strings, consistently named and preserve line clam
     `^--visual-page-(?:${pagesWithoutGalleryArrows.join('|')})-gallery-arrow-` +
     '(?:radius|background|color|border|shadow)-(?:desktop|tablet|mobile)$'
   );
-  // Los metadatos de forma y margen se transforman en radius/safe-padding.
+
   const logoMetadata =
     /^--visual-header-(store|institution)-logo-(padding|shape)-(desktop|tablet|mobile)$/;
   const productArrows =

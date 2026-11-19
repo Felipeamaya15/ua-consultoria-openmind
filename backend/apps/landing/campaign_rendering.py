@@ -145,7 +145,6 @@ def render_campaign(row, unsubscribe):
         from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
         link = product.get('url')
         if not link:
-            # Earlier campaigns stored only the Mongo ID, while public routes use slugs.
             from apps.catalog.infrastructure.repositories import ProductRepository
             from pymongo.errors import PyMongoError
             link = brand['base'] + '/catalogo'

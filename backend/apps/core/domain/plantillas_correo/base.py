@@ -159,7 +159,7 @@ def fecha_limite_de_pago(pedido):
     try:
         from zoneinfo import ZoneInfo
         local, zona = limite.astimezone(ZoneInfo('America/Santiago')), 'hora de Chile'
-    except Exception:  # sin base de zonas horarias en el servidor
+    except Exception:
         local, zona = limite, 'UTC'
     return f'{local:%d-%m-%Y %H:%M} ({zona})'
 

@@ -41,10 +41,7 @@ export function isLegalContentVersion(value: unknown): value is LegalContentVers
   );
 }
 
-/**
- * Limpia un historial persistido y conserva una sola versión por id y número.
- * Las versiones se devuelven en orden ascendente para que la siguiente sea predecible.
- */
+
 export function normalizeLegalVersions(value: unknown, pageType: LegalType): LegalContentVersion[] {
   if (!Array.isArray(value)) return [];
   const ids = new Set<string>();

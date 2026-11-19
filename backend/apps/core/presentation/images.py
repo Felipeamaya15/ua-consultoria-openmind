@@ -17,7 +17,6 @@ class ProcessImageAPIView(APIView):
         fields.is_valid(raise_exception=True)
         try:
             max_mb = fields.validated_data['max_mb']
-            # max_mb=12 es el modo "reducir automaticamente": acepta hasta 12 MB y deja la foto en unos 150 KB
             image = process_upload(fields.validated_data['imagen'], max_mb, optimize=max_mb > 3)
         except ValidationError as error:
             raise serializers.ValidationError({'imagen': error.messages}) from error

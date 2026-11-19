@@ -66,7 +66,7 @@ class BusinessPeriodConsistencyTests(TestCase):
         return history, dashboard
 
     def test_month_boundary(self):
-        self.order('2026-11-01T01:30:00+00:00')  # still October in Santiago
+        self.order('2026-11-01T01:30:00+00:00')
         history = self.get(HISTORY, {'fecha_desde': '2026-11-01', 'fecha_hasta': '2026-11-30'})
         november = self.get(REPORTS, {'anio': 2026, 'mes': 11})
         self.assertEqual(history['resumen']['cantidad_ventas'], november['pedidos_pagados'])
@@ -200,7 +200,6 @@ class BusinessPeriodConsistencyTests(TestCase):
             reader = PdfReader(BytesIO(response.content))
             text = '\n'.join(page.extract_text() for page in reader.pages)
             self.assertIn(label, text)
-            # QA de formato chileno: ISO se conserva en API y DD/MM/YYYY en PDF visible.
             self.assertIn(date.fromisoformat(expected['fecha_desde']).strftime('%d/%m/%Y'), text)
             self.assertIn(date.fromisoformat(expected['fecha_hasta']).strftime('%d/%m/%Y'), text)
             self.assertEqual(response['Cache-Control'], 'no-store')

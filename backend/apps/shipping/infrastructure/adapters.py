@@ -7,9 +7,9 @@ import requests
 from apps.catalog.infrastructure.adapters.seguimiento_response import procesar_respuesta_seguimiento
 from apps.shipping.domain.ports import LogisticsPort
 from apps.shipping.domain.dtos import (
-    DireccionDespachoDTO, 
-    PaqueteDTO, 
-    CotizacionEnvioDTO, 
+    DireccionDespachoDTO,
+    PaqueteDTO,
+    CotizacionEnvioDTO,
     GuiaDespachoDTO,
     EventoSeguimientoDTO,
     DetalleSeguimientoDTO
@@ -44,9 +44,9 @@ class StandardLogisticsAdapter(LogisticsPort):
         self.timeout_segundos = validar_tiempo_espera(timeout_segundos)
 
     def cotizar_envio(
-        self, 
-        origen: DireccionDespachoDTO, 
-        destino: DireccionDespachoDTO, 
+        self,
+        origen: DireccionDespachoDTO,
+        destino: DireccionDespachoDTO,
         paquetes: List[PaqueteDTO]
     ) -> List[CotizacionEnvioDTO]:
         region_normalizada = destino.region.strip().upper()
@@ -55,7 +55,7 @@ class StandardLogisticsAdapter(LogisticsPort):
 
         tarifa_base = self.TARIFAS_BASE.get(region_normalizada, self.TARIFA_GENERAL_REGIONES)
         peso_total = sum(p.peso_kg for p in paquetes) or Decimal("1.0")
-        
+
         recargo_peso = Decimal("0")
         if peso_total > Decimal("3.0"):
             recargo_peso = (peso_total - Decimal("3.0")) * Decimal("800")
@@ -80,10 +80,10 @@ class StandardLogisticsAdapter(LogisticsPort):
         ]
 
     def generar_despacho(
-        self, 
-        orden_id: str, 
-        origen: DireccionDespachoDTO, 
-        destino: DireccionDespachoDTO, 
+        self,
+        orden_id: str,
+        origen: DireccionDespachoDTO,
+        destino: DireccionDespachoDTO,
         paquetes: List[PaqueteDTO]
     ) -> GuiaDespachoDTO:
         codigo_tracking = f"TRK-{uuid.uuid4().hex[:8].upper()}"
@@ -185,9 +185,9 @@ class ChilexpressAdapter(LogisticsPort):
         return Decimal("0")
 
     def cotizar_envio(
-        self, 
-        origen: DireccionDespachoDTO, 
-        destino: DireccionDespachoDTO, 
+        self,
+        origen: DireccionDespachoDTO,
+        destino: DireccionDespachoDTO,
         paquetes: List[PaqueteDTO]
     ) -> List[CotizacionEnvioDTO]:
         region_normalizada = destino.region.strip().upper() if destino.region else ""
@@ -230,10 +230,10 @@ class ChilexpressAdapter(LogisticsPort):
         ]
 
     def generar_despacho(
-        self, 
-        orden_id: str, 
-        origen: DireccionDespachoDTO, 
-        destino: DireccionDespachoDTO, 
+        self,
+        orden_id: str,
+        origen: DireccionDespachoDTO,
+        destino: DireccionDespachoDTO,
         paquetes: List[PaqueteDTO]
     ) -> GuiaDespachoDTO:
         codigo_tracking = f"CHILEX-{uuid.uuid4().hex[:10].upper()}"
@@ -362,9 +362,9 @@ class StarkenAdapter(LogisticsPort):
         return Decimal("0")
 
     def cotizar_envio(
-        self, 
-        origen: DireccionDespachoDTO, 
-        destino: DireccionDespachoDTO, 
+        self,
+        origen: DireccionDespachoDTO,
+        destino: DireccionDespachoDTO,
         paquetes: List[PaqueteDTO]
     ) -> List[CotizacionEnvioDTO]:
         region_normalizada = destino.region.strip().upper() if destino.region else ""
@@ -415,10 +415,10 @@ class StarkenAdapter(LogisticsPort):
         ]
 
     def generar_despacho(
-        self, 
-        orden_id: str, 
-        origen: DireccionDespachoDTO, 
-        destino: DireccionDespachoDTO, 
+        self,
+        orden_id: str,
+        origen: DireccionDespachoDTO,
+        destino: DireccionDespachoDTO,
         paquetes: List[PaqueteDTO]
     ) -> GuiaDespachoDTO:
         codigo_tracking = f"STK-{uuid.uuid4().hex[:10].upper()}"
@@ -514,9 +514,9 @@ class MultiCarrierLogisticsAdapter(LogisticsPort):
         ]
 
     def cotizar_envio(
-        self, 
-        origen: DireccionDespachoDTO, 
-        destino: DireccionDespachoDTO, 
+        self,
+        origen: DireccionDespachoDTO,
+        destino: DireccionDespachoDTO,
         paquetes: List[PaqueteDTO]
     ) -> List[CotizacionEnvioDTO]:
         todas_las_cotizaciones = []
@@ -527,7 +527,7 @@ class MultiCarrierLogisticsAdapter(LogisticsPort):
                 cotizaciones = adapter.cotizar_envio(origen, destino, paquetes)
                 todas_las_cotizaciones.extend(cotizaciones)
             except DireccionFueraDeCoberturaException:
-                continue  # Ese transportista no cubre el destino; otro puede hacerlo.
+                continue
             except (TiempoEsperaLogisticoException, *ERRORES_TIMEOUT):
                 fallos_de_proveedor += 1
                 fallos_por_timeout += 1
@@ -548,10 +548,10 @@ class MultiCarrierLogisticsAdapter(LogisticsPort):
         return todas_las_cotizaciones
 
     def generar_despacho(
-        self, 
-        orden_id: str, 
-        origen: DireccionDespachoDTO, 
-        destino: DireccionDespachoDTO, 
+        self,
+        orden_id: str,
+        origen: DireccionDespachoDTO,
+        destino: DireccionDespachoDTO,
         paquetes: List[PaqueteDTO]
     ) -> GuiaDespachoDTO:
         return self.adapters[0].generar_despacho(orden_id, origen, destino, paquetes)

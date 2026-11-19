@@ -1,4 +1,4 @@
-// Existing clients over HTTP against Postman; no installation data is modified.
+
 const assert=require('node:assert/strict'),path=require('node:path'),fs=require('node:fs');
 const {chromium}=require(process.env.DASHBOARD_PLAYWRIGHT_MODULE||'C:/Users/maria/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright');
 const base=process.env.EDITOR_TEST_URL||'http://127.0.0.1:5188',api=process.env.EDITOR_TEST_API||'http://127.0.0.1:4918/openmind',out=process.env.EDITOR_EVIDENCE_DIR||'C:/Users/maria/Ecommerce/rediseno-editor-evidencias';
@@ -43,9 +43,9 @@ const originalIds=['706d696e-6400-4000-8000-000000000001','706d696e-6400-4000-80
   await manager.locator(`[data-block-id="${newId}"] .lb-expand`).click();await page.getByLabel('Título de la sección',{exact:true}).fill('Borrador conservado');await page.getByRole('link',{name:'Personalizar apariencia ↗',exact:true}).click();await page.getByRole('dialog',{name:'Cambios sin guardar',exact:true}).getByRole('button',{name:'Seguir editando',exact:true}).click();assert.equal(await page.getByLabel('Título de la sección',{exact:true}).inputValue(),'Borrador conservado');await page.getByRole('button',{name:'Descartar cambios',exact:true}).click();assert.equal(await page.getByLabel('Título de la sección',{exact:true}).inputValue(),'De nuestro taller a tu hogar');
   console.log('OK agregar conserva ambas historias, ordenar/ocultar, confirmación, recuperar sin sobrescribir y bloqueo al salir');
 
-  // Both existing services are independent; a partial save must be explicit and retryable.
+
   await tab('Negocio');await page.getByLabel('Nombre de la tienda (obligatorio)',{exact:true}).fill('Taller Raíz · Chile');await tab('Portada');await page.getByLabel('Título principal',{exact:true}).fill('Objetos con historia y propósito');await control({status:500});await page.getByRole('button',{name:'Guardar cambios',exact:true}).click();await page.getByRole('alert').first().filter({hasText:'La información del negocio se guardó.'}).waitFor();assert.equal((await get('/api/tienda/configuracion/')).nombre,'Taller Raíz · Chile');assert.equal((await get('/api/landing/configuracion/')).titulo,'Objetos con historia');assert.equal(await page.getByLabel('Título principal',{exact:true}).inputValue(),'Objetos con historia y propósito');await control({status:200});await save();
-  // Rejected business save must retain everything and never write landing content.
+
   await tab('Negocio');await page.getByLabel('Nombre de la tienda (obligatorio)',{exact:true}).fill('Intento fallido');await control({businessStatus:500});await page.getByRole('button',{name:'Guardar cambios',exact:true}).click();await page.getByRole('alert').first().waitFor();assert.equal(await page.getByLabel('Nombre de la tienda (obligatorio)',{exact:true}).inputValue(),'Intento fallido');assert.equal((await get('/api/tienda/configuracion/')).nombre,'Taller Raíz · Chile');await control({businessStatus:200});await page.getByRole('button',{name:'Descartar cambios',exact:true}).click();
   console.log('OK guardado parcial explicado, reintento sin pérdida y error del servicio de negocio');
 

@@ -6,7 +6,6 @@ TIENDA = {
     'correo_negocio': 'contacto@tallerquillay.test',
 }
 
-# (código de color, nombre) por producto; "Único" = sin talla
 PRODUCTOS = [
     dict(slug='polera-algodon-organico', nombre='Polera Algodón Orgánico', categoria='Poleras', prefijo='POA', precio=12990, fotos=3, activo=True,
          descripcion='Polera de corte clásico en algodón orgánico, suave y resistente al lavado. Costuras reforzadas y cuello que no se deforma.',
@@ -56,7 +55,6 @@ PROMOCIONES = [
 
 PAGO_TRANSFERENCIA = dict(bank_name='Banco Estado', account_type='Cuenta Vista', account_number='00012345678', holder_rut='11.111.111-1',
                           holder_name='Taller Quillay SpA', confirmation_email='pagos@tallerquillay.test')
-# Credenciales PÚBLICAS de integración de Transbank (no mueven dinero real)
 TRANSBANK_INTEGRACION = dict(codigo_comercio='597055555532', api_key='579B532A7440BB0C9079DED94D31EA1615BACEB56610332264630D42D0A36B1C', ambiente='INTEGRACION', activo=True)
 
 _DIAS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun']
@@ -66,7 +64,6 @@ RETIRO = dict(
     hours={d: dict(enabled=(d != 'sun'), start=('10:00' if d != 'sun' else ''), end=('14:00' if d == 'sat' else ('18:00' if d != 'sun' else ''))) for d in _DIAS},
 )
 
-# región -> (tarifa Chilexpress, plazo, tarifa Starken, plazo)
 ZONAS = {
     'Metropolitana de Santiago': (3990, 2, 3490, 2),
     'Valparaíso': (5990, 3, 5490, 3),

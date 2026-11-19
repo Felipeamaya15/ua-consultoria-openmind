@@ -41,7 +41,6 @@ def request_link(store, email, purpose, template):
             or parsed.username or parsed.password
             or (parsed.scheme == 'http' and parsed.hostname not in ('localhost', '127.0.0.1', '::1'))):
         raise DeliveryUnavailable()
-    # Console/file transports would leak bearer links into application logs/files.
     if settings.EMAIL_BACKEND in ('django.core.mail.backends.console.EmailBackend',
                                   'django.core.mail.backends.filebased.EmailBackend',
                                   'django.core.mail.backends.dummy.EmailBackend'):
@@ -73,8 +72,6 @@ def request_link(store, email, purpose, template):
     link = f'{origin}/plantilla/{template}/preferencias-comerciales#' + urlencode({'accion': purpose, 'token': token})
     management = ''
     if purpose == 'confirmar':
-        # The same confirmation message includes a future-revision withdrawal
-        # link, usable immediately after confirmation without another purchase.
         manage = SolicitudConsentimiento(consentimiento=record, proposito='gestionar',
             revision=record.revision + 1, version_texto=VERSION,
             confirmacion=challenge,
@@ -93,7 +90,6 @@ def request_link(store, email, purpose, template):
         if sent != 1:
             raise DeliveryUnavailable()
     except Exception:
-        # Never include transport exceptions, recipient or token in responses/logs.
         raise DeliveryUnavailable() from None
 
 
@@ -109,7 +105,6 @@ def decode(token, purpose):
 @transaction.atomic
 def use_link(store, token, purpose, action):
     pk = decode(token, purpose)
-    # Lock in the same order as request_link to avoid deadlocks.
     candidate = SolicitudConsentimiento.objects.filter(pk=pk, consentimiento__tienda=store).values('consentimiento_id').first()
     if candidate is None:
         raise InvalidLink()
@@ -119,7 +114,6 @@ def use_link(store, token, purpose, action):
             or not constant_time_compare(challenge.token_hash, hashlib.sha256(token.encode()).hexdigest())):
         raise InvalidLink()
     if challenge.fecha_consumida:
-        # A repeated successful operation is harmless, but cannot re-grant after withdrawal.
         if action == 'confirmar' and record.estado == 'autorizado' and record.verificado and record.revision == challenge.revision + 1:
             return {'estado': 'autorizado', 'verificado': True}
         if action == 'retirar' and record.estado == 'retirado' and record.revision == challenge.revision + 1:
@@ -147,7 +141,6 @@ def use_link(store, token, purpose, action):
         if record.estado == 'retirado':
             return {'estado': 'retirado', 'verificado': False}
         record.estado = 'retirado'
-        # Model save updates withdrawal time, revision and verification atomically.
     else:
         raise InvalidLink()
     record.save()

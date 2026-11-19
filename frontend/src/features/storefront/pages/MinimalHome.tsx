@@ -49,10 +49,7 @@ export default function MinimalHome() {
   return (
     <div data-landing-page="minimal" className="pb-4 min-w-0 overflow-x-hidden">
 
-      {/* OPENMIND_SOFT_DISCOVERY_COMPACT_HERO_V1
-          Soft Discovery: composición editorial compacta. Los productos destacados
-          conservan su sección habitual más abajo, sin duplicaciones flotantes.
-          Los atributos data-visual permiten continuar editando desde Diseño. */}
+
       <section data-visual-section={VISUAL_SECTION.hero} className="px-4 md:px-8 py-8">
         <div data-visual-part="heroOverlay" className="absolute inset-0" />
         <div data-visual-layout="stack" data-visual-part="heroLayout" className="max-w-6xl mx-auto min-w-0">
@@ -145,7 +142,7 @@ export default function MinimalHome() {
         </div>
       </section>
 
-      {/* Beneficios compactos debajo de la portada. */}
+
       {isSectionVisible('Beneficios') && content.beneficios.length > 0 && (
         <section
           aria-label="Beneficios de la tienda"

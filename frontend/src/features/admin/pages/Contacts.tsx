@@ -88,7 +88,7 @@ function ContactsList() {
           <div className="mb-4 flex flex-wrap justify-between gap-2"><h3 className="font-semibold">Listado de contactos</h3><span className="text-xs text-[#52617a]">{result.page.total} contactos</span></div>
           {!result.data.length ? <EmptyListState>No hay contactos que coincidan con los filtros.</EmptyListState> : (
             <>
-              {/* En móvil: tarjetas sin desplazamiento horizontal */}
+
               <div className="space-y-2 md:hidden">
                 {result.data.map(contact => (
                   <div key={contact.email} className="rounded-lg border border-[#e2e8f0] p-3">
@@ -99,7 +99,7 @@ function ContactsList() {
                   </div>
                 ))}
               </div>
-              {/* En escritorio: tabla con ancho suficiente y scroll limitado a ella */}
+
               <div role="region" aria-label="Tabla de contactos" tabIndex={0} className="hidden overflow-x-auto md:block">
                 <table className="w-full min-w-[720px] border-collapse text-left text-sm">
                   <caption className="sr-only">Contactos únicos por correo</caption>

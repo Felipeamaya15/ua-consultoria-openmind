@@ -25,7 +25,7 @@ export function VisualHeader() {
     <header data-visual-section={VISUAL_SECTION.header} className="bg-white border-t-4 border-[var(--primary)] border-b border-black/10">
       <div data-visual-part="headerLayout" className="max-w-6xl mx-auto px-3 sm:px-5 py-2 min-h-16 flex items-center justify-between gap-2 sm:gap-3 lg:gap-4">
 
-        {/* Izquierda: Logo Universidad al lado del logo y nombre completo de la tienda */}
+
         <div className="flex flex-1 min-w-0 items-center gap-2 sm:gap-3">
           <InstitutionalBadge compact />
           <Link data-visual-part="logo"
@@ -40,7 +40,7 @@ export function VisualHeader() {
           </Link>
         </div>
 
-        {/* Derecha: Catálogo -> Seguimiento -> Iniciar sesión (/ Salir) -> Carrito -> Menú móvil */}
+
         <div className="flex shrink-0 items-center gap-2.5 sm:gap-3 lg:gap-6 text-sm">
           <nav data-visual-part="navigation" className="hidden md:flex shrink-0 items-center gap-3 lg:gap-6 text-xs lg:text-sm">
             <Link

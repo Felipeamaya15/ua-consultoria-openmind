@@ -208,20 +208,13 @@ class TiendaPropietarioMigrationTests(TransactionTestCase):
     def setUp(self):
         executor = MigrationExecutor(connection)
         self.final_targets = executor.loader.graph.leaf_nodes()
-        # Keep only independent leaves. Instagram (and future dependants)
-        # requires a later core schema, so retaining it would reapply the
-        # same migrations that this historical test is rolling back.
         self.other_targets = [node for node in self.final_targets
                               if node[0] not in ('core', 'authentication', 'landing', 'visual_config')
                               and self.migrate_to not in executor.loader.graph.forwards_plan(node)]
         targets = [self.migrate_from, *self.other_targets]
         operation = executor.loader.disk_migrations[('authentication', '0002_ensure_configuracion_autenticacion_table')].operations[0]
         promotion_reverse = executor.loader.disk_migrations[('core', '0023_reconciliar_promocion_historica')].operations[0].database_operations[0]
-        # This historical owner fixture starts empty and drops the later promotion
-        # table on its way to 0001. Do not attempt a destructive DATE downgrade.
         self.assertFalse(self.final_model_promotions_exist())
-        # No cambia migraciones guardadas ni la BD local: evita el rollback destructivo
-        # preexistente de 0002 para aislar la conciliación de propietarios en la BD temporal.
         with patch.object(operation, 'reverse_code', RunPython.noop), patch.object(promotion_reverse, 'reverse_code', RunPython.noop):
             executor.migrate(targets)
         self.old_apps = executor.loader.project_state(targets).apps
@@ -232,7 +225,6 @@ class TiendaPropietarioMigrationTests(TransactionTestCase):
         return Promocion.objects.exists()
 
     def tearDown(self):
-        # Solo datos de la base de pruebas; deja el esquema actual para los siguientes tests.
         executor = MigrationExecutor(connection)
         if self.migrate_to not in executor.loader.applied_migrations:
             self.old_apps.get_model('core', 'Tienda').objects.all().delete()

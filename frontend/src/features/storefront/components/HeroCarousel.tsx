@@ -1,14 +1,13 @@
-// OPENMIND_TEMPLATE_GALLERY_LAYOUT_FIX_V1
+
 import { useEffect, useRef, useState } from 'react';
-import { isActiveTemplateThumbnailPreview } from '../visual/pages'; // miniaturas: vista estable
+import { isActiveTemplateThumbnailPreview } from '../visual/pages';
 import type { CarouselSlideContent, LandingConfig } from '../../landing/types/landing.types';
 import './hero-carousel.css';
-// Animaciones oficiales disponibles también en la tienda pública, sin fetch en cada visita.
+
 
 import { CAROUSEL_TRANSITIONS, type CarouselTransitionId } from '../visual/carouselTransitionLibrary';
 import { isOnlineEffectId, type OnlineEffectId } from '../visual/onlineEffects';
-// OPENMIND_PUBLIC_CAROUSEL_PLAYBACK_FIX_V1
-// OPENMIND_ONLINE_EFFECTS_V1
+
 
 type HeroSlide = { id: string; src: string; alt: string; tipo?: 'imagen' | 'video'; content?: CarouselSlideContent };
 type HeroCarouselProps = { landing?: LandingConfig | null; intervalMs?: number; onContentChange?: (content: CarouselSlideContent) => void };
@@ -123,10 +122,10 @@ export function HeroCarousel({ landing, intervalMs, onContentChange }: HeroCarou
   }, [nextImageSource]);
   const showDots = !thumbnailPreview && count > 1 && settings.mode !== 'static' &&
     (settings.mode === 'manual' || settings.indicators);
-  // Pausa explícita para accesibilidad, incluso con indicadores ocultos.
+
   const showControls = !thumbnailPreview && (showDots || (count > 1 && settings.mode === 'automatic'));
 
-  // Configuración compartida entre tienda pública y vista previa del editor.
+
   useEffect(() => {
     const node = hostRef.current;
     if (!node) return;
@@ -144,7 +143,7 @@ export function HeroCarousel({ landing, intervalMs, onContentChange }: HeroCarou
     const observer = new MutationObserver(sync);
     const root = node.closest('[data-storefront-visual]');
     if (root) observer.observe(root, { attributes: true, attributeFilter: ['style', 'class'] });
-    // El editor notifica sus cambios directamente; evitamos observar todo head.
+
     doc.defaultView?.addEventListener('openmind:carousel:sync', sync);
     sync();
     return () => {
@@ -175,8 +174,8 @@ export function HeroCarousel({ landing, intervalMs, onContentChange }: HeroCarou
   useEffect(() => {
     if (count <= 1 || thumbnailPreview || settings.mode !== 'automatic' || manualPaused ||
       reducedMotion || !pageVisible) return;
-    // Un solo temporizador por fotografía: respeta 2–20 s, y se reinicia
-    // después de escoger un indicador sin desactivar la reproducción.
+
+
     const timer = window.setTimeout(() => {
       setActiveIndex(index => (index + 1) % count);
     }, settings.interval * 1000);
@@ -184,8 +183,7 @@ export function HeroCarousel({ landing, intervalMs, onContentChange }: HeroCarou
   }, [count, currentIndex, settings.mode, settings.interval, manualPaused,
     reducedMotion, pageVisible]);
 
-  // Conserva brevemente la fotografía anterior debajo de la nueva.
-  // Así las animaciones revelan una imagen y no un fondo vacío.
+
   useEffect(() => {
     const last = previousSlide.current;
     const changed = Boolean(last && active && (last.id !== active.id || last.src !== active.src));
@@ -200,7 +198,7 @@ export function HeroCarousel({ landing, intervalMs, onContentChange }: HeroCarou
   }, [active?.id, active?.src, reducedMotion, settings.mode, settings.transition]);
 
   function selectSlide(index: number) {
-    // Los indicadores SOLO navegan. No pausan la reproducción automática.
+
     setActiveIndex(index);
   }
 

@@ -1,7 +1,4 @@
-/**
- * Validación estricta, sanitización de entradas, listas blancas (Allowlists)
- * y escape de datos contra XSS (Cross-Site Scripting) e inyecciones SQL.
- */
+
 
 export const MAX_EMAIL_LENGTH = 254;
 export const MAX_NAME_LENGTH = 150;
@@ -10,24 +7,21 @@ export const MAX_PHONE_LENGTH = 20;
 export const MAX_POSTAL_CODE_LENGTH = 12;
 export const MAX_PASSWORD_LENGTH = 128;
 
-// Expresiones regulares por Lista Blanca (Allowlists)
+
 export const EMAIL_ALLOWLIST_REGEX = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,24}$/;
 export const PHONE_ALLOWLIST_REGEX = /^\+?[0-9 ()-]{7,20}$/;
-// Código postal: lista blanca estricta que solo permite números y guiones
+
 export const POSTAL_CODE_ALLOWLIST_REGEX = /^[0-9-]{3,12}$/;
-// Nombre de persona: letras (incluyendo acentos y ñ), espacios, apóstrofes y guiones
+
 export const PERSON_NAME_ALLOWLIST_REGEX = /^[a-zA-ZáéíóúÁÉÍÓÚàèìòùÀÈÌÒÙäëïöüÄËÏÖÜñÑçÇ\s'-]{1,150}$/;
-// Código OTP / MFA: exclusivamente 6 dígitos numéricos
+
 export const OTP_ALLOWLIST_REGEX = /^[0-9]{6}$/;
-// Código CAPTCHA: exclusivamente caracteres alfanuméricos
+
 export const CAPTCHA_ALLOWLIST_REGEX = /^[a-zA-Z0-9]{2,10}$/;
 
 const SQL_INJECTION_REGEX = /(?:\b(?:UNION\s+(?:ALL\s+)?SELECT|SELECT\s+.+\s+FROM|INSERT\s+INTO|UPDATE\s+\w+\s+SET|DELETE\s+FROM|DROP\s+(?:TABLE|DATABASE)|ALTER\s+TABLE|EXEC(?:UTE)?\s+|SLEEP\s*\(|BENCHMARK\s*\(|WAITFOR\s+DELAY)\b|'\s*(?:OR|AND)\s*'?\d+'?\s*=\s*'?\d+|"\s*(?:OR|AND)\s*"?\d+"?\s*=\s*"?\d+|;\s*(?:DROP|DELETE|UPDATE|INSERT|ALTER|CREATE)\b|--\s*$|\/\*[\s\S]*?\*\/)/i;
 
-/**
- * Transforma caracteres peligrosos en entidades HTML de texto plano para prevenir XSS.
- * Ejemplo: "<script>" -> "&lt;script&gt;"
- */
+
 export function escapeHtml(value: string): string {
   if (typeof value !== 'string') return '';
   return value

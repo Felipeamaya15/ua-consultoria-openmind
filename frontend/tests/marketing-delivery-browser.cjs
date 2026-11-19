@@ -1,4 +1,4 @@
-// Ejecutar contra Vite con VITE_API_URL=http://127.0.0.1:4912/openmind y la simulación local.
+
 const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
 const {chromium}=require(process.env.DASHBOARD_PLAYWRIGHT_MODULE||'playwright');
 const base=process.env.MARKETING_TEST_URL||'http://127.0.0.1:5197',api='http://127.0.0.1:4912/openmind';
@@ -61,7 +61,7 @@ async function state(patch){const res=await fetch(api+'/__qa/state',{method:'POS
       }
     }
     fs.writeFileSync(path.join(out,'matriz-exportaciones.json'),JSON.stringify(matrix,null,2));
-    // Guardar las tres personalizaciones y referencia explícita de variante, sin precios cacheados.
+
     await page.getByLabel('Variante de la publicación').selectOption('AZUL');
     await page.getByLabel('Nombre del borrador',{exact:true}).fill('Campaña primavera');await click('Guardar borrador');
     await page.getByText('Borrador guardado en este navegador.',{exact:true}).waitFor();
@@ -80,29 +80,29 @@ async function state(patch){const res=await fetch(api+'/__qa/state',{method:'POS
     await click('Eliminar Campaña editada · copia');await click('Confirmar eliminación');assert.equal((await readDrafts()).drafts.length,1);
     accept=false;await click('Nueva publicación');assert.equal(await art.count(),1,'cancelar conserva edición');accept=true;
     await click('Nueva publicación');assert.equal(await art.count(),0);assert.equal((await readDrafts()).drafts.length,1);
-    // Abrir siempre reconsulta el catálogo; referencias obsoletas no producen publicaciones falsas.
+
     await state({offer:21000});await click('Abrir Campaña editada');await ready();assert((await art.innerText()).includes('$21.000'));assert(!(await art.innerText()).includes('$24.000'));
     await state({missingVariant:true});await click('Mis borradores');await click('Abrir Campaña editada');await page.getByText('La variante guardada ya no está disponible.',{exact:false}).waitFor();assert.equal(await art.count(),0);
     await state({deleted:true});await click('Mis borradores');await click('Abrir Campaña editada');await page.getByText('Este producto ya no está disponible en tu catálogo.',{exact:false}).waitFor();assert.equal(await art.count(),0);
     await state({deleted:false,missingVariant:false,image:'none'});await click('Nueva publicación');await click('Actualizar datos');await choose(1);
     let downloadEvent=page.waitForEvent('download');await click('Descargar PNG');await (await downloadEvent).saveAs(path.join(out,'sin-imagen.png'));
-    // Imagen externa legible en pantalla: CORS permitido exporta; denegado informa sin archivo parcial.
+
     await state({image:'external',cors:true});await click('Actualizar datos');await ready();downloadEvent=page.waitForEvent('download');await click('Descargar JPG');await (await downloadEvent).saveAs(path.join(out,'externa-cors.jpg'));
     await state({cors:false});await click('Descargar PNG');await page.getByRole('alert').filter({hasText:'CORS'}).waitFor();
     await state({cors:true,failImage:true});await click('Actualizar datos');await page.getByText('No pudimos cargar la imagen.',{exact:false}).waitFor();await click('Descargar PNG');await page.getByRole('alert').filter({hasText:'logo que no pudo cargarse'}).waitFor();
     await state({image:'data',failImage:false});await click('Actualizar datos');await ready();
-    // Cuota real simulada en la API Storage del navegador: no se pierde lo editado.
+
     await page.getByLabel('Nombre del borrador',{exact:true}).fill('No cabe');await page.evaluate(()=>{window.qaOriginalSet=Storage.prototype.setItem;Storage.prototype.setItem=function(k,v){if(k.startsWith('ua-marketing-drafts'))throw new DOMException('Quota','QuotaExceededError');return window.qaOriginalSet.call(this,k,v);};});
     await click('Guardar borrador');await page.getByRole('alert').filter({hasText:'no tiene espacio'}).waitFor();assert.equal(await page.getByLabel('Nombre del borrador',{exact:true}).inputValue(),'No cabe');
     await page.evaluate(()=>Storage.prototype.setItem=window.qaOriginalSet);
-    // Un usuario distinto dentro de la misma pestaña debe desmontar inmediatamente la sesión anterior.
+
     await page.evaluate(()=>{localStorage.setItem('token','qa-owner-eight');window.dispatchEvent(new StorageEvent('storage',{key:'token'}));});
     await page.getByText('Publicación nueva.',{exact:false}).waitFor();assert.equal(await art.count(),0);await click('Mis borradores');await page.getByText('Aún no tienes borradores guardados.',{exact:true}).waitFor();
     await choose(1);await page.getByLabel('Nombre del borrador',{exact:true}).fill('Usuario ocho');await click('Guardar borrador');
     await state({storeId:2});await page.reload();await page.getByLabel('Producto para publicar',{exact:true}).waitFor();await click('Mis borradores');await page.getByText('Aún no tienes borradores guardados.',{exact:true}).waitFor();await choose(2);assert((await art.innerText()).includes('Tienda QA 2'));
-    // Usuario anónimo: ni listado ni contenido privado.
+
     await page.evaluate(()=>{localStorage.removeItem('token');window.dispatchEvent(new StorageEvent('storage',{key:'token'}));});await page.getByText('Inicia sesión como emprendedor para acceder a Marketing.',{exact:true}).waitFor();assert.equal(await page.getByRole('region',{name:'Mis borradores',exact:true}).count(),0);
-    // Datos incompatibles y corruptos se preservan byte a byte, con un error comprensible.
+
     await state({storeId:1});await page.evaluate(()=>localStorage.setItem('token','qa-owner-seven'));await load();
     const original=await page.evaluate(()=>{const key=Object.keys(localStorage).find(k=>k.endsWith(':store:1:user:7'));const raw=localStorage.getItem(key);localStorage.setItem(key,JSON.stringify({version:99}));return {key,raw};});
     await page.reload();await page.getByRole('alert').filter({hasText:'versión'}).waitFor();assert.equal(await page.evaluate(key=>localStorage.getItem(key),original.key),JSON.stringify({version:99}));

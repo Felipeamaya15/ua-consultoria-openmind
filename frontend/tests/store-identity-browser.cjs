@@ -1,4 +1,4 @@
-// Real React/Vite in Edge; EVERY API response below is simulated.
+
 const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
 const {chromium}=require(process.env.DASHBOARD_PLAYWRIGHT_MODULE||'playwright');
 const base=process.env.IDENTITY_TEST_URL||'http://localhost:5173';
@@ -70,7 +70,7 @@ const productId='123456789012345678901234', secondId='123456789012345678901235';
      }
      assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),`${scenario}/${template}/${width}: desbordamiento`);
      await page.reload();await brand.waitFor();
-     // Verify a refresh of a mounted provider; the same events are emitted after admin saves.
+
      if(scenario==='full'&&!focusRefresh){
       businessName='Marca actualizada sin remontar';logoValue=null;
       await page.evaluate(()=>{window.dispatchEvent(new Event('openmind:store-information-changed'));window.dispatchEvent(new Event('openmind:landing-config-changed'));});
@@ -90,7 +90,7 @@ const productId='123456789012345678901234', secondId='123456789012345678901235';
     }
     console.log(`OK API SIMULADA ${scenario}: 4 plantillas ${width}px, identidad/medios/contacto/estilos/precios/rutas/recarga`);
    }
-   // No customization and long business names, without reusing any previous store's palette.
+
    await page.evaluate(()=>localStorage.clear());store=1;mode='full';businessName='Nombre comercial muy extenso '.repeat(5).slice(0,150);
    for(const template of [1,2,3,4]){
     await page.goto(`${base}/plantilla/${template}`);await page.getByRole('link',{name:`Ir al inicio de ${businessName}`,exact:true}).waitFor();

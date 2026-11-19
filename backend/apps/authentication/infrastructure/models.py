@@ -3,7 +3,6 @@ from django.contrib.auth import get_user_model
 
 from apps.core.models import Tienda
 
-# Obtenemos el modelo de usuario activo en Django
 UserModel = get_user_model()
 
 

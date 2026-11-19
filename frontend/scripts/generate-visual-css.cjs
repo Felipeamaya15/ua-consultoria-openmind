@@ -1,5 +1,5 @@
-// Run from frontend: node scripts/generate-visual-css.cjs
-// Rebuild aliases from the real resolver contract while preserving consumer CSS.
+
+
 const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm'),ts=require('typescript');
 const root=path.resolve(__dirname,'..'),cache=new Map();
 function load(relative) {

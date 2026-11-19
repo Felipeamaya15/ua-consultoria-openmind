@@ -1,8 +1,8 @@
-// Aplicación real en Edge con API interceptada y fixture gráfica de QA. No escribe datos comerciales.
+
 const fs = require('node:fs'), path = require('node:path'), assert = require('node:assert/strict');
 const { chromium } = require(process.env.DASHBOARD_PLAYWRIGHT_MODULE || 'playwright');
 const base = process.env.MARKETING_TEST_URL || 'http://127.0.0.1:5173';
-const fixtures = path.resolve(__dirname, '../../docs/marketing-parte1/evidencias');
+const fixtures = path.resolve(__dirname, 'fixtures');
 const reportFixtures = process.env.REPORTS_FIXTURE_DIR ? path.resolve(process.env.REPORTS_FIXTURE_DIR) : path.resolve(fixtures, '../../mejoras-informes-configuracion/evidencias');
 const out = process.env.MARKETING_EVIDENCE_DIR ? path.resolve(process.env.MARKETING_EVIDENCE_DIR) : fixtures;
 fs.mkdirSync(out, { recursive: true });
@@ -64,7 +64,7 @@ const settle = async page => page.locator('.marketing-preview-empty, .marketing-
         else if (p === '/api/tienda/informes/') data = JSON.parse(fs.readFileSync(path.join(reportFixtures, 'informe-ventas-pedidos-2025.json'), 'utf8'));
         else if (p === '/api/tienda/informes/pdf/') return route.fulfill({ contentType: 'application/pdf', body: fs.readFileSync(path.join(reportFixtures, 'informe-ventas-pedidos-2025.pdf')) });
         else if (p === '/api/promociones/') {
-          // Contrato persistido de develop, únicamente en el transporte simulado de QA.
+
           if (request.method() === 'POST') {
             assert.equal(request.headers().authorization, 'Token marketing-qa-owner');
             const draft = request.postDataJSON();
@@ -180,7 +180,7 @@ const settle = async page => page.locator('.marketing-preview-empty, .marketing-
       await art.waitFor(); assert.equal(await page.getByLabel('Producto para publicar').inputValue(), pid(1));
       await page.goto(base + `/emprendedor/marketing?producto=${pid(999)}`, { waitUntil: 'domcontentloaded' });
       await page.getByText('Este producto ya no está disponible en tu catálogo.', { exact: false }).waitFor(); assert.equal(await art.count(), 0);
-      // Regresiones de navegación de los módulos anteriores; API simulada, sin guardar cambios.
+
       await page.goto(base + '/emprendedor', { waitUntil: 'domcontentloaded' });
       const reports = page.getByRole('region', { name: 'Historial e informes', exact: true });
       await reports.getByRole('button', { name: 'Descargar informe PDF' }).waitFor();

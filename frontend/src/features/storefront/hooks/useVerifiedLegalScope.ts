@@ -4,7 +4,7 @@ import { useStoreIdentity } from '../context/StoreIdentityContext';
 
 function currentToken() { try { return authService.getToken(); } catch { return null; } }
 
-/** Las claves persistentes contienen identidad confirmada, nunca tokens. */
+
 export function useVerifiedLegalScope() {
   const { identity } = useStoreIdentity();
   const [token, setToken] = useState(currentToken);

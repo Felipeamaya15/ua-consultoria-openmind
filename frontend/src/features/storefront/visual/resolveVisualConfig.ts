@@ -13,7 +13,7 @@ export function isRecord(value: unknown): value is Record<string, unknown> {
 
 const enumValues: Record<string, readonly string[]> = {
   carouselMode: ['static', 'manual', 'automatic'], productImageMode: ['static', 'hover', 'automatic'], catalogProductImageMode: ['static', 'hover', 'automatic'], galleryArrowStyle: ['circulares', 'redondeadas', 'solo-flechas'], productImageTransition: ['fade', 'slide', 'zoom'],
-  align: ALIGNMENTS, titleAlign: ALIGNMENTS, promoAlign: ALIGNMENTS, // OPENMIND_EDITORIAL_PROMO_V1
+  align: ALIGNMENTS, titleAlign: ALIGNMENTS, promoAlign: ALIGNMENTS,
   horizontalAlign: ALIGNMENTS, navAlign: ALIGNMENTS,
   logoPosition: ALIGNMENTS, institutionLogoPosition: ALIGNMENTS, verticalAlign: ['top', 'center', 'bottom'], imagePosition: ['top', 'center', 'bottom'],
   density: DENSITIES, shape: SHAPES,
@@ -46,9 +46,9 @@ function validLeaf(value: unknown, baseline: unknown, path: string): boolean {
     if (key === 'imageRatio') return value > 0 && value <= 10;
     if (key === 'lineHeight') return value > 0 && value <= 4;
     if (/Size$/.test(key) || key === 'baseSize') return value > 0;
-    return true; // Zero is meaningful for spacing, dimensions, radius and borders.
+    return true;
   }
-  // OPENMIND_EDITORIAL_PROMO_V1: texto plano, no se interpreta como CSS ni HTML.
+
   if (key === 'promoText') return typeof value === 'string' && value.length <= 100;
   if (typeof baseline === 'string' && typeof value === 'string') {
     if (key === 'layout') {
@@ -59,13 +59,13 @@ function validLeaf(value: unknown, baseline: unknown, path: string): boolean {
       return allowed.includes(value);
     }
     if (enumValues[key]) return enumValues[key].includes(value);
-    // Color contract: hex (3/4/6/8 digits), transparent, currentColor. No arbitrary CSS.
+
     return /^(#[\da-f]{3}|#[\da-f]{4}|#[\da-f]{6}|#[\da-f]{8}|transparent|currentColor)$/i.test(value);
   }
   return false;
 }
 
-/** Schema-directed merge: ignore unknown keys, null, arrays and invalid leaf values. */
+
 function mergeKnown<T extends object>(baseline: T, patch: unknown, path = ''): T {
   const candidate = isRecord(patch) ? patch : {};
   const result: Record<string, unknown> = {};
@@ -79,7 +79,7 @@ function mergeKnown<T extends object>(baseline: T, patch: unknown, path = ''): T
   return result as T;
 }
 
-/** Keep partial breakpoint overrides partial so desktop edits continue to cascade. */
+
 function mergeOverrides(baseline: VisualSections, ...patches: unknown[]): DeepPartial<VisualSections> {
   function select(shape: Record<string, unknown>, sources: unknown[], path: string): Record<string, unknown> {
     const result: Record<string, unknown> = {};
@@ -103,7 +103,7 @@ function supportedCustomization(value: unknown): Record<string, unknown> {
   return value;
 }
 
-/** New independent dimensions inherit their older counterpart until explicitly edited. */
+
 function compatibleDimensions(value: unknown): unknown {
   if (!isRecord(value)) return value;
   const result = { ...value };
@@ -122,12 +122,12 @@ function compatibleDimensions(value: unknown): unknown {
 export interface ResolveVisualOptions {
   template?: unknown;
   legacyColors?: unknown;
-  /** Store-wide overrides, followed by overrides for the active template. */
+
   customization?: unknown;
   templateCustomization?: unknown;
 }
 
-/** defaults → preset → legacy colors → store overrides → template overrides. */
+
 export function resolveVisualConfig(options: ResolveVisualOptions = {}): VisualConfig {
   const preset = typeof options.template === 'string' && Object.prototype.hasOwnProperty.call(VISUAL_PRESETS, options.template)
     ? VISUAL_PRESETS[options.template as TemplateId].config : {};
@@ -147,14 +147,14 @@ export function resolveVisualConfig(options: ResolveVisualOptions = {}): VisualC
   };
 }
 
-/** Mobile inherits tablet, including partial overrides; desktop is the base. */
+
 export function resolveVisualViewport(config: VisualConfig, viewport: Viewport): VisualSections {
   const { responsive, version: _version, ...base } = config;
   const tablet = viewport === 'desktop' ? mergeKnown(base, {}) : mergeKnown(base, responsive.tablet);
   return viewport === 'mobile' ? mergeKnown(tablet, responsive.mobile) : tablet;
 }
 
-/** One adaptation boundary for persisted legacy fields, new overrides and editor drafts. */
+
 export function resolveStoreVisualConfig(storeConfig: unknown, templateId?: unknown, draftTheme?: unknown): VisualConfig {
   const store = isRecord(storeConfig) ? storeConfig : {};
   const themes = isRecord(store.themeEditor) ? store.themeEditor : {};
@@ -166,7 +166,7 @@ export function resolveStoreVisualConfig(storeConfig: unknown, templateId?: unkn
   return resolveVisualConfig({ template: templateId ?? store.template, legacyColors: legacy, customization: store.visualConfig, templateCustomization: theme.visualConfig });
 }
 
-/** Merge partial persisted overrides without materializing preset/default values. */
+
 export function mergeVisualOverrides(current: VisualConfigOverrides | undefined, patch: VisualConfigOverrides): VisualConfigOverrides {
   const { responsive: _responsive, version: _version, ...sections } = VISUAL_DEFAULTS;
   const base = mergeOverrides(sections, current, patch);
@@ -177,7 +177,7 @@ export function mergeVisualOverrides(current: VisualConfigOverrides | undefined,
     ...(Object.keys(tablet).length || Object.keys(mobile).length ? { responsive: { ...(Object.keys(tablet).length ? { tablet } : {}), ...(Object.keys(mobile).length ? { mobile } : {}) } } : {}) };
 }
 
-/** Removing a leaf restores inheritance; null is not a persisted reset sentinel. */
+
 export function removeVisualOverride(config: VisualConfigOverrides, path: readonly string[]): VisualConfigOverrides {
   function remove(value: unknown, remaining: readonly string[]): unknown {
     if (!isRecord(value) || !remaining.length) return value;

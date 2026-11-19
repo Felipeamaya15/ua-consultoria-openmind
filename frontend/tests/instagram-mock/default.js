@@ -1,4 +1,4 @@
-// Contract-shaped Instagram stand-in. Synthetic credentials only; never deploy this mock.
+
 const http=require('node:http');
 const initial=()=>({mode:'normal',calls:[],containers:{},created:0,published:0});
 http.createServer(async(req,res)=>{

@@ -45,7 +45,7 @@ export default function SeoAnalytics() {
       return;
     }
 
-    // Validación del identificador de Meta/Facebook Pixel
+
     const pixelValidation = validatePixelId(form.pixelId);
     if (!pixelValidation.valid) {
       setError(pixelValidation.error || 'Identificador de Meta/Facebook Pixel inválido.');

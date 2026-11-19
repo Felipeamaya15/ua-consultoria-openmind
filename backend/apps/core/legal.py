@@ -146,7 +146,6 @@ def normalize_legal_type(tipo: str) -> str | None:
     return TYPE_ALIASES.get(cleaned)
 
 
-# Fecha editorial de la base compartida con legalContent.ts, no de cada lectura.
 DEFAULT_LEGAL_PUBLICATION_DATE = '2025-08-01'
 
 
@@ -401,7 +400,6 @@ def save_legal_for_store(tienda, payload: dict) -> dict:
 
     now_iso = timezone.now().isoformat()
 
-    # Caso 1: Actualización de un único tipo
     if 'tipo' in payload or 'type' in payload:
         raw_type = payload.get('tipo') or payload.get('type')
         canonical = normalize_legal_type(raw_type)
@@ -439,7 +437,7 @@ def save_legal_for_store(tienda, payload: dict) -> dict:
                 'content': content_to_publish,
             })
             page['historial'] = historial
-        else:  # accion == 'draft' o update regular
+        else:
             draft_content = payload.get('draft')
             if draft_content is not None:
                 if not isinstance(draft_content, str):
@@ -475,7 +473,6 @@ def save_legal_for_store(tienda, payload: dict) -> dict:
 
         current_stored[canonical] = page
 
-    # Caso 2: Objeto completo con claves terms/privacy/refund/cookies
     else:
         for key in CANONICAL_TYPES:
             if key in payload:

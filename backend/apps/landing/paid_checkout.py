@@ -37,7 +37,6 @@ def is_test_order(order):
 def local_test_enabled(request):
     if not settings.DEBUG or os.environ.get('PAID_ACTIVITY_TEST_CHECKOUT') != '1':
         return False
-    # Igual que el carrito de prueba: únicamente el entorno local.
     host = urlsplit('http://' + request.get_host()).hostname
     return host in ('localhost', '127.0.0.1', '::1')
 
@@ -99,7 +98,6 @@ def test_order_result(order):
 
 @transaction.atomic
 def create_test_order(store, buyer, data):
-    # En el mismo orden que las reservas y el checkout físico: primero tienda.
     Tienda.objects.select_for_update().get(pk=store.pk)
     digest = hashlib.sha256(json.dumps(data, sort_keys=True, default=str).encode()).hexdigest()
     previous = Pedido.objects.filter(clave_checkout=data['clave_checkout']).first()
@@ -122,7 +120,6 @@ def create_test_order(store, buyer, data):
     ItemPedido.objects.bulk_create([ItemPedido(id_pedido=order, nombre_producto=('[PRUEBA] ' + r.condiciones['titulo'])[:200],
         sku='', cantidad=r.cantidad, precio_unitario=Decimal(r.precio_unitario),
         atributos={'Actividad':r.condiciones['titulo'], 'Inicio':r.inicio.isoformat(), 'Tipo':r.condiciones['tipo']}) for r in reservations])
-    # El pedido de prueba retiene cupos hasta decisión manual; no hay pasarela ni correo.
     ReservaActividadPagada.objects.filter(pk__in=[r.pk for r in reservations]).update(estado='en_pago')
     return order, True
 

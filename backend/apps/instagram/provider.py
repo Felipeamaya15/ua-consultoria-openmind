@@ -94,7 +94,6 @@ def request(method, url, *, token='', data=None, params=None):
     publishing = method == 'POST' and parsed.path.endswith(('/media', '/media_publish'))
     if publishing and not settings.INSTAGRAM_PUBLISHING_ENABLED:
         raise InstagramError('publicacion_deshabilitada')
-    # Only a dedicated, explicit QA settings module may route HTTP to a local stand-in.
     test_base = getattr(settings, 'INSTAGRAM_TEST_HTTP_ORIGIN', '')
     if test_base:
         if not settings.DEBUG or not settings.DATABASES['default']['NAME'].startswith(('instagram_qa_', 'test_instagram_qa_')):
@@ -117,7 +116,6 @@ def request(method, url, *, token='', data=None, params=None):
             raise InstagramError(code, method == 'POST' and (response.status_code >= 500 or response.is_redirect))
         return body
     except requests.RequestException:
-        # A network failure after a remote write has an unknown outcome; never blindly repeat it.
         raise InstagramError('instagram_no_disponible', method == 'POST') from None
 
 
@@ -136,7 +134,6 @@ def exchange(code):
     token = body.get('access_token')
     if not isinstance(token, str) or len(token) < 10:
         raise InstagramError('token_instagram_invalido')
-    # Validate app, credential type, real grants and expiration; /me is NOT the IG user.
     metadata = request('GET', api('debug_token'), token=settings.INSTAGRAM_APP_ID+'|'+settings.INSTAGRAM_APP_SECRET,
         params={'input_token': token}).get('data')
     if (not isinstance(metadata, dict) or metadata.get('is_valid') is not True
@@ -145,8 +142,6 @@ def exchange(code):
     permissions = metadata.get('scopes')
     if not isinstance(permissions, list) or not all(isinstance(item, str) for item in permissions) or not set(SCOPES).issubset(permissions):
         raise InstagramError('permisos_instagram_incompletos')
-    # manage_messages is mandatory for Unified Login; no messaging endpoint exists in this app.
-    # public_profile can be an implicit login grant. Never use it or accept wider business scopes.
     if set(permissions) - set(SCOPES) - {'public_profile'}:
         raise InstagramError('permisos_instagram_excesivos')
     expiry = metadata.get('expires_at')
@@ -169,7 +164,6 @@ def exchange(code):
     )
     assigned = request('GET', api('me/assigned_instagram_accounts'), token=token, params={'fields': 'id,username'})
     accounts = assigned.get('data')
-    # One store = one explicitly shared account. Never silently choose the first asset.
     paging = assigned.get('paging') or {}
     if not isinstance(accounts, list) or len(accounts) != 1 or not isinstance(paging, dict) or paging.get('next'):
         raise InstagramError('comparte_una_cuenta_instagram')

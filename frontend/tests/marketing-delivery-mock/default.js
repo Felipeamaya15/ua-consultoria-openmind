@@ -1,6 +1,6 @@
-// Contratos leídos de serializers/views del repositorio. Datos artificiales; uso local.
+
 const http = require('node:http'), fs = require('node:fs'), path = require('node:path');
-const image = fs.readFileSync(path.resolve(__dirname, '../../../docs/marketing-parte1/evidencias/producto-qa.png'));
+const image = fs.readFileSync(path.resolve(__dirname, '../fixtures/producto-qa.png'));
 const initial = () => ({storeId:1,price:30000,offer:24000,deleted:false,missingVariant:false,image:'data',cors:true,failImage:false});
 const pid = n => String(n).padStart(24,'0');
 http.createServer(async (req,res) => {

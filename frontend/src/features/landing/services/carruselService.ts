@@ -73,9 +73,7 @@ function notifyCarouselChanged(): void {
   window.dispatchEvent(new Event(LANDING_CONFIG_CHANGED));
 }
 
-/**
- * Obtiene las imágenes guardadas del carrusel.
- */
+
 export async function fetchCarouselImages(): Promise<
   ImagenCarruselLanding[]
 > {
@@ -96,11 +94,7 @@ export async function fetchCarouselImages(): Promise<
     .sort((a, b) => a.orden - b.orden);
 }
 
-/**
- * Sube fotografías JPG, PNG, WebP, HEIC o HEIF.
- * Los formatos de iPhone se convierten primero
- * utilizando el procesador existente de OpenMind.
- */
+
 export async function uploadCarouselImage(
   file: File,
   alternativeText = ''
@@ -131,8 +125,8 @@ export async function uploadCarouselImage(
   const isHeicOrHeif = /\.(heic|heif)$/i.test(file.name);
 
   if (isHeicOrHeif) {
-    // El backend de OpenMind procesa HEIC y HEIF
-    // y devuelve una imagen compatible en Base64.
+
+
     const processedDataUrl = await prepareImage(
       file,
       MAX_MB_CARRUSEL
@@ -163,8 +157,7 @@ export async function uploadCarouselImage(
     );
   }
 
-  // El archivo convertido también debe respetar
-  // el límite de tamaño definido por el backend.
+
   if (uploadFile.size > maxBytes) {
     throw new Error(
       'La fotografía procesada supera los 2 MB.'
@@ -176,8 +169,7 @@ export async function uploadCarouselImage(
   body.append('archivo', uploadFile);
   body.append('texto_alternativo', text);
 
-  // No establecer Content-Type:
-  // el navegador configura el FormData automáticamente.
+
   const response = await requestJson(ENDPOINT, {
     method: 'POST',
     headers: authHeaders(),
@@ -195,9 +187,7 @@ export async function uploadCarouselImage(
   return normalizeImage(response);
 }
 
-/**
- * Reordena todas las fotografías del carrusel.
- */
+
 export async function reorderCarouselImages(
   ids: string[]
 ): Promise<ImagenCarruselLanding[]> {
@@ -236,9 +226,7 @@ export async function reorderCarouselImages(
     .sort((a, b) => a.orden - b.orden);
 }
 
-/**
- * Elimina una fotografía del carrusel.
- */
+
 export async function deleteCarouselImage(
   id: string
 ): Promise<void> {

@@ -24,7 +24,7 @@ export async function deletePalette(id:string) {
 export async function saveAppearance(plantillas:Appearance) {
   await requestJson(endpoint+'apariencia/',{method:'PUT',headers:auth(),body:JSON.stringify({plantillas})});window.dispatchEvent(new Event(PALETTES_CHANGED));
 }
-/** Refresh on edits, focus and cross-tab broadcasts, scoped to the confirmed tenant. */
+
 export function usePaletteLibrary() {
   const {identity}=useStoreIdentity();const key=identity?`${identity.apiBaseUrl}:${identity.storeId}`:'';
   const [state,setState]=useState<{key:string;library:PaletteLibrary;appearance:Appearance}|null>(null);

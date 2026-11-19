@@ -1,4 +1,4 @@
-// SCRUM-400: control explícito de la versión legal vigente.
+
 const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');

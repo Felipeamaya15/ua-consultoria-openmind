@@ -32,8 +32,7 @@ import '../visualEditor/editor.css';
 import '../visualEditor/workspace.css';
 const ABSENT_SECTION_NOTICE = 'Esta sección no está visible en esta página. Sus ajustes se aplicarán cuando tenga contenido o esté habilitada.';
 
-// OPENMIND_SHARED_CAROUSEL_V4
-/** Comportamiento compartido del carrusel, no del diseño de cada portada. */
+
 type SharedCarouselSettings = {
   carouselMode: NonNullable<VisualConfig['hero']['carouselMode']>;
   carouselInterval: NonNullable<VisualConfig['hero']['carouselInterval']>;
@@ -87,10 +86,7 @@ function applySharedCarousel(document: EditorDocument, shared: SharedCarouselSet
   };
 }
 
-// OPENMIND_PORTADA_AJUSTES_V4
-// El editor debe aplicar la misma recuperación que la tienda pública cuando
-// una versión antigua de la API de apariencia omite los campos promocionales.
-// No sobrescribe valores que el servidor sí entrega.
+
 const PROMO_KEYS = [
   'promoText', 'promoVisible', 'promoAlign', 'promoBackground',
   'promoTextColor', 'promoTextSize', 'promoRadius',
@@ -128,7 +124,7 @@ export default function ThemeEditor() {
     const entry = remote.current?.appearance[template];
     if (!entry) return document;
     const server = retainCarouselFields(entry.visualConfig, paletteOverrides(entry, remote.current?.library) ?? {});
-    // Compatibilidad con servidores que todavía no devuelven las nuevas propiedades de etiqueta.
+
     return {...document, overrides: recoverLocalPromo(server, readStoredStoreConfig(identity), template), paletteId: entry.paleta_id};
   };
   const [baseline, setBaseline] = useState(load);
@@ -148,7 +144,7 @@ export default function ThemeEditor() {
   const [inspectorOpen, setInspectorOpen] = useState(true);
   const [selectedSection, setSelectedSection] = useState<VisualSectionId>('hero');
   const heroAdvancedToggle = useRef<HTMLButtonElement>(null);
-  const [heroAdvancedOpen, setHeroAdvancedOpen] = useState(false); // OPENMIND_PORTADA_UI_UNIFICADA_V1
+  const [heroAdvancedOpen, setHeroAdvancedOpen] = useState(false);
   const [viewport, setViewport] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
   const [previewPage, setPreviewPage] = useState<PreviewPageId>('home');
   const previewProduct = 'ejemplo-editor';
@@ -292,7 +288,7 @@ export default function ThemeEditor() {
       }
       const pending=[...Object.entries(templateDrafts.current).filter(([id])=>id!==template).map(([id,item])=>({id:id as TemplateId,document:item!.history.present,baseline:item!.baseline})),{id:template,document:submitted,baseline}];
       if (sharedCarousel) {
-        // Las plantillas no abiertas también deben recibir el mismo carrusel.
+
         const templates: TemplateId[] = ['catalog', 'editorial', 'minimal', 'visual'];
         for (const id of templates) {
           if (pending.some(item => item.id === id)) continue;
@@ -324,7 +320,7 @@ export default function ThemeEditor() {
       await saveAppearance(appearances);
       let nextConfig=config;
       for(const item of pending)nextConfig=publishEditorDocument(nextConfig,item.id,item.document);
-      // Guardar apariencia no activa una plantilla: esa acción se confirma en Diseño.
+
       if(!setConfig({...nextConfig,template:config.template}))throw new Error('La apariencia se guardó en el servidor, pero no pudimos guardar la copia local. Conservamos el borrador para reintentar.');
       if (remote.current) {
         remote.current.appearance = { ...remote.current.appearance, ...appearances };
@@ -414,7 +410,7 @@ export default function ThemeEditor() {
           setDraft(current => editScopedProperty(current, template, `hero.${field}`, value, 'all', 'desktop'));
         }} /></div>)}
         </div>)}
-          {/* OPENMIND_IMPORTED_PRESETS_V1: panel duplicado retirado en V1 online. */}
+
           {previewPage === 'product' && selectedSection === 'pageLayout' && (
             <ProductDetailTransitionInspector
               transition={effective.hero.detailProductImageTransition ?? 'none'}
@@ -424,7 +420,7 @@ export default function ThemeEditor() {
               }}
             />
           )}
-          {/* OPENMIND_PRODUCT_HOVER_V1 */}
+
           {(previewPage === 'home' || previewPage === 'catalog') &&
             ['sections', 'productCard', 'productGrid', 'categories'].includes(selectedSection) && (
               <ProductHoverInspector
@@ -439,7 +435,7 @@ export default function ThemeEditor() {
                 }}
               />
           )}
-                    {/* OPENMIND_UNIFIED_HOVER_LIBRARY_V3: catálogo de productos integrado arriba; no duplicar. */}
+
 
           <button className="ve-reset-section ve-danger" type="button" onClick={resetVisibleSection}>Restablecer sección ↺</button></>}
         <details className="ve-restore"><summary>Opciones del diseño</summary><button type="button" className="ve-danger" onClick={() => setRestoreRequested(true)}>Volver al diseño original</button><Link to="/emprendedor/diseno">Volver al panel de administración</Link></details>

@@ -30,32 +30,26 @@ class CorreosManualesTests(TestCase):
         )
 
     def test_destinatario_normalizado_con_gmail_outlook_hotmail(self):
-        # Prueba compatibilidad con mayúsculas y espacios en varios proveedores
         self.assertEqual(_destinatario_valido('  Juan.Perez@GMAIL.COM  '), 'Juan.Perez@gmail.com')
         self.assertEqual(_destinatario_valido('maria@outlook.com'), 'maria@outlook.com')
         self.assertEqual(_destinatario_valido('pedro@HOTMAIL.COM'), 'pedro@hotmail.com')
         self.assertEqual(_destinatario_valido('alguien+alias@live.cl'), 'alguien+alias@live.cl')
 
     def test_construir_correo_forzar_ignora_plantilla_desactivada(self):
-        # Desactivamos la plantilla de recepción
         ConfiguracionCorreo.objects.create(
             tienda=self.tienda,
             plantillas={'order_received': {'enabled': False, 'subject': 'Recepcion', 'preheader': '', 'body': 'Cuerpo'}}
         )
-        # Sin forzar devuelve None
         self.assertIsNone(construir_correo('order_received', self.pedido, forzar=False))
-        # Con forzar genera el correo normalmente
         correo = construir_correo('order_received', self.pedido, forzar=True)
         self.assertIsNotNone(correo)
         self.assertEqual(correo.asunto, 'Recepcion')
 
     def test_enviar_correo_manual_bypasa_ya_enviado_y_actualiza_marca(self):
-        # Primera vez manual
         res1 = notificaciones_pedido.enviar_correo_manual(self.pedido, 'order_received')
         self.assertTrue(res1.enviado)
         self.assertEqual(len(mail.outbox), 1)
 
-        # Segunda vez manual (debe permitir reenvío de emergencia a diferencia del automático)
         res2 = notificaciones_pedido.enviar_correo_manual(self.pedido, 'order_received')
         self.assertTrue(res2.enviado)
         self.assertEqual(len(mail.outbox), 2)

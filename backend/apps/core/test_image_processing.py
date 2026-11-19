@@ -17,7 +17,6 @@ from apps.landing.models import ConfiguracionLanding
 
 def fixture(format='HEIF', size=(90, 160), orientation=None):
     image = Image.new('RGB', size, '#224466')
-    # Distinct corners make accidental rotation visible in manual evidence.
     image.paste('#f97316', (0, 0, 35, 35))
     output = BytesIO()
     options = {}
@@ -71,7 +70,6 @@ class ImageProcessingTests(TestCase):
         with Image.open(BytesIO(result.data)) as image:
             self.assertEqual(image.size, (90, 160))
             self.assertIsNone(image.getexif().get(274))
-            # The already oriented source is not rotated a second time.
             r,g,b = image.convert('RGB').getpixel((12,12))
             self.assertGreater(r,b)
 

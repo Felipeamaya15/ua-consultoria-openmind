@@ -1,4 +1,4 @@
-// OPENMIND_TEMPLATE_GALLERY_LAYOUT_FIX_V1
+
 import { ViewportVideo } from '../../../landing/components/ViewportVideo';
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from 'react';
 import { Link, useLocation } from 'react-router-dom';
@@ -10,7 +10,7 @@ import './productImageGallery.css';
 
 type Props = { images: string[]; alt: string; href?: string; imageClassName?: string; detail?: boolean; index?: number; onSelect?: (index: number) => void; videoUrl?: string };
 
-/** One gallery for cards and detail; navigation never changes product order. */
+
 export function ProductImageGallery({ images, alt, href, imageClassName = '', detail = false, index, onSelect, videoUrl }: Props) {
   const host = useRef<HTMLDivElement>(null);
   const { pathname } = useLocation();
@@ -59,7 +59,7 @@ export function ProductImageGallery({ images, alt, href, imageClassName = '', de
 
     preload.onload = apply;
     preload.onerror = () => {
-      // Mantener la fotografia anterior si la siguiente falla.
+
     };
     preload.src = candidate;
 
@@ -150,7 +150,7 @@ export function ProductImageGallery({ images, alt, href, imageClassName = '', de
     return () => clearTimeout(timer);
   }, [src, reduced, detail, transitionDuration]);
   const image = <>
-    {/* Fondo suave para rellenar el recuadro sin recortar fotografías ni láminas con texto. */}
+
     {detail && src && (
       <div className="om-product-gallery__backdrop" aria-hidden="true">
         <img src={src} alt="" loading="lazy" decoding="async" />

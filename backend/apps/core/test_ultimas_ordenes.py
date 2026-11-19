@@ -39,9 +39,8 @@ class UltimasOrdenesTests(TestCase):
     def ids(self, respuesta):
         return [fila['id_pedido'] for fila in respuesta.json()['data']]
 
-    # ------------------------------------------------------------------ qué devuelve
     def test_devuelve_las_cinco_mas_recientes_de_la_mas_nueva_a_la_mas_antigua(self):
-        pedidos = [self.crear(numero) for numero in range(1, 9)]   # el 1 es el más reciente
+        pedidos = [self.crear(numero) for numero in range(1, 9)]
         respuesta = self.api.get(URL)
         self.assertEqual(respuesta.status_code, 200, respuesta.content)
         cuerpo = respuesta.json()
@@ -83,7 +82,6 @@ class UltimasOrdenesTests(TestCase):
         self.crear(2, propia=False)
         self.assertEqual(self.ids(self.api.get(URL)), [propia.id_pedido])
 
-    # ------------------------------------------------------------------ el límite
     def test_respeta_el_limite_pedido(self):
         for numero in range(1, 9):
             self.crear(numero)
@@ -100,7 +98,6 @@ class UltimasOrdenesTests(TestCase):
             self.assertEqual(error['mensaje'], 'El límite debe ser un número entero entre 1 y 20.')
             self.assertFalse(error['exito'])
 
-    # ------------------------------------------------------------------ quién puede verlo
     def test_solo_el_propietario_puede_consultarlo(self):
         self.crear(1)
         anonimo = APIClient()
@@ -128,7 +125,6 @@ class UltimasOrdenesTests(TestCase):
     def test_no_se_guarda_en_cache(self):
         self.assertEqual(self.api.get(URL)['Cache-Control'], 'no-store')
 
-    # ------------------------------------------------------------------ costo y compatibilidad
     def test_la_cantidad_de_consultas_no_crece_con_la_cantidad_de_ordenes(self):
         for numero in range(1, 4):
             self.crear(numero)

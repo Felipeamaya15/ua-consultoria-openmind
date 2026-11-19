@@ -1,4 +1,4 @@
-﻿from apps.landing.campaigns import CampaignAudienceView, CampaignsView
+from apps.landing.campaigns import CampaignAudienceView, CampaignsView
 
 from apps.core.presentation.customer_orders import CustomerOrdersAPIView
 from apps.landing.campaign_delivery import CampaignActionView, CampaignUnsubscribeView
@@ -141,7 +141,6 @@ urlpatterns = [
     path('legal/<str:tipo>/publicar/', PublicarContenidoLegalAPIView.as_view(), name='legal-publicar-tipo'),
     path('legal/<str:tipo>/vigente/', ConsultaVersionVigenteAPIView.as_view(), name='legal-tipo-vigente'),
     path('legal/<str:tipo>/', PaginaLegalDetalleAPIView.as_view(), name='legal-detalle'),
-    # Consulta de la versión vigente del software
     path('software/version-vigente/', SoftwareVersionAPIView.as_view(), name='software-version-vigente'),
     path('software/version/', SoftwareVersionAPIView.as_view(), name='software-version'),
     path('version-vigente/', SoftwareVersionAPIView.as_view(), name='version-vigente-raiz'),

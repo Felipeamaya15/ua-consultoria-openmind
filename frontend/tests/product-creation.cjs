@@ -1,4 +1,4 @@
-// Ejecutar desde frontend: node tests/product-creation.cjs
+
 const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
@@ -51,7 +51,7 @@ async function main() {
   await service.createPublicProduct(product);
   assert.equal(request.options.headers.Authorization, 'Token session-owner');
 
-  // Creación y edición solo marcan Guardado tras éxito backend, sin AdminContext.
+
   for (const editing of [false, true]) for (const fails of [true, false]) {
     const state = [], changes = [];
     let calls = 0;

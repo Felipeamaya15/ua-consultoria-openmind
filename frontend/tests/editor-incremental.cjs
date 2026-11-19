@@ -14,12 +14,12 @@ test('palette roles flow into sections, cards, pages and borders without touchin
     const before=resolver.resolveVisualConfig({template});
     const global={colors:{background:'#fefefe',alternate:'#eeffee',secondary:'#bbddbb',surface:'#ffefff',muted:'#444444',button:'#225522',buttonText:'#ffffee',border:'#778877'}};
     const changed=resolver.resolveVisualConfig({template,customization:{global}}),vars=css(changed);
-    // currentColor en fondos de sección es el secundario del preset; transparent hereda el rol alternativo/general.
+
     assert.equal(vars['--visual-section-featured-background-desktop'],template==='minimal'?'#bbddbb':'#eeffee');
     assert.equal(vars['--visual-section-content-background-desktop'],template==='visual'?'#bbddbb':'#fefefe');
     assert.equal(vars['--visual-contact-background-desktop'],'#eeffee');assert.equal(vars['--visual-location-background-desktop'],'#eeffee');assert.equal(vars['--visual-page-login-panel-background-desktop'],'#ffefff');
     assert.equal(vars['--visual-page-login-button-color-desktop'],'#ffffee');
-    // Contraste automático del CTA oscuro y texto blanco del CTA outline sobre la portada.
+
     assert.equal(vars['--visual-cta-color-desktop'],'#ffffff');
     const light=css(resolver.resolveVisualConfig({template,customization:{global,heroCta:{variant:'solid',background:'#ffffee',textColor:'currentColor'}}}));
     assert.equal(light['--visual-cta-color-desktop'],'#000000');

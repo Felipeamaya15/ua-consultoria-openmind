@@ -1,9 +1,6 @@
 #!/bin/sh
-# Arranque del backend en producción: prepara las bases, los estilos y lanza Gunicorn.
 set -e
 
-# Los volúmenes de Docker pueden llegar con dueño "root". Se corrige aquí y luego el programa
-# sigue como usuario "app" (sin privilegios), que es como debe correr en producción.
 if [ "$(id -u)" = "0" ]; then
   find /app/media /app/staticfiles ! -user app -exec chown app:app {} +
   exec env HOME=/home/app setpriv --reuid=1000 --regid=1000 --clear-groups "$0" "$@"

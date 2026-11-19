@@ -38,10 +38,6 @@ class WebImageField(serializers.ImageField):
         )
 
 
-# ============================================================
-# CARRUSEL DE PORTADA
-# ============================================================
-
 class ImagenCarruselLandingSerializer(serializers.ModelSerializer):
     """
     Devuelve las imágenes del carrusel asociadas a la tienda.
@@ -61,10 +57,6 @@ class ImagenCarruselLandingSerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
 
-# ============================================================
-# CONFIGURACIÓN DE PÁGINA PRINCIPAL
-# ============================================================
-
 class ConfiguracionLandingSerializer(serializers.ModelSerializer):
     imagen_principal = WebImageField(
         max_mb=2,
@@ -72,9 +64,6 @@ class ConfiguracionLandingSerializer(serializers.ModelSerializer):
         allow_null=True
     )
 
-    # Imágenes adicionales asociadas a esta configuración.
-    # Es de solo lectura para no modificar las imágenes
-    # accidentalmente al guardar otros datos de la Landing.
     imagenes_carrusel = serializers.SerializerMethodField()
 
     def get_imagenes_carrusel(self, instance):
@@ -153,13 +142,11 @@ class ConfiguracionLandingSerializer(serializers.ModelSerializer):
                 'El contenido debe ser un objeto.'
             )
 
-        # Recuperar el contenido previamente guardado.
         contenido_anterior = {}
 
         if self.instance and isinstance(self.instance.contenido, dict):
             contenido_anterior = self.instance.contenido
 
-        # Validar la estructura, las secciones y sus componentes.
         serializer = ContenidoLandingSerializer(
             data=value,
             context={
@@ -171,14 +158,6 @@ class ConfiguracionLandingSerializer(serializers.ModelSerializer):
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
 
-        # ---------------------------------------------------------
-        # QA SPRINT 8
-        # Validación de productos destacados y categorías.
-        #
-        # Se validan solamente las referencias NUEVAS.
-        # Las selecciones antiguas no bloquean cambios en portada,
-        # logo u otras secciones independientes.
-        # ---------------------------------------------------------
 
         ids_actuales = data.get('productos_destacados', [])
         categorias_actuales = data.get('categorias', [])
@@ -212,8 +191,6 @@ class ConfiguracionLandingSerializer(serializers.ModelSerializer):
                 if categoria not in categorias_previas
             ]
 
-        # Consultar MongoDB solamente cuando se agregan
-        # nuevos productos o categorías.
         if ids_nuevos or categorias_nuevas:
             from apps.catalog.infrastructure.repositories import (
                 ProductRepository
@@ -282,9 +259,6 @@ class ConfiguracionLandingSerializer(serializers.ModelSerializer):
                     )
                 })
 
-        # ---------------------------------------------------------
-        # Conservar la información existente.
-        # ---------------------------------------------------------
 
         if self.instance:
             if 'contacto' in data:
@@ -295,8 +269,6 @@ class ConfiguracionLandingSerializer(serializers.ModelSerializer):
                     **data['contacto'],
                 }
 
-                # Un guardado de Landing no debe reactivar
-                # redes sociales deshabilitadas desde Marketing.
                 for network in previous.get('redes_sociales', {}):
                     contact[network] = previous.get(network, '')
 
@@ -307,7 +279,6 @@ class ConfiguracionLandingSerializer(serializers.ModelSerializer):
                 **data,
             }
 
-        # Mantener el orden unificado de las secciones.
         from apps.landing.home_sections import reconcile_home_order
 
         return reconcile_home_order(data)

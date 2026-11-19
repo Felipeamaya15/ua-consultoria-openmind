@@ -15,7 +15,7 @@ export function MinimalFooter() {
     <footer data-visual-section={VISUAL_SECTION.footer} className="px-4 md:px-8 pb-6 mt-20">
       <div className="max-w-6xl mx-auto bg-[var(--primary)] text-[var(--on-primary)] rounded-[28px] px-6 md:px-10 py-10">
         <div data-visual-part="footerLayout" className="grid grid-cols-1 md:grid-cols-4 gap-8 text-left items-start">
-          {/* Información de tienda */}
+
           <div className="md:col-span-2 text-left">
             {config.logo && <img data-landing-image className="store-footer-logo" src={config.logo} alt={`Logo de ${config.name}`} />}
             <p data-visual-part="footerTitle" className="text-2xl font-semibold mb-2 text-left">
@@ -24,7 +24,7 @@ export function MinimalFooter() {
             <StoreBusinessDescription className="text-sm leading-relaxed text-left" />
           </div>
 
-          {/* Tienda */}
+
           <div className="text-left">
             <p data-visual-part="footerTitle" className="text-xs font-semibold uppercase tracking-wider text-[color-mix(in_srgb,currentColor_70%,transparent)] mb-3 text-left">
               Tienda
@@ -39,7 +39,7 @@ export function MinimalFooter() {
             </div>
           </div>
 
-          {/* Legal */}
+
           <div className="text-left">
             <p data-visual-part="footerTitle" className="text-xs font-semibold uppercase tracking-wider text-[color-mix(in_srgb,currentColor_70%,transparent)] mb-3 text-left">
               Legal

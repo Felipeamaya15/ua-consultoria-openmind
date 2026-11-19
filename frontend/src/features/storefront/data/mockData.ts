@@ -1,5 +1,5 @@
 import type { VisualConfigOverrides } from '../visual/types';
-// Datos de demostración del diseño; no se realizan llamadas al backend.
+
 export type TemplateId = 'editorial' | 'minimal' | 'visual' | 'catalog';
 
 export interface ProductVariant {
@@ -15,7 +15,7 @@ export interface ProductVariant {
 export interface Product {
   variantsLoaded?: boolean;
   attributeLabels?: Record<string, string>;
-  catalogId?: string; // ID Mongo estable, independiente del slug público.
+  catalogId?: string;
   id: string;
   name: string;
   description: string;

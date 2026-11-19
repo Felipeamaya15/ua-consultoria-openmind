@@ -272,7 +272,6 @@ class ConfiguracionPagosResponseSerializer(serializers.Serializer):
         data["metodos"] = {
             metodo: {
                 "enabled": bool(config.get("enabled", False)),
-                # Solo nombres de campos, jamás sus valores.
                 "configured_fields": sorted(
                     str(nombre) for nombre, valor in config.get("fields", {}).items()
                     if valor is not None and str(valor).strip()
