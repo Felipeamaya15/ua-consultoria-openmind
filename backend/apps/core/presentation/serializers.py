@@ -314,6 +314,10 @@ class ChilexpressCredentialsSerializer(StrictSerializer):
     envios = DeliveryStringField(allow_blank=True, max_length=200, required=False)
     tcc = DeliveryStringField(allow_blank=True, max_length=50, required=False)
     origen = DeliveryStringField(allow_blank=True, max_length=20, required=False)
+    rut = DeliveryStringField(allow_blank=True, max_length=12, required=False)
+    origen_calle = DeliveryStringField(allow_blank=True, max_length=100, required=False)
+    origen_numero = DeliveryStringField(allow_blank=True, max_length=20, required=False)
+    telefono = DeliveryStringField(allow_blank=True, max_length=20, required=False)
 
 
 class ChilexpressConfigurationSerializer(CarrierConfigurationSerializer):

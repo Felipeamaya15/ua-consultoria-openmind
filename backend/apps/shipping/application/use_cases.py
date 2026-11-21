@@ -158,13 +158,19 @@ class ConsultarSeguimientoUseCase:
             "estado_estandar": _estado_estandar(detalle.estado_actual),
             "descripcion_estado": detalle.descripcion_estado,
             "fecha_estimada_entrega": detalle.fecha_estimada_entrega,
+            "entrega": {
+                "receptor_nombre": detalle.receptor_nombre,
+                "receptor_rut": detalle.receptor_rut,
+                "fecha_hora": detalle.fecha_entrega,
+            } if (detalle.receptor_nombre or detalle.fecha_entrega) else None,
             "historial": [
                 {
                     "fecha_hora": e.fecha_hora,
                     "estado": e.estado,
                     "estado_estandar": _estado_estandar(e.estado),
                     "descripcion": e.descripcion,
-                    "ubicacion": e.ubicacion
+                    "ubicacion": e.ubicacion,
+                    "certificado_entrega": e.certificado_entrega,
                 }
                 for e in detalle.historial_eventos
             ]

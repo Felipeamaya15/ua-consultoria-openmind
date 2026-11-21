@@ -41,9 +41,17 @@ class SeguimientoLogisticoView(APIView):
     """
     proveedor_fijo = None
 
+    @staticmethod
+    def _tienda(request):
+        try:
+            from apps.core.infrastructure.tenant import resolver_tienda
+            return resolver_tienda(request)
+        except Exception:
+            return None
+
     def get(self, request, numero_seguimiento):
         try:
-            adaptador = get_logistics_adapter(self.proveedor_fijo or numero_seguimiento)
+            adaptador = get_logistics_adapter(self.proveedor_fijo or numero_seguimiento, tienda=self._tienda(request))
             caso_uso = ConsultarSeguimientoUseCase(logistics_port=adaptador)
 
             resultado = caso_uso.execute(numero_seguimiento=numero_seguimiento)

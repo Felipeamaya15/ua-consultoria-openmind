@@ -36,11 +36,15 @@ class BaseCarrierClient:
     def configurado(self) -> bool:
         return bool(self.api_key and self.base_url)
 
+    def _puede_solicitar(self, api_key: Optional[str] = None) -> bool:
+        return self.configurado
+
     def _headers(self, api_key: Optional[str] = None) -> dict:
-        return {self.auth_header: (api_key or self.api_key), 'Accept': 'application/json'}
+        return {self.auth_header: (api_key or self.api_key), 'Accept': 'application/json',
+                'Content-Type': 'application/json'}
 
     def _request(self, method: str, path: str, *, params=None, json=None, api_key: Optional[str] = None) -> dict:
-        if not self.configurado:
+        if not self._puede_solicitar(api_key):
             raise ProveedorLogisticoError(f'{self.nombre} no está configurado.')
         url = f'{self.base_url}/{path.lstrip("/")}'
         try:
@@ -91,9 +95,12 @@ class ChilexpressClient(BaseCarrierClient):
     auth_header = 'Ocp-Apim-Subscription-Key'
     RATES_PATH = 'rating/api/v1.0/rates/courier'
     COVERAGE_PATH = 'georeference/api/v1.0/coverage-areas'
+    ORDERS_PATH = 'transport-orders/api/v1.0/transport-orders'
+    TRACKING_PATH = 'transport-orders/api/v1.0/tracking'
 
     def __init__(self, *, api_keys=None, origin_county_code: str = '', ambiente: str = 'SANDBOX', base_url: str = '',
-                 rates_path: str = '', coverage_path: str = '', tracking_path: str = '', api_key: str = '', **kwargs):
+                 rates_path: str = '', coverage_path: str = '', tracking_path: str = '', orders_path: str = '',
+                 tcc: str = '', rut: str = '', api_key: str = '', **kwargs):
         ambiente = (ambiente or 'SANDBOX').upper()
         if ambiente not in CHILEXPRESS_HOSTS:
             raise ValueError('Ambiente de Chilexpress inválido (usa SANDBOX o PRODUCCION).')
@@ -107,13 +114,19 @@ class ChilexpressClient(BaseCarrierClient):
         self.origin_county_code = (origin_county_code or '').strip()
         self.rates_path = rates_path or self.RATES_PATH
         self.coverage_path = coverage_path or self.COVERAGE_PATH
-        self.tracking_path = tracking_path
+        self.orders_path = orders_path or self.ORDERS_PATH
+        self.tracking_path = tracking_path or self.TRACKING_PATH
+        self.tcc = (tcc or '').strip()
+        self.rut = ''.join(c for c in (rut or '') if c.isdigit())
         self._counties = {}
 
     @property
     def configurado(self) -> bool:
         return bool(self.base_url and self.api_keys['cotizador'] and self.api_keys['coberturas']
                     and self.origin_county_code)
+
+    def _puede_solicitar(self, api_key: Optional[str] = None) -> bool:
+        return bool(self.base_url and (api_key or self.api_key))
 
     @staticmethod
     def region_code(region: str) -> Optional[str]:
@@ -153,11 +166,70 @@ class ChilexpressClient(BaseCarrierClient):
         }
         return self._request('POST', self.rates_path, json=payload, api_key=self.api_keys['cotizador'])
 
-    def seguimiento(self, numero: str, rut: str = '') -> dict:
-        if not self.tracking_path or not self.api_keys['envios']:
-            raise ProveedorLogisticoError('El seguimiento de Chilexpress no está configurado.')
-        return self._request('POST', self.tracking_path, json={'reference': numero, 'rut': rut},
-                             api_key=self.api_keys['envios'])
+    @staticmethod
+    def _verificar_estado(body: dict) -> dict:
+        status_code = body.get('statusCode')
+        if status_code not in (0, '0'):
+            detalle = body.get('statusDescription') or ''
+            errores = body.get('errors')
+            if isinstance(errores, list) and errores:
+                detalle = '; '.join(str(e.get('message', e)) if isinstance(e, dict) else str(e) for e in errores[:3])
+            logger.warning('Chilexpress: statusCode=%s (%s)', status_code, str(detalle)[:200])
+            raise ProveedorLogisticoError(f'Chilexpress rechazó la solicitud: {str(detalle)[:200] or "sin detalle"}.')
+        return body
+
+    def crear_orden_transporte(self, *, referencia: str, destino: dict, remitente: dict, origen: dict,
+                               paquete: dict, tipo_etiqueta: int = 2) -> dict:
+        if not (self.api_keys['envios'] and self.tcc and self.rut and self.origin_county_code):
+            raise ProveedorLogisticoError('Faltan credenciales de Chilexpress (clave Envíos, TCC, RUT o comuna de origen).')
+        destino_code = self.county_code(destino['region'], destino['comuna'])
+        contacto = destino.get('contacto') or {}
+
+        def direccion(tipo, code, datos):
+            return {
+                'addressId': 0, 'countyCoverageCode': code, 'streetName': datos.get('calle', ''),
+                'streetNumber': str(datos.get('numero', '')), 'supplement': datos.get('complemento', '') or '',
+                'addressType': tipo, 'deliveryOnCommercialOffice': False, 'observation': datos.get('observacion', '') or '',
+            }
+
+        payload = {
+            'header': {
+                'certificateNumber': 0, 'customerCardNumber': self.tcc,
+                'countyOfOriginCoverageCode': self.origin_county_code, 'labelType': tipo_etiqueta,
+                'marketplaceRut': self.rut, 'sellerRut': 'DEFAULT',
+            },
+            'details': [{
+                'addresses': [direccion('DEST', destino_code, destino),
+                              direccion('DEV', self.origin_county_code, origen)],
+                'contacts': [
+                    {'name': remitente.get('nombre', ''), 'phoneNumber': remitente.get('telefono', ''),
+                     'mail': remitente.get('correo', ''), 'contactType': 'R'},
+                    {'name': contacto.get('nombre', ''), 'phoneNumber': contacto.get('telefono', ''),
+                     'mail': contacto.get('correo', ''), 'contactType': 'D'},
+                ],
+                'packages': [{
+                    'weight': format(Decimal(str(paquete['peso_kg'])), 'f'), 'height': str(paquete['alto_cm']),
+                    'width': str(paquete['ancho_cm']), 'length': str(paquete['largo_cm']),
+                    'serviceDeliveryCode': str(paquete.get('servicio', '3')), 'productCode': '3',
+                    'deliveryReference': referencia, 'groupReference': '',
+                    'declaredValue': str(int(Decimal(str(paquete['valor_declarado'])))),
+                    'declaredContent': '5', 'receivableAmountInDelivery': 0,
+                }],
+            }],
+        }
+        body = self._request('POST', self.orders_path, json=payload, api_key=self.api_keys['envios'])
+        return self._verificar_estado(body)
+
+    def seguimiento(self, numero_ot, referencia: str = '', mostrar_eventos: int = 1) -> dict:
+        if not self.api_keys['envios'] or not self.rut:
+            raise ProveedorLogisticoError('El seguimiento de Chilexpress no está configurado (clave Envíos y RUT).')
+        digitos = ''.join(c for c in str(numero_ot) if c.isdigit())
+        if not digitos:
+            raise ProveedorLogisticoError('Número de orden de transporte inválido.')
+        payload = {'reference': referencia, 'transportOrderNumber': int(digitos), 'rut': int(self.rut),
+                   'showTrackingEvents': 1 if mostrar_eventos else 0}
+        body = self._request('POST', self.tracking_path, json=payload, api_key=self.api_keys['envios'])
+        return self._verificar_estado(body)
 
 
 class StarkenClient(BaseCarrierClient):

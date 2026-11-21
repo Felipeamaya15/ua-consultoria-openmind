@@ -176,8 +176,9 @@ class ChilexpressAdapter(LogisticsPort):
     LIMITE_PESO_BASE_KG = Decimal("1.5")
     RECARGO_POR_KG_EXTRA = Decimal("950")
 
-    def __init__(self, timeout_segundos: float = DEFAULT_TIMEOUT_SEGUNDOS):
+    def __init__(self, timeout_segundos: float = DEFAULT_TIMEOUT_SEGUNDOS, tienda=None):
         self.timeout_segundos = validar_tiempo_espera(timeout_segundos)
+        self.tienda = tienda
 
     def _obtener_tarifas_region(self, region_normalizada: str) -> dict:
         for reg_key, tarifas in self.TARIFAS_BASE_CHILEXPRESS.items():
@@ -204,7 +205,7 @@ class ChilexpressAdapter(LogisticsPort):
                 "La región y comuna de destino son obligatorias para cotizar con Chilexpress."
             )
 
-        client = live.get_client("Chilexpress")
+        client = live.get_client("Chilexpress", self.tienda)
         if client is not None:
             return self._cotizar_en_vivo(client, destino, paquetes)
         if not live.simulated_allowed():
@@ -266,22 +267,61 @@ class ChilexpressAdapter(LogisticsPort):
         orden_id: str,
         origen: DireccionDespachoDTO,
         destino: DireccionDespachoDTO,
-        paquetes: List[PaqueteDTO]
+        paquetes: List[PaqueteDTO],
+        *,
+        contacto_destino: dict = None,
+        remitente: dict = None,
+        servicio: str = "3",
     ) -> GuiaDespachoDTO:
-        if live.get_client("Chilexpress") is not None or not live.simulated_allowed():
-            raise ProveedorLogisticoError(
-                "La emisión automática de guías de Chilexpress aún no está disponible; ingresa la guía manualmente."
+        client = live.get_shipping_client(self.tienda)
+        if client is None:
+            if not live.simulated_allowed():
+                raise ProveedorLogisticoError(
+                    "Chilexpress no está configurado (clave de Envíos) y los datos simulados están desactivados."
+                )
+            codigo_tracking = f"CHILEX-{uuid.uuid4().hex[:10].upper()}"
+            return GuiaDespachoDTO(
+                numero_seguimiento=codigo_tracking,
+                proveedor="CHILEXPRESS",
+                url_etiqueta=f"https://envios.chilexpress.cl/etiquetas/{codigo_tracking}.pdf",
+                estado="EMITIDO"
             )
-        codigo_tracking = f"CHILEX-{uuid.uuid4().hex[:10].upper()}"
+
+        from apps.shipping.infrastructure.chilexpress_envios import procesar_orden_transporte
+        peso = sum((p.peso_kg for p in paquetes), Decimal("0")) or Decimal("1.0")
+        base = paquetes[0] if paquetes else None
+
+        def direccion(d):
+            return {"region": d.region, "comuna": d.comuna, "calle": d.calle, "numero": d.numero,
+                    "complemento": d.depto_casa or "", "observacion": d.referencias or ""}
+
+        try:
+            raw = client.crear_orden_transporte(
+                referencia=str(orden_id),
+                destino={**direccion(destino), "contacto": contacto_destino or {}},
+                origen=direccion(origen), remitente=remitente or {},
+                paquete={
+                    "peso_kg": peso, "alto_cm": base.alto_cm if base else Decimal("15"),
+                    "ancho_cm": base.ancho_cm if base else Decimal("20"),
+                    "largo_cm": base.largo_cm if base else Decimal("30"),
+                    "valor_declarado": sum((p.valor_declarado for p in paquetes), Decimal("0")),
+                    "servicio": servicio,
+                },
+            )
+            guia = procesar_orden_transporte(raw)
+        except ValueError as exc:
+            raise RespuestaLogisticaInvalidaException(str(exc)) from exc
+        except ERRORES_TIMEOUT as exc:
+            raise TiempoEsperaLogisticoException("Se agotó el tiempo de espera al emitir la guía en Chilexpress.") from exc
         return GuiaDespachoDTO(
-            numero_seguimiento=codigo_tracking,
-            proveedor="CHILEXPRESS",
-            url_etiqueta=f"https://envios.chilexpress.cl/etiquetas/{codigo_tracking}.pdf",
-            estado="EMITIDO"
+            numero_seguimiento=guia["numero_ot"], proveedor="CHILEXPRESS",
+            url_etiqueta=None, estado="EMITIDO",
+            certificado=guia["certificado"], codigo_barras=guia["codigo_barras"],
+            etiqueta=guia["etiqueta"], tipo_etiqueta=guia["tipo_etiqueta"],
         )
 
     def _obtener_respuesta_seguimiento(self, codigo: str) -> dict:
-        client = live.get_client("Chilexpress")
+        client = live.get_shipping_client(self.tienda)
         if client is not None:
             return client.seguimiento(codigo)
         if not live.simulated_allowed():
@@ -297,15 +337,53 @@ class ChilexpressAdapter(LogisticsPort):
             }
         }
 
+    def _seguimiento_en_vivo(self, client, codigo: str) -> DetalleSeguimientoDTO:
+        from apps.shipping.infrastructure.chilexpress_envios import procesar_seguimiento
+        if not codigo.isdigit():
+            raise FormatoSeguimientoInvalidoException(
+                "El número de seguimiento de Chilexpress es el número de orden de transporte (solo dígitos)."
+            )
+        try:
+            detalle = procesar_seguimiento(client.seguimiento(codigo))
+        except ERRORES_TIMEOUT as exc:
+            raise TiempoEsperaLogisticoException(
+                "Se agotó el tiempo de espera al consultar el seguimiento en Chilexpress."
+            ) from exc
+        except (ValueError, TypeError, KeyError) as exc:
+            logger.warning("Seguimiento Chilexpress: respuesta invalida del operador (%s)", exc)
+            raise RespuestaLogisticaInvalidaException(
+                "La respuesta recibida desde Chilexpress es inválida o incompleta."
+            ) from exc
+        eventos = [EventoSeguimientoDTO(fecha_hora=e["fecha"], estado=e["estado"], descripcion=e["descripcion"],
+                                        ubicacion=e["ubicacion"], certificado_entrega=e["certificado_entrega"])
+                   for e in detalle["eventos"]]
+        estado = detalle["estado"] or (eventos[-1].estado if eventos else "")
+        entrega = detalle["entrega"]
+        descripcion = estado
+        if detalle["ubicacion_estado"]:
+            descripcion = f"{estado} ({detalle['ubicacion_estado']})"
+        return DetalleSeguimientoDTO(
+            numero_seguimiento=codigo, proveedor="CHILEXPRESS", estado_actual=estado,
+            descripcion_estado=descripcion or "Seguimiento actualizado por Chilexpress.",
+            fecha_estimada_entrega="", historial_eventos=eventos,
+            receptor_nombre=entrega["receptor_nombre"] if entrega else "",
+            receptor_rut=entrega["receptor_rut"] if entrega else "",
+            fecha_entrega=entrega["fecha_hora"] if entrega else "",
+        )
+
     def consultar_seguimiento(self, numero_seguimiento: str) -> DetalleSeguimientoDTO:
         codigo = (numero_seguimiento or "").strip().upper()
+
+        client_vivo = live.get_shipping_client(self.tienda)
+        if client_vivo is not None:
+            return self._seguimiento_en_vivo(client_vivo, codigo)
 
         if not codigo.startswith("CHILEX-") and not (codigo.isdigit() and len(codigo) >= 8):
             raise FormatoSeguimientoInvalidoException(
                 "El número de seguimiento de Chilexpress debe comenzar con 'CHILEX-' o contener al menos 8 dígitos de orden de transporte."
             )
 
-        en_vivo = live.get_client("Chilexpress") is not None
+        en_vivo = False
         if not en_vivo:
             if codigo.endswith("0000") or "NOTFOUND" in codigo:
                 raise NumeroSeguimientoNoEncontradoException(
@@ -646,19 +724,19 @@ class MultiCarrierLogisticsAdapter(LogisticsPort):
         return target_adapter.consultar_seguimiento(numero_seguimiento)
 
 
-def get_logistics_adapter(provider_or_tracking: str = None, timeout_segundos: float = DEFAULT_TIMEOUT_SEGUNDOS) -> LogisticsPort:
+def get_logistics_adapter(provider_or_tracking: str = None, timeout_segundos: float = DEFAULT_TIMEOUT_SEGUNDOS, tienda=None) -> LogisticsPort:
     """
     Resuelve el adaptador logístico adecuado según el proveedor solicitado
     o el formato del número de seguimiento.
     """
     timeout_validado = validar_tiempo_espera(timeout_segundos)
     if not provider_or_tracking:
-        return ChilexpressAdapter(timeout_segundos=timeout_validado)
+        return ChilexpressAdapter(timeout_segundos=timeout_validado, tienda=tienda)
     token = provider_or_tracking.strip().upper()
     if token.startswith("STK-") or "STARKEN" in token:
         return StarkenAdapter(timeout_segundos=timeout_validado)
     elif token.startswith("CHILEX") or "CHILEXPRESS" in token:
-        return ChilexpressAdapter(timeout_segundos=timeout_validado)
+        return ChilexpressAdapter(timeout_segundos=timeout_validado, tienda=tienda)
     elif token.startswith("TRK-") or "STANDARD" in token or "CENTRAL" in token:
         return StandardLogisticsAdapter(timeout_segundos=timeout_validado)
-    return ChilexpressAdapter(timeout_segundos=timeout_validado)
+    return ChilexpressAdapter(timeout_segundos=timeout_validado, tienda=tienda)

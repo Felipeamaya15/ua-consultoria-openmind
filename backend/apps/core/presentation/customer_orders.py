@@ -66,6 +66,8 @@ class OrderDetailSerializer(OrderSerializer):
         if order.clave_checkout:
             delivery=dict(order.entrega or {})
             delivery.pop('pago_actividad_externo',None)
+            if isinstance(delivery.get('guia'), dict):
+                delivery['guia'] = {k: v for k, v in delivery['guia'].items() if k != 'etiqueta'}
             result.update(medio_pago=order.medio_pago, entrega=delivery,
                           costo_envio=format(order.costo_envio, '.2f'), descuento=format(order.descuento, '.2f'))
         return result

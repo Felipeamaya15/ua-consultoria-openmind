@@ -68,7 +68,7 @@ class CotizacionEnVivoTests(SimpleTestCase):
 
 
 class ModoSimuladoTests(SimpleTestCase):
-    @override_settings(CHILEXPRESS_API_KEY='', STARKEN_API_KEY='', SHIPPING_ALLOW_SIMULATED=False)
+    @override_settings(CHILEXPRESS_API_KEY='', CHILEXPRESS_ENVIOS_API_KEY='', STARKEN_API_KEY='', SHIPPING_ALLOW_SIMULATED=False)
     def test_produccion_sin_credenciales_no_inventa_nada(self):
         for adapter, codigo in ((ChilexpressAdapter(), 'CHILEX-ABC12345'), (StarkenAdapter(), 'STK-ABC12345')):
             with self.assertRaises(ProveedorLogisticoError):
@@ -78,7 +78,7 @@ class ModoSimuladoTests(SimpleTestCase):
             with self.assertRaises(ProveedorLogisticoError):
                 adapter.generar_despacho('1', _dir(), _dir(), [_paquete()])
 
-    @override_settings(CHILEXPRESS_API_KEY='', STARKEN_API_KEY='', SHIPPING_ALLOW_SIMULATED=True)
+    @override_settings(CHILEXPRESS_API_KEY='', CHILEXPRESS_ENVIOS_API_KEY='', STARKEN_API_KEY='', SHIPPING_ALLOW_SIMULATED=True)
     def test_desarrollo_conserva_los_codigos_de_prueba(self):
         with self.assertRaises(NumeroSeguimientoNoEncontradoException):
             ChilexpressAdapter().consultar_seguimiento('CHILEX-NOTFOUND')
@@ -90,13 +90,15 @@ class SeguimientoEnVivoTests(SimpleTestCase):
     @override_settings(**CHILEX_CFG)
     def test_chilexpress_numero_real_terminado_en_0000_no_se_rechaza_ni_se_inventa_fecha(self):
         cliente = MagicMock()
-        cliente.seguimiento.return_value = {'data': {'statusList': [
-            {'date': '2026-11-10T10:00:00Z', 'status': 'EN_RUTA', 'description': 'Salió a reparto', 'location': 'Santiago'}]}}
-        with patch.object(live, 'get_client', return_value=cliente):
+        cliente.seguimiento.return_value = {'statusCode': 0, 'data': {
+            'transportOrderData': {'status': 'EN REPARTO', 'locationStatus': 'Santiago'},
+            'trackingEvents': [{'eventDate': '10/11/2026', 'eventHour': '10:00', 'description': 'Salió a reparto',
+                                'location': 'Santiago', 'code': {'clientEventDescription': 'En reparto'}}]}}
+        with patch.object(live, 'get_shipping_client', return_value=cliente):
             detalle = ChilexpressAdapter().consultar_seguimiento('250010000')
-        self.assertEqual(detalle.estado_actual, 'EN_RUTA')
-        self.assertEqual(detalle.descripcion_estado, 'Salió a reparto')
+        self.assertEqual(detalle.estado_actual, 'EN REPARTO')
         self.assertEqual(detalle.fecha_estimada_entrega, '')
+        self.assertEqual(detalle.historial_eventos[0].descripcion, 'Salió a reparto')
         cliente.seguimiento.assert_called_once_with('250010000')
 
     @override_settings(**STARKEN_CFG)
@@ -112,7 +114,7 @@ class SeguimientoEnVivoTests(SimpleTestCase):
     def test_error_de_la_api_se_propaga_como_dominio(self):
         cliente = MagicMock()
         cliente.seguimiento.side_effect = NumeroSeguimientoNoEncontradoException('x')
-        with patch.object(live, 'get_client', return_value=cliente):
+        with patch.object(live, 'get_shipping_client', return_value=cliente):
             with self.assertRaises(NumeroSeguimientoNoEncontradoException):
                 ChilexpressAdapter().consultar_seguimiento('99999999')
 

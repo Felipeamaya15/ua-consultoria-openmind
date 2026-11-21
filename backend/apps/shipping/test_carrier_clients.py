@@ -23,7 +23,7 @@ def respuesta(status=200, body=None, json_error=False):
 
 def chilex(session):
     return ChilexpressClient(api_key='SECRETA', base_url='https://api.test', origin_county_code='SANT',
-                             tracking_path='tracking/prueba', session=session)
+                             tracking_path='tracking/prueba', rut='96756430', session=session)
 
 
 class ChilexpressClientTests(unittest.TestCase):
@@ -123,14 +123,15 @@ class ChilexpressDocumentedContractTests(unittest.TestCase):
     def client(self, session, ambiente='SANDBOX'):
         return ChilexpressClient(
             api_keys={'cotizador': 'K-COT', 'coberturas': 'K-COB', 'envios': 'K-ENV'}, ambiente=ambiente,
-            origin_county_code='SANT', tracking_path='tracking/prueba', session=session)
+            origin_county_code='SANT', tracking_path='tracking/prueba', rut='96756430', tcc='18578680',
+            session=session)
 
     def test_rates_use_rating_route_and_one_key_per_product(self):
         session = MagicMock()
         session.request.side_effect = [
             respuesta(body={'data': {'coverageAreas': [{'countyName': 'Providencia', 'countyCode': 'PROV'}]}}),
             respuesta(body={'data': {'courierServiceOptions': [{'serviceValue': 4990}]}}),
-            respuesta(body={'data': {}}),
+            respuesta(body={'statusCode': 0, 'data': {}}),
         ]
         client = self.client(session)
         client.cotizar('Metropolitana de Santiago', 'Providencia', **PKG)
@@ -153,8 +154,13 @@ class ChilexpressDocumentedContractTests(unittest.TestCase):
         self.assertFalse(solo_cotizador.configurado)
         self.assertTrue(self.client(MagicMock()).configurado)
 
-    def test_tracking_requires_explicit_route_and_envios_key(self):
-        sin_ruta = ChilexpressClient(api_keys={'cotizador': 'a', 'coberturas': 'b', 'envios': 'c'},
-                                     origin_county_code='SANT', session=MagicMock())
+    def test_tracking_usa_la_ruta_oficial_por_defecto_y_exige_clave_envios_y_rut(self):
+        sin_clave = ChilexpressClient(api_keys={'cotizador': 'a', 'coberturas': 'b'}, origin_county_code='SANT',
+                                      rut='96756430', session=MagicMock())
         with self.assertRaises(ProveedorLogisticoError):
-            sin_ruta.seguimiento('123')
+            sin_clave.seguimiento('99726299584')
+        sin_rut = ChilexpressClient(api_keys={'envios': 'c'}, session=MagicMock())
+        with self.assertRaises(ProveedorLogisticoError):
+            sin_rut.seguimiento('99726299584')
+        self.assertEqual(ChilexpressClient(api_keys={'envios': 'c'}).tracking_path,
+                         'transport-orders/api/v1.0/tracking')

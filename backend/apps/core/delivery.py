@@ -8,7 +8,7 @@ from apps.core.models import ConfiguracionEntrega
 DELIVERY_METHODS = {'Chilexpress': 'chilexpress', 'Starken': 'starken', 'Retiro': 'pickup'}
 
 CARRIER_ENVIRONMENTS = ('SANDBOX', 'PRODUCCION')
-CARRIER_CREDENTIALS = {'chilexpress': ('cotizador', 'coberturas', 'envios', 'tcc', 'origen')}
+CARRIER_CREDENTIALS = {'chilexpress': ('cotizador', 'coberturas', 'envios', 'tcc', 'origen', 'rut', 'origen_calle', 'origen_numero', 'telefono')}
 CARRIER_SECRET_FIELDS = {'chilexpress': ('cotizador', 'coberturas', 'envios')}
 CREDENTIALS_KEY = 'credenciales_transportistas'
 
