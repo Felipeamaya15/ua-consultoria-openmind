@@ -130,7 +130,9 @@ export default function Shipping() {
                       </select>
                     </label>
                     {([['cotizador', 'Clave API Cotizador', true], ['coberturas', 'Clave API Coberturas', true], ['envios', 'Clave API Envíos', true],
-                      ['tcc', 'Número de Tarjeta de Cliente (TCC)', false], ['origen', 'Código de comuna de origen', false]] as const).map(([field, label, secret]) => (
+                      ['tcc', 'Número de Tarjeta de Cliente (TCC)', false], ['origen', 'Código de comuna de origen', false],
+                      ['rut', 'RUT de la empresa (sin puntos ni dígito verificador)', false], ['origen_calle', 'Calle de origen (guías)', false],
+                      ['origen_numero', 'Número de la dirección de origen', false], ['telefono', 'Teléfono del remitente', false]] as const).map(([field, label, secret]) => (
                       <Input key={field} id={`chilexpress-${field}`} label={label} type={secret ? 'password' : 'text'} autoComplete="off"
                         placeholder={secret ? 'Una clave distinta por producto del portal' : ''}
                         value={current.credenciales?.[field] || ''} onChange={event => updateCredential(field, event.target.value)} />
