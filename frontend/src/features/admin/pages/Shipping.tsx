@@ -11,6 +11,21 @@ import type { PackageConfiguration, ShippingRate } from '../types';
 import PickupEditor from '../components/shipping/PickupEditor';
 import { validatePickup } from '../services/pickupConfiguration';
 
+const CREDENCIALES_COTIZACION = [
+  ['cotizador', 'Clave API Cotizador', true],
+  ['coberturas', 'Clave API Coberturas', true],
+  ['origen', 'Código de comuna de origen', false],
+] as const;
+
+const CREDENCIALES_GUIA = [
+  ['envios', 'Clave API Envíos', true],
+  ['tcc', 'Número de Tarjeta de Cliente (TCC)', false],
+  ['rut', 'RUT de la empresa (sin puntos ni dígito verificador)', false],
+  ['origen_calle', 'Calle de origen (guías)', false],
+  ['origen_numero', 'Número de la dirección de origen', false],
+  ['telefono', 'Teléfono del remitente', false],
+] as const;
+
 export default function Shipping() {
   const { config, setConfig } = useAdmin();
   const { form, setForm } = useAdminForm('shippingConfiguration');
@@ -135,14 +150,24 @@ export default function Shipping() {
                         <option value="PRODUCCION">PRODUCCIÓN</option>
                       </select>
                     </label>
-                    {([['cotizador', 'Clave API Cotizador', true], ['coberturas', 'Clave API Coberturas', true], ['envios', 'Clave API Envíos', true],
-                      ['tcc', 'Número de Tarjeta de Cliente (TCC)', false], ['origen', 'Código de comuna de origen', false],
-                      ['rut', 'RUT de la empresa (sin puntos ni dígito verificador)', false], ['origen_calle', 'Calle de origen (guías)', false],
-                      ['origen_numero', 'Número de la dirección de origen', false], ['telefono', 'Teléfono del remitente', false]] as const).map(([field, label, secret]) => (
-                      <Input key={field} id={`chilexpress-${field}`} label={label} type={secret ? 'password' : 'text'} autoComplete="off"
-                        placeholder={secret ? 'Una clave distinta por producto del portal' : ''}
-                        value={current.credenciales?.[field] || ''} onChange={event => updateCredential(field, event.target.value)} />
-                    ))}
+                    <div className="grid gap-3">
+                      <h3 className="text-sm font-semibold">Cotización en el checkout</h3>
+                      <p className="text-xs text-[var(--muted-foreground)]">Es lo mínimo para que la tienda calcule el precio del envío con Chilexpress.</p>
+                      {CREDENCIALES_COTIZACION.map(([field, label, secret]) => (
+                        <Input key={field} id={`chilexpress-${field}`} label={label} type={secret ? 'password' : 'text'} autoComplete="off"
+                          placeholder={secret ? 'Una clave distinta por producto del portal' : ''}
+                          value={current.credenciales?.[field] || ''} onChange={event => updateCredential(field, event.target.value)} />
+                      ))}
+                    </div>
+                    <div className="grid gap-3 border-t border-[var(--border)] pt-3">
+                      <h3 className="text-sm font-semibold">Guías automáticas (opcional)</h3>
+                      <p className="text-xs text-[var(--muted-foreground)]">Solo es necesario si quieres emitir las guías de despacho desde el panel. Sin estos datos la cotización sigue funcionando y las guías se emiten por fuera del sistema.</p>
+                      {CREDENCIALES_GUIA.map(([field, label, secret]) => (
+                        <Input key={field} id={`chilexpress-${field}`} label={label} type={secret ? 'password' : 'text'} autoComplete="off"
+                          placeholder={secret ? 'Una clave distinta por producto del portal' : ''}
+                          value={current.credenciales?.[field] || ''} onChange={event => updateCredential(field, event.target.value)} />
+                      ))}
+                    </div>
                     <p className="text-xs text-[var(--muted-foreground)]">Las claves se guardan cifradas y no se vuelven a mostrar completas. Déjalas como están para conservarlas.</p>
                   </div>
                 ) : (<>
@@ -191,8 +216,8 @@ export default function Shipping() {
           <div className="flex gap-3 items-center mb-3">
             <Icon name="box" className="w-6 h-6" />
             <div>
-              <h2 className="text-sm font-semibold">Peso, caja y margen del envío</h2>
-              <p className="text-xs text-[var(--muted-foreground)]">Se aplican a la cotización automática con Chilexpress. Las tarifas manuales por comuna no cambian.</p>
+              <h2 className="text-sm font-semibold">Peso, paquete y margen del envío</h2>
+              <p className="text-xs text-[var(--muted-foreground)]">Se aplican a la cotización automática con el transportista. Las tarifas manuales por comuna no cambian.</p>
             </div>
           </div>
           <div className="border-t border-[var(--border)] pt-3 grid gap-3">
@@ -201,19 +226,15 @@ export default function Shipping() {
               value={form.paquete?.peso_default_kg == null ? '' : String(form.paquete.peso_default_kg)}
               onChange={event => updatePackage({ peso_default_kg: optionalNumber(event.target.value) })} />
             <Input id="paquete-margen-porcentaje" label="Margen sobre la tarifa (%)" type="number" min="0" max="100" step="0.5" inputMode="decimal"
-              persistentHint hint="Se suma a la tarifa que devuelve Chilexpress, para cubrir diferencias con tu factura."
+              persistentHint hint="Porcentaje que se suma a la tarifa que devuelve el transportista, para cubrir diferencias con lo que te factura. Ej: 10 % sobre una tarifa de $4.000 suma $400. En 0 no se agrega nada."
               value={String(form.paquete?.margen_porcentaje ?? 0)}
               onChange={event => updatePackage({ margen_porcentaje: Number(event.target.value || 0) })} />
-            <Input id="paquete-margen-fijo" label="Margen fijo (CLP)" type="number" min="0" step="1" inputMode="numeric"
-              persistentHint hint="Monto fijo que se suma después del porcentaje."
-              value={String(form.paquete?.margen_fijo ?? 0)}
-              onChange={event => updatePackage({ margen_fijo: Math.trunc(Number(event.target.value || 0)) })} />
             <Input id="paquete-limite-peso" label="Peso máximo para envío automático (kg)" type="number" min="0.1" step="0.5" inputMode="decimal"
-              persistentHint hint="Sobre este peso total el comprador ve «Envío a coordinar». Vacío = sin límite."
+              persistentHint hint="Sobre este peso total el comprador no puede pagar el envío automático: ve «Envío a coordinar» y debe contactar a la tienda o elegir retiro. Vacío = sin límite."
               value={form.paquete?.limite_peso_kg == null ? '' : String(form.paquete.limite_peso_kg)}
               onChange={event => updatePackage({ limite_peso_kg: optionalNumber(event.target.value) })} />
             <Input id="paquete-limite-unidades" label="Unidades máximas para envío automático" type="number" min="1" step="1" inputMode="numeric"
-              persistentHint hint="Sobre estas unidades el comprador ve «Envío a coordinar». Vacío = sin límite."
+              persistentHint hint="Sobre estas unidades el comprador no puede pagar el envío automático: ve «Envío a coordinar» y debe contactar a la tienda o elegir retiro. Vacío = sin límite."
               value={form.paquete?.limite_unidades == null ? '' : String(form.paquete.limite_unidades)}
               onChange={event => updatePackage({ limite_unidades: event.target.value.trim() === '' ? null : Math.trunc(Number(event.target.value)) })} />
             <div className="grid grid-cols-3 gap-3">
@@ -223,7 +244,7 @@ export default function Shipping() {
                   onChange={event => updatePackage({ [field]: Math.trunc(Number(event.target.value || 1)) } as Partial<PackageConfiguration>)} />
               ))}
             </div>
-            <p className="text-xs text-[var(--muted-foreground)]">Esta caja se usa para los productos que no tienen medidas propias (los de un pedido se agrupan en una sola caja). Los productos con alto, ancho y largo suman su propio volumen. Chilexpress puede cobrar por volumen si es mayor que el peso real.</p>
+            <p className="text-xs text-[var(--muted-foreground)]">Este paquete se usa para los productos que no tienen medidas propias (los de un pedido se agrupan en un solo paquete). Los productos con alto, ancho y largo suman su propio volumen. El transportista puede cobrar por volumen si es mayor que el peso real.</p>
           </div>
         </AdminCard>
         <PickupEditor value={form.pickup} errors={pickupErrors} onProviderStatus={setPickupProviderConfigured} onChange={pickup => {

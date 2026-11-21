@@ -40,7 +40,7 @@ def producto(item_id, *_):
 class PesoEnvioBase(TestCase):
     url = '/api/entregas/cotizacion/'
     checkout_url = '/api/checkout/pedidos/'
-    paquete = {'peso_default_kg': 0.5, 'margen_porcentaje': 10, 'margen_fijo': 500}
+    paquete = {'peso_default_kg': 0.5, 'margen_porcentaje': 10}
 
     def setUp(self):
         self.owner = get_user_model().objects.create_user(username='peso-owner', is_staff=True)
@@ -102,12 +102,12 @@ class CotizacionConPesoTests(PesoEnvioBase):
 
     def test_margen_sobre_la_tarifa_de_la_api_y_oculto_al_comprador(self):
         tarifa = self.tarifa()
-        self.assertEqual(tarifa['monto'], '5450')
+        self.assertEqual(tarifa['monto'], '4950')
         self.assertEqual(tarifa['origen'], 'api_transportista')
         self.assertNotIn('margen', tarifa)
         self.assertNotIn('monto_base', tarifa)
         firmado = signing.loads(tarifa['cotizacion'], salt=QUOTE_SALT)
-        self.assertEqual((firmado['monto_base'], firmado['margen'], firmado['peso_kg']), (4500, 950, '2.200'))
+        self.assertEqual((firmado['monto_base'], firmado['margen'], firmado['peso_kg']), (4500, 450, '2.200'))
         self.assertTrue(firmado['peso_estimado'])
 
     def test_sin_peso_de_tienda_se_usa_el_global(self):
@@ -208,7 +208,7 @@ class PesoFirmadoAlPagarTests(PesoEnvioBase):
         reply = self.api.post(self.checkout_url, self.order(token), format='json')
         self.assertEqual(reply.status_code, 201, reply.data)
         pedido = Pedido.objects.get()
-        self.assertEqual(pedido.costo_envio, Decimal('5450'))
+        self.assertEqual(pedido.costo_envio, Decimal('4950'))
         self.assertEqual(pedido.entrega['cotizacion']['peso_kg'], '2.200')
 
     def test_carrito_mas_pesado_que_el_cotizado_se_rechaza(self):
@@ -235,15 +235,15 @@ class ConfiguracionPaqueteTests(PesoEnvioBase):
 
     def test_se_guarda_y_se_lee_en_el_panel(self):
         reply = self.api.patch(self.url, {'paquete': {'peso_default_kg': 0.8, 'margen_porcentaje': 5,
-                                                      'margen_fijo': 300, 'limite_unidades': 20}}, format='json')
+                                                      'limite_unidades': 20}}, format='json')
         self.assertEqual(reply.status_code, 200, reply.data)
         paquete = self.api.get(self.url).data['data']['paquete']
-        self.assertEqual((paquete['peso_default_kg'], paquete['margen_porcentaje'], paquete['margen_fijo'],
-                          paquete['limite_unidades'], paquete['limite_peso_kg']), (0.8, 5, 300, 20, 15))
+        self.assertEqual((paquete['peso_default_kg'], paquete['margen_porcentaje'],
+                          paquete['limite_unidades'], paquete['limite_peso_kg']), (0.8, 5, 20, 15))
 
     def test_valores_invalidos_se_rechazan(self):
         for cambio in ({'peso_default_kg': 0}, {'peso_default_kg': -1}, {'margen_porcentaje': 101},
-                       {'margen_porcentaje': -1}, {'margen_fijo': -5}, {'limite_unidades': 0},
+                       {'margen_porcentaje': -1}, {'margen_fijo': 5}, {'limite_unidades': 0},
                        {'alto_cm': 0}, {'otro': 1}):
             with self.subTest(cambio=cambio):
                 self.assertEqual(self.api.patch(self.url, {'paquete': cambio}, format='json').status_code, 400)
@@ -298,7 +298,7 @@ class PesoDeLaGuiaTests(TestCase):
         owner = get_user_model().objects.create_user(username='guia-peso', email='dueno@example.com')
         self.tienda = Tienda.objects.create(nombre='Guía', id_usuario_propietario=owner)
         self.params = {'peso_default_kg': Decimal('0.5'), 'limite_peso_kg': None, 'limite_unidades': None,
-                       'alto_cm': 15, 'ancho_cm': 20, 'largo_cm': 30, 'margen_porcentaje': 0, 'margen_fijo': 0}
+                       'alto_cm': 15, 'ancho_cm': 20, 'largo_cm': 30, 'margen_porcentaje': 0}
 
     def test_la_guia_usa_el_peso_con_que_se_cobro_el_envio(self):
         pedido = SimpleNamespace(itempedido_set=SimpleNamespace(all=lambda: []))

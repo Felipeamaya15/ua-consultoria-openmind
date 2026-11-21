@@ -89,7 +89,6 @@ export interface AdminConfig extends StoreConfig {
 export interface PackageConfiguration {
   peso_default_kg: number | null;
   margen_porcentaje: number;
-  margen_fijo: number;
   limite_peso_kg: number | null;
   limite_unidades: number | null;
   alto_cm: number;

@@ -8,7 +8,6 @@ from django.conf import settings
 PACKAGE_DEFAULTS = {
     'peso_default_kg': None,
     'margen_porcentaje': 0,
-    'margen_fijo': 0,
     'limite_peso_kg': 15,
     'limite_unidades': 10,
     'alto_cm': 15, 'ancho_cm': 20, 'largo_cm': 30,
@@ -184,8 +183,7 @@ def calcular_carrito(tienda, items: List[Dict[str, Any]], *, repository=None, pa
 def aplicar_margen(monto, params) -> int:
     base = _decimal(monto, Decimal('0'))
     porcentaje = _decimal(params.get('margen_porcentaje'), Decimal('0'))
-    fijo = _decimal(params.get('margen_fijo'), Decimal('0'))
-    total = base + base * porcentaje / Decimal('100') + fijo
+    total = base + base * porcentaje / Decimal('100')
     return int(total.to_integral_value(rounding=ROUND_CEILING))
 
 

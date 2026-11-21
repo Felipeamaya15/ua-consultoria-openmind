@@ -6,9 +6,11 @@ Desde el panel **Entregas → Chilexpress** cada tienda guarda su propia configu
 
 - **Ambiente `SANDBOX` / `PRODUCCION`**: elige el host oficial (`testservices.wschilexpress.com` o `services.wschilexpress.com`).
 - **Una clave por producto** del portal developers.wschilexpress.com: *Cotizador*, *Coberturas* y *Envíos* (header `Ocp-Apim-Subscription-Key`). Se guardan **cifradas** y la API solo las devuelve enmascaradas.
-- **TCC**, **RUT de la empresa** (sin puntos ni dígito verificador), **código y dirección de origen** y **teléfono del remitente** (se usan al emitir guías).
+- El formulario del panel tiene dos secciones:
+  - **Cotización en el checkout** (lo mínimo para activar Chilexpress): claves *Cotizador* y *Coberturas* y código de comuna de origen.
+  - **Guías automáticas (opcional)**: clave *Envíos*, **TCC**, **RUT de la empresa** (sin puntos ni dígito verificador), calle y número de origen y **teléfono del remitente**. Sin estos datos la cotización sigue funcionando y las guías se emiten por fuera del sistema.
 - Cotización: `rating/api/v1.0/rates/courier` (API Cotizador). Cobertura: `georeference/api/v1.0/coverage-areas`.
-- Sin credenciales en la tienda, se usan las variables globales `CHILEXPRESS_*` (compatibilidad) y, si tampoco existen, la tarifa manual.
+- Sin credenciales en la tienda, se usa la tarifa manual del panel.
 
 Datos de prueba del portal: TCC `18578680`, RUT `96756430` (en SANDBOX se usan por defecto si la tienda no los define). Para pasar a producción Chilexpress pide simular 10 OT (6 en RM y 4 a regiones) y enviarlas a soporteintegraciones@chilexpress.cl.
 
@@ -90,13 +92,13 @@ python manage.py test apps.shipping apps.core.test_shipping apps.core.test_shipp
 
 ## Peso real, margen y envío a coordinar (patch 0005)
 
-Con la API de Chilexpress activa, la cotización se calcula con el **peso real del carrito**:
+Con la API del transportista activa, la cotización se calcula con el **peso real del carrito**:
 
 - **Peso por producto:** campo `peso_kg` (kg por unidad) en el editor de productos. Es opcional.
-- **Peso por defecto:** Entregas → «Peso, caja y margen del envío». Se usa en los productos sin peso. Si no se define, rige `SHIPPING_DEFAULT_WEIGHT_KG` (1 kg). Conviene poner el peso del producto más pesado.
-- **Margen:** porcentaje y/o monto fijo que se suman a la tarifa de la API. No se aplican a las tarifas manuales por comuna ni se muestran al comprador.
-- **Envío a coordinar:** si el carrito supera el peso máximo (15 kg) o las unidades máximas (10), la cotización responde `ENVIO_A_COORDINAR` y el comprador debe elegir retiro u otra alternativa. Vacío = sin límite.
-- **Caja:** alto/ancho/largo configurables (15×20×30 cm por defecto), iguales para todos los pedidos. Chilexpress podría cobrar por volumen.
+- **Peso por defecto:** Entregas → «Peso, paquete y margen del envío». Se usa en los productos sin peso. Si no se define, rige `SHIPPING_DEFAULT_WEIGHT_KG` (1 kg). Conviene poner el peso del producto más pesado.
+- **Margen:** porcentaje que se suma a la tarifa de la API, para cubrir diferencias con lo que factura el transportista (10 % sobre $4.000 suma $400). Empieza en 0. No se aplica a las tarifas manuales por comuna ni se muestra al comprador.
+- **Envío a coordinar:** si el carrito supera el peso máximo (15 kg) o las unidades máximas (10), la cotización responde `ENVIO_A_COORDINAR` y el comprador debe elegir retiro u otra alternativa. Vacío = sin límite. Solo aplica con la cotización automática: las tarifas manuales por comuna no tienen límite de peso ni de unidades.
+- **Paquete:** alto/ancho/largo configurables (15×20×30 cm por defecto), iguales para todos los pedidos. El transportista puede cobrar por volumen.
 - El peso queda firmado en la cotización; si el carrito cambia al pagar, se pide cotizar de nuevo.
 - La guía usa el mismo peso con que se cobró el envío.
 - `POST /api/entregas/cotizacion/` ahora recibe `items: [{producto_id, sku, cantidad}]` (obligatorio con la API activa).
@@ -105,10 +107,10 @@ Probar: `python manage.py test apps.core.test_peso_envio apps.core.test_delivery
 
 ## Medidas por producto (patch 0006)
 
-Chilexpress puede cobrar por volumen, así que cada producto puede traer las medidas de su paquete ya embalado (bolsa, sobre o caja):
+El transportista puede cobrar por volumen, así que cada producto puede traer las medidas de su paquete ya embalado (bolsa, sobre o caja):
 
 - **Producto:** campos `alto_cm`, `ancho_cm`, `largo_cm` (una unidad). Van las tres o ninguna.
 - **Variantes:** una variante puede tener su propio peso y/o medidas (p. ej. shampoo de 250 ml y de 2 L); si los tiene reemplazan a los del producto, y si no, rigen los del producto. Las medidas de la variante también van las tres o ninguna.
-- **Sin medidas:** todos los productos del pedido sin medidas se agrupan en **una sola caja de la tienda** (Entregas → «Peso, caja y margen»), sin importar cuántas unidades sean.
-- **Pedido con varios productos:** se suma el volumen de cada producto por su cantidad y se cotiza una caja equivalente: largo y ancho son los mayores de los productos y el alto se calcula para igualar el volumen (los productos se asumen apilados). Es una aproximación; el margen cubre la diferencia.
-- La caja y el volumen quedan firmados en la cotización: si cambian los productos al pagar, se pide cotizar de nuevo. La guía usa la misma caja.
+- **Sin medidas:** todos los productos del pedido sin medidas se agrupan en **un solo paquete de la tienda** (Entregas → «Peso, paquete y margen»), sin importar cuántas unidades sean.
+- **Pedido con varios productos:** se suma el volumen de cada producto por su cantidad y se cotiza un paquete equivalente: largo y ancho son los mayores de los productos y el alto se calcula para igualar el volumen (los productos se asumen apilados). Es una aproximación; el margen cubre la diferencia.
+- El paquete y el volumen quedan firmados en la cotización: si cambian los productos al pagar, se pide cotizar de nuevo. La guía usa el mismo paquete.
