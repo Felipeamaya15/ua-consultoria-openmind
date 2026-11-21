@@ -13,8 +13,8 @@ export default function Cart() {
   const {
     items,
     activities,
-    removeItem,
-    updateQuantity,
+    removeItem: deleteItem,
+    updateQuantity: setQuantity,
     subtotal,
     discount,
     promoCode,
@@ -30,6 +30,17 @@ export default function Cart() {
 
   const { route, isMinimal, isVisual, isCatalog } = useStorefrontTemplate();
   const navigate = useNavigate();
+
+  const removeItem = (productId: string, variantId: string) => {
+    const item = items.find(row => row.productId === productId && row.variantId === variantId);
+    if (item && window.confirm(`¿Eliminar ${item.name} del carrito?`)) {
+      return deleteItem(productId, variantId);
+    }
+  };
+  const updateQuantity = (productId: string, variantId: string, quantity: number) => {
+    if (quantity <= 0) return removeItem(productId, variantId);
+    return setQuantity(productId, variantId, quantity);
+  };
 
   const [promoInput, setPromoInput] = useState('');
   const [promoError, setPromoError] = useState('');

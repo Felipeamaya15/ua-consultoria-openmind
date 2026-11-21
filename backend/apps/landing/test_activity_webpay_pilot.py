@@ -56,7 +56,7 @@ class WebpayActivityTests(TestCase):
         order=self.fixture();raw=self.approved(order);raw['status']='INITIALIZED'
         ReservaActividadPagada.objects.filter(clave_checkout=order.clave_checkout).update(vence=timezone.now()-timedelta(minutes=1))
         with patch('apps.landing.webpay_activity_orders.adapter_for') as adapter,patch('apps.landing.webpay_activity_orders.status_raw',return_value=raw):
-            self.assertEqual(process_order(order.pk)[0],'espera');adapter.return_value.confirmar_transaccion.assert_not_called()
+            self.assertEqual(process_order(order.pk)[0],'indeterminado');adapter.return_value.confirmar_transaccion.assert_not_called()
         self.assertEqual(availability(self.store,self.section)['cupos_disponibles'],1)
     def test_no_token_expired_releases(self):
         order=self.fixture();order.webpay_token='';order.webpay_url='';order.save(update_fields=['webpay_token','webpay_url'])

@@ -5,7 +5,7 @@ from uuid import UUID
 
 from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.test import TestCase, override_settings
+from django.test import TransactionTestCase, override_settings
 from PIL import Image
 from rest_framework.test import APIClient
 
@@ -16,7 +16,7 @@ from apps.landing.models import (
 )
 
 
-class CarruselLandingTests(TestCase):
+class CarruselLandingTests(TransactionTestCase):
     url = '/api/landing/carrusel/'
 
     def setUp(self):
@@ -140,7 +140,9 @@ class CarruselLandingTests(TestCase):
         added = self.client.post(self.url, {'recurso_id': resource_id}, format='json')
         self.assertEqual(added.status_code, 201, added.data)
         self.assertEqual(added.data['data']['tipo'], 'video')
-        self.assertEqual(public.get(file_url).status_code, 200)
+        playback = public.get(file_url)
+        self.addCleanup(playback.close)
+        self.assertEqual(playback.status_code, 200)
         pk = added.data['data']['id']
         self.assertEqual(self.client.patch(self.url + pk + '/', {'contenido': {'titulo': 'Video propio'}}, format='json').status_code, 200)
         resource = RecursoMultimedia.objects.get(pk=resource_id)
@@ -284,10 +286,9 @@ class CarruselLandingTests(TestCase):
 
         self.assertTrue(storage.exists(filename))
 
-        with self.captureOnCommitCallbacks(execute=True):
-            response = self.client.delete(
-                self.url + str(imagen_id) + '/'
-            )
+        response = self.client.delete(
+            self.url + str(imagen_id) + '/'
+        )
 
         self.assertEqual(
             response.status_code,

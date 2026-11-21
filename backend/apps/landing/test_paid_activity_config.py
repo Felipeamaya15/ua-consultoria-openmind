@@ -6,7 +6,8 @@ from apps.landing.activities import ActivityConfigSerializer, paid_activity_deta
 
 class PaidActivityConfigTests(SimpleTestCase):
     def section(self):
-        serializer = ActivityConfigSerializer(data={'tipo': 'taller', 'zona_horaria': 'America/Santiago', 'cupos': 5, 'venta': {}})
+        cover = '/media/landing/blocks/1/00000000-0000-0000-0000-000000000001/' + 'a' * 64 + '.png'
+        serializer = ActivityConfigSerializer(data={'tipo': 'taller', 'portada': cover, 'zona_horaria': 'America/Santiago', 'cupos': 5, 'venta': {}})
         self.assertTrue(serializer.is_valid(), serializer.errors)
         return {'tipo': 'personalizada', 'visible': True, 'titulo': 'Taller', 'actividad': serializer.validated_data,
                 'componentes': [{'tipo':'precio','visible':True,'importe':'25000'},

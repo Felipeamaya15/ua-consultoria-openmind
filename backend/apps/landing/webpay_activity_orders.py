@@ -126,6 +126,9 @@ def validate_identity(order,result):
 
 def notify(order, approved):
     from apps.core.infrastructure.notificaciones_pedido import notificar_cambio_de_estado
+    if approved:
+        from apps.landing.activity_owner_notifications import programar_aviso_inscripcion
+        programar_aviso_inscripcion(order.pk)
     if meta(order).get('ambiente')=='PRODUCCION':
         transaction.on_commit(lambda: notificar_cambio_de_estado(order,'pendiente'))
 
@@ -144,7 +147,8 @@ def approve_locked(order, rows, result):
     safe['monto']=int(order.monto_total)
     ReservaActividadPagada.objects.filter(pk__in=[r.pk for r in rows]).update(estado='confirmada')
     order.estado='pagado'; set_meta(order,aprobacion=safe,confirmado_en=timezone.now().isoformat(),
-        actividad_iniciada=any(timezone.now()>=r.inicio for r in rows))
+        actividad_iniciada=any(timezone.now()>=r.inicio for r in rows),revision_pendiente=False,
+        confirmacion_incierta=False)
     order.save(update_fields=['estado','entrega'])
     notify(order,True)
     return safe
@@ -158,9 +162,20 @@ def cancel_locked(order,rows,reason):
         order.save(update_fields=['entrega'])
         return 'indeterminado'
     ReservaActividadPagada.objects.filter(pk__in=[r.pk for r in rows]).update(estado='liberada')
-    order.estado='cancelado';set_meta(order,motivo=reason,cancelado_en=timezone.now().isoformat())
+    order.estado='cancelado';set_meta(order,motivo=reason,cancelado_en=timezone.now().isoformat(),
+        revision_pendiente=False,confirmacion_incierta=False)
     order.save(update_fields=['estado','entrega']);notify(order,False)
     return 'cancelado'
+
+
+def review_locked(order, status, reason='resultado_no_concluyente'):
+    # Keep en_pago: availability counts these seats even after their deadline.
+    # Elapsed time is not evidence that a started payment failed, in any environment.
+    set_meta(order, revision_en=timezone.now().isoformat(),
+             ultimo_estado=str(status or 'desconocido'), revision_pendiente=True,
+             motivo_revision=reason)
+    order.save(update_fields=['entrega'])
+    return 'indeterminado', None
 
 
 @transaction.atomic
@@ -184,9 +199,13 @@ def process_order(order_id, *, callback_token=None, consult=True):
         if last:
             from django.utils.dateparse import parse_datetime
             previous=parse_datetime(last)
-            if previous and timezone.now()-previous<timedelta(minutes=3): return 'espera',None
-    adapter=adapter_for(order)
-    raw=status_raw(adapter,order.webpay_token)
+            if previous and timezone.now()-previous<timedelta(minutes=3):
+                return ('indeterminado' if meta(order).get('revision_pendiente') else 'espera'),None
+    try:
+        adapter=adapter_for(order)
+        raw=status_raw(adapter,order.webpay_token)
+    except TransbankTransaccionException:
+        return review_locked(order, None, 'consulta_no_verificada')
     result=normalize_status(raw);validate_identity(order,result)
     status=result['estado']
     if status=='AUTHORIZED' and raw.get('response_code')==0:
@@ -194,12 +213,19 @@ def process_order(order_id, *, callback_token=None, consult=True):
     if status in ('FAILED','REVERSED','NULLIFIED'):
         return cancel_locked(order,rows,status),None
     if status=='INITIALIZED' and callback_token:
-        if any(timezone.now()>=r.inicio for r in rows): return 'espera',None
-        approved=adapter.confirmar_transaccion(token_ws=order.webpay_token)
+        if meta(order).get('confirmacion_incierta'):
+            return review_locked(order,status,'confirmacion_no_verificada')
+        if any(timezone.now()>=r.inicio for r in rows):
+            return review_locked(order,status,'actividad_iniciada_sin_autorizacion')
+        try:
+            approved=adapter.confirmar_transaccion(token_ws=order.webpay_token)
+        except (TransbankTransaccionException, TransbankRechazoException):
+            # A failed commit response does not prove a terminal provider state.
+            # Reconcile via GET before deciding whether seats may be released.
+            set_meta(order,confirmacion_incierta=True)
+            return review_locked(order,status,'confirmacion_no_verificada')
         return 'pagado',approve_locked(order,rows,approved)
-    set_meta(order,revision_en=timezone.now().isoformat(),ultimo_estado=str(status or 'desconocido'))
-    order.save(update_fields=['entrega'])
-    return 'espera',None
+    return review_locked(order,status)
 
 
 def confirm_if_activity(store_id,token):

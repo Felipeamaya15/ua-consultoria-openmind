@@ -6,6 +6,7 @@ from datetime import timedelta
 from decimal import Decimal
 from io import StringIO
 from pathlib import Path
+from unittest import skipIf
 from unittest.mock import MagicMock, patch
 
 from django.contrib.auth import get_user_model
@@ -375,6 +376,7 @@ class ComandoExpiradorTests(BaseConciliacion):
         with self.assertRaises(CommandError):
             self.ejecutar('--lote', '0')
 
+    @skipIf(os.name == 'nt', 'SIGTERM con os.kill termina el runner en Windows; requiere POSIX')
     def test_el_servicio_repite_las_pasadas_late_y_se_detiene_con_sigterm(self):
         from apps.core.management.commands.expirar_pedidos_pendientes import Command
 
@@ -396,6 +398,7 @@ class ComandoExpiradorTests(BaseConciliacion):
         self.assertTrue(latido.exists())
         self.assertIn('detenido', salida)
 
+    @skipIf(os.name == 'nt', 'SIGTERM con os.kill termina el runner en Windows; requiere POSIX')
     def test_el_servicio_sobrevive_a_una_pasada_fallida_y_no_late_con_ella(self):
         from apps.core.management.commands.expirar_pedidos_pendientes import Command
 

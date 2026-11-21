@@ -6,7 +6,7 @@ const vm = require('node:vm');
 const ts = require('typescript');
 
 function harness(replies, gateway = 'mercadopago') {
-  const states = [], refs = [], effects = [], storage = new Map();
+  const states = [], refs = [], effects = [], storage = new Map(), purchases = [];
   let stateIndex, refIndex, calls = 0;
   const jsx = (type, props) => ({type, props});
   const module = {exports: {}};
@@ -29,17 +29,19 @@ function harness(replies, gateway = 'mercadopago') {
       if (name.includes('useStorefrontTemplate')) return {useStorefrontTemplate: () => ({route: p => '/' + p})};
       if (name.includes('mercadoPagoPaymentService')) return {mercadoPagoPaymentService: {confirmarPago: service}};
       if (name.includes('paypalPaymentService')) return {paypalPaymentService: {capturarPago: service}};
+      if (name.includes('metaPurchaseTracking')) return {trackConfirmedMetaPurchase: (...args) => purchases.push(args)};
       throw Error(name);
     },
   });
   function render() {stateIndex = refIndex = 0; return module.exports.default({gateway, orderNumber: 'ORDER', tiendaId: 2, reference: 'REF'});}
-  return {render, calls: () => calls, storage, async flush() {for (const effect of effects.splice(0)) effect(); await new Promise(resolve => setImmediate(resolve));}};
+  return {render, calls: () => calls, storage, purchases, async flush() {for (const effect of effects.splice(0)) effect(); await new Promise(resolve => setImmediate(resolve));}};
 }
 function nodes(tree) {return !tree ? [] : Array.isArray(tree) ? tree.flatMap(nodes) : typeof tree === 'object' ? [tree, ...nodes(tree.props?.children)] : [tree];}
 
 for (const gateway of ['mercadopago', 'paypal']) test(`${gateway}: un error permite verificar el mismo pago sin volver al checkout`, async () => {
   const h = harness([new Error('network'), {exito: true, data: {}}], gateway);
   h.render(); await h.flush();
+  assert.equal(h.purchases.length, 0, 'Un error de verificación no es una compra');
   const tree = nodes(h.render());
   assert.equal(tree.filter(n => n?.props?.to === '/compra').length, 0);
   const button = tree.find(n => n?.type === 'Button' && n.props.children === 'Volver a verificar el pago');
@@ -48,15 +50,18 @@ for (const gateway of ['mercadopago', 'paypal']) test(`${gateway}: un error perm
   assert.equal(h.calls(), 2);
   assert.ok(nodes(h.render()).some(n => typeof n === 'string' && n.includes('Pago aprobado')));
   assert.ok(h.storage.has(`${gateway}-result:2:ORDER:REF`));
+  assert.equal(h.purchases.length, 1);
 });
 
 test('Mercado Pago: un pago pendiente puede pasar a aprobado al verificar', async () => {
   const h = harness([{exito: false, error: {codigo: 'PAGO_PENDIENTE'}}, {exito: true}]);
   h.render(); await h.flush();
+  assert.equal(h.purchases.length, 0, 'Un pago pendiente no registra Purchase');
   const tree = nodes(h.render());
   assert.ok(tree.some(n => typeof n === 'string' && n.includes('No repitas el pago')));
   tree.find(n => n?.type === 'Button').props.onClick();
   h.render(); await h.flush();
   assert.equal(h.calls(), 2);
   assert.ok(nodes(h.render()).some(n => typeof n === 'string' && n.includes('Pago aprobado')));
+  assert.equal(h.purchases.length, 1);
 });

@@ -14,9 +14,10 @@ function ActivityRow({item}:{item:ActivityCartItem}){
     return()=>{active=false;current?.abort();window.clearInterval(timer);window.removeEventListener('focus',refresh);};
   },[item.sectionId]);
   const valid=!!quote&&canSelectPaidQuote(quote,item.quantity,item.version);
+  const requestRemoval=()=>{if(window.confirm(`¿Eliminar ${item.title} del carrito?`))remove(item.sectionId);};
   async function update(delta:number){
     if(busy)return;
-    if(delta<0){reduce(item.sectionId);return;}
+    if(delta<0){if(item.quantity===1)requestRemoval();else reduce(item.sectionId);return;}
     const qty=item.quantity+delta;if(qty<1)return;
     setBusy(true);setError('');
     try{const fresh=await fetchPaidQuote(item.sectionId);setQuote(fresh);if(!canSelectPaidQuote(fresh,qty,item.version))throw new Error('Cupos, precio o condiciones cambiaron. Vuelve a seleccionar la actividad.');put(item.sectionId,fresh,qty,item.version);}
@@ -26,7 +27,7 @@ function ActivityRow({item}:{item:ActivityCartItem}){
     <header className="paid-cart-head">
       <div className="paid-cart-symbol" aria-hidden="true"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M7 3v4m10-4v4M3 10h18m-13 5h3m3 0h3"/></svg></div>
       <div className="paid-cart-title"><span className="paid-cart-kind">{quote?.tipo==='servicio'?'Servicio':quote?.tipo==='taller'?'Taller':'Actividad'} · Sin despacho</span><strong>{item.title}</strong><p>{formatActivityDate(item.start,item.zone)}</p></div>
-      <button className="paid-cart-remove" type="button" disabled={busy} aria-label={`Eliminar ${item.title} del carrito`} onClick={()=>remove(item.sectionId)}>Eliminar</button>
+      <button className="paid-cart-remove" type="button" disabled={busy} aria-label={`Eliminar ${item.title} del carrito`} onClick={requestRemoval}>Eliminar</button>
     </header>
     <p className="paid-cart-status" role="status">{error||(!quote?'Verificando disponibilidad…':quote.version!==item.version?'Las condiciones cambiaron. Elimina y vuelve a seleccionar la actividad.':!valid?`${paidStatusLabel[quote.estado]} · ${quote.cupos_disponibles} cupos. Revisa tu selección.`:`${quote.cupos_disponibles} cupos disponibles · Se confirman al finalizar la compra`)}</p>
     <div className="paid-cart-bottom">

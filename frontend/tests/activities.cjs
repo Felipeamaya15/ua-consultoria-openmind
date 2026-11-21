@@ -83,4 +83,9 @@ test('actual public form preserves data on failure, reuses idempotency on retry 
   tree=render();tree.find(node=>node.props?.label==='Tu consulta').props.onChange({target:{value:'Consulta corregida'}});
   fail=false;await submit();assert.notEqual(calls[2].data.solicitud_id,calls[1].data.solicitud_id);assert.equal(calls[2].data.mensaje,'Consulta corregida');
   tree=render();assert(tree.some(node=>node.props?.role==='status'));assert(!tree.some(node=>node.type==='form'));
+  tree.find(node=>node.type==='button').props.onClick();
+  tree=render();assert(tree.some(node=>node.type==='form'),'Reabrir permite realizar otra consulta');
+  for(const [label,value] of [['Nombre','Ana'],['Correo electrónico','ana@example.test'],['Tu consulta','Segunda consulta distinta']]){tree=render();tree.find(node=>node.props?.label===label).props.onChange({target:{value}});}
+  tree=render();tree.find(node=>node.props?.type==='checkbox').props.onChange({target:{checked:true}});
+  await submit();assert.equal(calls.length,4);assert.notEqual(calls[3].data.solicitud_id,calls[2].data.solicitud_id);
 });

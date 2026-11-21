@@ -5,7 +5,7 @@ const stored = new Map();
 const storage = {getItem: key => stored.get(key) ?? null, setItem: (key, value) => stored.set(key, value)};
 function load(file, requireMock) {
   const module = {exports: {}};
-  vm.runInNewContext(ts.transpileModule(fs.readFileSync(path.join(root, file), 'utf8'),
+  vm.runInNewContext(ts.transpileModule(fs.readFileSync(path.join(root, file), 'utf8').replaceAll('import.meta.env.VITE_API_URL', 'undefined'),
     {compilerOptions: {module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020, jsx: ts.JsxEmit.ReactJSX}}).outputText,
     {module, exports: module.exports, require: requireMock, localStorage: storage, sessionStorage: {getItem: () => null}, console});
   return module.exports;
@@ -27,13 +27,15 @@ const Provider = load('src/features/storefront/context/CartContext.tsx', name =>
       return [states[i], value => {states[i] = typeof value === 'function' ? value(states[i]) : value; dirty = true;}];},
     useEffect(fn, deps) {const i = cursor++; if (!slots[i] || deps.some((d, j) => d !== slots[i][j])) {slots[i] = deps; effects.push(fn);}}};
   if (name.includes('StoreIdentityContext')) return {useStoreIdentity: () => ({identity})};
-  if (name.includes('activityCart')) return {useActivityCart: () => ({items: [], clear() {}})};
+  if (name.includes('activityCart')) return {useActivityCart: () => ({items: [], clear: async () => {}})};
   if (name.includes('cartSession')) return {useCartSession: () => ({token: null, scope: 'guest-v2'}), currentCartToken: () => null};
   if (name.includes('catalogService')) return {fetchPublicProducts: async () => [{id: item.productId}]};
   if (name.includes('guestCartStorage')) return persistence;
   if (name.includes('visual/pages')) return {isActiveEditorPreview: () => preview};
   if (name.includes('promotionService')) return {validatePromotion: async () => {throw Error('No promo validation expected');}};
   if (name.includes('cartService')) return {cartService: {obtenerCarrito() {throw Error('Guest/preview must not query real cart');}}};
+  if (name.includes('useStorefrontTemplate')) return {useStorefrontTemplate: () => ({route: value => value})};
+  if (name.includes('metaPixelService')) return {trackMetaPixelEvent() {}};
   throw Error(name);
 }).CartProvider;
 function render() {cursor = 0; const scoped = Provider({children: null}); return scoped.type(scoped.props).props.value;}

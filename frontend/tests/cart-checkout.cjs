@@ -86,6 +86,8 @@ const result = {id_pedido: 42, identificador: 'PEDIDO-BACKEND-42', tienda_id: 9,
     useMemo: callback => callback(), useEffect(callback) {if (recordEffects) effects.push(callback);},
   };
   const requireMock = name => {
+    if (name.includes('metaPixelService')) return {trackMetaPixelEvent() {}};
+    if (name.includes('ActivityCartPreview')) return {ActivityCartRows: 'ActivityCartRows'};
       if (name.endsWith('.css')) return {};
       if (name.includes('paidActivityService')) return {formatActivityDate:()=>''};
       if (name.includes('activityPurchaseMode')) return {useActivityCheckoutOptions:()=>({mode:'disabled',methods:[]})};
@@ -255,8 +257,10 @@ const result = {id_pedido: 42, identificador: 'PEDIDO-BACKEND-42', tienda_id: 9,
   const Provider = load('src/features/storefront/context/CartContext.tsx', {
     localStorage: {getItem: () => 'buyer-token'}, sessionStorage: {getItem: () => null},
     require: name => {
+      if (name.includes('useStorefrontTemplate')) return {useStorefrontTemplate: () => ({route: value => value})};
+      if (name.includes('metaPixelService')) return {trackMetaPixelEvent() {}};
       if (name.includes('StoreIdentityContext')) return {useStoreIdentity: () => ({identity: null})};
-      if (name.includes('activityCart')) return {useActivityCart:()=>({items:[],clear(){}})};
+      if (name.includes('activityCart')) return {useActivityCart:()=>({items:[],clear:async()=>{}})};
       if (name.includes('cartSession')) return {useCartSession:()=>({token:'buyer-token',scope:'test-account'}),currentCartToken:()=> 'buyer-token'};
       if (name.includes('catalogService')) return {fetchPublicProducts:async()=>[]};
       if (name.includes('guestCartStorage')) return {guestCartKey: () => null};

@@ -1,5 +1,8 @@
 import copy
+import base64
 import uuid
+from io import BytesIO
+from PIL import Image
 from concurrent.futures import ThreadPoolExecutor
 from datetime import timedelta
 from threading import Barrier
@@ -21,11 +24,14 @@ def element(kind, **values):
 
 def activity_block(kind='taller', **config):
     day = (timezone.now() + timedelta(days=30)).date().isoformat()
+    cover = BytesIO()
+    Image.new('RGB', (8, 8), 'white').save(cover, format='PNG')
     return {'id': str(uuid.uuid4()), 'tipo': 'personalizada', 'visible': True, 'titulo': '', 'subtitulo': '',
         'texto': '', 'imagenes': [], 'nombre_interno': 'Solo para el panel',
         'actividad': {'tipo': kind, 'estado': 'activa', 'categoria': 'Plantas', 'zona_horaria': 'UTC',
             'plataforma': 'Meet', 'enlace_reunion': 'https://meet.google.com/abc-defg-hij',
-            'gratuito': True, 'inscripciones': kind == 'taller', 'cupos': 2, 'confirmacion': 'manual', **config},
+            'gratuito': True, 'inscripciones': kind == 'taller', 'cupos': 2, 'confirmacion': 'manual',
+            'portada': 'data:image/png;base64,' + base64.b64encode(cover.getvalue()).decode(), **config},
         'componentes': [element('titulo', texto='Cuidado de plantas'), element('texto', texto='Contenido público'),
             element('fecha', fecha=day), element('horario', inicio='19:00', termino='20:00'),
             element('modalidad', modalidad='online'), element('consulta', etiqueta='Consultar'), element('inscripcion', etiqueta='Inscribirme')]}
@@ -126,6 +132,21 @@ class ActivityTests(TestCase):
         self.assertEqual(SolicitudActividad.objects.count(), 1)
         self.assertEqual(SolicitudActividad.objects.get().email, 'ana@example.test')
         self.assertEqual(self.submit(data={**data, 'mensaje': 'Otra consulta'}).status_code, 400)
+
+    def test_customer_can_make_different_consultations_without_enrolling(self):
+        service = activity_block('servicio')
+        self.payload['contenido']['bloques'].append(service)
+        self.assertEqual(self.save().status_code, 200)
+        for index, (section, message) in enumerate(((self.block['id'], 'Materiales del taller'),
+                                 (self.block['id'], 'Horario del taller'),
+                                 (service['id'], 'Disponibilidad del servicio'))):
+            data = submission(mensaje=message)
+            self.assertEqual(self.submit(data=data, block=section).status_code, 202)
+            if index == 0:
+                self.assertEqual(self.submit(data=data, block=section).status_code, 202)
+        self.assertEqual(SolicitudActividad.objects.filter(tipo='consulta').count(), 3)
+        self.assertFalse(SolicitudActividad.objects.filter(tipo='inscripcion').exists())
+        self.assertEqual(self.management(tipo='consulta').data['data']['total'], 3)
 
     def test_enrollment_duplicate_and_capacity_pending_reservation(self):
         for email in ['a@example.test', 'a@example.test', 'b@example.test']:

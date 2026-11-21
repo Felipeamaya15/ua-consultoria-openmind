@@ -6,7 +6,7 @@ from uuid import uuid4
 
 from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.test import TestCase, override_settings
+from django.test import TransactionTestCase, override_settings
 from PIL import Image
 from rest_framework.test import APIClient
 
@@ -16,7 +16,7 @@ from apps.landing.media_library import available_media, store_media_image
 from apps.landing.models import ArchivoMultimedia, ConfiguracionLanding, RecursoMultimedia
 
 
-class MediaLibraryTests(TestCase):
+class MediaLibraryTests(TransactionTestCase):
     url = '/api/landing/biblioteca/'
 
     def setUp(self):
@@ -174,7 +174,9 @@ class MediaLibraryTests(TestCase):
             self.assertEqual(row['archivo']['ancho'], 64)
             self.assertEqual(self.client.get(self.url).data['data']['resultados'][0]['id'], row['id'])
             endpoint = self.url + row['id'] + '/imagen/'
-            self.assertEqual(self.client.get(endpoint)['Content-Type'], 'video/' + kind)
+            playback = self.client.get(endpoint)
+            self.addCleanup(playback.close)
+            self.assertEqual(playback['Content-Type'], 'video/' + kind)
             self.assertIn(APIClient().get(endpoint).status_code, (401, 403))
         self.assertEqual(ArchivoMultimedia.objects.count(), 2)
 

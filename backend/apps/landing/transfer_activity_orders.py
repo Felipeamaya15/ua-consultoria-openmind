@@ -172,6 +172,9 @@ def change_transfer(store,order_id,reservation_id,actor,action,reason='',referen
         from apps.core.infrastructure.notificaciones_pedido import notificar_cambio_de_estado, notificar_pago_rechazado
         if expected=='pagado': transaction.on_commit(lambda: notificar_cambio_de_estado(order,'pendiente'))
         else: transaction.on_commit(lambda: notificar_pago_rechazado(order))
+        if expected=='pagado':
+            from apps.landing.activity_owner_notifications import programar_aviso_inscripcion
+            programar_aviso_inscripcion(order.pk)
         return order,row
     current=records(order); key=str(row.pk); old=current.get(key) or {}
     if action=='registrar_devolucion' and any(v.get('estado') in ('reembolso_en_revision','reembolso_externo_revision') for v in current.values()):

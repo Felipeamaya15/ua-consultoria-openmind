@@ -150,6 +150,8 @@ def approve_locked(order, reference, currency, amount):
     save_meta(order, referencia_pago=str(reference), moneda=currency, monto=str(amount), confirmado_en=timezone.now().isoformat(), actividad_iniciada=any(timezone.now()>=r.inicio for r in rows))
     order.estado = 'pagado'
     order.save(update_fields=['estado'])
+    from apps.landing.activity_owner_notifications import programar_aviso_inscripcion
+    programar_aviso_inscripcion(order.pk)
     if meta(order).get('ambiente') not in ('SANDBOX','INTEGRACION'):
         from apps.core.infrastructure.notificaciones_pedido import notificar_cambio_de_estado
         transaction.on_commit(lambda: notificar_cambio_de_estado(order, 'pendiente'))

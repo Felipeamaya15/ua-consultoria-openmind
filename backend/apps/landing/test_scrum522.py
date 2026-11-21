@@ -8,6 +8,7 @@ from email import message_from_bytes
 from io import BytesIO
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from threading import Thread
+from unittest import skipUnless
 from unittest.mock import patch
 from urllib.parse import parse_qs, urlsplit
 
@@ -17,7 +18,7 @@ from PIL import Image
 from django.contrib.auth import get_user_model
 from django.core import mail, signing
 from django.core.management import call_command
-from django.test import TestCase, TransactionTestCase, override_settings
+from django.test import TestCase, TransactionTestCase, override_settings, tag
 from django.utils import timezone
 from rest_framework.test import APIClient
 
@@ -511,6 +512,11 @@ class CampaignMigrationTests(TransactionTestCase):
 @override_settings(EMAIL_BACKEND='django.core.mail.backends.smtp.EmailBackend', EMAIL_HOST='mailpit',
     EMAIL_PORT=1025, EMAIL_HOST_USER='', EMAIL_HOST_PASSWORD='', EMAIL_USE_TLS=False, EMAIL_USE_SSL=False,
     DEFAULT_FROM_EMAIL='QA OpenMind <qa@openmind.test>', STORE_MAIL_EXTERNAL_ENABLED=False)
+@tag('mailpit')
+@skipUnless(
+    os.environ.get('RUN_MAILPIT_INTEGRATION') == '1',
+    'Requiere Mailpit SMTP y API accesibles'
+)
 class MailpitCaptureTests(TestCase):
     def test_real_smtp_campaign_and_reply_are_captured_without_duplicates(self):
         """SMTP + API Django + PostgreSQL + API HTTP Mailpit. No se borra el buzón."""
