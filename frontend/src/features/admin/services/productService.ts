@@ -9,6 +9,7 @@ export type AdminProduct = Product & {
   revision?: string;
   generalAttributes?: CatalogAttribute[];
   attributeLabels?: Record<string, string>;
+  weightKg?: number | null;
 };
 
 function toBackendPayload(product: AdminProduct) {
@@ -19,6 +20,7 @@ function toBackendPayload(product: AdminProduct) {
     activo: product.status === "active",
     imagenes: product.images,
     video_recurso_id: product.videoResourceId ?? null,
+    peso_kg: product.weightKg ?? null,
     atributos_generales: product.generalAttributes ?? [],
     variantes: product.variants.map((variant) => {
       const hasOffer =
@@ -128,6 +130,7 @@ function adaptAdminProduct(item: any): AdminProduct {
     category: item.categoria,
     images: item.imagenes ?? [],
     videoResourceId: item.video_recurso_id ?? null,
+    weightKg: typeof item.peso_kg === 'number' && Number.isFinite(item.peso_kg) ? item.peso_kg : null,
     variants,
     attributes,
     attributeLabels: labels,

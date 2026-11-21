@@ -476,7 +476,7 @@ export default function Checkout() {
   const deliveryReady = onlyActivities || (!shippingLoading && !shippingError && !!selectedShippingOption
     && (shippingMethod === 'Retiro' ? true : (!!selectedQuote && !quoteLoading && !quoteError)));
 
-
+  const cartSignature = JSON.stringify(items.map(item => [item.productId, item.sku, item.quantity]));
   const quoteNeedsOtherOption = ['sin_tarifa', 'no_disponible', 'destino'].includes(quoteErrorKind);
   const quoteUnavailable = ['sin_tarifa', 'no_disponible'].includes(quoteErrorKind);
   const otherShippingOptions = shippingOptions.filter(option => option.id !== shippingMethod);
@@ -490,7 +490,7 @@ export default function Checkout() {
     const controller = new AbortController();
     let expiry: ReturnType<typeof setTimeout>;
     setQuoteLoading(true);
-    getShippingQuotes(shippingMethod, address.region, address.city, controller.signal)
+    getShippingQuotes(shippingMethod, address.region, address.city, items, controller.signal)
       .then((quotes) => {
         if (controller.signal.aborted) return;
         const quote = quotes.find(item => item.operador === shippingMethod);
@@ -508,7 +508,7 @@ export default function Checkout() {
         setQuoteErrorKind((cause as {kind?: string} | null)?.kind ?? 'temporal');
       }).finally(() => { if (!controller.signal.aborted) setQuoteLoading(false); });
     return () => { controller.abort(); clearTimeout(expiry); };
-  }, [address.city, address.region, shippingMethod, selectedShippingOption, quoteAttempt, destinationKey]);
+  }, [address.city, address.region, shippingMethod, selectedShippingOption, quoteAttempt, destinationKey, cartSignature]);
 
   useEffect(() => {
     if (

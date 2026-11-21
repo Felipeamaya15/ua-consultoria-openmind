@@ -10,6 +10,9 @@ from rest_framework.views import APIView
 from apps.core.delivery import carrier_credentials, delivery_raw
 from apps.core.infrastructure.tenant import resolver_tienda
 from apps.core.models import Pedido
+from apps.core.peso_envio import (
+    PESO_MINIMO_KG, CarritoInvalido, calcular_carrito, package_settings, peso_default_de_tienda, peso_str,
+)
 from apps.core.presentation.responses import error_response, success_response
 from apps.shipping.application.use_cases import ConsultarSeguimientoUseCase
 from apps.shipping.domain.dtos import DireccionDespachoDTO, PaqueteDTO
@@ -28,7 +31,20 @@ from apps.shipping.infrastructure.chilexpress_envios import tipo_contenido_etiqu
 
 logger = logging.getLogger(__name__)
 
-CAJA_ALTO, CAJA_ANCHO, CAJA_LARGO = Decimal('15'), Decimal('20'), Decimal('30')
+
+def _peso_del_pedido(pedido, tienda, entrega, params):
+    cotizacion = entrega.get('cotizacion') if isinstance(entrega.get('cotizacion'), dict) else {}
+    peso = cotizacion.get('peso_kg')
+    if peso is not None and Decimal(str(peso)) > 0:
+        return Decimal(str(peso))
+    items = [{'producto_id': item.producto_mongo_id, 'sku': item.sku, 'cantidad': item.cantidad}
+             for item in pedido.itempedido_set.all() if item.producto_mongo_id]
+    try:
+        if items:
+            return calcular_carrito(tienda, items, params=params).peso_kg
+    except CarritoInvalido:
+        pass
+    return peso_default_de_tienda(params)
 
 
 def _pedido_de_la_tienda(request, id_pedido, *, bloquear=False):
@@ -80,8 +96,10 @@ class GuiaChilexpressAPIView(APIView):
         origen = DireccionDespachoDTO(calle=credenciales['origen_calle'], numero=credenciales['origen_numero'],
                                       comuna='', region='')
         valor = max(Decimal(pedido.monto_total) - Decimal(pedido.costo_envio or 0), Decimal('0'))
-        paquete = PaqueteDTO(peso_kg=Decimal(str(live._cfg('SHIPPING_DEFAULT_WEIGHT_KG', '1'))),
-                             alto_cm=CAJA_ALTO, ancho_cm=CAJA_ANCHO, largo_cm=CAJA_LARGO,
+        params = package_settings(delivery_raw(tienda))
+        peso = max(_peso_del_pedido(pedido, tienda, entrega, params), PESO_MINIMO_KG)
+        paquete = PaqueteDTO(peso_kg=peso, alto_cm=Decimal(str(params['alto_cm'])),
+                             ancho_cm=Decimal(str(params['ancho_cm'])), largo_cm=Decimal(str(params['largo_cm'])),
                              valor_declarado=valor.quantize(Decimal('1')))
         contacto = {'nombre': pedido.nombre_contacto or (pedido.contacto or {}).get('nombre', ''),
                     'telefono': pedido.telefono_contacto or (pedido.contacto or {}).get('telefono', ''),
@@ -119,6 +137,7 @@ class GuiaChilexpressAPIView(APIView):
             stored = delivery_raw(tienda).get('chilexpress')
             ambiente = (stored.get('ambiente') if isinstance(stored, dict) else None) or 'SANDBOX'
             detalle = {
+                'peso_kg': peso_str(paquetes[0].peso_kg),
                 'numero_ot': guia.numero_seguimiento, 'certificado': guia.certificado,
                 'codigo_barras': guia.codigo_barras, 'etiqueta': guia.etiqueta,
                 'tipo_etiqueta': guia.tipo_etiqueta, 'ambiente': ambiente,

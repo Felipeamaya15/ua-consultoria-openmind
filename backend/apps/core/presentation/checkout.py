@@ -149,7 +149,8 @@ class CheckoutOrderAPIView(ErroresDeCotizacionMixin, APIView):
                 delivery = delivery_for_store(tienda)
                 if not delivery[method]['enabled']:
                     raise ValidationError({'metodo_entrega': 'El método de entrega no está habilitado en esta tienda.'})
-                quote = (validate_quote(tienda, data['metodo_entrega'], data.get('direccion', {}), data.get('cotizacion'))
+                quote = (validate_quote(tienda, data['metodo_entrega'], data.get('direccion', {}), data.get('cotizacion'),
+                                        items=data['items'], repository=ProductRepository())
                          if method != 'pickup' else None)
 
 

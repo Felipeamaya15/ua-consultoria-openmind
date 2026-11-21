@@ -87,3 +87,18 @@ python manage.py test apps.shipping apps.core.test_shipping apps.core.test_shipp
 - La cotización y la guía usan peso/dimensiones por defecto (`SHIPPING_DEFAULT_*`) cuando no hay datos del producto.
 - El token de cotización firmado no se revalida contra la API al pagar; Chilexpress puede facturar una tarifa distinta (tarifas pactadas, descuentos).
 - El seguimiento público por número de OT no exige datos del pedido: quien conozca un número de OT de tu cuenta puede consultarlo.
+
+## Peso real, margen y envío a coordinar (patch 0005)
+
+Con la API de Chilexpress activa, la cotización se calcula con el **peso real del carrito**:
+
+- **Peso por producto:** campo `peso_kg` (kg por unidad) en el editor de productos. Es opcional.
+- **Peso por defecto:** Entregas → «Peso, caja y margen del envío». Se usa en los productos sin peso. Si no se define, rige `SHIPPING_DEFAULT_WEIGHT_KG` (1 kg). Conviene poner el peso del producto más pesado.
+- **Margen:** porcentaje y/o monto fijo que se suman a la tarifa de la API. No se aplican a las tarifas manuales por comuna ni se muestran al comprador.
+- **Envío a coordinar:** si el carrito supera el peso máximo (15 kg) o las unidades máximas (10), la cotización responde `ENVIO_A_COORDINAR` y el comprador debe elegir retiro u otra alternativa. Vacío = sin límite.
+- **Caja:** alto/ancho/largo configurables (15×20×30 cm por defecto), iguales para todos los pedidos. Chilexpress podría cobrar por volumen.
+- El peso queda firmado en la cotización; si el carrito cambia al pagar, se pide cotizar de nuevo.
+- La guía usa el mismo peso con que se cobró el envío.
+- `POST /api/entregas/cotizacion/` ahora recibe `items: [{producto_id, sku, cantidad}]` (obligatorio con la API activa).
+
+Probar: `python manage.py test apps.core.test_peso_envio apps.core.test_delivery apps.core.test_shipping apps.core.test_guia_chilexpress`

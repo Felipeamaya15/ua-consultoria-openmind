@@ -64,6 +64,7 @@ export interface AdminConfig extends StoreConfig {
     chilexpress: CarrierConnection;
     starken: CarrierConnection;
     pickup: import('../services/pickupConfiguration').PickupConfiguration;
+    paquete?: PackageConfiguration;
   };
 
   paymentConfiguration: Record<
@@ -83,4 +84,15 @@ export interface AdminConfig extends StoreConfig {
   };
 
   themeEditor: ThemeEditorConfiguration;
+}
+
+export interface PackageConfiguration {
+  peso_default_kg: number | null;
+  margen_porcentaje: number;
+  margen_fijo: number;
+  limite_peso_kg: number | null;
+  limite_unidades: number | null;
+  alto_cm: number;
+  ancho_cm: number;
+  largo_cm: number;
 }

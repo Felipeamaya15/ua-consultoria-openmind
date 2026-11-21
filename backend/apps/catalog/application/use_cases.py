@@ -909,6 +909,8 @@ class CreateProductUseCase:
             "variantes": data["variantes"],
             "seo": data.get("seo", {}),
         }
+        if data.get("peso_kg") is not None:
+            producto["peso_kg"] = data["peso_kg"]
 
         return self.repository.create(tienda_id, producto)
 

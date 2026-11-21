@@ -132,6 +132,7 @@ class ProductAdminDetailSerializer(ProductPublicDetailSerializer):
     activo = serializers.BooleanField()
     fecha_creacion = serializers.DateTimeField(required=False)
     variantes = serializers.ListField(child=serializers.DictField(), required=False)
+    peso_kg = serializers.FloatField(required=False, allow_null=True)
     revision = serializers.SerializerMethodField()
 
     def get_revision(self, product):
@@ -393,6 +394,7 @@ class ProductCreateSerializer(serializers.Serializer):
     )
     variantes = VarianteInputSerializer(many=True)
     seo = SeoInputSerializer(required=False)
+    peso_kg = serializers.FloatField(required=False, allow_null=True, min_value=0.01, max_value=1000)
 
     def validate_imagenes(self, value):
         existing_images = self.context.get("existing_images") or ()

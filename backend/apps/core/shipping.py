@@ -12,6 +12,9 @@ from apps.core.delivery import DELIVERY_METHODS, delivery_for_store
 from apps.shipping.domain.exceptions import (
     DireccionFueraDeCoberturaException, LogisticaException, TiempoEsperaLogisticoException,
 )
+from apps.core.peso_envio import (
+    MENSAJE_A_COORDINAR, CarritoInvalido, CarritoRequerido, EnvioACoordinar, calcular_carrito, mismo_peso,
+)
 from apps.shipping.infrastructure.live import live_quote
 
 logger = logging.getLogger(__name__)
@@ -55,7 +58,10 @@ def validate_destination(region, comuna):
     raise ValidationError({'comuna': 'Selecciona una comuna de la región elegida.'})
 
 
-def configured_quote(tienda, operador, region, comuna):
+CAMPOS_INTERNOS = ('monto_base', 'margen')
+
+
+def configured_quote(tienda, operador, region, comuna, items=None, repository=None):
     try:
         region = validate_destination(region, comuna)
     except ValidationError:
@@ -70,15 +76,20 @@ def configured_quote(tienda, operador, region, comuna):
                               'TRANSPORTISTA_NO_HABILITADO')
     live_error = None
     try:
-        live = live_quote(operador, region, comuna, tienda)
+        live = live_quote(operador, region, comuna, tienda, items=items, repository=repository, exigir_carrito=True)
+    except CarritoRequerido as exc:
+        raise ErrorCotizacion('items', str(exc), 'CARRITO_REQUERIDO') from None
+    except CarritoInvalido as exc:
+        raise ErrorCotizacion('items', str(exc), 'CARRITO_INVALIDO') from None
+    except EnvioACoordinar as exc:
+        raise ErrorCotizacion('cotizacion', str(exc) or MENSAJE_A_COORDINAR, 'ENVIO_A_COORDINAR') from None
     except DireccionFueraDeCoberturaException:
         live = None
     except LogisticaException as exc:
         live, live_error = None, exc
         logger.warning('Cotizacion en vivo fallida (%s, tienda=%s): %s', operador, tienda.pk, type(exc).__name__)
     if live is not None:
-        return {**live, 'monto': str(live['monto']), 'region': region, 'comuna': comuna,
-                'origen': 'api_transportista'}
+        return {**live, 'monto': str(live['monto']), 'region': region, 'comuna': comuna, 'origen': 'api_transportista'}
     rates = [rate for rate in carrier['tarifas'] if isinstance(rate, dict)
              and canonical_region(rate.get('region')) == region and rate.get('comuna') == comuna]
     if len(rates) != 1:
@@ -105,14 +116,15 @@ def configured_quote(tienda, operador, region, comuna):
             'region': region, 'comuna': comuna, 'origen': 'configuracion_tienda'}
 
 
-def issue_quote(tienda, operador, region, comuna):
-    quote = configured_quote(tienda, operador, region, comuna)
+def issue_quote(tienda, operador, region, comuna, items=None, repository=None):
+    quote = configured_quote(tienda, operador, region, comuna, items, repository)
     payload = {**quote, 'tienda': tienda.pk, 'vence_en': int(time()) + QUOTE_MAX_AGE}
-    return {**quote, 'vence_en': payload['vence_en'],
+    visible = {key: value for key, value in quote.items() if key not in CAMPOS_INTERNOS}
+    return {**visible, 'vence_en': payload['vence_en'],
             'cotizacion': signing.dumps(payload, salt=QUOTE_SALT, compress=True)}
 
 
-def validate_quote(tienda, operador, address, token):
+def validate_quote(tienda, operador, address, token, items=None, repository=None):
     vencida = ErrorCotizacion('cotizacion', 'La cotización venció. Vuelve a cotizar el envío.', 'COTIZACION_VENCIDA')
     invalida = ErrorCotizacion('cotizacion', 'La cotización es inválida o venció. Vuelve a cotizar el envío.',
                                'COTIZACION_INVALIDA')
@@ -126,7 +138,16 @@ def validate_quote(tienda, operador, address, token):
         raise invalida
     if signed.get('vence_en', 0) <= time():
         raise vencida
-    current = configured_quote(tienda, operador, address.get('region'), address.get('city'))
+    if signed.get('peso_kg') is not None:
+        cambio = ErrorCotizacion('cotizacion', 'Tu carrito cambió desde que cotizaste el envío. Vuelve a cotizar.',
+                                 'COTIZACION_INVALIDA')
+        try:
+            actual = calcular_carrito(tienda, items or [], repository=repository)
+        except CarritoInvalido:
+            raise cambio from None
+        if not mismo_peso(signed.get('peso_kg'), actual.peso_kg):
+            raise cambio
+    current = configured_quote(tienda, operador, address.get('region'), address.get('city'), items, repository)
     expected = {**current, 'tienda': tienda.pk}
     if any(signed.get(key) != value for key, value in expected.items()):
         raise ErrorCotizacion('cotizacion', 'La cotización cambió. Vuelve a cotizar el envío.', 'COTIZACION_CAMBIO')

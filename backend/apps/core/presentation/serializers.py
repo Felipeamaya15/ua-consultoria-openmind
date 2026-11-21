@@ -326,10 +326,22 @@ class ChilexpressConfigurationSerializer(CarrierConfigurationSerializer):
     status = serializers.ChoiceField(choices=['not_configured', 'configured'], required=False)
 
 
+class PackageConfigurationSerializer(StrictSerializer):
+    peso_default_kg = serializers.FloatField(min_value=0.01, max_value=1000, allow_null=True, required=False)
+    margen_porcentaje = serializers.FloatField(min_value=0, max_value=100, required=False)
+    margen_fijo = serializers.IntegerField(min_value=0, max_value=1000000, required=False)
+    limite_peso_kg = serializers.FloatField(min_value=0.1, max_value=1000, allow_null=True, required=False)
+    limite_unidades = serializers.IntegerField(min_value=1, max_value=100000, allow_null=True, required=False)
+    alto_cm = serializers.IntegerField(min_value=1, max_value=200, required=False)
+    ancho_cm = serializers.IntegerField(min_value=1, max_value=200, required=False)
+    largo_cm = serializers.IntegerField(min_value=1, max_value=200, required=False)
+
+
 class ShippingConfigurationSerializer(StrictSerializer):
     chilexpress = ChilexpressConfigurationSerializer()
     starken = CarrierConfigurationSerializer()
     pickup = PickupConfigurationSerializer()
+    paquete = PackageConfigurationSerializer(required=False)
 
 
 class ConfiguracionPagoSerializer(serializers.Serializer):

@@ -1,8 +1,11 @@
 """Contrato de entrega compartido por el panel, la consulta pública y checkout."""
+from decimal import Decimal
+
 from django.core.exceptions import ImproperlyConfigured
 
 from apps.core.infrastructure.encryption import cifrar, descifrar
 from apps.core.models import ConfiguracionEntrega
+from apps.core.peso_envio import PACKAGE_DEFAULTS, package_settings
 
 
 DELIVERY_METHODS = {'Chilexpress': 'chilexpress', 'Starken': 'starken', 'Retiro': 'pickup'}
@@ -55,6 +58,7 @@ def delivery_defaults():
                         'ambiente': 'SANDBOX', 'credenciales': {k: '' for k in CARRIER_CREDENTIALS['chilexpress']}},
         'starken': {'enabled': False, 'accountId': '', 'apiKey': '', 'status': 'not_configured', 'tarifas': []},
         'pickup': {'enabled': False, 'address': '', 'schedule': ''},
+        'paquete': dict(PACKAGE_DEFAULTS),
     }
 
 
@@ -64,6 +68,8 @@ def delivery_data(datos):
     if not isinstance(datos, dict):
         return result
     for method, defaults in result.items():
+        if method == 'paquete':
+            continue
         stored = datos.get(method)
         if not isinstance(stored, dict):
             continue
@@ -91,6 +97,8 @@ def delivery_data(datos):
                 {key: rate[key] for key in ('region', 'comuna', 'monto', 'plazo_dias') if key in rate}
                 for rate in stored['tarifas'] if isinstance(rate, dict)
             ]
+    result['paquete'] = {key: (float(value) if isinstance(value, Decimal) else value)
+                         for key, value in package_settings(datos).items()}
     return result
 
 
@@ -108,4 +116,5 @@ def delivery_for_store(tienda, *, public=True):
             data['pickup']['enabled'] = False
         if isinstance(data['pickup'].get('location'), dict):
             data['pickup']['location'].pop('verification', None)
+        data.pop('paquete', None)
     return data

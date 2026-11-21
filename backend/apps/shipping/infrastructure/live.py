@@ -50,18 +50,33 @@ def get_client(operador: str, tienda=None):
     return _chilexpress_client_for_store(tienda, common)
 
 
-def live_quote(operador: str, region: str, comuna: str, tienda=None) -> Optional[dict]:
+def live_quote(operador: str, region: str, comuna: str, tienda=None, items=None, repository=None,
+               exigir_carrito: bool = False) -> Optional[dict]:
     client = get_client(operador, tienda)
     if client is None:
         return None
-    package = {
-        'peso_kg': Decimal(str(_cfg('SHIPPING_DEFAULT_WEIGHT_KG', '1'))),
-        'alto_cm': Decimal('15'), 'ancho_cm': Decimal('20'), 'largo_cm': Decimal('30'),
-        'valor_declarado': Decimal(str(_cfg('SHIPPING_DEFAULT_DECLARED_VALUE', '20000'))),
-    }
+    from apps.core import peso_envio
+    params = peso_envio.package_settings_for_store(tienda) if tienda is not None else peso_envio.package_settings({})
+    carrito = None
+    if items:
+        carrito = peso_envio.calcular_carrito(tienda, items, repository=repository, params=params)
+        if carrito.a_coordinar:
+            raise peso_envio.EnvioACoordinar(peso_envio.MENSAJE_A_COORDINAR)
+        package = carrito.paquete()
+    elif exigir_carrito:
+        raise peso_envio.CarritoRequerido('Faltan los productos del carrito para calcular el envío.')
+    else:
+        package = peso_envio.paquete_sin_carrito(params)
     raw = client.cotizar(region, comuna, **package)
     try:
-        return procesar_respuesta_chilexpress(raw)
+        quote = procesar_respuesta_chilexpress(raw)
     except ValueError as exc:
         from apps.shipping.domain.exceptions import RespuestaLogisticaInvalidaException
         raise RespuestaLogisticaInvalidaException(str(exc)) from exc
+    base = int(quote['monto'])
+    total = peso_envio.aplicar_margen(base, params)
+    quote = {**quote, 'monto': total, 'monto_base': base, 'margen': total - base}
+    if carrito:
+        quote.update(peso_kg=peso_envio.peso_str(carrito.peso_kg), unidades=carrito.unidades,
+                     peso_estimado=carrito.usa_peso_default)
+    return quote

@@ -26,10 +26,22 @@ class ErroresDeCotizacionMixin:
         return super().handle_exception(exc)
 
 
+class ShippingQuoteItemSerializer(StrictSerializer):
+    producto_id = serializers.CharField(max_length=100)
+    sku = serializers.CharField(max_length=100)
+    cantidad = serializers.IntegerField(min_value=1, max_value=100000)
+
+    def to_internal_value(self, data):
+        if isinstance(data, dict) and type(data.get('cantidad')) is not int:
+            raise serializers.ValidationError({'cantidad': 'La cantidad debe ser un entero positivo.'})
+        return super().to_internal_value(data)
+
+
 class ShippingQuoteSerializer(StrictSerializer):
     operador = serializers.ChoiceField(choices=['Chilexpress', 'Starken'])
     region = serializers.CharField(max_length=100)
     comuna = serializers.CharField(max_length=100)
+    items = ShippingQuoteItemSerializer(many=True, required=False, max_length=100)
 
 
 class ShippingQuoteAPIView(ErroresDeCotizacionMixin, APIView):

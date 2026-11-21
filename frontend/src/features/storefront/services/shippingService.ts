@@ -29,6 +29,9 @@ const KIND_BY_CODE: Record<string, ShippingErrorKind> = {
   COTIZACION_VENCIDA: 'vencida',
   COTIZACION_INVALIDA: 'vencida',
   COTIZACION_CAMBIO: 'vencida',
+  ENVIO_A_COORDINAR: 'no_disponible',
+  CARRITO_REQUERIDO: 'temporal',
+  CARRITO_INVALIDO: 'temporal',
 };
 
 const isAbort = (error: unknown) => (error as {name?: string} | null)?.name === 'AbortError';
@@ -351,16 +354,20 @@ export async function searchPickupAddresses(region: string, comuna: string, quer
 
 export type ShippingQuote = {
   operador: string; monto: number; plazo_dias: number | null; moneda: 'CLP';
-  region: string; comuna: string; origen: 'configuracion_tienda'; cotizacion: string; vence_en: number;
+  region: string; comuna: string; origen: 'configuracion_tienda' | 'api_transportista'; cotizacion: string; vence_en: number;
+  peso_kg?: string; peso_estimado?: boolean;
 };
 
-export async function getShippingQuotes(operador: string, region: string, comuna: string, signal?: AbortSignal): Promise<ShippingQuote[]> {
+export type ShippingQuoteItem = { productId: string; sku: string; quantity: number };
+
+export async function getShippingQuotes(operador: string, region: string, comuna: string, items: ShippingQuoteItem[], signal?: AbortSignal): Promise<ShippingQuote[]> {
   let response: Response;
   try {
     response = await fetch(`${API_BASE_URL}/api/entregas/cotizacion/`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ operador, region, comuna }),
+      body: JSON.stringify({ operador, region, comuna,
+        items: items.map(item => ({ producto_id: item.productId, sku: item.sku, cantidad: item.quantity })) }),
       signal,
     });
   } catch (error) {
@@ -381,7 +388,7 @@ export async function getShippingQuotes(operador: string, region: string, comuna
   if (!Array.isArray(tarifas) || tarifas.length !== 1 || !tarifas.every(tarifa => tarifa
     && tarifa.operador === operador && tarifa.comuna === comuna && typeof tarifa.region === 'string'
     && tarifa.region === nombreOficialRegion(region)
-    && tarifa.moneda === 'CLP' && tarifa.origen === 'configuracion_tienda'
+    && tarifa.moneda === 'CLP' && (tarifa.origen === 'configuracion_tienda' || tarifa.origen === 'api_transportista')
     && typeof tarifa.monto === 'string' && /^\d+$/.test(tarifa.monto)
     && Number.isSafeInteger(Number(tarifa.monto)) && Number(tarifa.monto) <= 9999999999
     && (tarifa.plazo_dias === null || (Number.isInteger(tarifa.plazo_dias) && tarifa.plazo_dias > 0))
