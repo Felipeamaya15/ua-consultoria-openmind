@@ -911,6 +911,9 @@ class CreateProductUseCase:
         }
         if data.get("peso_kg") is not None:
             producto["peso_kg"] = data["peso_kg"]
+        for medida in ("alto_cm", "ancho_cm", "largo_cm"):
+            if data.get(medida) is not None:
+                producto[medida] = data[medida]
 
         return self.repository.create(tienda_id, producto)
 

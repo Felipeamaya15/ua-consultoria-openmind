@@ -32,6 +32,25 @@ from apps.shipping.infrastructure.chilexpress_envios import tipo_contenido_etiqu
 logger = logging.getLogger(__name__)
 
 
+def _caja_del_pedido(pedido, tienda, entrega, params):
+    cotizacion = entrega.get('cotizacion') if isinstance(entrega.get('cotizacion'), dict) else {}
+    try:
+        firmada = [Decimal(str(cotizacion[k])) for k in ('alto_cm', 'ancho_cm', 'largo_cm')]
+        if all(m > 0 for m in firmada):
+            return tuple(firmada)
+    except (KeyError, ArithmeticError, ValueError):
+        pass
+    items = [{'producto_id': item.producto_mongo_id, 'sku': item.sku, 'cantidad': item.cantidad}
+             for item in pedido.itempedido_set.all() if item.producto_mongo_id]
+    try:
+        carrito = calcular_carrito(tienda, items, params=params) if items else None
+    except CarritoInvalido:
+        carrito = None
+    if carrito and carrito.caja:
+        return carrito.caja
+    return Decimal(str(params['alto_cm'])), Decimal(str(params['ancho_cm'])), Decimal(str(params['largo_cm']))
+
+
 def _peso_del_pedido(pedido, tienda, entrega, params):
     cotizacion = entrega.get('cotizacion') if isinstance(entrega.get('cotizacion'), dict) else {}
     peso = cotizacion.get('peso_kg')
@@ -98,8 +117,8 @@ class GuiaChilexpressAPIView(APIView):
         valor = max(Decimal(pedido.monto_total) - Decimal(pedido.costo_envio or 0), Decimal('0'))
         params = package_settings(delivery_raw(tienda))
         peso = max(_peso_del_pedido(pedido, tienda, entrega, params), PESO_MINIMO_KG)
-        paquete = PaqueteDTO(peso_kg=peso, alto_cm=Decimal(str(params['alto_cm'])),
-                             ancho_cm=Decimal(str(params['ancho_cm'])), largo_cm=Decimal(str(params['largo_cm'])),
+        alto, ancho, largo = _caja_del_pedido(pedido, tienda, entrega, params)
+        paquete = PaqueteDTO(peso_kg=peso, alto_cm=alto, ancho_cm=ancho, largo_cm=largo,
                              valor_declarado=valor.quantize(Decimal('1')))
         contacto = {'nombre': pedido.nombre_contacto or (pedido.contacto or {}).get('nombre', ''),
                     'telefono': pedido.telefono_contacto or (pedido.contacto or {}).get('telefono', ''),

@@ -78,5 +78,8 @@ def live_quote(operador: str, region: str, comuna: str, tienda=None, items=None,
     quote = {**quote, 'monto': total, 'monto_base': base, 'margen': total - base}
     if carrito:
         quote.update(peso_kg=peso_envio.peso_str(carrito.peso_kg), unidades=carrito.unidades,
-                     peso_estimado=carrito.usa_peso_default)
+                     peso_estimado=carrito.usa_peso_default, caja_estimada=carrito.usa_caja_default,
+                     volumen_cm3=int(carrito.volumen_cm3),
+                     alto_cm=int(package['alto_cm']), ancho_cm=int(package['ancho_cm']),
+                     largo_cm=int(package['largo_cm']))
     return quote

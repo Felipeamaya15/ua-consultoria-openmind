@@ -133,6 +133,9 @@ class ProductAdminDetailSerializer(ProductPublicDetailSerializer):
     fecha_creacion = serializers.DateTimeField(required=False)
     variantes = serializers.ListField(child=serializers.DictField(), required=False)
     peso_kg = serializers.FloatField(required=False, allow_null=True)
+    alto_cm = serializers.FloatField(required=False, allow_null=True)
+    ancho_cm = serializers.FloatField(required=False, allow_null=True)
+    largo_cm = serializers.FloatField(required=False, allow_null=True)
     revision = serializers.SerializerMethodField()
 
     def get_revision(self, product):
@@ -276,12 +279,19 @@ class VarianteInputSerializer(VarianteStockUpdateSerializer):
     atributos_variante = serializers.ListField(
         child=serializers.DictField(), required=False, default=list
     )
+    peso_kg = serializers.FloatField(required=False, allow_null=True, min_value=0.01, max_value=1000)
+    alto_cm = serializers.FloatField(required=False, allow_null=True, min_value=0.1, max_value=200)
+    ancho_cm = serializers.FloatField(required=False, allow_null=True, min_value=0.1, max_value=200)
+    largo_cm = serializers.FloatField(required=False, allow_null=True, min_value=0.1, max_value=200)
 
     def validate_sku(self, value):
         return value.strip().upper()
 
     def validate(self, data):
         import math
+        medidas = [data.get(key) for key in ('alto_cm', 'ancho_cm', 'largo_cm')]
+        if any(m is not None for m in medidas) and any(m is None for m in medidas):
+            raise serializers.ValidationError('Ingresa alto, ancho y largo de la variante, o deja las tres vacías.')
         if any(not math.isfinite(data[field]) for field in ('precio', 'precio_oferta')
                if data.get(field) is not None):
             raise serializers.ValidationError("Los precios deben ser números finitos.")
@@ -395,6 +405,16 @@ class ProductCreateSerializer(serializers.Serializer):
     variantes = VarianteInputSerializer(many=True)
     seo = SeoInputSerializer(required=False)
     peso_kg = serializers.FloatField(required=False, allow_null=True, min_value=0.01, max_value=1000)
+    alto_cm = serializers.FloatField(required=False, allow_null=True, min_value=0.1, max_value=200)
+    ancho_cm = serializers.FloatField(required=False, allow_null=True, min_value=0.1, max_value=200)
+    largo_cm = serializers.FloatField(required=False, allow_null=True, min_value=0.1, max_value=200)
+
+    def validate(self, attrs):
+        attrs = super().validate(attrs)
+        medidas = [attrs.get(key) for key in ('alto_cm', 'ancho_cm', 'largo_cm')]
+        if any(m is not None for m in medidas) and any(m is None for m in medidas):
+            raise serializers.ValidationError({'alto_cm': 'Ingresa alto, ancho y largo, o deja las tres medidas vacías.'})
+        return attrs
 
     def validate_imagenes(self, value):
         existing_images = self.context.get("existing_images") or ()

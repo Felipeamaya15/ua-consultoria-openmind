@@ -79,6 +79,23 @@ def _peso_producto(product) -> Optional[Decimal]:
     return peso if peso is not None and peso > 0 else None
 
 
+def _dimensiones_producto(product):
+    if not isinstance(product, dict):
+        return None
+    medidas = [_decimal(product.get(key)) for key in ('alto_cm', 'ancho_cm', 'largo_cm')]
+    if any(m is None or m <= 0 for m in medidas):
+        return None
+    return tuple(sorted(medidas, reverse=True))
+
+
+def caja_equivalente(bultos, volumen_total):
+    largo = max(b[0] for b in bultos)
+    ancho = max(b[1] for b in bultos)
+    alto = max(volumen_total / (largo * ancho), max(b[2] for b in bultos))
+    redondear = lambda v: Decimal(int(v.to_integral_value(rounding=ROUND_CEILING)))
+    return redondear(alto), redondear(ancho), redondear(largo)
+
+
 def _precio_variante(variant) -> Decimal:
     base = _decimal(variant.get('precio'), Decimal('0'))
     oferta = _decimal(variant.get('precio_oferta'))
@@ -93,6 +110,9 @@ class CarritoEnvio:
     valor_declarado: Decimal
     usa_peso_default: bool
     params: Dict[str, Any] = field(default_factory=dict)
+    caja: Any = None
+    volumen_cm3: Decimal = Decimal('0')
+    usa_caja_default: bool = False
 
     @property
     def a_coordinar(self) -> bool:
@@ -101,10 +121,11 @@ class CarritoEnvio:
                     or (limite_unidades is not None and self.unidades > int(limite_unidades)))
 
     def paquete(self) -> Dict[str, Any]:
+        alto, ancho, largo = self.caja or (Decimal(str(self.params['alto_cm'])), Decimal(str(self.params['ancho_cm'])),
+                                           Decimal(str(self.params['largo_cm'])))
         return {
             'peso_kg': max(self.peso_kg, PESO_MINIMO_KG),
-            'alto_cm': Decimal(str(self.params['alto_cm'])), 'ancho_cm': Decimal(str(self.params['ancho_cm'])),
-            'largo_cm': Decimal(str(self.params['largo_cm'])),
+            'alto_cm': alto, 'ancho_cm': ancho, 'largo_cm': largo,
             'valor_declarado': self.valor_declarado.quantize(Decimal('1'), rounding=ROUND_CEILING),
         }
 
@@ -125,7 +146,9 @@ def calcular_carrito(tienda, items: List[Dict[str, Any]], *, repository=None, pa
         repository = ProductRepository()
     params = params if params is not None else package_settings_for_store(tienda)
     peso_default = peso_default_de_tienda(params)
+    caja_tienda = tuple(sorted((Decimal(str(params[k])) for k in ('alto_cm', 'ancho_cm', 'largo_cm')), reverse=True))
     total, unidades, valor, usa_default = Decimal('0'), 0, Decimal('0'), False
+    bultos, volumen, usa_caja_default = [], Decimal('0'), False
     for item in items or []:
         cantidad = item.get('cantidad')
         if isinstance(cantidad, bool) or not isinstance(cantidad, int) or cantidad < 1:
@@ -137,14 +160,25 @@ def calcular_carrito(tienda, items: List[Dict[str, Any]], *, repository=None, pa
         variant = next((v for v in product.get('variantes', []) if v.get('sku') == item.get('sku')), None)
         if variant is None:
             raise CarritoInvalido('El SKU no pertenece al producto seleccionado.')
-        peso = _peso_producto(product)
+        peso = _peso_producto(variant) or _peso_producto(product)
         if peso is None:
             peso, usa_default = peso_default, True
+        medidas = _dimensiones_producto(variant) or _dimensiones_producto(product)
+        if medidas is None:
+            usa_caja_default = True
+        else:
+            bultos.append(medidas)
+            volumen += medidas[0] * medidas[1] * medidas[2] * cantidad
         total += peso * cantidad
         unidades += cantidad
         valor += _precio_variante(variant) * cantidad
+    if usa_caja_default:
+        bultos.append(caja_tienda)
+        volumen += caja_tienda[0] * caja_tienda[1] * caja_tienda[2]
     return CarritoEnvio(peso_kg=total.quantize(Decimal('0.001')), unidades=unidades,
-                        valor_declarado=valor, usa_peso_default=usa_default, params=params)
+                        valor_declarado=valor, usa_peso_default=usa_default, params=params,
+                        caja=caja_equivalente(bultos, volumen) if bultos else None,
+                        volumen_cm3=volumen, usa_caja_default=usa_caja_default)
 
 
 def aplicar_margen(monto, params) -> int:
@@ -157,6 +191,11 @@ def aplicar_margen(monto, params) -> int:
 
 def peso_str(value) -> str:
     return format(Decimal(str(value)).quantize(Decimal('0.001')), 'f')
+
+
+def mismo_volumen(firmado, actual) -> bool:
+    a, b = _decimal(firmado), _decimal(actual)
+    return a is not None and b is not None and a == b
 
 
 def mismo_peso(firmado, actual) -> bool:

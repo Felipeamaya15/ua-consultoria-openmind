@@ -223,7 +223,7 @@ export default function Shipping() {
                   onChange={event => updatePackage({ [field]: Math.trunc(Number(event.target.value || 1)) } as Partial<PackageConfiguration>)} />
               ))}
             </div>
-            <p className="text-xs text-[var(--muted-foreground)]">La caja es la misma para todos los pedidos; Chilexpress puede cobrar por volumen si es mayor que el peso real.</p>
+            <p className="text-xs text-[var(--muted-foreground)]">Esta caja se usa para los productos que no tienen medidas propias (los de un pedido se agrupan en una sola caja). Los productos con alto, ancho y largo suman su propio volumen. Chilexpress puede cobrar por volumen si es mayor que el peso real.</p>
           </div>
         </AdminCard>
         <PickupEditor value={form.pickup} errors={pickupErrors} onProviderStatus={setPickupProviderConfigured} onChange={pickup => {

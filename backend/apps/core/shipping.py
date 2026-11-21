@@ -13,7 +13,7 @@ from apps.shipping.domain.exceptions import (
     DireccionFueraDeCoberturaException, LogisticaException, TiempoEsperaLogisticoException,
 )
 from apps.core.peso_envio import (
-    MENSAJE_A_COORDINAR, CarritoInvalido, CarritoRequerido, EnvioACoordinar, calcular_carrito, mismo_peso,
+    MENSAJE_A_COORDINAR, CarritoInvalido, CarritoRequerido, EnvioACoordinar, calcular_carrito, mismo_peso, mismo_volumen,
 )
 from apps.shipping.infrastructure.live import live_quote
 
@@ -146,6 +146,8 @@ def validate_quote(tienda, operador, address, token, items=None, repository=None
         except CarritoInvalido:
             raise cambio from None
         if not mismo_peso(signed.get('peso_kg'), actual.peso_kg):
+            raise cambio
+        if signed.get('volumen_cm3') is not None and not mismo_volumen(signed.get('volumen_cm3'), actual.volumen_cm3):
             raise cambio
     current = configured_quote(tienda, operador, address.get('region'), address.get('city'), items, repository)
     expected = {**current, 'tienda': tienda.pk}

@@ -102,3 +102,13 @@ Con la API de Chilexpress activa, la cotización se calcula con el **peso real d
 - `POST /api/entregas/cotizacion/` ahora recibe `items: [{producto_id, sku, cantidad}]` (obligatorio con la API activa).
 
 Probar: `python manage.py test apps.core.test_peso_envio apps.core.test_delivery apps.core.test_shipping apps.core.test_guia_chilexpress`
+
+## Medidas por producto (patch 0006)
+
+Chilexpress puede cobrar por volumen, así que cada producto puede traer las medidas de su paquete ya embalado (bolsa, sobre o caja):
+
+- **Producto:** campos `alto_cm`, `ancho_cm`, `largo_cm` (una unidad). Van las tres o ninguna.
+- **Variantes:** una variante puede tener su propio peso y/o medidas (p. ej. shampoo de 250 ml y de 2 L); si los tiene reemplazan a los del producto, y si no, rigen los del producto. Las medidas de la variante también van las tres o ninguna.
+- **Sin medidas:** todos los productos del pedido sin medidas se agrupan en **una sola caja de la tienda** (Entregas → «Peso, caja y margen»), sin importar cuántas unidades sean.
+- **Pedido con varios productos:** se suma el volumen de cada producto por su cantidad y se cotiza una caja equivalente: largo y ancho son los mayores de los productos y el alto se calcula para igualar el volumen (los productos se asumen apilados). Es una aproximación; el margen cubre la diferencia.
+- La caja y el volumen quedan firmados en la cotización: si cambian los productos al pagar, se pide cotizar de nuevo. La guía usa la misma caja.
