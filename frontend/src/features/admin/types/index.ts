@@ -25,8 +25,10 @@ export interface CarrierConnection {
   enabled: boolean;
   accountId: string;
   apiKey: string;
-  status: 'not_configured' | 'credentials_saved';
+  status: 'not_configured' | 'configured' | 'credentials_saved';
   tarifas?: ShippingRate[];
+  ambiente?: 'SANDBOX' | 'PRODUCCION';
+  credenciales?: Partial<Record<'cotizador' | 'coberturas' | 'envios' | 'tcc' | 'origen', string>>;
 }
 
 export interface ThemeTemplateCustomization {

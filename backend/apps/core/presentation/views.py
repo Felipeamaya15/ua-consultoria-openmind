@@ -3,7 +3,9 @@ from rest_framework.views import APIView
 from rest_framework.exceptions import APIException
 from django.db import transaction
 
-from apps.core.delivery import delivery_data, delivery_for_store
+from apps.core.delivery import (
+    CREDENTIALS_KEY, delivery_data, delivery_for_store, merge_carrier_credentials,
+)
 from apps.core.infrastructure.expiracion_pedidos import devolver_stock_de_pedido_cancelado, liberar_vencidos_de_tienda
 from apps.core.infrastructure.stock_pedidos import descontar_stock_de_pedido
 from apps.core.infrastructure.notificaciones_pedido import notificar_cambio_de_estado, notificar_pago_rechazado
@@ -109,7 +111,10 @@ class ConfiguracionEntregaAPIView(APIView):
             Tienda.objects.select_for_update().get(pk=tienda.pk)
             config = ConfiguracionEntrega.objects.filter(tienda=tienda).first()
             datos = delivery_data(config.datos if config else None)
+            stored_credentials = (config.datos or {}).get(CREDENTIALS_KEY) if config and isinstance(config.datos, dict) else None
             previous = deepcopy(datos['pickup'])
+            new_credentials = serializer.validated_data.get('chilexpress', {}).pop('credenciales', None)
+            datos['chilexpress'].pop('credenciales', None)
             def merge(target, changes):
                 for key, value in changes.items():
                     if isinstance(value, dict) and isinstance(target.get(key), dict):
@@ -130,9 +135,14 @@ class ConfiguracionEntregaAPIView(APIView):
             datos['pickup'] = prepare_pickup_for_save(pickup, tienda.pk)
             if config is None:
                 config = ConfiguracionEntrega(tienda=tienda)
+            previous_raw = {CREDENTIALS_KEY: stored_credentials} if stored_credentials else {}
+            merged = merge_carrier_credentials(previous_raw, 'chilexpress', new_credentials)
+            if merged.get('chilexpress') or len(merged) > 1:
+                datos[CREDENTIALS_KEY] = merged
+            datos['chilexpress'].pop('status', None)
             config.datos = datos
             config.save()
-        return success_response(data=datos, mensaje='Configuración de entregas guardada.')
+        return success_response(data=delivery_data(config.datos), mensaje='Configuración de entregas guardada.')
 
 
 class AlternativasEntregaAPIView(APIView):

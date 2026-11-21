@@ -274,7 +274,7 @@ function isConfiguration(value: unknown): value is ShippingConfiguration {
     return typeof fields.enabled === 'boolean' && (key === 'pickup'
       ? typeof fields.address === 'string' && typeof fields.schedule === 'string'
       : typeof fields.accountId === 'string' && typeof fields.apiKey === 'string'
-        && fields.status === 'not_configured');
+        && (fields.status === 'not_configured' || (key === 'chilexpress' && fields.status === 'configured')));
   });
 }
 

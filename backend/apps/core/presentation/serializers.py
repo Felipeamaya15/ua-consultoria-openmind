@@ -308,8 +308,22 @@ class CarrierConfigurationSerializer(StrictSerializer):
         return data
 
 
+class ChilexpressCredentialsSerializer(StrictSerializer):
+    cotizador = DeliveryStringField(allow_blank=True, max_length=200, required=False)
+    coberturas = DeliveryStringField(allow_blank=True, max_length=200, required=False)
+    envios = DeliveryStringField(allow_blank=True, max_length=200, required=False)
+    tcc = DeliveryStringField(allow_blank=True, max_length=50, required=False)
+    origen = DeliveryStringField(allow_blank=True, max_length=20, required=False)
+
+
+class ChilexpressConfigurationSerializer(CarrierConfigurationSerializer):
+    ambiente = serializers.ChoiceField(choices=['SANDBOX', 'PRODUCCION'], required=False)
+    credenciales = ChilexpressCredentialsSerializer(required=False)
+    status = serializers.ChoiceField(choices=['not_configured', 'configured'], required=False)
+
+
 class ShippingConfigurationSerializer(StrictSerializer):
-    chilexpress = CarrierConfigurationSerializer()
+    chilexpress = ChilexpressConfigurationSerializer()
     starken = CarrierConfigurationSerializer()
     pickup = PickupConfigurationSerializer()
 

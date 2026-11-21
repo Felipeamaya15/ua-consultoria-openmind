@@ -140,7 +140,7 @@ class DeliveryConfigurationTests(TestCase):
         ConfiguracionEntrega.objects.create(tienda=self.store, datos=self.configuration)
         response = self.api.put(self.url, self.configuration, format='json')
         self.assertEqual(response.status_code, 200, response.data)
-        self.assertEqual(ConfiguracionEntrega.objects.get(tienda=self.store).datos, self.configuration)
+        self.assertEqual(delivery_data(ConfiguracionEntrega.objects.get(tienda=self.store).datos), self.configuration)
         self.assertEqual(self.api.get(self.url).data['data'], self.configuration)
         self.assertEqual(self.api.get(self.public_url).data['data'], self.configuration)
 

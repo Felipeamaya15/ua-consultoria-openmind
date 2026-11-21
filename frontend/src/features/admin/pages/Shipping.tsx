@@ -52,6 +52,14 @@ export default function Shipping() {
     setForm({ ...form, [carrier]: { ...(form[carrier] || {}), enabled } });
   };
 
+  const updateChilexpress = (changes: Record<string, unknown>) => {
+    setMessage('');
+    setForm({ ...form, chilexpress: { ...(form.chilexpress || {}), ...changes } });
+  };
+  const updateCredential = (field: string, value: string) => updateChilexpress({
+    credenciales: { ...(form.chilexpress?.credenciales || {}), [field]: value },
+  });
+
   const updateRates = (carrier: 'chilexpress' | 'starken', tarifas: ShippingRate[]) => {
     setMessage('');
     setForm({ ...form, [carrier]: { ...form[carrier], tarifas } });
@@ -110,11 +118,29 @@ export default function Shipping() {
                     </p>
                   </div>
                 </div>
-                <Badge variant="default">Conexión automática pendiente</Badge>
+                <Badge variant="default">{carrier === 'chilexpress' && current.status === 'configured' ? 'Conexión automática lista' : 'Conexión automática pendiente'}</Badge>
               </div>
               <div className="border-t border-[var(--border)] pt-3 grid gap-3">
-                <Input id={`${carrier}-account`} label="ID de cliente / número de cuenta" placeholder="Entregado por el transportista" value={loaded ? current.accountId || '' : ''} disabled />
-                <Input id={`${carrier}-api`} label="Clave del transportista" type="password" autoComplete="off" placeholder="Disponible próximamente" persistentHint hint="El guardado de credenciales no está disponible." value="" disabled />
+                {carrier === 'chilexpress' ? (
+                  <div className="grid gap-3">
+                    <label className="text-xs">Ambiente de la API
+                      <select aria-label="Ambiente Chilexpress" className="block w-full border rounded p-2" value={current.ambiente || 'SANDBOX'} onChange={event => updateChilexpress({ ambiente: event.target.value })}>
+                        <option value="SANDBOX">SANDBOX (pruebas)</option>
+                        <option value="PRODUCCION">PRODUCCIÓN</option>
+                      </select>
+                    </label>
+                    {([['cotizador', 'Clave API Cotizador', true], ['coberturas', 'Clave API Coberturas', true], ['envios', 'Clave API Envíos', true],
+                      ['tcc', 'Número de Tarjeta de Cliente (TCC)', false], ['origen', 'Código de comuna de origen', false]] as const).map(([field, label, secret]) => (
+                      <Input key={field} id={`chilexpress-${field}`} label={label} type={secret ? 'password' : 'text'} autoComplete="off"
+                        placeholder={secret ? 'Una clave distinta por producto del portal' : ''}
+                        value={current.credenciales?.[field] || ''} onChange={event => updateCredential(field, event.target.value)} />
+                    ))}
+                    <p className="text-xs text-[var(--muted-foreground)]">Las claves se guardan cifradas y no se vuelven a mostrar completas. Déjalas como están para conservarlas.</p>
+                  </div>
+                ) : (<>
+                  <Input id={`${carrier}-account`} label="ID de cliente / número de cuenta" placeholder="Entregado por el transportista" value={loaded ? current.accountId || '' : ''} disabled />
+                  <Input id={`${carrier}-api`} label="Clave del transportista" type="password" autoComplete="off" placeholder="Disponible próximamente" persistentHint hint="El guardado de credenciales no está disponible." value="" disabled />
+                </>)}
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <Toggle
                     checked={loaded && !!current.enabled}
@@ -122,7 +148,7 @@ export default function Shipping() {
                     label="Ofrecer este envío a clientes"
                     onChange={enabled => update(carrier, enabled)}
                   />
-                  <Button variant="outline" size="sm" disabled>Guardar credenciales</Button>
+                  {carrier !== 'chilexpress' && <Button variant="outline" size="sm" disabled>Guardar credenciales</Button>}
                 </div>
                 <div className="grid gap-3">
                   <h3 className="text-sm font-semibold">Tarifas de la tienda</h3>

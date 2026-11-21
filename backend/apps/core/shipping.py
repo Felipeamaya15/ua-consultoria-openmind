@@ -1,4 +1,4 @@
-"""Tarifas explícitas por tienda; no hay todavía clientes de las APIs de transportistas."""
+import logging
 import json
 from pathlib import Path
 from time import time
@@ -9,6 +9,12 @@ from rest_framework.exceptions import ValidationError
 from apps.catalog.infrastructure.adapters.chilexpress_response import procesar_respuesta_chilexpress
 from apps.catalog.infrastructure.adapters.starken_response import procesar_respuesta_starken
 from apps.core.delivery import DELIVERY_METHODS, delivery_for_store
+from apps.shipping.domain.exceptions import (
+    DireccionFueraDeCoberturaException, LogisticaException, TiempoEsperaLogisticoException,
+)
+from apps.shipping.infrastructure.live import live_quote
+
+logger = logging.getLogger(__name__)
 
 
 class ErrorCotizacion(ValidationError):
@@ -62,9 +68,25 @@ def configured_quote(tienda, operador, region, comuna):
     if not carrier['enabled']:
         raise ErrorCotizacion('operador', 'El transportista no está habilitado en esta tienda.',
                               'TRANSPORTISTA_NO_HABILITADO')
+    live_error = None
+    try:
+        live = live_quote(operador, region, comuna, tienda)
+    except DireccionFueraDeCoberturaException:
+        live = None
+    except LogisticaException as exc:
+        live, live_error = None, exc
+        logger.warning('Cotizacion en vivo fallida (%s, tienda=%s): %s', operador, tienda.pk, type(exc).__name__)
+    if live is not None:
+        return {**live, 'monto': str(live['monto']), 'region': region, 'comuna': comuna,
+                'origen': 'api_transportista'}
     rates = [rate for rate in carrier['tarifas'] if isinstance(rate, dict)
              and canonical_region(rate.get('region')) == region and rate.get('comuna') == comuna]
     if len(rates) != 1:
+        if live_error is not None:
+            mensaje = ('El transportista tardó demasiado en responder. Intenta nuevamente.'
+                       if isinstance(live_error, TiempoEsperaLogisticoException)
+                       else 'No pudimos obtener la tarifa de envío en este momento. Intenta nuevamente.')
+            raise ErrorCotizacion('cotizacion', mensaje, 'ERROR_COTIZACION')
         raise ErrorCotizacion('cotizacion', 'No hay una tarifa disponible para este destino. Contacta a la tienda.',
                               'TARIFA_NO_DISPONIBLE')
     rate = rates[0]

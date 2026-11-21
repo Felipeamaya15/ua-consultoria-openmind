@@ -6,6 +6,7 @@ from typing import List
 import requests
 from apps.catalog.infrastructure.adapters.seguimiento_response import procesar_respuesta_seguimiento
 from apps.shipping.domain.ports import LogisticsPort
+from apps.shipping.infrastructure import live
 from apps.shipping.domain.dtos import (
     DireccionDespachoDTO,
     PaqueteDTO,
@@ -28,6 +29,12 @@ from apps.shipping.domain.exceptions import (
 logger = logging.getLogger(__name__)
 
 ERRORES_TIMEOUT = (TimeoutError, socket.timeout, requests.exceptions.Timeout)
+
+
+def _sin_simulacion(operador: str) -> ProveedorLogisticoError:
+    return ProveedorLogisticoError(
+        f"{operador} no está configurado y los datos simulados están desactivados en este entorno."
+    )
 
 
 class StandardLogisticsAdapter(LogisticsPort):
@@ -197,6 +204,12 @@ class ChilexpressAdapter(LogisticsPort):
                 "La región y comuna de destino son obligatorias para cotizar con Chilexpress."
             )
 
+        client = live.get_client("Chilexpress")
+        if client is not None:
+            return self._cotizar_en_vivo(client, destino, paquetes)
+        if not live.simulated_allowed():
+            raise _sin_simulacion("Chilexpress")
+
         try:
             peso_total = sum((p.peso_kg for p in paquetes), Decimal("0")) or Decimal("1.0")
             recargo_peso = self._calcular_recargo_peso(peso_total)
@@ -229,6 +242,25 @@ class ChilexpressAdapter(LogisticsPort):
             )
         ]
 
+    def _cotizar_en_vivo(self, client, destino, paquetes):
+        from apps.catalog.infrastructure.adapters.chilexpress_response import procesar_respuesta_chilexpress
+        peso = sum((p.peso_kg for p in paquetes), Decimal("0")) or Decimal("1.0")
+        base = paquetes[0] if paquetes else None
+        raw = client.cotizar(
+            destino.region, destino.comuna, peso_kg=peso,
+            alto_cm=base.alto_cm if base else Decimal("15"), ancho_cm=base.ancho_cm if base else Decimal("20"),
+            largo_cm=base.largo_cm if base else Decimal("30"),
+            valor_declarado=sum((p.valor_declarado for p in paquetes), Decimal("0")),
+        )
+        try:
+            tarifa = procesar_respuesta_chilexpress(raw)
+        except ValueError as exc:
+            raise RespuestaLogisticaInvalidaException(str(exc)) from exc
+        return [CotizacionEnvioDTO(
+            proveedor="CHILEXPRESS", servicio="CHILEXPRESS_API", costo=Decimal(tarifa["monto"]),
+            dias_habiles_entrega=tarifa["plazo_dias"] or 0, es_cobertura_valida=True,
+        )]
+
     def generar_despacho(
         self,
         orden_id: str,
@@ -236,6 +268,10 @@ class ChilexpressAdapter(LogisticsPort):
         destino: DireccionDespachoDTO,
         paquetes: List[PaqueteDTO]
     ) -> GuiaDespachoDTO:
+        if live.get_client("Chilexpress") is not None or not live.simulated_allowed():
+            raise ProveedorLogisticoError(
+                "La emisión automática de guías de Chilexpress aún no está disponible; ingresa la guía manualmente."
+            )
         codigo_tracking = f"CHILEX-{uuid.uuid4().hex[:10].upper()}"
         return GuiaDespachoDTO(
             numero_seguimiento=codigo_tracking,
@@ -245,6 +281,11 @@ class ChilexpressAdapter(LogisticsPort):
         )
 
     def _obtener_respuesta_seguimiento(self, codigo: str) -> dict:
+        client = live.get_client("Chilexpress")
+        if client is not None:
+            return client.seguimiento(codigo)
+        if not live.simulated_allowed():
+            raise _sin_simulacion("Chilexpress")
         return {
             "data": {
                 "statusList": [
@@ -264,15 +305,17 @@ class ChilexpressAdapter(LogisticsPort):
                 "El número de seguimiento de Chilexpress debe comenzar con 'CHILEX-' o contener al menos 8 dígitos de orden de transporte."
             )
 
-        if codigo.endswith("0000") or "NOTFOUND" in codigo:
-            raise NumeroSeguimientoNoEncontradoException(
-                f"No se registraron envíos en Chilexpress para el seguimiento '{codigo}'."
-            )
+        en_vivo = live.get_client("Chilexpress") is not None
+        if not en_vivo:
+            if codigo.endswith("0000") or "NOTFOUND" in codigo:
+                raise NumeroSeguimientoNoEncontradoException(
+                    f"No se registraron envíos en Chilexpress para el seguimiento '{codigo}'."
+                )
 
-        if "TIMEOUT" in codigo:
-            raise TiempoEsperaLogisticoException(
-                "Se agotó el tiempo de espera al consultar el seguimiento en Chilexpress."
-            )
+            if "TIMEOUT" in codigo:
+                raise TiempoEsperaLogisticoException(
+                    "Se agotó el tiempo de espera al consultar el seguimiento en Chilexpress."
+                )
 
         try:
             respuesta = self._obtener_respuesta_seguimiento(codigo)
@@ -310,8 +353,11 @@ class ChilexpressAdapter(LogisticsPort):
             numero_seguimiento=codigo,
             proveedor="CHILEXPRESS",
             estado_actual=ultimo_estado,
-            descripcion_estado="Tu envío Chilexpress va en camino con el transportista para entrega final.",
-            fecha_estimada_entrega="2026-10-08T19:00:00Z",
+            descripcion_estado=(
+                eventos[-1].descripcion or "Seguimiento actualizado por Chilexpress."
+                if en_vivo else "Tu envío Chilexpress va en camino con el transportista para entrega final."
+            ),
+            fecha_estimada_entrega="" if en_vivo else "2026-10-08T19:00:00Z",
             historial_eventos=eventos
         )
 
@@ -374,6 +420,12 @@ class StarkenAdapter(LogisticsPort):
                 "La región y comuna de destino son obligatorias para cotizar con Starken."
             )
 
+        client = live.get_client("Starken")
+        if client is not None:
+            return self._cotizar_en_vivo(client, destino, paquetes)
+        if not live.simulated_allowed():
+            raise _sin_simulacion("Starken")
+
         try:
             peso_total = sum((p.peso_kg for p in paquetes), Decimal("0")) or Decimal("1.0")
             recargo_peso = self._calcular_recargo_peso(peso_total)
@@ -414,6 +466,25 @@ class StarkenAdapter(LogisticsPort):
             )
         ]
 
+    def _cotizar_en_vivo(self, client, destino, paquetes):
+        from apps.catalog.infrastructure.adapters.starken_response import procesar_respuesta_starken
+        peso = sum((p.peso_kg for p in paquetes), Decimal("0")) or Decimal("1.0")
+        base = paquetes[0] if paquetes else None
+        raw = client.cotizar(
+            destino.region, destino.comuna, peso_kg=peso,
+            alto_cm=base.alto_cm if base else Decimal("15"), ancho_cm=base.ancho_cm if base else Decimal("20"),
+            largo_cm=base.largo_cm if base else Decimal("30"),
+            valor_declarado=sum((p.valor_declarado for p in paquetes), Decimal("0")),
+        )
+        try:
+            tarifa = procesar_respuesta_starken(raw)
+        except ValueError as exc:
+            raise RespuestaLogisticaInvalidaException(str(exc)) from exc
+        return [CotizacionEnvioDTO(
+            proveedor="STARKEN", servicio="STARKEN_API", costo=Decimal(tarifa["monto"]),
+            dias_habiles_entrega=tarifa["plazo_dias"] or 0, es_cobertura_valida=True,
+        )]
+
     def generar_despacho(
         self,
         orden_id: str,
@@ -421,6 +492,10 @@ class StarkenAdapter(LogisticsPort):
         destino: DireccionDespachoDTO,
         paquetes: List[PaqueteDTO]
     ) -> GuiaDespachoDTO:
+        if live.get_client("Starken") is not None or not live.simulated_allowed():
+            raise ProveedorLogisticoError(
+                "La emisión automática de guías de Starken aún no está disponible; ingresa la guía manualmente."
+            )
         codigo_tracking = f"STK-{uuid.uuid4().hex[:10].upper()}"
         return GuiaDespachoDTO(
             numero_seguimiento=codigo_tracking,
@@ -430,6 +505,11 @@ class StarkenAdapter(LogisticsPort):
         )
 
     def _obtener_respuesta_seguimiento(self, codigo: str) -> dict:
+        client = live.get_client("Starken")
+        if client is not None:
+            return client.seguimiento(codigo)
+        if not live.simulated_allowed():
+            raise _sin_simulacion("Starken")
         return {
             "eventos": [
                 {"fecha": "2026-10-07T08:30:00Z", "estado": "INGRESO_EN_AGENCIA", "descripcion": "Carga recepcionada y documentada en agencia Starken.", "ciudad": "Agencia Alameda Santiago"},
@@ -447,15 +527,17 @@ class StarkenAdapter(LogisticsPort):
                 "El número de seguimiento de Starken debe comenzar con 'STK-', 'STARKEN-' o contener al menos 8 dígitos de orden de flete."
             )
 
-        if codigo.endswith("0000") or "NOTFOUND" in codigo:
-            raise NumeroSeguimientoNoEncontradoException(
-                f"No se registraron envíos en Starken para el seguimiento '{codigo}'."
-            )
+        en_vivo = live.get_client("Starken") is not None
+        if not en_vivo:
+            if codigo.endswith("0000") or "NOTFOUND" in codigo:
+                raise NumeroSeguimientoNoEncontradoException(
+                    f"No se registraron envíos en Starken para el seguimiento '{codigo}'."
+                )
 
-        if "TIMEOUT" in codigo:
-            raise TiempoEsperaLogisticoException(
-                "Se agotó el tiempo de espera al consultar el seguimiento en Starken."
-            )
+            if "TIMEOUT" in codigo:
+                raise TiempoEsperaLogisticoException(
+                    "Se agotó el tiempo de espera al consultar el seguimiento en Starken."
+                )
 
         try:
             respuesta = self._obtener_respuesta_seguimiento(codigo)
@@ -493,8 +575,11 @@ class StarkenAdapter(LogisticsPort):
             numero_seguimiento=codigo,
             proveedor="STARKEN",
             estado_actual=ultimo_estado,
-            descripcion_estado="Tu envío Starken se encuentra en ruta de entrega hacia el domicilio acordado.",
-            fecha_estimada_entrega="2026-10-08T18:00:00Z",
+            descripcion_estado=(
+                eventos[-1].descripcion or "Seguimiento actualizado por Starken."
+                if en_vivo else "Tu envío Starken se encuentra en ruta de entrega hacia el domicilio acordado."
+            ),
+            fecha_estimada_entrega="" if en_vivo else "2026-10-08T18:00:00Z",
             historial_eventos=eventos
         )
 
