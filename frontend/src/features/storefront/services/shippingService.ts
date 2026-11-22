@@ -2,7 +2,7 @@
 import { fetchInitialLoad } from '../../../core/http/initialLoad';
 import { authService } from '../../auth/services/authService';
 import type { AdminConfig } from '../../admin/types';
-import { nombreOficialRegion } from '../data/comunasChile';
+import { comunasDeRegion, nombreOficialRegion } from '../data/comunasChile';
 
 const API_BASE = (API_BASE_URL || import.meta.env.VITE_API_URL || 'http://localhost:8000').replace(/\/+$/, '');
 
@@ -26,9 +26,14 @@ const KIND_BY_CODE: Record<string, ShippingErrorKind> = {
   TRANSPORTISTA_NO_HABILITADO: 'no_disponible',
   OPERADOR_INVALIDO: 'no_disponible',
   DESTINO_INVALIDO: 'destino',
+  SECTOR_INVALIDO: 'destino',
+  SECTOR_SIN_REPARTO: 'destino',
   COTIZACION_VENCIDA: 'vencida',
   COTIZACION_INVALIDA: 'vencida',
   COTIZACION_CAMBIO: 'vencida',
+  ENVIO_A_COORDINAR: 'no_disponible',
+  CARRITO_REQUERIDO: 'temporal',
+  CARRITO_INVALIDO: 'temporal',
 };
 
 const isAbort = (error: unknown) => (error as {name?: string} | null)?.name === 'AbortError';
@@ -274,7 +279,7 @@ function isConfiguration(value: unknown): value is ShippingConfiguration {
     return typeof fields.enabled === 'boolean' && (key === 'pickup'
       ? typeof fields.address === 'string' && typeof fields.schedule === 'string'
       : typeof fields.accountId === 'string' && typeof fields.apiKey === 'string'
-        && fields.status === 'not_configured');
+        && (fields.status === 'not_configured' || (key === 'chilexpress' && fields.status === 'configured')));
   });
 }
 
@@ -318,6 +323,15 @@ export async function saveShippingConfiguration(configuration: ShippingConfigura
   }));
 }
 
+export async function saveChilexpressCredentials(
+  chilexpress: Pick<ShippingConfiguration['chilexpress'], 'ambiente' | 'credenciales'>,
+): Promise<ShippingConfiguration> {
+  return readConfiguration(await fetch(`${API_BASE_URL}/api/entregas/configuracion/`, {
+    method: 'PATCH', headers: adminHeaders(),
+    body: JSON.stringify({ chilexpress: { ambiente: chilexpress.ambiente, credenciales: chilexpress.credenciales } }),
+  }));
+}
+
 export async function getDeliveryAlternatives(signal?: AbortSignal): Promise<ShippingConfiguration> {
   let response: Response;
   try {
@@ -351,16 +365,20 @@ export async function searchPickupAddresses(region: string, comuna: string, quer
 
 export type ShippingQuote = {
   operador: string; monto: number; plazo_dias: number | null; moneda: 'CLP';
-  region: string; comuna: string; origen: 'configuracion_tienda'; cotizacion: string; vence_en: number;
+  region: string; comuna: string; origen: 'configuracion_tienda' | 'api_transportista'; cotizacion: string; vence_en: number;
+  peso_kg?: string; peso_estimado?: boolean;
 };
 
-export async function getShippingQuotes(operador: string, region: string, comuna: string, signal?: AbortSignal): Promise<ShippingQuote[]> {
+export type ShippingQuoteItem = { productId: string; sku: string; quantity: number };
+
+export async function getShippingQuotes(operador: string, region: string, comuna: string, items: ShippingQuoteItem[], signal?: AbortSignal, sector = ''): Promise<ShippingQuote[]> {
   let response: Response;
   try {
     response = await fetch(`${API_BASE_URL}/api/entregas/cotizacion/`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ operador, region, comuna }),
+      body: JSON.stringify({ operador, region, comuna, ...(sector ? { sector } : {}),
+        items: items.map(item => ({ producto_id: item.productId, sku: item.sku, cantidad: item.quantity })) }),
       signal,
     });
   } catch (error) {
@@ -381,7 +399,7 @@ export async function getShippingQuotes(operador: string, region: string, comuna
   if (!Array.isArray(tarifas) || tarifas.length !== 1 || !tarifas.every(tarifa => tarifa
     && tarifa.operador === operador && tarifa.comuna === comuna && typeof tarifa.region === 'string'
     && tarifa.region === nombreOficialRegion(region)
-    && tarifa.moneda === 'CLP' && tarifa.origen === 'configuracion_tienda'
+    && tarifa.moneda === 'CLP' && (tarifa.origen === 'configuracion_tienda' || tarifa.origen === 'api_transportista')
     && typeof tarifa.monto === 'string' && /^\d+$/.test(tarifa.monto)
     && Number.isSafeInteger(Number(tarifa.monto)) && Number(tarifa.monto) <= 9999999999
     && (tarifa.plazo_dias === null || (Number.isInteger(tarifa.plazo_dias) && tarifa.plazo_dias > 0))
@@ -390,4 +408,94 @@ export async function getShippingQuotes(operador: string, region: string, comuna
     throw new ShippingError('La cotización recibida es inválida. Vuelve a cotizar el envío.', 'temporal');
   }
   return tarifas.map(tarifa => ({ ...tarifa, monto: Number(tarifa.monto) }));
+}
+
+const claveComuna = (texto: string) =>
+  texto.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+
+const PALABRAS_MENORES = new Set(['de', 'del', 'la', 'las', 'los', 'y']);
+
+const capitalizar = (texto: string) => texto.toLowerCase().split(/(\s+|-)/).map((parte, index) =>
+  index > 0 && PALABRAS_MENORES.has(parte) ? parte : parte.charAt(0).toUpperCase() + parte.slice(1)).join('');
+
+export type SectorChilexpress = { codigo: string; nombre: string; reparto: boolean };
+
+const nombreDeSector = (cobertura: string, comuna: string): string => {
+  const limpio = cobertura.trim();
+  const separador = limpio.indexOf(' - ');
+  const sinPrefijo = separador >= 0 && claveComuna(limpio.slice(0, separador)) === claveComuna(comuna)
+    ? limpio.slice(separador + 3) : limpio;
+  return capitalizar(sinPrefijo);
+};
+
+const sectoresDeCobertura = (body: any, region: string): Record<string, SectorChilexpress[]> => {
+  const items = body?.exito && Array.isArray(body.data?.comunas) ? body.data.comunas : [];
+  const oficiales = new Map(comunasDeRegion(region).map(nombre => [claveComuna(nombre), nombre]));
+  const porComuna: Record<string, SectorChilexpress[]> = {};
+  for (const item of items as Array<{ comuna?: unknown; cobertura?: unknown; codigo?: unknown; modo?: unknown; reparto?: unknown }>) {
+    if (item.modo !== 2 || typeof item.codigo !== 'string') continue;
+    const comuna = String(item.comuna || '').trim();
+    if (!comuna) continue;
+    const nombreComuna = oficiales.get(claveComuna(comuna)) ?? capitalizar(comuna);
+    (porComuna[nombreComuna] ??= []).push({
+      codigo: item.codigo,
+      nombre: nombreDeSector(String(item.cobertura || item.codigo), comuna),
+      reparto: item.reparto === true,
+    });
+  }
+  Object.values(porComuna).forEach(lista => lista.sort((a, b) => a.nombre.localeCompare(b.nombre, 'es')));
+  return porComuna;
+};
+
+export async function getSectoresChilexpress(region: string, signal?: AbortSignal): Promise<Record<string, SectorChilexpress[]> | null> {
+  if (!region) return null;
+  try {
+    const response = await fetch(
+      `${API_BASE}/api/logistica/chilexpress/coberturas/?region=${encodeURIComponent(nombreOficialRegion(region))}`,
+      { signal },
+    );
+    const body = await readJson(response);
+    return body?.exito ? sectoresDeCobertura(body, region) : null;
+  } catch {
+    return null;
+  }
+}
+
+const nombresDeCobertura = (body: any, region: string): string[] | null => {
+  const items = body?.exito && Array.isArray(body.data?.comunas) ? body.data.comunas : null;
+  if (!items) return null;
+  const oficiales = new Map(comunasDeRegion(region).map(nombre => [claveComuna(nombre), nombre]));
+  const names = items
+    .map((item: { comuna?: unknown }) => String(item.comuna || '').trim())
+    .filter(Boolean)
+    .map((comuna: string) => oficiales.get(claveComuna(comuna)) ?? capitalizar(comuna));
+  return names.length ? Array.from(new Set<string>(names)).sort((a, b) => a.localeCompare(b, 'es')) : null;
+};
+
+export async function getComunasChilexpress(region: string, signal?: AbortSignal): Promise<string[] | null> {
+  if (!region) return null;
+  try {
+    const response = await fetch(
+      `${API_BASE}/api/logistica/chilexpress/coberturas/?region=${encodeURIComponent(nombreOficialRegion(region))}`,
+      { signal },
+    );
+    return nombresDeCobertura(await readJson(response), region);
+  } catch {
+    return null;
+  }
+}
+
+export async function getComunasChilexpressAdmin(
+  region: string, clave: string, ambiente: string, signal?: AbortSignal,
+): Promise<string[] | null> {
+  if (!region) return null;
+  try {
+    const response = await fetch(`${API_BASE}/api/logistica/chilexpress/coberturas/admin/`, {
+      method: 'POST', headers: adminHeaders(), signal,
+      body: JSON.stringify({ region: nombreOficialRegion(region), coberturas: clave, ambiente }),
+    });
+    return nombresDeCobertura(await readJson(response), region);
+  } catch {
+    return null;
+  }
 }

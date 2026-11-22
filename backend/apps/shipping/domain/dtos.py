@@ -12,6 +12,7 @@ class DireccionDespachoDTO:
     depto_casa: Optional[str] = ""
     codigo_postal: Optional[str] = ""
     referencias: Optional[str] = ""
+    sector: Optional[str] = ""
 
 @dataclass(frozen=True)
 class PaqueteDTO:
@@ -35,6 +36,10 @@ class GuiaDespachoDTO:
     proveedor: str
     url_etiqueta: Optional[str]
     estado: str
+    certificado: str = ""
+    codigo_barras: str = ""
+    etiqueta: str = ""
+    tipo_etiqueta: str = ""
 
 
 @dataclass(frozen=True)
@@ -43,6 +48,7 @@ class EventoSeguimientoDTO:
     estado: str
     descripcion: str
     ubicacion: str
+    certificado_entrega: str = ""
 
 @dataclass(frozen=True)
 class DetalleSeguimientoDTO:
@@ -52,3 +58,6 @@ class DetalleSeguimientoDTO:
     descripcion_estado: str
     fecha_estimada_entrega: str
     historial_eventos: List[EventoSeguimientoDTO]
+    receptor_nombre: str = ""
+    receptor_rut: str = ""
+    fecha_entrega: str = ""

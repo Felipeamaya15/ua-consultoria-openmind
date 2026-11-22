@@ -308,10 +308,41 @@ class CarrierConfigurationSerializer(StrictSerializer):
         return data
 
 
+class ChilexpressCredentialsSerializer(StrictSerializer):
+    cotizador = DeliveryStringField(allow_blank=True, max_length=200, required=False)
+    coberturas = DeliveryStringField(allow_blank=True, max_length=200, required=False)
+    envios = DeliveryStringField(allow_blank=True, max_length=200, required=False)
+    tcc = DeliveryStringField(allow_blank=True, max_length=50, required=False)
+    origen = DeliveryStringField(allow_blank=True, max_length=20, required=False)
+    origen_region = DeliveryStringField(allow_blank=True, max_length=100, required=False)
+    origen_comuna = DeliveryStringField(allow_blank=True, max_length=100, required=False)
+    rut = DeliveryStringField(allow_blank=True, max_length=12, required=False)
+    origen_calle = DeliveryStringField(allow_blank=True, max_length=100, required=False)
+    origen_numero = DeliveryStringField(allow_blank=True, max_length=20, required=False)
+    telefono = DeliveryStringField(allow_blank=True, max_length=20, required=False)
+
+
+class ChilexpressConfigurationSerializer(CarrierConfigurationSerializer):
+    ambiente = serializers.ChoiceField(choices=['SANDBOX', 'PRODUCCION'], required=False)
+    credenciales = ChilexpressCredentialsSerializer(required=False)
+    status = serializers.ChoiceField(choices=['not_configured', 'configured'], required=False)
+
+
+class PackageConfigurationSerializer(StrictSerializer):
+    peso_default_kg = serializers.FloatField(min_value=0.01, max_value=1000, allow_null=True, required=False)
+    margen_porcentaje = serializers.FloatField(min_value=0, max_value=100, required=False)
+    limite_peso_kg = serializers.FloatField(min_value=0.1, max_value=1000, allow_null=True, required=False)
+    limite_unidades = serializers.IntegerField(min_value=1, max_value=100000, allow_null=True, required=False)
+    alto_cm = serializers.IntegerField(min_value=1, max_value=200, required=False)
+    ancho_cm = serializers.IntegerField(min_value=1, max_value=200, required=False)
+    largo_cm = serializers.IntegerField(min_value=1, max_value=200, required=False)
+
+
 class ShippingConfigurationSerializer(StrictSerializer):
-    chilexpress = CarrierConfigurationSerializer()
+    chilexpress = ChilexpressConfigurationSerializer()
     starken = CarrierConfigurationSerializer()
     pickup = PickupConfigurationSerializer()
+    paquete = PackageConfigurationSerializer(required=False)
 
 
 class ConfiguracionPagoSerializer(serializers.Serializer):

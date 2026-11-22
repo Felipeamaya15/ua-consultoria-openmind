@@ -22,6 +22,9 @@ from apps.core.presentation.software_version import SoftwareVersionAPIView
 from apps.core.presentation.recent_orders import UltimasOrdenesAPIView, ActualizarEstadoPedidoAPIView
 from apps.core.presentation.historial import HistorialPedidosAPIView, HistorialVentasAPIView
 from apps.core.presentation.historial import PedidoDetallePrivadoAPIView
+from apps.core.presentation.guia_envio import (
+    EtiquetaChilexpressAPIView, GuiaChilexpressAPIView, SeguimientoPedidoAPIView,
+)
 from apps.core.presentation.commercial_exports import (InformeXLSXAPIView, PedidosExportAPIView,
     VentasExportAPIView, ContactosAPIView, ContactosExportAPIView)
 from apps.core.presentation.dashboard import DashboardAPIView
@@ -94,6 +97,9 @@ urlpatterns = [
     path('tienda/configuracion/', InformacionTiendaAPIView.as_view(), name='tienda-configuracion'),
     path('tienda/correos/', PlantillasCorreoAPIView.as_view(), name='tienda-correos'),
     path('tienda/correos/enviar-manual/', ProbarCorreoEventoAPIView.as_view(), name='tienda-correos-enviar-manual'),
+    path('tienda/pedidos/<int:id_pedido>/guia-chilexpress/', GuiaChilexpressAPIView.as_view(), name='tienda-pedido-guia-chilexpress'),
+    path('tienda/pedidos/<int:id_pedido>/guia-chilexpress/etiqueta/', EtiquetaChilexpressAPIView.as_view(), name='tienda-pedido-etiqueta-chilexpress'),
+    path('tienda/pedidos/<int:id_pedido>/seguimiento/', SeguimientoPedidoAPIView.as_view(), name='tienda-pedido-seguimiento'),
     path('tienda/pedidos/<int:id_pedido>/enviar-correo/', EnviarCorreoManualPedidoAPIView.as_view(), name='tienda-pedido-enviar-correo'),
     path('promociones/', PromocionesAPIView.as_view(), name='promotions'),
     path('promociones/validar/', ValidarPromocionAPIView.as_view(), name='promotion-validate'),

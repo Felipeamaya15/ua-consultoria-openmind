@@ -12,12 +12,16 @@ import { authService } from '../../auth/services/authService';
 
 import { orderService } from '../services/orderService';
 import { validatePromotion, type ValidatedPromotion } from '../services/promotionService';
-import { getDeliveryAlternatives, getShippingQuotes, type ShippingQuote, type ShippingConfiguration } from '../services/shippingService';
+import { getDeliveryAlternatives, getShippingQuotes, type ShippingQuote, type ShippingConfiguration, type SectorChilexpress } from '../services/shippingService';
 import PickupDetails from '../components/checkout/PickupDetails';
 import { useCart } from '../context/CartContext';
 import { formatActivityDate } from '../../landing/services/paidActivityService';
 import { formatPrice } from '../data/mockData';
-import { comunasDeRegion, esComunaDeRegion } from '../data/comunasChile';
+import { useComunasChilexpress } from '../hooks/useComunasChilexpress';
+import { useSectoresChilexpress } from '../hooks/useSectoresChilexpress';
+
+const SECTOR_PRINCIPAL = 'principal';
+const SIN_SECTORES: SectorChilexpress[] = [];
 import {
   Stepper,
   Button,
@@ -284,7 +288,13 @@ export default function Checkout() {
     apt: '',
     city: '',
     region: 'Metropolitana',
+    sector: '',
   });
+  const comunasDisponibles = useComunasChilexpress(address.region);
+  const sectoresPorComuna = useSectoresChilexpress(address.region, shippingMethod === 'Chilexpress');
+  const sectoresComuna = (shippingMethod === 'Chilexpress' ? sectoresPorComuna[address.city] : undefined) ?? SIN_SECTORES;
+  const sectorElegido = sectoresComuna.find((sector) => sector.codigo === address.sector);
+  const sectorEnviado = shippingMethod === 'Chilexpress' && address.sector !== SECTOR_PRINCIPAL ? address.sector : '';
 
   const [paymentMethod, setPaymentMethod] =
     useState('');
@@ -412,7 +422,7 @@ export default function Checkout() {
   const promotionRequest = useRef(0);
   const applyingPromotion = useRef(false);
 
-  const destinationKey = JSON.stringify([shippingMethod, address.region, address.city]);
+  const destinationKey = JSON.stringify([shippingMethod, address.region, address.city, sectorEnviado]);
   const selectedShippingOption = onlyActivities ? undefined : shippingOptions.find(option => option.id === shippingMethod);
   const candidateQuote = shippingQuotes[shippingMethod];
   const selectedQuote = candidateQuote?.destino === destinationKey && candidateQuote.vence_en > Date.now() / 1000
@@ -476,7 +486,7 @@ export default function Checkout() {
   const deliveryReady = onlyActivities || (!shippingLoading && !shippingError && !!selectedShippingOption
     && (shippingMethod === 'Retiro' ? true : (!!selectedQuote && !quoteLoading && !quoteError)));
 
-
+  const cartSignature = JSON.stringify(items.map(item => [item.productId, item.sku, item.quantity]));
   const quoteNeedsOtherOption = ['sin_tarifa', 'no_disponible', 'destino'].includes(quoteErrorKind);
   const quoteUnavailable = ['sin_tarifa', 'no_disponible'].includes(quoteErrorKind);
   const otherShippingOptions = shippingOptions.filter(option => option.id !== shippingMethod);
@@ -486,11 +496,17 @@ export default function Checkout() {
     setQuoteError('');
     setQuoteErrorKind('');
     setQuoteLoading(false);
-    if (!selectedShippingOption?.requiresAddress || !esComunaDeRegion(address.city, address.region)) return;
+    if (!selectedShippingOption?.requiresAddress || !comunasDisponibles.includes(address.city)) return;
+    if (sectoresComuna.length > 0 && !address.sector) return;
+    if (sectorElegido && !sectorElegido.reparto) {
+      setQuoteError('Chilexpress no reparte a domicilio en ese sector. Elige otra opción de entrega, como retiro en tienda.');
+      setQuoteErrorKind('destino');
+      return;
+    }
     const controller = new AbortController();
     let expiry: ReturnType<typeof setTimeout>;
     setQuoteLoading(true);
-    getShippingQuotes(shippingMethod, address.region, address.city, controller.signal)
+    getShippingQuotes(shippingMethod, address.region, address.city, items, controller.signal, sectorEnviado)
       .then((quotes) => {
         if (controller.signal.aborted) return;
         const quote = quotes.find(item => item.operador === shippingMethod);
@@ -508,7 +524,7 @@ export default function Checkout() {
         setQuoteErrorKind((cause as {kind?: string} | null)?.kind ?? 'temporal');
       }).finally(() => { if (!controller.signal.aborted) setQuoteLoading(false); });
     return () => { controller.abort(); clearTimeout(expiry); };
-  }, [address.city, address.region, shippingMethod, selectedShippingOption, quoteAttempt, destinationKey]);
+  }, [address.city, address.region, address.sector, shippingMethod, selectedShippingOption, quoteAttempt, destinationKey, cartSignature, comunasDisponibles, sectoresComuna, sectorElegido, sectorEnviado]);
 
   useEffect(() => {
     if (
@@ -645,10 +661,16 @@ export default function Checkout() {
           'Dirección requerida';
       } else if (
         selectedShippingOption?.requiresAddress &&
-        !esComunaDeRegion(address.city, address.region)
+        !comunasDisponibles.includes(address.city)
       ) {
         newErrors.address =
           'Selecciona una comuna de la región elegida';
+      } else if (
+        selectedShippingOption?.requiresAddress &&
+        sectoresComuna.length > 0 &&
+        !address.sector
+      ) {
+        newErrors.address = 'Selecciona tu sector o localidad.';
       }
 
       if (shippingLoading || shippingError || !selectedShippingOption) {
@@ -726,7 +748,7 @@ export default function Checkout() {
         throw new Error('Este medio de pago todavía no está disponible para completar la compra.');
       }
       const order = await orderService.create({
-        key: checkoutAttempt.current.key, items, activities, contact, paymentMethod, shippingMethod: onlyActivities ? 'Actividad' : shippingMethod, address, promoCode: checkoutPromoCode,
+        key: checkoutAttempt.current.key, items, activities, contact, paymentMethod, shippingMethod: onlyActivities ? 'Actividad' : shippingMethod, address: {...address, sector: sectorEnviado}, promoCode: checkoutPromoCode,
         shippingQuote: onlyActivities ? undefined : selectedQuote?.cotizacion,
       });
 
@@ -1446,6 +1468,7 @@ export default function Checkout() {
                                 event.target
                                   .value,
                               city: '',
+                              sector: '',
                             }),
                           )
                         }
@@ -1462,12 +1485,13 @@ export default function Checkout() {
                               city:
                                 event.target
                                   .value,
+                              sector: '',
                             }),
                           )
                         }
                         options={[
                           { value: '', label: 'Selecciona una comuna' },
-                          ...comunasDeRegion(address.region).map(
+                          ...comunasDisponibles.map(
                             (comuna) => ({
                               value: comuna,
                               label: comuna,
@@ -1476,6 +1500,24 @@ export default function Checkout() {
                         ]}
                       />
                     </div>
+
+                    {sectoresComuna.length > 0 && (
+                      <Select
+                        label="Sector o localidad"
+                        value={address.sector}
+                        onChange={(event) =>
+                          setAddress((current) => ({ ...current, sector: event.target.value }))
+                        }
+                        options={[
+                          { value: '', label: 'Selecciona tu sector' },
+                          { value: SECTOR_PRINCIPAL, label: `${address.city} (zona principal)` },
+                          ...sectoresComuna.map((sector) => ({
+                            value: sector.codigo,
+                            label: sector.reparto ? sector.nombre : `${sector.nombre} (sin reparto a domicilio)`,
+                          })),
+                        ]}
+                      />
+                    )}
                   </div>
                 )}
             </div>

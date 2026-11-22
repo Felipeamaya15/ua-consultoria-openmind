@@ -11,6 +11,16 @@ class DireccionFueraDeCoberturaException(LogisticaException):
     pass
 
 
+class SectorInvalidoException(LogisticaException):
+    """El sector elegido no pertenece a la comuna de destino."""
+    pass
+
+
+class SectorSinRepartoException(SectorInvalidoException):
+    """El sector existe, pero el transportista no reparte a domicilio en él."""
+    pass
+
+
 class ProveedorLogisticoError(LogisticaException):
     """Error al comunicarse con el proveedor o servicio logístico."""
     pass

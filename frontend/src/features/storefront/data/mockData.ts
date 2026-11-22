@@ -10,6 +10,10 @@ export interface ProductVariant {
   comparePrice?: number;
   stock: number;
   available: boolean;
+  weightKg?: number | null;
+  heightCm?: number | null;
+  widthCm?: number | null;
+  lengthCm?: number | null;
 }
 
 export interface Product {

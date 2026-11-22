@@ -16,7 +16,7 @@ export type CreatedOrder = {
 export type CheckoutInput = {
   key: string; items: CartItem[]; activities?: ActivityCartItem[]; contact: {name: string; email: string; phone: string};
   paymentMethod: string; shippingMethod: string; promoCode: string;
-  address: {street: string; number: string; apt: string; city: string; region: string};
+  address: {street: string; number: string; apt: string; city: string; region: string; sector?: string};
   shippingQuote?: string;
   pickupSelection?: { fecha: string; hora: string };
 };
