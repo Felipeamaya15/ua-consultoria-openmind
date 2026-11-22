@@ -9,6 +9,8 @@ def _dict(valor, mensaje):
 
 
 def _texto(valor) -> str:
+    if isinstance(valor, float) and valor.is_integer():
+        valor = int(valor)
     return '' if valor is None else str(valor).strip()
 
 
@@ -19,8 +21,10 @@ def procesar_orden_transporte(respuesta: dict) -> dict:
     if not isinstance(detalles, list) or not detalles or not isinstance(detalles[0], dict):
         raise ValueError('Respuesta de Chilexpress inválida: no trae el detalle de la orden.')
     detalle = detalles[0]
+    if detalle.get('statusCode') not in (None, 0, '0'):
+        raise ValueError(f"Chilexpress rechazó la orden: {_texto(detalle.get('statusDescription'))[:200] or 'sin detalle'}.")
     numero = _texto(detalle.get('transportOrderNumber'))
-    if not numero:
+    if not numero or numero == '0':
         raise ValueError('Respuesta de Chilexpress inválida: falta el número de orden de transporte.')
     etiqueta = detalle.get('label') if isinstance(detalle.get('label'), dict) else {}
     datos_etiqueta = etiqueta.get('labelData')

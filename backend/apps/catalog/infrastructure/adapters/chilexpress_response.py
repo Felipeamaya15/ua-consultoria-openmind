@@ -22,9 +22,11 @@ def procesar_respuesta_chilexpress(respuesta: dict) -> dict:
     if not isinstance(servicios, list) or not servicios:
         raise ValueError("Respuesta de Chilexpress inválida: no trae servicios con valor.")
 
+    envio = [s for s in servicios if isinstance(s, dict)
+             and 'LOG DEV' not in str(s.get('serviceDescription') or '').upper()]
     montos = []
     codigos = {}
-    for servicio in servicios:
+    for servicio in (envio or servicios):
         if not isinstance(servicio, dict):
             continue
         valor_crudo = servicio.get(CAMPO_MONTO)

@@ -45,7 +45,6 @@ class OrigenChilexpressError(Exception):
 
 
 def resolve_origin_county(stored_raw, incoming, ambiente):
-    """
     incoming = dict(incoming or {})
     if not (incoming.get('origen_region') or incoming.get('origen_comuna')):
         return incoming
@@ -84,6 +83,18 @@ def merge_carrier_credentials(datos, method, incoming):
     all_credentials = dict(datos.get(CREDENTIALS_KEY) or {}) if isinstance(datos, dict) else {}
     all_credentials[method] = stored
     return all_credentials
+
+
+CHILEXPRESS_REQUIRED = (('cotizador', 'Clave API Cotizador'), ('coberturas', 'Clave API Coberturas'),
+                        ('origen', 'Comuna de origen'), ('tcc', 'Número de cliente Chilexpress (TCC)'))
+
+
+def chilexpress_missing_fields(merged, enabled):
+    stored = merged.get('chilexpress') if isinstance(merged, dict) else None
+    stored = stored if isinstance(stored, dict) else {}
+    if not (enabled or any(stored.values())):
+        return []
+    return [label for field, label in CHILEXPRESS_REQUIRED if not stored.get(field)]
 
 
 def delivery_defaults():

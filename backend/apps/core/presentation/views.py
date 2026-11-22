@@ -5,7 +5,7 @@ from django.db import transaction
 
 from apps.core.delivery import (
     CREDENTIALS_KEY, OrigenChilexpressError, delivery_data, delivery_for_store, merge_carrier_credentials,
-    resolve_origin_county,
+    resolve_origin_county, chilexpress_missing_fields,
 )
 from apps.core.infrastructure.expiracion_pedidos import devolver_stock_de_pedido_cancelado, liberar_vencidos_de_tienda
 from apps.core.infrastructure.stock_pedidos import descontar_stock_de_pedido
@@ -142,6 +142,11 @@ class ConfiguracionEntregaAPIView(APIView):
             except OrigenChilexpressError as exc:
                 return error_response(str(exc), 'ERROR_VALIDACION', {'chilexpress': {'credenciales': {'origen_comuna': str(exc)}}})
             merged = merge_carrier_credentials(previous_raw, 'chilexpress', new_credentials)
+            missing = chilexpress_missing_fields(merged, datos['chilexpress'].get('enabled') is True)
+            if missing:
+                message = f"Faltan campos obligatorios: {', '.join(missing)}."
+                return error_response(message, 'ERROR_VALIDACION',
+                                      {'chilexpress': {'credenciales': {'tcc': message}}})
             if merged.get('chilexpress') or len(merged) > 1:
                 datos[CREDENTIALS_KEY] = merged
             datos['chilexpress'].pop('status', None)

@@ -94,6 +94,7 @@ class ChilexpressClient(BaseCarrierClient):
     nombre = 'Chilexpress'
     auth_header = 'Ocp-Apim-Subscription-Key'
     RATES_PATH = 'rating/api/v1.0/rates/courier'
+    BUSINESS_RATES_PATH = 'rating/api/v1.0/rates/business'
     COVERAGE_PATH = 'georeference/api/v1.0/coverage-areas'
     ORDERS_PATH = 'transport-orders/api/v1.0/transport-orders'
     TRACKING_PATH = 'transport-orders/api/v1.0/tracking'
@@ -143,13 +144,21 @@ class ChilexpressClient(BaseCarrierClient):
         if code not in self._counties:
             body = self._request('GET', self.coverage_path, params={'RegionCode': code, 'type': 0},
                                  api_key=self.api_keys['coberturas'])
-            areas = (body.get('data') or {}).get('coverageAreas')
+            data = body.get('data')
+            areas = body.get('coverageAreas')
+            if not isinstance(areas, list) and isinstance(data, dict):
+                areas = data.get('coverageAreas')
             if not isinstance(areas, list):
+                logger.warning('Chilexpress: la respuesta de coberturas no trae coverageAreas.')
                 raise RespuestaLogisticaInvalidaException('Chilexpress devolvió una cobertura inválida.')
-            self._counties[code] = {
-                _normalizar(a.get('countyName')): a.get('countyCode') for a in areas
-                if isinstance(a, dict) and a.get('countyCode')
-            }
+            counties = {}
+            for area in areas:
+                if not isinstance(area, dict) or not area.get('countyCode'):
+                    continue
+                key = _normalizar(area.get('countyName'))
+                if key not in counties or area.get('queryMode') == 1:
+                    counties[key] = area['countyCode']
+            self._counties[code] = counties
         found = self._counties[code].get(_normalizar(comuna))
         if not found:
             raise DireccionFueraDeCoberturaException('Chilexpress no cubre la comuna indicada.')
@@ -164,6 +173,16 @@ class ChilexpressClient(BaseCarrierClient):
             'productType': 3, 'contentType': 1, 'declaredWorth': int(Decimal(str(valor_declarado))),
             'deliveryTime': 0,
         }
+        if self.tcc:
+            from apps.catalog.infrastructure.adapters.chilexpress_response import procesar_respuesta_chilexpress
+            try:
+                body = self._request('POST', self.BUSINESS_RATES_PATH,
+                                     json={**payload, 'customerCardNumber': self.tcc},
+                                     api_key=self.api_keys['cotizador'])
+                procesar_respuesta_chilexpress(body)
+                return body
+            except (ProveedorLogisticoError, ValueError) as exc:
+                logger.warning('Chilexpress: cotización con TCC falló (%s); se usa la tarifa normal.', type(exc).__name__)
         return self._request('POST', self.rates_path, json=payload, api_key=self.api_keys['cotizador'])
 
     @staticmethod

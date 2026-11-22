@@ -14,7 +14,19 @@ import { validatePickup } from '../services/pickupConfiguration';
 const CREDENCIALES_COTIZACION = [
   ['cotizador', 'Clave API Cotizador', true],
   ['coberturas', 'Clave API Coberturas', true],
+  ['tcc', 'Número de cliente Chilexpress (TCC)', false],
 ] as const;
+
+const CHILEXPRESS_OBLIGATORIOS = [
+  ['cotizador', 'Clave API Cotizador'], ['coberturas', 'Clave API Coberturas'],
+  ['tcc', 'Número de cliente Chilexpress (TCC)'], ['origen_region', 'Región de origen'], ['origen_comuna', 'Comuna de origen'],
+] as const;
+
+function chilexpressFaltantes(chilexpress: { credenciales?: Record<string, string | undefined> } | undefined, enabled: boolean) {
+  const creds = chilexpress?.credenciales || {};
+  if (!enabled && !Object.values(creds).some(Boolean)) return [];
+  return CHILEXPRESS_OBLIGATORIOS.filter(([field]) => !creds[field]).map(([, label]) => label);
+}
 
 const CHILEXPRESS_TEST_TCC = '18578680';
 const CHILEXPRESS_TEST_RUT = '96756430';
@@ -23,7 +35,6 @@ const AYUDA_TCC = 'Te lo entrega Chilexpress al contratar el servicio. Si no lo 
 
 const CREDENCIALES_GUIA = [
   ['envios', 'Clave API Envíos', true],
-  ['tcc', 'Número de cliente Chilexpress (TCC)', false],
   ['rut', 'RUT de la empresa (sin puntos ni dígito verificador)', false],
   ['origen_calle', 'Calle de origen (guías)', false],
   ['origen_numero', 'Número de la dirección de origen', false],
@@ -68,6 +79,11 @@ export default function Shipping() {
 
   const update = (carrier: 'chilexpress' | 'starken', enabled: boolean) => {
     setMessage('');
+    if (enabled && carrier === 'chilexpress') {
+      const faltan = chilexpressFaltantes(form.chilexpress, true);
+      if (faltan.length) { setError(`Para ofrecer Chilexpress faltan: ${faltan.join(', ')}.`); return; }
+    }
+    setError('');
     setForm({ ...form, [carrier]: { ...(form[carrier] || {}), enabled } });
   };
 
@@ -99,6 +115,8 @@ export default function Shipping() {
 
   async function saveChilexpressOnly() {
     if (!loaded || savingRef.current) return;
+    const faltan = chilexpressFaltantes(form.chilexpress, !!form.chilexpress?.enabled);
+    if (faltan.length) { setError(`Faltan campos obligatorios: ${faltan.join(', ')}.`); return; }
     savingRef.current = true;
     setSaving(true);
     setError('');
@@ -125,6 +143,8 @@ export default function Shipping() {
 
   async function save() {
     if (!loaded || savingRef.current) return;
+    const faltan = chilexpressFaltantes(form.chilexpress, !!form.chilexpress?.enabled);
+    if (faltan.length) { setError(`Faltan campos obligatorios de Chilexpress: ${faltan.join(', ')}.`); return; }
     const validation = validatePickup(form.pickup, pickupProviderConfigured === true);
     setPickupErrors(validation);
     if (Object.keys(validation).length) { setError('Revisa los campos de retiro indicados.'); return; }
@@ -197,10 +217,11 @@ export default function Shipping() {
                     )}
                     <div className="grid gap-3">
                       <h3 className="text-sm font-semibold">Cotización en el checkout</h3>
-                      <p className="text-xs text-[var(--muted-foreground)]">Es lo mínimo para que la tienda calcule el precio del envío con Chilexpress.</p>
+                      <p className="text-xs text-[var(--muted-foreground)]">Es obligatorio para ofrecer Chilexpress: el precio del checkout se cotiza con la tarifa de tu contrato (TCC).</p>
                       {CREDENCIALES_COTIZACION.map(([field, label, secret]) => (
                         <Input key={field} id={`chilexpress-${field}`} label={label} type={secret ? 'password' : 'text'} autoComplete="off"
                           placeholder={secret ? 'Una clave distinta por producto del portal' : ''}
+                          {...(field === 'tcc' ? { persistentHint: true, hint: AYUDA_TCC } : {})}
                           value={current.credenciales?.[field] || ''} onChange={event => updateCredential(field, event.target.value)} />
                       ))}
                       <label className="text-xs">Región de origen
@@ -223,7 +244,6 @@ export default function Shipping() {
                       {CREDENCIALES_GUIA.map(([field, label, secret]) => (
                         <Input key={field} id={`chilexpress-${field}`} label={label} type={secret ? 'password' : 'text'} autoComplete="off"
                           placeholder={secret ? 'Una clave distinta por producto del portal' : ''}
-                          {...(field === 'tcc' ? { persistentHint: true, hint: AYUDA_TCC } : {})}
                           value={current.credenciales?.[field] || ''} onChange={event => updateCredential(field, event.target.value)} />
                       ))}
                     </div>
