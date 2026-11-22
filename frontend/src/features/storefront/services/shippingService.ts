@@ -321,6 +321,15 @@ export async function saveShippingConfiguration(configuration: ShippingConfigura
   }));
 }
 
+export async function saveChilexpressCredentials(
+  chilexpress: Pick<ShippingConfiguration['chilexpress'], 'ambiente' | 'credenciales'>,
+): Promise<ShippingConfiguration> {
+  return readConfiguration(await fetch(`${API_BASE_URL}/api/entregas/configuracion/`, {
+    method: 'PATCH', headers: adminHeaders(),
+    body: JSON.stringify({ chilexpress: { ambiente: chilexpress.ambiente, credenciales: chilexpress.credenciales } }),
+  }));
+}
+
 export async function getDeliveryAlternatives(signal?: AbortSignal): Promise<ShippingConfiguration> {
   let response: Response;
   try {

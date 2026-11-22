@@ -28,7 +28,7 @@ export interface CarrierConnection {
   status: 'not_configured' | 'configured' | 'credentials_saved';
   tarifas?: ShippingRate[];
   ambiente?: 'SANDBOX' | 'PRODUCCION';
-  credenciales?: Partial<Record<'cotizador' | 'coberturas' | 'envios' | 'tcc' | 'origen' | 'rut' | 'origen_calle' | 'origen_numero' | 'telefono', string>>;
+  credenciales?: Partial<Record<'cotizador' | 'coberturas' | 'envios' | 'tcc' | 'origen' | 'origen_region' | 'origen_comuna' | 'rut' | 'origen_calle' | 'origen_numero' | 'telefono', string>>;
 }
 
 export interface ThemeTemplateCustomization {

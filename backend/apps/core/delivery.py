@@ -11,7 +11,7 @@ from apps.core.peso_envio import PACKAGE_DEFAULTS, package_settings
 DELIVERY_METHODS = {'Chilexpress': 'chilexpress', 'Starken': 'starken', 'Retiro': 'pickup'}
 
 CARRIER_ENVIRONMENTS = ('SANDBOX', 'PRODUCCION')
-CARRIER_CREDENTIALS = {'chilexpress': ('cotizador', 'coberturas', 'envios', 'tcc', 'origen', 'rut', 'origen_calle', 'origen_numero', 'telefono')}
+CARRIER_CREDENTIALS = {'chilexpress': ('cotizador', 'coberturas', 'envios', 'tcc', 'origen', 'origen_region', 'origen_comuna', 'rut', 'origen_calle', 'origen_numero', 'telefono')}
 CARRIER_SECRET_FIELDS = {'chilexpress': ('cotizador', 'coberturas', 'envios')}
 CREDENTIALS_KEY = 'credenciales_transportistas'
 
@@ -38,6 +38,40 @@ def carrier_credentials(datos, method):
             except ImproperlyConfigured:
                 result[field] = ''
     return result
+
+
+class OrigenChilexpressError(Exception):
+    """No se pudo convertir la región y comuna de origen en un código de cobertura."""
+
+
+def resolve_origin_county(stored_raw, incoming, ambiente):
+    """
+    incoming = dict(incoming or {})
+    if not (incoming.get('origen_region') or incoming.get('origen_comuna')):
+        return incoming
+    stored = carrier_credentials(stored_raw, 'chilexpress')
+    region = (incoming['origen_region'] if 'origen_region' in incoming else stored.get('origen_region', '')).strip()
+    comuna = (incoming['origen_comuna'] if 'origen_comuna' in incoming else stored.get('origen_comuna', '')).strip()
+    if not (region and comuna):
+        raise OrigenChilexpressError('Elige la región y la comuna de origen.')
+    if stored.get('origen') and (region, comuna) == (stored.get('origen_region'), stored.get('origen_comuna')):
+        incoming['origen'] = stored['origen']
+        return incoming
+    key = incoming.get('coberturas') or ''
+    key = '' if key.startswith('*') else key.strip()
+    key = key or stored.get('coberturas', '')
+    if not key:
+        raise OrigenChilexpressError('Ingresa la clave API Coberturas para poder buscar la comuna de origen.')
+    from apps.shipping.domain.exceptions import DireccionFueraDeCoberturaException, ProveedorLogisticoError
+    from apps.shipping.infrastructure.carrier_clients import ChilexpressClient
+    try:
+        incoming['origen'] = ChilexpressClient(api_keys={'coberturas': key}, ambiente=ambiente).county_code(region, comuna)
+    except DireccionFueraDeCoberturaException as exc:
+        raise OrigenChilexpressError('Chilexpress no tiene cobertura en la comuna de origen elegida.') from exc
+    except ProveedorLogisticoError as exc:
+        raise OrigenChilexpressError('No pudimos consultar Chilexpress para validar la comuna de origen. '
+                                     'Revisa la clave API Coberturas e intenta de nuevo.') from exc
+    return incoming
 
 
 def merge_carrier_credentials(datos, method, incoming):

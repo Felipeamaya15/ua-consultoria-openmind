@@ -4,7 +4,8 @@ from rest_framework.exceptions import APIException
 from django.db import transaction
 
 from apps.core.delivery import (
-    CREDENTIALS_KEY, delivery_data, delivery_for_store, merge_carrier_credentials,
+    CREDENTIALS_KEY, OrigenChilexpressError, delivery_data, delivery_for_store, merge_carrier_credentials,
+    resolve_origin_county,
 )
 from apps.core.infrastructure.expiracion_pedidos import devolver_stock_de_pedido_cancelado, liberar_vencidos_de_tienda
 from apps.core.infrastructure.stock_pedidos import descontar_stock_de_pedido
@@ -136,6 +137,10 @@ class ConfiguracionEntregaAPIView(APIView):
             if config is None:
                 config = ConfiguracionEntrega(tienda=tienda)
             previous_raw = {CREDENTIALS_KEY: stored_credentials} if stored_credentials else {}
+            try:
+                new_credentials = resolve_origin_county(previous_raw, new_credentials, datos['chilexpress'].get('ambiente'))
+            except OrigenChilexpressError as exc:
+                return error_response(str(exc), 'ERROR_VALIDACION', {'chilexpress': {'credenciales': {'origen_comuna': str(exc)}}})
             merged = merge_carrier_credentials(previous_raw, 'chilexpress', new_credentials)
             if merged.get('chilexpress') or len(merged) > 1:
                 datos[CREDENTIALS_KEY] = merged
