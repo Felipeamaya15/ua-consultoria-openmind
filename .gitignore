@@ -58,3 +58,4 @@ backups/
 
 # Respaldos binarios de MongoDB: mantener fuera de nuevos commits
 *.archive
+/docs/AVANCE_FINAL_ECOMMERCE.md
