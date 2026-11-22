@@ -293,7 +293,8 @@ class ChilexpressAdapter(LogisticsPort):
 
         def direccion(d):
             return {"region": d.region, "comuna": d.comuna, "calle": d.calle, "numero": d.numero,
-                    "complemento": d.depto_casa or "", "observacion": d.referencias or ""}
+                    "complemento": d.depto_casa or "", "observacion": d.referencias or "",
+                    "sector": getattr(d, "sector", "") or ""}
 
         try:
             raw = client.crear_orden_transporte(

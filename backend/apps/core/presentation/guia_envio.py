@@ -111,7 +111,8 @@ class GuiaChilexpressAPIView(APIView):
             raise ProveedorLogisticoError(
                 'Falta la dirección de origen de Chilexpress (calle y número) en Entregas → Chilexpress.')
         destino = DireccionDespachoDTO(calle=calle, numero=numero, comuna=comuna, region=region,
-                                       depto_casa=(direccion.get('apt') or '').strip())
+                                       depto_casa=(direccion.get('apt') or '').strip(),
+                                       sector=(direccion.get('sector') or '').strip())
         origen = DireccionDespachoDTO(calle=credenciales['origen_calle'], numero=credenciales['origen_numero'],
                                       comuna='', region='')
         valor = max(Decimal(pedido.monto_total) - Decimal(pedido.costo_envio or 0), Decimal('0'))

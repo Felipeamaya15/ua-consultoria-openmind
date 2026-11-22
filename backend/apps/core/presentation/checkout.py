@@ -71,6 +71,7 @@ class AddressSerializer(StrictSerializer):
     apt = serializers.CharField(max_length=100, allow_blank=True)
     city = serializers.CharField(max_length=100, allow_blank=True)
     region = serializers.CharField(max_length=100, allow_blank=True)
+    sector = serializers.CharField(max_length=20, required=False, allow_blank=True)
 
 
 class CheckoutSerializer(StrictSerializer):

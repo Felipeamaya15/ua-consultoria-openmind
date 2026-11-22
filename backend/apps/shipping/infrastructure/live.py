@@ -51,7 +51,7 @@ def get_client(operador: str, tienda=None):
 
 
 def live_quote(operador: str, region: str, comuna: str, tienda=None, items=None, repository=None,
-               exigir_carrito: bool = False) -> Optional[dict]:
+               exigir_carrito: bool = False, sector: str = '') -> Optional[dict]:
     client = get_client(operador, tienda)
     if client is None:
         return None
@@ -67,7 +67,8 @@ def live_quote(operador: str, region: str, comuna: str, tienda=None, items=None,
         raise peso_envio.CarritoRequerido('Faltan los productos del carrito para calcular el envío.')
     else:
         package = peso_envio.paquete_sin_carrito(params)
-    raw = client.cotizar(region, comuna, **package)
+    extra = {'sector': sector} if sector and operador == 'Chilexpress' else {}
+    raw = client.cotizar(region, comuna, **package, **extra)
     try:
         quote = procesar_respuesta_chilexpress(raw)
     except ValueError as exc:

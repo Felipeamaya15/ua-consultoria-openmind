@@ -1,5 +1,6 @@
 import logging
 import json
+import unicodedata
 from pathlib import Path
 from time import time
 
@@ -10,7 +11,8 @@ from apps.catalog.infrastructure.adapters.chilexpress_response import procesar_r
 from apps.catalog.infrastructure.adapters.starken_response import procesar_respuesta_starken
 from apps.core.delivery import DELIVERY_METHODS, delivery_for_store
 from apps.shipping.domain.exceptions import (
-    DireccionFueraDeCoberturaException, LogisticaException, TiempoEsperaLogisticoException,
+    DireccionFueraDeCoberturaException, LogisticaException, SectorInvalidoException, SectorSinRepartoException,
+    TiempoEsperaLogisticoException,
 )
 from apps.core.peso_envio import (
     MENSAJE_A_COORDINAR, CarritoInvalido, CarritoRequerido, EnvioACoordinar, calcular_carrito, mismo_peso, mismo_volumen,
@@ -50,10 +52,21 @@ def canonical_region(region):
     return REGION_ALIASES.get(region, region) if isinstance(region, str) else ''
 
 
+COMUNA_ALIASES = {'SANTIAGOCENTRO': 'SANTIAGO', 'AISEN': 'AYSEN', 'LACALERA': 'CALERA', 'LLAYLLAY': 'LLAILLAY'}
+
+
+def _clave_comuna(texto):
+    base = unicodedata.normalize('NFKD', texto if isinstance(texto, str) else '')
+    return ''.join(c for c in base if c.isalnum() and not unicodedata.combining(c)).upper()
+
+
 def validate_destination(region, comuna):
     official = canonical_region(region)
+    wanted = _clave_comuna(comuna)
+    wanted = COMUNA_ALIASES.get(wanted, wanted)
     for entry in TERRITORY:
-        if entry['nombre'] == official and any(comuna in p['comunas'] for p in entry['provincias']):
+        if entry['nombre'] == official and wanted and any(
+                _clave_comuna(nombre) == wanted for p in entry['provincias'] for nombre in p['comunas']):
             return official
     raise ValidationError({'comuna': 'Selecciona una comuna de la región elegida.'})
 
@@ -61,7 +74,7 @@ def validate_destination(region, comuna):
 CAMPOS_INTERNOS = ('monto_base', 'margen')
 
 
-def configured_quote(tienda, operador, region, comuna, items=None, repository=None):
+def configured_quote(tienda, operador, region, comuna, items=None, repository=None, sector=''):
     try:
         region = validate_destination(region, comuna)
     except ValidationError:
@@ -70,26 +83,35 @@ def configured_quote(tienda, operador, region, comuna, items=None, repository=No
     if method not in ('chilexpress', 'starken'):
         raise ErrorCotizacion('operador', 'Selecciona Chilexpress o Starken. Retiro no requiere cotización.',
                               'OPERADOR_INVALIDO')
+    sector = (sector or '').strip() if operador == 'Chilexpress' else ''
     carrier = delivery_for_store(tienda)[method]
     if not carrier['enabled']:
         raise ErrorCotizacion('operador', 'El transportista no está habilitado en esta tienda.',
                               'TRANSPORTISTA_NO_HABILITADO')
     live_error = None
     try:
-        live = live_quote(operador, region, comuna, tienda, items=items, repository=repository, exigir_carrito=True)
+        live = live_quote(operador, region, comuna, tienda, items=items, repository=repository, exigir_carrito=True,
+                          sector=sector)
     except CarritoRequerido as exc:
         raise ErrorCotizacion('items', str(exc), 'CARRITO_REQUERIDO') from None
     except CarritoInvalido as exc:
         raise ErrorCotizacion('items', str(exc), 'CARRITO_INVALIDO') from None
     except EnvioACoordinar as exc:
         raise ErrorCotizacion('cotizacion', str(exc) or MENSAJE_A_COORDINAR, 'ENVIO_A_COORDINAR') from None
+    except SectorSinRepartoException:
+        raise ErrorCotizacion('sector', 'Chilexpress no reparte a domicilio en ese sector. Elige otra opción de entrega.',
+                              'SECTOR_SIN_REPARTO') from None
+    except SectorInvalidoException:
+        raise ErrorCotizacion('sector', 'Selecciona un sector válido para la comuna elegida.',
+                              'SECTOR_INVALIDO') from None
     except DireccionFueraDeCoberturaException:
         live = None
     except LogisticaException as exc:
         live, live_error = None, exc
         logger.warning('Cotizacion en vivo fallida (%s, tienda=%s): %s', operador, tienda.pk, type(exc).__name__)
     if live is not None:
-        return {**live, 'monto': str(live['monto']), 'region': region, 'comuna': comuna, 'origen': 'api_transportista'}
+        return {**live, 'monto': str(live['monto']), 'region': region, 'comuna': comuna, 'sector': sector,
+                'origen': 'api_transportista'}
     rates = [rate for rate in carrier['tarifas'] if isinstance(rate, dict)
              and canonical_region(rate.get('region')) == region and rate.get('comuna') == comuna]
     if len(rates) != 1:
@@ -113,11 +135,11 @@ def configured_quote(tienda, operador, region, comuna, items=None, repository=No
     except (ValueError, TypeError, OverflowError):
         raise ErrorCotizacion('cotizacion', 'No se pudo cotizar el envío. Intenta nuevamente.', 'ERROR_COTIZACION') from None
     return {**quote, 'monto': str(quote['monto']), 'plazo_dias': days,
-            'region': region, 'comuna': comuna, 'origen': 'configuracion_tienda'}
+            'region': region, 'comuna': comuna, 'sector': sector, 'origen': 'configuracion_tienda'}
 
 
-def issue_quote(tienda, operador, region, comuna, items=None, repository=None):
-    quote = configured_quote(tienda, operador, region, comuna, items, repository)
+def issue_quote(tienda, operador, region, comuna, items=None, repository=None, sector=''):
+    quote = configured_quote(tienda, operador, region, comuna, items, repository, sector)
     payload = {**quote, 'tienda': tienda.pk, 'vence_en': int(time()) + QUOTE_MAX_AGE}
     visible = {key: value for key, value in quote.items() if key not in CAMPOS_INTERNOS}
     return {**visible, 'vence_en': payload['vence_en'],
@@ -149,7 +171,8 @@ def validate_quote(tienda, operador, address, token, items=None, repository=None
             raise cambio
         if signed.get('volumen_cm3') is not None and not mismo_volumen(signed.get('volumen_cm3'), actual.volumen_cm3):
             raise cambio
-    current = configured_quote(tienda, operador, address.get('region'), address.get('city'), items, repository)
+    current = configured_quote(tienda, operador, address.get('region'), address.get('city'), items, repository,
+                               address.get('sector') or '')
     expected = {**current, 'tienda': tienda.pk}
     if any(signed.get(key) != value for key, value in expected.items()):
         raise ErrorCotizacion('cotizacion', 'La cotización cambió. Vuelve a cotizar el envío.', 'COTIZACION_CAMBIO')

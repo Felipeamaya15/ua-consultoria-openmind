@@ -41,6 +41,7 @@ class ShippingQuoteSerializer(StrictSerializer):
     operador = serializers.ChoiceField(choices=['Chilexpress', 'Starken'])
     region = serializers.CharField(max_length=100)
     comuna = serializers.CharField(max_length=100)
+    sector = serializers.CharField(max_length=20, required=False, allow_blank=True)
     items = ShippingQuoteItemSerializer(many=True, required=False, max_length=100)
 
 

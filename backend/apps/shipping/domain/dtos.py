@@ -12,6 +12,7 @@ class DireccionDespachoDTO:
     depto_casa: Optional[str] = ""
     codigo_postal: Optional[str] = ""
     referencias: Optional[str] = ""
+    sector: Optional[str] = ""
 
 @dataclass(frozen=True)
 class PaqueteDTO:

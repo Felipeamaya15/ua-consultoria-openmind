@@ -11,6 +11,8 @@ from apps.shipping.domain.exceptions import (
     NumeroSeguimientoNoEncontradoException,
     ProveedorLogisticoError,
     RespuestaLogisticaInvalidaException,
+    SectorInvalidoException,
+    SectorSinRepartoException,
     TiempoEsperaLogisticoException,
     validar_tiempo_espera,
 )
@@ -150,7 +152,7 @@ class ChilexpressClient(BaseCarrierClient):
         code = self.region_code(region)
         if not code:
             raise DireccionFueraDeCoberturaException('Región sin cobertura en Chilexpress.')
-        cache_key = f'chilexpress:coberturas:{self.ambiente}:{code}'
+        cache_key = f'chilexpress:coberturas:v2:{self.ambiente}:{code}'
         cached = cache.get(cache_key)
         if cached is not None:
             return cached
@@ -166,14 +168,29 @@ class ChilexpressClient(BaseCarrierClient):
         result = [
             {'codigo': area['countyCode'], 'comuna': str(area.get('countyName') or '').strip(),
              'cobertura': str(area.get('coverageName') or area.get('countyName') or '').strip(),
-             'modo': area.get('queryMode'), 'region': code}
+             'modo': area.get('queryMode'), 'region': code, 'reparto': area.get('ind_rd') == 1}
             for area in areas if isinstance(area, dict) and area.get('countyCode')
         ]
         if result:
             cache.set(cache_key, result, COBERTURAS_CACHE_SEGUNDOS)
         return result
 
-    def county_code(self, region: str, comuna: str) -> str:
+    def sector_code(self, region: str, comuna: str, sector: str) -> str:
+        principal = self.county_code(region, comuna)
+        areas = self.coberturas(region)
+        base = next((a for a in areas if a['codigo'] == principal), None)
+        wanted = (sector or '').strip().upper()
+        elegido = next((a for a in areas if base and a['comuna'] == base['comuna'] and a['modo'] != 1
+                        and a['codigo'].upper() == wanted), None)
+        if elegido is None:
+            raise SectorInvalidoException('El sector elegido no pertenece a la comuna de destino.')
+        if not elegido['reparto']:
+            raise SectorSinRepartoException('Chilexpress no reparte a domicilio en el sector elegido.')
+        return elegido['codigo']
+
+    def county_code(self, region: str, comuna: str, sector: str = '') -> str:
+        if sector:
+            return self.sector_code(region, comuna, sector)
         areas = self.coberturas(region)
         index = {}
         rango = {}
@@ -195,10 +212,11 @@ class ChilexpressClient(BaseCarrierClient):
             raise DireccionFueraDeCoberturaException('Chilexpress no cubre la comuna indicada.')
         return found
 
-    def cotizar(self, region: str, comuna: str, *, peso_kg, alto_cm, ancho_cm, largo_cm, valor_declarado) -> dict:
+    def cotizar(self, region: str, comuna: str, *, peso_kg, alto_cm, ancho_cm, largo_cm, valor_declarado,
+                sector: str = '') -> dict:
         payload = {
             'originCountyCode': self.origin_county_code,
-            'destinationCountyCode': self.county_code(region, comuna),
+            'destinationCountyCode': self.county_code(region, comuna, sector),
             'package': {'weight': float(peso_kg), 'height': float(alto_cm),
                         'width': float(ancho_cm), 'length': float(largo_cm)},
             'productType': 3, 'contentType': 1, 'declaredWorth': int(Decimal(str(valor_declarado))),
@@ -224,22 +242,28 @@ class ChilexpressClient(BaseCarrierClient):
             errores = body.get('errors')
             if isinstance(errores, list) and errores:
                 detalle = '; '.join(str(e.get('message', e)) if isinstance(e, dict) else str(e) for e in errores[:3])
-            logger.warning('Chilexpress: statusCode=%s (%s)', status_code, str(detalle)[:200])
-            raise ProveedorLogisticoError(f'Chilexpress rechazó la solicitud: {str(detalle)[:200] or "sin detalle"}.')
+            detalles = (body.get('data') or {}).get('detail') if isinstance(body.get('data'), dict) else None
+            if isinstance(detalles, list):
+                motivos = [str(d.get('statusDescription')) for d in detalles if isinstance(d, dict)
+                           and d.get('statusCode') not in (0, '0', None) and d.get('statusDescription')]
+                if motivos:
+                    detalle = '; '.join(motivos[:3])
+            logger.warning('Chilexpress: statusCode=%s (%s)', status_code, str(detalle)[:300])
+            raise ProveedorLogisticoError(f'Chilexpress rechazó la solicitud: {str(detalle)[:300] or "sin detalle"}.')
         return body
 
     def crear_orden_transporte(self, *, referencia: str, destino: dict, remitente: dict, origen: dict,
                                paquete: dict, tipo_etiqueta: int = 2) -> dict:
         if not (self.api_keys['envios'] and self.tcc and self.rut and self.origin_county_code):
             raise ProveedorLogisticoError('Faltan credenciales de Chilexpress (clave Envíos, TCC, RUT o comuna de origen).')
-        destino_code = self.county_code(destino['region'], destino['comuna'])
+        destino_code = self.county_code(destino['region'], destino['comuna'], destino.get('sector') or '')
         contacto = destino.get('contacto') or {}
 
         def direccion(tipo, code, datos):
             return {
                 'addressId': 0, 'countyCoverageCode': code, 'streetName': datos.get('calle', ''),
                 'streetNumber': str(datos.get('numero', '')), 'supplement': datos.get('complemento', '') or '',
-                'addressType': tipo, 'deliveryOnCommercialOffice': False, 'observation': datos.get('observacion', '') or '',
+                'addressType': tipo, 'deliveryOnCommercialOffice': False, 'observation': datos.get('observacion', '') or 'DEFAULT',
             }
 
         payload = {
