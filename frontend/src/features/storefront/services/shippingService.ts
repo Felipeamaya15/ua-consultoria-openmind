@@ -2,7 +2,7 @@
 import { fetchInitialLoad } from '../../../core/http/initialLoad';
 import { authService } from '../../auth/services/authService';
 import type { AdminConfig } from '../../admin/types';
-import { nombreOficialRegion } from '../data/comunasChile';
+import { comunasDeRegion, nombreOficialRegion } from '../data/comunasChile';
 
 const API_BASE = (API_BASE_URL || import.meta.env.VITE_API_URL || 'http://localhost:8000').replace(/\/+$/, '');
 
@@ -408,12 +408,22 @@ export async function getShippingQuotes(operador: string, region: string, comuna
   return tarifas.map(tarifa => ({ ...tarifa, monto: Number(tarifa.monto) }));
 }
 
-const nombresDeCobertura = (body: any): string[] | null => {
+const claveComuna = (texto: string) =>
+  texto.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+
+const PALABRAS_MENORES = new Set(['de', 'del', 'la', 'las', 'los', 'y']);
+
+const capitalizar = (texto: string) => texto.toLowerCase().split(/(\s+|-)/).map((parte, index) =>
+  index > 0 && PALABRAS_MENORES.has(parte) ? parte : parte.charAt(0).toUpperCase() + parte.slice(1)).join('');
+
+const nombresDeCobertura = (body: any, region: string): string[] | null => {
   const items = body?.exito && Array.isArray(body.data?.comunas) ? body.data.comunas : null;
   if (!items) return null;
+  const oficiales = new Map(comunasDeRegion(region).map(nombre => [claveComuna(nombre), nombre]));
   const names = items
-    .map((item: { cobertura?: unknown; comuna?: unknown }) => String(item.cobertura || item.comuna || '').trim())
-    .filter(Boolean);
+    .map((item: { comuna?: unknown }) => String(item.comuna || '').trim())
+    .filter(Boolean)
+    .map((comuna: string) => oficiales.get(claveComuna(comuna)) ?? capitalizar(comuna));
   return names.length ? Array.from(new Set<string>(names)).sort((a, b) => a.localeCompare(b, 'es')) : null;
 };
 
@@ -424,7 +434,7 @@ export async function getComunasChilexpress(region: string, signal?: AbortSignal
       `${API_BASE}/api/logistica/chilexpress/coberturas/?region=${encodeURIComponent(nombreOficialRegion(region))}`,
       { signal },
     );
-    return nombresDeCobertura(await readJson(response));
+    return nombresDeCobertura(await readJson(response), region);
   } catch {
     return null;
   }
@@ -439,7 +449,7 @@ export async function getComunasChilexpressAdmin(
       method: 'POST', headers: adminHeaders(), signal,
       body: JSON.stringify({ region: nombreOficialRegion(region), coberturas: clave, ambiente }),
     });
-    return nombresDeCobertura(await readJson(response));
+    return nombresDeCobertura(await readJson(response), region);
   } catch {
     return null;
   }
