@@ -18,7 +18,7 @@ RESPUESTA="$(printf '%s' "$RESPUESTA" | tr -d '[:space:]' | tr '[:lower:]' '[:up
 [ "$RESPUESTA" = "RESTAURAR" ] || { echo "Cancelado."; exit 1; }
 
 echo "[1/4] Deteniendo la tienda..."
-$DC stop web backend
+$DC stop web backend expirador_pedidos
 
 echo "[2/4] Restaurando PostgreSQL..."
 BD="$(valor POSTGRES_DB)"; USR="$(valor POSTGRES_USER)"

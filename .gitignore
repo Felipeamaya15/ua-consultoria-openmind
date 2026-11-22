@@ -41,6 +41,11 @@ venv/
 .coverage
 htmlcov/
 
+# Informes y catálogo previos locales; conservarlos fuera de nuevas entregas.
+/backend/qa_*.txt
+/backend/resultado_qa_backend.txt
+/catalogo_meta_previa.tsv
+
 # Respaldos o volcados locales de BD
 *.sql
 *.tar

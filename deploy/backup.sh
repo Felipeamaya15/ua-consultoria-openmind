@@ -28,5 +28,7 @@ for f in "postgres-$FECHA.sql.gz" "mongo-$FECHA.archive.gz" "imagenes-$FECHA.tar
 done
 
 chmod 600 "$BACKUP_DIR"/*-"$FECHA".*
-find "$BACKUP_DIR" -type f -mtime +"$DIAS" -delete
+find "$BACKUP_DIR" -maxdepth 1 -type f \
+  \( -name 'postgres-*.sql.gz' -o -name 'mongo-*.archive.gz' -o -name 'imagenes-*.tar.gz' \) \
+  -mtime +"$DIAS" -delete
 echo "Respaldo listo: $BACKUP_DIR (identificador $FECHA). Copia estos archivos fuera del servidor."
