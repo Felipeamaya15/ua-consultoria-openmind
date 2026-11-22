@@ -2,6 +2,7 @@ import unittest
 from unittest.mock import MagicMock
 
 import requests
+from django.core.cache import cache
 
 from apps.shipping.domain.exceptions import (
     DireccionFueraDeCoberturaException, NumeroSeguimientoNoEncontradoException,
@@ -27,6 +28,10 @@ def chilex(session):
 
 
 class ChilexpressClientTests(unittest.TestCase):
+    def setUp(self):
+        cache.clear()
+        self.addCleanup(cache.clear)
+
     def test_not_configured_without_credentials_or_origin(self):
         self.assertFalse(ChilexpressClient(api_key='', base_url='https://x', origin_county_code='A').configurado)
         self.assertFalse(ChilexpressClient(api_key='k', base_url='https://x').configurado)
@@ -119,6 +124,10 @@ if __name__ == '__main__':
 
 
 class ChilexpressDocumentedContractTests(unittest.TestCase):
+    def setUp(self):
+        cache.clear()
+        self.addCleanup(cache.clear)
+
 
     def client(self, session, ambiente='SANDBOX'):
         return ChilexpressClient(

@@ -3,6 +3,7 @@ from decimal import Decimal
 from unittest.mock import MagicMock, patch
 
 from django.contrib.auth import get_user_model
+from django.core.cache import cache
 from django.test import TestCase
 from rest_framework.test import APIClient
 
@@ -26,6 +27,8 @@ ENTREGA = {'metodo': 'Chilexpress', 'cotizacion': {'servicio_codigo': '5', 'mont
 
 class GuiaChilexpressTests(TestCase):
     def setUp(self):
+        cache.clear()
+        self.addCleanup(cache.clear)
         owner = get_user_model().objects.create_user(username='guia-owner', email='dueno@example.com')
         self.tienda = Tienda.objects.create(nombre='Tienda Guía', id_usuario_propietario=owner)
         datos = {'chilexpress': {'enabled': True, 'ambiente': 'SANDBOX'}}

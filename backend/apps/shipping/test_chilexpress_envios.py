@@ -2,6 +2,7 @@ import base64
 from decimal import Decimal
 from unittest.mock import MagicMock, patch
 
+from django.core.cache import cache
 from django.test import SimpleTestCase, override_settings
 
 from apps.shipping.domain.dtos import DireccionDespachoDTO, PaqueteDTO
@@ -43,6 +44,10 @@ def respuesta(body, status=200):
 
 
 class GuiaAutomaticaClienteTests(SimpleTestCase):
+    def setUp(self):
+        cache.clear()
+        self.addCleanup(cache.clear)
+
     def test_orden_de_transporte_cumple_la_especificacion(self):
         session = MagicMock()
         session.request.side_effect = [
@@ -129,6 +134,10 @@ class ParsersTests(SimpleTestCase):
 
 
 class AdaptadorChilexpressEnVivoTests(SimpleTestCase):
+    def setUp(self):
+        cache.clear()
+        self.addCleanup(cache.clear)
+
     def _dir(self):
         return DireccionDespachoDTO(calle='Av. Manuel Montt', numero='427', comuna='Providencia', region='Metropolitana',
                                     depto_casa='501')

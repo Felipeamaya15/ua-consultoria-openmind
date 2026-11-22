@@ -4,6 +4,7 @@ from decimal import Decimal
 from typing import Optional
 
 import requests
+from django.core.cache import cache
 
 from apps.shipping.domain.exceptions import (
     DireccionFueraDeCoberturaException,
@@ -20,6 +21,13 @@ logger = logging.getLogger(__name__)
 def _normalizar(texto: str) -> str:
     base = unicodedata.normalize('NFKD', texto or '')
     return ''.join(c for c in base if not unicodedata.combining(c)).strip().upper()
+
+
+def _clave_comuna(texto: str) -> str:
+    return ''.join(c for c in _normalizar(texto) if c.isalnum())
+
+
+COBERTURAS_CACHE_SEGUNDOS = 24 * 60 * 60
 
 
 class BaseCarrierClient:
@@ -119,7 +127,6 @@ class ChilexpressClient(BaseCarrierClient):
         self.tracking_path = tracking_path or self.TRACKING_PATH
         self.tcc = (tcc or '').strip()
         self.rut = ''.join(c for c in (rut or '') if c.isdigit())
-        self._counties = {}
 
     @property
     def configurado(self) -> bool:
@@ -132,34 +139,58 @@ class ChilexpressClient(BaseCarrierClient):
     @staticmethod
     def region_code(region: str) -> Optional[str]:
         norm = _normalizar(region)
+        if norm in set(CHILEXPRESS_REGION_CODES.values()):
+            return norm
         for key, code in CHILEXPRESS_REGION_CODES.items():
             if _normalizar(key) in norm:
                 return code
         return None
 
-    def county_code(self, region: str, comuna: str) -> str:
+    def coberturas(self, region: str) -> list:
         code = self.region_code(region)
         if not code:
             raise DireccionFueraDeCoberturaException('Región sin cobertura en Chilexpress.')
-        if code not in self._counties:
-            body = self._request('GET', self.coverage_path, params={'RegionCode': code, 'type': 0},
-                                 api_key=self.api_keys['coberturas'])
-            data = body.get('data')
-            areas = body.get('coverageAreas')
-            if not isinstance(areas, list) and isinstance(data, dict):
-                areas = data.get('coverageAreas')
-            if not isinstance(areas, list):
-                logger.warning('Chilexpress: la respuesta de coberturas no trae coverageAreas.')
-                raise RespuestaLogisticaInvalidaException('Chilexpress devolvió una cobertura inválida.')
-            counties = {}
-            for area in areas:
-                if not isinstance(area, dict) or not area.get('countyCode'):
-                    continue
-                key = _normalizar(area.get('countyName'))
-                if key not in counties or area.get('queryMode') == 1:
-                    counties[key] = area['countyCode']
-            self._counties[code] = counties
-        found = self._counties[code].get(_normalizar(comuna))
+        cache_key = f'chilexpress:coberturas:{self.ambiente}:{code}'
+        cached = cache.get(cache_key)
+        if cached is not None:
+            return cached
+        body = self._request('GET', self.coverage_path, params={'RegionCode': code, 'type': 0},
+                             api_key=self.api_keys['coberturas'])
+        data = body.get('data')
+        areas = body.get('coverageAreas')
+        if not isinstance(areas, list) and isinstance(data, dict):
+            areas = data.get('coverageAreas')
+        if not isinstance(areas, list):
+            logger.warning('Chilexpress: la respuesta de coberturas no trae coverageAreas.')
+            raise RespuestaLogisticaInvalidaException('Chilexpress devolvió una cobertura inválida.')
+        result = [
+            {'codigo': area['countyCode'], 'comuna': str(area.get('countyName') or '').strip(),
+             'cobertura': str(area.get('coverageName') or area.get('countyName') or '').strip(),
+             'modo': area.get('queryMode'), 'region': code}
+            for area in areas if isinstance(area, dict) and area.get('countyCode')
+        ]
+        if result:
+            cache.set(cache_key, result, COBERTURAS_CACHE_SEGUNDOS)
+        return result
+
+    def county_code(self, region: str, comuna: str) -> str:
+        areas = self.coberturas(region)
+        index = {}
+        rango = {}
+        for area in areas:
+            peso = 0 if area['modo'] == 1 else 1
+            for key in (_clave_comuna(area['comuna']), _clave_comuna(area['cobertura'])):
+                if key and (key not in index or peso < rango[key]):
+                    index[key] = area['codigo']
+                    rango[key] = peso
+        for area in areas:
+            index.setdefault(_clave_comuna(area['codigo']), area['codigo'])
+        clave = _clave_comuna(comuna)
+        found = index.get(clave)
+        if not found and clave:
+            candidatos = {v for k, v in index.items() if k.startswith(clave)}
+            if len(candidatos) == 1:
+                found = candidatos.pop()
         if not found:
             raise DireccionFueraDeCoberturaException('Chilexpress no cubre la comuna indicada.')
         return found

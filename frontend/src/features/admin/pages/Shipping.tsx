@@ -7,6 +7,7 @@ import { AdminCard, Alert, Input, Toggle, Button, Icon, Badge } from '../compone
 import { getShippingConfiguration, saveShippingConfiguration, saveChilexpressCredentials, ShippingConfigurationError } from '../../storefront/services/shippingService';
 import territorio from '../data/chileTerritory.json';
 import { comunasDeRegion } from '../../storefront/data/comunasChile';
+import { useComunasChilexpress } from '../../storefront/hooks/useComunasChilexpress';
 import type { PackageConfiguration, ShippingRate } from '../types';
 import PickupEditor from '../components/shipping/PickupEditor';
 import { validatePickup } from '../services/pickupConfiguration';
@@ -44,6 +45,9 @@ const CREDENCIALES_GUIA = [
 export default function Shipping() {
   const { config, setConfig } = useAdmin();
   const { form, setForm } = useAdminForm('shippingConfiguration');
+  const comunasOrigen = useComunasChilexpress(form.chilexpress?.credenciales?.origen_region || '', {
+    clave: form.chilexpress?.credenciales?.coberturas, ambiente: form.chilexpress?.ambiente,
+  });
   const configRef = useRef(config);
   configRef.current = config;
   const savingRef = useRef(false);
@@ -233,7 +237,7 @@ export default function Shipping() {
                       <label className="text-xs">Comuna de origen
                         <select aria-label="Comuna de origen" className="block w-full border rounded p-2" value={current.credenciales?.origen_comuna || ''} disabled={!current.credenciales?.origen_region} onChange={event => updateCredential('origen_comuna', event.target.value)}>
                           <option value="">Selecciona comuna</option>
-                          {comunasDeRegion(current.credenciales?.origen_region || '').map(comuna => <option key={comuna} value={comuna}>{comuna}</option>)}
+                          {comunasOrigen.map(comuna => <option key={comuna} value={comuna}>{comuna}</option>)}
                         </select>
                       </label>
                       <p className="text-xs text-[var(--muted-foreground)]">Es la comuna desde donde despachas tus pedidos. Al guardar, buscamos su código en Chilexpress y necesitas haber ingresado la clave API Coberturas.</p>

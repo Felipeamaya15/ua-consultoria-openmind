@@ -17,7 +17,7 @@ import PickupDetails from '../components/checkout/PickupDetails';
 import { useCart } from '../context/CartContext';
 import { formatActivityDate } from '../../landing/services/paidActivityService';
 import { formatPrice } from '../data/mockData';
-import { comunasDeRegion, esComunaDeRegion } from '../data/comunasChile';
+import { useComunasChilexpress } from '../hooks/useComunasChilexpress';
 import {
   Stepper,
   Button,
@@ -285,6 +285,7 @@ export default function Checkout() {
     city: '',
     region: 'Metropolitana',
   });
+  const comunasDisponibles = useComunasChilexpress(address.region);
 
   const [paymentMethod, setPaymentMethod] =
     useState('');
@@ -486,7 +487,7 @@ export default function Checkout() {
     setQuoteError('');
     setQuoteErrorKind('');
     setQuoteLoading(false);
-    if (!selectedShippingOption?.requiresAddress || !esComunaDeRegion(address.city, address.region)) return;
+    if (!selectedShippingOption?.requiresAddress || !comunasDisponibles.includes(address.city)) return;
     const controller = new AbortController();
     let expiry: ReturnType<typeof setTimeout>;
     setQuoteLoading(true);
@@ -508,7 +509,7 @@ export default function Checkout() {
         setQuoteErrorKind((cause as {kind?: string} | null)?.kind ?? 'temporal');
       }).finally(() => { if (!controller.signal.aborted) setQuoteLoading(false); });
     return () => { controller.abort(); clearTimeout(expiry); };
-  }, [address.city, address.region, shippingMethod, selectedShippingOption, quoteAttempt, destinationKey, cartSignature]);
+  }, [address.city, address.region, shippingMethod, selectedShippingOption, quoteAttempt, destinationKey, cartSignature, comunasDisponibles]);
 
   useEffect(() => {
     if (
@@ -645,7 +646,7 @@ export default function Checkout() {
           'Dirección requerida';
       } else if (
         selectedShippingOption?.requiresAddress &&
-        !esComunaDeRegion(address.city, address.region)
+        !comunasDisponibles.includes(address.city)
       ) {
         newErrors.address =
           'Selecciona una comuna de la región elegida';
@@ -1467,7 +1468,7 @@ export default function Checkout() {
                         }
                         options={[
                           { value: '', label: 'Selecciona una comuna' },
-                          ...comunasDeRegion(address.region).map(
+                          ...comunasDisponibles.map(
                             (comuna) => ({
                               value: comuna,
                               label: comuna,

@@ -407,3 +407,40 @@ export async function getShippingQuotes(operador: string, region: string, comuna
   }
   return tarifas.map(tarifa => ({ ...tarifa, monto: Number(tarifa.monto) }));
 }
+
+const nombresDeCobertura = (body: any): string[] | null => {
+  const items = body?.exito && Array.isArray(body.data?.comunas) ? body.data.comunas : null;
+  if (!items) return null;
+  const names = items
+    .map((item: { cobertura?: unknown; comuna?: unknown }) => String(item.cobertura || item.comuna || '').trim())
+    .filter(Boolean);
+  return names.length ? Array.from(new Set<string>(names)).sort((a, b) => a.localeCompare(b, 'es')) : null;
+};
+
+export async function getComunasChilexpress(region: string, signal?: AbortSignal): Promise<string[] | null> {
+  if (!region) return null;
+  try {
+    const response = await fetch(
+      `${API_BASE}/api/logistica/chilexpress/coberturas/?region=${encodeURIComponent(nombreOficialRegion(region))}`,
+      { signal },
+    );
+    return nombresDeCobertura(await readJson(response));
+  } catch {
+    return null;
+  }
+}
+
+export async function getComunasChilexpressAdmin(
+  region: string, clave: string, ambiente: string, signal?: AbortSignal,
+): Promise<string[] | null> {
+  if (!region) return null;
+  try {
+    const response = await fetch(`${API_BASE}/api/logistica/chilexpress/coberturas/admin/`, {
+      method: 'POST', headers: adminHeaders(), signal,
+      body: JSON.stringify({ region: nombreOficialRegion(region), coberturas: clave, ambiente }),
+    });
+    return nombresDeCobertura(await readJson(response));
+  } catch {
+    return null;
+  }
+}
