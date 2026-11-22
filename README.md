@@ -10,12 +10,14 @@ Este proyecto consiste en el diseño, desarrollo e implementación de una plataf
 
 | Rol | Responsable | Funciones Principales |
 | :--- | :--- | :--- |
-| **Product Owner (PO)** | Marianela | Definicion y priorizacion del product backlog, gestion de requerimientos y comunicacion directa con el cliente. |
+| **Product Owner (PO)** | Marianela Pareja | Definicion y priorizacion del product backlog, gestion de requerimientos y comunicacion directa con el cliente. |
 | **Scrum Master (SM)** | Lorenzo Cotta | Facilitacion de ceremonias agiles (Sprint Planning, Daily, Review, Retro), gestion de impedimentos y cumplimiento de SCRUM. |
 | **Lider de QA** | Patricio Jaramillo | Diseno de la matriz de pruebas, ejecucion de pruebas de integracion con Postman, aseguramiento de calidad y control de tickets. |
 | **Responsable de Git** | Felipe Amaya | Administracion de repositorios, definicion de flujos de trabajo (*GitFlow*), politicas de ramas y revision tecnica de Pull Requests. |
-| **Documentacion Tecnica** | Ismael | Redaccion de actas, arquitectura de software, manuales tecnicos y especificaciones funcionales en Confluence. |
-| **Frontend Developer** | Francisco Salas | Diseno e implementacion de interfaces de usuario (UI/UX), integracion de servicios y logica del cliente web. |
+| **Documentacion Tecnica** | Ismael Herrera| Redaccion de actas, arquitectura de software, manuales tecnicos y especificaciones funcionales en Confluence. |
+| **Frontend Developer** | Francisco Salas | Diseño e implementacion de interfaces de usuario (UI/UX), integracion de servicios y logica del cliente web. |
+| **Backend Developer & Encargado de despliegue** | Franco Hidalgo | Diseño e implementación de las base de datos y logica, ademas de desplegar el proyecto. |
+
 
 ---
 
