@@ -509,10 +509,12 @@ class CampaignMigrationTests(TransactionTestCase):
             MigrationExecutor(connection).migrate(leaves)
 
 
-@override_settings(EMAIL_BACKEND='django.core.mail.backends.smtp.EmailBackend', EMAIL_HOST='mailpit',
-    EMAIL_PORT=1025, EMAIL_HOST_USER='', EMAIL_HOST_PASSWORD='', EMAIL_USE_TLS=False, EMAIL_USE_SSL=False,
+@override_settings(EMAIL_BACKEND='django.core.mail.backends.smtp.EmailBackend',
+    EMAIL_HOST=os.environ.get('MAILPIT_TEST_SMTP_HOST', 'mailpit'),
+    EMAIL_PORT=1025,
+    EMAIL_HOST_USER='', EMAIL_HOST_PASSWORD='', EMAIL_USE_TLS=False, EMAIL_USE_SSL=False,
     DEFAULT_FROM_EMAIL='QA OpenMind <qa@openmind.test>', STORE_MAIL_EXTERNAL_ENABLED=False)
-@tag('mailpit')
+@tag('mailpit', 'integration')
 @skipUnless(
     os.environ.get('RUN_MAILPIT_INTEGRATION') == '1',
     'Requiere Mailpit SMTP y API accesibles'
@@ -545,10 +547,50 @@ class MailpitCaptureTests(TestCase):
             'cuerpo': 'Respuesta operacional de prueba'}, format='json').data['data']
         for _ in range(2):
             self.assertEqual(client.post(url + reply['id'] + '/enviar/', {}, format='json').data['data']['estado'], 'aceptada')
-        captured = requests.get('http://mailpit:8025/api/v1/search', params={'query': 'subject:' + marker}, timeout=5).json()
+        mailpit_api = os.environ.get('MAILPIT_TEST_API_URL', 'http://mailpit:8025').rstrip('/')
+        captured = requests.get(mailpit_api + '/api/v1/search', params={'query': 'subject:' + marker}, timeout=5).json()
         self.assertEqual(captured['messages_count'], 2, {k: captured.get(k) for k in ['count', 'messages_count', 'total']})
         for message in captured['messages']:
-            detail = requests.get('http://mailpit:8025/api/v1/message/' + message['ID'], timeout=5).json()
+            detail = requests.get(mailpit_api + '/api/v1/message/' + message['ID'], timeout=5).json()
             self.assertEqual(len(detail['To']), 1)
             self.assertNotIn('<script>', detail['HTML'])
         request.refresh_from_db(); self.assertEqual(request.estado, 'respondida')
+
+    def test_paid_transfer_notifies_customer_and_owner_once(self):
+        from datetime import timedelta
+        from apps.core.models import Pedido
+        from apps.landing.models import ReservaActividadPagada
+        from apps.landing.transfer_activity_orders import TRANSFER_MARKER, change_transfer
+        from apps.landing.activity_owner_notifications import enviar_aviso_inscripcion
+        marker = 'SMTP-PAGO-' + uuid.uuid4().hex[:10]
+        owner = get_user_model().objects.create_user(username='smtp-paid-owner')
+        store = Tienda.objects.create(nombre=marker, correo_negocio='owner@example.test',
+            id_usuario_propietario=owner)
+        order = Pedido.objects.create(tienda=store, identificador=marker,
+            clave_checkout=uuid.uuid4(), monto_total=15000, estado='pendiente',
+            medio_pago='Transferencia', correo_contacto='buyer@example.test',
+            nombre_contacto='Cliente SMTP QA', entrega={'origen': TRANSFER_MARKER})
+        row = ReservaActividadPagada.objects.create(tienda=store, seccion_id=uuid.uuid4(),
+            clave_checkout=order.clave_checkout, cantidad=1, precio_unitario=15000,
+            inicio=timezone.now()+timedelta(days=30), cierre=timezone.now()+timedelta(days=29),
+            vence=timezone.now()+timedelta(minutes=15), estado='en_pago',
+            condiciones={'titulo': 'Taller SMTP QA'})
+        with self.captureOnCommitCallbacks(execute=True):
+            for _ in range(2):
+                change_transfer(store, order.pk, row.pk, owner, 'registrar_pago',
+                    'Comprobante sintético', 'QA-SMTP', True)
+        enviar_aviso_inscripcion(order.pk)
+        mailpit_api = os.environ.get('MAILPIT_TEST_API_URL', 'http://mailpit:8025').rstrip('/')
+        captured = requests.get(mailpit_api + '/api/v1/search',
+            params={'query': 'subject:' + marker}, timeout=5).json()
+        self.assertEqual(captured['messages_count'], 2)
+        recipients = []
+        for message in captured['messages']:
+            detail = requests.get(mailpit_api + '/api/v1/message/' + message['ID'], timeout=5).json()
+            self.assertEqual(len(detail['To']), 1)
+            recipients.append(detail['To'][0]['Address'])
+            self.assertNotIn('<script>', detail['HTML'])
+        self.assertCountEqual(recipients, ['buyer@example.test', 'owner@example.test'])
+        order.refresh_from_db(); row.refresh_from_db()
+        self.assertEqual(order.estado, 'pagado')
+        self.assertEqual(row.estado, 'confirmada')

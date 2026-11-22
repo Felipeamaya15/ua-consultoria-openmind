@@ -2,19 +2,27 @@
 import os
 from unittest import skipUnless
 from unittest.mock import patch
+from urllib.parse import urlsplit
 
 import requests
-from django.test import TestCase, override_settings
+from django.test import TestCase, override_settings, tag
 
 from apps.catalog.infrastructure.adapters.transbank_adapter import TransbankWebpayAdapter
 from apps.landing import test_webpay_activity_reconciliation as helpers
 from apps.landing.webpay_activity_orders import process_order
 
 SIMULATION = os.environ.get('OPENMIND_WEBPAY_SIMULATION') == '1'
-BASE = 'http://127.0.0.1:55442/transbank'
+BASE = os.environ.get('OPENMIND_WEBPAY_SIMULATION_URL', 'http://127.0.0.1:55442/transbank').rstrip('/')
+_simulation_url = urlsplit(BASE)
+if (_simulation_url.scheme != 'http' or _simulation_url.hostname not in (
+        '127.0.0.1', 'localhost', 'host.docker.internal') or _simulation_url.port != 55442
+        or _simulation_url.path != '/transbank' or _simulation_url.username
+        or _simulation_url.password or _simulation_url.query or _simulation_url.fragment):
+    raise ValueError('La simulación Webpay solo admite el servicio local de QA en el puerto 55442.')
 
 
 @skipUnless(SIMULATION, 'Requires local Postman simulation on port 55442')
+@tag('integration', 'webpay_http')
 @override_settings(DEBUG=True)
 class WebpayHTTPSimulationTests(helpers.ReconciliationFixtures, TestCase):
     def seed(self, order, status='INITIALIZED', **options):
