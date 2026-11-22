@@ -189,7 +189,7 @@ export default function VisualHome() {
 
           <div className="mt-8 sm:mt-10">
             <Link
-              to="catalogo"
+              to={route('catalogo')}
               className="
                 inline-flex items-center justify-center min-h-11 w-full sm:w-auto
                 border border-[var(--primary)]
@@ -232,6 +232,7 @@ function VisualHomeProduct({
   large = false,
   wide = false,
 }: VisualHomeProductProps) {
+  const { route } = useStorefrontTemplate();
   return (
     <article data-visual-section={VISUAL_SECTION.productCard} data-visual-card="grid"
       className={`
@@ -253,7 +254,7 @@ function VisualHomeProduct({
           }
         `}
       >
-        <ProductImageGallery images={product.images} alt={product.name} href={`producto/${product.id}`} imageClassName="
+        <ProductImageGallery images={product.images} alt={product.name} href={route(`producto/${product.id}`)} imageClassName="
             w-full h-full object-cover
             hover:scale-[1.02]
             transition-transform duration-700
@@ -291,7 +292,7 @@ function VisualHomeProduct({
           </span>
 
           <Link data-visual-part="buyButton"
-            to={`producto/${product.id}`}
+            to={route(`producto/${product.id}`)}
             className="
               inline-flex items-center justify-center min-h-10
               bg-[var(--primary)]

@@ -241,7 +241,7 @@ const [saved,setSaved]=useState(false);
           </Button>
 
           <Link
-            to={templatePaths[activeTemplate]}
+            to="/"
             target="_blank"
             rel="noopener noreferrer"
           >

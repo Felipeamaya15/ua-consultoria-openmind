@@ -11,6 +11,7 @@ import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 
 import { useStore } from '../../context/StoreContext';
 import { useCart } from '../../context/CartContext';
+import { useStorefrontTemplate } from '../../hooks/useStorefrontTemplate';
 import { InstitutionalBadge } from '../ui';
 import { authService } from '../../../auth/services/authService';
 
@@ -44,6 +45,7 @@ function CartIcon({ count }: { count: number }) {
 export function EditorialLayout() {
   const { config, landingLoading } = useStore();
   const { count } = useCart();
+  const { route } = useStorefrontTemplate();
   const navigate = useNavigate();
 
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -65,7 +67,7 @@ export function EditorialLayout() {
   const handleLogout = () => {
     authService.logout();
     setUser(null);
-    navigate('/plantilla/1');
+    navigate(route());
   };
 
   useEffect(() => {
@@ -95,7 +97,7 @@ export function EditorialLayout() {
               window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
             }
           }}
-            to="."
+            to={route()}
             className="flex min-w-0 max-w-full items-center gap-3"
             aria-label={`Ir al inicio de ${config.name || 'la tienda'}`}
           >
@@ -127,14 +129,14 @@ export function EditorialLayout() {
 
 
             <Link
-              to="catalogo"
+              to={route('catalogo')}
               className="text-sm text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition-colors"
             >
               Catálogo
             </Link>
 
             <Link
-              to="seguimiento"
+              to={route('seguimiento')}
               className="text-sm text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition-colors"
             >
               Seguimiento
@@ -145,7 +147,7 @@ export function EditorialLayout() {
           <div className="flex shrink-0 items-center gap-3">
 
             <Link
-              to="carrito"
+              to={route('carrito')}
               className="text-[var(--foreground)] hover:text-[var(--primary)] transition-colors"
               aria-label={`Ver carrito (${count} productos)`}
             >
@@ -209,7 +211,7 @@ export function EditorialLayout() {
 
 
             <Link
-              to="catalogo"
+              to={route('catalogo')}
               className="text-sm font-medium py-2.5 px-2 rounded-lg"
               onClick={() => setMobileOpen(false)}
             >
@@ -217,7 +219,7 @@ export function EditorialLayout() {
             </Link>
 
             <Link
-              to="seguimiento"
+              to={route('seguimiento')}
               className="text-sm font-medium py-2.5 px-2 rounded-lg"
               onClick={() => setMobileOpen(false)}
             >
@@ -279,13 +281,13 @@ export function EditorialLayout() {
             </p>
             <div className="flex flex-col gap-2 text-sm text-[color-mix(in_srgb,currentColor_70%,transparent)]">
               <Link
-                to="catalogo"
+                to={route('catalogo')}
                 className="hover:text-inherit transition-colors"
               >
                 Catálogo
               </Link>
               <Link
-                to="seguimiento"
+                to={route('seguimiento')}
                 className="hover:text-inherit transition-colors"
               >
                 Seguimiento
@@ -300,25 +302,25 @@ export function EditorialLayout() {
             </p>
             <div className="flex flex-col gap-2 text-sm text-[color-mix(in_srgb,currentColor_70%,transparent)]">
               <Link
-                to="legal/terms"
+                to={route('legal/terms')}
                 className="hover:text-inherit transition-colors"
               >
                 Términos
               </Link>
               <Link
-                to="legal/privacy"
+                to={route('legal/privacy')}
                 className="hover:text-inherit transition-colors"
               >
                 Privacidad
               </Link>
               <Link
-                to="legal/refund"
+                to={route('legal/refund')}
                 className="hover:text-inherit transition-colors"
               >
                 Reembolsos
               </Link>
               <Link
-                to="legal/cookies"
+                to={route('legal/cookies')}
                 className="hover:text-inherit transition-colors"
               >
                 Cookies

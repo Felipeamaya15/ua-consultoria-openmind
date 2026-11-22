@@ -104,14 +104,24 @@ class AppearanceAPIView(APIView):
 
     def get(self, request):
         store = resolver_tienda(request)
-        data = read_data(ConfiguracionVisual.objects.filter(tienda=store).first())
-        response = success_response(data={'plantillas': data.get('editor', {})})
+        config = ConfiguracionVisual.objects.filter(tienda=store).first()
+        data = read_data(config)
+        plantilla_seleccionada = config.plantilla_seleccionada if config else ''
+        plantilla_activa = plantilla_seleccionada or ConfiguracionVisual.Plantilla.EDITORIAL
+        response = success_response(data={
+            'plantillas': data.get('editor', {}),
+            'plantilla_seleccionada': plantilla_seleccionada,
+            'plantilla_activa': plantilla_activa,
+        })
         response['Cache-Control'] = 'no-store'
         return response
 
     def put(self, request):
         store = resolver_tienda(request, exigir_propietario=True)
         templates = request.data.get('plantillas')
+        active_template = request.data.get('plantilla_activa') or request.data.get('plantilla_seleccionada')
+        if active_template is not None and active_template not in TEMPLATES:
+            raise serializers.ValidationError('Plantilla activa inválida.')
         if not isinstance(templates, dict) or set(templates) - set(TEMPLATES) or len(json.dumps(templates)) > 200000:
             raise serializers.ValidationError('Envía ajustes de las cuatro plantillas compatibles.')
         effect_fields = frozenset((
@@ -211,5 +221,14 @@ class AppearanceAPIView(APIView):
                 if value.get('paleta_id') is not None and value['paleta_id'] not in ids:
                     raise serializers.ValidationError('La paleta ya no pertenece a esta tienda. Selecciona otra.')
             config.personalizacion = {**data, 'editor': {**data.get('editor', {}), **templates}}
-            config.save(update_fields=['personalizacion'])
-        return success_response(data={'plantillas': config.personalizacion['editor']})
+            update_fields = ['personalizacion']
+            if active_template:
+                config.plantilla_seleccionada = active_template
+                update_fields.append('plantilla_seleccionada')
+            config.save(update_fields=update_fields)
+        plantilla_seleccionada = config.plantilla_seleccionada or ''
+        return success_response(data={
+            'plantillas': config.personalizacion['editor'],
+            'plantilla_seleccionada': plantilla_seleccionada,
+            'plantilla_activa': plantilla_seleccionada or ConfiguracionVisual.Plantilla.EDITORIAL,
+        })

@@ -849,48 +849,104 @@ export default function Catalog() {
         </div>
 
 
-        <div data-catalog-toolbar className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+        <div data-catalog-toolbar className={`flex flex-wrap items-center ${isMinimal ? 'gap-2.5 sm:gap-3' : 'gap-2'} w-full sm:w-auto`}>
 
 
-          <div data-catalog-search className="relative w-full sm:w-auto">
-            <Icon
-              name="search"
-              className="
-                absolute
-                left-3.5
-                top-1/2
-                -translate-y-1/2
-                w-4
-                h-4
-                text-gray-500
-                pointer-events-none
-              "
-            />
+          {isMinimal ? (
+            <div
+              data-catalog-search
+              className="om-minimal-search-field om-minimal-search-field--catalog group w-full sm:w-72 md:w-80 lg:w-96 h-12 bg-white rounded-full border border-gray-200 shadow-xs hover:border-gray-300 hover:shadow-md focus-within:border-[var(--primary)] focus-within:ring-4 focus-within:ring-[var(--primary)]/15 pl-4 pr-2.5 flex flex-nowrap items-center gap-2.5 transition-all duration-200"
+            >
+              <svg
+                className="om-minimal-search-icon w-4 h-4 text-gray-400 group-focus-within:text-[var(--primary)] shrink-0 transition-colors pointer-events-none"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                aria-hidden="true"
+              >
+                <circle cx="11" cy="11" r="7" strokeWidth="1.8" />
+                <path
+                  d="m20 20-3.5-3.5"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                />
+              </svg>
 
-            <input
-              value={search}
-              onChange={(event) => {
-                setSearch(event.target.value);
-                setPage(1);
-              }}
-              aria-label="Buscar productos"
-              placeholder="Buscar..."
-              className={`
-                border
-                border-[var(--border)]
-                bg-white
-                focus:outline-none
-                focus:ring-1
-                focus:ring-[var(--primary)]
-                transition-all
-                ${
-                  isMinimal
-                    ? 'h-11 sm:h-10 text-sm rounded-full pl-10 pr-4 w-full sm:w-48 md:w-56'
-                    : 'h-11 sm:h-8 text-sm rounded-lg pl-9 pr-3 w-full sm:w-40 sm:focus:w-52'
-                }
-              `}
-            />
-          </div>
+              <input
+                type="search"
+                value={search}
+                onChange={(event) => {
+                  setSearch(event.target.value);
+                  setPage(1);
+                }}
+                aria-label="Buscar productos"
+                placeholder="¿Qué estás buscando hoy?"
+                className="om-minimal-search-input flex-1 min-w-0 w-full h-full bg-transparent border-none outline-none ring-0 focus:ring-0 focus:outline-none focus:border-none text-sm text-[#171717] placeholder:text-gray-400"
+              />
+
+              {search.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSearch('');
+                    setPage(1);
+                  }}
+                  aria-label="Limpiar búsqueda"
+                  title="Limpiar búsqueda"
+                  className="om-minimal-search-clear w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
+                >
+                  <svg
+                    className="w-3.5 h-3.5"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path d="M18 6 6 18M6 6l12 12" />
+                  </svg>
+                </button>
+              )}
+            </div>
+          ) : (
+            <div data-catalog-search className="relative w-full sm:w-auto">
+              <Icon
+                name="search"
+                className="
+                  absolute
+                  left-3.5
+                  top-1/2
+                  -translate-y-1/2
+                  w-4
+                  h-4
+                  text-gray-500
+                  pointer-events-none
+                "
+              />
+
+              <input
+                value={search}
+                onChange={(event) => {
+                  setSearch(event.target.value);
+                  setPage(1);
+                }}
+                aria-label="Buscar productos"
+                placeholder="Buscar..."
+                className="
+                  border
+                  border-[var(--border)]
+                  bg-white
+                  focus:outline-none
+                  focus:ring-1
+                  focus:ring-[var(--primary)]
+                  transition-all
+                  h-11 sm:h-8 text-sm rounded-lg pl-9 pr-3 w-full sm:w-40 sm:focus:w-52
+                "
+              />
+            </div>
+          )}
 
 
           <select
@@ -902,13 +958,12 @@ export default function Catalog() {
             className={`
               flex-1 sm:flex-initial min-w-0
               border
-              border-[var(--border)]
               bg-white
               focus:outline-none
               ${
                 isMinimal
-                  ? 'h-11 sm:h-10 text-xs rounded-full px-4'
-                  : 'h-11 sm:h-8 text-xs rounded-lg px-2'
+                  ? 'h-12 text-xs font-medium text-[#171717] border-gray-200 shadow-xs rounded-full px-4 hover:border-gray-300 transition-colors'
+                  : 'h-11 sm:h-8 text-xs border-[var(--border)] rounded-lg px-2'
               }
             `}
           >
@@ -927,13 +982,12 @@ export default function Catalog() {
             className={`
               flex shrink-0
               border
-              border-[var(--border)]
               overflow-hidden
               bg-white
               ${
                 isMinimal
-                  ? 'rounded-full h-11 sm:h-10'
-                  : 'rounded-lg h-11 sm:h-auto'
+                  ? 'rounded-full h-12 border-gray-200 shadow-xs'
+                  : 'rounded-lg h-11 sm:h-auto border-[var(--border)]'
               }
             `}
           >
@@ -957,7 +1011,7 @@ export default function Catalog() {
                     transition-colors
                     ${
                       isMinimal
-                        ? 'w-11 sm:w-10'
+                        ? 'w-12'
                         : 'w-11 sm:w-auto sm:px-2 sm:py-1.5'
                     }
                     ${

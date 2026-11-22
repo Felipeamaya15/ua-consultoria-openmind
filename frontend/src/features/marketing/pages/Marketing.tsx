@@ -19,7 +19,6 @@ import { draftRepository } from '../services/draftStorage';
 import { downloadPublication, publicationFilename, renderPublication, type ExportType } from '../services/exportPublication';
 import type { ContentSource, PublicationDesign } from '../domain/types';
 import { useAdmin } from '../../admin/context/AdminContext';
-import { templatePaths } from '../../admin/config/navigation';
 import { resolveSharingItem } from '../services/sharingService';
 import { sharingKey, type SharingItem, type SharingReference } from '../domain/sharing';
 import type { PublicationFormat } from '../domain/types';
@@ -34,8 +33,8 @@ export default function Marketing() {
 
 function MarketingWorkspace({ scope, isCurrent }: { scope: DraftScope; isCurrent: () => boolean }) {
   const [params] = useSearchParams();
-  const {config}=useAdmin();
-  const home=window.location.origin+templatePaths[config.template];
+  useAdmin();
+  const home = window.location.origin;
   const [sharingReference,setSharingReference]=useState<SharingReference>();
   const [sharingItem,setSharingItem]=useState<SharingItem|null>(null);
   const [sharingLoading,setSharingLoading]=useState(false);

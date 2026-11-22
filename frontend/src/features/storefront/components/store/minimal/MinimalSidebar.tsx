@@ -54,7 +54,7 @@ export function MinimalSidebar() {
         </Link>
 
         <Link
-          to="catalogo"
+          to={route('catalogo')}
           aria-label="Catálogo"
           title="Catálogo"
           className="w-10 h-10 rounded-full flex items-center justify-center text-gray-600 hover:bg-gray-100 hover:text-[var(--primary)] transition-colors"
@@ -72,7 +72,7 @@ export function MinimalSidebar() {
         </Link>
 
         <Link
-          to="seguimiento"
+          to={route('seguimiento')}
           aria-label="Seguimiento"
           title="Seguimiento"
           className="w-10 h-10 rounded-full flex items-center justify-center text-gray-600 hover:bg-gray-100 hover:text-[var(--primary)] transition-colors"
