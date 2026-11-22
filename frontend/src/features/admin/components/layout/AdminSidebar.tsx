@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, NavLink, useLocation } from 'react-router-dom';
-import { menuItems, legalSlugs, templatePaths } from '../../config/navigation';
+import { menuItems, legalSlugs } from '../../config/navigation';
 import { searchAdminPanel } from '../../config/panelSearch';
 import { legalPageTemplates } from '../../data/mockAdminData';
 import { useAdmin } from '../../context/AdminContext';
@@ -75,7 +75,7 @@ export function AdminSidebar({
             <p className="text-xs text-[var(--muted-foreground)] mt-0.5">Emprendedor</p>
           </div>
           <Link
-            to={templatePaths[config.template]}
+            to="/"
             className="w-full inline-flex items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 shadow-[0_1px_2px_rgba(15,23,42,0.05)] transition-colors hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900"
           >
             <Icon name="bag" className="w-3.5 h-3.5 text-slate-500" />

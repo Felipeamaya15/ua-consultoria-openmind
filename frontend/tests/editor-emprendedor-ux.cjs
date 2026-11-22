@@ -55,7 +55,7 @@ test('saving shows progress, errors keep the draft, retry clears dirty, and undo
 });
 test('saving an alternate template preserves the active template and discard restores the draft',async () =>{
   const h=editorHarness();let tree=h.render();button(tree,'Plantillas').props.onClick();tree=h.render();
-  tree.find(n=>n.type?.name==='TemplateGallery').props.onSelect('minimal');tree=h.render();assert.equal(button(tree,'Guardar cambios').props.disabled,true);assert(tree.find(n=>n.type==='iframe').props.src.startsWith('/plantilla/2'));
+  tree.find(n=>n.type?.name==='TemplateGallery').props.onSelect('minimal');tree=h.render();assert.equal(button(tree,'Guardar cambios').props.disabled,true);assert(tree.find(n=>n.type==='iframe').props.src.startsWith('/admin/preview/plantilla/2'));
   button(tree,'Diseño y apariencia').props.onClick();tree=h.render();tree.find(n=>n.type?.name==='VisualInspector').props.onEdit('hero.titleSize',84);tree=h.render();assert.equal(button(tree,'Guardar cambios').props.disabled,false);
   await button(tree,'Guardar cambios').props.onClick();h.flush();tree=h.render();assert.equal(h.config().template,'editorial');assert.equal(button(tree,'Guardar cambios').props.disabled,true);assert.equal(h.config().themeEditor.minimal.visualConfig.hero.titleSize,84);
   tree.find(n=>n.type?.name==='VisualInspector').props.onEdit('hero.titleSize',72);tree=h.render();button(tree,'Descartar cambios').props.onClick();tree=h.render();assert.equal(button(tree,'Guardar cambios').props.disabled,true);assert.equal(h.config().themeEditor.minimal.visualConfig.hero.titleSize,84);

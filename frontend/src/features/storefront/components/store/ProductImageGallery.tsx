@@ -14,7 +14,9 @@ type Props = { images: string[]; alt: string; href?: string; imageClassName?: st
 export function ProductImageGallery({ images, alt, href, imageClassName = '', detail = false, index, onSelect, videoUrl }: Props) {
   const host = useRef<HTMLDivElement>(null);
   const { pathname } = useLocation();
-  const esInicio = /^\/plantilla\/\d+\/?$/.test(pathname);
+  const esInicio =
+    (typeof document !== 'undefined' && pathname === '/') ||
+    /^\/(?:(?:admin|emprendedor)\/preview\/)?plantilla\/(?:\d+|editorial|minimal|visual|catalog)\/?$/.test(pathname);
   const esCatalogo = /(?:^|\/)catalogo\/?$/.test(pathname);
   const permiteRotacion = !detail && (esInicio || esCatalogo);
   const [desktopPointer, setDesktopPointer] = useState(false);

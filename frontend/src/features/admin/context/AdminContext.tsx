@@ -5,6 +5,7 @@ import { adminRepository } from '../data/adminRepository';
 import { useStoreIdentity } from '../../storefront/context/StoreIdentityContext';
 import { humanizeAdminError } from '../utils/humanizeError';
 import { getStoreConfigKey, isStoreConfigChange, STORE_CONFIG_CHANGED_EVENT, type StoreIdentity } from '../../storefront/visual/storage';
+import { getServerSelectedTemplate, setServerSelectedTemplate } from '../../storefront/visual/resolveVisualConfig';
 import { fetchStoreInformation, STORE_INFORMATION_CHANGED, type StoreInformation } from '../../storefront/services/storeInformationService';
 interface AdminContextValue {
   config: AdminConfig; setConfig: (next: AdminConfig) => boolean;
@@ -13,7 +14,11 @@ interface AdminContextValue {
 }
 const AdminContext = createContext<AdminContextValue | null>(null);
 function ScopedAdminProvider({children, identity}: {children:ReactNode; identity: StoreIdentity}) {
-  const [config, setState] = useState(() => adminRepository.load(identity));
+  const [config, setState] = useState(() => {
+    const loaded = adminRepository.load(identity);
+    const serverTemplate = getServerSelectedTemplate(identity);
+    return serverTemplate ? { ...loaded, template: serverTemplate } : loaded;
+  });
   const [business, setBusiness] = useState<StoreInformation | null>(null);
   useEffect(() => {
     const controller = new AbortController();
@@ -39,7 +44,7 @@ function ScopedAdminProvider({children, identity}: {children:ReactNode; identity
     };
   }, [identity]);
   function setConfig(next:AdminConfig) {
-    try { adminRepository.save(next, identity); setState(adminRepository.load(identity)); setStorageError(''); return true; }
+    try { setServerSelectedTemplate(identity, next.template); adminRepository.save(next, identity); setState(adminRepository.load(identity)); setStorageError(''); return true; }
     catch { setStorageError('No se pudo guardar. Revisa el espacio o los permisos del navegador; reduce el tamaño de las imágenes e intenta nuevamente.'); return false; }
   }
   function updateTemplate(template:TemplateId) { const saved = setConfig({...config,template}); if (saved) setPreviewTemplate(null); return saved; }

@@ -5,7 +5,7 @@ import { useStorefrontTemplate } from '../hooks/useStorefrontTemplate';
 
 export default function CommercialPreferences() {
   const {templateNumber, route} = useStorefrontTemplate();
-  const homeRoute = typeof route === 'function' ? route() : `/plantilla/${templateNumber}`;
+  const homeRoute = typeof route === 'function' ? route() : '/';
   const location = useLocation();
   const [link, setLink] = useState(() => {
     const values = new URLSearchParams(window.location.hash.slice(1));

@@ -127,7 +127,7 @@ class PlantillaSeleccionadaAPIView(APIView):
             else ""
         )
 
-        return success_response(
+        response = success_response(
             data={
                 "plantilla_seleccionada": plantilla_seleccionada,
                 "tienda_id": tienda.pk,
@@ -135,6 +135,8 @@ class PlantillaSeleccionadaAPIView(APIView):
             mensaje="Plantilla seleccionada obtenida correctamente",
             status=status.HTTP_200_OK,
         )
+        response["Cache-Control"] = "no-store"
+        return response
 
     def put(self, request):
         tienda = resolver_tienda(

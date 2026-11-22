@@ -3,7 +3,7 @@ import { ErrorState, LoadingState } from '../../../shared/components/states';
 import { humanizeAdminError } from '../utils/humanizeError';
 import { Link, useParams } from 'react-router-dom';
 import { createDefaultLegalPages, legalPageTemplates, type LegalPageType } from '../data/mockAdminData';
-import { legalSlugs, templatePaths } from '../config/navigation';
+import { legalSlugs } from '../config/navigation';
 import { useAdmin } from '../context/AdminContext';
 import { Alert, Badge, Button, Textarea } from '../components/ui';
 import { LEGAL_MAX_LENGTH, formatLegalDate } from '../../storefront/data/legalPublication';
@@ -23,7 +23,7 @@ export default function LegalEditor() {
 function ScopedLegalEditor({ isCurrent, storageKey }: { isCurrent: () => boolean; storageKey: string }) {
   const { type = 'terms' } = useParams();
   const current: LegalPageType = pageTypes.find(item => legalSlugs[item] === type) ?? 'terms';
-  const { config } = useAdmin();
+  useAdmin();
   const [pages, setPages] = useState<Record<LegalType, LegalPage>>(createDefaultLegalPages);
   const [loading, setLoading] = useState(true);
   const [loadFailed, setLoadFailed] = useState(false);
@@ -182,7 +182,7 @@ function ScopedLegalEditor({ isCurrent, storageKey }: { isCurrent: () => boolean
               </p>
             </div>
             <Link
-              to={`${templatePaths[config.template]}/legal/${current}`}
+              to={`/legal/${current}`}
               target="_blank"
               className="text-xs font-semibold text-[var(--primary)] hover:underline"
             >

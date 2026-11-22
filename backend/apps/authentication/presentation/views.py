@@ -406,7 +406,7 @@ class PasswordResetRequestAPIView(APIView):
             )
             origin = _frontend_origin()
             reset_link = (
-                f"{origin}/plantilla/{template}/ingresar"
+                f"{origin}/ingresar"
                 f"?modo=restablecer&token={quote(reset_token)}"
             )
             store_name = _store_name()

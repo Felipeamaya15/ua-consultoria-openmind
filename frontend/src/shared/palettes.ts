@@ -4,6 +4,8 @@ import { requestJson } from './services/apiRequest';
 import type { VisualConfigOverrides, VisualSections } from '../features/storefront/visual/types';
 import type { TemplateId } from '../features/storefront/data/mockData';
 import { useStoreIdentity } from '../features/storefront/context/StoreIdentityContext';
+import { setServerSelectedTemplate } from '../features/storefront/visual/resolveVisualConfig';
+import { normalizeTemplateId } from '../features/storefront/visual/templates';
 
 export type PaletteColors = VisualSections['global']['colors'];
 export interface StorePalette { id:string; nombre:string; colores:PaletteColors }
@@ -23,10 +25,14 @@ export async function deletePalette(id:string) {
 }
 export async function saveSelectedTemplate(template:TemplateId) {
   await requestJson(endpoint+'plantilla-seleccionada/',{method:'PUT',headers:auth(),body:JSON.stringify({plantilla_seleccionada:template})});
+  if (typeof window !== 'undefined' && typeof Event !== 'undefined') {
+    window.dispatchEvent(new Event(PALETTES_CHANGED));
+  }
 }
 export async function fetchSelectedTemplate(signal?:AbortSignal):Promise<string> {
-  const data=await requestJson(endpoint+'plantilla-seleccionada/',{signal,cache:'no-store'}) as {plantilla_seleccionada?:unknown};
-  return typeof data?.plantilla_seleccionada==='string'?data.plantilla_seleccionada:'';
+  const data=await requestJson(endpoint+'plantilla-seleccionada/',{signal,cache:'no-store'}) as {plantilla_seleccionada?:unknown;plantilla_activa?:unknown};
+  if (typeof data?.plantilla_seleccionada === 'string' && data.plantilla_seleccionada) return data.plantilla_seleccionada;
+  return typeof data?.plantilla_activa==='string'?data.plantilla_activa:'';
 }
 export async function saveAppearance(plantillas:Appearance) {
   await requestJson(endpoint+'apariencia/',{method:'PUT',headers:auth(),body:JSON.stringify({plantillas})});window.dispatchEvent(new Event(PALETTES_CHANGED));
@@ -34,13 +40,13 @@ export async function saveAppearance(plantillas:Appearance) {
 
 export function usePaletteLibrary() {
   const {identity}=useStoreIdentity();const key=identity?`${identity.apiBaseUrl}:${identity.storeId}`:'';
-  const [state,setState]=useState<{key:string;library:PaletteLibrary;appearance:Appearance}|null>(null);
+  const [state,setState]=useState<{key:string;library:PaletteLibrary;appearance:Appearance;selectedTemplate?:TemplateId}|null>(null);
   const [error,setError]=useState(''),[revision,setRevision]=useState(0);
   useEffect(() => {
     if(!key)return;
     const controller=new AbortController();
     const refresh=()=>setRevision(value=>value+1);
-    Promise.all([fetchPalettes(controller.signal),fetchAppearance(controller.signal)]).then(([library,appearance])=>{if(!controller.signal.aborted){setState({key,library,appearance});setError('');}}).catch(()=>{if(!controller.signal.aborted)setError('No pudimos cargar las paletas guardadas. Reintenta antes de guardarlas.');});
+    Promise.all([fetchPalettes(controller.signal),fetchAppearance(controller.signal),fetchSelectedTemplate(controller.signal).catch(()=>'')]).then(([library,appearance,rawSelected])=>{if(!controller.signal.aborted){const selectedTemplate=normalizeTemplateId(rawSelected);if(selectedTemplate)setServerSelectedTemplate(identity,selectedTemplate);setState({key,library,appearance,selectedTemplate});setError('');}}).catch(()=>{if(!controller.signal.aborted)setError('No pudimos cargar las paletas guardadas. Reintenta antes de guardarlas.');});
     window.addEventListener(PALETTES_CHANGED,refresh);window.addEventListener('focus',refresh);
     const channel=typeof BroadcastChannel==='undefined'?null:new BroadcastChannel(PALETTES_CHANGED+key);
     channel?.addEventListener('message',refresh);
@@ -48,7 +54,7 @@ export function usePaletteLibrary() {
     return ()=>{controller.abort();window.removeEventListener(PALETTES_CHANGED,refresh);window.removeEventListener('focus',refresh);window.removeEventListener(PALETTES_CHANGED,publish);channel?.close();};
   },[key,revision]);
   const current=state?.key===key?state:null;
-  return {library:current?.library,appearance:current?.appearance,error,retry:()=>setRevision(value=>value+1)};
+  return {library:current?.library,appearance:current?.appearance,selectedTemplate:current?.selectedTemplate,error,retry:()=>setRevision(value=>value+1)};
 }
 export function paletteOverrides(entry:Appearance[TemplateId],library?:PaletteLibrary):VisualConfigOverrides|undefined {
   if(!entry)return;

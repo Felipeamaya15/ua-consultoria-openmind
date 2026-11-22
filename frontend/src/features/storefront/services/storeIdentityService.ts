@@ -1,8 +1,9 @@
 import { API_BASE_URL } from '../../../api';
 import { fetchInitialLoad } from '../../../core/http/initialLoad';
-import { isRecord } from '../visual/resolveVisualConfig';
+import { isRecord, setServerSelectedTemplate, getServerSelectedTemplate } from '../visual/resolveVisualConfig';
 import type { StoreIdentity } from '../visual/storage';
 
+export { setServerSelectedTemplate, getServerSelectedTemplate };
 
 export async function fetchStoreIdentity(signal?: AbortSignal): Promise<StoreIdentity> {
   const response = await fetchInitialLoad(`${API_BASE_URL}/api/visual-config/plantilla-seleccionada/`, { retry: true, signal });
@@ -17,5 +18,7 @@ export async function fetchStoreIdentity(signal?: AbortSignal): Promise<StoreIde
   const id: unknown = body.data.tienda_id;
   if (typeof id === 'number' && !Number.isSafeInteger(id)) throw new Error('La identificación de la tienda no es válida.');
   if ((typeof id !== 'number' && typeof id !== 'string') || !/^[1-9]\d*$/.test(String(id))) throw new Error('No se recibió una identificación válida de tienda.');
-  return { apiBaseUrl: API_BASE_URL, storeId: String(id) };
+  const identity: StoreIdentity = { apiBaseUrl: API_BASE_URL, storeId: String(id) };
+  setServerSelectedTemplate(identity, body.data.plantilla_activa ?? body.data.plantilla_seleccionada);
+  return identity;
 }

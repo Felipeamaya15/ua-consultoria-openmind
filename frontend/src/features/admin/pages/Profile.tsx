@@ -8,7 +8,6 @@ import { useNavigate } from 'react-router-dom';
 
 import { authService, type MfaSetupData } from '../../auth/services/authService';
 import { useAdmin } from '../context/AdminContext';
-import { templatePaths } from '../config/navigation';
 import { Alert, Button, Input } from '../components/ui';
 
 export default function EntrepreneurProfile() {
@@ -148,7 +147,7 @@ export default function EntrepreneurProfile() {
 
   function logout() {
     authService.logout();
-    navigate(`${templatePaths[config.template]}/ingresar`, {
+    navigate('/ingresar', {
       replace: true,
     });
   }
