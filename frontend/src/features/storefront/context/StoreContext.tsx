@@ -162,7 +162,18 @@ export function StoreProvider({
       const request = new AbortController();
       controller = request;
       void fetchStoreInformation(request.signal).then(value => {
-        if (!request.signal.aborted) setBusiness({ key: storageKey, value });
+        if (!request.signal.aborted) {
+          setBusiness({ key: storageKey, value });
+          if (typeof document !== 'undefined' && !/\/producto\//.test(pathname)) {
+            const nextTitle = (typeof savedConfig.metaTitle === 'string' && savedConfig.metaTitle.trim()) || value.nombre?.trim();
+            if (nextTitle) document.title = nextTitle;
+            const nextDescription = (typeof savedConfig.metaDescription === 'string' && savedConfig.metaDescription.trim()) || value.descripcion?.trim();
+            if (nextDescription && typeof document.querySelector === 'function') {
+              const metaDescription = document.querySelector('meta[name="description"]');
+              if (metaDescription) metaDescription.setAttribute('content', nextDescription);
+            }
+          }
+        }
       }).catch(() => {});
     };
     refresh();
