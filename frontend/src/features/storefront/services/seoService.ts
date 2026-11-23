@@ -1,5 +1,8 @@
 
 
+export const DEFAULT_STORE_SEO_TITLE = 'La Magia de Tijax | Cosmética Natural y Productos Artesanales';
+export const DEFAULT_STORE_SEO_DESCRIPTION = 'Descubre productos artesanales, cosmética natural y cuidado capilar en La Magia de Tijax. Compra online con envío a todo Chile.';
+
 export interface ProductSeoData {
   name: string;
   description?: string;
@@ -22,8 +25,8 @@ export interface ResolvedSeoMetadata {
 
 export function resolveStoreSeoMetadata(store: StoreSeoData): ResolvedSeoMetadata {
   return {
-    title: store.metaTitle?.trim() || store.name?.trim() || 'Tienda en línea',
-    description: store.metaDescription?.trim() || store.description?.trim() || '',
+    title: store.metaTitle?.trim() || store.name?.trim() || DEFAULT_STORE_SEO_TITLE,
+    description: store.metaDescription?.trim() || store.description?.trim() || DEFAULT_STORE_SEO_DESCRIPTION,
   };
 }
 

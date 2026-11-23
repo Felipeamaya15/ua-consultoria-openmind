@@ -33,7 +33,7 @@ const Tracking = lazyPage(() => import('../../features/storefront/pages/Tracking
 const Login = lazyPage(() => import('../../features/storefront/pages/Login'));
 const Legal = lazyPage(() => import('../../features/storefront/pages/Legal'));
 
-import { PendingPage } from '../../features/storefront/pages/PreviewPages';
+import { ErrorFallback, NotFoundPage } from '../../shared/components/ErrorFallback';
 
 import { StoreProvider, useStore } from '../../features/storefront/context/StoreContext';
 import { CartProvider } from '../../features/storefront/context/CartContext';
@@ -139,7 +139,7 @@ const sharedChildren = [
   },
   {
     path: '*',
-    element: <PendingPage title="Página no encontrada" />,
+    element: <NotFoundPage />,
   },
 ];
 
@@ -152,25 +152,32 @@ const storefrontChildren = [
 ];
 
 export const router = createBrowserRouter([
-  adminRoute,
-  { path: '/landing', element: <Navigate to="/" replace /> },
+  {
+    ...adminRoute,
+    errorElement: <ErrorFallback />,
+  },
+  { path: '/landing', element: <Navigate to="/" replace />, errorElement: <ErrorFallback /> },
 
   {
     path: '/plantilla',
     element: <Navigate to="/" replace />,
+    errorElement: <ErrorFallback />,
   },
   {
     path: '/plantilla/:id',
     element: <Navigate to="/" replace />,
+    errorElement: <ErrorFallback />,
   },
   {
     path: '/plantilla/:id/*',
     element: <Navigate to="/" replace />,
+    errorElement: <ErrorFallback />,
   },
 
   {
     path: '/admin/preview/plantilla/:templateId',
     element: <RequireAdmin />,
+    errorElement: <ErrorFallback />,
     children: [
       {
         element: (
@@ -178,6 +185,7 @@ export const router = createBrowserRouter([
             <ActiveStorefrontLayout />
           </StorefrontProviders>
         ),
+        errorElement: <ErrorFallback />,
         children: storefrontChildren,
       },
     ],
@@ -186,6 +194,7 @@ export const router = createBrowserRouter([
   {
     path: '/emprendedor/preview/plantilla/:templateId',
     element: <RequireAdmin />,
+    errorElement: <ErrorFallback />,
     children: [
       {
         element: (
@@ -193,6 +202,7 @@ export const router = createBrowserRouter([
             <ActiveStorefrontLayout />
           </StorefrontProviders>
         ),
+        errorElement: <ErrorFallback />,
         children: storefrontChildren,
       },
     ],
@@ -205,6 +215,13 @@ export const router = createBrowserRouter([
         <ActiveStorefrontLayout />
       </StorefrontProviders>
     ),
+    errorElement: <ErrorFallback />,
     children: storefrontChildren,
+  },
+
+  {
+    path: '*',
+    element: <NotFoundPage />,
+    errorElement: <ErrorFallback />,
   },
 ]);
