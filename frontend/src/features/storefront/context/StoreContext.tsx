@@ -166,11 +166,23 @@ export function StoreProvider({
           setBusiness({ key: storageKey, value });
           if (typeof document !== 'undefined' && !/\/producto\//.test(pathname)) {
             const nextTitle = (typeof savedConfig.metaTitle === 'string' && savedConfig.metaTitle.trim()) || value.nombre?.trim();
-            if (nextTitle) document.title = nextTitle;
             const nextDescription = (typeof savedConfig.metaDescription === 'string' && savedConfig.metaDescription.trim()) || value.descripcion?.trim();
+            if (nextTitle) {
+              document.title = nextTitle;
+              if (typeof document.querySelector === 'function') {
+                const ogTitle = document.querySelector('meta[property="og:title"]');
+                if (ogTitle) ogTitle.setAttribute('content', nextTitle);
+              }
+            }
             if (nextDescription && typeof document.querySelector === 'function') {
               const metaDescription = document.querySelector('meta[name="description"]');
               if (metaDescription) metaDescription.setAttribute('content', nextDescription);
+              const ogDescription = document.querySelector('meta[property="og:description"]');
+              if (ogDescription) ogDescription.setAttribute('content', nextDescription);
+            }
+            if (typeof window !== 'undefined' && window.location?.origin && typeof document.querySelector === 'function') {
+              const ogUrl = document.querySelector('meta[property="og:url"]');
+              if (ogUrl) ogUrl.setAttribute('content', `${window.location.origin}${window.location.pathname}`);
             }
           }
         }

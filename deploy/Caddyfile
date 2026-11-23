@@ -17,7 +17,7 @@
 	}
 
 	# La API, el administrador de Django y las imágenes de la tienda las atiende el backend.
-	@backend path /api/* /admin/* /media/* /landing/*
+	@backend path /api/* /admin/* /media/* /landing/* /sitemap.xml
 	handle @backend {
 		reverse_proxy {$BACKEND_UPSTREAM:backend:8000}
 	}
