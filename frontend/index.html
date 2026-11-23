@@ -3,12 +3,43 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>La Magia de Tijax | Cosmética Natural y Productos Artesanales</title>
-    <meta name="description" content="Descubre productos artesanales, cosmética natural y cuidado capilar en La Magia de Tijax. Compra online con envío a todo Chile." />
-    <meta property="og:title" content="La Magia de Tijax | Cosmética Natural y Productos Artesanales" />
-    <meta property="og:description" content="Descubre productos artesanales, cosmética natural y cuidado capilar en La Magia de Tijax. Compra online con envío a todo Chile." />
+    <title>Tienda Online</title>
+    <meta name="description" content="Descubre nuestro catálogo de productos y compra online con envío a todo Chile." />
+    <meta property="og:title" content="Tienda Online" />
+    <meta property="og:description" content="Descubre nuestro catálogo de productos y compra online con envío a todo Chile." />
     <meta property="og:type" content="website" />
-    <meta property="og:url" content="https://tijax.cl/" />
+    <meta property="og:url" content="" />
+    <script>
+      (function () {
+        var host = (window.location.hostname || '').toLowerCase().replace(/^www\./, '');
+        var stores = {
+          'tijax.cl': {
+            title: 'La Magia de Tijax | Cosmética Natural y Productos Artesanales',
+            description: 'Descubre productos artesanales, cosmética natural y cuidado capilar en La Magia de Tijax. Compra online con envío a todo Chile.',
+            url: 'https://tijax.cl' + (window.location.pathname || '/')
+          },
+          'ecocrespo.cl': {
+            title: 'EcoCrespo | Productos Sustentables y Cuidado Natural',
+            description: 'Descubre productos sustentables, ecológicos y de cuidado natural en EcoCrespo. Compra online con envío a todo Chile.',
+            url: 'https://ecocrespo.cl' + (window.location.pathname || '/')
+          }
+        };
+        var current = stores[host];
+        var setMeta = function (selector, value) {
+          var el = document.querySelector(selector);
+          if (el && value) el.setAttribute('content', value);
+        };
+        if (current) {
+          document.title = current.title;
+          setMeta('meta[name="description"]', current.description);
+          setMeta('meta[property="og:title"]', current.title);
+          setMeta('meta[property="og:description"]', current.description);
+          setMeta('meta[property="og:url"]', current.url);
+        } else if (window.location.origin) {
+          setMeta('meta[property="og:url"]', window.location.origin + (window.location.pathname || '/'));
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

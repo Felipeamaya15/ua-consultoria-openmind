@@ -8,5 +8,3 @@ Disallow: /emprendedor
 Disallow: /compra
 Disallow: /perfil
 Disallow: /mis-pedidos
-
-Sitemap: https://tijax.cl/sitemap.xml

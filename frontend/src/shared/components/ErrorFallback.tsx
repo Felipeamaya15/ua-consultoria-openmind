@@ -1,5 +1,17 @@
 import { isRouteErrorResponse, Link, useRouteError } from 'react-router-dom';
 
+function getErrorStoreHeading(): string {
+  if (typeof window !== 'undefined' && window.location?.hostname) {
+    const host = window.location.hostname.toLowerCase().replace(/^www\./, '');
+    if (host === 'tijax.cl') return 'La Magia de Tijax';
+    if (host === 'ecocrespo.cl') return 'EcoCrespo';
+  }
+  if (typeof document !== 'undefined' && document.title) {
+    return document.title.split('|')[0].trim() || 'Tienda Online';
+  }
+  return 'Tienda Online';
+}
+
 export function ErrorFallback() {
   const error = useRouteError();
   const isNotFound = isRouteErrorResponse(error) && error.status === 404;
@@ -15,7 +27,7 @@ export function ErrorFallback() {
         className="w-full max-w-lg rounded-2xl border border-[var(--border,#e5e7eb)] bg-white p-6 sm:p-10 text-center shadow-sm"
       >
         <p className="text-xs font-semibold uppercase tracking-widest text-[var(--muted-foreground,#6b7280)] mb-2">
-          La Magia de Tijax
+          {getErrorStoreHeading()}
         </p>
         <h1 className="font-display text-2xl sm:text-3xl font-bold text-[var(--foreground,#111827)] mb-3">
           Ocurrió un problema inesperado al cargar esta sección

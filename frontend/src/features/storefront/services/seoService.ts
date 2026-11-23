@@ -1,7 +1,18 @@
 
 
-export const DEFAULT_STORE_SEO_TITLE = 'La Magia de Tijax | Cosmética Natural y Productos Artesanales';
-export const DEFAULT_STORE_SEO_DESCRIPTION = 'Descubre productos artesanales, cosmética natural y cuidado capilar en La Magia de Tijax. Compra online con envío a todo Chile.';
+export const DEFAULT_STORE_SEO_TITLE = 'Tienda Online';
+export const DEFAULT_STORE_SEO_DESCRIPTION = 'Descubre nuestro catálogo de productos y compra online con envío a todo Chile.';
+
+const DOMAIN_SEO_DEFAULTS: Record<string, { title: string; description: string }> = {
+  'tijax.cl': {
+    title: 'La Magia de Tijax | Cosmética Natural y Productos Artesanales',
+    description: 'Descubre productos artesanales, cosmética natural y cuidado capilar en La Magia de Tijax. Compra online con envío a todo Chile.',
+  },
+  'ecocrespo.cl': {
+    title: 'EcoCrespo | Productos Sustentables y Cuidado Natural',
+    description: 'Descubre productos sustentables, ecológicos y de cuidado natural en EcoCrespo. Compra online con envío a todo Chile.',
+  },
+};
 
 export interface ProductSeoData {
   name: string;
@@ -22,11 +33,22 @@ export interface ResolvedSeoMetadata {
   description: string;
 }
 
+export function getDomainSeoDefaults(hostname?: string): ResolvedSeoMetadata {
+  const rawHost =
+    hostname ??
+    (typeof window !== 'undefined' && window.location ? window.location.hostname : '');
+  const cleanHost = rawHost.trim().toLowerCase().replace(/^www\./, '');
+  return DOMAIN_SEO_DEFAULTS[cleanHost] ?? {
+    title: DEFAULT_STORE_SEO_TITLE,
+    description: DEFAULT_STORE_SEO_DESCRIPTION,
+  };
+}
 
 export function resolveStoreSeoMetadata(store: StoreSeoData): ResolvedSeoMetadata {
+  const defaults = getDomainSeoDefaults();
   return {
-    title: store.metaTitle?.trim() || store.name?.trim() || DEFAULT_STORE_SEO_TITLE,
-    description: store.metaDescription?.trim() || store.description?.trim() || DEFAULT_STORE_SEO_DESCRIPTION,
+    title: store.metaTitle?.trim() || store.name?.trim() || defaults.title,
+    description: store.metaDescription?.trim() || store.description?.trim() || defaults.description,
   };
 }
 
@@ -48,6 +70,12 @@ function setMetaAttribute(
   return { element, created, previous };
 }
 
+function getCurrentOgUrl(): string {
+  if (typeof window !== 'undefined' && window.location?.origin) {
+    return `${window.location.origin}${window.location.pathname || '/'}`;
+  }
+  return '';
+}
 
 export function updateStoreSeo(store: StoreSeoData): () => void {
   if (typeof document === 'undefined') return () => {};
@@ -61,6 +89,13 @@ export function updateStoreSeo(store: StoreSeoData): () => void {
     setMetaAttribute('meta[property="og:title"]', 'property', 'og:title', metadata.title),
     setMetaAttribute('meta[property="og:description"]', 'property', 'og:description', metadata.description),
   ];
+
+  const currentUrl = getCurrentOgUrl();
+  if (currentUrl) {
+    entries.push(
+      setMetaAttribute('meta[property="og:url"]', 'property', 'og:url', currentUrl),
+    );
+  }
 
   return () => {
     document.title = previousTitle;
@@ -91,6 +126,13 @@ export function updateProductSeo(product: ProductSeoData, storeName?: string): (
     setMetaAttribute('meta[property="og:title"]', 'property', 'og:title', rawTitle),
     setMetaAttribute('meta[property="og:description"]', 'property', 'og:description', description),
   ];
+
+  const currentUrl = getCurrentOgUrl();
+  if (currentUrl) {
+    entries.push(
+      setMetaAttribute('meta[property="og:url"]', 'property', 'og:url', currentUrl),
+    );
+  }
 
   return () => {
     document.title = previousTitle;
