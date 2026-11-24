@@ -72,8 +72,14 @@ class EventoSeguimientoResponseSerializer(serializers.Serializer):
     fecha_hora = serializers.CharField()
     estado = serializers.CharField()
     estado_estandar = serializers.CharField(allow_null=True, required=False)
-    descripcion = serializers.CharField()
-    ubicacion = serializers.CharField()
+    descripcion = serializers.CharField(allow_blank=True)
+    ubicacion = serializers.CharField(allow_blank=True)
+    certificado_entrega = serializers.CharField(allow_blank=True, required=False)
+
+class EntregaSeguimientoSerializer(serializers.Serializer):
+    receptor_nombre = serializers.CharField(allow_blank=True)
+    receptor_rut = serializers.CharField(allow_blank=True)
+    fecha_hora = serializers.CharField(allow_blank=True)
 
 class DetalleSeguimientoResponseSerializer(serializers.Serializer):
     numero_seguimiento = serializers.CharField()
@@ -81,5 +87,6 @@ class DetalleSeguimientoResponseSerializer(serializers.Serializer):
     estado_actual = serializers.CharField()
     estado_estandar = serializers.CharField(allow_null=True, required=False)
     descripcion_estado = serializers.CharField()
-    fecha_estimada_entrega = serializers.CharField()
+    fecha_estimada_entrega = serializers.CharField(allow_blank=True)
+    entrega = EntregaSeguimientoSerializer(allow_null=True, required=False)
     historial = EventoSeguimientoResponseSerializer(many=True)

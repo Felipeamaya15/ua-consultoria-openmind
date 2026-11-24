@@ -32,7 +32,7 @@ export function MediaPreview({ resource, publicImageUrl, initiallyOpen = false }
   const pathname = typeof window !== 'undefined'
     ? window.location.pathname
     : '';
-  const isPublicStorefront = /^\/plantilla\/[1-4](?:\/|$)/.test(pathname);
+  const isPublicStorefront = !pathname.startsWith('/emprendedor') && !pathname.startsWith('/admin');
 
 
   const normalizedUrl = (resource.url || '')
@@ -41,7 +41,7 @@ export function MediaPreview({ resource, publicImageUrl, initiallyOpen = false }
     .replace(/\/+$/, '');
 
   const storePath =
-    pathname.match(/^\/plantilla\/[1-4]/)?.[0] || '';
+    pathname.match(/^\/(?:(?:admin|emprendedor)\/preview\/)?plantilla\/[1-4]/)?.[0] || '/';
 
   const previewKey =
     `openmind:public-media-preview:v2:${storePath}:${resource.tipo}:${normalizedUrl || resource.id}`;

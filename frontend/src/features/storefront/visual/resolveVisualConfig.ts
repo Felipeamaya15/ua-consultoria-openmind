@@ -11,6 +11,33 @@ export function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
 }
 
+const VALID_TEMPLATES: readonly TemplateId[] = ['editorial', 'minimal', 'visual', 'catalog'];
+const serverTemplates = new Map<string, TemplateId | ''>();
+
+function serverIdentityKey(identity: { apiBaseUrl: string; storeId: string }): string {
+  return `${identity.apiBaseUrl.replace(/\/+$/, '')}:${identity.storeId}`;
+}
+
+export function setServerSelectedTemplate(
+  identity: { apiBaseUrl: string; storeId: string } | null,
+  value: unknown,
+): void {
+  if (!identity) return;
+  const normalized =
+    typeof value === 'string' && VALID_TEMPLATES.includes(value as TemplateId)
+      ? (value as TemplateId)
+      : '';
+  serverTemplates.set(serverIdentityKey(identity), normalized);
+}
+
+export function getServerSelectedTemplate(
+  identity: { apiBaseUrl: string; storeId: string } | null,
+): TemplateId | undefined {
+  if (!identity) return undefined;
+  const value = serverTemplates.get(serverIdentityKey(identity));
+  return value || undefined;
+}
+
 const enumValues: Record<string, readonly string[]> = {
   carouselMode: ['static', 'manual', 'automatic'], productImageMode: ['static', 'hover', 'automatic'], catalogProductImageMode: ['static', 'hover', 'automatic'], galleryArrowStyle: ['circulares', 'redondeadas', 'solo-flechas'], productImageTransition: ['fade', 'slide', 'zoom'],
   align: ALIGNMENTS, titleAlign: ALIGNMENTS, promoAlign: ALIGNMENTS,

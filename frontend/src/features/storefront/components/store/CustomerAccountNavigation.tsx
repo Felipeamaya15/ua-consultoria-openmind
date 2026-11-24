@@ -6,6 +6,5 @@ export function CustomerAccountNavigation() {
   return <nav aria-label="Mi cuenta" className="flex flex-wrap gap-5 border-b pb-3 mb-5">
     <NavLink to={route('perfil')} className={({isActive}) => isActive ? 'font-semibold underline' : 'hover:underline'}>Perfil</NavLink>
     <NavLink to={route('mis-pedidos')} className={({isActive}) => isActive ? 'font-semibold underline' : 'hover:underline'}>Mis pedidos</NavLink>
-    <NavLink to={route('mis-talleres')} className={({isActive}) => isActive ? 'font-semibold underline' : 'hover:underline'}>Mis talleres</NavLink>
   </nav>;
 }

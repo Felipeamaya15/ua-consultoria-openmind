@@ -39,9 +39,9 @@ function load(file, globals) {
   }
   assert.equal((await renderGuard()).type, 'Outlet');
   deny = true;
-  assert.equal((await renderGuard()).props.to, '/plantilla/1');
+  assert.equal((await renderGuard()).props.to, '/');
   token = null;
-  assert.equal((await renderGuard()).props.to, '/plantilla/1/ingresar');
+  assert.equal((await renderGuard()).props.to, '/ingresar');
 
 
   let fail = false, savedEmail, changedPassword;

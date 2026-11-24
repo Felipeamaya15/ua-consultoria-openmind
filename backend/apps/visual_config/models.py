@@ -29,5 +29,9 @@ class ConfiguracionVisual(models.Model):
         blank=True,
     )
 
+    @property
+    def plantilla_activa(self) -> str:
+        return self.plantilla_seleccionada or self.Plantilla.EDITORIAL
+
     class Meta:
         db_table = 'configuracion_visual'

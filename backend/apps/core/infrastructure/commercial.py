@@ -79,6 +79,10 @@ def serialize_order(order):
               'cantidad': line.cantidad, 'precio_unitario': format(line.precio_unitario, '.2f'),
               'total_linea': format(line.precio_unitario * line.cantidad, '.2f'), 'descuento_linea': None}
              for line in order.itempedido_set.all()]
+    entrega = order.entrega
+    if isinstance(entrega, dict) and isinstance(entrega.get('guia'), dict):
+        guia = {k: v for k, v in entrega['guia'].items() if k != 'etiqueta'}
+        entrega = {**entrega, 'guia': {**guia, 'tiene_etiqueta': bool(entrega['guia'].get('etiqueta'))}}
     return {'id_pedido': order.pk, 'identificador': order.identificador,
             'nombre_contacto': order.nombre_contacto, 'correo_contacto': order.correo_contacto,
             'estado': order.estado, 'estado_etiqueta': order.get_estado_display(),
@@ -86,7 +90,7 @@ def serialize_order(order):
             'pago_estado': payment_status(order), 'monto_total': format(order.monto_total, '.2f'),
             'fecha_creacion': order.fecha_creacion.isoformat(), 'moneda': 'CLP',
             'descuento': format(order.descuento, '.2f'), 'costo_envio': format(order.costo_envio, '.2f'),
-            'entrega': order.entrega, 'items': lines,
+            'entrega': entrega, 'items': lines,
             'importes': {key: format(value, '.2f') for key, value in amounts(order).items()}}
 
 

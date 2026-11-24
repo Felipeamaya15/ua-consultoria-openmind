@@ -41,9 +41,17 @@ class SeguimientoLogisticoView(APIView):
     """
     proveedor_fijo = None
 
+    @staticmethod
+    def _tienda(request):
+        try:
+            from apps.core.infrastructure.tenant import resolver_tienda
+            return resolver_tienda(request)
+        except Exception:
+            return None
+
     def get(self, request, numero_seguimiento):
         try:
-            adaptador = get_logistics_adapter(self.proveedor_fijo or numero_seguimiento)
+            adaptador = get_logistics_adapter(self.proveedor_fijo or numero_seguimiento, tienda=self._tienda(request))
             caso_uso = ConsultarSeguimientoUseCase(logistics_port=adaptador)
 
             resultado = caso_uso.execute(numero_seguimiento=numero_seguimiento)
@@ -200,3 +208,91 @@ class CotizacionEnvioView(APIView):
                 "mensaje": "Error interno al procesar la cotizacion.",
                 "error": {"codigo": "ERROR_INTERNO"}
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+class CoberturasChilexpressView(APIView):
+    authentication_classes = []
+    permission_classes = []
+
+    def get(self, request):
+        region = (request.query_params.get("region") or "").strip()
+        if not region:
+            return Response({
+                "exito": False,
+                "mensaje": "El parametro 'region' es obligatorio.",
+                "error": {"codigo": "ERROR_VALIDACION"},
+            }, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            from apps.core.infrastructure.tenant import resolver_tienda
+            from apps.shipping.infrastructure import live
+            tienda = resolver_tienda(request)
+            client = live._chilexpress_client_for_store(
+                tienda, {"timeout_segundos": float(live._cfg("SHIPPING_HTTP_TIMEOUT", 10))}, requiere=("coberturas",))
+            if client is None:
+                raise ProveedorLogisticoError("Chilexpress no está configurado.")
+            comunas = client.coberturas(region)
+        except DireccionFueraDeCoberturaException as e:
+            return Response({
+                "exito": False,
+                "mensaje": str(e),
+                "error": {"codigo": "SIN_COBERTURA"},
+            }, status=status.HTTP_400_BAD_REQUEST)
+        except (LogisticaException, ProveedorLogisticoError, *ERRORES_TIMEOUT):
+            logger.warning("Coberturas Chilexpress: no disponibles", exc_info=True)
+            return Response({
+                "exito": False,
+                "mensaje": "No se pudo obtener la cobertura de Chilexpress.",
+                "error": {"codigo": "COBERTURAS_NO_DISPONIBLES"},
+            }, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+        return Response({
+            "exito": True,
+            "data": {"region": client.region_code(region), "comunas": comunas},
+        }, status=status.HTTP_200_OK)
+
+
+class CoberturasChilexpressAdminView(APIView):
+    def post(self, request):
+        region = str(request.data.get("region") or "").strip()
+        if not region:
+            return Response({
+                "exito": False,
+                "mensaje": "El parametro 'region' es obligatorio.",
+                "error": {"codigo": "ERROR_VALIDACION"},
+            }, status=status.HTTP_400_BAD_REQUEST)
+        from apps.core.infrastructure.tenant import resolver_tienda
+        from apps.shipping.infrastructure import live
+        from apps.shipping.infrastructure.carrier_clients import ChilexpressClient
+        tienda = resolver_tienda(request, exigir_propietario=True)
+        timeout = float(live._cfg("SHIPPING_HTTP_TIMEOUT", 10))
+        clave = str(request.data.get("coberturas") or "").strip()
+        try:
+            if clave and not clave.startswith("*"):
+                ambiente = str(request.data.get("ambiente") or "SANDBOX")
+                client = ChilexpressClient(api_keys={"coberturas": clave}, ambiente=ambiente, timeout_segundos=timeout)
+            else:
+                client = live._chilexpress_client_for_store(tienda, {"timeout_segundos": timeout}, requiere=("coberturas",))
+            if client is None:
+                raise ProveedorLogisticoError("Falta la clave API Coberturas.")
+            comunas = client.coberturas(region)
+        except ValueError as e:
+            return Response({
+                "exito": False,
+                "mensaje": str(e),
+                "error": {"codigo": "ERROR_VALIDACION"},
+            }, status=status.HTTP_400_BAD_REQUEST)
+        except DireccionFueraDeCoberturaException as e:
+            return Response({
+                "exito": False,
+                "mensaje": str(e),
+                "error": {"codigo": "SIN_COBERTURA"},
+            }, status=status.HTTP_400_BAD_REQUEST)
+        except (LogisticaException, *ERRORES_TIMEOUT):
+            logger.warning("Coberturas Chilexpress (admin): no disponibles", exc_info=True)
+            return Response({
+                "exito": False,
+                "mensaje": "No se pudo obtener la cobertura de Chilexpress. Revisa la clave API Coberturas.",
+                "error": {"codigo": "COBERTURAS_NO_DISPONIBLES"},
+            }, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+        return Response({
+            "exito": True,
+            "data": {"region": client.region_code(region), "comunas": comunas},
+        }, status=status.HTTP_200_OK)

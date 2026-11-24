@@ -34,22 +34,21 @@ export default function MinimalHome() {
     const query = search.trim();
 
     if (!query) {
-      navigate('catalogo');
+      navigate(route('catalogo'));
       return;
     }
 
-    navigate(`catalogo?q=${encodeURIComponent(query)}`);
+    navigate(route(`catalogo?q=${encodeURIComponent(query)}`));
   };
 
   const goToCategory = (category: string) => {
-    navigate(`catalogo?cat=${encodeURIComponent(category)}`);
+    navigate(route(`catalogo?cat=${encodeURIComponent(category)}`));
   };
 
   const hero = useHeroContent(landing, route);
   return (
     <div data-landing-page="minimal" className="pb-4 min-w-0 overflow-x-hidden">
-
-
+      {/* OPENMIND_SOFT_DISCOVERY_COMPACT_HERO_V1 */}
       <section data-visual-section={VISUAL_SECTION.hero} className="px-4 md:px-8 py-8">
         <div data-visual-part="heroOverlay" className="absolute inset-0" />
         <div data-visual-layout="stack" data-visual-part="heroLayout" className="max-w-6xl mx-auto min-w-0">
@@ -71,66 +70,90 @@ export default function MinimalHome() {
                   <Link data-visual-section={VISUAL_SECTION.heroCta} to={hero.href}
                     target={hero.external ? '_blank' : undefined}
                     rel={hero.external ? 'noopener noreferrer' : undefined}
-                    className="inline-flex min-h-11 items-center rounded-full bg-[var(--primary)] px-6 py-3 font-semibold text-[var(--on-primary)]">
+                    className="inline-flex min-h-11 items-center rounded-full bg-[var(--primary)] px-6 py-3 font-semibold text-[var(--on-primary)] shadow-sm hover:opacity-95 transition-opacity">
                     {hero.buttonText}
                   </Link>
                 </div>
               )}
 
-          <form data-visual-part="heroCtaLayout"
-            onSubmit={handleSearch}
-            className="om-minimal-hero-search w-full max-w-2xl mx-auto mt-6 sm:mt-8 flex justify-center"
-          >
-            <div data-landing-search className="om-minimal-search-field w-full min-w-0 bg-white rounded-full border border-black/10 shadow-sm p-1.5 pl-3.5 sm:p-2 sm:pl-6 flex flex-nowrap items-center gap-2 sm:gap-3">
-
-              <svg
-                className="w-4 h-4 sm:w-5 sm:h-5 text-gray-500 flex-shrink-0"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                aria-hidden="true"
+              <form data-visual-part="heroCtaLayout"
+                onSubmit={handleSearch}
+                className="om-minimal-hero-search w-full max-w-xl mt-2 flex justify-center"
               >
-                <circle cx="11" cy="11" r="7" strokeWidth="1.7" />
-                <path
-                  d="m20 20-3.5-3.5"
-                  strokeWidth="1.7"
-                  strokeLinecap="round"
-                />
-              </svg>
-
-              <input
-                type="search"
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-                placeholder="¿Qué estás buscando hoy?"
-                aria-label="Buscar productos"
-                className="flex-1 min-w-0 w-0 h-10 sm:h-11 bg-transparent outline-none text-xs sm:text-sm md:text-base text-[#171717] placeholder:text-gray-500"
-              />
-
-              <button
-                type="submit"
-                aria-label="Buscar productos"
-                className="om-minimal-search-submit min-h-11 shrink-0 gap-1.5 rounded-full bg-[var(--primary)] text-[var(--on-primary)] inline-flex items-center justify-center text-xs sm:text-sm font-semibold whitespace-nowrap"
-              >
-                <span>Buscar</span>
-                <svg
-                  className="w-4 h-4 shrink-0"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  aria-hidden="true"
+                <div
+                  data-landing-search
+                  className="om-minimal-search-field group w-full min-w-0 h-13 sm:h-14 bg-white rounded-full border border-gray-200 shadow-xs hover:border-gray-300 hover:shadow-md focus-within:border-[var(--primary)] focus-within:ring-4 focus-within:ring-[var(--primary)]/15 pl-5 pr-2 flex flex-nowrap items-center gap-3 transition-all duration-200"
                 >
-                  <path
-                    d="M5 12h14M13 6l6 6-6 6"
-                    strokeWidth="1.7"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-              </button>
+                  <svg
+                    className="om-minimal-search-icon w-5 h-5 text-gray-400 group-focus-within:text-[var(--primary)] flex-shrink-0 transition-colors pointer-events-none"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    aria-hidden="true"
+                  >
+                    <circle cx="11" cy="11" r="7" strokeWidth="1.8" />
+                    <path
+                      d="m20 20-3.5-3.5"
+                      strokeWidth="1.8"
+                      strokeLinecap="round"
+                    />
+                  </svg>
 
-            </div>
-          </form>
+                  <input
+                    type="search"
+                    value={search}
+                    onChange={(event) => setSearch(event.target.value)}
+                    placeholder="¿Qué estás buscando hoy?"
+                    aria-label="Buscar productos"
+                    className="om-minimal-search-input flex-1 min-w-0 w-full h-full bg-transparent border-none outline-none ring-0 focus:ring-0 focus:outline-none focus:border-none text-sm sm:text-[15px] text-[#171717] placeholder:text-gray-400"
+                  />
+
+                  {search.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setSearch('')}
+                      aria-label="Limpiar búsqueda"
+                      title="Limpiar búsqueda"
+                      className="om-minimal-search-clear w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
+                    >
+                      <svg
+                        className="w-3.5 h-3.5"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2.2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        aria-hidden="true"
+                      >
+                        <path d="M18 6 6 18M6 6l12 12" />
+                      </svg>
+                    </button>
+                  )}
+
+                  <button
+                    type="submit"
+                    aria-label="Buscar productos"
+                    className="om-minimal-search-submit h-9 sm:h-10 px-4 shrink-0 gap-1.5 rounded-full inline-flex items-center justify-center text-xs sm:text-sm font-semibold whitespace-nowrap transition-all duration-200"
+                  >
+                    <span>Buscar</span>
+                    <svg
+                      className="w-3.5 h-3.5 shrink-0"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      aria-hidden="true"
+                    >
+                      <path
+                        d="M5 12h14M13 6l6 6-6 6"
+                        strokeWidth="1.8"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  </button>
+                </div>
+              </form>
             </div>
 
             {heroHasPhoto && (
@@ -141,6 +164,8 @@ export default function MinimalHome() {
           </div>
         </div>
       </section>
+
+      {/* Beneficios compactos debajo de la portada. */}
 
 
       {isSectionVisible('Beneficios') && content.beneficios.length > 0 && (
@@ -203,7 +228,7 @@ export default function MinimalHome() {
             </div>
 
             <Link
-              to="catalogo"
+              to={route('catalogo')}
               className="hidden sm:inline-flex text-sm font-semibold text-[var(--primary)] hover:opacity-75 transition-opacity"
             >
               Ver todo →
@@ -219,7 +244,7 @@ export default function MinimalHome() {
 
                 className="relative relative group relative rounded-[24px] overflow-hidden bg-gray-200 aspect-[4/5]"
               >
-                <ProductImageGallery images={product.images} alt={product.name} href={`producto/${product.id}`} imageClassName="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                <ProductImageGallery images={product.images} alt={product.name} href={route(`producto/${product.id}`)} imageClassName="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
 
                 <div data-visual-part="body" className="absolute inset-x-3 bottom-3 bg-white/95 backdrop-blur-sm rounded-2xl p-4">
 
@@ -231,7 +256,7 @@ export default function MinimalHome() {
 
                     <div className="min-w-0">
                       <h3 className="font-semibold text-sm text-[#171717] truncate">
-                        <Link to={`producto/${product.id}`}>{product.name}</Link>
+                        <Link to={route(`producto/${product.id}`)}>{product.name}</Link>
                       </h3>
 
                       <p data-visual-part="description">{product.description}</p>
@@ -252,7 +277,7 @@ export default function MinimalHome() {
           </div>
 
           <Link
-            to="catalogo"
+            to={route('catalogo')}
             className="sm:hidden inline-flex items-center min-h-11 mt-5 text-sm font-medium text-[var(--primary)]"
           >
             Ver todo →
@@ -289,7 +314,7 @@ export default function MinimalHome() {
                   </h2>
 
                   <Link
-                    to="catalogo"
+                    to={route('catalogo')}
                     className="inline-flex min-h-11 items-center mt-6 sm:mt-7 bg-white text-[#171717] rounded-full px-6 py-3 text-sm font-semibold hover:bg-white/90 transition-colors"
                   >
                     Explorar colección
@@ -314,7 +339,7 @@ export default function MinimalHome() {
             </h2>
 
             <Link
-              to="catalogo"
+              to={route('catalogo')}
               className="text-sm font-semibold text-[var(--primary)] hover:opacity-75 transition-opacity"
             >
               Ver catálogo →
@@ -333,7 +358,7 @@ export default function MinimalHome() {
                 >
                   <div data-visual-part="cardImage" className="relative aspect-square rounded-[22px] overflow-hidden bg-gray-200">
 
-                    <ProductImageGallery images={product.images} alt={product.name} href={`producto/${product.id}`} imageClassName="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                    <ProductImageGallery images={product.images} alt={product.name} href={route(`producto/${product.id}`)} imageClassName="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
 
                   </div>
 
@@ -344,7 +369,7 @@ export default function MinimalHome() {
                     </p>
 
                     <h3 className="text-sm font-semibold text-[#171717] mt-1 truncate">
-                      <Link to={`producto/${product.id}`}>{product.name}</Link>
+                      <Link to={route(`producto/${product.id}`)}>{product.name}</Link>
                     </h3>
 
                     <p data-visual-part="price" className="text-sm font-semibold text-gray-700 mt-1">

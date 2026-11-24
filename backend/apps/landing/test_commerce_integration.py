@@ -3,6 +3,7 @@ from datetime import timedelta
 from io import BytesIO
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from unittest import skip
 from unittest.mock import patch
 from urllib.parse import urlencode
 from urllib.request import urlopen
@@ -64,9 +65,13 @@ class CommerceIntegrationTests(TestCase):
             'nombre': 'QA Producto sintético', 'variantes': [{'sku': 'QA-SKU', 'precio': 5000, 'stock': 5,
                 'activo': True, 'atributos_variante': []}]}).inserted_id
         self.client.force_authenticate(self.owner)
-        upload = self.client.post('/api/landing/grabaciones/', {'titulo': 'QA Grabación sintética', 'video': self.video()}, format='multipart')
-        self.assertEqual(upload.status_code, 201, upload.data)
-        self.recording = GrabacionTaller.objects.get(pk=upload.data['data']['id'])
+        # La carga pública está deshabilitada. Una grabación privada preexistente
+        # se crea solo en la base y el almacenamiento temporal de las pruebas,
+        # sin abrir nuevamente el endpoint de subida.
+        video = self.video()
+        self.recording = GrabacionTaller(tienda=self.store, titulo='QA Grabación sintética', bytes=video.size)
+        self.recording.archivo.save(video.name, video, save=False)
+        self.recording.save()
         self.section = str(uuid4())
         activity = ActivityConfigSerializer(data={'tipo': 'taller', 'modalidad_venta': 'grabado',
             'grabacion_id': str(self.recording.pk), 'acceso_dias': 30, 'venta': {},
@@ -136,6 +141,7 @@ class CommerceIntegrationTests(TestCase):
         history = self.client.get(f'/api/landing/solicitudes-actividades/{record.pk}/respuestas/')
         self.assertEqual(history.data['data']['total'], 1)
 
+    @skip('PENDIENTE: venta de talleres grabados deshabilitada en esta etapa; conservar para cuando se habilite')
     def test_mixed_checkout_keeps_invoice_private_and_grants_only_after_approval_once(self):
         response, _ = self.checkout(mixed=True)
         self.assertEqual(response.status_code, 201, response.data)
@@ -160,6 +166,7 @@ class CommerceIntegrationTests(TestCase):
         self.assertNotIn('_solicitud_factura', OrderDetailSerializer(order).data['entrega'])
         self.assertEqual(order.entrega['_solicitud_factura']['rut'], '12345678-5')
 
+    @skip('PENDIENTE: venta de talleres grabados deshabilitada en esta etapa; conservar para cuando se habilite')
     def test_private_file_requires_buyer_and_cannot_be_reached_through_media(self):
         order, row = self.approve()
         self.assertFalse(Path(self.recording.archivo.path).is_relative_to(Path(settings.MEDIA_ROOT)))
@@ -176,6 +183,7 @@ class CommerceIntegrationTests(TestCase):
         with self.assertRaises(Http404):
             require_recording(other, self.recording.pk)
 
+    @skip('PENDIENTE: venta de talleres grabados deshabilitada en esta etapa; conservar para cuando se habilite')
     def test_expiration_cancellation_and_refund_block_existing_access(self):
         order, row = self.approve()
         url = f'/api/landing/mis-talleres/{order.pk}/{row.pk}/video/'
@@ -195,9 +203,23 @@ class CommerceIntegrationTests(TestCase):
         change_transfer(self.store, order.pk, row.pk, self.owner, 'registrar_devolucion', 'QA Devolución simulada sin movimiento bancario', 'QA-REF-' + uuid4().hex, True)
         self.assertEqual(self.client.get(url).status_code, 404)
 
+    def test_recorded_workshop_sale_stays_disabled_for_logged_in_buyer(self):
+        # No debe permitir la venta de talleres grabados ni solos ni combinados
+        # con productos; no se crean pedidos ni se descuenta inventario.
+        for mixed in (False, True):
+            response, _ = self.checkout(mixed=mixed)
+            self.assertEqual(response.status_code, 400, response.data)
+            self.assertIn('venta de talleres grabados no esta disponible', str(response.data).lower())
+            self.assertFalse(Pedido.objects.exists())
+            self.assertFalse(ReservaActividadPagada.objects.exists())
+            self.assertEqual(self.collection.find_one({'_id': self.product})['variantes'][0]['stock'], 5)
+
     def test_guest_cannot_purchase_recorded_workshop(self):
         response, _ = self.checkout(authenticate=False)
-        self.assertIn(response.status_code, (401, 403))
+        # La venta está cerrada para todos: la validación puede responder
+        # antes de llegar a la comprobación de sesión de usuario.
+        self.assertEqual(response.status_code, 400, response.data)
+        self.assertIn('venta de talleres grabados no esta disponible', str(response.data).lower())
         self.assertFalse(Pedido.objects.exists())
         self.assertFalse(ReservaActividadPagada.objects.exists())
 
@@ -216,6 +238,7 @@ class CommerceIntegrationTests(TestCase):
         self.assertEqual(len(messages), 1)
         self.assertEqual(messages[0]['Subject'], subject)
 
+    @skip('PENDIENTE: venta de talleres grabados deshabilitada en esta etapa; conservar para cuando se habilite')
     def test_native_video_cookie_authentication_and_expired_session(self):
         from django.core.cache import cache
         from rest_framework.authtoken.models import Token

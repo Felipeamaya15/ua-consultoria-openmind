@@ -20,7 +20,7 @@ import { fetchPublicProducts } from '../services/catalogService';
 import { LANDING_CONFIG_CHANGED, fetchLandingConfig } from '../../landing/services/landingService';
 import { fetchStoreInformation, STORE_INFORMATION_CHANGED, type StoreInformation } from '../services/storeInformationService';
 import type { LandingConfig } from '../../landing/types/landing.types';
-import { isRecord, resolveVisualConfig, resolveStoreVisualConfig } from '../visual/resolveVisualConfig';
+import { isRecord, resolveVisualConfig, resolveStoreVisualConfig, getServerSelectedTemplate } from '../visual/resolveVisualConfig';
 import { CAROUSEL_TRANSITIONS } from '../visual/carouselTransitionLibrary';
 import { isOnlineEffectId } from '../visual/onlineEffects';
 import type { VisualConfig } from '../visual/types';
@@ -33,6 +33,8 @@ import { legalService } from '../services/legalService';
 import { type LegalType, type LegalPage } from '../data/legalContent';
 const StoreContext = createContext({
   config: { ...defaultStoreConfig, name: '', description: '', logo: '' },
+  activeTemplate: 'editorial' as TemplateId,
+  plantillaActiva: 'editorial' as TemplateId,
   visualConfig: resolveVisualConfig(),
   blockStyles: readBlockStyles(undefined),
   landing: null as LandingConfig | null,
@@ -115,8 +117,16 @@ export function StoreProvider({
     };
   }, [storageKey]);
   const savedConfig = useMemo(() => readStoredStoreConfig(identity), [identity, storageRevision]);
-  const activeTemplate: TemplateId = templateFromPath(pathname) ?? (['editorial','minimal','visual','catalog'].includes(String(savedConfig.template)) ? savedConfig.template as TemplateId : 'editorial');
   const paletteSource=usePaletteLibrary();
+  const storedTemplate = ['editorial','minimal','visual','catalog'].includes(String(savedConfig.template))
+    ? (savedConfig.template as TemplateId)
+    : undefined;
+  const serverTemplate = paletteSource.selectedTemplate ?? getServerSelectedTemplate(identity);
+  const activeTemplate: TemplateId =
+    templateFromPath(pathname) ??
+    serverTemplate ??
+    storedTemplate ??
+    'editorial';
   const visualConfig = useMemo(() => {
     const appearance = paletteSource.appearance?.[activeTemplate];
     const remote = paletteOverrides(appearance, paletteSource.library);
@@ -152,7 +162,30 @@ export function StoreProvider({
       const request = new AbortController();
       controller = request;
       void fetchStoreInformation(request.signal).then(value => {
-        if (!request.signal.aborted) setBusiness({ key: storageKey, value });
+        if (!request.signal.aborted) {
+          setBusiness({ key: storageKey, value });
+          if (typeof document !== 'undefined' && !/\/producto\//.test(pathname)) {
+            const nextTitle = (typeof savedConfig.metaTitle === 'string' && savedConfig.metaTitle.trim()) || value.nombre?.trim();
+            const nextDescription = (typeof savedConfig.metaDescription === 'string' && savedConfig.metaDescription.trim()) || value.descripcion?.trim();
+            if (nextTitle) {
+              document.title = nextTitle;
+              if (typeof document.querySelector === 'function') {
+                const ogTitle = document.querySelector('meta[property="og:title"]');
+                if (ogTitle) ogTitle.setAttribute('content', nextTitle);
+              }
+            }
+            if (nextDescription && typeof document.querySelector === 'function') {
+              const metaDescription = document.querySelector('meta[name="description"]');
+              if (metaDescription) metaDescription.setAttribute('content', nextDescription);
+              const ogDescription = document.querySelector('meta[property="og:description"]');
+              if (ogDescription) ogDescription.setAttribute('content', nextDescription);
+            }
+            if (typeof window !== 'undefined' && window.location?.origin && typeof document.querySelector === 'function') {
+              const ogUrl = document.querySelector('meta[property="og:url"]');
+              if (ogUrl) ogUrl.setAttribute('content', `${window.location.origin}${window.location.pathname}`);
+            }
+          }
+        }
       }).catch(() => {});
     };
     refresh();
@@ -232,9 +265,9 @@ export function StoreProvider({
     return () => controller.abort();
   }, [storageKey, storageRevision, legalRevision]);
   useEffect(() => {
-    const template = templateFromPath(pathname);
-    if (!template || typeof document === 'undefined' || typeof MutationObserver === 'undefined') return;
-    const theme = readTheme(savedConfig, template);
+    if (pathname.startsWith('/emprendedor') && !pathname.startsWith('/emprendedor/preview/')) return;
+    if (!activeTemplate || typeof document === 'undefined' || typeof MutationObserver === 'undefined') return;
+    const theme = readTheme(savedConfig, activeTemplate);
     const originals = new Map<HTMLImageElement, OriginalImageStyle>();
     applyImageCustomizations(theme, originals);
     const observer = new MutationObserver(() => {
@@ -250,10 +283,10 @@ export function StoreProvider({
         restoreOriginalImage(img, original);
       }
     };
-  }, [pathname, savedConfig]);
+  }, [pathname, activeTemplate, savedConfig]);
 
 
-  const publicStorefront = pathname.startsWith('/plantilla/') && !isActiveEditorPreview();
+  const publicStorefront = !pathname.startsWith('/emprendedor') && !isActiveEditorPreview();
   const initialPalettePending = identityLoading ||
     (identity !== null && !paletteSource.library && !paletteSource.error);
 
@@ -273,6 +306,7 @@ export function StoreProvider({
         config: {
           ...defaultStoreConfig,
           ...savedConfig,
+          template: activeTemplate,
           name: business?.nombre ?? '',
           description: business?.descripcion ?? '',
           logo: landing?.logo || '',
@@ -280,6 +314,8 @@ export function StoreProvider({
           secondaryColor: visualConfig.global.colors.secondary,
           accentColor: visualConfig.global.colors.accent,
         },
+        activeTemplate,
+        plantillaActiva: activeTemplate,
         visualConfig,
         blockStyles: readBlockStyles(
           landing?.contenido?.apariencia_bloques?.[activeTemplate] ??

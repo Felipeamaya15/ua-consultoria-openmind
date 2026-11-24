@@ -55,8 +55,8 @@ export function RequireAdmin() {
       <Navigate
         to={
           authService.hasSession()
-            ? '/plantilla/1'
-            : '/plantilla/1/ingresar'
+            ? '/'
+            : '/ingresar'
         }
         replace
         state={{ from: location.pathname }}

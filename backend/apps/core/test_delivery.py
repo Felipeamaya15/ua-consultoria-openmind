@@ -15,12 +15,26 @@ from apps.core.presentation.serializers import ShippingConfigurationSerializer
 from apps.core.presentation.views import AlternativasEntregaAPIView, ConfiguracionEntregaAPIView
 
 
+# Credenciales sintéticas: solo tests, no corresponden a cuentas reales.
+QA_CHILEXPRESS_CREDENTIALS = {
+    'cotizador': 'qa-cotizador-invalido',
+    'coberturas': 'qa-coberturas-invalido',
+    'origen': 'STGO',
+    'tcc': 'QA-TCC-FAKE',
+}
+
+
+def chilexpress_habilitado_con_credenciales(config):
+    config['chilexpress']['enabled'] = True
+    config['chilexpress']['credenciales'].update(QA_CHILEXPRESS_CREDENTIALS)
+
+
 class DeliveryContractTests(SimpleTestCase):
     """Validación del contrato sin PostgreSQL ni MongoDB."""
 
     def test_defaults_are_disabled_and_independent(self):
         defaults = delivery_defaults()
-        self.assertTrue(all(value['enabled'] is False for value in defaults.values()))
+        self.assertTrue(all(value['enabled'] is False for key, value in defaults.items() if key != 'paquete'))
         defaults['pickup']['enabled'] = True
         self.assertFalse(delivery_defaults()['pickup']['enabled'])
 
@@ -140,17 +154,23 @@ class DeliveryConfigurationTests(TestCase):
         ConfiguracionEntrega.objects.create(tienda=self.store, datos=self.configuration)
         response = self.api.put(self.url, self.configuration, format='json')
         self.assertEqual(response.status_code, 200, response.data)
-        self.assertEqual(ConfiguracionEntrega.objects.get(tienda=self.store).datos, self.configuration)
+        self.assertEqual(delivery_data(ConfiguracionEntrega.objects.get(tienda=self.store).datos), self.configuration)
         self.assertEqual(self.api.get(self.url).data['data'], self.configuration)
-        self.assertEqual(self.api.get(self.public_url).data['data'], self.configuration)
+        self.assertEqual(self.api.get(self.public_url).data['data'], {k: v for k, v in self.configuration.items() if k != 'paquete'})
 
     def test_partial_save_and_disable_preserve_address_schedule_and_carriers(self):
-        self.configuration['chilexpress']['enabled'] = True
+        # Para habilitar Chilexpress se requieren las nuevas credenciales.
+        chilexpress_habilitado_con_credenciales(self.configuration)
         ConfiguracionEntrega.objects.create(tienda=self.store, datos=self.configuration)
-        self.api.put(self.url, self.configuration, format='json')
+        guardado = self.api.put(self.url, self.configuration, format='json')
+        self.assertEqual(guardado.status_code, 200, guardado.data)
+        anterior = guardado.data['data']
+        self.assertTrue(anterior['chilexpress']['enabled'])
+        self.assertNotEqual(anterior['chilexpress']['credenciales']['cotizador'],
+                            QA_CHILEXPRESS_CREDENTIALS['cotizador'])
         response = self.api.patch(self.url, {'pickup': {'enabled': False}}, format='json')
         self.assertEqual(response.status_code, 200, response.data)
-        expected = deepcopy(self.configuration)
+        expected = deepcopy(anterior)
         expected['pickup']['enabled'] = False
         self.assertEqual(response.data['data'], expected)
         self.assertEqual(self.api.get(self.url).data['data'], expected)
@@ -175,7 +195,7 @@ class DeliveryConfigurationTests(TestCase):
         self.assertEqual(self.api.patch(self.url, {'pickup': {'enabled': True}}, format='json').status_code, 401)
         response = self.api.get(self.public_url)
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.data['data'], delivery_defaults())
+        self.assertEqual(response.data['data'], {k: v for k, v in delivery_defaults().items() if k != 'paquete'})
 
     def test_foreign_store_identifiers_are_rejected(self):
         for response in (
@@ -259,16 +279,24 @@ class DeliveryCheckoutTests(TestCase):
     def test_panel_save_public_checkout_and_disable_preserve_carriers_and_payments(self):
         admin = APIClient()
         admin.force_authenticate(self.store.id_usuario_propietario)
-        self.configuration['chilexpress']['enabled'] = True
+        chilexpress_habilitado_con_credenciales(self.configuration)
         self.configuration['starken']['enabled'] = True
         from apps.core.test_pickup import make_pickup
         self.configuration['pickup'] = make_pickup(self.store)
         payments = deepcopy(ConfiguracionPago.objects.get(tienda=self.store).datos)
         response = admin.put('/api/entregas/configuracion/', self.configuration, format='json')
         self.assertEqual(response.status_code, 200, response.data)
-        self.assertEqual(admin.get('/api/entregas/configuracion/').data['data'], self.configuration)
-        public_config = deepcopy(self.configuration)
+        saved = admin.get('/api/entregas/configuracion/').data['data']
+        self.assertEqual(saved['pickup'], self.configuration['pickup'])
+        self.assertEqual(saved['starken'], self.configuration['starken'])
+        self.assertTrue(saved['chilexpress']['enabled'])
+        self.assertEqual(saved['chilexpress']['credenciales']['origen'],
+                         QA_CHILEXPRESS_CREDENTIALS['origen'])
+        self.assertNotEqual(saved['chilexpress']['credenciales']['cotizador'],
+                            QA_CHILEXPRESS_CREDENTIALS['cotizador'])
+        public_config = deepcopy(saved)
         public_config['pickup']['location'].pop('verification')
+        public_config.pop('paquete', None)
         self.assertEqual(self.api.get('/api/entregas/alternativas/').data['data'], public_config)
         with patch('apps.core.presentation.checkout.validate_quote') as quote:
             response = self.api.post(self.url, self.payload, format='json')
@@ -282,9 +310,13 @@ class DeliveryCheckoutTests(TestCase):
         disabled = deepcopy(self.configuration)
         disabled['pickup']['enabled'] = False
         self.assertEqual(admin.put('/api/entregas/configuracion/', disabled, format='json').status_code, 200)
-        self.assertEqual(admin.get('/api/entregas/configuracion/').data['data'], disabled)
-        public_disabled = deepcopy(disabled)
+        saved_disabled = admin.get('/api/entregas/configuracion/').data['data']
+        expected_disabled = deepcopy(saved)
+        expected_disabled['pickup']['enabled'] = False
+        self.assertEqual(saved_disabled, expected_disabled)
+        public_disabled = deepcopy(saved_disabled)
         public_disabled['pickup']['location'].pop('verification')
+        public_disabled.pop('paquete', None)
         self.assertEqual(self.api.get('/api/entregas/alternativas/').data['data'], public_disabled)
         response = self.api.post(self.url, {**self.payload, 'clave_checkout': str(uuid4())}, format='json')
         self.assertEqual(response.status_code, 400)

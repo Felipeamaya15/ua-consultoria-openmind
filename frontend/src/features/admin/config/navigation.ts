@@ -1,11 +1,13 @@
 
 import type { TemplateId } from '../../storefront/data/mockData';
 
+export const PUBLIC_STORE_PATH = '/';
+
 export const templatePaths: Record<TemplateId, string> = {
-  editorial: '/plantilla/1',
-  minimal: '/plantilla/2',
-  visual: '/plantilla/3',
-  catalog: '/plantilla/4',
+  editorial: '/admin/preview/plantilla/1',
+  minimal: '/admin/preview/plantilla/2',
+  visual: '/admin/preview/plantilla/3',
+  catalog: '/admin/preview/plantilla/4',
 };
 
 export const legalSlugs = {

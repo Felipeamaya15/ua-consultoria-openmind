@@ -1,7 +1,9 @@
 from django.urls import path
-from .views import CotizacionEnvioView, SeguimientoLogisticoView
+from .views import CoberturasChilexpressAdminView, CoberturasChilexpressView, CotizacionEnvioView, SeguimientoLogisticoView
 
 urlpatterns = [
+    path("chilexpress/coberturas/", CoberturasChilexpressView.as_view(), name="shipping-coberturas-chilexpress"),
+    path("chilexpress/coberturas/admin/", CoberturasChilexpressAdminView.as_view(), name="shipping-coberturas-chilexpress-admin"),
     path("cotizar/", CotizacionEnvioView.as_view(), name="shipping-cotizar"),
     path("cotizar/chilexpress/", CotizacionEnvioView.as_view(proveedor_fijo="chilexpress"), name="shipping-cotizar-chilexpress"),
     path("cotizar/chilexpress", CotizacionEnvioView.as_view(proveedor_fijo="chilexpress")),

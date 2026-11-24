@@ -25,8 +25,10 @@ export interface CarrierConnection {
   enabled: boolean;
   accountId: string;
   apiKey: string;
-  status: 'not_configured' | 'credentials_saved';
+  status: 'not_configured' | 'configured' | 'credentials_saved';
   tarifas?: ShippingRate[];
+  ambiente?: 'SANDBOX' | 'PRODUCCION';
+  credenciales?: Partial<Record<'cotizador' | 'coberturas' | 'envios' | 'tcc' | 'origen' | 'origen_region' | 'origen_comuna' | 'rut' | 'origen_calle' | 'origen_numero' | 'telefono', string>>;
 }
 
 export interface ThemeTemplateCustomization {
@@ -62,6 +64,7 @@ export interface AdminConfig extends StoreConfig {
     chilexpress: CarrierConnection;
     starken: CarrierConnection;
     pickup: import('../services/pickupConfiguration').PickupConfiguration;
+    paquete?: PackageConfiguration;
   };
 
   paymentConfiguration: Record<
@@ -81,4 +84,14 @@ export interface AdminConfig extends StoreConfig {
   };
 
   themeEditor: ThemeEditorConfiguration;
+}
+
+export interface PackageConfiguration {
+  peso_default_kg: number | null;
+  margen_porcentaje: number;
+  limite_peso_kg: number | null;
+  limite_unidades: number | null;
+  alto_cm: number;
+  ancho_cm: number;
+  largo_cm: number;
 }

@@ -68,6 +68,8 @@ class OrderDetailSerializer(OrderSerializer):
             delivery.pop('pago_actividad_externo',None)
             delivery.pop('_solicitud_factura', None)
             delivery.pop('_grabaciones_acceso', None)
+            if isinstance(delivery.get('guia'), dict):
+                delivery['guia'] = {k: v for k, v in delivery['guia'].items() if k != 'etiqueta'}
             result.update(medio_pago=order.medio_pago, entrega=delivery,
                           costo_envio=format(order.costo_envio, '.2f'), descuento=format(order.descuento, '.2f'))
         return result

@@ -9,7 +9,7 @@ export interface HistoryOrder {
   id_pedido: number; identificador: string | null; nombre_contacto: string; correo_contacto: string;
   monto_total: string; estado: string; estado_etiqueta: string; fecha_creacion: string; metodo_pago: string;
   pago_estado: 'confirmado' | 'pendiente' | 'cancelado'; moneda: 'CLP'; costo_envio: string; descuento: string;
-  items: HistoryLine[]; entrega?: { _solicitud_factura?: Record<string, string>; metodo?: string; direccion?: Record<string, unknown>; retiro?: { address?: string; seleccion?: { fecha: string; hora: string } } };
+  items: HistoryLine[]; entrega?: { _solicitud_factura?: Record<string, string>; metodo?: string; codigo_seguimiento?: string; guia?: { numero_ot?: string; tiene_etiqueta?: boolean }; direccion?: Record<string, unknown>; retiro?: { address?: string; seleccion?: { fecha: string; hora: string } } };
 }
 export interface Pagination { pagina: number; tamano: number; total: number; total_paginas: number }
 export interface Contact { email: string; cantidad_pedidos: number; ultimo_pedido: string | null; consentimiento: 'pendiente' | 'autorizado' | 'retirado' | 'sin_registro'; fecha_consentimiento: string | null }

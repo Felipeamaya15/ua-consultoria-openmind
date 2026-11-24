@@ -9,6 +9,10 @@ export type AdminProduct = Product & {
   revision?: string;
   generalAttributes?: CatalogAttribute[];
   attributeLabels?: Record<string, string>;
+  weightKg?: number | null;
+  heightCm?: number | null;
+  widthCm?: number | null;
+  lengthCm?: number | null;
 };
 
 function toBackendPayload(product: AdminProduct) {
@@ -19,6 +23,10 @@ function toBackendPayload(product: AdminProduct) {
     activo: product.status === "active",
     imagenes: product.images,
     video_recurso_id: product.videoResourceId ?? null,
+    peso_kg: product.weightKg ?? null,
+    alto_cm: product.heightCm ?? null,
+    ancho_cm: product.widthCm ?? null,
+    largo_cm: product.lengthCm ?? null,
     atributos_generales: product.generalAttributes ?? [],
     variantes: product.variants.map((variant) => {
       const hasOffer =
@@ -31,6 +39,10 @@ function toBackendPayload(product: AdminProduct) {
         precio: hasOffer ? variant.comparePrice! : variant.price,
         precio_oferta: hasOffer ? variant.price : null,
         stock: variant.stock,
+        peso_kg: variant.weightKg ?? null,
+        alto_cm: variant.heightCm ?? null,
+        ancho_cm: variant.widthCm ?? null,
+        largo_cm: variant.lengthCm ?? null,
         atributos_variante: Object.entries(variant.attributes).map(
           ([nombre, valor]) => ({
             clave: nombre.toLowerCase(),
@@ -107,6 +119,10 @@ function adaptAdminProduct(item: any): AdminProduct {
       comparePrice: offer ? v.precio : undefined,
       stock: v.stock,
       available: v.stock > 0,
+      weightKg: typeof v.peso_kg === 'number' ? v.peso_kg : null,
+      heightCm: typeof v.alto_cm === 'number' ? v.alto_cm : null,
+      widthCm: typeof v.ancho_cm === 'number' ? v.ancho_cm : null,
+      lengthCm: typeof v.largo_cm === 'number' ? v.largo_cm : null,
     };
   });
 
@@ -128,6 +144,10 @@ function adaptAdminProduct(item: any): AdminProduct {
     category: item.categoria,
     images: item.imagenes ?? [],
     videoResourceId: item.video_recurso_id ?? null,
+    weightKg: typeof item.peso_kg === 'number' && Number.isFinite(item.peso_kg) ? item.peso_kg : null,
+    heightCm: typeof item.alto_cm === 'number' && Number.isFinite(item.alto_cm) ? item.alto_cm : null,
+    widthCm: typeof item.ancho_cm === 'number' && Number.isFinite(item.ancho_cm) ? item.ancho_cm : null,
+    lengthCm: typeof item.largo_cm === 'number' && Number.isFinite(item.largo_cm) ? item.largo_cm : null,
     variants,
     attributes,
     attributeLabels: labels,

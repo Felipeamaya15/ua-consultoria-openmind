@@ -206,7 +206,7 @@ class CommerceCompletionTests(SimpleTestCase):
         self.assertEqual(response['Cache-Control'], 'no-store')
         self.assertEqual(b''.join(response.streaming_content), b'2345')
 
-    def test_private_upload_decodes_a_real_small_mp4_without_public_storage(self):
+    def test_private_upload_rejects_even_valid_mp4_while_disabled(self):
         from io import BytesIO
         import av
         from PIL import Image
@@ -225,14 +225,10 @@ class CommerceCompletionTests(SimpleTestCase):
         request = APIRequestFactory().post('/grabaciones/', {'titulo': 'Grabación sintética', 'video': upload}, format='multipart')
         force_authenticate(request, SimpleNamespace(is_authenticated=True, pk=1))
         with patch('apps.landing.private_recordings.resolver_tienda', return_value='store'), patch('apps.landing.models.GrabacionTaller') as model:
-            recording = model.return_value
-            recording.pk, recording.bytes = uuid4(), upload.size
             response = RecordingUploadView.as_view()(request)
-            self.assertEqual(response.status_code, 201)
-            recording.archivo.save.assert_called_once()
-            self.assertEqual(recording.archivo.save.call_args.kwargs, {'save': False})
-            self.assertNotIn('archivo', response.data['data'])
-            self.assertNotIn('url', response.data['data'])
+            self.assertEqual(response.status_code, 400)
+            self.assertIn('deshabilitada', str(response.data['video']))
+            model.assert_not_called()
 
     def test_missing_recording_migration_fails_closed(self):
         from django.db import ProgrammingError

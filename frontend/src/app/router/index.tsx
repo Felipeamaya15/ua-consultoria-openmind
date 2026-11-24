@@ -1,22 +1,23 @@
 import { lazyPage } from '../LazyPage';
-import { SelectedTemplateRedirect } from './SelectedTemplateRedirect';
-const MyWorkshops = lazyPage(() => import('../../features/storefront/pages/MyWorkshops'));
 const CustomerOrders = lazyPage(() => import('../../features/storefront/pages/CustomerOrders'));
 import { RequireCustomer } from '../../features/storefront/components/store/AccountNavigation';
 const Profile = lazyPage(() => import('../../features/storefront/pages/Profile'));
 const CommercialPreferences = lazyPage(() => import('../../features/storefront/pages/CommercialPreferences'));
 
 import { adminRoute } from '../../features/admin/routes';
+import { RequireAdmin } from '../../features/admin/auth/RequireAdmin';
 import {
   createBrowserRouter,
   ScrollRestoration,
   Navigate,
+  useLocation,
 } from 'react-router-dom';
 
 import { EditorialLayout } from '../../features/storefront/components/store/EditorialLayout';
 import { MinimalLayout } from '../../features/storefront/components/store/minimal/MinimalLayout';
 import { VisualLayout } from '../../features/storefront/components/store/visual/VisualLayout';
 import { CatalogLayout } from '../../features/storefront/components/store/catalog/CatalogLayout';
+import { templateFromPath } from '../../features/storefront/visual/templates';
 
 const EditorialHome = lazyPage(() => import('../../features/storefront/pages/EditorialHome'));
 const MinimalHome = lazyPage(() => import('../../features/storefront/pages/MinimalHome'));
@@ -33,9 +34,9 @@ const Tracking = lazyPage(() => import('../../features/storefront/pages/Tracking
 const Login = lazyPage(() => import('../../features/storefront/pages/Login'));
 const Legal = lazyPage(() => import('../../features/storefront/pages/Legal'));
 
-import { PendingPage } from '../../features/storefront/pages/PreviewPages';
+import { ErrorFallback, NotFoundPage } from '../../shared/components/ErrorFallback';
 
-import { StoreProvider } from '../../features/storefront/context/StoreContext';
+import { StoreProvider, useStore } from '../../features/storefront/context/StoreContext';
 import { CartProvider } from '../../features/storefront/context/CartContext';
 import { OrderProvider } from '../../features/storefront/context/OrderContext';
 import { CookieConsentBanner } from '../../features/storefront/components/store/CookieConsentBanner';
@@ -60,8 +61,44 @@ function StorefrontProviders({
   );
 }
 
+export function ActiveStorefrontLayout() {
+  const { pathname } = useLocation();
+  const { activeTemplate } = useStore();
+  if (
+    /^\/(?:admin|emprendedor)\/preview\/plantilla\//.test(pathname) &&
+    !templateFromPath(pathname)
+  ) {
+    return <Navigate to="/" replace />;
+  }
+  switch (activeTemplate) {
+    case 'minimal':
+      return <MinimalLayout />;
+    case 'visual':
+      return <VisualLayout />;
+    case 'catalog':
+      return <CatalogLayout />;
+    case 'editorial':
+    default:
+      return <EditorialLayout />;
+  }
+}
+
+export function ActiveStorefrontHome() {
+  const { activeTemplate } = useStore();
+  switch (activeTemplate) {
+    case 'minimal':
+      return <MinimalHome />;
+    case 'visual':
+      return <VisualHome />;
+    case 'catalog':
+      return <CatalogHome />;
+    case 'editorial':
+    default:
+      return <EditorialHome />;
+  }
+}
+
 const sharedChildren = [
-  { path: 'mis-talleres', element: <RequireCustomer><MyWorkshops /></RequireCustomer> },
   { path: 'mis-pedidos', element: <RequireCustomer><CustomerOrders /></RequireCustomer> },
   { path: 'mis-pedidos/:id', element: <RequireCustomer><CustomerOrders /></RequireCustomer> },
   { path: 'perfil', element: <RequireCustomer><Profile /></RequireCustomer> },
@@ -99,95 +136,94 @@ const sharedChildren = [
     element: <Legal />,
   },
   {
+    path: 'nuestra-historia',
+    element: <VisualStory />,
+  },
+  {
     path: '*',
-    element: <PendingPage title="Página no encontrada" />,
+    element: <NotFoundPage />,
   },
 ];
 
+const storefrontChildren = [
+  {
+    index: true,
+    element: <ActiveStorefrontHome />,
+  },
+  ...sharedChildren,
+];
+
 export const router = createBrowserRouter([
-  adminRoute,
-  { path: "/landing", element: <Navigate to="/" replace /> },
+  {
+    ...adminRoute,
+    errorElement: <ErrorFallback />,
+  },
+  { path: '/landing', element: <Navigate to="/" replace />, errorElement: <ErrorFallback /> },
+
+  {
+    path: '/plantilla',
+    element: <Navigate to="/" replace />,
+    errorElement: <ErrorFallback />,
+  },
+  {
+    path: '/plantilla/:id',
+    element: <Navigate to="/" replace />,
+    errorElement: <ErrorFallback />,
+  },
+  {
+    path: '/plantilla/:id/*',
+    element: <Navigate to="/" replace />,
+    errorElement: <ErrorFallback />,
+  },
+
+  {
+    path: '/admin/preview/plantilla/:templateId',
+    element: <RequireAdmin />,
+    errorElement: <ErrorFallback />,
+    children: [
+      {
+        element: (
+          <StorefrontProviders>
+            <ActiveStorefrontLayout />
+          </StorefrontProviders>
+        ),
+        errorElement: <ErrorFallback />,
+        children: storefrontChildren,
+      },
+    ],
+  },
+
+  {
+    path: '/emprendedor/preview/plantilla/:templateId',
+    element: <RequireAdmin />,
+    errorElement: <ErrorFallback />,
+    children: [
+      {
+        element: (
+          <StorefrontProviders>
+            <ActiveStorefrontLayout />
+          </StorefrontProviders>
+        ),
+        errorElement: <ErrorFallback />,
+        children: storefrontChildren,
+      },
+    ],
+  },
 
   {
     path: '/',
-    element: <SelectedTemplateRedirect />,
-  },
-
-
-  {
-    path: '/plantilla/1',
     element: (
       <StorefrontProviders>
-        <EditorialLayout />
+        <ActiveStorefrontLayout />
       </StorefrontProviders>
     ),
-    children: [
-      {
-        index: true,
-        element: <EditorialHome />,
-      },
-      ...sharedChildren,
-    ],
+    errorElement: <ErrorFallback />,
+    children: storefrontChildren,
   },
-
-
-  {
-    path: '/plantilla/2',
-    element: (
-      <StorefrontProviders>
-        <MinimalLayout />
-      </StorefrontProviders>
-    ),
-    children: [
-      {
-        index: true,
-        element: <MinimalHome />,
-      },
-      ...sharedChildren,
-    ],
-  },
-
-
-  {
-    path: '/plantilla/3',
-    element: (
-      <StorefrontProviders>
-        <VisualLayout />
-      </StorefrontProviders>
-    ),
-    children: [
-      {
-        index: true,
-        element: <VisualHome />,
-      },
-      {
-        path: 'nuestra-historia',
-        element: <VisualStory />,
-      },
-      ...sharedChildren,
-    ],
-  },
-
-
-  {
-    path: '/plantilla/4',
-    element: (
-      <StorefrontProviders>
-        <CatalogLayout />
-      </StorefrontProviders>
-    ),
-    children: [
-      {
-        index: true,
-        element: <CatalogHome />,
-      },
-      ...sharedChildren,
-    ],
-  },
-
 
   {
     path: '*',
-    element: <SelectedTemplateRedirect />,
+    element: <NotFoundPage />,
+    errorElement: <ErrorFallback />,
   },
 ]);

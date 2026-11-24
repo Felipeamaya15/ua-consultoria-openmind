@@ -12,7 +12,7 @@ export function StoreSeoMetadata() {
 
     if (/\/producto\//.test(pathname)) return;
     return updateStoreSeo(config);
-  }, [pathname, config.name, config.description, config.metaTitle, config.metaDescription]);
+  }, [pathname, config.name, config.description, config.metaTitle, config.metaDescription, config.logo]);
 
   return null;
 }

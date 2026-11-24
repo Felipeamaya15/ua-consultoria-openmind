@@ -11,7 +11,7 @@ import { OrderFilters } from '../components/OrderFilters'
 import { useCommercialExport } from '../hooks/useCommercialHistory'
 import { getOrderHistory, getOrderDetail, historyParams, emptyPagination, type HistoryOrder as StoreOrder } from '../services/commercialService'
 import { approveManualTransfer, verifyTransfer } from "../services/pendingTransfersService"
-import { describeShipmentEmail, updateOrderStatus, sendManualOrderEmail, formatRecentOrderDate } from '../services/recentOrdersService';
+import { describeShipmentEmail, updateOrderStatus, sendManualOrderEmail, formatRecentOrderDate, emitChilexpressGuide, fetchOrderTracking, openChilexpressLabel, type ChilexpressTracking } from '../services/recentOrdersService';
 import { hasOrderFilters } from '../services/emptyStates';
 
 import { Link, useSearchParams } from 'react-router-dom'
@@ -52,6 +52,15 @@ export default function Orders() {
   const operationPending = useRef(false)
   const [verifyMessage, setVerifyMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null)
   const [sendingEmailType, setSendingEmailType] = useState<string | null>(null)
+  const [guideBusy, setGuideBusy] = useState(false)
+  const [trackingInfo, setTrackingInfo] = useState<ChilexpressTracking | null>(null)
+  const runGuideAction = async (action: () => Promise<void>) => {
+    if (guideBusy) return
+    setGuideBusy(true)
+    try { await action() } catch (cause) {
+      setVerifyMessage({ type: 'error', text: cause instanceof Error ? cause.message : 'No se pudo completar la operación con Chilexpress.' })
+    } finally { setGuideBusy(false) }
+  }
 
   useEffect(() => {
     const controller = new AbortController()
@@ -363,6 +372,37 @@ export default function Orders() {
               <PickupSelectionSummary selection={selectedOrder.entrega?.retiro?.seleccion} />
               <p className="text-xs">Entrega: {selectedOrder.entrega?.metodo || 'Sin registro'} · Pago {selectedOrder.pago_estado}</p>
               {selectedOrder.entrega?.retiro?.address && <p className="text-xs">Retiro: {selectedOrder.entrega.retiro.address}</p>}
+              {selectedOrder.entrega?.metodo === 'Chilexpress' && (
+                <div className="text-xs space-y-1">
+                  {selectedOrder.entrega.codigo_seguimiento && <p>Guía Chilexpress: <strong>{selectedOrder.entrega.codigo_seguimiento}</strong></p>}
+                  <div className="flex flex-wrap gap-2">
+                    {!selectedOrder.entrega.guia?.numero_ot && ['pagado', 'preparando', 'en_origen'].includes(selectedOrder.estado?.toLowerCase() || '') && (
+                      <button type="button" disabled={guideBusy} className="bg-[var(--primary)] text-white py-1.5 px-3 rounded disabled:opacity-50"
+                        onClick={() => runGuideAction(async () => {
+                          const guide = await emitChilexpressGuide(selectedOrder.id_pedido)
+                          setVerifyMessage({ type: 'success', text: `Guía emitida: ${guide.numero_ot}.` })
+                          setRefreshKey(prev => prev + 1)
+                        })}>{guideBusy ? 'Emitiendo...' : 'Emitir guía Chilexpress'}</button>
+                    )}
+                    {selectedOrder.entrega.guia?.tiene_etiqueta && (
+                      <button type="button" disabled={guideBusy} className="border py-1.5 px-3 rounded disabled:opacity-50"
+                        onClick={() => runGuideAction(() => openChilexpressLabel(selectedOrder.id_pedido))}>Ver etiqueta</button>
+                    )}
+                    {selectedOrder.entrega.codigo_seguimiento && (
+                      <button type="button" disabled={guideBusy} className="border py-1.5 px-3 rounded disabled:opacity-50"
+                        onClick={() => runGuideAction(async () => setTrackingInfo(await fetchOrderTracking(selectedOrder.id_pedido)))}>Consultar seguimiento</button>
+                    )}
+                  </div>
+                  {trackingInfo && (
+                    <div className="space-y-0.5">
+                      <p className="font-medium">{trackingInfo.estado_actual}</p>
+                      {trackingInfo.historial.map((event, index) => (
+                        <p key={index} className="text-[var(--muted-foreground)]">{event.fecha_hora} · {event.descripcion || event.estado}{event.ubicacion ? ` (${event.ubicacion})` : ''}</p>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
               {selectedOrder.entrega?.direccion && <p className="text-xs">{Object.entries(selectedOrder.entrega.direccion).filter(([key, value]) => ['region', 'comuna', 'calle', 'numero', 'departamento', 'direccion'].includes(key) && typeof value === 'string').map(([, value]) => String(value)).join(', ')}</p>}
               {Number(selectedOrder.descuento) > 0 && (
                 <div className="flex justify-between text-[var(--success)]">

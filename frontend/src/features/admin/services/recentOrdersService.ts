@@ -147,3 +147,46 @@ export async function sendManualOrderEmail(pedidoId: number, tipo: string, desti
     notificaciones?: Record<string, unknown>;
   };
 }
+
+
+export interface ChilexpressGuide { numero_ot: string; certificado?: string; codigo_barras?: string; tiene_etiqueta?: boolean }
+export interface ChilexpressTracking {
+  estado_actual: string;
+  descripcion_estado: string;
+  entrega?: { receptor_nombre: string; receptor_rut: string; fecha_hora: string } | null;
+  historial: { fecha_hora: string; estado: string; descripcion: string; ubicacion: string; certificado_entrega?: string }[];
+}
+
+export async function emitChilexpressGuide(pedidoId: number): Promise<ChilexpressGuide> {
+  const token = authService.getToken();
+  if (!token) throw new Error('Inicia sesión como propietario para emitir la guía.');
+  const guide = await requestJson(`${API_BASE_URL}/api/tienda/pedidos/${pedidoId}/guia-chilexpress/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Token ${token}` },
+  });
+  if (!isRecord(guide) || typeof guide.numero_ot !== 'string') throw new Error('La respuesta de la guía es inválida.');
+  return guide as unknown as ChilexpressGuide;
+}
+
+export async function fetchOrderTracking(pedidoId: number): Promise<ChilexpressTracking> {
+  const token = authService.getToken();
+  if (!token) throw new Error('Inicia sesión como propietario para consultar el seguimiento.');
+  const tracking = await requestJson(`${API_BASE_URL}/api/tienda/pedidos/${pedidoId}/seguimiento/`, {
+    headers: { Authorization: `Token ${token}` },
+  });
+  if (!isRecord(tracking) || typeof tracking.estado_actual !== 'string' || !Array.isArray(tracking.historial)) {
+    throw new Error('La respuesta del seguimiento es inválida.');
+  }
+  return tracking as unknown as ChilexpressTracking;
+}
+
+export async function openChilexpressLabel(pedidoId: number): Promise<void> {
+  const token = authService.getToken();
+  if (!token) throw new Error('Inicia sesión como propietario para ver la etiqueta.');
+  const response = await fetch(`${API_BASE_URL}/api/tienda/pedidos/${pedidoId}/guia-chilexpress/etiqueta/`, {
+    headers: { Authorization: `Token ${token}` },
+  });
+  if (!response.ok) throw new Error('No hay una etiqueta disponible para este pedido.');
+  const url = URL.createObjectURL(await response.blob());
+  window.open(url, '_blank', 'noopener');
+}

@@ -8,7 +8,6 @@ import { Link, useNavigate } from 'react-router-dom';
 import { authService } from '../../../auth/services/authService';
 
 import { useAdmin } from '../../context/AdminContext';
-import { templatePaths } from '../../config/navigation';
 import { Icon } from '../ui';
 
 function formatSessionTime(iso: string | null, nowMs: number): string {
@@ -91,7 +90,7 @@ export function AdminHeader({
     setProfileOpen(false);
 
     navigate(
-      templatePaths[config.template] + '/ingresar',
+      '/ingresar',
       { replace: true },
     );
   }

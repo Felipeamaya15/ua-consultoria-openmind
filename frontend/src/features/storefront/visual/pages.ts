@@ -39,7 +39,10 @@ export function isActiveTemplateThumbnailPreview(): boolean {
 }
 
 export function pageFromPath(pathname: string): StorePageId | null {
-  const relative = pathname.replace(/^\/plantilla\/[1-4]\/?/, '').replace(/\/$/, '');
+  const relative = pathname
+    .replace(/^\/(?:(?:admin|emprendedor)\/preview\/)?plantilla\/(?:[1-4]|editorial|minimal|visual|catalog)\/?/, '')
+    .replace(/^\/+/, '')
+    .replace(/\/$/, '');
   if (relative === 'legal/cookies' || relative.startsWith('legal/cookies/')) return 'terms';
   return STORE_PAGES.find(page => relative === page.path || relative.startsWith(page.path + '/'))?.id ?? null;
 }
