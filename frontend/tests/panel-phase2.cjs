@@ -56,6 +56,7 @@ test('Marketing conserva el acceso central y no monta un segundo editor de perfi
 
 test('inscripciones: ayudas distinguen confirmación, cupos y pagos sin crear acciones de envío',()=>{
  const {default:Activities}=load('src/features/admin/pages/Activities.tsx',{
+  '../../../shared/components/FeedbackProvider':{useFeedback:()=>({confirm:async()=>false,ask:async()=>null,notify(){}})},
   react:{...React,useEffect(){},useRef:initial=>({current:initial}),useState:initial=>[typeof initial==='function'?initial():initial,()=>{}]},
   'react-router-dom':{Link:({to,children,...props})=>React.createElement('a',{...props,href:to},children),useSearchParams:()=>[new URLSearchParams('tipo=inscripcion'),()=>{}]},
   '../../landing/services/activityService':{CONSULT_STATES:{nueva:'Nueva'},ENROLL_STATES:{pendiente:'Pendiente de confirmación',confirmada:'Confirmada (gratuita)',cancelada:'Cancelada'}}

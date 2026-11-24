@@ -45,7 +45,7 @@ def order_line(row):
         precio_unitario=Decimal(row.precio_unitario), atributos={'actividad_id':str(row.seccion_id),
         'reserva_id':str(row.pk), 'tipo':row.condiciones['tipo'], 'inicio':row.condiciones['inicio']},
         atributos_variante=[{'etiqueta':'Actividad','valor':row.condiciones['tipo']},
-                           {'etiqueta':'Inicio','valor':row.condiciones['inicio']}])
+                           ({'etiqueta':'Acceso','valor':str(row.condiciones['acceso_dias']) + ' días desde el pago'} if row.condiciones.get('modalidad_venta') == 'grabado' else {'etiqueta':'Inicio','valor':row.condiciones['inicio']})])
 
 def resolve_unified_qa(order, *, approve):
     if not is_unified_qa(order): return False
@@ -56,7 +56,7 @@ def resolve_unified_qa(order, *, approve):
         raise ValidationError('No hay reservas pendientes válidas para este pedido.')
     if approve and any(timezone.now()>=r.vence for r in rows):
         raise ValidationError('La reserva de prueba venció. Rechaza el pedido y vuelve a realizar la compra.')
-    if approve and any(timezone.now()>=r.inicio for r in rows):
+    if approve and any(r.inicio is not None and timezone.now()>=r.inicio for r in rows):
         raise ValidationError('La actividad ya comenzó. Revisa la transferencia y gestiona el caso manualmente.')
     ReservaActividadPagada.objects.filter(pk__in=[r.pk for r in rows]).update(estado='confirmada' if approve else 'liberada')
     return True

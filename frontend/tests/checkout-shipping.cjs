@@ -47,7 +47,7 @@ function harness(template) {
     Date: Clock, crypto: {randomUUID: () => 'new-order-key'},
     setTimeout: (callback, delay) => {const id = ++timerId; timers.set(id, {callback, due: now + delay}); return id;},
     clearTimeout: id => timers.delete(id),
-    localStorage: {getItem: () => '{invalid'}, window: {scrollTo() {}, location: {origin: 'http://localhost'}},
+    localStorage: {getItem: () => '{invalid'}, window: {addEventListener(){},removeEventListener(){},scrollTo() {}, location: {origin: 'http://localhost'}},
     fetch: async () => networkReply,
     require: name => {
       if (name.endsWith('.css')) return {};
@@ -91,7 +91,12 @@ function harness(template) {
       if (name.includes('components/ui')) return Object.fromEntries(['Stepper','Button','Input','Select','Alert','Icon'].map(type => [type,type]));
       if (name.includes('shared/components/states')) return {LoadingState: 'LoadingState', ErrorState: 'ErrorState', EmptyListState: 'EmptyListState'}; if (name.includes('humanizeError')) return {humanizeAdminError: message => message};
       if (name.includes('@react-oauth/google')) return {useGoogleLogin: () => () => {}};
-      if (name.includes('authService')) return {authService: {hasSession: () => false, getMe: async () => ({}), googleLogin: async () => ({})}};
+      if (name.includes('authService')) return {authService: {getToken:()=>null, hasSession: () => false, getMe: async () => ({}), googleLogin: async () => ({})}};
+      if (name.endsWith('/InvoiceFields')) return {InvoiceFields:'InvoiceFields'};
+      if (name.endsWith('/commerceService')) return {invoiceErrors:()=>({})};
+      if (name.endsWith('/metaPixelService')) return {trackMetaPixelEvent:()=>{}};
+      if (name.endsWith('visual/pages')) return {checkoutPreviewStep:()=>null,isActiveEditorPreview:()=>false};
+      if (name.includes('StoreIdentityContext')) return {useStoreIdentity:()=>({identity:null})};
       throw Error(name);
     },
   }).default;

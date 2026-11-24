@@ -34,6 +34,9 @@ class ActivityConfigSerializer(StrictSerializer):
     cupos = serializers.IntegerField(min_value=1, max_value=10000, allow_null=True, default=None)
     confirmacion = serializers.ChoiceField(choices=('manual', 'automatica'), default='manual')
     portada = serializers.CharField(max_length=1500000, allow_blank=True, required=False, default='')
+    modalidad_venta = serializers.ChoiceField(choices=('vivo', 'grabado'), required=False)
+    grabacion_id = serializers.UUIDField(required=False)
+    acceso_dias = serializers.IntegerField(min_value=1, max_value=3650, required=False)
     venta = PaidActivitySettingsSerializer(required=False, allow_null=True)
 
     def validate_zona_horaria(self, value):
@@ -74,6 +77,13 @@ class ActivityConfigSerializer(StrictSerializer):
         return media_url('enlace', value) if value else ''
 
     def validate(self, data):
+        if data.get('modalidad_venta') == 'grabado':
+            if data['tipo'] != 'taller' or data.get('venta') is None or data['gratuito'] or data['inscripciones']:
+                raise serializers.ValidationError({'modalidad_venta': 'La grabación requiere un taller pagado.'})
+            if not data.get('grabacion_id') or not data.get('acceso_dias'):
+                raise serializers.ValidationError({'grabacion_id': 'Selecciona un video privado y la duración del acceso.'})
+        if data.get('grabacion_id'):
+            data['grabacion_id'] = str(data['grabacion_id'])
         if data.get('venta') is not None and (data['gratuito'] or data['inscripciones']):
             raise serializers.ValidationError('La venta pagada no es compatible con la modalidad gratuita.')
         if data['inscripciones'] and (data['tipo'] != 'taller' or not data['gratuito']):
@@ -126,6 +136,9 @@ def paid_activity_details(section):
             raise ValueError()
     except (TypeError, ValueError):
         raise ValidationError('Ingresa un precio entero positivo en pesos chilenos.') from None
+    if config.get('modalidad_venta') == 'grabado':
+        return {'precio': price, 'cupos': 1, 'inicio': None, 'termino': None, 'cierre': None,
+            'venta': {**sale, 'cancelacion': 'evaluacion'}}
     if any(sum(item['tipo'] == kind for item in visible) != 1 for kind in ('fecha', 'horario')):
         raise ValidationError('La actividad pagada requiere una fecha y un horario visibles y únicos.')
     schedule = activity_schedule(section)
@@ -148,7 +161,7 @@ def require_paid_activity_open(section, *, now=None):
     details = paid_activity_details(section)
     if not section.get('visible') or section['actividad'].get('estado') != 'activa':
         raise ValidationError('La actividad no está disponible.')
-    if (now if now is not None else timezone.now()) >= details['cierre']:
+    if details['cierre'] is not None and (now if now is not None else timezone.now()) >= details['cierre']:
         raise ValidationError('Las inscripciones pagadas están cerradas.')
     return details
 
@@ -165,8 +178,11 @@ def validate_activity(section):
         raise ValidationError('Agrega una imagen de portada antes de publicar el servicio o taller.')
     if section.get('visible') and not activity_title(section):
         raise ValidationError('Agrega un título público antes de publicar el servicio o taller.')
-    schedule = activity_schedule(section)
-    if section.get('visible') and config['tipo'] == 'taller' and not schedule:
+    recorded = config.get('modalidad_venta') == 'grabado'
+    if recorded and section.get('visible') and not any(item.get('visible') and item.get('tipo') == 'texto' and item.get('texto', '').strip() for item in section.get('componentes', [])):
+        raise ValidationError({'descripcion': 'Agrega una descripción del taller grabado.'})
+    schedule = None if recorded else activity_schedule(section)
+    if section.get('visible') and not recorded and config['tipo'] == 'taller' and not schedule:
         raise ValidationError('Agrega fecha y horario visibles antes de publicar el taller.')
     if schedule and schedule[1] < schedule[0]:
         raise ValidationError('La fecha y hora de término no pueden ser anteriores al inicio.')

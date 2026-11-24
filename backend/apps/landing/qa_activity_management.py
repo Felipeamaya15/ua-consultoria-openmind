@@ -41,9 +41,9 @@ def describe(order,row,owner=False):
     mode,hours=policy(row)
     result={'id':str(row.pk),'pedido_id':order.pk,'pedido':order.identificador,
         'titulo':row.condiciones.get('titulo','Actividad'),'tipo':row.condiciones.get('tipo','actividad'),
-        'inicio':row.inicio.isoformat(),'cantidad':row.cantidad,'importe':amount(row),
+        'inicio':row.inicio.isoformat() if row.inicio else None,'cantidad':row.cantidad,'importe':amount(row),
         'estado':row.estado,'pedido_estado':order.estado,'vence':row.vence.isoformat(),
-        'politica':mode,'horas':hours,'plazo_vigente':timezone.now()<row.inicio-timedelta(hours=hours),
+        'politica':mode,'horas':hours,'plazo_vigente':bool(row.inicio and timezone.now()<row.inicio-timedelta(hours=hours)),
         'devolucion':{k:v for k,v in record.items() if k in ('estado','motivo','monto','fecha','resuelto_en')},
         'puede_solicitar':row.estado=='confirmada' and order.estado=='pagado' and not record,
         'modo':'qa'}

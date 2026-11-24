@@ -22,7 +22,7 @@ function hooks(file,name,mocks,globals={}) {
     useCallback(fn){cursor++;return fn},
     useEffect(fn,deps){const i=cursor++;if(!(i in slots)||!deps||deps.some((v,j)=>!Object.is(v,slots[i]?.[j]))){slots[i]=deps;effects.push(fn)}}};
   const jsx=(type,props)=>({type,props});
-  const component=load(file,{react,'react/jsx-runtime':{jsx,jsxs:jsx},
+  const component=load(file,{'../../../shared/components/FeedbackProvider':{useFeedback:()=>({confirm:async()=>false})},react,'react/jsx-runtime':{jsx,jsxs:jsx},
     './ui':Object.fromEntries(['AdminCard','Alert','Button','Input','Textarea','Modal','Select'].map(n=>[n,n])),
     '../../../shared/components/states':{LoadingState:'LoadingState'},...mocks},
     {crypto,window:{addEventListener(){},removeEventListener(){},confirm:()=>true,open(){}},...globals})[name];

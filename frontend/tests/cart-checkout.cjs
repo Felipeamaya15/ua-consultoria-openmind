@@ -8,7 +8,7 @@ function load(file, globals) {
     {module, exports: module.exports, Error, console, ...globals});
   return module.exports;
 }
-const jsx = (type, props) => ({type, props});
+const jsx = (type, props) => typeof type==='function'&&['CartProductRow','CartLineItem','QuantityControl','StockFeedback'].includes(type.name)?type(props):({type,props});
 function nodes(tree, out = []) {
   if (Array.isArray(tree)) tree.forEach(child => nodes(child, out));
   else if (tree && typeof tree === 'object') {out.push(tree); nodes(tree.props?.children, out);}
@@ -86,6 +86,8 @@ const result = {id_pedido: 42, identificador: 'PEDIDO-BACKEND-42', tienda_id: 9,
     useMemo: callback => callback(), useEffect(callback) {if (recordEffects) effects.push(callback);},
   };
   const requireMock = name => {
+    if(name.includes('CartLineItem'))return require('./source-loader.cjs').load('src/features/storefront/components/store/CartLineItem.tsx',{'react/jsx-runtime':{jsx,jsxs:jsx},'react-router-dom':{Link:'Link'},'../../data/mockData':requireMock('../data/mockData')});
+    if(name.includes('FeedbackProvider'))return {useFeedback:()=>({confirm:async()=>false})};
     if (name.includes('metaPixelService')) return {trackMetaPixelEvent() {}};
     if (name.includes('ActivityCartPreview')) return {ActivityCartRows: 'ActivityCartRows'};
       if (name.endsWith('.css')) return {};
@@ -119,7 +121,7 @@ const result = {id_pedido: 42, identificador: 'PEDIDO-BACKEND-42', tienda_id: 9,
     if (name.includes('transbankPaymentService')) return {transbankPaymentService: {iniciarPago: async (...args) => {assert.equal(args[0], 9); assert.equal(args[1], result.identificador); assert.equal(args[2], 30000); return {exito: true, data: {url: 'webpay', token: 'token'}};}, redirigirAWebpay() {}}};
     if (name.includes('StockFeedback')) return {StockFeedback: 'StockFeedback'};
     if (name.includes('components/ui')) return Object.fromEntries(['Stepper','Button','Input','Select','Alert','Icon','EmptyState'].map(label => [label, label]));
-    if (name.includes('shared/components/states')) return {LoadingState: 'LoadingState', ErrorState: 'ErrorState', EmptyListState: 'EmptyListState'}; if (name.includes('humanizeError')) return {humanizeAdminError: message => message}; throw Error(name);
+    if (name.endsWith('/commerceService')) return {invoiceErrors: () => ({})}; if (name.endsWith('/InvoiceFields')) return {InvoiceFields: 'InvoiceFields'}; if (name.includes('shared/components/states')) return {LoadingState: 'LoadingState', ErrorState: 'ErrorState', EmptyListState: 'EmptyListState'}; if (name.includes('humanizeError')) return {humanizeAdminError: message => message}; throw Error(name);
   };
   const receiptStorage = new Map();
   const globals = {require: requireMock, localStorage: {getItem: () => null}, sessionStorage: {setItem: (key, value) => receiptStorage.set(key, value)}, crypto: {randomUUID: () => 'fixed-checkout-key'}, window: {location: paymentLocation},
@@ -243,7 +245,7 @@ const result = {id_pedido: 42, identificador: 'PEDIDO-BACKEND-42', tienda_id: 9,
     assert.ok(tree.includes('CLP 18000'));
     assert.ok(tree.includes('CLP 12000'));
     assert.ok(tree.includes('CLP 30000'));
-    assert.equal(tree.filter(value => value === ' por unidad').length, 2);
+    assert.equal(tree.filter(node=>node?.type==='small'&&nodes(node).filter(value=>typeof value==='string').join('').endsWith(' por unidad')).length, 2);
     assert.ok(tree.some(node => node.props?.to === '/plantilla/1/compra' || node.props?.onClick));
     cart.shipping = null; cart.shippingMethod = 'Chilexpress';
     const pendingTree = render(Cart);
@@ -262,18 +264,19 @@ const result = {id_pedido: 42, identificador: 'PEDIDO-BACKEND-42', tienda_id: 9,
       if (name.includes('StoreIdentityContext')) return {useStoreIdentity: () => ({identity: null})};
       if (name.includes('activityCart')) return {useActivityCart:()=>({items:[],clear:async()=>{}})};
       if (name.includes('cartSession')) return {useCartSession:()=>({token:'buyer-token',scope:'test-account'}),currentCartToken:()=> 'buyer-token'};
+      if (name.includes('cartTransfer')) return {prepareGuestCartTransfer(){},transferGuestCart:async()=>''};
       if (name.includes('catalogService')) return {fetchPublicProducts:async()=>[]};
       if (name.includes('guestCartStorage')) return {guestCartKey: () => null};
       if (name.includes('promotionService')) return {validatePromotion: async () => ({code: 'TEST', type: 'fixed', discount: 0, shipping: 0, message: ''})};
       if (name === '../visual/pages') return {isActiveEditorPreview: () => editorPreview};
       if (name === 'react/jsx-runtime') return {jsx, jsxs: jsx};
-      if (name === 'react') return {createContext: () => ({Provider: 'Provider'}), useContext() {}, useEffect() {}, useCallback: fn => fn,
+      if (name === 'react') return {useRef:value=>({current:value}), createContext: () => ({Provider: 'Provider'}), useContext() {}, useEffect() {}, useCallback: fn => fn,
         useState(initial) {const i = cursor++; if (!(i in contextStates)) contextStates[i] = initial; return [contextStates[i], next => {contextStates[i] = typeof next === 'function' ? next(contextStates[i]) : next;}];}};
       if (name.includes('cartService')) return {cartService: {
         obtenerCarrito: async () => { cartReads++; return persistedCart; },
         agregarItem: async id => {addedToSql.push(id);}, eliminarItem: async id => {deleted.push(id);},
       }};
-      if (name.includes('shared/components/states')) return {LoadingState: 'LoadingState', ErrorState: 'ErrorState', EmptyListState: 'EmptyListState'}; if (name.includes('humanizeError')) return {humanizeAdminError: message => message}; throw Error(name);
+      if (name.endsWith('/commerceService')) return {invoiceErrors: () => ({})}; if (name.endsWith('/InvoiceFields')) return {InvoiceFields: 'InvoiceFields'}; if (name.includes('shared/components/states')) return {LoadingState: 'LoadingState', ErrorState: 'ErrorState', EmptyListState: 'EmptyListState'}; if (name.includes('humanizeError')) return {humanizeAdminError: message => message}; throw Error(name);
     },
   }).CartProvider;
   const context = () => {cursor = 0; const scoped=Provider({children:null}); return scoped.type(scoped.props).props.value;};
@@ -301,7 +304,7 @@ const result = {id_pedido: 42, identificador: 'PEDIDO-BACKEND-42', tienda_id: 9,
   await context().clearCart();
   assert.equal(context().items.length, 0);
   assert.deepEqual(deleted, [99]);
-  contextStates[0] = [{...items[0]}];
+  contextStates[0] = {...contextStates[0],rows:[{...items[0]}]};
   persistedCart = [{id_item_carrito: 100, id_producto: 123, producto_mongo_id: items[0].productId,
     slug: 'polera', sku: 'QA-M', cantidad: 1, precio_unitario: 0, stock_disponible: 0}];
   await context().refreshCart();

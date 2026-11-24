@@ -13,3 +13,7 @@
 
 
 [data-storefront-visual] [data-content-block-id][id^="seccion-"] {scroll-margin-top:120px;}
+
+/* Ajustes compartidos por secciones agregadas (también las personalizadas). */
+[data-storefront-visual] .store-content-block[data-content-block-id]{color:var(--lb-text-color,inherit)}
+[data-storefront-visual] .store-content-block[data-content-block-id] .section-element-link{background:var(--lb-button-background,var(--visual-primary,var(--primary,#5433eb)));color:var(--lb-button-color,var(--visual-button-text,#fff))}

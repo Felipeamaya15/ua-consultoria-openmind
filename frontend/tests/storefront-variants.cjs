@@ -41,6 +41,7 @@ function cardHarness(product, template = 'catalog', layout = 'grid') {
   const jsx = (type, props) => ({ type, props });
   const card = load('src/features/storefront/components/store/ProductCard.tsx', {
     require: name => {
+        if(name.includes('WholesaleQuote'))return {WholesaleQuote:'WholesaleQuote'};
       if (name.includes('StoreContext')) return { useStore: () => ({config:{}}) };
         if (name.includes('seoService')) return { updateProductSeo: () => {} };
         if (name.includes('metaPixelService')) return { trackMetaPixelEvent: () => {} };
@@ -69,6 +70,7 @@ async function main() {
   const requests = [];
   const service = load('src/features/storefront/services/catalogService.ts', {
     require: name => {
+        if(name.includes('WholesaleQuote'))return {WholesaleQuote:'WholesaleQuote'};
       assert.ok(name.includes('initialLoad'));
       return { fetchInitialLoad: async url => { requests.push(url); return response(url.endsWith('/productos/') ? [summary] : details); } };
     },
@@ -135,6 +137,7 @@ async function main() {
     const jsx = (type, props) => ({ type, props });
     const detail = load('src/features/storefront/pages/ProductDetail.tsx', {
       require: name => {
+        if(name.includes('WholesaleQuote'))return {WholesaleQuote:'WholesaleQuote'};
         if (name.includes('StoreContext')) return { useStore: () => ({config:{}}) };
         if (name.includes('seoService')) return { updateProductSeo: () => {} };
         if (name.includes('metaPixelService')) return { trackMetaPixelEvent: () => {} };

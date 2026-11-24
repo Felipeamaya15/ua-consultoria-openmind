@@ -42,6 +42,7 @@ test('editar el nombre en el componente conserva campos históricos y permite va
   const states=[],effects=[],calls=[];let index=0;
   const jsx=(type,props)=>({type,props});
   const mocks={
+   '../../../shared/components/FeedbackProvider':{useFeedback:()=>({confirm:async()=>false,ask:async()=>null,notify(){}})},
    react:{useRef:()=>({current:false}),useState:initial=>{const i=index++;if(!(i in states))states[i]=initial;return [states[i],next=>states[i]=typeof next==='function'?next(states[i]):next];},useEffect:fn=>{if(!effects.length)effects.push(fn);}},
    'react/jsx-runtime':{jsx,jsxs:jsx},
    '../data/mockAdminData':{formatPrice:String},

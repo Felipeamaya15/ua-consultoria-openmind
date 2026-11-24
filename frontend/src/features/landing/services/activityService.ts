@@ -35,7 +35,7 @@ export interface ActivityRequest {
   id: string;
   seccion_id: string;
   titulo_actividad: string;
-  tipo_actividad: 'servicio' | 'taller';
+  tipo_actividad: 'servicio' | 'taller' | 'producto';
   tipo: ActivityRequestKind;
   nombre: string;
   apellido: string;

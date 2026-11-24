@@ -138,6 +138,10 @@ def process_one(pk):
             pk=original.tienda_id
         )
 
+        from apps.landing.commerce import commerce_options, reminders_allowed
+        if not reminders_allowed() or not commerce_options(store)['recordatorios']:
+            return 'deshabilitado'
+
         row = RegistroCarritoAbandonado.objects.select_for_update().get(
             pk=pk
         )
@@ -179,6 +183,11 @@ def process_one(pk):
             row = RegistroCarritoAbandonado.objects.select_for_update().get(
                 pk=pk
             )
+
+            if not commerce_options(store)['recordatorios'] or not reminders_allowed():
+                row.estado = 'activo'
+                row.save(update_fields=['estado'])
+                return 'deshabilitado'
 
             if row.estado != "procesando":
                 return "omitido"

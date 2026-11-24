@@ -1,3 +1,4 @@
+import { WholesaleQuote } from '../components/store/WholesaleQuote';
 import { ProductImageGallery } from '../components/store/ProductImageGallery';
 import { useEffect, useState } from 'react';
 import { LoadingState } from '../../../shared/components/states';
@@ -23,7 +24,7 @@ const previewAttributes = [{ clave: 'material', etiqueta: 'Material', valor: '10
 
 export default function ProductDetail({ previewProduct }: { previewProduct?: Product } = {}) {
   const { id } = useParams();
-  const { addItem, items } = useCart();
+  const { addItem, items, loading:cartLoading, syncError } = useCart();
   const { route, isMinimal, isVisual, isCatalog } = useStorefrontTemplate();
   const { config } = useStore();
 
@@ -232,6 +233,7 @@ export default function ProductDetail({ previewProduct }: { previewProduct?: Pro
   const hasCartItems = previewProduct ? true : items.length > 0;
 
   const handleAddToCart = () => {
+    if (!previewProduct && (cartLoading || syncError)) return;
     if (
       !selectedVariant ||
       !completeSelection ||
@@ -440,6 +442,7 @@ export default function ProductDetail({ previewProduct }: { previewProduct?: Pro
                     type="button"
                     onClick={handleAddToCart}
                     disabled={
+                      (!previewProduct && (cartLoading || !!syncError)) ||
                       !inStock ||
                       !selectedVariant ||
                       !completeSelection ||
@@ -463,7 +466,8 @@ export default function ProductDetail({ previewProduct }: { previewProduct?: Pro
                   </button>
                 </div>
 
-                {hasCartItems && (
+                {!previewProduct && <WholesaleQuote productId={String(product.catalogId || product.id)} productName={product.name} />}
+              {hasCartItems && (
                   <Link data-page-action="outline"
                     to={route('carrito')}
                     className="mt-3 flex h-11 w-full items-center justify-center rounded-[9px] border border-[var(--visual-global-border)]/15 text-[11px] font-bold text-[var(--visual-page-color)] transition-colors hover:bg-[var(--visual-page-panel-background)] hover:text-[var(--visual-page-color)]"
@@ -709,6 +713,7 @@ export default function ProductDetail({ previewProduct }: { previewProduct?: Pro
                     type="button"
                     onClick={handleAddToCart}
                     disabled={
+                      (!previewProduct && (cartLoading || !!syncError)) ||
                       !inStock ||
                       !selectedVariant ||
                       !completeSelection ||
@@ -732,7 +737,8 @@ export default function ProductDetail({ previewProduct }: { previewProduct?: Pro
                   </button>
                 </div>
 
-                {hasCartItems && (
+                {!previewProduct && <WholesaleQuote productId={String(product.catalogId || product.id)} productName={product.name} />}
+              {hasCartItems && (
                   <Link data-page-action="primary"
                     to={route('carrito')}
                     className="mt-3 flex h-11 w-full items-center justify-center rounded-[8px] border border-[var(--visual-global-border)] text-[11px] font-semibold transition-colors hover:bg-[var(--visual-page-panel-background)] hover:text-[var(--visual-page-color)]"
@@ -1086,6 +1092,7 @@ export default function ProductDetail({ previewProduct }: { previewProduct?: Pro
                 type="button"
                 onClick={handleAddToCart}
                 disabled={
+                  (!previewProduct && (cartLoading || !!syncError)) ||
                   !inStock ||
                   !selectedVariant ||
                   !completeSelection ||
@@ -1118,6 +1125,7 @@ export default function ProductDetail({ previewProduct }: { previewProduct?: Pro
                         : 'Agregar al carrito'}
               </button>
 
+              {!previewProduct && <WholesaleQuote productId={String(product.catalogId || product.id)} productName={product.name} />}
               {hasCartItems && (
                 <Link data-page-action="outline"
                   to={route('carrito')}

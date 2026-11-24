@@ -1,3 +1,4 @@
+import { useFeedback } from '../../../shared/components/FeedbackProvider';
 import { IMAGE_ACCEPT, prepareImage } from '../../../shared/services/imageUpload';
 import { type FormEvent, useEffect, useMemo, useRef, useState } from "react"
 import { saveProductVideoResource } from '../../marketing/services/mediaLibraryService';
@@ -26,6 +27,8 @@ const variantAttributes = (variant: ProductVariant) =>
     .join(" · ") || "Sin atributos"
 
 export function ProductList() {
+  const uiFeedback = useFeedback();
+
   const [search, setSearch] = useState("")
   const [products, setProducts] = useState<AdminProduct[]>([])
   const [statusFilter, setStatusFilter] = useState("all")
@@ -74,7 +77,7 @@ export function ProductList() {
   const handleToggleProductStatus = async (product: AdminProduct) => {
     if (deactivatingRef.current) return;
     const isArchived = product.status === "archived";
-    if (!isArchived && !window.confirm("¿Estás seguro de que deseas desactivar este producto? Dejará de ser visible en el catálogo, pero se mantendrá en tu historial de ventas.")) return;
+    if (!isArchived && !(await uiFeedback.confirm({title:"Desactivar producto",confirmLabel:"Desactivar producto",message:"¿Estás seguro de que deseas desactivar este producto? Dejará de ser visible en el catálogo, pero se mantendrá en tu historial de ventas."}))) return;
     deactivatingRef.current = true;
     setDeactivating(true);
     setSuccessMessage("");

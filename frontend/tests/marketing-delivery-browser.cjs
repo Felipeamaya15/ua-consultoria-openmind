@@ -78,8 +78,8 @@ async function state(patch){const res=await fetch(api+'/__qa/state',{method:'POS
     await click('Duplicar Campaña editada');assert.equal((await readDrafts()).drafts.length,2);
     await click('Eliminar Campaña editada · copia');await click('Cancelar');assert.equal((await readDrafts()).drafts.length,2);
     await click('Eliminar Campaña editada · copia');await click('Confirmar eliminación');assert.equal((await readDrafts()).drafts.length,1);
-    accept=false;await click('Nueva publicación');assert.equal(await art.count(),1,'cancelar conserva edición');accept=true;
-    await click('Nueva publicación');assert.equal(await art.count(),0);assert.equal((await readDrafts()).drafts.length,1);
+    await click('Nueva publicación');await page.getByRole('dialog',{name:'Descartar cambios',exact:true}).getByRole('button',{name:'Cancelar',exact:true}).click();assert.equal(await art.count(),1,'cancelar conserva edición');
+    await click('Nueva publicación');await page.getByRole('dialog',{name:'Descartar cambios',exact:true}).getByRole('button',{name:'Descartar cambios',exact:true}).click();await art.waitFor({state:'detached'});assert.equal(await art.count(),0);assert.equal((await readDrafts()).drafts.length,1);
 
     await state({offer:21000});await click('Abrir Campaña editada');await ready();assert((await art.innerText()).includes('$21.000'));assert(!(await art.innerText()).includes('$24.000'));
     await state({missingVariant:true});await click('Mis borradores');await click('Abrir Campaña editada');await page.getByText('La variante guardada ya no está disponible.',{exact:false}).waitFor();assert.equal(await art.count(),0);

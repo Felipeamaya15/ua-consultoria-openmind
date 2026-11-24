@@ -1,9 +1,12 @@
+import { useFeedback } from '../../../shared/components/FeedbackProvider';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { AdminCard, Alert, Button } from './ui';
 import { mailConnectionService, MAIL_AUTHORIZATION_TEXT, type MailConnection } from '../services/mailConnectionService';
 import { Link } from 'react-router-dom';
 
 export function MailConnectionPanel({businessEmail = '', businessSaved = true, summary = false}: {businessEmail?: string; businessSaved?: boolean; summary?: boolean} = {}) {
+  const uiFeedback = useFeedback();
+
   const [data, setData] = useState<MailConnection | null>(null);
   const [busy, setBusy] = useState(false), [error, setError] = useState(''), [notice, setNotice] = useState('');
   const lock = useRef(false), alive = useRef(true), key = useRef<string>();
@@ -22,7 +25,7 @@ export function MailConnectionPanel({businessEmail = '', businessSaved = true, s
   }, [refresh]);
   async function action(type: 'connect' | 'disconnect' | 'test') {
     if (lock.current) return;
-    if (type === 'disconnect' && !window.confirm('¿Desconectar esta cuenta de correo de la tienda?')) return;
+    if (type === 'disconnect' && !(await uiFeedback.confirm({title:"Desconectar correo",confirmLabel:"Desconectar cuenta",message:'¿Desconectar esta cuenta de correo de la tienda?'}))) return;
     lock.current = true; setBusy(true); setError(''); setNotice('');
     try {
       if (type === 'connect') {

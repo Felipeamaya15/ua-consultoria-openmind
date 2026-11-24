@@ -1,3 +1,4 @@
+import { useFeedback } from '../../../shared/components/FeedbackProvider';
 import { useState, useEffect, useRef } from "react"
 import { EmptyListState, ErrorState, LoadingState } from "../../../shared/components/states"
 import { humanizeAdminError } from "../utils/humanizeError"
@@ -18,6 +19,8 @@ import { ORDER_STATUS_BADGE as STATUS_BADGE } from '../data/orderStatus'
 import { readOrderFilters, orderDateInChile } from '../services/orderNavigation'
 
 export default function Orders() {
+  const uiFeedback = useFeedback();
+
   const [pedidos, setPedidos] = useState<StoreOrder[]>([])
   const [params, setParams] = useSearchParams()
   const filters = readOrderFilters(params)
@@ -81,7 +84,7 @@ export default function Orders() {
   const handlePaymentConfirmation = async (order: StoreOrder) => {
     if (operationPending.current) return;
     const isManualTransfer = order.metodo_pago.trim().toLowerCase() === 'transferencia';
-    if (isManualTransfer && !window.confirm(`¿Confirmas que recibiste el pago del pedido ${order.identificador || `#${order.id_pedido}`}?`)) return;
+    if (isManualTransfer && !(await uiFeedback.confirm({title:"Confirmar abono recibido",confirmLabel:"Confirmar abono",message:`¿Confirmas que recibiste el pago del pedido ${order.identificador || `#${order.id_pedido}`}?`}))) return;
     operationPending.current = true;
     setVerifying(true);
     setVerifyMessage(null);
@@ -356,6 +359,7 @@ export default function Orders() {
             </div>
 
             <div className="border-t border-[var(--border)] pt-3 text-sm space-y-1">
+              {selectedOrder.entrega?._solicitud_factura && <div className="border rounded p-3"><h3>Solicitud de factura</h3><p>Emitir mediante el sistema autorizado del negocio.</p>{Object.entries(selectedOrder.entrega._solicitud_factura).map(([key, value]) => <p key={key}>{key.replace(/_/g, ' ')}: {value}</p>)}</div>}
               <PickupSelectionSummary selection={selectedOrder.entrega?.retiro?.seleccion} />
               <p className="text-xs">Entrega: {selectedOrder.entrega?.metodo || 'Sin registro'} · Pago {selectedOrder.pago_estado}</p>
               {selectedOrder.entrega?.retiro?.address && <p className="text-xs">Retiro: {selectedOrder.entrega.retiro.address}</p>}

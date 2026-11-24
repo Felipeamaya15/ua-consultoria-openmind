@@ -1,3 +1,4 @@
+import { useFeedback } from '../../../shared/components/FeedbackProvider';
 import { useEffect, useRef, useState } from 'react';
 import { AdminCard, Button, Input, Select, Textarea } from '../../admin/components/ui';
 import { EmptyListState, ErrorState, LoadingState } from '../../../shared/components/states';
@@ -10,8 +11,11 @@ import './sharing.css';
 
 interface Props {active:boolean;home:string;isCurrent:()=>boolean;onDirty:(dirty:boolean)=>void;onOpenSocial:()=>void;onPrepare:(item:SharingItem,format:PublicationFormat)=>Promise<boolean>}
 export function Sharing({active,home,isCurrent,onDirty,onPrepare,onOpenSocial}:Props){
+  const uiFeedback = useFeedback();
+
   const [sources,setSources]=useState<SharingSources|null>(null),[loading,setLoading]=useState(false),[attempt,setAttempt]=useState(0),[error,setError]=useState(''),[notice,setNotice]=useState('');
   const [key,setKey]=useState(''),[query,setQuery]=useState(''),[group,setGroup]=useState(''),[title,setTitle]=useState(''),[caption,setCaption]=useState(''),[channel,setChannel]=useState<SocialNetwork|''>(''),[busy,setBusy]=useState(false);
+  const [whatsappPhotoReady,setWhatsappPhotoReady]=useState(false);
   const pending=useRef<AbortController|null>(null),writing=useRef(false),selected=useRef(key);selected.current=key;
   const item=sources?.items.find(item=>sharingKey(item.reference)===key)||null;
   const dirty=!!key&&!!item&&(title!==item.title||caption!==item.description);
@@ -26,6 +30,49 @@ export function Sharing({active,home,isCurrent,onDirty,onPrepare,onOpenSocial}:P
   const channels=sources?.profiles?sharingChannels(sources.profiles,item):[];
   const chosen=channels.find(entry=>entry.network===channel&&entry.compatible);
   const text=item?sharingText(title,caption,item.url):'';
+  // WhatsApp para Windows puede ignorar el texto al recibir un archivo con Web Share API.
+  // Preparamos ambos recursos para que la persona adjunte la foto y pegue el texto
+  // en el campo de comentario ANTES de enviarla: asi quedan en un unico mensaje.
+  async function shareWhatsAppImage() {
+    if (!item || busy || writing.current || !isCurrent()) return;
+    writing.current = true; setBusy(true); setError(''); setNotice(''); setWhatsappPhotoReady(false);
+    const controller = new AbortController(); pending.current = controller;
+    const start = key;
+    try {
+      const current = await resolveSharingItem(item.reference, home, controller.signal);
+      if (selected.current !== start || !isCurrent()) throw new Error('La selección cambió. Vuelve a intentarlo.');
+      const src = current.images[0];
+      if (!src) throw new Error('Este contenido no tiene fotografía pública para compartir.');
+      const response = await fetch(src, { mode: 'cors', credentials: 'omit', signal: controller.signal });
+      if (!response.ok) throw new Error('No se pudo recuperar la imagen pública.');
+      const blob = await response.blob();
+      if (!blob.type.startsWith('image/') || blob.size > 10 * 1024 * 1024) throw new Error('La imagen no está disponible en un formato compartible (máximo 10 MB).');
+      const ext = blob.type.includes('png') ? 'png' : blob.type.includes('webp') ? 'webp' : 'jpg';
+      const filename = `producto-whatsapp.${ext}`;
+      const objectUrl = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = objectUrl; link.download = filename;
+      document.body.appendChild(link); link.click(); link.remove();
+      window.setTimeout(() => URL.revokeObjectURL(objectUrl), 10000);
+
+      // Copiar el texto es una ayuda; si el navegador lo impide, el boton
+      // «Copiar texto y enlace» y la vista previa manual siguen disponibles.
+      let copied = false;
+      try {
+        if (navigator.clipboard?.writeText) {
+          await navigator.clipboard.writeText(sharingText(title, caption, current.url));
+          copied = true;
+        }
+      } catch { /* Permisos del portapapeles denegados: se ofrece copia manual. */ }
+
+      setWhatsappPhotoReady(true);
+      setNotice(copied
+        ? 'Fotografía descargada y texto con enlace copiados. Adjunta la fotografía en WhatsApp y pega el texto en «Añadir comentario» ANTES de enviarla.'
+        : 'Fotografía descargada. Usa «Copiar texto y enlace» y pégalo en «Añadir comentario» al adjuntar la foto en WhatsApp.');
+    } catch (cause) {
+      if (!controller.signal.aborted && isCurrent()) setError(humanizeAdminError(cause instanceof Error ? cause.message : 'No se pudo preparar la imagen.'));
+    } finally { writing.current = false; if (isCurrent()) setBusy(false); }
+  }
   async function action(kind:'text'|'link'|'native'|'whatsapp'){
     if(!item||writing.current||!isCurrent())return;writing.current=true;setBusy(true);setError('');setNotice('');
     const controller=new AbortController();pending.current=controller;const start=key;
@@ -52,19 +99,28 @@ export function Sharing({active,home,isCurrent,onDirty,onPrepare,onOpenSocial}:P
     {loading&&<LoadingState>Cargando contenido publicado y perfiles sociales…</LoadingState>}{error&&<ErrorState>{humanizeAdminError(error)}</ErrorState>}
     {sources?.errors.map(message=><p role="alert" key={message}>{message}</p>)}
     <div className="sharing-columns"><AdminCard><h4>1. Selecciona contenido publicado</h4><Input label="Buscar contenido para difundir" value={query} onChange={event=>setQuery(event.target.value)} /><Select label="Tipo de contenido" value={group} options={[{value:'',label:'Todos'},...['Productos','Destacados','Promociones','Servicios','Talleres','Información','Multimedia'].map(value=>({value,label:value}))]} onChange={event=>setGroup(event.target.value)} />
-      <div className="sharing-items">{filtered.map(row=><button key={sharingKey(row.reference)} type="button" disabled={busy||loading} aria-pressed={key===sharingKey(row.reference)} onClick={()=>{if(dirty&&!window.confirm('Tienes un texto de difusión editado. ¿Descartarlo y elegir otro contenido?'))return;setKey(sharingKey(row.reference));setTitle(row.title);setCaption(row.description);setError('');setNotice('');}}><span className="sharing-item-thumb">{row.images[0]?<img src={row.images[0]} alt="" loading="lazy" onError={event=>{event.currentTarget.style.display='none';}} />:<span aria-hidden="true">↗</span>}</span><span><strong>{row.title}</strong><small>{row.group}</small></span></button>)}</div>
+      <div className="sharing-items">{filtered.map(row=><button key={sharingKey(row.reference)} type="button" disabled={busy||loading} aria-pressed={key===sharingKey(row.reference)} onClick={async ()=>{if(dirty&&!(await uiFeedback.confirm({title:"Cambiar contenido",confirmLabel:"Descartar y continuar",message:'Tienes un texto de difusión editado. ¿Descartarlo y elegir otro contenido?'})))return;setKey(sharingKey(row.reference));setTitle(row.title);setCaption(row.description);setWhatsappPhotoReady(false);setError('');setNotice('');}}><span className="sharing-item-thumb">{row.images[0]?<img src={row.images[0]} alt="" loading="lazy" onError={event=>{event.currentTarget.style.display='none';}} />:<span aria-hidden="true">↗</span>}</span><span><strong>{row.title}</strong><small>{row.group}</small></span></button>)}</div>
       {!loading&&!error&&!sources?.errors.length&&!filtered.length&&<EmptyListState>{query||group?'No hay coincidencias con estos filtros. Prueba otro tipo o búsqueda.':'No hay contenido publicado disponible. Publica una sección o agrega productos disponibles.'}</EmptyListState>}
       <p>Biblioteca solo muestra recursos usados en secciones visibles. Los archivos privados conservan su acceso restringido.</p>
     </AdminCard><AdminCard><h4>2. Prepara el texto y el canal</h4>{item?<>
       {item.images[0]&&<img className="sharing-source-image" src={item.images[0]} alt={item.title} loading="lazy" referrerPolicy="no-referrer" />}
-      <Input label="Título para difundir" value={title} maxLength={255} disabled={busy} onChange={event=>setTitle(event.target.value)} /><Textarea label="Texto descriptivo para compartir" value={caption} maxLength={3000} rows={5} disabled={busy} onChange={event=>setCaption(event.target.value)} />
+      <Input label="Título para difundir" value={title} maxLength={255} disabled={busy} onChange={event=>{setTitle(event.target.value);setWhatsappPhotoReady(false);}} /><Textarea label="Texto descriptivo para compartir" value={caption} maxLength={3000} rows={5} disabled={busy} onChange={event=>{setCaption(event.target.value);setWhatsappPhotoReady(false);}} />
       <p><a href={item.url} target="_blank" rel="noopener noreferrer" className="marketing-text-link">Revisar enlace público ↗</a></p>
       {/^https?:\/\/(localhost|127\.0\.0\.1)(:|\/)/.test(item.url)&&<p>Este enlace usa localhost y solo sirve en este equipo. Para difundir fuera de él necesitas el dominio público de la tienda.</p>}
       <Select label="Red social registrada" disabled={busy} value={chosen?channel:''} options={[{value:'',label:'Selecciona una red'},...channels.filter(entry=>entry.compatible).map(entry=>({value:entry.network,label:SOCIAL_LABELS[entry.network]}))]} onChange={event=>setChannel(event.target.value as SocialNetwork)} />
       {!channels.length&&<p>No hay perfiles activos válidos. <button type="button" className="marketing-text-link" onClick={onOpenSocial}>Configurar Redes sociales</button>.</p>}
       {channels.some(entry=>!entry.compatible)&&<p>YouTube solo se ofrece como canal para un video de YouTube ya publicado; no se suben videos desde OpenMind.</p>}
       {chosen&&<p><a href={chosen.url} target="_blank" rel="noopener noreferrer">Abrir perfil registrado de {SOCIAL_LABELS[chosen.network]} ↗</a>. Perfil registrado; publicación automática no autorizada. {chosen.network==='instagram'||chosen.network==='facebook'?'Prepara y descarga la imagen; publícala manualmente en esa red.':''}</p>}
-      <div className="sharing-actions"><Button disabled={busy||loading} onClick={()=>void action('text')}>Copiar texto y enlace</Button><Button variant="outline" disabled={busy||loading} onClick={()=>void action('link')}>Copiar enlace público</Button>{chosen?.network==='whatsapp'&&<Button disabled={busy||loading} onClick={()=>void action('whatsapp')}>Abrir WhatsApp con el texto</Button>}{typeof navigator!=='undefined'&&typeof navigator.share==='function'&&<Button variant="outline" disabled={busy||loading} onClick={()=>void action('native')}>Compartir con el navegador</Button>}</div>
+      <div className="sharing-actions"><Button disabled={busy||loading} onClick={()=>void action('text')}>Copiar texto y enlace</Button><Button variant="outline" disabled={busy||loading} onClick={()=>void action('link')}>Copiar enlace público</Button>{chosen?.network==='whatsapp'&&<><Button disabled={busy||loading} onClick={()=>void action('whatsapp')}>Abrir WhatsApp con el texto</Button>{item.images.length>0&&<Button variant="outline" disabled={busy||loading} onClick={()=>void shareWhatsAppImage()}>Preparar foto + texto para WhatsApp</Button>}</>}{typeof navigator!=='undefined'&&typeof navigator.share==='function'&&<Button variant="outline" disabled={busy||loading} onClick={()=>void action('native')}>Compartir con el navegador</Button>}</div>
+      {whatsappPhotoReady && <div role="status" className="marketing-hint" aria-live="polite">
+        <strong>Para enviar foto, descripción y enlace juntos:</strong>
+        <ol>
+          <li>Abre el chat de WhatsApp y adjunta la imagen descargada (<code>producto-whatsapp</code>).</li>
+          <li>Antes de enviar, pega con Ctrl+V el texto y enlace en «Añadir comentario» o «Pie de foto».</li>
+          <li>Envía la fotografía con ese comentario. El enlace quedará en el pie de la imagen.</li>
+        </ol>
+        <p>Si el texto no se copió automáticamente, usa «Copiar texto y enlace» aquí arriba. No uses «Compartir con el navegador» para la foto: WhatsApp de escritorio puede descartar el texto adjunto.</p>
+      </div>}
       <details><summary>Texto y enlace para copiar manualmente</summary><pre className="sharing-copy-text">{text}</pre></details>
       <h4>3. Prepara la imagen en Publicaciones</h4><p>Se abrirá el generador que ya usas, con los datos seleccionados. Allí podrás editar, guardar borrador y descargar PNG o JPG.</p><div className="sharing-actions"><Button disabled={busy||loading} onClick={()=>void prepare('square')}>Preparar imagen 1:1</Button><Button variant="outline" disabled={busy||loading} onClick={()=>void prepare('story')}>Preparar imagen 9:16</Button></div>
     </>:<p>{key?'El contenido seleccionado ya no está publicado o no pudo verificarse. Actualiza y selecciona otro.':'Elige un contenido de la lista para ver su vista previa y preparar el material.'}</p>}</AdminCard></div>

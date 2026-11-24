@@ -41,7 +41,11 @@ function load(file, globals) {
     if (name.includes('authService')) return {authService: service};
     if (name.includes('useStorefrontTemplate')) return {useStorefrontTemplate: () => ({route: p => '/plantilla/' + template + '/' + p})};
     if (name.includes('CustomerAccountNavigation')) return {CustomerAccountNavigation: 'AccountNav'};
-    if (name.includes('shared/components/states')) return {LoadingState: 'LoadingState', ErrorState: 'ErrorState', EmptyListState: 'EmptyListState'}; if (name.includes('humanizeError')) return {humanizeAdminError: message => message}; if (name.includes('emptyStates')) return require('./source-loader.cjs').load('src/features/admin/services/emptyStates.ts'); throw Error(name);
+    if (name.includes('shared/components/states')) return {LoadingState: 'LoadingState', ErrorState: 'ErrorState', EmptyListState: 'EmptyListState'}; if (name.includes('humanizeError')) return {humanizeAdminError: message => message}; if (name.includes('emptyStates')) return require('./source-loader.cjs').load('src/features/admin/services/emptyStates.ts');     if (name.includes('StoreIdentityContext')) return {useStoreIdentity:()=>({identity:null})};
+    if (name.includes('metaPurchaseTracking')) return {trackConfirmedMetaPurchase:()=>{}};
+    if (name.includes('PaidActivityOrderQA')) return {PaidActivityOrderQA:'PaidActivityOrderQA'};
+    if (name.includes('PagarPedidoPendiente')) return {PagarPedidoPendiente:'PagarPedidoPendiente'};
+throw Error(name);
   };
   const {default: Orders} = load('src/features/storefront/pages/CustomerOrders.tsx', {require: requireMock});
   function nodes(tree, out = []) {if (Array.isArray(tree)) tree.forEach(x => nodes(x, out)); else if (tree && typeof tree === 'object') {out.push(tree); nodes(tree.props?.children, out);} else if (typeof tree === 'string') out.push(tree); return out;}
@@ -73,6 +77,7 @@ function load(file, globals) {
   const {default: StoreOrders} = load('src/features/admin/pages/Orders.tsx', {
     fetch: async (url, options) => {storeCalls.push({url, options}); return storeReply;},
     require: name => {
+      if(name.includes('FeedbackProvider'))return {useFeedback:()=>({confirm:async()=>false,ask:async()=>null,notify(){}})};
       if (name === 'react/jsx-runtime') return {jsx, jsxs: jsx};
       if (name === 'react') return requireMock(name);
       if (name === 'react-router-dom') return {Link: 'Link', useSearchParams: () => [new URLSearchParams(), () => {}]};
@@ -94,7 +99,11 @@ function load(file, globals) {
       if (name.includes('businessTime')) return require('./source-loader.cjs').load('src/features/admin/services/businessTime.ts');
       if (name.includes('mockAdminData')) return {formatPrice: String};
       if (name.includes('components/ui')) return {Badge: 'Badge', Icon: 'Icon', Input: 'Input', Button: 'Button', Select: 'Select'};
-      if (name.includes('shared/components/states')) return {LoadingState: 'LoadingState', ErrorState: 'ErrorState', EmptyListState: 'EmptyListState'}; if (name.includes('humanizeError')) return {humanizeAdminError: message => message}; if (name.includes('emptyStates')) return require('./source-loader.cjs').load('src/features/admin/services/emptyStates.ts'); throw Error(name);
+      if (name.includes('shared/components/states')) return {LoadingState: 'LoadingState', ErrorState: 'ErrorState', EmptyListState: 'EmptyListState'}; if (name.includes('humanizeError')) return {humanizeAdminError: message => message}; if (name.includes('emptyStates')) return require('./source-loader.cjs').load('src/features/admin/services/emptyStates.ts');     if (name.includes('StoreIdentityContext')) return {useStoreIdentity:()=>({identity:null})};
+    if (name.includes('metaPurchaseTracking')) return {trackConfirmedMetaPurchase:()=>{}};
+    if (name.includes('PaidActivityOrderQA')) return {PaidActivityOrderQA:'PaidActivityOrderQA'};
+    if (name.includes('PagarPedidoPendiente')) return {PagarPedidoPendiente:'PagarPedidoPendiente'};
+throw Error(name);
     },
   });
   async function renderStore() {

@@ -98,7 +98,7 @@ def state(order,row):
     mode,hours=policy_terms(row)
     record=records(order).get(str(row.pk)) or {}
     return {'devolucion':{k:v for k,v in record.items() if k in ('estado','motivo','monto','fecha','resuelto_en')},
-            'plazo_vigente':timezone.now()<=row.inicio-timedelta(hours=hours),
+            'plazo_vigente':bool(row.inicio and timezone.now()<=row.inicio-timedelta(hours=hours)),
             'politica':mode,'horas':hours,
             'puede_solicitar':row.estado=='confirmada' and order.estado in Pedido.ESTADOS_PAGADOS and not record}
 
@@ -154,7 +154,7 @@ def change_transfer(store,order_id,reservation_id,actor,action,reason='',referen
         if order.estado!='pendiente' or any(r.estado!='en_pago' for r in rows):
             raise ValidationError('Este pedido ya fue resuelto o no tiene reservas pendientes.')
         if action=='registrar_pago':
-            if any(timezone.now()>=r.inicio for r in rows):
+            if any(r.inicio is not None and timezone.now()>=r.inicio for r in rows):
                 raise ValidationError('La actividad ya comenzó. Revisa y devuelve el dinero fuera del sistema antes de liberar los cupos.')
             if Pedido.objects.filter(tienda=store,entrega__contains={'revision_transferencia_actividad':{'accion':'registrar_pago','referencia':reference}}).exclude(pk=order.pk).exists():
                 raise ValidationError('Esta referencia de pago ya se utilizó en otro pedido.')
@@ -168,6 +168,9 @@ def change_transfer(store,order_id,reservation_id,actor,action,reason='',referen
         order.estado=expected
         order.entrega={**(order.entrega or {}),'revision_transferencia_actividad':{'accion':action,'referencia':reference,'motivo':reason,'fecha':timezone.now().isoformat(),'responsable':str(actor.pk)}}
         order.save(update_fields=['estado','entrega'])
+        if expected == 'pagado':
+            from apps.landing.private_recordings import grant_recordings
+            grant_recordings(order, rows)
         row.refresh_from_db()
         from apps.core.infrastructure.notificaciones_pedido import notificar_cambio_de_estado, notificar_pago_rechazado
         if expected=='pagado': transaction.on_commit(lambda: notificar_cambio_de_estado(order,'pendiente'))
@@ -194,7 +197,7 @@ def change_transfer(store,order_id,reservation_id,actor,action,reason='',referen
         if old: raise ValidationError('La solicitud ya está en gestión. Contacta a la tienda.')
         mode,hours=policy_terms(row)
         current[key]={'estado':'solicitada','motivo':reason,'monto':full_amount(row),'fecha':stamp,'solicitante':str(actor.pk),
-                      'evaluacion':'anticipada_en_plazo' if mode=='anticipada' and timezone.now()<=row.inicio-timedelta(hours=hours) else 'revision_individual'}
+                      'evaluacion':'anticipada_en_plazo' if mode=='anticipada' and bool(row.inicio and timezone.now()<=row.inicio-timedelta(hours=hours)) else 'revision_individual'}
     elif action=='rechazar':
         if old.get('estado')!='solicitada': raise ValidationError('Solo se rechaza una solicitud pendiente de revisión.')
         current[key]={**old,'estado':'rechazada','motivo':reason,'resuelto_en':stamp,'responsable':str(actor.pk)}

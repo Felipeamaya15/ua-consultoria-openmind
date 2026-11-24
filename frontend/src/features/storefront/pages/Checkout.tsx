@@ -1,3 +1,6 @@
+import { InvoiceFields } from '../components/store/InvoiceFields';
+import type { InvoiceRequest } from '../../landing/services/commerceService';
+import { invoiceErrors } from '../../landing/services/commerceService';
 import './checkout-order-summary.css';
 import {useActivityCheckoutOptions} from '../../landing/services/activityPurchaseMode';
 import { CommercialOptIn } from '../components/store/CommercialOptIn';
@@ -9,6 +12,7 @@ import { useEffect, useMemo, useState, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useOptionalGoogleLogin as useGoogleLogin, GOOGLE_LOGIN_CONFIGURED } from '../../auth/hooks/useOptionalGoogleLogin';
 import { authService } from '../../auth/services/authService';
+import { prepareGuestCartTransfer } from '../services/cartTransfer';
 
 import { orderService } from '../services/orderService';
 import { validatePromotion, type ValidatedPromotion } from '../services/promotionService';
@@ -174,6 +178,7 @@ export default function Checkout() {
   const {
     items,
     activities,
+    loading:cartLoading,syncError,syncNotice,refreshCart,
     subtotal,
     clearCart,
     promoCode,
@@ -540,9 +545,12 @@ export default function Checkout() {
       setGoogleLoading(true);
       setErrors((current) => ({ ...current, auth: '', email: '', name: '' }));
       try {
+        if (!authService.getToken() && identity) {
+          prepareGuestCartTransfer(identity);
+        }
         const data = await authService.googleLogin(tokenResponse.access_token);
-        if (data?.data?.token) {
-          authService.setSession(data.data.token, data?.data?.user);
+        if (!data?.data?.token || authService.getToken() !== data.data.token) {
+          throw new Error('No se pudo confirmar tu sesión de Google. La selección del carrito sigue protegida.');
         }
         const user = data?.data?.user;
         const fullName = [user?.first_name, user?.last_name].filter(Boolean).join(' ') || user?.username || '';
@@ -554,27 +562,7 @@ export default function Checkout() {
           email: userEmail || current.email,
         }));
       } catch {
-        try {
-          const res = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
-            headers: { Authorization: `Bearer ${tokenResponse.access_token}` },
-          });
-          if (res.ok) {
-            const info = await res.json();
-            const fullName = info.name || [info.given_name, info.family_name].filter(Boolean).join(' ') || '';
-            setContact((current) => ({
-              ...current,
-              name: fullName || current.name,
-              email: info.email || current.email,
-            }));
-                return;
-          }
-        } catch {
-
-        }
-        setErrors((current) => ({
-          ...current,
-          auth: 'No se pudo vincular la cuenta de Google. Ingresa tus datos como invitado o reintenta.',
-        }));
+        setErrors(current=>({...current,auth:'No se pudo vincular la cuenta de Google. Tu carrito se conserva; reintenta o continúa como invitado.'}));
       } finally {
         setGoogleLoading(false);
       }
@@ -587,30 +575,22 @@ export default function Checkout() {
     },
   });
 
-  useEffect(() => {
-    let active = true;
-    if (authService.hasSession()) {
-      authService.getMe().then((data) => {
-        if (!active || !data?.data) return;
-        const user = data.data;
-        const fullName = [user.first_name, user.last_name].filter(Boolean).join(' ') || user.username || '';
-        if (user.email) {
-          setContact((current) => ({
-            name: current.name || fullName,
-            email: current.email || user.email,
-            phone: current.phone,
-          }));
-        }
-      }).catch(() => {});
-    }
-    return () => { active = false; };
-  }, []);
+  useEffect(()=>{
+    let active=true,previous=authService.getToken();
+    const load=()=>{const token=authService.getToken();if(!token)return;authService.getMe().then(data=>{if(!active||authService.getToken()!==token||!data?.data)return;const user=data.data;const name=[user.first_name,user.last_name].filter(Boolean).join(' ')||user.username||'';if(user.email)setContact(current=>({...current,name,email:user.email}));}).catch(()=>{});};
+    const changed=()=>{const token=authService.getToken();if(token===previous)return;if(previous){setContact({name:'',email:'',phone:''});setAddress({street:'',number:'',apt:'',city:'',region:'Metropolitana'});setFactura(undefined);setStep('contact');setPaymentMethod('');setShippingMethod('');}previous=token;load();};
+    load();window.addEventListener('openmind-cart-session-changed',changed);
+    return()=>{active=false;window.removeEventListener('openmind-cart-session-changed',changed);};
+  },[]);
 
+
+  const [factura, setFactura] = useState<InvoiceRequest | undefined>();
 
   const validate = (currentStep: string) => {
     const newErrors: Record<string, string> = {};
 
     if (currentStep === 'contact') {
+      if (factura && Object.keys(invoiceErrors(factura)).length) newErrors.factura = Object.values(invoiceErrors(factura)).join(' ');
       if (!availableAuthModes.includes(authMode)) {
         newErrors.auth =
           'Selecciona un metodo de acceso permitido por la tienda.';
@@ -706,7 +686,7 @@ export default function Checkout() {
 
 
   const handleConfirm = async () => {
-    if (submitting.current || loading || (!items.length && !activities.length)) return;
+    if (submitting.current || loading || cartLoading || syncError || (!items.length && !activities.length)) return;
     if(activities.length && (!activityPurchaseAllowed||!activityPayments.includes(paymentMethod)||checkoutPromoCode)) {setErrors({payment:'Revisa la disponibilidad, selecciona el medio de pago habilitado y quita el código promocional.'});return;}
     if(activities.length&&activityMode==='qa'&&!contact.email.trim().toLowerCase().endsWith('@example.com')){setErrors({payment:'Utiliza un correo @example.com para la prueba. No transfieras dinero.'});return;}
     if (promoLoading || (checkoutPromoCode && !currentPromotion)) {
@@ -717,7 +697,7 @@ export default function Checkout() {
     submitting.current = true;
     setLoading(true);
     setErrors({});
-    const signature = JSON.stringify({items, activities, contact, paymentMethod, shippingMethod, address, promoCode: checkoutPromoCode});
+    const signature = JSON.stringify({items, activities, contact, factura, paymentMethod, shippingMethod, address, promoCode: checkoutPromoCode});
     if (checkoutAttempt.current.signature !== signature) {
       checkoutAttempt.current = {signature, key: crypto.randomUUID()};
     }
@@ -726,7 +706,7 @@ export default function Checkout() {
         throw new Error('Este medio de pago todavía no está disponible para completar la compra.');
       }
       const order = await orderService.create({
-        key: checkoutAttempt.current.key, items, activities, contact, paymentMethod, shippingMethod: onlyActivities ? 'Actividad' : shippingMethod, address, promoCode: checkoutPromoCode,
+        key: checkoutAttempt.current.key, items, activities, contact, factura, paymentMethod, shippingMethod: onlyActivities ? 'Actividad' : shippingMethod, address, promoCode: checkoutPromoCode,
         shippingQuote: onlyActivities ? undefined : selectedQuote?.cotizacion,
       });
 
@@ -859,6 +839,8 @@ export default function Checkout() {
   };
 
 
+  if(syncError)return <ErrorState onRetry={()=>void refreshCart()}>{syncError}</ErrorState>;
+  if(cartLoading)return <LoadingState>Cargando y sincronizando tu carrito…</LoadingState>;
   if (items.length === 0 && activities.length === 0) {
     return (
       <div
@@ -923,7 +905,7 @@ export default function Checkout() {
       : 'bg-white border border-[var(--border)] rounded-2xl min-w-0 p-4 sm:p-6 flex flex-col gap-5';
 
 
-  const isPaymentDisabled = (activities.length > 0 && (!activityPurchaseAllowed||!activityPayments.includes(paymentMethod)||!!checkoutPromoCode)) || loading || promoLoading || (!!checkoutPromoCode && !currentPromotion) || !deliveryReady || (shipping === null && shippingMethod !== 'Retiro');
+  const isPaymentDisabled = !!cartLoading || !!syncError || (activities.length > 0 && (!activityPurchaseAllowed||!activityPayments.includes(paymentMethod)||!!checkoutPromoCode)) || loading || promoLoading || (!!checkoutPromoCode && !currentPromotion) || !deliveryReady || (shipping === null && shippingMethod !== 'Retiro');
 
   return (
     <div
@@ -936,6 +918,7 @@ export default function Checkout() {
             : 'max-w-5xl mx-auto px-4 py-8'
       }
     >
+      {syncNotice&&<p role="status" className="mb-4 rounded-lg border p-3 text-sm">{syncNotice}</p>}
       {activities.length > 0 && <div role="status" className="mb-4 rounded-lg border border-[var(--border)] p-3 text-sm">{activityMode==='qa'?'Prueba local sin cobro. No transfieras dinero.':activityMode==='disabled'?'La venta de esta combinación de artículos no está habilitada.':onlyActivities?'Selecciona un medio de pago. Tu inscripción se confirma tras verificar el pago. No repitas un pago en revisión.':'Compra productos y actividades en un pedido. El despacho se calcula solo para productos físicos. Los cupos se confirman tras verificar el pago.'}</div>}
       {isVisual && (
         <div className="mb-8">
@@ -1009,6 +992,7 @@ export default function Checkout() {
             <CommercialOptIn checked={commercial} onChange={setCommercial} />
             <Link className="text-sm underline" to={route('preferencias-comerciales')}>Consultar o retirar mi autorización comercial</Link>
           </div>}
+          {step === 'contact' && <><InvoiceFields value={factura} onChange={setFactura} />{errors.factura && <p role="alert">{errors.factura}</p>}</>}
           {step === 'contact' && (
             <div data-checkout-step-panel tabIndex={-1} data-visual-section="pagePanel" data-page-panel className={panelClass}>
               <div>
@@ -1908,7 +1892,6 @@ export default function Checkout() {
           )}
 
 
-          {step==='confirm' && errors.payment && <Alert variant="error">{errors.payment}</Alert>}
           <div data-checkout-navigation className="flex justify-between items-center gap-3 mt-5">
             {step !== 'contact' ? (
               isVisual ? (
@@ -2022,7 +2005,7 @@ export default function Checkout() {
             <div data-checkout-items className="flex flex-col gap-4 mb-5">
               {activities.map(item => (
                 <div className="flex items-start justify-between gap-3" key={`activity-${item.sectionId}`}>
-                  <div className="min-w-0"><p className="text-sm font-medium">{item.title}</p><p className="text-xs">{formatActivityDate(item.start,item.zone)} · {item.quantity} {item.quantity === 1 ? 'participante' : 'participantes'}</p><p className="text-xs">Sin despacho</p></div>
+                  <div className="min-w-0"><p className="text-sm font-medium">{item.title}</p><p className="text-xs">{item.recorded?`Grabación · ${item.accessDays} días de acceso`:formatActivityDate(item.start,item.zone)} · {item.quantity} {item.quantity === 1 ? 'participante' : 'participantes'}</p><p className="text-xs">Sin despacho</p></div>
                   <span data-page-price className="text-xs font-semibold whitespace-nowrap">{formatPrice(item.quantity*item.price)}</span>
                 </div>
               ))}

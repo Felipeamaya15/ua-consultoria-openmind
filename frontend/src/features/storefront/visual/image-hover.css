@@ -231,3 +231,21 @@
     transform: none !important; scale: none !important; animation: none !important;
   }
 }
+
+/* QA: aplicar el efecto al contenedor real de la galería y no solo al <img> externo. */
+@media (hover:hover) and (pointer:fine) {
+  [data-storefront-visual] [data-visual-section="productCard"]:is(:hover,:focus-within) .om-product-gallery__layer[data-gallery-active] img,
+  [data-storefront-visual] [data-visual-kind="featured"] .om-product-gallery:is(:hover,:focus-within) .om-product-gallery__layer[data-gallery-active] img {
+    transform:var(--om-product-transform,none);
+  }
+  [data-storefront-visual] [data-visual-section="productCard"]:is(:hover,:focus-within) .om-product-gallery__layer[data-gallery-active]::after,
+  [data-storefront-visual] [data-visual-kind="featured"] .om-product-gallery:is(:hover,:focus-within) .om-product-gallery__layer[data-gallery-active]::after {
+    content:"";position:absolute;inset:0;z-index:2;pointer-events:none;
+    background:var(--om-product-overlay-background,transparent);
+    opacity:var(--om-product-overlay-opacity,0);
+    animation:var(--om-product-overlay-animation,none);
+  }
+}
+@media (prefers-reduced-motion:reduce){
+  [data-storefront-visual] .om-product-gallery__layer[data-gallery-active]::after{animation:none!important;opacity:0!important}
+}

@@ -225,6 +225,9 @@ def public_section_content(content, store):
                 block['actividad'].pop('enlace_reunion', None)
             if not block.get('visible'):
                 continue
+            # Ocultar de la vitrina talleres grabados descontinuados; no borrar la configuracion guardada.
+            if (block.get('actividad') or {}).get('modalidad_venta') == 'grabado':
+                continue
             block.pop('nombre_interno', None)
             block['componentes'] = [element for element in block.get('componentes', []) if element.get('visible') and
                 (element.get('tipo') != 'biblioteca' or element.get('recurso_id') in active_ids)]

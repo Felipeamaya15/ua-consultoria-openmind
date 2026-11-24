@@ -1,3 +1,4 @@
+import { humanizeAdminError } from '../../../admin/utils/humanizeError';
 import { Link } from 'react-router-dom';
 import { VISUAL_SECTION } from '../../visual/sectionIds';
 import React, { useState, useId, useEffect, ReactNode, ButtonHTMLAttributes, InputHTMLAttributes, SelectHTMLAttributes, TextareaHTMLAttributes } from 'react';
@@ -125,12 +126,14 @@ interface TextareaProps extends TextareaHTMLAttributes<HTMLTextAreaElement> {
 }
 
 export function Textarea({ label, error, hint, className = '', id, ...props }: TextareaProps) {
-  const elId = id ?? label?.toLowerCase().replace(/\s+/g, '-');
+  const generatedId = useId();
+  const elId = id ?? generatedId;
   return (
     <div data-visual-section={VISUAL_SECTION.pageField} className="flex flex-col gap-1">
       {label && <label htmlFor={elId} className="text-sm font-medium text-[var(--foreground)]">{label}</label>}
       <textarea
         aria-invalid={!!error}
+        aria-describedby={error ? `${elId}-error` : hint ? `${elId}-hint` : undefined}
         id={elId}
         className={`w-full text-sm border rounded-lg px-3 py-2 bg-white text-[var(--foreground)] placeholder-[var(--muted-foreground)] transition-colors resize-y
           focus:outline-none focus:ring-2 focus:ring-[var(--ring)] focus:border-[var(--primary)]
@@ -138,8 +141,8 @@ export function Textarea({ label, error, hint, className = '', id, ...props }: T
         rows={4}
         {...props}
       />
-      {error && <p className="text-xs text-[var(--error)]">{error}</p>}
-      {hint && !error && <p className="text-xs text-[var(--muted-foreground)]">{hint}</p>}
+      {error && <p id={`${elId}-error`} role="alert" className="text-xs text-[var(--error)]">{error}</p>}
+      {hint && !error && <p id={`${elId}-hint`} className="text-xs text-[var(--muted-foreground)]">{hint}</p>}
     </div>
   );
 }
@@ -257,10 +260,11 @@ const toastColors: Record<ToastVariant, string> = {
   info: 'bg-[var(--info-bg)] border-[var(--info)] text-[var(--info)]',
 };
 
-export function Toast({ variant, message, onClose }: { variant: ToastVariant; message: string; onClose: () => void }) {
-  useEffect(() => { const t = setTimeout(onClose, 3500); return () => clearTimeout(t); }, [onClose]);
+export function Toast({ variant, message, onClose, duration = 3500 }: { variant: ToastVariant; message: string; onClose: () => void; duration?: number }) {
+  const [paused,setPaused]=useState(false);
+  useEffect(() => { if(!duration||paused)return;const t=setTimeout(onClose,duration);return()=>clearTimeout(t); }, [onClose,duration,paused]);
   return (
-    <div className={`flex items-center gap-3 px-4 py-3 rounded-xl border text-sm font-medium shadow-lg animate-fade-in ${toastColors[variant]}`} role="alert">
+    <div className={`flex items-center gap-3 px-4 py-3 rounded-xl border text-sm font-medium shadow-lg animate-fade-in ${toastColors[variant]}`} role={variant==='error'||variant==='warning'?'alert':'status'} aria-atomic="true" onMouseEnter={()=>setPaused(true)} onMouseLeave={()=>setPaused(false)} onFocus={()=>setPaused(true)} onBlur={()=>setPaused(false)}>
       <span className="w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold bg-current/10">{toastIcons[variant]}</span>
       <span className="text-[var(--foreground)]">{message}</span>
       <button type="button" onClick={onClose} className="ml-auto opacity-60 hover:opacity-100" aria-label="Cerrar">✕</button>
@@ -390,7 +394,7 @@ export function Alert({ variant, title, children }: { variant: AlertVariant; tit
     <div className={`flex gap-3 p-4 rounded-xl border ${alertStyles[variant]}`} role="alert">
       <div className="flex-1">
         {title && <p className="font-semibold text-sm mb-0.5">{title}</p>}
-        <div className="text-sm text-[var(--foreground)] opacity-90">{children}</div>
+        <div className="text-sm text-[var(--foreground)] opacity-90">{variant==='error'&&typeof children==='string'?humanizeAdminError(children,'No pudimos completar la acción. Revisa el estado de tus datos y vuelve a intentarlo.'):children}</div>
       </div>
     </div>
   );

@@ -56,11 +56,24 @@ const statusMessages: Record<number, string> = {
 export const isRequestCancelled = (cause: unknown): boolean => !!cause && typeof cause === 'object' && 'name' in cause && cause.name === 'AbortError';
 
 
+export function reportUnexpectedResponse(response:Response, reason:string) {
+  let path='';
+  try{path=new URL(response.url).pathname.replace(/\/[a-f\d-]{20,}(?=\/|$)/gi,'/:id').slice(0,160);}catch{}
+  if(typeof console!=='undefined')console.warn('OPENMIND_HTTP_RESPONSE',{path,status:response.status,redirected:response.redirected===true,reason});
+}
+
+export async function readJsonResponse(response:Response, fallback='No pudimos completar la operación. Comprueba su estado antes de reintentar.'):Promise<any> {
+  const type=response.headers?.get?.('content-type')?.toLowerCase()||'';
+  if(type&&!type.includes('json')){reportUnexpectedResponse(response,'non-json');throw new ApiError(fallback,response.status,'UNEXPECTED_RESPONSE');}
+  try{return await response.json();}
+  catch(cause){if(isRequestCancelled(cause))throw cause;reportUnexpectedResponse(response,'invalid-json');throw new ApiError(fallback,response.status,'UNEXPECTED_RESPONSE');}
+}
+
 export async function readApiEnvelope(response: Response, fallback = 'No pudimos completar la operación. Intenta nuevamente.'): Promise<Record<string, unknown>> {
   if ([401, 403, 404].includes(response.status)) throw new ApiError(statusMessages[response.status], response.status);
   if (response.status >= 500) throw new ApiError('El servicio no está disponible en este momento. Intenta nuevamente más tarde.', response.status);
   let body: unknown;
-  try { body = await response.json(); }
+  try { body = await readJsonResponse(response); }
   catch (cause) {
     if (isRequestCancelled(cause)) throw cause;
     throw new ApiError(response.ok ? 'La respuesta recibida no es válida. Comprueba si se guardó antes de volver a intentarlo.' : statusMessages[response.status] || fallback, response.status);
@@ -74,8 +87,15 @@ export async function readApiEnvelope(response: Response, fallback = 'No pudimos
   const candidates = record(body)
     ? [
         ...messages(error.detalles),
+        ...messages(error.errores),
+        ...messages(error.validaciones),
+        ...messages(error.mensaje),
+        ...messages(error.detail),
+        ...messages(body.errores),
+        ...messages(body.errors),
         ...messages(body.detail),
         ...messages(body.mensaje),
+        ...messages(typeof body.error === 'string' ? body.error : undefined),
       ]
     : [];
 
@@ -110,6 +130,7 @@ export async function readApiEnvelope(response: Response, fallback = 'No pudimos
   );
 }
   if (!record(body) || body.exito !== true || !Object.prototype.hasOwnProperty.call(body, 'data')) {
+    reportUnexpectedResponse(response,'invalid-envelope');
     throw new ApiError('La respuesta recibida no es válida. Comprueba si se guardó antes de volver a intentarlo.', response.status);
   }
   return body;

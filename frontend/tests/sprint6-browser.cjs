@@ -10,7 +10,7 @@ const results = [], errors = [];
 (async () => {
   fs.mkdirSync(out, { recursive: true });
   const fixture = await (await fetch(`${api}/__qa_fixture`)).json();
-  const entry = `import React from 'react';import{createRoot}from'react-dom/client';import{BrowserRouter,Routes,Route}from'react-router-dom';
+  const entry = `import{FeedbackProvider}from'./src/shared/components/FeedbackProvider';import React from 'react';import{createRoot}from'react-dom/client';import{BrowserRouter,Routes,Route}from'react-router-dom';
   import{CartProvider,useCart}from'./src/features/storefront/context/CartContext';
   import Checkout from './src/features/storefront/pages/Checkout';import OrderConfirmation from './src/features/storefront/pages/OrderConfirmation';
   import Orders from './src/features/admin/pages/Orders';import Dashboard from './src/features/admin/pages/Dashboard';import Shipping from './src/features/admin/pages/Shipping';import Promotions from './src/features/admin/pages/Promotions';
@@ -25,10 +25,10 @@ const results = [], errors = [];
   function Controls(){const cart=useCart();return <div className="flex gap-3 p-2"><button id="qa-qty1" onClick={()=>cart.updateQuantity(q.productId,'QA-E2E',1)}>QA cantidad 1</button><button id="qa-qty2" onClick={()=>cart.updateQuantity(q.productId,'QA-E2E',2)}>QA cantidad 2</button></div>}
   function Shop(){return <CartProvider><Controls/><Checkout/></CartProvider>}
   function Admin({children}){return <AdminHelpProvider><AdminProvider>{children}</AdminProvider></AdminHelpProvider>}
-  createRoot(document.getElementById('root')).render(<BrowserRouter><div data-storefront-visual={template} className="min-h-screen p-3" style={visualConfigToCssVariables(resolveVisualConfig({template}))}>
+  createRoot(document.getElementById('root')).render(<FeedbackProvider><BrowserRouter><div data-storefront-visual={template} className="min-h-screen p-3" style={visualConfigToCssVariables(resolveVisualConfig({template}))}>
   <Routes><Route path="/plantilla/:id/checkout" element={<Shop/>}/><Route path="/plantilla/:id/pedido-confirmado" element={<OrderConfirmation/>}/>
   <Route path="/emprendedor" element={<Dashboard/>}/><Route path="/emprendedor/pedidos" element={<Orders/>}/>
-  <Route path="/emprendedor/entregas" element={<Admin><Shipping/></Admin>}/><Route path="/emprendedor/promociones" element={<Admin><Promotions/></Admin>}/></Routes></div></BrowserRouter>);`;
+  <Route path="/emprendedor/entregas" element={<Admin><Shipping/></Admin>}/><Route path="/emprendedor/promociones" element={<Admin><Promotions/></Admin>}/></Routes></div></BrowserRouter></FeedbackProvider>);`;
   const bundle = await esbuild.build({ stdin: { contents: entry, loader: 'tsx', resolveDir: root }, jsx: 'automatic', bundle: true, write: false, format: 'iife',
     define: { 'process.env.NODE_ENV': '"production"', 'import.meta.env': JSON.stringify({ VITE_API_URL: api }) }, plugins: [{ name: 'qa-identity-only', setup(build) {
       build.onLoad({ filter: /StoreIdentityContext\.tsx$/ }, () => ({ loader: 'js', contents: `export const useStoreIdentity=()=>({identity:{apiBaseUrl:'${api}',storeId:'${fixture.storeId}'},loading:false,error:'',retry(){}});` }));

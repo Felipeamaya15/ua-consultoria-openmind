@@ -70,7 +70,6 @@ export function EditorialLayout() {
 
   useEffect(() => {
     setMobileOpen(false);
-    window.scrollTo(0, 0);
   }, [pathname, search]);
 
   useEffect(() => {
@@ -91,7 +90,7 @@ export function EditorialLayout() {
         <div data-visual-part="headerLayout" className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between gap-6">
 
           <InstitutionalBadge compact /><Link data-visual-part="logo" onClick={event => {
-            if (!event.ctrlKey && !event.metaKey && !event.shiftKey && !event.altKey) {
+            if (!event.ctrlKey && !event.metaKey && !event.shiftKey && !event.altKey && event.currentTarget.pathname === window.location.pathname) {
               window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
             }
           }}

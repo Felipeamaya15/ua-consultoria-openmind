@@ -157,6 +157,8 @@ class ConfiguracionLandingSerializer(serializers.ModelSerializer):
 
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
+        if 'comercio' in contenido_anterior:
+            data['comercio'] = contenido_anterior['comercio']
 
 
         ids_actuales = data.get('productos_destacados', [])

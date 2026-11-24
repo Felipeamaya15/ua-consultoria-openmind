@@ -1,0 +1,30 @@
+.feedback-dialog {
+  padding: 0;
+  width: min(32rem, calc(100vw - 2rem));
+  max-height: calc(100dvh - 2rem);
+  overflow-y: auto;
+  overflow-wrap: anywhere;
+  border: 1px solid var(--border, #d1d5db);
+  font-family: inherit;
+}
+.feedback-dialog::backdrop { background: rgb(0 0 0 / .5); backdrop-filter: blur(3px); }
+[data-storefront-visual] .feedback-dialog {
+  --foreground: var(--visual-text, #0f1623);
+  --muted-foreground: var(--visual-muted, #475569);
+  --border: var(--visual-border, #d1d5db);
+  background: var(--visual-surface, white);
+  color: var(--foreground);
+  border-radius: var(--radius, 1rem);
+  font-family: var(--visual-body-font, inherit);
+}
+[data-storefront-visual] .feedback-dialog h2 { font-family: var(--visual-heading-font, inherit); }
+[data-storefront-visual] .feedback-toasts { --foreground: var(--visual-text, #0f1623); font-family: var(--visual-body-font, inherit); }
+[data-storefront-visual] .feedback-toasts > [role] { background: var(--visual-surface, white); }
+.feedback-toasts button { color: var(--foreground); opacity: 1; min-width: 44px; min-height: 44px; }
+.feedback-dialog > div:first-child > button { min-width: 44px; min-height: 44px; }
+.feedback-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: .75rem; }
+.feedback-actions > button { min-height: 44px; }
+.feedback-toasts { position: fixed; z-index: 1000; right: 1rem; bottom: 1rem; display: flex; flex-direction: column; gap: .75rem; max-width: min(30rem, calc(100vw - 2rem)); max-height: calc(100dvh - 2rem); overflow-y: auto; overflow-wrap: anywhere; font-family: inherit; }
+@media (max-width: 480px) { .feedback-actions > button { flex: 1 1 100%; } .feedback-toasts { left: 1rem; right: 1rem; } }
+
+.cookie-preferences-modal { --foreground: var(--visual-text); --border: var(--visual-border); --muted-foreground: var(--visual-muted); background: var(--visual-surface, white); color: var(--visual-text); }

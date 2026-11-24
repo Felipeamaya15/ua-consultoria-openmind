@@ -1,3 +1,4 @@
+import { readJsonResponse } from '../../../shared/services/apiRequest';
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 const post = async (path: string, body: Record<string, unknown>) => {
@@ -6,7 +7,7 @@ const post = async (path: string, body: Record<string, unknown>) => {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   });
-  return response.json();
+  return readJsonResponse(response,'No pudimos consultar el pago. Revisa el estado del pedido antes de volver a pagar.');
 };
 
 export const paypalPaymentService = {

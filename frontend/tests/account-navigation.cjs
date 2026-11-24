@@ -48,7 +48,7 @@ async function settled(component, props = {}) {
   const header = fs.readFileSync(path.join(root, storeRoot, 'minimal/MinimalHeader.tsx'), 'utf8');
   const layout = fs.readFileSync(path.join(root, storeRoot, 'minimal/MinimalLayout.tsx'), 'utf8');
   assert.ok(layout.includes('<MinimalSidebar') && layout.includes('<MinimalHeader'), 'Plantilla 2 monta ambas modalidades');
-  assert.ok(header.includes('<CompactMobileNavigation'), 'Encabezado conecta la navegación móvil');
+  assert.ok(header.includes('<AdminModal') && header.includes('<MinimalSidebar mobile') && header.includes('aria-expanded={menuOpen}'), 'Encabezado conecta el diálogo accesible con la navegación móvil compartida');
   assert.ok(!header.includes('<AccountNavigation') && !header.includes('<nav'), 'Encabezado no duplica el menú de escritorio');
   assert.ok(!header.includes('to="perfil"') && !header.includes("route('perfil')"), 'Encabezado no evita el control compartido de identidad');
   const stylesheet = fs.readFileSync(path.join(root, 'src/styles/storefront.css'), 'utf8');
@@ -72,6 +72,9 @@ async function settled(component, props = {}) {
       '../AccountNavigation': account, './AccountNavigation': account,
       '../../../hooks/useStorefrontTemplate': template, '../../hooks/useStorefrontTemplate': template,
       '../../../../auth/services/authService': auth, '../../../auth/services/authService': auth,
+      '../../../context/CartContext': {useCart:()=>({count:0})},
+      './MinimalHeader': {MinimalCartIcon:'MinimalCartIcon'},
+      './MinimalCartIcon': {MinimalCartIcon:'MinimalCartIcon'},
       '../../ui': {Icon: 'Icon'},
     })[name];
     for (const [identity, label, destination] of [

@@ -106,6 +106,10 @@ function montarPedidos(pedir, id) {
     useEffect: (funcion, deps) => { efectos[numero++] = { funcion, deps }; },
   };
   const mocks = {
+    '../context/StoreIdentityContext': {useStoreIdentity:()=>({identity:null})},
+    '../services/metaPurchaseTracking': {trackConfirmedMetaPurchase(){}},
+    '../../../../shared/components/FeedbackProvider': {useFeedback:()=>({confirm:async()=>false,ask:async()=>null,notify(){}})},
+    '../../../shared/components/FeedbackProvider': {useFeedback:()=>({confirm:async()=>false,ask:async()=>null,notify(){}})},
     react: falsoReact,
     'react-router-dom': { Link: 'Link', useParams: () => (id ? { id } : {}) },
     '../../auth/services/authService': { authService: { getCustomerOrders: pedir, getCustomerOrder: async () => ({ id_pedido: 5, identificador: 'ORD-1', entrega: {}, items: [] }) } },

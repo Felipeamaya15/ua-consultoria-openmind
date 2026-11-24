@@ -259,9 +259,9 @@ export const PANEL_SEARCH_MODULES: PanelSearchModule[] = [
       },
       {
         id: 'marketing-sharing',
-        label: 'Difusión de tienda, servicios y talleres',
-        description: 'Prepara contenido listo para compartir de tus productos, servicios y talleres.',
-        to: '/emprendedor/marketing#difusion',
+        label: 'Publicaciones de servicios y talleres',
+        description: 'Diseña y descarga imágenes de productos, servicios y talleres para redes sociales.',
+        to: '/emprendedor/marketing',
         keywords: ['difusion', 'compartir', 'enlaces'],
       },
       {
@@ -351,7 +351,7 @@ export const PANEL_SEARCH_MODULES: PanelSearchModule[] = [
       },
       {
         id: 'contacts-campaigns',
-        label: 'Campañas de correo promocional',
+        label: 'Correos y campañas promocionales',
         description: 'Crea borradores, previsualiza y envía campañas a contactos autorizados.',
         to: '/emprendedor/contactos?vista=campanas',
         keywords: ['campanas', 'email marketing', 'boletin', 'newsletter', 'envio masivo'],

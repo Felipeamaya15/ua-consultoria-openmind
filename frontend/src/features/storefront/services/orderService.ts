@@ -1,3 +1,4 @@
+import type { InvoiceRequest } from '../../landing/services/commerceService';
 import type { CartItem } from '../context/CartContext';
 import type { ActivityCartItem } from '../context/activityCart';
 import { authService, type CustomerOrder, type CustomerOrderItem } from '../../auth/services/authService';
@@ -14,6 +15,7 @@ export type CreatedOrder = {
   url_pago?: string;
 };
 export type CheckoutInput = {
+  factura?: InvoiceRequest;
   key: string; items: CartItem[]; activities?: ActivityCartItem[]; contact: {name: string; email: string; phone: string};
   paymentMethod: string; shippingMethod: string; promoCode: string;
   address: {street: string; number: string; apt: string; city: string; region: string};
@@ -154,6 +156,7 @@ export const orderService = {
         headers: {'Content-Type': 'application/json', ...(token ? {Authorization: `Token ${token}`} : {})},
         body: JSON.stringify({
           clave_checkout: input.key,
+          ...(input.factura ? {factura: input.factura} : {}),
           items: input.items.map(item => ({producto_id: item.productId, sku: item.sku, cantidad: item.quantity})),
           ...(input.activities?.length ? {actividades:input.activities.map(item=>({seccion_id:item.sectionId,cantidad:item.quantity,version:item.version}))} : {}),
           contacto: {nombre: input.contact.name, email: input.contact.email.trim(), telefono: input.contact.phone},

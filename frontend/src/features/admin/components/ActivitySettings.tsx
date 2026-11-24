@@ -10,6 +10,7 @@ export function ActivitySettings({section,onChange}:{section:BloqueLanding;onCha
   const activity=section.actividad;
   const update=(patch:Partial<SectionActivity>)=>onChange({...section,actividad:{...activity!,...patch}});
   const sale=activity?.venta;
+  const recorded=activity?.modalidad_venta==='grabado';
   const updateSale=(patch:Partial<PaidActivitySettings>)=>{if(sale)update({venta:{...sale,...patch}});};
   const add=(kind:ElementKind)=>onChange({...section,componentes:[...(section.componentes||[]),newSectionElement(kind)]});
   const components=section.componentes||[];
@@ -24,11 +25,13 @@ export function ActivitySettings({section,onChange}:{section:BloqueLanding;onCha
   };
   const issues:string[]=[];
   if(sale){
+    if(recorded&&!activity?.grabacion_id)issues.push('Selecciona un video privado.');
+    if(recorded&&!components.some(e=>e.visible&&e.tipo==='texto'&&e.texto?.trim()))issues.push('Agrega una descripción del taller grabado.');
     if(!price||!/^\d{1,12}$/.test(price.importe||'')||Number(price.importe)<=0)issues.push('Ingresa un precio por participante mayor que $0.');
-    if(!day?.fecha)issues.push('Selecciona la fecha de inicio.');
-    if(!hours?.inicio||!hours?.termino)issues.push('Completa las horas de inicio y término.');
-    if(day?.fecha&&hours?.inicio&&hours?.termino&&`${day.hasta||day.fecha}T${hours.termino}`<=`${day.fecha}T${hours.inicio}`)issues.push('El término debe ser posterior al inicio.');
-    if(!Number.isInteger(activity?.cupos)||Number(activity?.cupos)<1||Number(activity?.cupos)>10000)issues.push('Define entre 1 y 10.000 cupos.');
+    if(!recorded&&!day?.fecha)issues.push('Selecciona la fecha de inicio.');
+    if(!recorded&&(!hours?.inicio||!hours?.termino))issues.push('Completa las horas de inicio y término.');
+    if(!recorded&&day?.fecha&&hours?.inicio&&hours?.termino&&`${day.hasta||day.fecha}T${hours.termino}`<=`${day.fecha}T${hours.inicio}`)issues.push('El término debe ser posterior al inicio.');
+    if(!recorded&&(!Number.isInteger(activity?.cupos)||Number(activity?.cupos)<1||Number(activity?.cupos)>10000))issues.push('Define entre 1 y 10.000 cupos.');
     for(const kind of kinds)if(components.filter(e=>e.tipo===kind&&e.visible).length>1)issues.push(`Deja solo un bloque ${kind} visible.`);
     if(!components.some(e=>e.visible&&(e.tipo==='titulo'||e.tipo==='nombre')&&e.texto?.trim())&&!section.titulo?.trim())issues.push('Agrega un título para la actividad.');
     if(!Number.isInteger(sale.cierre_minutos)||sale.cierre_minutos<0||sale.cierre_minutos>10080)issues.push('El cierre de ventas debe estar entre 0 y 10.080 minutos.');
@@ -39,6 +42,9 @@ export function ActivitySettings({section,onChange}:{section:BloqueLanding;onCha
   return <fieldset className="activity-settings"><legend>Servicio o taller</legend>
     <Select label="Tipo de actividad" value={activity?.tipo||''} options={[{value:'',label:'Contenido general'},{value:'servicio',label:'Servicio'},{value:'taller',label:'Taller o actividad'}]} onChange={event=>onChange({...section,actividad:event.target.value?{...newActivity(event.target.value as SectionActivity['tipo']),...(activity||{}),tipo:event.target.value as SectionActivity['tipo'],inscripciones:false}:null})} />
     {activity&&<>
+      {activity.tipo==='taller'&&<div className="flexible-help" role="status">
+        {recorded ? <>La venta de talleres grabados esta deshabilitada. Los accesos previamente pagados se conservan. <button type="button" className="lp-button" onClick={()=>update({modalidad_venta:'vivo',grabacion_id:undefined,acceso_dias:undefined})}>Convertir en taller en vivo (revisar fecha y horario)</button></> : 'Modalidad: en vivo o programado. Las grabaciones pagadas se evaluaran en una etapa futura.'}
+      </div>}
       <div className="activity-settings-grid"><Input label="Clasificación (opcional)" value={activity.categoria} maxLength={100} onChange={event=>update({categoria:event.target.value})} /><Select label="Estado de la actividad" value={activity.estado} options={[{value:'activa',label:'Activa'},{value:'cancelada',label:'Cancelada'}]} onChange={event=>update({estado:event.target.value as SectionActivity['estado']})} /></div>
 
       <div className="activity-cover-editor">
@@ -62,35 +68,35 @@ export function ActivitySettings({section,onChange}:{section:BloqueLanding;onCha
       <div className="activity-settings-grid"><Input label="Zona horaria" value={activity.zona_horaria} required maxLength={80} placeholder="America/Santiago" onChange={event=>update({zona_horaria:event.target.value})} /><Input label="Plataforma de reunión (opcional)" value={activity.plataforma} maxLength={100} placeholder="Zoom, Google Meet…" onChange={event=>update({plataforma:event.target.value})} /></div>
       <Input label="Enlace privado de reunión (opcional)" type="url" value={activity.enlace_reunion||''} maxLength={2000} onChange={event=>update({enlace_reunion:event.target.value})} />
       <p>Este enlace solo lo ve el propietario en el panel. No se publica ni se entrega automáticamente; verifica al participante antes de compartirlo.</p>
-      <Toggle label="Actividad gratuita" checked={activity.gratuito} onChange={gratuito=>update({gratuito,inscripciones:gratuito?activity.inscripciones:false,venta:gratuito?null:activity.venta})} />
-      {activity.tipo==='taller'&&<>
+      <Toggle disabled={recorded} label="Actividad gratuita" checked={activity.gratuito} onChange={gratuito=>update({gratuito,inscripciones:gratuito?activity.inscripciones:false,venta:gratuito?null:activity.venta})} />
+      {activity.tipo==='taller'&&!recorded&&<>
         <p>Para publicar un taller agrega un bloque Fecha y otro Horario. Los primeros bloques visibles determinan la inscripción. La fecha de término es opcional; el horario corresponde a cada día de la actividad.</p>
         <div className="flexible-add">{(['fecha','horario'] as const).filter(kind=>!section.componentes?.some(element=>element.tipo===kind)).map(kind=><button key={kind} className="lp-button" type="button" disabled={(section.componentes?.length||0)>=30} onClick={()=>add(kind)}>Agregar {kind==='fecha'?'fecha':'horario'}</button>)}</div>
         <Toggle label="Permitir inscripciones gratuitas" disabled={!activity.gratuito} checked={activity.inscripciones} onChange={inscripciones=>onChange({...section,actividad:{...activity,inscripciones},componentes:inscripciones&&!section.componentes?.some(element=>element.tipo==='inscripcion')&&(section.componentes?.length||0)<30?[...(section.componentes||[]),newSectionElement('inscripcion')]:section.componentes})} />
         {activity.inscripciones&&<div className="activity-settings-grid"><Input label="Cupos máximos (vacío: sin límite)" type="number" min={1} max={10000} step={1} value={activity.cupos??''} onChange={event=>update({cupos:event.target.value?Number(event.target.value):null})} /><Select label="Confirmación de inscripción" value={activity.confirmacion} options={[{value:'manual',label:'Pendiente de confirmación por la tienda'},{value:'automatica',label:'Confirmar automáticamente (gratuita)'}]} onChange={event=>update({confirmacion:event.target.value as SectionActivity['confirmacion']})} /></div>}
       </>}
       {!activity.gratuito&&<>
-        <Toggle label="Preparar venta online" checked={!!sale} onChange={enabled=>update({venta:enabled?newPaidActivitySettings():null,inscripciones:false})} />
+        <Toggle disabled={recorded} label="Preparar venta online" checked={!!sale} onChange={enabled=>update({venta:enabled?newPaidActivitySettings():null,inscripciones:false})} />
         {sale&&<div className="activity-settings paid-sale-editor" aria-label="Configuración de venta online">
-          <div className="paid-sale-heading"><strong>Venta online</strong><p>Define el precio, las fechas y los cupos que podrán comprar tus clientes.</p></div>
+          <div className="paid-sale-heading"><strong>Venta online</strong><p>{recorded?'Define el precio y el acceso personal a la grabación.':'Define el precio, las fechas y los cupos que podrán comprar tus clientes.'}</p></div>
           {issues.length>0&&<div className="paid-sale-validation paid-sale-incomplete" role="alert">
             <strong>Para guardar la venta online, completa lo siguiente:</strong>
             <ul>{issues.map(issue=><li key={issue}>{issue}</li>)}</ul>
           </div>}
-          <div className="paid-sale-price"><label htmlFor={`paid-price-${section.id}`}>Precio por participante (CLP)</label><div className="paid-sale-money"><span>$</span><input id={`paid-price-${section.id}`} type="text" inputMode="numeric" maxLength={12} placeholder="15000" value={price?.importe||components.find(e=>e.tipo==='precio')?.importe||''} disabled={!components.some(e=>e.tipo==='precio')&&components.length>=30} onChange={e=>edit('precio',{importe:e.target.value.replace(/[^0-9]/g,'')})}/></div><p>Este importe se sincroniza con el bloque Precio de la tienda.</p>{!price&&<button type="button" className="paid-sale-add" disabled={!components.some(e=>e.tipo==='precio')&&components.length>=30} onClick={()=>edit('precio',{})}>+ {components.some(e=>e.tipo==='precio')?'Mostrar':'Agregar'} bloque Precio</button>}</div>
-          <div className="activity-settings-grid">
-            <Input label="Fecha de inicio" type="date" value={day?.fecha||''} onChange={e=>edit('fecha',{fecha:e.target.value})} />
+          <div className="paid-sale-price"><label htmlFor={`paid-price-${section.id}`}>Precio por participante (CLP)</label><div className="paid-sale-money"><span>$</span><input id={`paid-price-${section.id}`} type="text" inputMode="numeric" aria-invalid={!price||Number(price.importe)<=0} className={!price||Number(price.importe)<=0?'border-red-600':''} maxLength={12} placeholder="15000" value={price?.importe||components.find(e=>e.tipo==='precio')?.importe||''} disabled={!components.some(e=>e.tipo==='precio')&&components.length>=30} onChange={e=>edit('precio',{importe:e.target.value.replace(/[^0-9]/g,'')})}/></div><p>Este importe se sincroniza con el bloque Precio de la tienda.</p>{!price&&<button type="button" className="paid-sale-add" disabled={!components.some(e=>e.tipo==='precio')&&components.length>=30} onClick={()=>edit('precio',{})}>+ {components.some(e=>e.tipo==='precio')?'Mostrar':'Agregar'} bloque Precio</button>}</div>
+          {!recorded&&<div className="activity-settings-grid">
+            <Input label="Fecha de inicio" error={!day?.fecha?'Selecciona una fecha de inicio.':undefined} type="date" value={day?.fecha||''} onChange={e=>edit('fecha',{fecha:e.target.value})} />
             <Input label="Fecha de término (opcional)" type="date" value={day?.hasta||''} onChange={e=>edit('fecha',{hasta:e.target.value})} />
-            <Input label="Hora de inicio" type="time" value={hours?.inicio||''} onChange={e=>edit('horario',{inicio:e.target.value})} />
-            <Input label="Hora de término" type="time" value={hours?.termino||''} onChange={e=>edit('horario',{termino:e.target.value})} />
-          </div>
+            <Input label="Hora de inicio" error={!hours?.inicio?'Ingresa la hora de inicio.':undefined} type="time" value={hours?.inicio||''} onChange={e=>edit('horario',{inicio:e.target.value})} />
+            <Input label="Hora de término" error={!hours?.termino?'Ingresa la hora de término.':undefined} type="time" value={hours?.termino||''} onChange={e=>edit('horario',{termino:e.target.value})} />
+          </div>}
           {components.length>=30&&(!price||!day||!hours)&&<p role="alert">Se alcanzó el máximo de 30 bloques. Elimina uno si necesitas crear otro.</p>}
           <div className="activity-settings-grid">
-            <Input label="Cupos totales" type="number" min={1} max={10000} step={1} value={activity.cupos??''} onChange={event=>update({cupos:event.target.value?Number(event.target.value):null})} />
-            <Input label="Cierre de ventas (minutos antes del inicio)" type="number" min={0} max={10080} step={1} value={sale.cierre_minutos} onChange={event=>updateSale({cierre_minutos:Number(event.target.value)})} />
-            <Input label="Tolerancia de atraso (minutos)" type="number" min={0} max={120} step={1} value={sale.tolerancia_minutos} onChange={event=>updateSale({tolerancia_minutos:Number(event.target.value)})} />
-            <Select label="Política de anulaciones y devoluciones" value={sale.cancelacion} options={[{value:'evaluacion',label:'Evaluar cada solicitud de devolución'},{value:'anticipada',label:'Admitir anulación anticipada'}]} onChange={event=>updateSale({cancelacion:event.target.value as PaidActivitySettings['cancelacion']})} />
-            {sale.cancelacion==='anticipada'&&<Input label="Solicitar anulación con cuántas horas de anticipación" type="number" min={0} max={720} step={1} value={sale.cancelacion_horas} onChange={event=>updateSale({cancelacion_horas:Number(event.target.value)})} />}
+            {!recorded&&<Input label="Cupos totales" error={!Number.isInteger(activity.cupos)||Number(activity.cupos)<1?'Define un número de cupos mayor que cero.':undefined} type="number" min={1} max={10000} step={1} value={activity.cupos??''} onChange={event=>update({cupos:event.target.value?Number(event.target.value):null})} />}
+            {!recorded&&<Input label="Cierre de ventas (minutos antes del inicio)" type="number" min={0} max={10080} step={1} value={sale.cierre_minutos} onChange={event=>updateSale({cierre_minutos:Number(event.target.value)})} />}
+            {!recorded&&<Input label="Tolerancia de atraso (minutos)" type="number" min={0} max={120} step={1} value={sale.tolerancia_minutos} onChange={event=>updateSale({tolerancia_minutos:Number(event.target.value)})} />}
+            <Select label="Política de anulaciones y devoluciones" value={recorded?'evaluacion':sale.cancelacion} disabled={recorded} options={[{value:'evaluacion',label:'Evaluar cada solicitud de devolución'},{value:'anticipada',label:'Admitir anulación anticipada'}]} onChange={event=>updateSale({cancelacion:event.target.value as PaidActivitySettings['cancelacion']})} />
+            {!recorded&&sale.cancelacion==='anticipada'&&<Input label="Solicitar anulación con cuántas horas de anticipación" type="number" min={0} max={720} step={1} value={sale.cancelacion_horas} onChange={event=>updateSale({cancelacion_horas:Number(event.target.value)})} />}
           </div>
           <p>Las solicitudes se gestionan desde Servicios y talleres. Si admites anulación anticipada, el comprador puede solicitarla dentro del plazo indicado. Las demás solicitudes se evalúan individualmente.</p>
           <p>Para transferencias, la tienda realiza la devolución desde su banco y registra el comprobante una sola vez. No se solicita otra tarjeta. Las condiciones no limitan los derechos legales del consumidor.</p>

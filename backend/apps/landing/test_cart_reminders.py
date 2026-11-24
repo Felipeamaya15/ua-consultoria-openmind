@@ -10,7 +10,7 @@ from django.utils import timezone
 
 from apps.core.models import ConsentimientoComercial, Pedido, Tienda
 from apps.landing.abandoned_cart_jobs import process_one, process_reminders
-from apps.landing.models import RegistroCarritoAbandonado
+from apps.landing.models import RegistroCarritoAbandonado, ConfiguracionLanding
 
 
 @override_settings(EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend',
@@ -20,6 +20,7 @@ class CartReminderTests(TestCase):
         owner = get_user_model().objects.create_user(username='reminder-owner')
         self.buyer = get_user_model().objects.create_user(username='reminder-buyer', email='buyer@example.test')
         self.store = Tienda.objects.create(nombre='QA Recordatorios', id_usuario_propietario=owner)
+        ConfiguracionLanding.objects.create(tienda=self.store, contenido={'comercio': {'recordatorios': True}})
         self.consent = ConsentimientoComercial.objects.create(tienda=self.store,
             email=self.buyer.email, estado='autorizado', verificado=True,
             fecha_autorizacion=timezone.now(), fecha_verificacion=timezone.now(),

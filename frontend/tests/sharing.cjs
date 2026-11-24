@@ -65,6 +65,7 @@ const tick=()=>new Promise(resolve=>setImmediate(resolve));
 test('actual sharing form preserves edits, checks availability before copy, and delegates both image formats to the existing generator',async()=>{
   const items=buildSharingItems(input());let unavailable=false,copied=[],prepared=[],dirty=[];
   const {Sharing}=load('src/features/marketing/components/Sharing.tsx',{
+    '../../../shared/components/FeedbackProvider':{useFeedback:()=>({confirm:async()=>false})},
     react:hooks,'../../admin/components/ui':Object.fromEntries(['AdminCard','Button','Input','Select','Textarea'].map(name=>[name,name])),
     '../../../shared/components/states':{EmptyListState:'EmptyListState',ErrorState:'ErrorState',LoadingState:'LoadingState'},'../../admin/utils/humanizeError':{humanizeAdminError:text=>text},
     '../services/sharingService':{fetchSharingSources:async()=>({items,profiles:null,errors:[]}),resolveSharingItem:async ref=>{if(unavailable)throw new Error('Contenido no publicado');return items.find(item=>item.reference.id===ref.id);}},

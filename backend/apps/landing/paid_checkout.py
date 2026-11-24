@@ -119,7 +119,7 @@ def create_test_order(store, buyer, data):
         entrega={'metodo':'Actividad', 'origen':TEST_MARKER, 'sin_despacho':True}, costo_envio=Decimal(0), descuento=Decimal(0))
     ItemPedido.objects.bulk_create([ItemPedido(id_pedido=order, nombre_producto=('[PRUEBA] ' + r.condiciones['titulo'])[:200],
         sku='', cantidad=r.cantidad, precio_unitario=Decimal(r.precio_unitario),
-        atributos={'Actividad':r.condiciones['titulo'], 'Inicio':r.inicio.isoformat(), 'Tipo':r.condiciones['tipo']}) for r in reservations])
+        atributos={'Actividad':r.condiciones['titulo'], 'Inicio':r.inicio.isoformat() if r.inicio else 'Grabación', 'Tipo':r.condiciones['tipo']}) for r in reservations])
     ReservaActividadPagada.objects.filter(pk__in=[r.pk for r in reservations]).update(estado='en_pago')
     return order, True
 
@@ -134,7 +134,7 @@ def resolve_test_order(order, *, approve):
         tienda_id=order.tienda_id, clave_checkout=order.clave_checkout))
     if not rows or any(r.estado not in ('en_pago','revision_pago') for r in rows):
         raise ValidationError('El pedido no tiene reservas pendientes válidas.')
-    if approve and any(timezone.now() >= r.inicio for r in rows):
+    if approve and any(r.inicio is not None and timezone.now() >= r.inicio for r in rows):
         raise ValidationError('La actividad ya comenzó. Revisa el pedido antes de resolverlo.')
     ReservaActividadPagada.objects.filter(pk__in=[r.pk for r in rows]).update(estado='confirmada' if approve else 'liberada')
     return True

@@ -17,12 +17,13 @@ from apps.landing.models import ConfiguracionLanding, ReservaActividadPagada, So
 def sale_snapshot(section, details):
     blocks = section.get('componentes', [])
     return {
+        **({key: section['actividad'][key] for key in ('modalidad_venta', 'grabacion_id', 'acceso_dias')} if section['actividad'].get('modalidad_venta') == 'grabado' else {}),
         'titulo': activity_title(section),
         'tipo': section['actividad']['tipo'],
         'zona_horaria': section['actividad']['zona_horaria'],
-        'inicio': details['inicio'].isoformat(),
-        'termino': details['termino'].isoformat(),
-        'cierre': details['cierre'].isoformat(),
+        'inicio': details['inicio'].isoformat() if details['inicio'] else '',
+        'termino': details['termino'].isoformat() if details['termino'] else '',
+        'cierre': details['cierre'].isoformat() if details['cierre'] else '',
         'precio': details['precio'],
         'venta': dict(details['venta']),
         'condiciones': [b.get('texto', '') for b in blocks if b.get('visible') and b.get('tipo') == 'condiciones'],
@@ -50,8 +51,12 @@ def availability(store, section_id, *, now=None):
     section = find_activity(config, section_id)
     details = paid_activity_details(section)
     snapshot = sale_snapshot(section, details)
-    remaining = max(0, details['cupos'] - occupied_seats(store, section_id, now))
-    status = ('finalizada' if now >= details['termino'] else 'iniciada' if now >= details['inicio'] else
+    # Descontinuados: no ofertar grabaciones nuevas, sin alterar reservas o accesos historicos.
+    if snapshot.get('modalidad_venta') == 'grabado':
+        return {**snapshot, 'version': sale_version(snapshot), 'cupos_disponibles': 0,
+                'estado': 'cerrada', 'hora_servidor': now.isoformat(), 'compra_habilitada': False}
+    remaining = 1 if snapshot.get('modalidad_venta') == 'grabado' else max(0, details['cupos'] - occupied_seats(store, section_id, now))
+    status = 'disponible' if snapshot.get('modalidad_venta') == 'grabado' else ('finalizada' if now >= details['termino'] else 'iniciada' if now >= details['inicio'] else
               'cerrada' if now >= details['cierre'] else 'agotada' if remaining == 0 else 'disponible')
     return {**snapshot, 'version': sale_version(snapshot), 'cupos_disponibles': remaining,
             'estado': status, 'hora_servidor': now.isoformat(), 'compra_habilitada': False}
@@ -75,6 +80,8 @@ def reserve_activity(store, section_id, *, checkout_key, quantity, accepted_vers
     config = ConfiguracionLanding.objects.select_for_update().filter(tienda=store).first()
     now = now or timezone.now()
     section = find_activity(config, section_id)
+    if section['actividad'].get('modalidad_venta') == 'grabado':
+        raise ValidationError('La venta de talleres grabados no esta disponible en esta etapa.')
     details = require_paid_activity_open(section, now=now)
     snapshot = sale_snapshot(section, details)
     if sale_version(snapshot) != accepted_version:
@@ -86,8 +93,13 @@ def reserve_activity(store, section_id, *, checkout_key, quantity, accepted_vers
         if previous.estado == 'liberada' or (previous.estado == 'reservada' and previous.vence <= now):
             raise ValidationError('La reserva venció. Inicia un nuevo intento de compra.')
         return previous
-    if quantity > details['cupos'] - occupied_seats(store, section_id, now):
+    if snapshot.get('modalidad_venta') == 'grabado':
+        if quantity != 1:
+            raise ValidationError('Cada compra de una grabación corresponde a un acceso personal.')
+        from apps.landing.private_recordings import require_recording
+        require_recording(store, snapshot['grabacion_id'])
+    elif quantity > details['cupos'] - occupied_seats(store, section_id, now):
         raise ValidationError('No quedan suficientes cupos disponibles.')
     return ReservaActividadPagada.objects.create(tienda=store, seccion_id=section_id, clave_checkout=checkout_key,
         cantidad=quantity, precio_unitario=details['precio'], inicio=details['inicio'], cierre=details['cierre'],
-        condiciones=snapshot, vence=min(now + timedelta(minutes=15), details['cierre']))
+        condiciones=snapshot, vence=min(now + timedelta(minutes=15), details['cierre']) if details['cierre'] else now + timedelta(minutes=15))

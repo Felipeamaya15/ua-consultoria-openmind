@@ -28,7 +28,9 @@ export function CatalogHeader() {
 
           <div className="flex flex-1 min-w-0 items-center gap-2 sm:gap-3">
             <InstitutionalBadge compact />
-            <Link data-visual-part="logo"
+            <Link data-visual-part="logo" onClick={event => {
+              if (!event.ctrlKey && !event.metaKey && !event.shiftKey && !event.altKey && event.currentTarget.pathname === window.location.pathname) window.scrollTo({top:0,left:0,behavior:'instant'});
+            }}
               to={route()}
               aria-label={`Ir al inicio de ${config.name || 'la tienda'}`}
               className="flex min-w-0 flex-1 items-center gap-2 text-white hover:text-[var(--primary)] transition-colors"

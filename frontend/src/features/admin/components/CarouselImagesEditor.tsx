@@ -1,3 +1,4 @@
+import { useFeedback } from '../../../shared/components/FeedbackProvider';
 import { LoadingState } from '../../../shared/components/states';
 import { Button, Input, Textarea, Toggle, Modal } from './ui';
 import { MediaPreview } from '../../marketing/components/MediaPreview';
@@ -107,6 +108,8 @@ function SlideContentEditor({image,onSaved,disabled,destinations}:{image:ImagenC
 }
 
 export function CarouselImagesEditor({blocks=[],products=[]}:{blocks?:BloqueLanding[];products?:Product[]} = {}) {
+  const uiFeedback = useFeedback();
+
   const destinations=slideDestinations(blocks,products);
   const fileId = useId();
   const descriptionId = useId();
@@ -288,11 +291,9 @@ export function CarouselImagesEditor({blocks=[],products=[]}:{blocks?:BloqueLand
   async function remove(image: ImagenCarruselLanding) {
     if (busy) return;
 
-    const confirmed = window.confirm(
-      '¿Eliminar esta fotografía del carrusel? ' +
+    const confirmed = (await uiFeedback.confirm({title:"Eliminar imagen",confirmLabel:"Eliminar imagen",message:'¿Eliminar esta fotografía del carrusel? ' +
       'La eliminación se guarda inmediatamente ' +
-      'y no puede deshacerse desde Página principal.',
-    );
+      'y no puede deshacerse desde Página principal.'}));
 
     if (!confirmed) return;
 

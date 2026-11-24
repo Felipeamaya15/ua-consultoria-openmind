@@ -27,6 +27,9 @@ export const newPaidActivitySettings = (): PaidActivitySettings => ({
 export interface SectionActivity {
   tipo:'servicio'|'taller'; estado:'activa'|'cancelada'; categoria:string; zona_horaria:string;
   plataforma:string; enlace_reunion?:string; gratuito:boolean; inscripciones:boolean; cupos:number|null; confirmacion:'manual'|'automatica';
+  modalidad_venta?: 'vivo' | 'grabado';
+  grabacion_id?: string;
+  acceso_dias?: number;
   portada?: string;
   venta?: PaidActivitySettings | null;
 }

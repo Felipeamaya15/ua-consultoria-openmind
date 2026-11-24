@@ -147,9 +147,11 @@ def approve_locked(order, rows, result):
     safe['monto']=int(order.monto_total)
     ReservaActividadPagada.objects.filter(pk__in=[r.pk for r in rows]).update(estado='confirmada')
     order.estado='pagado'; set_meta(order,aprobacion=safe,confirmado_en=timezone.now().isoformat(),
-        actividad_iniciada=any(timezone.now()>=r.inicio for r in rows),revision_pendiente=False,
+        actividad_iniciada=any(r.inicio is not None and timezone.now()>=r.inicio for r in rows),revision_pendiente=False,
         confirmacion_incierta=False)
     order.save(update_fields=['estado','entrega'])
+    from apps.landing.private_recordings import grant_recordings
+    grant_recordings(order, rows)
     notify(order,True)
     return safe
 
@@ -215,7 +217,7 @@ def process_order(order_id, *, callback_token=None, consult=True):
     if status=='INITIALIZED' and callback_token:
         if meta(order).get('confirmacion_incierta'):
             return review_locked(order,status,'confirmacion_no_verificada')
-        if any(timezone.now()>=r.inicio for r in rows):
+        if any(r.inicio is not None and timezone.now()>=r.inicio for r in rows):
             return review_locked(order,status,'actividad_iniciada_sin_autorizacion')
         try:
             approved=adapter.confirmar_transaccion(token_ws=order.webpay_token)

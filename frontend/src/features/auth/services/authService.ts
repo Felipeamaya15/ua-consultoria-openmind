@@ -1,4 +1,4 @@
-import { ApiError, requestEnvelope } from '../../../shared/services/apiRequest';
+import { ApiError, requestEnvelope, reportUnexpectedResponse } from '../../../shared/services/apiRequest';
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 const TOKEN_KEY = 'token';
 const SESSION_STARTED_AT_KEY = 'entrepreneur_session_started_at';
@@ -213,12 +213,14 @@ async function readAuthJson(res: Response): Promise<any> {
   }
   const contentType = res.headers?.get?.('content-type')?.toLowerCase() || '';
   if (contentType && !contentType.includes('json')) {
+    reportUnexpectedResponse(res,'non-json');
     throw new Error('No pudimos comunicarnos con el servicio. Intenta nuevamente mas tarde.');
   }
   let body: unknown;
   try {
     body = await res.json();
   } catch {
+    reportUnexpectedResponse(res,'invalid-json');
     throw new Error('No pudimos comunicarnos con el servicio. Intenta nuevamente mas tarde.');
   }
   if (!body || typeof body !== 'object' || Array.isArray(body)) {
@@ -242,6 +244,7 @@ export const authService = {
     return getSessionInactivityLimitMs();
   },
   setSession(token: string, user?: AuthUserSummary | null) {
+    if(!getStoredToken()&&typeof window!=="undefined"&&window.dispatchEvent(new Event("openmind-before-auth-session",{cancelable:true}))===false)throw new Error("No se pudo proteger el carrito antes de autenticar. Revisa el almacenamiento del navegador.");
     const nowIso = new Date().toISOString();
     safeSetStorage(TOKEN_KEY, token);
     safeSetStorage(SESSION_STARTED_AT_KEY, nowIso);

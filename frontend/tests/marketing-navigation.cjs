@@ -32,11 +32,11 @@ function workspace() {
   return { render, editor, focused: () => focused };
 }
 
-test('four labelled panels preserve the same mounted publication editor across every section', () => {
+test('five labelled panels preserve the same mounted publication editor across every section', () => {
   const page = workspace();
   const labels = page.render().tabs.map(tab => tab.props.children.at(-1));
-  assert.deepEqual(labels, ['Publicaciones', 'Biblioteca multimedia', 'Difusión', 'Campañas']);
-  for (let index = 0; index < 4; index++) {
+  assert.deepEqual(labels, ['Publicaciones', 'Biblioteca multimedia', 'Difusión', 'Campañas', 'Carritos abandonados']);
+  for (let index = 0; index < 5; index++) {
     page.render().tabs[index].props.onClick();
     const { tabs, panels } = page.render();
     assert.equal(tabs.filter(tab => tab.props['aria-selected']).length, 1);
@@ -51,11 +51,11 @@ test('four labelled panels preserve the same mounted publication editor across e
 test('keyboard navigation wraps, supports Home/End, moves focus and is disabled during export', () => {
   const page = workspace();
   let focused;
-  const press = (index, key, busy = false) => page.render(busy).tabs[index].props.onKeyDown({ key, preventDefault() {}, currentTarget: { parentElement: { querySelectorAll: () => [0, 1, 2, 3].map(n => ({ focus: () => { focused = n; } })) } } });
-  press(0, 'ArrowLeft'); assert.equal(focused, 3);
-  press(3, 'ArrowRight'); assert.equal(focused, 0);
-  press(0, 'End'); assert.equal(focused, 3);
-  press(3, 'Home'); assert.equal(focused, 0);
+  const press = (index, key, busy = false) => page.render(busy).tabs[index].props.onKeyDown({ key, preventDefault() {}, currentTarget: { parentElement: { querySelectorAll: () => [0, 1, 2, 3, 4].map(n => ({ focus: () => { focused = n; } })) } } });
+  press(0, 'ArrowLeft'); assert.equal(focused, 4);
+  press(4, 'ArrowRight'); assert.equal(focused, 0);
+  press(0, 'End'); assert.equal(focused, 4);
+  press(4, 'Home'); assert.equal(focused, 0);
   assert(page.render(true).tabs.every(tab => tab.props.disabled));
   press(0, 'End', true); assert.equal(focused, 0);
 });

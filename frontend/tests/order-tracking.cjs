@@ -98,6 +98,10 @@ const real = {id_pedido: 42, identificador: identifier, fecha_creacion: '2026-10
     if (name.includes('shippingService')) return {shippingService: {getTracking: async (...args) => liveReply(...args)}};
     if (name.includes('trackingStates')) return load('src/features/storefront/data/trackingStates.ts', {});
     if (name.includes('components/ui')) return Object.fromEntries(['Button','Input','Badge','Alert','Icon'].map(type => [type, type]));
+    if (name.includes('StoreIdentityContext')) return {useStoreIdentity:()=>({identity:null})};
+    if (name.includes('metaPurchaseTracking')) return {trackConfirmedMetaPurchase:()=>{}};
+    if (name.includes('PaidActivityOrderQA')) return {PaidActivityOrderQA:'PaidActivityOrderQA'};
+    if (name.includes('PagarPedidoPendiente')) return {PagarPedidoPendiente:'PagarPedidoPendiente'};
     throw Error(name);
   };
   const Confirmation = load('src/features/storefront/pages/OrderConfirmation.tsx', {require: requireMock}).default;

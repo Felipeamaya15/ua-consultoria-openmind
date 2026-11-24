@@ -18,7 +18,7 @@ function load(file) {
 function req(id) {
   if (id === 'react/jsx-runtime') return { jsx, jsxs: jsx };
   if (id === 'react') return { useMemo: f => f(), useEffect: () => {}, useId: () => 'qa-map', useState: x => [x, () => {}] };
-  if (id === 'react-router-dom') return { Link: 'Link', useNavigate: () => () => {} };
+  if (id === 'react-router-dom') return { Link: 'Link', useNavigate: () => () => {}, useLocation:()=>({pathname:'/plantilla/1',search:'',hash:'',key:'qa'}) };
   if (id.includes('StoreContext')) return { useStore: () => state };
   if (id.includes('useHeroContent')) return load('src/features/storefront/hooks/useHeroContent.ts');
   if (id.includes('useLandingContent')) return load('src/features/landing/hooks/useLandingContent.ts');

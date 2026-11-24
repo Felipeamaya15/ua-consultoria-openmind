@@ -489,7 +489,7 @@ export default function Activities() {
                                   : 'bg-teal-100 text-teal-800'
                               }`}
                             >
-                              {record.tipo_actividad === 'taller' ? 'Taller' : 'Servicio'}
+                              {record.tipo_actividad === 'producto' ? 'Cotización' : record.tipo_actividad === 'taller' ? 'Taller' : 'Servicio'}
                             </span>
                             <h3 className="font-bold text-base text-[var(--foreground)] leading-snug">
                               {record.titulo_actividad}

@@ -115,6 +115,14 @@ class ContenidoLandingSerializer(serializers.Serializer):
             if 'actividad' not in block and 'actividad' in previous.get(block['id'], {}):
                 import copy
                 block['actividad'] = copy.deepcopy(previous[block['id']]['actividad'])
+            # Mantener configuraciones historicas, pero impedir publicar nuevas ventas de grabaciones.
+            activity_config = block.get('actividad') or {}
+            previous_config = (previous.get(block['id'], {}).get('actividad') or {})
+            if (activity_config.get('modalidad_venta') == 'grabado'
+                    and previous_config.get('modalidad_venta') != 'grabado'):
+                raise serializers.ValidationError(
+                    'Las nuevas ventas de talleres grabados estan deshabilitadas. Usa un taller en vivo o programado.'
+                )
             validate_activity(block)
 
             portada = (block.get('actividad') or {}).get('portada') or ''
@@ -129,6 +137,9 @@ class ContenidoLandingSerializer(serializers.Serializer):
                         'La portada debe pertenecer a esta tienda y actividad.'
                     )
             activity = block.get('actividad') or {}
+            if activity.get('modalidad_venta') == 'grabado' and self.context.get('tienda'):
+                from apps.landing.private_recordings import require_recording
+                require_recording(self.context['tienda'], activity.get('grabacion_id'))
             if activity.get('cupos') and self.context.get('tienda'):
                 from apps.landing.models import SolicitudActividad
                 reserved = SolicitudActividad.objects.filter(tienda=self.context['tienda'], seccion_id=block['id'], tipo='inscripcion').exclude(estado='cancelada').count()

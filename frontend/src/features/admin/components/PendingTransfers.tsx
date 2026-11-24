@@ -1,3 +1,4 @@
+import { useFeedback } from '../../../shared/components/FeedbackProvider';
 import { useEffect, useRef, useState } from 'react';
 import { EmptyListState, LoadingState } from '../../../shared/components/states';
 import { Alert, Button } from './ui';
@@ -12,6 +13,8 @@ import {
 const dateFormat = new Intl.DateTimeFormat('es-CL', { dateStyle: 'short', timeStyle: 'short' });
 
 export function PendingTransfers() {
+  const uiFeedback = useFeedback();
+
   const [transfers, setTransfers] = useState<PendingTransfer[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -39,7 +42,7 @@ export function PendingTransfers() {
 
   const approve = async (transfer: PendingTransfer) => {
     if (operationPending.current) return;
-    if (!window.confirm(`¿Confirmas que recibiste el pago del pedido ${transfer.identificador || `#${transfer.id_pedido}`}?`)) return;
+    if (!(await uiFeedback.confirm({title:"Confirmar transferencia",confirmLabel:"Confirmar abono",message:`¿Confirmas que recibiste el pago del pedido ${transfer.identificador || `#${transfer.id_pedido}`}?`}))) return;
     operationPending.current = true;
     setApprovingId(transfer.id_pedido);
     setError('');
@@ -59,7 +62,7 @@ export function PendingTransfers() {
   const reject = async (transfer: PendingTransfer) => {
     if (operationPending.current) return;
     const orderLabel = transfer.identificador || `#${transfer.id_pedido}`;
-    if (!window.confirm(`¿Confirmas que deseas rechazar la transferencia del pedido ${orderLabel}? El pedido será cancelado.`)) return;
+    if (!(await uiFeedback.confirm({title:"Rechazar transferencia",confirmLabel:"Rechazar transferencia",message:`¿Confirmas que deseas rechazar la transferencia del pedido ${orderLabel}? El pedido será cancelado.`}))) return;
 
     operationPending.current = true;
     setRejectingId(transfer.id_pedido);

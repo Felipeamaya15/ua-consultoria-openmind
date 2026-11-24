@@ -8,12 +8,12 @@ const api = 'http://127.0.0.1:8005', results = [], errors = [], downloads = [];
 (async () => {
   fs.mkdirSync(out, { recursive: true });
   const fixture = await (await fetch(`${api}/__qa_fixture`)).json(); assert(fixture.commercial);
-  const entry = `import React from'react';import{createRoot}from'react-dom/client';import{BrowserRouter,Routes,Route}from'react-router-dom';
+  const entry = `import{FeedbackProvider}from'./src/shared/components/FeedbackProvider';import React from'react';import{createRoot}from'react-dom/client';import{BrowserRouter,Routes,Route}from'react-router-dom';
     import{AdminLayout}from'./src/features/admin/components/layout/AdminLayout';import Dashboard from'./src/features/admin/pages/Dashboard';
     import Orders from'./src/features/admin/pages/Orders';import Sales from'./src/features/admin/pages/Sales';import Contacts from'./src/features/admin/pages/Contacts';
     localStorage.setItem('token',window.QA.ownerToken);
-    createRoot(document.getElementById('root')).render(<BrowserRouter><Routes><Route path="/emprendedor" element={<AdminLayout/>}>
-    <Route index element={<Dashboard/>}/><Route path="pedidos" element={<Orders/>}/><Route path="ventas" element={<Sales/>}/><Route path="contactos" element={<Contacts/>}/></Route></Routes></BrowserRouter>);`;
+    createRoot(document.getElementById('root')).render(<FeedbackProvider><BrowserRouter><Routes><Route path="/emprendedor" element={<AdminLayout/>}>
+    <Route index element={<Dashboard/>}/><Route path="pedidos" element={<Orders/>}/><Route path="ventas" element={<Sales/>}/><Route path="contactos" element={<Contacts/>}/></Route></Routes></BrowserRouter></FeedbackProvider>);`;
   const bundle = await esbuild.build({ stdin: { contents: entry, loader: 'tsx', resolveDir: root }, outfile: 'qa.js', jsx: 'automatic', bundle: true, write: false, format: 'iife',
     define: { 'process.env.NODE_ENV': '"production"', 'import.meta.env': JSON.stringify({ VITE_API_URL: api }) }, plugins: [{ name: 'qa-identity-only', setup(build) {
       build.onLoad({ filter: /StoreIdentityContext\.tsx$/ }, () => ({ loader: 'js', contents: `const identity={apiBaseUrl:'${api}',storeId:'${fixture.storeId}'};export const useStoreIdentity=()=>({identity,loading:false,error:'',retry(){}});` }));

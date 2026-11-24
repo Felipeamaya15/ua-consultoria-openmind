@@ -325,7 +325,7 @@ async function pruebasDelDashboard() {
     const salida = renderToStaticMarkup(React.createElement(Dashboard));
     assert.ok(salida.includes('LISTADO-REAL-DE-ORDENES'));
     assert.ok(!salida.includes('MOCK-0001') && !salida.includes('Cliente De Ejemplo'), 'la tabla ya no usa los datos de ejemplo');
-    assert.ok(salida.includes('Resumen de la Tienda') && salida.includes('Ventas Totales') && salida.includes('Órdenes Totales') && salida.includes('Por Despachar'), 'las tarjetas siguen');
+    assert.ok(salida.includes('Estadísticas de la Tienda')&&salida.includes('Cargando estadísticas')&&salida.includes('Ticket promedio') && salida.includes('Ventas Totales') && salida.includes('Órdenes Totales') && salida.includes('Por Despachar'), 'las tarjetas siguen');
     assert.ok(!salida.includes('No hay pedidos en el período seleccionado'));
   });
 }

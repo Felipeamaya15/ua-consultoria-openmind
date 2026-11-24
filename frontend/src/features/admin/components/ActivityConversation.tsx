@@ -1,3 +1,4 @@
+import { useFeedback } from '../../../shared/components/FeedbackProvider';
 import { useEffect, useRef, useState } from 'react';
 import { Alert, Button, Input, Modal, Textarea } from './ui';
 import { LoadingState } from '../../../shared/components/states';
@@ -8,6 +9,8 @@ const ATTEMPT_CODES: Record<string, string> = { enviado_local: 'Capturada por el
 export const REPLY_STATES = { borrador: 'Borrador', enviando: 'En proceso: revisa el resultado antes de reenviar', aceptada: 'Aceptada por el transporte', fallida: 'No enviada: puedes revisar y reintentar', indeterminada: 'Resultado incierto: no reenviar sin revisar el transporte' };
 
 export function ActivityConversation({ id, onClose, onUpdated }: { id: string; onClose: () => void; onUpdated: () => void }) {
+  const uiFeedback = useFeedback();
+
   const [data, setData] = useState<Conversation | null>(null);
   const [page, setPage] = useState(1), [revision, setRevision] = useState(0);
   const [subject, setSubject] = useState(''), [body, setBody] = useState('');
@@ -28,7 +31,7 @@ export function ActivityConversation({ id, onClose, onUpdated }: { id: string; o
     const warn = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = ''; };
     window.addEventListener('beforeunload', warn); return () => window.removeEventListener('beforeunload', warn);
   }, [dirty]);
-  function close() { if (!busy && (!dirty || window.confirm('Hay una respuesta sin guardar. ¿Cerrar y descartarla?'))) onClose(); }
+  async function close() { if (!busy && (!dirty || (await uiFeedback.confirm({title:"Descartar respuesta",confirmLabel:"Descartar respuesta",message:'Hay una respuesta sin guardar. ¿Cerrar y descartarla?'})))) onClose(); }
   function edit(field: 'subject' | 'body', value: string) {
     if (saved) { key.current = undefined; setSaved(null); }
     field === 'subject' ? setSubject(value) : setBody(value); setError(''); setNotice('');
@@ -68,7 +71,7 @@ export function ActivityConversation({ id, onClose, onUpdated }: { id: string; o
         </section>
         <section className="space-y-3"><div className="flex flex-wrap justify-between gap-2"><h3 className="font-semibold">Historial de respuestas ({data.total})</h3><Button variant="ghost" disabled={busy} onClick={() => setRevision(n => n + 1)}>Actualizar historial</Button></div>
           {!data.respuestas.length && <p className="text-sm">Aún no hay respuestas guardadas.</p>}
-          {data.respuestas.map(row => <article key={row.id} className="rounded-lg border border-[var(--border)] p-3 space-y-2 break-words"><p className="font-semibold">{row.asunto}</p><p className="text-xs">{formatBusinessDate(row.creado, true)} · {REPLY_STATES[row.estado]}</p><p className="whitespace-pre-wrap text-sm">{row.cuerpo}</p>{row.intentos.map(attempt => <p key={attempt.numero} className="text-xs">Intento {attempt.numero}: {REPLY_STATES[attempt.estado as ActivityReply['estado']] || attempt.estado} · {ATTEMPT_CODES[attempt.codigo] || 'Pendiente de resultado'}</p>)}{['borrador','fallida'].includes(row.estado) && <Button variant="outline" disabled={busy} onClick={() => { if (dirty && !window.confirm('¿Cambiar de respuesta y descartar el texto sin guardar?')) return; setSaved(row); key.current = row.clave; setSubject(row.asunto); setBody(row.cuerpo); setNotice('Respuesta recuperada. Puedes revisarla antes de enviar.'); }}>Recuperar respuesta</Button>}</article>)}
+          {data.respuestas.map(row => <article key={row.id} className="rounded-lg border border-[var(--border)] p-3 space-y-2 break-words"><p className="font-semibold">{row.asunto}</p><p className="text-xs">{formatBusinessDate(row.creado, true)} · {REPLY_STATES[row.estado]}</p><p className="whitespace-pre-wrap text-sm">{row.cuerpo}</p>{row.intentos.map(attempt => <p key={attempt.numero} className="text-xs">Intento {attempt.numero}: {REPLY_STATES[attempt.estado as ActivityReply['estado']] || attempt.estado} · {ATTEMPT_CODES[attempt.codigo] || 'Pendiente de resultado'}</p>)}{['borrador','fallida'].includes(row.estado) && <Button variant="outline" disabled={busy} onClick={async () => { if (dirty && !(await uiFeedback.confirm({title:"Descartar respuesta",confirmLabel:"Descartar respuesta",message:'¿Cambiar de respuesta y descartar el texto sin guardar?'}))) return; setSaved(row); key.current = row.clave; setSubject(row.asunto); setBody(row.cuerpo); setNotice('Respuesta recuperada. Puedes revisarla antes de enviar.'); }}>Recuperar respuesta</Button>}</article>)}
           <div className="flex flex-wrap items-center gap-3"><Button variant="ghost" disabled={page <= 1 || busy} onClick={() => setPage(n => n - 1)}>Respuestas anteriores</Button><span className="text-xs">Página {data.pagina} de {data.paginas}</span><Button variant="ghost" disabled={page >= data.paginas || busy} onClick={() => setPage(n => n + 1)}>Más respuestas</Button></div>
         </section>
       </div>}

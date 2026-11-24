@@ -66,6 +66,8 @@ class OrderDetailSerializer(OrderSerializer):
         if order.clave_checkout:
             delivery=dict(order.entrega or {})
             delivery.pop('pago_actividad_externo',None)
+            delivery.pop('_solicitud_factura', None)
+            delivery.pop('_grabaciones_acceso', None)
             result.update(medio_pago=order.medio_pago, entrega=delivery,
                           costo_envio=format(order.costo_envio, '.2f'), descuento=format(order.descuento, '.2f'))
         return result

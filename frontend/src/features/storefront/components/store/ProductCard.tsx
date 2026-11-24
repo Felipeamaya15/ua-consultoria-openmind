@@ -1,6 +1,6 @@
 import { VISUAL_SECTION } from '../../visual/sectionIds';
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 
 import { Product, formatPrice } from '../../data/mockData';
 import { ProductImageGallery } from './ProductImageGallery';
@@ -18,7 +18,8 @@ export function ProductCard({
   product,
   layout = 'grid',
 }: ProductCardProps) {
-  const { addItem, items } = useCart();
+  const { addItem, items, loading:cartLoading, syncError } = useCart();
+  const navigate=useNavigate();
 
   const {
     route,
@@ -37,7 +38,7 @@ export function ProductCard({
     product.attributes[name].some(value => value.trim()));
   const [selectedVariantId, setSelectedVariantId] = useState(defaultVariant?.id ?? '');
   const selectedVariant = hasRealVariants
-    ? product.variants.find(variant => variant.id === selectedVariantId) : undefined;
+    ? product.variants.find(variant => variant.id === selectedVariantId) ?? defaultVariant : undefined;
   const price = selectedVariant?.price ?? product.basePrice;
   const comparePrice = selectedVariant ? selectedVariant.comparePrice : product.comparePrice;
   const hasDiscount = comparePrice !== undefined && comparePrice > price;
@@ -63,7 +64,8 @@ export function ProductCard({
   const productPath = route(`producto/${product.id}`);
 
   const handleAddToCart = () => {
-    if (!selectedVariant || !canBuySelectedVariant || atLimit) {
+    if (!hasRealVariants && !cartLoading && !syncError) {navigate(productPath);return;}
+    if (cartLoading || syncError || !selectedVariant || !canBuySelectedVariant || atLimit) {
       return;
     }
 
@@ -110,7 +112,7 @@ export function ProductCard({
             <span>{attributeNames.length === 1 ? product.attributeLabels?.[attributeNames[0]] || attributeNames[0] : 'Variante'}</span>
             <select
               aria-label={attributeNames.length === 1 ? product.attributeLabels?.[attributeNames[0]] || attributeNames[0] : 'Variante'}
-              value={selectedVariantId}
+              value={selectedVariant?.id ?? ''}
               onChange={event => { setSelectedVariantId(event.target.value); setAdded(false); }}
               className={`h-10 sm:h-9 w-full min-w-0 rounded-lg border px-2 text-xs normal-case tracking-normal outline-none ${selectClass}`}
             >
@@ -210,11 +212,11 @@ export function ProductCard({
             <button data-visual-part="buyButton"
               type="button"
               onClick={handleAddToCart}
-              disabled={!canBuySelectedVariant || atLimit}
+              disabled={cartLoading || !!syncError || (hasRealVariants && (!canBuySelectedVariant || atLimit))}
               aria-label={`Agregar ${product.name} al carrito`}
               className="mt-4 min-h-11 sm:min-h-10 h-11 sm:h-10 w-full rounded-[9px] bg-[var(--primary)] text-[11px] font-bold text-[var(--on-primary)] transition-colors hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40"
             >
-              {atLimit ? 'Maximo disponible' : added ? 'Agregado' : 'Comprar'}
+              {!hasRealVariants ? 'Ver opciones' : atLimit ? 'Maximo disponible' : added ? 'Agregado' : 'Comprar'}
             </button>
           )}
 
@@ -275,11 +277,11 @@ export function ProductCard({
               <button data-visual-part="buyButton"
                 type="button"
                 onClick={handleAddToCart}
-                disabled={!canBuySelectedVariant || atLimit}
+                disabled={cartLoading || !!syncError || (hasRealVariants && (!canBuySelectedVariant || atLimit))}
                 aria-label={`Agregar ${product.name} al carrito`}
                 className="min-h-10 rounded-[8px] bg-[var(--primary)] px-4 py-2.5 text-[10px] font-bold text-[var(--on-primary)] hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40"
               >
-                {atLimit ? 'Maximo' : added ? 'Agregado' : 'Agregar'}
+                {!hasRealVariants ? 'Ver opciones' : atLimit ? 'Maximo' : added ? 'Agregado' : 'Agregar'}
               </button>
             ) : (
               <span className="text-[9px] font-bold uppercase tracking-[0.1em] text-black/60">
@@ -347,11 +349,11 @@ export function ProductCard({
               <button data-visual-part="buyButton"
                 type="button"
                 onClick={handleAddToCart}
-                disabled={!canBuySelectedVariant || atLimit}
+                disabled={cartLoading || !!syncError || (hasRealVariants && (!canBuySelectedVariant || atLimit))}
                 aria-label={`Agregar ${product.name} al carrito`}
                 className="inline-flex min-h-10 sm:min-h-9 h-10 sm:h-9 flex-shrink-0 items-center justify-center rounded-[7px] bg-[#111111] px-4 text-[11px] font-semibold text-white transition-opacity hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-35"
               >
-                {atLimit ? 'Maximo' : added ? 'Agregado' : 'Comprar'}
+                {!hasRealVariants ? 'Ver opciones' : atLimit ? 'Maximo' : added ? 'Agregado' : 'Comprar'}
               </button>
             ) : (
               <span className="text-[10px] font-semibold uppercase tracking-[0.1em] text-[#8b8582]">
@@ -447,11 +449,11 @@ export function ProductCard({
             <button data-visual-part="buyButton"
               type="button"
               onClick={handleAddToCart}
-              disabled={!canBuySelectedVariant || atLimit}
+              disabled={cartLoading || !!syncError || (hasRealVariants && (!canBuySelectedVariant || atLimit))}
               aria-label={`Agregar ${product.name} al carrito`}
               className="mt-3 min-h-10 sm:min-h-8 h-10 sm:h-8 w-full sm:w-auto rounded-lg bg-[var(--primary)] px-4 text-xs font-semibold text-[var(--on-primary)] transition-colors hover:brightness-90 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {atLimit ? 'Maximo disponible' : added ? 'Agregado' : 'Agregar al carrito'}
+              {!hasRealVariants ? 'Ver opciones' : atLimit ? 'Maximo disponible' : added ? 'Agregado' : 'Agregar al carrito'}
             </button>
           )}
         </div>
@@ -651,7 +653,7 @@ export function ProductCard({
           <button data-visual-part="buyButton"
             type="button"
             onClick={handleAddToCart}
-            disabled={!canBuySelectedVariant || atLimit}
+            disabled={cartLoading || !!syncError || (hasRealVariants && (!canBuySelectedVariant || atLimit))}
             aria-label={`Agregar ${product.name} al carrito`}
             className={`
               w-full
@@ -670,7 +672,7 @@ export function ProductCard({
               }
             `}
           >
-            {atLimit
+            {!hasRealVariants ? 'Ver opciones' : atLimit
               ? 'Maximo disponible'
               : added
                 ? 'Agregado'

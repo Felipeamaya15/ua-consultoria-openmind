@@ -325,7 +325,7 @@ export function PublicationPreview({ content, brand, design, paletteColors, imag
               {content.originalPrice !== null && <p className="marketing-art-original"><span>Precio regular </span><s>{formatMarketingMoney(content.originalPrice)}</s></p>}
               <p className="marketing-art-price" style={textStyle('price')}>{content.fromPrice && <span>Desde </span>}{formatMarketingMoney(content.price)}</p>
             </div>}
-            {content.hasMultipleVariants && <p className="marketing-art-variant" style={textStyle('variant')} title={content.variantLabel}>{content.variantLabel}</p>}
+            {content.hasMultipleVariants && editor.showVariant !== false && <p className="marketing-art-variant" style={textStyle('variant')} title={content.variantLabel}>{content.variantLabel}</p>}
             {appearance.showButton && <p className="marketing-art-cta" data-campaign-cta={professional && appearance.buttonStyle === 'solid' && appearance.buttonShape === 'original' && appearance.buttonBackground === null && appearance.buttonRadius === null && appearance.buttonWidth === null && appearance.buttonPaddingX === null && appearance.buttonPaddingY === null && editor.textStyles.cta.color === null && appearance.buttonFullWidth ? 'editorial' : 'custom'} style={{ ...textStyle('cta'), color: buttonColor,
               background: appearance.buttonStyle === 'solid' ? palette.buttonBackground : 'transparent',
               border: appearance.buttonStyle === 'outline' ? `${appearance.buttonBorderWidth}px ${appearance.buttonBorderStyle} ${safeTextColor(appearance.buttonBorderColor || buttonColor, palette.copyBackground)}` : 'none',

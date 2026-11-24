@@ -68,6 +68,7 @@ export function DesignControls({ activity, freeLayers, value: d, brand, paletteC
       </>}
       {activeSection === 'Elementos libres' && freeLayers}
       {activeSection === 'Textos' && <>
+        {!activity && <label className="marketing-option"><input type="checkbox" checked={d.showVariant !== false} onChange={e => change({ showVariant: e.target.checked })} /> Mostrar variante (color, tamaño o atributo) en la publicación</label>}
         <p className="marketing-hint">El nombre real del producto siempre aparece. El encabezado es un título editorial adicional; evita afirmaciones comerciales.</p>
         <Select label="Bloque de texto" value={block} onChange={e => setBlock(e.target.value as TextBlock)} options={[{ value: 'heading', label: 'Encabezado adicional' }, { value: 'subtitle', label: 'Subtítulo' }, { value: 'cta', label: 'Llamada a la acción' }, { value: 'title', label: 'Nombre del producto' }, { value: 'price', label: 'Precio del producto' }, { value: 'variant', label: 'Variante del producto' }, { value: 'brand', label: 'Nombre de la tienda' }, { value: 'description', label: 'Descripción del producto' }]} />
         {editorial ? <><Input label={block === 'heading' ? 'Encabezado adicional (opcional)' : block === 'subtitle' ? 'Texto del subtítulo' : 'Texto de llamada a la acción'} value={d[editorial]} maxLength={TEXT_LIMITS[editorial]} onChange={e => change({ [editorial]: e.target.value })} />

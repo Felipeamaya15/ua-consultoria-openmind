@@ -1,3 +1,4 @@
+import { readJsonResponse } from '../../../shared/services/apiRequest';
 import { fetchInitialLoad, type InitialLoadOptions } from '../../../core/http/initialLoad';
 import type { Product } from '../data/mockData';
 
@@ -92,7 +93,7 @@ export async function fetchPublicProducts(options?: InitialLoadOptions & { inclu
   }
 
   const body: BackendEnvelope<BackendProductListItem[]> =
-    await response.json();
+    await readJsonResponse(response,'No pudimos cargar los productos del carrito. Conservamos tu selección; actualiza para reintentar.');
 
   if (!body.exito) {
     throw new Error(body.mensaje || 'Error al obtener productos');
@@ -235,7 +236,7 @@ export async function fetchPublicProductDetail(slug: string, options?: InitialLo
     throw new Error('No se pudo obtener el detalle del producto');
   }
 
-  const body: BackendEnvelope<BackendProductDetail> = await response.json();
+  const body: BackendEnvelope<BackendProductDetail> = await readJsonResponse(response,'No pudimos cargar los productos del carrito. Conservamos tu selección; actualiza para reintentar.');
 
   if (!body.exito) {
     throw new Error(body.mensaje || 'Error al obtener el producto');

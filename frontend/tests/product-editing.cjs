@@ -78,6 +78,7 @@ async function main() {
     const jsx = (type, props) => ({ type, props });
     const components = load('src/features/admin/pages/Products.tsx', {
       require: name => {
+        if(name.includes("FeedbackProvider"))return {useFeedback:()=>({confirm:async()=>false})};
         if (name.includes('shared/services/imageUpload')) return { IMAGE_ACCEPT: 'image/*', prepareImage: async () => { throw new Error('Este test no selecciona archivos'); } };
         if (name === '../../marketing/services/mediaLibraryService') return {saveProductVideoResource: async () => {throw new Error('Esta fixture no selecciona videos');}};
         if (name === '../components/ProductVideoField') return {ProductVideoField: 'ProductVideoField'};

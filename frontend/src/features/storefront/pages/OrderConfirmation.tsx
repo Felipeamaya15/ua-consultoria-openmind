@@ -68,6 +68,7 @@ export default function OrderConfirmation() {
   }
 
   const orderNumber = state.orderNumber;
+  const paymentNotice='El pedido está registrado y el pago sigue pendiente. Realiza la transferencia con las instrucciones de la tienda y envía el comprobante. Consulta Seguimiento para saber cuándo se apruebe el pago.';
   const email = state.email ?? 'tu correo';
   const identificador = state.identificador?.trim();
   const trackingRoute = identificador
@@ -79,7 +80,7 @@ export default function OrderConfirmation() {
     return (
       <div className="w-full max-w-[1160px] mx-auto px-5 py-16 md:py-20 text-center text-[var(--visual-page-color)]">
         <div className="mx-auto w-16 h-16 rounded-full bg-[var(--primary)] flex items-center justify-center">
-          <span className="text-2xl font-black" aria-hidden="true">✓</span>
+          <span className="text-2xl font-black" aria-hidden="true">◷</span>
         </div>
 
         <p className="mt-7 text-[var(--primary)] text-[10px] font-black uppercase tracking-[0.16em]">
@@ -87,8 +88,9 @@ export default function OrderConfirmation() {
         </p>
 
         <h1 className="mt-3 text-[42px] md:text-[54px] leading-[0.96] tracking-[-0.045em] font-black">
-          ¡Pedido confirmado!
+          Pedido recibido
         </h1>
+        <p role="status" className="mx-auto mt-4 max-w-xl rounded-xl border border-current/20 p-4 text-sm">{paymentNotice}</p>
 
         <p className="mt-5 text-[13px] leading-6 text-[var(--visual-page-color)]/50">
           Tu número de orden es{' '}
@@ -112,7 +114,7 @@ export default function OrderConfirmation() {
           <div className="mt-7 grid grid-cols-1 md:grid-cols-3 gap-6">
             {[
               ['1', 'Pedido registrado', 'Tu pedido quedó registrado con estado pendiente.'],
-              ['2', 'Pago pendiente', 'Te enviamos un correo con la confirmación de recepción de tu pedido.'],
+              ['2', 'Pago pendiente', 'Realiza la transferencia y comparte el comprobante con la tienda. El pago está pendiente de verificación.'],
               ['3', 'Sigue tu pedido', 'Puedes consultar el estado desde Seguimiento.'],
             ].map(([number, title, description]) => (
               <div key={number}>
@@ -153,18 +155,19 @@ export default function OrderConfirmation() {
           <div className="flex flex-col items-center text-center">
             <div className="w-16 h-16 rounded-full bg-[var(--visual-page-panel-background)] text-[var(--visual-page-color)] flex items-center justify-center mb-7">
               <Icon
-                name="check"
+                name="clock"
                 className="w-7 h-7"
               />
             </div>
 
             <p className="mb-3 text-[9px] font-medium uppercase tracking-[0.18em] text-[var(--visual-page-color)]">
-              Compra completada
+              Pendiente de pago
             </p>
 
             <h1 className="font-serif text-[42px] md:text-[52px] leading-none tracking-[-0.025em]">
-              ¡Pedido confirmado!
+              Pedido recibido
             </h1>
+        <p role="status" className="mx-auto mt-4 max-w-xl rounded-xl border border-current/20 p-4 text-sm">{paymentNotice}</p>
 
             <p className="mt-5 text-[14px] leading-6 text-[var(--visual-page-color)]">
               Tu pedido fue registrado correctamente.
@@ -286,18 +289,19 @@ export default function OrderConfirmation() {
 
           <div className="w-20 h-20 rounded-full bg-[var(--primary)] text-[var(--visual-page-color)] flex items-center justify-center mb-7">
             <Icon
-              name="check"
+              name="clock"
               className="w-8 h-8"
             />
           </div>
 
           <p className="text-xs text-[var(--visual-page-color)] mb-2">
-            Compra completada
+            Pendiente de pago
           </p>
 
           <h1 className="text-3xl md:text-4xl font-semibold tracking-tight text-[var(--visual-page-color)]">
-            ¡Pedido confirmado!
+            Pedido recibido
           </h1>
+        <p role="status" className="mx-auto mt-4 max-w-xl rounded-xl border border-current/20 p-4 text-sm">{paymentNotice}</p>
 
           <p className="text-sm md:text-base text-[var(--visual-page-color)] mt-3">
             Tu pedido fue registrado correctamente.
@@ -412,15 +416,16 @@ export default function OrderConfirmation() {
 
       <div className="w-20 h-20 rounded-full bg-[var(--success-bg)] flex items-center justify-center text-[var(--success)]">
         <Icon
-          name="check"
+          name="clock"
           className="w-9 h-9"
         />
       </div>
 
       <div>
         <h1 className="text-2xl font-bold text-[var(--foreground)] mb-2">
-          ¡Pedido confirmado!
+          Pedido recibido
         </h1>
+        <p role="status" className="mx-auto mt-4 max-w-xl rounded-xl border border-current/20 p-4 text-sm">{paymentNotice}</p>
 
         <p className="text-[var(--muted-foreground)]">
           Tu número de orden es{' '}

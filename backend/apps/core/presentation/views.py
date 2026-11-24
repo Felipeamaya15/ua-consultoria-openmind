@@ -1,3 +1,5 @@
+import logging
+
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.views import APIView
 from rest_framework.exceptions import APIException
@@ -41,6 +43,9 @@ class TiendaPagoActualAPIView(APIView):
         except Exception as e:
             return error_response(mensaje=str(e), codigo="ERROR_TIENDA", status=getattr(e, "status_code", 400))
 
+logger = logging.getLogger(__name__)
+
+
 class ConfiguracionPagoAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -53,38 +58,48 @@ class ConfiguracionPagoAPIView(APIView):
             return error_response(mensaje=str(e), codigo="ERROR_PAGO", status=getattr(e, "status_code", 400))
 
     def put(self, request):
+        return self.save_configuration(request, partial=False)
+
+    def patch(self, request):
+        return self.save_configuration(request, partial=True)
+
+    def save_configuration(self, request, *, partial):
         try:
             tienda = resolver_tienda(request, exigir_propietario=True)
             serializer = ConfiguracionPagoSerializer(data=request.data)
             if not serializer.is_valid():
                 return error_response(mensaje="Datos incompletos.", codigo="ERROR_VALIDACION", detalles=serializer.errors, status=400)
 
-            config_pago, _ = ConfiguracionPago.objects.get_or_create(tienda=tienda)
-            datos = serializer.validated_data
-            actuales = config_pago.datos_descifrados
-            for metodo, campos in ConfiguracionPago.CAMPOS_SECRETOS.items():
-                nuevos = (datos.get(metodo) or {}).get('fields') if isinstance(datos.get(metodo), dict) else None
-                previos = (actuales.get(metodo) or {}).get('fields') or {}
-                if isinstance(nuevos, dict):
-                    for campo in campos:
-                        if nuevos.get(campo) and nuevos[campo] == ConfiguracionPago.enmascarar(previos.get(campo, '')):
-                            nuevos[campo] = previos[campo]
-            for metodo, claves in (('linkify', ('idCuenta', 'clavePrivada')), ('tuu', ('accountId', 'secretKey'))):
-                nuevo = datos.get(metodo)
-                if (isinstance(nuevo, dict) and nuevo.get('enabled') is False
-                        and not any(nuevo.get('fields', {}).get(k) for k in claves)):
-                    previos = ((config_pago.datos or {}).get(metodo) or {}).get('fields')
-                    if isinstance(previos, dict) and previos:
-                        datos[metodo] = {'enabled': False, 'fields': dict(previos)}
-            config_pago.datos = datos
-            config_pago.save()
+            with transaction.atomic():
+                Tienda.objects.select_for_update().get(pk=tienda.pk)
+                config_pago, _ = ConfiguracionPago.objects.get_or_create(tienda=tienda)
+                datos = deepcopy(serializer.validated_data)
+                actuales = config_pago.datos_descifrados
+                for metodo, campos in ConfiguracionPago.CAMPOS_SECRETOS.items():
+                    nuevos = (datos.get(metodo) or {}).get('fields') if isinstance(datos.get(metodo), dict) else None
+                    previos = (actuales.get(metodo) or {}).get('fields') or {}
+                    if isinstance(nuevos, dict):
+                        for campo in campos:
+                            if nuevos.get(campo) and nuevos[campo] == ConfiguracionPago.enmascarar(previos.get(campo, '')):
+                                nuevos[campo] = previos[campo]
+                for metodo, claves in (('linkify', ('idCuenta', 'clavePrivada')), ('tuu', ('accountId', 'secretKey'))):
+                    nuevo = datos.get(metodo)
+                    if (isinstance(nuevo, dict) and nuevo.get('enabled') is False
+                            and not any(nuevo.get('fields', {}).get(k) for k in claves)):
+                        previos = ((config_pago.datos or {}).get(metodo) or {}).get('fields')
+                        if isinstance(previos, dict) and previos:
+                            datos[metodo] = {'enabled': False, 'fields': dict(previos)}
+                if partial:
+                    datos = {**actuales, **datos}
+                config_pago.datos = datos
+                config_pago.save()
 
-            return success_response(mensaje="Métodos guardados.", data=config_pago.datos_enmascarados)
-        except Exception as e:
-            return error_response(mensaje=str(e), codigo="ERROR_PAGO", status=getattr(e, "status_code", 400))
-
-    def patch(self, request):
-        return self.put(request)
+                return success_response(mensaje="Métodos guardados.", data=config_pago.datos_enmascarados)
+        except APIException as error:
+            return error_response(mensaje="No tienes acceso a esta configuración. Revisa tu sesión.", codigo="ERROR_PAGO", status=error.status_code)
+        except Exception as error:
+            logger.error('PAYMENT_CONFIGURATION_FAILED kind=%s', type(error).__name__)
+            return error_response(mensaje="No pudimos guardar los medios de pago. Actualiza para comprobar su estado antes de reintentar.", codigo="ERROR_PAGO", status=500)
 
 class ConfiguracionEntregaAPIView(APIView):
     permission_classes = [IsAuthenticated]

@@ -7,7 +7,7 @@ const ts = require('typescript');
 const root = path.resolve(__dirname, '..');
 function load(file, req) {
   const module = { exports: {} };
-  const code = ts.transpileModule(fs.readFileSync(path.join(root, file), 'utf8'), {
+  const code = ts.transpileModule(fs.readFileSync(path.join(root, file), 'utf8').replaceAll('import.meta.env.VITE_API_URL', '"http://localhost:8000"'), {
     compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020, jsx: ts.JsxEmit.ReactJSX },
   }).outputText;
   vm.runInNewContext(code, { module, exports: module.exports, require: req, localStorage: {getItem: () => null}, sessionStorage: {getItem: () => null} });
@@ -30,7 +30,7 @@ function hooks(initial = []) {
   const state = initial;
   let cursor = 0;
   return { reset: () => { cursor = 0; }, react: {
-    createContext: () => ({ Provider: 'Provider' }), useEffect: () => {}, useCallback: fn => fn,
+    useRef:value=>({current:value}), createContext: () => ({ Provider: 'Provider' }), useEffect: () => {}, useCallback: fn => fn,
     useState: value => {
       const index = cursor++;
       if (!(index in state)) state[index] = typeof value === 'function' ? value() : value;
@@ -52,6 +52,11 @@ const providerHooks = hooks();
 const provider = load('src/features/storefront/context/CartContext.tsx', name => {
   if (name.includes('StoreIdentityContext')) return {useStoreIdentity: () => ({identity: null})};
   if (name.includes('guestCartStorage')) return {guestCartKey: () => null};
+  if (name.includes('cartSession')) return {useCartSession:()=>({token:null,scope:'guest-v2'}),currentCartToken:()=>null};
+  if (name.includes('context/activityCart') || name === './activityCart') return {useActivityCart:()=>({items:[],clear:async()=>{},ready:true})};
+  if (name.includes('useStorefrontTemplate')) return {useStorefrontTemplate:()=>({route:p=>'/'+p})};
+  if (name.includes('visual/pages')) return {isActiveEditorPreview:()=>false};
+  if (name.includes('metaPixelService')) return {trackMetaPixelEvent:()=>{}};
   if (name === 'react') return providerHooks.react;
   return { jsx, jsxs: jsx };
 });
@@ -59,9 +64,14 @@ const context = () => { providerHooks.reset(); return provider.CartProvider({ ch
 context().addItem(item('QA-PANT-M', 6, 7));
 context().addItem(item('QA-PANT-L', 7, 8, 120));
 
+let cartBlock='';
 function component(file, template, initial = []) {
   const h = hooks(initial);
   const exports = load(file, name => {
+    if (name.includes('FeedbackProvider')) return {useFeedback:()=>({confirm:async()=>false})};
+    if(name.includes('CartLineItem'))return require('./source-loader.cjs').load('src/features/storefront/components/store/CartLineItem.tsx',{'react/jsx-runtime':{jsx,jsxs:jsx},'react-router-dom':{Link:'Link'},'./StockFeedback':feedback,'../../data/mockData':{formatPrice:value=>`CLP ${value}`}});
+    if (name.includes('WholesaleQuote')) return {WholesaleQuote:()=>null};
+    if (name.includes('ActivityCartPreview')) return {ActivityCartRows:()=>null};
     if (name.includes('StoreContext')) return { useStore: () => ({config:{}}) };
         if (name.includes('seoService')) return { updateProductSeo: () => {} };
         if (name.includes('metaPixelService')) return { trackMetaPixelEvent: () => {} };
@@ -71,7 +81,7 @@ function component(file, template, initial = []) {
     if (name === 'react-router-dom') return { Link: 'Link', useNavigate: () => () => {}, useParams: () => ({ id: 'polera' }) };
     if (name.includes('StockFeedback')) return feedback;
     if (name.includes('QuantityControl')) return load('src/features/storefront/components/store/QuantityControl.tsx', () => ({ jsx, jsxs: jsx }));
-    if (name.includes('CartContext')) return { useCart: context };
+    if (name.includes('CartContext')) return { useCart:()=>({...context(),...(cartBlock?{items:[],loading:cartBlock==='loading',syncError:cartBlock==='error'?'Sincronización pendiente':''}:{})}) };
     if (name.includes('mockData')) return { formatPrice: value => `CLP ${value}` };
     if (name.includes('useStorefrontTemplate')) return { useStorefrontTemplate: () => ({ route: p => `/${p}`, isCatalog: template === 'catalog', isVisual: template === 'visual', isMinimal: template === 'minimal' }) };
     if (name.endsWith('/ProductImageGallery')) return { ProductImageGallery: 'ProductImageGallery' };
@@ -137,3 +147,19 @@ assert.equal(context().items[0].sku, 'QA-PANT-L');
 assert.equal(context().items[0].maxStock, 8);
 assert.equal(context().subtotal, 7 * 120);
 console.log('OK: límite por SKU, umbral <=5, avisos en cuatro plantillas, reducción/eliminación y totales');
+
+for (const template of ['catalog','visual','minimal','editorial']) for (cartBlock of ['loading','error']) {
+  const before=JSON.stringify(context().items);
+  const card=component('src/features/storefront/components/store/ProductCard.tsx',template);
+  const tree=card.render({product});
+  const add=walk(tree,n=>n.type==='button'&&n.props['aria-label']?.startsWith('Agregar'))[0];
+  assert.equal(add.props.disabled,true);add.props.onClick();
+  assert.ok(!text(card.render({product})).includes('Agregado'));
+  const detail=component('src/features/storefront/pages/ProductDetail.tsx',template,[product,[],false,false,{talla:'M'},1,0,false]);
+  const buy=walk(detail.render(),n=>n.type==='button'&&/Agregar al carrito/.test(text(n)))[0];
+  assert.equal(buy.props.disabled,true);buy.props.onClick();
+  assert.ok(!text(detail.render()).includes('Agregado'));
+  assert.equal(JSON.stringify(context().items),before);
+}
+cartBlock='';
+console.log('OK: sincronización y error impiden falsas confirmaciones de agregado en las cuatro plantillas');

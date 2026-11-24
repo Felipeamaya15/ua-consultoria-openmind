@@ -37,7 +37,7 @@ if(!fontFile)throw new Error('Define MARKETING_TEST_FONT con la fuente de QA Plu
     count=downloads;await button('Descargar PNG');await page.getByRole('alert').filter({hasText:'archivo completo'}).waitFor();assert.equal(downloads,count);
     await page.evaluate(()=>HTMLCanvasElement.prototype.toBlob=window.qaToBlob);
 
-    permit=false;const cancelled=page.waitForEvent('dialog');await page.getByRole('link',{name:'Administrar productos →',exact:true}).click();await cancelled;await settleDialog;assert(page.url().includes('/marketing'));permit=true;
+    await page.getByRole('link',{name:'Administrar productos →',exact:true}).click();await page.getByRole('dialog',{name:'Salir de Marketing',exact:true}).getByRole('button',{name:'Cancelar',exact:true}).click();assert(page.url().includes('/marketing'));
 
     const longName='Colección para acompañarte en cada aventura de primavera y verano';
     await page.getByLabel('Nombre del borrador',{exact:true}).fill(longName);await button('Guardar borrador');await button('Mis borradores');

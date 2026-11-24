@@ -773,8 +773,8 @@ export function LandingBlocksEditor({
           ¿Estás seguro de que deseas eliminar esta sección de tu tienda? El cambio se hará efectivo al guardar la página principal.
         </p>
         <div className="flex items-center justify-end gap-3 mt-5 pt-3 border-t border-slate-200">
-          <Button type="button" variant="ghost" onClick={() => setRemove(undefined)}>
-            Conservar sección
+          <Button type="button" variant="ghost" data-modal-autofocus onClick={() => setRemove(undefined)}>
+            Cancelar
           </Button>
           <Button
             type="button"
@@ -784,7 +784,7 @@ export function LandingBlocksEditor({
               setRemove(undefined);
             }}
           >
-            Eliminar definitivamente
+            Eliminar sección
           </Button>
         </div>
       </Modal>

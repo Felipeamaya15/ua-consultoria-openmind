@@ -1,3 +1,4 @@
+import { FeedbackProvider } from './shared/components/FeedbackProvider';
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { RouterProvider } from 'react-router-dom';
@@ -7,7 +8,7 @@ import { router } from './app/router';
 import { StoreIdentityProvider } from './features/storefront/context/StoreIdentityContext';
 import './styles/storefront.css';
 
-const application = <StoreIdentityProvider><RouterProvider router={router} /></StoreIdentityProvider>;
+const application = <FeedbackProvider><StoreIdentityProvider><RouterProvider router={router} /></StoreIdentityProvider></FeedbackProvider>;
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>

@@ -1,6 +1,5 @@
 import { StorePageContent } from '../StorePageContent';
-import { useEffect } from 'react';
-import { Outlet, useLocation } from 'react-router-dom';
+import { Outlet } from 'react-router-dom';
 
 import { MinimalSidebar } from './MinimalSidebar';
 import { MinimalHeader } from './MinimalHeader';
@@ -9,12 +8,6 @@ import { StoreVisualRoot } from '../StoreVisualRoot';
 import './minimalLandingPolish.css';
 
 export function MinimalLayout() {
-  const { pathname, search } = useLocation();
-
-  useEffect(() => {
-    window.scrollTo(0, 0);
-  }, [pathname, search]);
-
   return (
     <StoreVisualRoot className="template-minimal min-h-screen bg-[#f5f5f3]">
       <MinimalSidebar />

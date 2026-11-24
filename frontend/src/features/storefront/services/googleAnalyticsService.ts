@@ -51,6 +51,9 @@ export function initGoogleAnalytics(value: unknown): boolean {
   const validation = validateGoogleAnalyticsId(value);
   if (!validation.valid || !validation.measurementId) return false;
   const measurementId = validation.measurementId;
+  const flags=window as unknown as Record<string,unknown>;
+  if(window.__googleAnalyticsId&&window.__googleAnalyticsId!==measurementId)flags['ga-disable-'+window.__googleAnalyticsId]=true;
+  flags['ga-disable-'+measurementId]=false;
 
   window.dataLayer = window.dataLayer || [];
   window.gtag = window.gtag || function (...args: GtagArguments) {
@@ -77,6 +80,7 @@ export function initGoogleAnalytics(value: unknown): boolean {
 
 
 export function disableGoogleAnalytics(): void {
-  if (typeof window === 'undefined' || typeof window.gtag !== 'function') return;
-  window.gtag('consent', 'update', { analytics_storage: 'denied' });
+  if(typeof window==='undefined')return;
+  if(window.__googleAnalyticsId)(window as unknown as Record<string,unknown>)['ga-disable-'+window.__googleAnalyticsId]=true;
+  if(typeof window.gtag==='function')window.gtag('consent','update',{analytics_storage:'denied'});
 }

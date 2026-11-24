@@ -1,8 +1,9 @@
+import { CartProductRow } from '../components/store/CartLineItem';
+import { useFeedback } from '../../../shared/components/FeedbackProvider';
 import { useEffect, useState } from 'react';
-import { LoadingState } from '../../../shared/components/states';
+import { ErrorState, LoadingState } from '../../../shared/components/states';
 import { Link, useNavigate } from 'react-router-dom';
 
-import { StockFeedback } from '../components/store/StockFeedback';
 import { ActivityCartRows } from '../components/store/ActivityCartPreview';
 import { useCart } from '../context/CartContext';
 import { formatPrice } from '../data/mockData';
@@ -10,6 +11,8 @@ import { Button, EmptyState, Icon } from '../components/ui';
 import { useStorefrontTemplate } from '../hooks/useStorefrontTemplate';
 
 export default function Cart() {
+  const uiFeedback = useFeedback();
+
   const {
     items,
     activities,
@@ -23,7 +26,7 @@ export default function Cart() {
     applyPromo,
     promoNotice,
     count,
-    loading,
+    loading,syncError,syncNotice,refreshCart,
   } = useCart();
   const hasItems = items.length > 0 || activities.length > 0;
   const shippingLabel = !items.length && activities.length ? 'No aplica' : shipping === null ? 'Se calcula en checkout' : shipping === 0 ? 'Gratis' : formatPrice(shipping);
@@ -31,9 +34,9 @@ export default function Cart() {
   const { route, isMinimal, isVisual, isCatalog } = useStorefrontTemplate();
   const navigate = useNavigate();
 
-  const removeItem = (productId: string, variantId: string) => {
+  const removeItem = async (productId: string, variantId: string) => {
     const item = items.find(row => row.productId === productId && row.variantId === variantId);
-    if (item && window.confirm(`¿Eliminar ${item.name} del carrito?`)) {
+    if (item && (await uiFeedback.confirm({title:"Eliminar producto",confirmLabel:"Eliminar producto",message:`¿Eliminar ${item.name} del carrito?`}))) {
       return deleteItem(productId, variantId);
     }
   };
@@ -68,6 +71,7 @@ export default function Cart() {
     setPromoSuccess('');
   }, [promoNotice]);
 
+  if(syncError)return <ErrorState onRetry={()=>void refreshCart()}>{syncError}</ErrorState>;
   if (loading && !hasItems) return <LoadingState spacing="none" className="p-8">Cargando carrito…</LoadingState>;
 
 
@@ -165,6 +169,7 @@ export default function Cart() {
     return (
       <div className="bg-[var(--visual-page-panel-background)] text-[var(--visual-page-color)]">
         <div className="max-w-[1160px] mx-auto px-4 sm:px-5 py-10 md:py-14 pb-20 md:pb-28">
+          {syncNotice&&<p role="status" className="mb-4 border rounded-lg p-3">{syncNotice}</p>}
           <div className="mb-9 md:mb-12">
             <p className="text-[var(--primary)] text-[10px] font-black uppercase tracking-[0.16em]">
               Tu selección
@@ -182,121 +187,7 @@ export default function Cart() {
           <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-6 lg:gap-8 items-start">
             <div className="space-y-3">
               <ActivityCartRows items={activities} />
-              {items.map((item) => {
-                const hasDiscount = Boolean(item.comparePrice);
-                const canIncrease = item.quantity < item.maxStock;
-
-                return (
-                  <article data-page-panel
-                    key={`${item.productId}-${item.variantId}`}
-                    className="rounded-[16px] bg-[var(--visual-page-panel-background)] p-4 sm:p-5 text-[var(--visual-page-color)]"
-                  >
-                    <div className="flex gap-3 sm:gap-5">
-                      <Link data-page-action="outline"
-                        to={route(`producto/${item.productId}`)}
-                        aria-label={item.name}
-                        className="h-20 w-20 sm:h-32 sm:w-28 flex-shrink-0 overflow-hidden rounded-[12px] bg-[var(--visual-page-panel-background)] flex items-center justify-center"
-                      >
-                        {item.image && (
-                          <img data-page-item-image
-                            src={item.image}
-                            alt=""
-                            onError={(event) => { event.currentTarget.style.display = 'none'; }}
-                            className="w-full h-full object-cover"
-                          />
-                        )}
-                      </Link>
-
-                      <div className="min-w-0 flex-1 flex flex-col">
-                        <div className="flex items-start justify-between gap-2 sm:gap-4">
-                          <div className="min-w-0 flex-1">
-                            <p className="text-[9px] font-black uppercase tracking-[0.14em] text-[var(--primary)]">
-                              Producto
-                            </p>
-
-                            <Link data-page-action="ghost"
-                              to={route(`producto/${item.productId}`)}
-                              className="mt-1.5 block text-[16px] sm:text-[19px] font-extrabold leading-snug tracking-[-0.02em] break-words hover:opacity-60 transition-opacity"
-                            >
-                              {item.name}
-                            </Link>
-
-                            <p className="mt-1.5 text-[10px] leading-5 text-[var(--visual-page-color)]/45 break-words">
-                              {Object.entries(item.attributes)
-                                .map(([key, value]) => `${key}: ${value}`)
-                                .join(' · ')}
-                              {Object.keys(item.attributes).length > 0 ? ' · ' : ''}
-                              SKU: {item.sku}
-                            </p>
-
-                            <StockFeedback sku={item.sku} maxStock={item.maxStock} quantity={item.quantity} className="mt-2 text-[10px] font-semibold text-[#e04b1a]" />
-                          </div>
-
-                          <button data-page-action="danger"
-                            type="button"
-                            onClick={() => removeItem(item.productId, item.variantId)}
-                            className="w-8 h-8 flex-shrink-0 rounded-full flex items-center justify-center text-[var(--visual-page-color)]/35 hover:bg-[var(--visual-page-panel-background)]/[0.06] hover:text-[var(--visual-page-color)] transition-colors"
-                            aria-label={`Eliminar ${item.name}`}
-                          >
-                            <span aria-hidden="true">×</span>
-                          </button>
-                        </div>
-
-                        <div className="mt-auto pt-4 flex flex-wrap items-center justify-between gap-3 sm:gap-4">
-                          <div data-page-quantity className="flex h-9 w-[108px] shrink-0 items-center overflow-hidden rounded-[8px] border border-[var(--visual-global-border)]/10 bg-[var(--visual-page-panel-background)]">
-                            <button data-page-action="ghost"
-                              type="button"
-                              onClick={() =>
-                                updateQuantity(
-                                  item.productId,
-                                  item.variantId,
-                                  item.quantity - 1,
-                                )
-                              }
-                              className="h-full w-9 text-sm hover:bg-[var(--visual-page-panel-background)]/[0.04] transition-colors"
-                              aria-label={`Disminuir cantidad de ${item.name}`}
-                            >
-                              −
-                            </button>
-
-                            <span className="h-full flex-1 flex items-center justify-center border-x border-[var(--visual-global-border)]/10 text-[11px] font-black">
-                              {item.quantity}
-                            </span>
-
-                            <button data-page-action="ghost"
-                              type="button"
-                              onClick={() =>
-                                updateQuantity(
-                                  item.productId,
-                                  item.variantId,
-                                  item.quantity + 1,
-                                )
-                              }
-                              disabled={!canIncrease}
-                              className="h-full w-9 text-sm hover:bg-[var(--visual-page-panel-background)]/[0.04] transition-colors disabled:opacity-25"
-                              aria-label={`Aumentar cantidad de ${item.name}`}
-                            >
-                              +
-                            </button>
-                          </div>
-
-                          <div className="text-left sm:text-right shrink-0 ml-auto">
-                            <p data-page-price className="text-[15px] font-black whitespace-nowrap">
-                              {formatPrice(item.price * item.quantity)}<span className="block text-xs font-normal whitespace-nowrap">{formatPrice(item.price)} por unidad</span>
-                            </p>
-
-                            {hasDiscount && item.comparePrice && (
-                              <p className="mt-1 text-[10px] text-[var(--visual-page-color)]/35 line-through whitespace-nowrap">
-                                {formatPrice(item.comparePrice * item.quantity)}
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </article>
-                );
-              })}
+              {items.map(item=><CartProductRow key={`${item.productId}-${item.variantId}`} item={item} route={route} onRemove={()=>removeItem(item.productId,item.variantId)} onQuantity={quantity=>updateQuantity(item.productId,item.variantId,quantity)}/>)}
 
               <Link data-page-action="ghost"
                 to={route('catalogo')}
@@ -444,118 +335,7 @@ export default function Cart() {
           <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-8 lg:gap-12 items-start">
             <div className="flex flex-col gap-4">
               <ActivityCartRows items={activities} />
-              {items.map((item) => {
-                const hasDiscount = Boolean(item.comparePrice);
-
-                return (
-                  <article data-page-panel
-                    key={`${item.productId}-${item.variantId}`}
-                    className="flex gap-3 sm:gap-4 md:gap-5 rounded-[10px] bg-[var(--visual-page-panel-background)] p-4 md:p-5"
-                  >
-                    <Link data-page-action="outline"
-                      to={route(`producto/${item.productId}`)}
-                      aria-label={item.name}
-                      className="w-20 h-24 sm:w-28 sm:h-32 flex-shrink-0 overflow-hidden rounded-[8px] bg-[var(--visual-page-panel-background)] flex items-center justify-center"
-                    >
-                      {item.image && (
-                        <img data-page-item-image
-                          src={item.image}
-                          alt=""
-                          onError={(event) => { event.currentTarget.style.display = 'none'; }}
-                          className="w-full h-full object-cover"
-                        />
-                      )}
-                    </Link>
-
-                    <div className="flex-1 min-w-0 flex flex-col">
-                      <div className="flex items-start justify-between gap-2 sm:gap-4">
-                        <div className="min-w-0 flex-1">
-                          <p className="mb-1.5 text-[9px] font-medium uppercase tracking-[0.16em] text-[var(--visual-page-color)]">
-                            Producto
-                          </p>
-
-                          <Link data-page-action="ghost"
-                            to={route(`producto/${item.productId}`)}
-                            className="block font-serif text-[18px] sm:text-[20px] md:text-[22px] leading-snug break-words hover:opacity-60 transition-opacity"
-                          >
-                            {item.name}
-                          </Link>
-
-                          <p className="mt-1.5 text-[11px] leading-5 text-[var(--visual-page-color)] break-words">
-                            {Object.entries(item.attributes)
-                              .map(([key, value]) => `${key}: ${value}`)
-                              .join(' · ')}
-                            {Object.keys(item.attributes).length > 0 ? ' · ' : ''}
-                            SKU: {item.sku}
-                          </p>
-
-                          <StockFeedback sku={item.sku} maxStock={item.maxStock} quantity={item.quantity} className="mt-2 text-[10px] text-[#756b51]" />
-                        </div>
-
-                        <button data-page-action="danger"
-                          type="button"
-                          onClick={() => removeItem(item.productId, item.variantId)}
-                          className="w-8 h-8 flex-shrink-0 rounded-full flex items-center justify-center text-[var(--visual-page-color)] hover:bg-[var(--visual-page-panel-background)] hover:text-[var(--visual-page-color)] transition-colors"
-                          aria-label={`Eliminar ${item.name}`}
-                        >
-                          <span aria-hidden="true">×</span>
-                        </button>
-                      </div>
-
-                      <div className="mt-auto pt-4 flex flex-wrap items-center justify-between gap-3 sm:gap-4">
-                        <div data-page-quantity className="flex h-9 w-[108px] shrink-0 items-center overflow-hidden rounded-[7px] border border-[var(--visual-global-border)]/15 bg-[var(--visual-page-panel-background)]">
-                          <button data-page-action="ghost"
-                            type="button"
-                            onClick={() =>
-                              updateQuantity(
-                                item.productId,
-                                item.variantId,
-                                item.quantity - 1,
-                              )
-                            }
-                            className="h-full w-9 text-sm hover:bg-[var(--visual-page-panel-background)] transition-colors"
-                            aria-label={`Disminuir cantidad de ${item.name}`}
-                          >
-                            −
-                          </button>
-
-                          <span className="h-full flex-1 flex items-center justify-center border-x border-[var(--visual-global-border)]/10 text-[12px] font-semibold">
-                            {item.quantity}
-                          </span>
-
-                          <button data-page-action="ghost"
-                            type="button"
-                            onClick={() =>
-                              updateQuantity(
-                                item.productId,
-                                item.variantId,
-                                item.quantity + 1,
-                              )
-                            }
-                            disabled={item.quantity >= item.maxStock}
-                            className="h-full w-9 text-sm hover:bg-[var(--visual-page-panel-background)] transition-colors disabled:opacity-30"
-                            aria-label={`Aumentar cantidad de ${item.name}`}
-                          >
-                            +
-                          </button>
-                        </div>
-
-                        <div className="text-left sm:text-right shrink-0 ml-auto">
-                          <p data-page-price className="text-[14px] font-semibold whitespace-nowrap">
-                            {formatPrice(item.price * item.quantity)}<span className="block text-xs font-normal whitespace-nowrap">{formatPrice(item.price)} por unidad</span>
-                          </p>
-
-                          {hasDiscount && item.comparePrice && (
-                            <p className="mt-1 text-[10px] text-[var(--visual-page-color)] line-through whitespace-nowrap">
-                              {formatPrice(item.comparePrice * item.quantity)}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </article>
-                );
-              })}
+              {items.map(item=><CartProductRow key={`${item.productId}-${item.variantId}`} item={item} route={route} onRemove={()=>removeItem(item.productId,item.variantId)} onQuantity={quantity=>updateQuantity(item.productId,item.variantId,quantity)}/>)}
             </div>
 
             <aside data-visual-section="pagePanel" className="lg:sticky lg:top-24">
@@ -664,6 +444,7 @@ export default function Cart() {
           : 'max-w-7xl mx-auto px-3 sm:px-4 py-8 sm:py-10'
       }
     >
+      {syncNotice&&<p role="status" className="mb-4 border rounded-lg p-3">{syncNotice}</p>}
       <h1
         className={
           isMinimal
@@ -677,96 +458,7 @@ export default function Cart() {
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-8">
         <div className="flex flex-col gap-4">
           <ActivityCartRows items={activities} />
-          {items.map((item) => (
-            <article data-page-panel
-              key={`${item.productId}-${item.variantId}`}
-              className="flex gap-3 sm:gap-4 rounded-xl border border-[var(--border)] bg-[var(--visual-page-panel-background)] p-3.5 sm:p-4"
-            >
-              <Link data-page-action="outline"
-                to={route(`producto/${item.productId}`)}
-                aria-label={item.name}
-                className="w-16 h-16 sm:w-20 sm:h-20 flex-shrink-0 overflow-hidden rounded-xl bg-[var(--muted)] flex items-center justify-center"
-              >
-                {item.image && (
-                  <img data-page-item-image
-                    src={item.image}
-                    alt=""
-                    onError={(event) => { event.currentTarget.style.display = 'none'; }}
-                    className="w-full h-full object-cover"
-                  />
-                )}
-              </Link>
-
-              <div className="flex-1 min-w-0">
-                <div className="flex items-start justify-between gap-2 sm:gap-4">
-                  <div className="min-w-0 flex-1">
-                    <Link data-page-action="ghost"
-                      to={route(`producto/${item.productId}`)}
-                      className="block font-semibold leading-snug break-words hover:underline"
-                    >
-                      {item.name}
-                    </Link>
-
-                    <p className="text-xs text-[var(--muted-foreground)] mt-1 break-words">
-                      {Object.entries(item.attributes)
-                        .map(([key, value]) => `${key}: ${value}`)
-                        .join(' · ')}
-                      {Object.keys(item.attributes).length > 0 ? ' · ' : ''}
-                      SKU: {item.sku}
-                    </p>
-                    <StockFeedback sku={item.sku} maxStock={item.maxStock} quantity={item.quantity} />
-                  </div>
-
-                  <button data-page-action="danger"
-                    type="button"
-                    onClick={() => removeItem(item.productId, item.variantId)}
-                    className="w-7 h-7 flex-shrink-0 flex items-center justify-center text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
-                    aria-label={`Eliminar ${item.name}`}
-                  >
-                    ×
-                  </button>
-                </div>
-
-                <div className="flex flex-wrap items-center justify-between gap-3 sm:gap-4 mt-4">
-                  <div data-page-quantity className="flex w-[108px] shrink-0 items-center border border-[var(--border)] rounded-lg overflow-hidden">
-                    <button data-page-action="ghost"
-                      type="button"
-                      onClick={() =>
-                        updateQuantity(item.productId, item.variantId, item.quantity - 1)
-                      }
-                      className="w-9 h-9"
-                    >
-                      −
-                    </button>
-                    <span className="w-9 h-9 flex items-center justify-center border-x border-[var(--border)]">
-                      {item.quantity}
-                    </span>
-                    <button data-page-action="ghost"
-                      type="button"
-                      onClick={() =>
-                        updateQuantity(item.productId, item.variantId, item.quantity + 1)
-                      }
-                      disabled={item.quantity >= item.maxStock}
-                      className="w-9 h-9 disabled:opacity-30"
-                    >
-                      +
-                    </button>
-                  </div>
-
-                  <div className="text-left sm:text-right shrink-0 ml-auto">
-                    <p data-page-price className="font-semibold whitespace-nowrap">
-                      {formatPrice(item.price * item.quantity)}<span className="block text-xs font-normal whitespace-nowrap">{formatPrice(item.price)} por unidad</span>
-                    </p>
-                    {item.comparePrice && (
-                      <p className="text-xs line-through text-[var(--muted-foreground)] whitespace-nowrap">
-                        {formatPrice(item.comparePrice * item.quantity)}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </article>
-          ))}
+          {items.map(item=><CartProductRow key={`${item.productId}-${item.variantId}`} item={item} route={route} onRemove={()=>removeItem(item.productId,item.variantId)} onQuantity={quantity=>updateQuantity(item.productId,item.variantId,quantity)}/>)}
         </div>
 
         <aside data-visual-section="pagePanel">

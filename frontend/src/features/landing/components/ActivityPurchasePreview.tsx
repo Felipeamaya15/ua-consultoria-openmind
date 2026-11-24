@@ -50,7 +50,7 @@ export function ActivityPurchasePreview({sectionId}:{sectionId:string}){
     return()=>{active=false;request.current?.abort();request.current=null;window.clearInterval(timer);window.removeEventListener('focus',refresh);};
   },[sectionId]);
   useEffect(()=>{
-    if(!quote)return;
+    if(!quote||quote.modalidad_venta==='grabado')return;
     const ms=Date.parse(quote.cierre)-Date.parse(quote.hora_servidor);
     if(ms<=0){setExpired(true);return;}
     const timer=window.setTimeout(()=>setExpired(true),Math.min(ms,2147483647));
@@ -66,30 +66,31 @@ export function ActivityPurchasePreview({sectionId}:{sectionId:string}){
     }catch(e){setError(e instanceof Error?e.message:'No pudimos agregar la actividad.');}
     finally{setBusy(false);}
   }
+  const recorded=quote?.modalidad_venta==='grabado';
   const existing=items.find(i=>i.sectionId===sectionId);
   useEffect(()=>{setQuantity(existing?.quantity??1);},[sectionId,existing?.quantity]);
   const available=!!quote&&quote.estado==='disponible'&&!expired&&quote.cupos_disponibles>0;
   const validQuantity=!!quote&&Number.isSafeInteger(quantity)&&quantity>=1&&quantity<=quote.cupos_disponibles;
   const typeLabel=quote?.tipo==='servicio'?'Servicio':'Taller';
   const countLabel=quote?.tipo==='servicio'?'Selecciona la cantidad de participantes':'¿Cuántas personas asistirán?';
-  if(mode==='disabled')return null;
+  if(mode==='disabled'||recorded)return null; // Las grabaciones pagadas estan descontinuadas.
   return <section className="paid-activity-preview paid-purchase-card" aria-label="Reserva de actividad">
     <header className="paid-purchase-heading">
-      <span className="paid-purchase-eyebrow">{typeLabel} · Reserva online</span>
-      <h3>{quote?.tipo==='servicio'?'Reserva tu servicio':'Reserva tu cupo'}</h3>
-      <p>Selecciona los participantes y agrega la actividad a tu carrito.</p>
+      <span className="paid-purchase-eyebrow">{recorded?'Taller grabado':typeLabel} · {recorded?'Acceso personal':'Reserva online'}</span>
+      <h3>{recorded?'Accede al taller grabado':quote?.tipo==='servicio'?'Reserva tu servicio':'Reserva tu cupo'}</h3>
+      <p>{recorded?`Inicia sesión para comprar. Tendrás ${quote?.acceso_dias} días de acceso desde la confirmación del pago.`:'Selecciona los participantes y agrega la actividad a tu carrito.'}</p>
     </header>
     {!quote&&!error&&<p role="status">Consultando disponibilidad…</p>}
     {quote&&<>
       <div className="paid-purchase-overview">
         <div className="paid-purchase-cost"><span>Precio por participante</span><strong>{formatPrice(quote.precio)}</strong><small>Sin despacho</small></div>
-        <div className={`paid-purchase-stock ${available?'is-available':'is-unavailable'}`} role="status"><span>{expired&&quote.estado==='disponible'?'Inscripciones cerradas':paidStatusLabel[quote.estado]}</span><strong>{quote.cupos_disponibles} {quote.cupos_disponibles===1?'cupo disponible':'cupos disponibles'}</strong></div>
+        <div className={`paid-purchase-stock ${available?'is-available':'is-unavailable'}`} role="status"><span>{expired&&quote.estado==='disponible'?'Inscripciones cerradas':paidStatusLabel[quote.estado]}</span><strong>{recorded?'Acceso individual':`${quote.cupos_disponibles} ${quote.cupos_disponibles===1?'cupo disponible':'cupos disponibles'}`}</strong></div>
       </div>
-      <div className="paid-purchase-dates">
+      {!recorded&&<div className="paid-purchase-dates">
         <div><span>Inicio</span><strong>{formatActivityDate(quote.inicio,quote.zona_horaria)}</strong></div>
         <div><span>Término</span><strong>{formatActivityDate(quote.termino,quote.zona_horaria)}</strong></div>
         <div className="paid-purchase-deadline"><span>Cierre de ventas</span><strong>{formatActivityDate(quote.cierre,quote.zona_horaria)}</strong><small>{quote.zona_horaria}</small></div>
-      </div>
+      </div>}
       {available&&<>
         <div className="paid-purchase-select"><div><strong>Participantes</strong><small>{countLabel}</small></div>
           <div className="paid-cart-stepper" aria-label="Cantidad de participantes">
@@ -100,7 +101,7 @@ export function ActivityPurchasePreview({sectionId}:{sectionId:string}){
         </div>
         {!validQuantity&&<p role="alert">La disponibilidad cambió. Ajusta la cantidad de participantes.</p>}
         <div className="paid-activity-terms paid-purchase-terms"><strong>Condiciones de participación y devoluciones</strong>
-          <p>Tolerancia de atraso: {quote.venta.tolerancia_minutos} minutos.</p>
+          {!recorded&&<p>Tolerancia de atraso: {quote.venta.tolerancia_minutos} minutos.</p>}
           <p>{quote.venta.cancelacion==='anticipada'?`Anulación voluntaria anticipada: solicitar al menos ${quote.venta.cancelacion_horas} h antes.`:'Las solicitudes de anulación y devolución se evalúan individualmente.'}</p>
           {quote.condiciones.filter(Boolean).map((text,i)=><p key={`c${i}`}>{text}</p>)}
           {quote.requisitos.filter(Boolean).map((text,i)=><p key={`r${i}`}>{text}</p>)}

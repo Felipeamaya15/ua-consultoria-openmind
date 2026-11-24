@@ -6,7 +6,7 @@ import type { MarketingProduct } from '../domain/types';
 
 export interface CatalogSelection { productId: string; sku: string; imageIndex: number }
 export interface CatalogStatus { loading: boolean; error: string; retry: () => void }
-interface Props { products: MarketingProduct[]; busy: boolean; onSelect?: (selection: CatalogSelection) => boolean; status?: CatalogStatus }
+interface Props { products: MarketingProduct[]; busy: boolean; onSelect?: (selection: CatalogSelection) => boolean | Promise<boolean>; status?: CatalogStatus }
 
 function CatalogCard({ product, busy, onSelect }: { product: MarketingProduct } & Omit<Props, 'products'>) {
   const variants = pricedVariants(product);

@@ -1,5 +1,6 @@
+import { prepareGuestCartTransfer, transferGuestCart } from '../services/cartTransfer';
 import { isActiveEditorPreview } from '../visual/pages';
-import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, useRef, type ReactNode } from 'react';
 import type { CartItem as BaseCartItem } from '../data/mockData';
 import { cartService } from '../services/cartService';
 import { useStoreIdentity } from './StoreIdentityContext';
@@ -37,6 +38,8 @@ interface CartState {
   removeItem: (productId: string, variantId: string) => Promise<void> | void;
   refreshCart: () => Promise<void>;
   loading: boolean;
+  syncError: string;
+  syncNotice: string;
 }
 
 const PENDING_CART_SNAPSHOT_KEY = 'openmind-pending-payment-cart';
@@ -47,43 +50,77 @@ const CartContext = createContext<CartState | null>(null);
 export function CartProvider({ children }: { children: ReactNode }) {
   const {token,scope}=useCartSession();
   const {identity}=useStoreIdentity();
-  if (!scope) return <div role="status" className="p-4 text-sm">Cargando tu carrito…</div>;
-  return <ScopedCartProvider key={`${guestCartKey(identity) || 'store'}:${scope}`} sessionToken={token} scope={scope}>{children}</ScopedCartProvider>;
+  return <ScopedCartProvider key={guestCartKey(identity) || 'store'} sessionToken={token} scope={scope}>{children}</ScopedCartProvider>;
 }
 
-function ScopedCartProvider({children,sessionToken,scope}:{children:ReactNode;sessionToken:string|null;scope:string}) {
-  const [items, setItems] = useState<CartItem[]>([]);
+function ScopedCartProvider({children,sessionToken,scope}:{children:ReactNode;sessionToken:string|null;scope:string|null}) {
+  const {identity}=useStoreIdentity();
+  const baseKey=guestCartKey(identity);
+  const owner=JSON.stringify([baseKey,scope]);
+  const current=useRef(owner);current.current=owner;
+  const [storedCart,setStoredCart]=useState<{owner:string;rows:CartItem[]}>({owner,rows:[]});
+  const items=storedCart.owner===owner?storedCart.rows:[];
+  const setItems=useCallback((next:CartItem[]|((previous:CartItem[])=>CartItem[]))=>{
+    if(current.current!==owner||!scope||currentCartToken()!==sessionToken)return;
+    setStoredCart(previous=>({owner,rows:typeof next==='function'?next(previous.owner===owner?previous.rows:[]):next}));
+  },[owner,scope,sessionToken]);
   const [promoCode, setPromoCode] = useState('');
   const [promoDiscount, setPromoDiscount] = useState(0);
   const [promoSubtotal, setPromoSubtotal] = useState(0);
   const [promoNotice, setPromoNotice] = useState('');
   const [shippingMethod, setShippingMethod] = useState('');
   const [customShipping, setCustomShipping] = useState<number | null>(null);
-  const [loading, setLoading] = useState(false);
-  const { identity } = useStoreIdentity();
+  const [fetching,setLoading]=useState(false);
+  const [syncError,setSyncError]=useState('');
+  const [syncNotice,setSyncNotice]=useState('');
+  const loading=fetching||!scope||(!!sessionToken&&storedCart.owner!==owner&&!syncError);
+  const {items:activities,clear:clearActivities,ready:activitiesReady,refresh:refreshActivities}=useActivityCart();
   const hasToken = !!sessionToken;
-  const baseKey = guestCartKey(identity);
   const storageKey = !hasToken && baseKey ? `${baseKey}:guest-v2` : null;
   const snapshotKey = `${PENDING_CART_SNAPSHOT_KEY}:${baseKey || 'store'}:${scope}`;
+  const sessionEpoch=useRef({token:sessionToken,value:0});
+  if(sessionEpoch.current.token!==sessionToken)sessionEpoch.current={token:sessionToken,value:sessionEpoch.current.value+1};
+  const hydrationKey=JSON.stringify([storageKey,sessionEpoch.current.value]);
   const [hydratedKey, setHydratedKey] = useState<string | null>(null);
   const [cartSynced, setCartSynced] = useState(false);
+  useEffect(() => {
+    const prepare = (event: Event) => {
+      if (currentCartToken()) return;
+      try {
+        if (storageKey && hydratedKey === hydrationKey && storedCart.owner === owner) {
+          saveGuestCart(storageKey, items);
+        }
+        prepareGuestCartTransfer(identity);
+      } catch (error) {
+        event.preventDefault();
+        setSyncError(error instanceof Error ? error.message : 'No se pudo proteger el carrito.');
+      }
+    };
+    window.addEventListener('openmind-before-auth-session', prepare);
+    return () => window.removeEventListener('openmind-before-auth-session', prepare);
+  }, [identity, storageKey, hydratedKey, hydrationKey, storedCart.owner, owner, items]);
+  useEffect(()=>{setCartSynced(false);setSyncError('');setSyncNotice('');},[owner]);
 
   useEffect(() => {
     if (isActiveEditorPreview() || !storageKey) return;
     setItems(readGuestCart(storageKey));
-    setHydratedKey(storageKey);
-  }, [storageKey]);
+    setHydratedKey(hydrationKey);
+  }, [storageKey,hydrationKey]);
 
   useEffect(() => {
-    if (!isActiveEditorPreview() && storageKey && hydratedKey === storageKey) saveGuestCart(storageKey, items);
-  }, [storageKey, hydratedKey, items]);
+    if (!isActiveEditorPreview() && storageKey && hydratedKey === hydrationKey && storedCart.owner===owner) saveGuestCart(storageKey, items);
+  }, [storageKey,hydrationKey, hydratedKey, items,owner,storedCart.owner]);
 
 
   const refreshCart = useCallback(async () => {
     if (isActiveEditorPreview()) return;
-    if (!sessionToken || currentCartToken() !== sessionToken) return;
+    if (!sessionToken || !scope || currentCartToken() !== sessionToken) return;
     try {
       setLoading(true);
+      setSyncError('');
+      if(identity&&scope){const notice=await transferGuestCart(identity,sessionToken,()=>current.current===owner);if(current.current!==owner)return;setSyncNotice(notice);}
+      await refreshActivities?.();
+      if(current.current!==owner||currentCartToken()!==sessionToken)return;
       const data: any = await cartService.obtenerCarrito();
       if (currentCartToken() !== sessionToken) return;
 
@@ -114,18 +151,24 @@ function ScopedCartProvider({children,sessionToken,scope}:{children:ReactNode;se
       setCartSynced(true);
 
     } catch (err: any) {
-      console.warn('No se pudo sincronizar el carrito con el backend:', err.message);
+      if (current.current === owner && currentCartToken() === sessionToken) {
+        const message = err instanceof Error ? err.message : '';
+        const technical = /unexpected token|<!doctype|not valid json|syntaxerror|json\.parse/i.test(message);
+        setSyncError(technical || !message
+          ? 'No pudimos completar la sincronización con la tienda. Tu selección permanece protegida; revisa la conexión e intenta actualizar.'
+          : message);
+      }
     } finally {
       setLoading(false);
     }
-  }, [sessionToken]);
+  }, [sessionToken,scope,owner]);
 
   useEffect(() => {
     refreshCart();
   }, [refreshCart]);
 
   const clearCart = async () => {
-    if (currentCartToken() !== sessionToken) return;
+    if (currentCartToken() !== sessionToken || loading || syncError) return;
     try {
       if (items.length > 0 && typeof sessionStorage !== 'undefined') {
         sessionStorage.setItem(snapshotKey, JSON.stringify(items));
@@ -146,7 +189,7 @@ function ScopedCartProvider({children,sessionToken,scope}:{children:ReactNode;se
 
 
   const addItem = async (item: CartItem) => {
-    if (currentCartToken() !== sessionToken) return;
+    if (currentCartToken() !== sessionToken || loading || syncError) return;
     if (!Number.isInteger(item.quantity) || item.quantity <= 0 || item.maxStock <= 0) return;
 
 
@@ -234,7 +277,7 @@ function ScopedCartProvider({children,sessionToken,scope}:{children:ReactNode;se
     variantId: string,
     quantity: number
   ) => {
-    if (currentCartToken() !== sessionToken || !Number.isInteger(quantity)) return;
+    if (currentCartToken() !== sessionToken || loading || syncError || !Number.isInteger(quantity)) return;
 
     if (quantity <= 0) {
       await removeItem(productId, variantId);
@@ -267,7 +310,7 @@ function ScopedCartProvider({children,sessionToken,scope}:{children:ReactNode;se
 
 
   const removeItem = async (productId: string, variantId: string) => {
-    if (currentCartToken() !== sessionToken) return;
+    if (currentCartToken() !== sessionToken || loading || syncError) return;
     const target = items.find(
       (i) => i.productId === productId && i.variantId === variantId
     );
@@ -305,7 +348,6 @@ function ScopedCartProvider({children,sessionToken,scope}:{children:ReactNode;se
     }).catch(() => {});
     return () => { live=false; };
   }, [baseKey,productIdentityList,sessionToken]);
-  const { items: activities, clear: clearActivities, ready: activitiesReady } = useActivityCart();
 
   const { route } = useStorefrontTemplate();
 
@@ -404,7 +446,7 @@ function ScopedCartProvider({children,sessionToken,scope}:{children:ReactNode;se
   const removePromo = () => { setPromoCode(''); setPromoDiscount(0); setPromoSubtotal(0); setPromoNotice('Promoción eliminada.'); };
 
   useEffect(() => {
-    if (!promoCode || promoSubtotal === subtotal) return;
+    if (loading || syncError || !promoCode || promoSubtotal === subtotal) return;
     let active = true;
     const dropPromo = (notice: string) => {
       setPromoCode('');
@@ -424,7 +466,7 @@ function ScopedCartProvider({children,sessionToken,scope}:{children:ReactNode;se
           : `El código ${promoCode} se quitó porque ya no es válido para este carrito.`);
       });
     return () => { active = false; };
-  }, [promoCode, promoSubtotal, subtotal]);
+  }, [promoCode, promoSubtotal, subtotal, loading, syncError]);
   const shipping =
     !items.length || shippingMethod === 'Retiro'
       ? 0
@@ -454,6 +496,7 @@ function ScopedCartProvider({children,sessionToken,scope}:{children:ReactNode;se
         updateQuantity,
         refreshCart,
         loading,
+        syncError, syncNotice,
         count,
         subtotal,
       }}

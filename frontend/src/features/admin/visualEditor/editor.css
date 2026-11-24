@@ -72,3 +72,8 @@
 
 
 .ve-color[data-follows] input[type=color]{opacity:.35}.ve-follows{display:block;margin-top:4px;font-size:11px;color:#4f46e5}
+
+/* Editar colores de todas las secciones con un selector consistente. */
+.ve-block-color-row{display:flex;align-items:center;gap:.5rem;min-width:0}
+.ve-block-color-row>input:not([type=color]){flex:1;min-width:0}
+.ve-block-color-row>input[type=color]{flex:0 0 48px;width:48px;min-height:38px;cursor:pointer}

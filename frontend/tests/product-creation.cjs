@@ -59,6 +59,7 @@ async function main() {
     const form = load('src/features/admin/pages/Products.tsx', {
       setTimeout: () => {},
       require: id => {
+        if(id.includes("FeedbackProvider"))return {useFeedback:()=>({confirm:async()=>false})};
         if (id.includes('shared/services/imageUpload')) return { IMAGE_ACCEPT: 'image/*', prepareImage: async () => { throw new Error('Este test no selecciona archivos'); } };
         if (id === '../../marketing/services/mediaLibraryService') return {saveProductVideoResource: async () => {throw new Error('Esta fixture no selecciona videos');}};
         if (id === '../components/ProductVideoField') return {ProductVideoField: 'ProductVideoField'};

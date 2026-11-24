@@ -1,3 +1,4 @@
+import { useFeedback } from '../../../shared/components/FeedbackProvider';
 import { useEffect, useRef, useState } from "react"
 import { EmptyListState, LoadingState } from "../../../shared/components/states"
 import { formatPrice, Promotion } from "../data/mockAdminData"
@@ -35,6 +36,8 @@ export function promotionState(promo: Promotion, now = new Date()) {
 const promotionStateLabels = { active: 'Activa', scheduled: 'Programada', ended: 'Finalizada', inactive: 'Inactiva', exhausted: 'Usos agotados' }
 
 export default function Promotions() {
+  const uiFeedback = useFeedback();
+
   const { config, setConfig } = useAdmin()
   const [promos, setPromotionRows] = useState<Promotion[]>([])
   const [original, setOriginal] = useState<Promotion | null>(null)
@@ -217,7 +220,7 @@ export default function Promotions() {
     if (mutation.current) return
     if (
       typeof window !== "undefined" &&
-      !window.confirm(`¿Eliminar la promoción "${promo.name}" (${promo.code})?`)
+      !(await uiFeedback.confirm({title:"Eliminar promoción",confirmLabel:"Eliminar promoción",message:`¿Eliminar la promoción "${promo.name}" (${promo.code})?`}))
     ) {
       return
     }

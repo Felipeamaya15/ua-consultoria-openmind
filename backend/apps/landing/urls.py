@@ -56,3 +56,17 @@ urlpatterns += [
         name='carrito-actividades-item',
     ),
 ]
+
+from apps.landing.commerce import CommerceView, AbandonedCartsView, WholesaleQuoteView
+urlpatterns += [
+    path('comercio/', CommerceView.as_view()),
+    path('carritos-abandonados/', AbandonedCartsView.as_view()),
+    path('cotizaciones/', WholesaleQuoteView.as_view()),
+]
+
+from apps.landing.private_recordings import RecordingUploadView, MyRecordingsView, RecordingStreamView
+urlpatterns += [
+    path('grabaciones/', RecordingUploadView.as_view()),
+    path('mis-talleres/', MyRecordingsView.as_view()),
+    path('mis-talleres/<int:pedido_id>/<uuid:reserva_id>/video/', RecordingStreamView.as_view()),
+]

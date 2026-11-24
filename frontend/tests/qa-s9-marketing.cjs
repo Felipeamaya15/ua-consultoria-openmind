@@ -4,8 +4,8 @@ const assert=require('node:assert/strict'),esbuild=require('esbuild');
 const {chromium}=require(process.env.DASHBOARD_PLAYWRIGHT_MODULE||'playwright');
 const root=path.resolve(__dirname,'..'),output=process.env.QA_S9_OUTPUT||fs.mkdtempSync(path.join(os.tmpdir(),'openmind-s9-marketing-'));
 (async()=>{
- const entry=`import React from 'react';import{createRoot}from'react-dom/client';import{createBrowserRouter,RouterProvider}from'react-router-dom';import Marketing from './src/features/marketing/pages/Marketing';
- createRoot(document.getElementById('root')).render(<RouterProvider router={createBrowserRouter([{path:'*',element:<Marketing/>}])}/>);`;
+ const entry=`import{FeedbackProvider}from'./src/shared/components/FeedbackProvider';import React from 'react';import{createRoot}from'react-dom/client';import{createBrowserRouter,RouterProvider}from'react-router-dom';import Marketing from './src/features/marketing/pages/Marketing';
+ createRoot(document.getElementById('root')).render(<FeedbackProvider><RouterProvider router={createBrowserRouter([{path:'/emprendedor/productos',element:<h1>Productos QA</h1>},{path:'*',element:<Marketing/>}])}/></FeedbackProvider>);`;
  const products=[{id:'000000000000000000000001',name:'Taza de cerámica artesanal',category:'Cerámica',description:'Una pieza hecha a mano.',active:true,
  images:['data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aD1sAAAAASUVORK5CYII='],variants:[{sku:'TAZA-AZUL',price:12990,offerPrice:9990,stock:10,active:true,attributes:[]}]},
  {id:'000000000000000000000002',name:'Plato artesanal',category:'Cerámica',active:true,images:[],variants:[{sku:'PLATO',price:7990,offerPrice:null,stock:5,active:true,attributes:[]}]}];
@@ -33,6 +33,17 @@ const root=path.resolve(__dirname,'..'),output=process.env.QA_S9_OUTPUT||fs.mkdt
  await page.getByRole('button',{name:/Taza de cerámica artesanal/}).click();
  await page.locator('.marketing-art').waitFor();
  await page.getByLabel('Nombre del borrador',{exact:true}).fill('Promoción QA');
+ await page.locator('.mk-publication-more > summary').click();
+ await page.getByRole('button',{name:'Nueva publicación',exact:true}).click();
+ const discard=page.getByRole('dialog',{name:'Descartar cambios',exact:true});
+ await discard.getByRole('button',{name:'Cancelar',exact:true}).click();
+ assert.equal(await page.getByLabel('Nombre del borrador',{exact:true}).inputValue(),'Promoción QA');
+ await page.getByRole('button',{name:'Nueva publicación',exact:true}).click();
+ await discard.getByRole('button',{name:'Descartar cambios',exact:true}).click();
+ assert.equal(await page.getByLabel('Nombre del borrador',{exact:true}).inputValue(),'');
+ await page.getByLabel('Buscar producto',{exact:true}).fill('Taza');
+ await page.getByRole('button',{name:/Taza de cerámica artesanal/}).click();
+ await page.getByLabel('Nombre del borrador',{exact:true}).fill('Promoción QA');
  await page.getByRole('button',{name:'Guardar borrador',exact:true}).click();
  await page.getByRole('button',{name:'Mis borradores',exact:true}).click({timeout:10000}).catch(async e=>{console.error((await page.locator('body').innerText()).slice(-3000));throw e});
  await page.getByRole('heading',{name:'Mis borradores',exact:true}).waitFor();
@@ -55,7 +66,19 @@ const root=path.resolve(__dirname,'..'),output=process.env.QA_S9_OUTPUT||fs.mkdt
  assert.deepEqual(await page.evaluate(()=>[window.qaPrepared,window.qaConfirmed]),[1,1]);
  assert.deepEqual(errors,[]);assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
  await page.screenshot({path:path.join(output,`authorized-${width}.png`),fullPage:true,animations:'disabled'});
- console.log(`PASS ${width}: búsqueda, borrador, descarga real JPG, alternativa manual e integración autorizada simulada`);await context.close();
+ await modal.getByRole('button',{name:'Cerrar revisión',exact:true}).click();
+ await page.getByLabel('Nombre del borrador',{exact:true}).fill('Edición sin guardar QA');
+ const productLink=page.getByRole('link',{name:'Administrar productos →',exact:true});
+ await productLink.click();
+ const leave=page.getByRole('dialog',{name:'Salir de Marketing',exact:true});
+ await leave.getByRole('button',{name:'Cancelar',exact:true}).click();
+ assert(page.url().endsWith('/emprendedor/marketing'));
+ assert.equal(await page.getByLabel('Nombre del borrador',{exact:true}).inputValue(),'Edición sin guardar QA');
+ await productLink.click();await page.keyboard.press('Escape');
+ assert(page.url().endsWith('/emprendedor/marketing'));
+ await productLink.click();await leave.getByRole('button',{name:'Salir y descartar',exact:true}).click();
+ await page.getByRole('heading',{name:'Productos QA',exact:true}).waitFor();
+ console.log('PASS '+width+': búsqueda, borrador, JPG, Instagram simulado, descarte cancelado y navegación confirmada');await context.close();
  }console.log('OUTPUT '+output);
  }finally{if(browser)await browser.close();await new Promise(r=>server.close(r));}
 })().catch(e=>{console.error(e);process.exitCode=1});

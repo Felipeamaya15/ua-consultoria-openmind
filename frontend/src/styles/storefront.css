@@ -1101,3 +1101,62 @@ button:disabled { cursor: not-allowed; opacity: .65; }
 [data-storefront-visual].template-minimal textarea {
   border-radius: 20px !important;
 }
+
+[data-storefront-visual] :is([data-landing-page="visual"], [data-landing-page="catalog"])
+[data-visual-section="categories"] [data-visual-part="categoryList"] {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 200px), 1fr)) !important;
+  gap: clamp(12px, 1.6vw, 22px) !important;
+  justify-content: stretch !important;
+  align-items: stretch !important;
+  width: 100%;
+}
+[data-storefront-visual] :is([data-landing-page="visual"], [data-landing-page="catalog"])
+[data-visual-section="categories"] [data-visual-part="categoryItem"] {
+  position: relative !important;
+  display: block !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  min-height: 132px !important;
+  aspect-ratio: 16 / 10 !important;
+  padding: 0 !important;
+  isolation: isolate;
+  background: color-mix(in srgb, var(--visual-text, #182338) 14%, var(--visual-background, #faf6fa)) !important;
+  overflow: hidden;
+}
+[data-storefront-visual] :is([data-landing-page="visual"], [data-landing-page="catalog"])
+[data-visual-section="categories"] [data-visual-part="categoryItem"] > img {
+  position: absolute !important;
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  max-width: none !important;
+  object-fit: cover !important;
+  display: var(--visual-categories-image-display, block) !important;
+}
+[data-storefront-visual] :is([data-landing-page="visual"], [data-landing-page="catalog"])
+[data-visual-section="categories"] [data-visual-part="categoryLabel"] {
+  position: absolute !important;
+  inset: 0 !important;
+  display: flex !important;
+  align-items: flex-end !important;
+  justify-content: flex-start !important;
+  width: 100% !important;
+  height: 100% !important;
+  margin: 0 !important;
+  padding: clamp(12px, 1.6vw, 20px) !important;
+  background: linear-gradient(180deg, rgba(15, 19, 30, .04) 0%, rgba(15, 19, 30, .86) 100%) !important;
+  color: #fff !important;
+  font-size: clamp(14px, 1.2vw, 18px) !important;
+  font-weight: 700 !important;
+  line-height: 1.25 !important;
+  text-align: left !important;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, .5);
+  overflow-wrap: anywhere;
+}
+@media (max-width: 520px) {
+  [data-storefront-visual] :is([data-landing-page="visual"], [data-landing-page="catalog"])
+  [data-visual-section="categories"] [data-visual-part="categoryList"] {
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 145px), 1fr)) !important;
+  }
+}

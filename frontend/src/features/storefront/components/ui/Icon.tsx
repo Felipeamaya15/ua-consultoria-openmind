@@ -2,6 +2,7 @@ import React from 'react';
 
 
 const PATHS: Record<string, React.ReactNode> = {
+  menu: <path d="M4 6h16M4 12h16M4 18h16" />,
   leaf: <><path d="M20 3C9 2 3 8 5 15s15 7 15-12Z" /><path d="m3 21 12-12M8 16v-5M8 16h5" /></>,
   gift: <><rect x="3" y="8" width="18" height="4" rx="1" /><path d="M5 12v9h14v-9M12 8v13" /><path d="M12 8C5 9 5 2 8 3c3 0 4 5 4 5s1-5 4-5c3-1 3 6-4 5Z" /></>,
   hand: <><path d="m8 13-2-3c-1-2-4-1-3 1l4 8c1 2 3 3 6 3 4 0 7-3 7-7V9c0-2-3-2-3 0v3M8 13V5c0-2 3-2 3 0v6M11 10V3c0-2 3-2 3 0v8M14 10V5c0-2 3-2 3 0v7" /></>,

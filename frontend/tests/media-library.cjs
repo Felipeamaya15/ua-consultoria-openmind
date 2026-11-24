@@ -98,6 +98,7 @@ function component(Component, props) {
 function libraryHarness({ failSave = false, failLoad = false } = {}) {
   const writes = [], removed = [], toggles = [], loads = [];
   const api = load('src/features/marketing/components/MediaLibrary.tsx', {
+    '../../../shared/components/FeedbackProvider':{useFeedback:()=>({confirm:async()=>false,ask:async()=>null,notify(){}})},
     react: hooks, './MediaPreview': { MediaPreview: 'MediaPreview' }, './mediaLibrary.css': {},
     '../../../shared/components/states': { EmptyListState: 'EmptyListState', ErrorState: 'ErrorState', LoadingState: 'LoadingState' },
     '../../../shared/services/imageUpload': { IMAGE_ACCEPT: '.png,.heic' },

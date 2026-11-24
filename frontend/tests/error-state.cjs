@@ -77,26 +77,31 @@ test('la clase del contenedor se agrega y no quedan rastros de valores vacíos',
 
 
 function montarPedidosDelComprador(pedir) {
+  let orderId, identity={storeId:"qa-store-1"};
   const slots = [], efectos = []; let indice = 0, numero = 0;
   const falsoReact = {
     useState: inicial => { const s = indice++; if (!(s in slots)) slots[s] = typeof inicial === 'function' ? inicial() : inicial; return [slots[s], valor => { slots[s] = typeof valor === 'function' ? valor(slots[s]) : valor; }]; },
     useEffect: (funcion, deps) => { efectos[numero++] = { funcion, deps }; },
   };
   const mocks = {
+    '../context/StoreIdentityContext': {useStoreIdentity:()=>({identity})},
+    '../services/metaPurchaseTracking': {trackConfirmedMetaPurchase(){}},
+    '../../../../shared/components/FeedbackProvider': {useFeedback:()=>({confirm:async()=>false,ask:async()=>null,notify(){}})},
+    '../../../shared/components/FeedbackProvider': {useFeedback:()=>({confirm:async()=>false,ask:async()=>null,notify(){}})},
     react: falsoReact,
-    'react-router-dom': { Link: 'Link', useParams: () => ({}) },
+    'react-router-dom': { Link: 'Link', useParams: () => ({id:orderId}) },
     '../../auth/services/authService': { authService: { getCustomerOrders: pedir, getCustomerOrder: async () => ({}) } },
     '../hooks/useStorefrontTemplate': { useStorefrontTemplate: () => ({ route: p => '/' + p }) },
     '../components/store/CustomerAccountNavigation': { CustomerAccountNavigation: 'AccountNav' },
     '../../admin/services/businessTime': { formatBusinessDate: String },
     '../../admin/services/reportFormatting': { formatReportMoney: String },
     '../components/checkout/PickupSchedule': { PickupSelectionSummary: 'Pickup' },
-    '../../../shared/components/states': { LoadingState: 'LoadingState', ErrorState: 'ErrorState' },
+    '../../../shared/components/states': { LoadingState: 'LoadingState', ErrorState: 'ErrorState', EmptyListState:'EmptyListState' },
   };
   const { default: Pagina } = load('src/features/storefront/pages/CustomerOrders.tsx', mocks);
   const dibujar = () => { indice = 0; numero = 0; return Pagina(); };
   const nodos = (nodo, lista = []) => { if (nodo && typeof nodo === 'object') { lista.push(nodo); [].concat(nodo.props?.children ?? []).forEach(h => nodos(h, lista)); } return lista; };
-  return { dibujar, efectos, nodos };
+  return { dibujar, efectos, nodos, cambiarPedido(value){orderId=value;}, cambiarTienda(value){identity={storeId:value};} };
 }
 
 test('si falla la carga de pedidos se avisa y "Reintentar" vuelve a pedirlos', async () => {
@@ -186,8 +191,16 @@ test('el catálogo y los pedidos del comprador ofrecen reintentar y vuelven a ca
   assert.ok(/<ErrorState onRetry=\{\(\) => \{ setLoadError\(false\); setLoading\(true\); setAttempt\(n => n \+ 1\); \}\}>/.test(catalogo));
   assert.ok(/\}, \[attempt\]\);/.test(catalogo), 'la carga del catálogo debe depender del intento');
   assert.ok(!catalogo.includes('Intenta recargar la página'));
-  const pedidos = pantallas.find(f => f.ruta === 'src/features/storefront/pages/CustomerOrders.tsx').texto;
-  assert.ok(/\}, \[id, attempt\]\);/.test(pedidos));
+  const pagina=montarPedidosDelComprador(async()=>[]);
+  pagina.dibujar();
+  assert.equal(pagina.efectos[0].deps[0],undefined);
+  assert.equal(pagina.efectos[0].deps[1],0);
+  assert(pagina.efectos[0].deps.includes('qa-store-1'));
+  pagina.cambiarPedido('42');pagina.dibujar();
+  assert.equal(pagina.efectos[0].deps[0],'42');
+  pagina.cambiarTienda('qa-store-2');pagina.dibujar();
+  assert(pagina.efectos[0].deps.includes('qa-store-2'));
+  assert(!pagina.efectos[0].deps.includes('qa-store-1'));
 });
 
 test('se usa en las pantallas principales', () => {

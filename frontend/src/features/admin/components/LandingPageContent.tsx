@@ -28,6 +28,19 @@ import { ApiError } from '../../../shared/services/apiRequest';
 import { CarouselImagesEditor } from './CarouselImagesEditor';
 
 type Business = {nombre:string;descripcion:string;correo_negocio:string};
+
+// Misma condición de publicación que backend/apps/landing/activities.py:
+// un taller presencial/en vivo visible necesita fecha y hora visibles.
+function tallerSinHorarioVisible(content: LandingInput['contenido']): boolean {
+  return (content?.bloques ?? []).some(block => {
+    const activity = block.actividad;
+    if (!block.visible || activity?.tipo !== 'taller' || activity.modalidad_venta === 'grabado') return false;
+    const elements = block.componentes ?? [];
+    const hasDate = elements.some(element => element.visible && element.tipo === 'fecha' && !!element.fecha);
+    const hasHour = elements.some(element => element.visible && element.tipo === 'horario' && !!element.inicio);
+    return !hasDate || !hasHour;
+  });
+}
 type Draft = LandingInput & {negocio:Business};
 type Panel = 'business' | 'cover' | 'blocks' | 'catalog' | 'contact';
 const panels: {id:Panel;label:string;short:string;description:string}[] = [
@@ -166,6 +179,11 @@ export default function LandingPageContent() {
     event.preventDefault();
     if(savingRef.current || saving || loadFailed || !dirty)return;
     if(socialPending){setActive('contact');setError('Guarda o descarta los cambios de cada red social en su tarjeta antes de guardar la página.');return;}
+    if (contentDirty && tallerSinHorarioVisible(form.contenido)) {
+      setActive('blocks');
+      setError('No se pudo publicar el taller: agrega fecha y horario visibles antes de publicarlo. En Página principal → Secciones, abre el taller y completa ambos bloques. Puedes mantener el taller oculto como borrador.');
+      return;
+    }
     const contactResult = normalizeContactFields(normalizeLandingContent(form.contenido).contacto, normalizeLandingContent(baseline.contenido).contacto);
     if (contactResult.error) { setActive('contact'); setError(contactResult.error); return; }
     if(hoursPending){setActive('contact');setError('Agrega o guarda el día que estás editando antes de guardar la página.');return;}

@@ -22,23 +22,24 @@ export function useStorefrontIdentity() {
   useEffect(() => {
     if (isActiveEditorPreview()) { setIdentity({user: null, loading: false}); return; }
     let active = true;
+    let request=0;
     const refreshIdentity = () => {
+      const sequence=++request;
       if (typeof authService.getToken === 'function' && !authService.getToken()) {
-        if (active) setIdentity({user: null, loading: false});
+        if (active && sequence===request) setIdentity({user: null, loading: false});
         return;
       }
       setIdentity({user: null, loading: true});
       authService.getMe().then(response => {
-        if (active) setIdentity({user: response?.data ?? null, loading: false});
-      }).catch(() => { if (active) setIdentity({user: null, loading: false}); });
+        if (active && sequence===request) setIdentity({user: response?.data ?? null, loading: false});
+      }).catch(() => { if (active && sequence===request) setIdentity({user: null, loading: false}); });
     };
-    setIdentity({user: null, loading: true});
-    authService.getMe().then(response => {
-      if (active) setIdentity({user: response?.data ?? null, loading: false});
-    }).catch(() => { if (active) setIdentity({user: null, loading: false}); });
+    refreshIdentity();
     identityListeners.add(refreshIdentity);
+    if(typeof window!=='undefined')window.addEventListener('openmind-cart-session-changed',refreshIdentity);
     return () => {
       active = false;
+      if(typeof window!=='undefined')window.removeEventListener('openmind-cart-session-changed',refreshIdentity);
       identityListeners.delete(refreshIdentity);
     };
   }, [pathname]);
@@ -46,12 +47,13 @@ export function useStorefrontIdentity() {
 }
 
 export function AccountNavigation({ className = '' }: { className?: string }) {
+  const {pathname}=useLocation();
   const { user, loading } = useStorefrontIdentity();
   const { route } = useStorefrontTemplate();
   if (loading) return null;
   const admin = isStoreAdministrator(user);
   if (user?.is_staff && !admin) return null;
-  return <Link className={className} to={admin ? '/emprendedor' : route(user ? 'perfil' : 'ingresar')}>
+  return <Link className={className} to={admin ? '/emprendedor' : route(user ? 'perfil' : pathname.endsWith('/compra')?'ingresar?next='+encodeURIComponent(pathname):'ingresar')}>
     {admin ? 'Volver al panel' : user ? 'Mi cuenta' : 'Iniciar sesión'}
   </Link>;
 }

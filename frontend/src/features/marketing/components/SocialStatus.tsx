@@ -14,7 +14,7 @@ export function SocialStatus({ active, isCurrent }: { active: boolean; isCurrent
     return () => controller.abort();
   }, [active, attempt]);
   return <div className="media-library">
-    {loading && <LoadingState>Consultando perfiles registrados…</LoadingState>}
+    {loading && <LoadingState>Cargando perfiles registrados…</LoadingState>}
     {error && <ErrorState onRetry={() => setAttempt(value => value + 1)}>{error}</ErrorState>}
     {profiles && <ul>{SOCIAL_NETWORKS.map(network => {
       const profile = profiles[network], link = profile.perfil ? profileLink(network, profile.perfil, profile.mensaje) : null;

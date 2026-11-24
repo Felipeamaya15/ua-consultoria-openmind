@@ -1,3 +1,4 @@
+import { readJsonResponse } from '../../../shared/services/apiRequest';
 const API_BASE = (import.meta.env.VITE_API_URL || 'http://localhost:8000').replace(/\/+$/, '');
 
 export interface CartItemDTO {
@@ -39,7 +40,7 @@ export const cartService = {
       method: 'GET',
       headers: getAuthHeaders(),
     });
-    const json = await res.json();
+    const json = await readJsonResponse(res,'No pudimos confirmar el cambio del carrito. Actualiza para comprobar su estado antes de reintentar.');
     if (!res.ok || !json.exito) {
       throw new Error(json.mensaje || 'Error al obtener el carrito');
     }
@@ -56,7 +57,7 @@ export const cartService = {
         sku: sku || undefined,
       }),
     });
-    const json = await res.json();
+    const json = await readJsonResponse(res,'No pudimos confirmar el cambio del carrito. Actualiza para comprobar su estado antes de reintentar.');
     if (!res.ok || !json.exito) {
       throw new Error(json.mensaje || 'Error al agregar el ítem al carrito');
     }
@@ -71,7 +72,7 @@ export const cartService = {
         cantidad: nuevaCantidad,
       }),
     });
-    const json = await res.json();
+    const json = await readJsonResponse(res,'No pudimos confirmar el cambio del carrito. Actualiza para comprobar su estado antes de reintentar.');
     if (!res.ok || !json.exito) {
       throw new Error(json.mensaje || 'Error al modificar la cantidad');
     }
@@ -84,7 +85,7 @@ export const cartService = {
       headers: getAuthHeaders(),
     });
     if (!res.ok) {
-      const json = await res.json().catch(() => ({}));
+      const json = await readJsonResponse(res,'No pudimos confirmar el cambio del carrito. Actualiza para comprobar su estado antes de reintentar.').catch(() => ({}));
       throw new Error(json.mensaje || 'Error al eliminar el producto del carrito');
     }
   },

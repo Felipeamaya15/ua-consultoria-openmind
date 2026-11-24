@@ -1,4 +1,5 @@
 """Creacion de pedidos SQL con precios y variantes del catalogo Mongo."""
+from apps.landing.commerce import InvoiceInput
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from hashlib import sha256
 import json
@@ -74,6 +75,7 @@ class AddressSerializer(StrictSerializer):
 
 
 class CheckoutSerializer(StrictSerializer):
+    factura = InvoiceInput(required=False)
     clave_checkout = serializers.UUIDField()
     items = CheckoutItemSerializer(many=True, allow_empty=True, max_length=100)
     actividades = CheckoutActivitySerializer(many=True, required=False, max_length=30)
@@ -166,6 +168,10 @@ class CheckoutOrderAPIView(ErroresDeCotizacionMixin, APIView):
                     selection = validate_pickup_selection(delivery['pickup'], data.get('retiro_seleccion'))
                     if selection:
                         delivery_snapshot['retiro']['seleccion'] = selection
+            if data.get('factura'):
+                from apps.landing.commerce import commerce_options
+                if not commerce_options(tienda)['factura']:
+                    raise ValidationError({'factura': 'Esta tienda no recibe solicitudes de factura.'})
             repository = ProductRepository() if data['items'] else None
             lines = {}
             for item in data['items']:
@@ -208,6 +214,8 @@ class CheckoutOrderAPIView(ErroresDeCotizacionMixin, APIView):
             if activities:
                 from apps.landing.unified_activity_orders import reserve_lines, order_line
                 reservations = reserve_lines(tienda, data)
+                if not buyer and any(r.condiciones.get('modalidad_venta') == 'grabado' for r in reservations):
+                    raise NotAuthenticated('Inicia sesión para comprar y acceder a tus talleres grabados.')
                 delivery_snapshot['origen'] = activity_marker
                 from apps.landing.webpay_activity_orders import WEBPAY_MARKER, META, enabled_config, merchant_snapshot
                 if activity_marker==WEBPAY_MARKER:
@@ -240,6 +248,8 @@ class CheckoutOrderAPIView(ErroresDeCotizacionMixin, APIView):
                 raise ValidationError({'medio_pago': 'Webpay requiere un total positivo en pesos enteros.'})
             if total > Decimal('9999999999.99'):
                 raise ValidationError({'items': 'El importe del pedido excede el maximo permitido.'})
+            if data.get('factura'):
+                delivery_snapshot['_solicitud_factura'] = dict(data['factura'])
             order = Pedido.objects.create(
                 comprador=buyer, tienda=tienda, monto_total=total,
                 clave_checkout=data['clave_checkout'], huella_checkout=fingerprint,

@@ -16,8 +16,8 @@ export function useVerifiedLegalScope() {
   useEffect(() => {
     const sync = () => setToken(currentToken());
     const timer = window.setInterval(sync, 500);
-    window.addEventListener('storage', sync); window.addEventListener('focus', sync);
-    return () => { window.clearInterval(timer); window.removeEventListener('storage', sync); window.removeEventListener('focus', sync); };
+    window.addEventListener('openmind-cart-session-changed',sync); window.addEventListener('storage', sync); window.addEventListener('focus', sync);
+    return () => { window.clearInterval(timer); window.removeEventListener('openmind-cart-session-changed',sync); window.removeEventListener('storage', sync); window.removeEventListener('focus', sync); };
   }, []);
   useEffect(() => {
     let active = true; setResult(null); setError('');

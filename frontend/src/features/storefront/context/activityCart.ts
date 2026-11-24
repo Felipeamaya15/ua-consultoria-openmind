@@ -13,6 +13,7 @@ export function activityCartPreviewEnabled() {
   return typeof window !== 'undefined' && !isActiveEditorPreview();
 }
 export interface ActivityCartItem {
+  recorded?: boolean; accessDays?: number;
   sectionId: string; title: string; quantity: number; price: number; version: string; start: string; zone: string;
 }
 const EMPTY: ActivityCartItem[] = [];
@@ -23,7 +24,7 @@ function validItem(x:unknown):x is ActivityCartItem {
   const a=x as ActivityCartItem;
   if (typeof a.sectionId!=='string'||!validActivityId(a.sectionId)||typeof a.title!=='string'||typeof a.version!=='string'|| !/^[a-f0-9]{64}$/.test(a.version)||
     !Number.isSafeInteger(a.quantity)||a.quantity<1||a.quantity>10000||!Number.isSafeInteger(a.price)||a.price<1||a.price>999999999999||
-    typeof a.start!=='string'||!Number.isFinite(Date.parse(a.start))||typeof a.zone!=='string')return false;
+    typeof a.start!=='string'||(!a.recorded&&!Number.isFinite(Date.parse(a.start)))||typeof a.zone!=='string')return false;
   try {new Intl.DateTimeFormat('es-CL',{timeZone:a.zone}).format();}catch{return false;}
   return true;
 }
@@ -84,7 +85,7 @@ function loadSavedActivities(
   force = false,
 ): Promise<void> {
   const pending = syncLoading.get(key);
-  if (pending) return pending;
+  if (pending) return force ? pending.then(()=>loadSavedActivities(key,token,true)) : pending;
   if (!force && syncLoaded.has(key)) return Promise.resolve();
 
   const task = serverCall(token, SYNC_BASE, 'GET')
@@ -160,8 +161,10 @@ export function useActivityCart(){
       });
     };
 
+    const merged=()=>{if(base)cache.delete(`${base}:activity-v2:guest-v2`);refresh();};
+    window.addEventListener('openmind-cart-merged',merged);
     window.addEventListener('focus', refresh);
-    return () => window.removeEventListener('focus', refresh);
+    return () => {window.removeEventListener('focus',refresh);window.removeEventListener('openmind-cart-merged',merged);};
   }, [key, token]);
 
   const put = useCallback(async (
@@ -189,6 +192,7 @@ export function useActivityCart(){
       version,
       start: quote.inicio,
       zone: quote.zona_horaria,
+      ...(quote.modalidad_venta === 'grabado' ? {recorded: true, accessDays: quote.acceso_dias} : {}),
     };
 
     if (token) {
@@ -336,8 +340,9 @@ export function useActivityCart(){
     });
   }, [key, token]);
 
+  const refresh=useCallback(async()=>{if(key&&token&&currentCartToken()===token)await serial(key,()=>loadSavedActivities(key,token,true));},[key,token]);
   return {
-    items, put, remove, reduce, clear,
+    items, put, remove, reduce, clear, refresh,
     ready: !!key && (
       !token || syncLoaded.has(key)
     ),

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import type { Product } from '../../storefront/data/mockData';
 import { useStore } from '../../storefront/context/StoreContext';
 import { fetchPublicProductDetail } from '../../storefront/services/catalogService';
 import { normalizeLandingContent } from '../types/landingContent';
@@ -13,15 +14,15 @@ export function useLandingContent() {
     .filter((p): p is NonNullable<typeof p> => !!p)
     .slice(0, 6);
 
-  const [fullImages, setFullImages] = useState<Record<string, string[]>>({});
+  const [details,setDetails]=useState<{key:string;products:Record<string,Product>}>({key:'',products:{}});
 
   const featuredKey = baseFeatured
-    .map(product => `${product.id}:${product.images.length}`)
+    .map(product => `${landing?.tienda}:${product.catalogId}:${product.id}:${product.images.length}:${product.variantsLoaded}`)
     .join('|');
 
   useEffect(() => {
     const products = baseFeatured.filter(
-      product => product.images.length < 2
+      product => product.variantsLoaded === false || product.images.length < 2
     );
 
     if (!products.length) return;
@@ -37,31 +38,17 @@ export function useLandingContent() {
             { signal: controller.signal }
           );
 
-          return {
-            id: product.id,
-            images: detail?.images?.filter(Boolean) ?? [],
-          };
+          return detail;
         } catch {
-          return {
-            id: product.id,
-            images: [] as string[],
-          };
+          return null;
         }
       })
     ).then(results => {
       if (!active) return;
 
-      setFullImages(previous => {
-        const next = { ...previous };
-
-        for (const result of results) {
-          if (result.images.length > 1) {
-            next[result.id] = result.images;
-          }
-        }
-
-        return next;
-      });
+      const products:Record<string,Product>={};
+      for(const product of results)if(product)products[product.id]=product;
+      setDetails({key:featuredKey,products});
     });
 
     return () => {
@@ -70,12 +57,7 @@ export function useLandingContent() {
     };
   }, [featuredKey]);
 
-  const featured = baseFeatured.map(product => ({
-    ...product,
-    images: fullImages[product.id]?.length
-      ? fullImages[product.id]
-      : product.images,
-  }));
+  const featured = baseFeatured.map(product => ({...product,...(details.key===featuredKey?details.products[product.id]:undefined)}));
   const availableCategories = new Set(landingProducts.map(p => p.category));
   const categories = content.categorias.filter(c => availableCategories.has(c));
   return { content, featured, categories, catalogError: landingCatalogError };

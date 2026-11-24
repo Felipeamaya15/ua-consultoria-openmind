@@ -685,23 +685,9 @@ export default function Payments() {
 
     pendingSaves.current.add('transfer');
     try {
-      const currentBody: any = await requestEnvelope(`${API_BASE}/api/pagos/configuracion/`, {
-        method: 'GET',
-        headers: getAuthHeaders(),
-      });
-
-      const mergedConfiguration = {
-        ...(currentBody.data ?? {}),
-        transfer: {
-          enabled: current.enabled === true,
-          fields: { ...(current.fields ?? {}) },
-        },
-      };
-
       await requestEnvelope(`${API_BASE}/api/pagos/configuracion/`, {
-        method: 'PUT',
-        headers: getAuthHeaders(),
-        body: JSON.stringify(mergedConfiguration),
+        method:'PATCH',headers:getAuthHeaders(),
+        body:JSON.stringify({transfer:{enabled:current.enabled===true,fields:{...(current.fields??{})}}}),
       });
 
       savedTransfer.current = structuredClone(current);
@@ -1075,16 +1061,10 @@ export default function Payments() {
       ? { ...(current.fields ?? {}) }
       : {};
 
-    const currentBody: any = await requestEnvelope(`${API_BASE}/api/pagos/configuracion/`, {
-      method: 'GET',
-      headers: getAuthHeaders(),
-    });
-
     await requestEnvelope(`${API_BASE}/api/pagos/configuracion/`, {
-      method: 'PUT',
+      method: 'PATCH',
       headers: getAuthHeaders(),
       body: JSON.stringify({
-        ...(currentBody.data ?? {}),
         linkify: {
           enabled: current.enabled === true,
           fields: fieldsToSend,
@@ -1097,15 +1077,10 @@ export default function Payments() {
     const current = form.tuu ?? { enabled: false, fields: {} };
     const complete = ['accountId', 'secretKey'].every((key) => String(current.fields?.[key] ?? '').trim());
     if (current.enabled && !complete) throw new Error('Completa el ID de cuenta y la llave secreta de TUU.');
-    const currentBody: any = await requestEnvelope(`${API_BASE}/api/pagos/configuracion/`, {
-      method: 'GET',
-      headers: getAuthHeaders(),
-    });
     await requestEnvelope(`${API_BASE}/api/pagos/configuracion/`, {
-      method: 'PUT',
+      method: 'PATCH',
       headers: getAuthHeaders(),
       body: JSON.stringify({
-        ...(currentBody.data ?? {}),
         tuu: { enabled: current.enabled === true, fields: current.enabled || complete ? { ...(current.fields ?? {}), environment: current.fields?.environment === 'produccion' ? 'produccion' : 'integracion' } : {} },
       }),
     });

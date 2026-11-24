@@ -116,7 +116,7 @@ class SolicitudActividad(models.Model):
     tienda = models.ForeignKey('core.Tienda', on_delete=models.CASCADE)
     seccion_id = models.UUIDField()
     titulo_actividad = models.CharField(max_length=255)
-    tipo_actividad = models.CharField(max_length=10, choices=[('servicio', 'Servicio'), ('taller', 'Taller')])
+    tipo_actividad = models.CharField(max_length=10, choices=[('servicio', 'Servicio'), ('taller', 'Taller'), ('producto', 'Cotización de producto')])
     tipo = models.CharField(max_length=12, choices=[('consulta', 'Consulta'), ('inscripcion', 'Inscripción')])
     usuario = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
     nombre = models.CharField(max_length=100)
@@ -153,8 +153,8 @@ class ReservaActividadPagada(models.Model):
     clave_checkout = models.UUIDField()
     cantidad = models.PositiveIntegerField()
     precio_unitario = models.PositiveBigIntegerField()
-    inicio = models.DateTimeField()
-    cierre = models.DateTimeField()
+    inicio = models.DateTimeField(null=True, blank=True)
+    cierre = models.DateTimeField(null=True, blank=True)
     condiciones = models.JSONField(default=dict)
     estado = models.CharField(max_length=16, default='reservada', choices=[(v,v) for v in (
         'reservada','en_pago','confirmada','liberada','revision_pago')])
@@ -296,7 +296,7 @@ class SeleccionCarritoActividad(models.Model):
     titulo = models.CharField(max_length=200)
     precio = models.PositiveBigIntegerField()
     version = models.CharField(max_length=64)
-    inicio = models.DateTimeField()
+    inicio = models.DateTimeField(null=True, blank=True)
     zona = models.CharField(max_length=80)
     actualizado = models.DateTimeField(auto_now=True)
 
@@ -307,3 +307,16 @@ class SeleccionCarritoActividad(models.Model):
                 name='carrito_actividad_usuario_unico',
             ),
         ]
+
+
+from apps.landing.private_storage import PrivateRecordingStorage, recording_path
+
+
+class GrabacionTaller(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    tienda = models.ForeignKey('core.Tienda', on_delete=models.PROTECT)
+    titulo = models.CharField(max_length=200)
+    archivo = models.FileField(storage=PrivateRecordingStorage(), upload_to=recording_path, max_length=200)
+    bytes = models.PositiveBigIntegerField()
+    activa = models.BooleanField(default=True)
+    creado = models.DateTimeField(auto_now_add=True)

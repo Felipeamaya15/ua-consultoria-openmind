@@ -1,5 +1,6 @@
 import { lazyPage } from '../LazyPage';
 import { SelectedTemplateRedirect } from './SelectedTemplateRedirect';
+const MyWorkshops = lazyPage(() => import('../../features/storefront/pages/MyWorkshops'));
 const CustomerOrders = lazyPage(() => import('../../features/storefront/pages/CustomerOrders'));
 import { RequireCustomer } from '../../features/storefront/components/store/AccountNavigation';
 const Profile = lazyPage(() => import('../../features/storefront/pages/Profile'));
@@ -8,6 +9,7 @@ const CommercialPreferences = lazyPage(() => import('../../features/storefront/p
 import { adminRoute } from '../../features/admin/routes';
 import {
   createBrowserRouter,
+  ScrollRestoration,
   Navigate,
 } from 'react-router-dom';
 
@@ -47,6 +49,7 @@ function StorefrontProviders({
   return (
     <StoreProvider>
       <StoreSeoMetadata />
+      <ScrollRestoration />
       <CartProvider>
         <OrderProvider>
           {children}
@@ -58,6 +61,7 @@ function StorefrontProviders({
 }
 
 const sharedChildren = [
+  { path: 'mis-talleres', element: <RequireCustomer><MyWorkshops /></RequireCustomer> },
   { path: 'mis-pedidos', element: <RequireCustomer><CustomerOrders /></RequireCustomer> },
   { path: 'mis-pedidos/:id', element: <RequireCustomer><CustomerOrders /></RequireCustomer> },
   { path: 'perfil', element: <RequireCustomer><Profile /></RequireCustomer> },

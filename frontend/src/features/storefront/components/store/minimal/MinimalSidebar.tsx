@@ -1,4 +1,4 @@
-import { MinimalCartIcon } from './MinimalHeader';
+import { MinimalCartIcon } from './MinimalCartIcon';
 import { useCart } from '../../../context/CartContext';
 import { AccountNavigation, notifyStorefrontAuthChange, useStorefrontIdentity } from '../AccountNavigation';
 import { Link, useNavigate } from 'react-router-dom';
@@ -6,20 +6,21 @@ import { Icon } from '../../ui';
 import { authService } from '../../../../auth/services/authService';
 import { useStorefrontTemplate } from '../../../hooks/useStorefrontTemplate';
 
-export function MinimalSidebar() {
+export function MinimalSidebar({mobile=false,onNavigate}:{mobile?:boolean;onNavigate?:()=>void}={}) {
   const { user } = useStorefrontIdentity();
   const { route } = useStorefrontTemplate();
   const navigate = useNavigate();
   const { count } = useCart();
 
   const handleLogout = () => {
+    onNavigate?.();
     authService.logout();
     notifyStorefrontAuthChange();
     navigate(route());
   };
 
   return (
-    <aside className="fixed left-0 top-0 bottom-0 z-50 hidden md:flex w-20 flex-col items-center bg-white border-r border-black/10 px-1.5 py-4">
+    <aside className={mobile?'minimal-mobile-sidebar flex flex-col items-center gap-4':'fixed left-0 top-0 bottom-0 z-50 hidden md:flex w-20 flex-col items-center bg-white border-r border-black/10 px-1.5 py-4'} onClickCapture={event=>{if(event.target instanceof Element&&event.target.closest('a'))onNavigate?.();}}>
 
       <div className="w-full flex flex-col items-center gap-1.5">
         <AccountNavigation className="w-full min-h-10 px-1.5 py-1.5 rounded-xl bg-[var(--primary)] text-[var(--on-primary)] flex items-center justify-center text-[10px] leading-tight font-semibold text-center break-words whitespace-normal shadow-2xs hover:opacity-90 transition-opacity" />
@@ -42,7 +43,7 @@ export function MinimalSidebar() {
       >
         <Link
           to={route()} onClick={event => {
-            if (!event.ctrlKey && !event.metaKey && !event.shiftKey && !event.altKey) {
+            if (!event.ctrlKey && !event.metaKey && !event.shiftKey && !event.altKey && event.currentTarget.pathname === window.location.pathname) {
               window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
             }
           }}
@@ -50,16 +51,16 @@ export function MinimalSidebar() {
           title="Inicio"
           className="w-10 h-10 rounded-full flex items-center justify-center text-gray-600 hover:bg-gray-100 hover:text-[var(--primary)] transition-colors"
         >
-          <Icon name="home" className="w-5 h-5" />
+          <Icon name="home" className="w-5 h-5" />{mobile&&<span>Inicio</span>}
         </Link>
 
         <Link
-          to="catalogo"
+          to={route('catalogo')}
           aria-label="Catálogo"
           title="Catálogo"
           className="w-10 h-10 rounded-full flex items-center justify-center text-gray-600 hover:bg-gray-100 hover:text-[var(--primary)] transition-colors"
         >
-          <Icon name="grid" className="w-5 h-5" />
+          <Icon name="grid" className="w-5 h-5" />{mobile&&<span>Catálogo</span>}
         </Link>
 
         <Link
@@ -68,16 +69,16 @@ export function MinimalSidebar() {
           title="Carrito de compras"
           className="w-10 h-10 rounded-full bg-[var(--primary)] text-[var(--on-primary)] flex items-center justify-center hover:opacity-90 transition-opacity"
         >
-          <MinimalCartIcon count={count} />
+          <MinimalCartIcon count={count} />{mobile&&<span>Carrito</span>}
         </Link>
 
         <Link
-          to="seguimiento"
+          to={route('seguimiento')}
           aria-label="Seguimiento"
           title="Seguimiento"
           className="w-10 h-10 rounded-full flex items-center justify-center text-gray-600 hover:bg-gray-100 hover:text-[var(--primary)] transition-colors"
         >
-          <Icon name="truck" className="w-5 h-5" />
+          <Icon name="truck" className="w-5 h-5" />{mobile&&<span>Seguimiento</span>}
         </Link>
       </nav>
     </aside>

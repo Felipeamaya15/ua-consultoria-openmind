@@ -1,3 +1,4 @@
+import { useFeedback } from '../../../shared/components/FeedbackProvider';
 import { LoadingState } from '../../../shared/components/states';
 import { MailConnectionPanel } from './MailConnectionPanel';
 import { useEffect, useRef, useState } from 'react';
@@ -13,6 +14,8 @@ import { formatBusinessDate } from '../services/businessTime';
 const blank = (): CampaignForm => ({ nombre: '', asunto: '', cuerpo: '', destinatarios: [], producto_id: '', diseno: { imagen: '', boton_texto: '', boton_url: '' } });
 export const CAMPAIGN_STATES: Record<string, string> = { borrador: 'Borrador', seleccionado: 'Seleccionado', pendiente: 'Pendiente', procesando: 'Procesando: revisa antes de reenviar', aceptada: 'Aceptada por el proveedor', parcial: 'Parcialmente aceptada', fallida: 'Fallida', cancelada: 'Cancelada', excluido: 'Excluido por consentimiento', indeterminada: 'Resultado incierto: requiere revisión' };
 export function CampaignWorkspace({home='',onDirty=()=>{}}:{home?:string;onDirty?:(dirty:boolean)=>void}) {
+  const uiFeedback = useFeedback();
+
   const [form, setForm] = useState<CampaignForm>(blank), [baseline, setBaseline] = useState<CampaignForm>(blank);
   const [current, setCurrent] = useState<Campaign | null>(null), [history, setHistory] = useState<CampaignList | null>(null);
   const [audience, setAudience] = useState<CampaignAudience | null>(null), [query, setQuery] = useState('');
@@ -62,7 +65,7 @@ export function CampaignWorkspace({home='',onDirty=()=>{}}:{home?:string;onDirty
     finally { lock.current = false; if (alive.current) setBusy(false); }
   }
   async function open(id: string) {
-    if (dirty && !window.confirm('¿Descartar el texto sin guardar y abrir otro borrador?')) return;
+    if (dirty && !(await uiFeedback.confirm({title:"Descartar borrador",confirmLabel:"Descartar cambios",message:'¿Descartar el texto sin guardar y abrir otro borrador?'}))) return;
     setBusy(true); setError('');
     try { const row = await campaignService.get(id); if (!alive.current) return; const stored = { nombre: row.nombre, asunto: row.asunto, cuerpo: row.cuerpo, producto_id: row.producto.tipo==='seccion'?'':row.producto.id || '', contenido:row.producto.seleccion||null, diseno: row.diseno || blank().diseno, destinatarios: row.destinatarios?.map(item => item.id) || [] }; setCurrent(row); key.current = row.clave; setForm(stored); setBaseline(stored); setNotice('Campaña recuperada. Revisa el estado y los contactos que siguen autorizados.'); }
     catch (cause) { if (alive.current) setError(cause instanceof Error ? cause.message : 'No se pudo abrir el borrador.'); }
@@ -105,8 +108,8 @@ export function CampaignWorkspace({home='',onDirty=()=>{}}:{home?:string;onDirty
   }
   return <div className="campaign-workspace space-y-5">
     <MailConnectionPanel summary />
-    <Alert variant="info">Las campañas solo incluyen personas con autorización comercial vigente y verificada. Guardar y previsualizar no envía correos. Mailpit captura las pruebas locales; el envío externo requiere habilitación del administrador.</Alert>
-    <div className="flex flex-wrap items-center justify-between gap-3"><h3 className="font-semibold">{current ? current.estado === 'borrador' ? 'Editar borrador de campaña' : 'Detalle de campaña' : 'Preparar campaña'}</h3><Button variant="outline" disabled={busy} onClick={() => { if (dirty && !window.confirm('¿Descartar el borrador sin guardar?')) return; const next = blank(); setForm(next); setBaseline(next); setCurrent(null); key.current = undefined; setNotice(''); setError(''); }}>Nuevo borrador</Button></div>
+    <Alert variant="info">Envía una promoción puntual (por ejemplo, un descuento exclusivo) o una campaña temática (Navidad, aniversario, temporada) desde el mismo formulario. Solo se incluyen destinatarios con autorización comercial vigente y verificada. Guardar y previsualizar no envía correos. Mailpit captura las pruebas locales; el envío externo requiere habilitación del administrador.</Alert>
+    <div className="flex flex-wrap items-center justify-between gap-3"><h3 className="font-semibold">{current ? current.estado === 'borrador' ? 'Editar borrador de campaña' : 'Detalle de campaña' : 'Preparar campaña'}</h3><Button variant="outline" disabled={busy} onClick={async () => { if (dirty && !(await uiFeedback.confirm({title:"Descartar borrador",confirmLabel:"Descartar cambios",message:'¿Descartar el borrador sin guardar?'}))) return; const next = blank(); setForm(next); setBaseline(next); setCurrent(null); key.current = undefined; setNotice(''); setError(''); }}>Nuevo borrador</Button></div>
     {error && <Alert variant="error">{error}</Alert>}{notice && <p role="status" className="text-sm">{notice}</p>}
     <fieldset disabled={busy || !!current && current.estado !== 'borrador'} className="grid gap-5 lg:grid-cols-2">
       <AdminCard className="space-y-3 min-w-0"><h4 className="font-semibold">Destinatarios autorizados</h4><Input label="Filtrar contactos autorizados" value={query} maxLength={100} onChange={event => setQuery(event.target.value)} placeholder="Buscar por correo" />
@@ -119,7 +122,7 @@ export function CampaignWorkspace({home='',onDirty=()=>{}}:{home?:string;onDirty
         </>}
         <p className="text-xs">Las bajas y autorizaciones se vuelven a comprobar al confirmar e inmediatamente antes de cada envío. Tener pedidos o aceptar cookies no autoriza publicidad.</p>
       </AdminCard>
-      <AdminCard className="space-y-3 min-w-0"><h4 className="font-semibold">Contenido de la campaña</h4><Input label="Nombre del borrador" maxLength={150} value={form.nombre} onChange={event => edit({ nombre: event.target.value })} /><Input label="Asunto de la campaña" maxLength={200} value={form.asunto} onChange={event => edit({ asunto: event.target.value })} /><Textarea label="Contenido de la campaña" rows={7} maxLength={5000} value={form.cuerpo} onChange={event => edit({ cuerpo: event.target.value })} /><PublishedContentPicker home={home} selection={form.contenido||undefined} onSelect={(selection)=>edit({contenido:selection,producto_id:selection.kind==='product'?selection.id:''})} />
+      <AdminCard className="space-y-3 min-w-0"><h4 className="font-semibold">Correo promocional o campaña temática</h4><p className="text-xs">Puedes elegir una sola persona autorizada para una oferta puntual o varios contactos para una campaña, con asunto, texto e imagen. Revisa la vista previa y realiza primero un envío de prueba.</p><Input label="Nombre del borrador" maxLength={150} value={form.nombre} onChange={event => edit({ nombre: event.target.value })} /><Input label="Asunto de la campaña" maxLength={200} value={form.asunto} onChange={event => edit({ asunto: event.target.value })} /><Textarea label="Contenido de la campaña" rows={7} maxLength={5000} value={form.cuerpo} onChange={event => edit({ cuerpo: event.target.value })} /><PublishedContentPicker home={home} selection={form.contenido||undefined} onSelect={(selection)=>edit({contenido:selection,producto_id:selection.kind==='product'?selection.id:''})} />
         {(form.contenido||form.producto_id)&&<Button variant="ghost" onClick={()=>edit({contenido:null,producto_id:''})}>Quitar contenido de la campaña</Button>}
         {current?.producto.nombre&&<p className="text-sm">Contenido guardado: {current.producto.nombre}. Se conserva su imagen y precio históricos.</p>}
         <Select label="Plantilla del correo" value={form.diseno?.plantilla||'photo'} options={TEMPLATES.map(template=>({value:template.id,label:template.name}))} onChange={event=>edit({diseno:{...form.diseno,plantilla:event.target.value}})} />

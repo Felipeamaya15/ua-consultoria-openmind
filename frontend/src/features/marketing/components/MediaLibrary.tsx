@@ -1,3 +1,4 @@
+import { useFeedback } from '../../../shared/components/FeedbackProvider';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { EmptyListState, ErrorState, LoadingState } from '../../../shared/components/states';
 import { IMAGE_ACCEPT } from '../../../shared/services/imageUpload';
@@ -51,7 +52,9 @@ function ResourceForm({ initial, busy, onSave, onCancel, onDirty }: {
   </form></AdminCard>;
 }
 
-export function MediaLibrary({ active, isCurrent, onDirty, products = [], catalogStatus, onSelectProduct, onUseImage, onOpenSharing }: { active: boolean; isCurrent: () => boolean; onDirty: (dirty: boolean) => void; products?: MarketingProduct[]; catalogStatus?: CatalogStatus; onSelectProduct?: (selection: CatalogSelection) => boolean; onUseImage?: (id: string) => Promise<boolean>; onOpenSharing?: () => void }) {
+export function MediaLibrary({ active, isCurrent, onDirty, products = [], catalogStatus, onSelectProduct, onUseImage, onOpenSharing }: { active: boolean; isCurrent: () => boolean; onDirty: (dirty: boolean) => void; products?: MarketingProduct[]; catalogStatus?: CatalogStatus; onSelectProduct?: (selection: CatalogSelection) => boolean | Promise<boolean>; onUseImage?: (id: string) => Promise<boolean>; onOpenSharing?: () => void }) {
+  const uiFeedback = useFeedback();
+
   const [origin, setOrigin] = useState('saved');
   const [query, setQuery] = useState(''), [kind, setKind] = useState(''), [state, setState] = useState(''), [order, setOrder] = useState('recientes');
   const [page, setPage] = useState(1), [revision, setRevision] = useState(0), [data, setData] = useState<MediaPage | null>(null);
@@ -86,13 +89,13 @@ export function MediaLibrary({ active, isCurrent, onDirty, products = [], catalo
     } catch (cause) { if (!controller.signal.aborted && isCurrent()) setMutationError(errorMessage(cause)); }
     finally { mutation.current = null; if (!controller.signal.aborted) setBusy(false); }
   }
-  function openEditor(item: MediaResource | null) {
-    if (dirty && !window.confirm('Tienes cambios sin guardar en este recurso. ¿Descartarlos?')) return;
+  async function openEditor(item: MediaResource | null) {
+    if (dirty && !(await uiFeedback.confirm({title:"Descartar cambios del recurso",confirmLabel:"Descartar cambios",message:'Tienes cambios sin guardar en este recurso. ¿Descartarlos?'}))) return;
     setEditor({ item, key: ++editorSequence.current }); setMutationError(''); setNotice(''); setDeleting(null);
   }
   return <div className="media-library">
     <header className="media-library-heading"><div><h2>Biblioteca multimedia</h2><p>Encuentra y reutiliza imágenes, videos y enlaces de tu tienda sin volver a cargarlos.</p></div><Button type="button" disabled={busy} onClick={() => { setOrigin('saved'); openEditor(null); }}>Agregar recurso</Button></header>
-    <div className="media-actions" role="group" aria-label="Origen de recursos"><Button type="button" variant={origin === 'saved' ? 'primary' : 'outline'} aria-pressed={origin === 'saved'} disabled={busy} onClick={() => setOrigin('saved')}>Recursos guardados</Button><Button type="button" variant={origin === 'catalog' ? 'primary' : 'outline'} aria-pressed={origin === 'catalog'} disabled={busy} onClick={() => setOrigin('catalog')}>Imágenes del catálogo</Button>{onOpenSharing && <Button type="button" variant="outline" disabled={busy} onClick={onOpenSharing}>Servicios y talleres en Difusión</Button>}</div>
+    <div className="media-actions" role="group" aria-label="Origen de recursos"><Button type="button" variant={origin === 'saved' ? 'primary' : 'outline'} aria-pressed={origin === 'saved'} disabled={busy} onClick={() => setOrigin('saved')}>Recursos guardados</Button><Button type="button" variant={origin === 'catalog' ? 'primary' : 'outline'} aria-pressed={origin === 'catalog'} disabled={busy} onClick={() => setOrigin('catalog')}>Imágenes del catálogo</Button>{onOpenSharing && <Button type="button" variant="outline" disabled={busy} onClick={onOpenSharing}>Crear publicación de servicio o taller</Button>}</div>
     {origin === 'catalog' && <CatalogMedia products={products} status={catalogStatus} busy={busy} onSelect={onSelectProduct} />}
     <div hidden={origin !== 'saved'} className="media-library">
     <p className="media-help">Guardar aquí no publica contenido en tu tienda. Puedes reutilizar imágenes, videos propios de hasta 20 segundos y 8 MB, y enlaces públicos.</p>

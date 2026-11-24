@@ -19,7 +19,7 @@ test('Velta y Obsidian conservan la sección real de categorías', () => {
 });
 
 test('las categorías son legibles incluso sin fotografías, solo en plantillas 3 y 4', () => {
-  const block = css.slice(css.indexOf('OPENMIND_VELTA_OBSIDIAN_CATEGORIES_AND_FEATURED_HOVER_V1'));
+  const block = css.slice(css.indexOf('[data-storefront-visual] :is([data-landing-page="visual"], [data-landing-page="catalog"])'));
   assert(block.length > 800);
   assert(block.includes('data-landing-page="visual"'));
   assert(block.includes('data-landing-page="catalog"'));
@@ -46,7 +46,7 @@ test('el producto principal de Obsidian cambia fotos usando ProductImageGallery'
 
 
 test('Velta y Obsidian usan columnas compactas sin estirar una categoria unica', () => {
-  const block = css.slice(css.indexOf('OPENMIND_VELTA_OBSIDIAN_CATEGORIES_AND_FEATURED_HOVER_V1'));
+  const block = css.slice(css.indexOf('[data-storefront-visual] :is([data-landing-page="visual"], [data-landing-page="catalog"])'));
   assert.match(block, /grid-template-columns:\s*repeat\(auto-fill,\s*minmax\(min\(100%,\s*200px\),\s*1fr\)\)/);
   assert.match(block, /display:\s*block\s*!important/);
 });
@@ -55,7 +55,8 @@ test('Obsidian mantiene varias fotos y reutiliza efectos configurables en su des
   const hover = read('features/storefront/visual/image-hover.css');
   assert.match(catalog, /<Link\s+data-ob-featured-gallery\s+to=\{route\(`/);
   assert.match(catalog, /<ProductImageGallery\s+images=\{mochila\.images\}/);
-  assert.match(hover, /OPENMIND_CATEGORIES_COMPACT_AND_GALLERY_HOVER_V2/);
+  assert.match(hover, /background:\s*var\(--om-product-overlay-background,\s*transparent\)/);
+  assert.match(hover, /opacity:\s*var\(--om-product-overlay-opacity,\s*0\)/);
   assert.match(hover, /\[data-ob-featured-gallery\]:is\(:hover,:focus-within\)::after/);
   assert.match(hover, /--om-product-overlay-animation/);
   assert.match(hover, /prefers-reduced-motion:\s*reduce/);

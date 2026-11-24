@@ -31,7 +31,12 @@ export function CompactMobileNavigation() {
         }
       }}
     >
-      <summary aria-label="Abrir navegación de la tienda">Menú</summary>
+      <summary aria-label="Abrir navegación de la tienda">
+        <svg data-qa-menu-icon="F02" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1f2937" strokeWidth="2.5" strokeLinecap="round" aria-hidden="true" style={{ display: 'block', flexShrink: 0 }}>
+          <path d="M4 6h16M4 12h16M4 18h16" />
+        </svg>
+        <span className="sr-only">Menú</span>
+      </summary>
       <nav aria-label="Navegación móvil">
         <Link to={route()}>Inicio</Link>
         <Link to={route('catalogo')}>Catálogo</Link>

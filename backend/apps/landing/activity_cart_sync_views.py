@@ -25,13 +25,18 @@ class CartSelectionSerializer(StrictSerializer):
 
 
 def item_data(item):
+    from apps.landing.models import ConfiguracionLanding
+    config = ConfiguracionLanding.objects.filter(tienda_id=item.tienda_id).first()
+    block = next((block for block in (config.contenido or {}).get('bloques', []) if block.get('id') == str(item.seccion_id)), {}) if config else {}
+    activity = block.get('actividad') or {}
     return {
+        **({'recorded': True, 'accessDays': activity.get('acceso_dias')} if activity.get('modalidad_venta') == 'grabado' else {}),
         'sectionId': str(item.seccion_id),
         'title': item.titulo,
         'quantity': item.cantidad,
         'price': item.precio,
         'version': item.version,
-        'start': item.inicio.isoformat(),
+        'start': item.inicio.isoformat() if item.inicio else '',
         'zone': item.zona,
     }
 
@@ -95,8 +100,8 @@ class CartActivityItemView(CartBase):
                 'Actualiza sus condiciones antes de continuar.'
             )
 
-        start = parse_datetime(current['inicio'])
-        if start is None or start.tzinfo is None:
+        start = parse_datetime(current['inicio']) if current['inicio'] else None
+        if current.get('modalidad_venta') != 'grabado' and (start is None or start.tzinfo is None):
             raise ValidationError('Fecha de actividad inválida.')
 
         with transaction.atomic():
@@ -113,6 +118,8 @@ class CartActivityItemView(CartBase):
                 )
 
             item, _ = rows.update_or_create(
+                tienda=store,
+                usuario=request.user,
                 seccion_id=pk,
                 defaults={
                     'cantidad': values['cantidad'],

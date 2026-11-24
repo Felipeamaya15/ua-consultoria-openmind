@@ -35,7 +35,7 @@ def save_meta(order, **updates):
     order.save(update_fields=['entrega'])
 
 
-def snapshot(store, method, active=True):
+def snapshot(store, method, active=True, require_callback=True):
     """Bind to the original configuration, including credential rotation. No secret stored."""
     if method in ('MercadoPago', 'PayPal'):
         model = ConfiguracionMercadoPago if method == 'MercadoPago' else ConfiguracionPayPal
@@ -61,7 +61,7 @@ def snapshot(store, method, active=True):
         environment = {'PRODUCTION':'PRODUCCION','INTEGRATION':'INTEGRACION'}.get(str(environment).upper(),str(environment).upper())
         if environment not in ('INTEGRACION', 'PRODUCCION'):
             return None
-        if not getattr(settings, 'TUU_CALLBACK_BASE_URL', '').startswith('https://'):
+        if require_callback and not getattr(settings, 'TUU_CALLBACK_BASE_URL', '').startswith('https://'):
             return None
     elif method == 'Linkify':
         from apps.core.presentation.checkout import CheckoutOrderAPIView
@@ -80,6 +80,9 @@ def snapshot(store, method, active=True):
 
 def allowed_methods(store):
     configured = set(os.environ.get('PAID_ACTIVITY_EXTERNAL_METHODS', '').split(','))
+    # TUU para actividades: se habilita solo si hay credenciales y callback HTTPS validos.
+    if snapshot(store, 'TUU', require_callback=False) is not None:
+        configured.add('TUU')
     if not configured.intersection(METHODS):
         return []
     from apps.core.payments import payment_methods_for_store, PAYMENT_METHODS
@@ -88,7 +91,7 @@ def allowed_methods(store):
     for method in METHODS:
         if method not in configured or not payments.get(PAYMENT_METHODS[method], {}).get('enabled'):
             continue
-        data = snapshot(store, method)
+        data = snapshot(store, method, require_callback=(method != 'TUU'))
         if data and (data['ambiente'] in ('SANDBOX', 'INTEGRACION') or os.environ.get('PAID_ACTIVITY_EXTERNAL_ALLOW_LIVE') == '1'):
             result.append(method)
     return result
@@ -147,9 +150,11 @@ def approve_locked(order, reference, currency, amount):
     except Exception:
         raise ErrorPago('Pago recibido; inventario en revisión. No pagues nuevamente.', 'ACTIVIDAD_STOCK_REVISION', 409) from None
     ReservaActividadPagada.objects.filter(pk__in=[r.pk for r in rows]).update(estado='confirmada')
-    save_meta(order, referencia_pago=str(reference), moneda=currency, monto=str(amount), confirmado_en=timezone.now().isoformat(), actividad_iniciada=any(timezone.now()>=r.inicio for r in rows))
+    save_meta(order, referencia_pago=str(reference), moneda=currency, monto=str(amount), confirmado_en=timezone.now().isoformat(), actividad_iniciada=any(r.inicio is not None and timezone.now()>=r.inicio for r in rows))
     order.estado = 'pagado'
     order.save(update_fields=['estado'])
+    from apps.landing.private_recordings import grant_recordings
+    grant_recordings(order, rows)
     from apps.landing.activity_owner_notifications import programar_aviso_inscripcion
     programar_aviso_inscripcion(order.pk)
     if meta(order).get('ambiente') not in ('SANDBOX','INTEGRACION'):

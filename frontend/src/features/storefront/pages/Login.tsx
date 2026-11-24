@@ -33,6 +33,7 @@ export default function Login() {
   const { route, templateNumber, isMinimal, isVisual, isCatalog } =
     useStorefrontTemplate();
 
+  const customerDestination=()=>{try{const next=params.get('next');if(next){const target=new URL(next,window.location.origin),prefix=route().replace(/\/+$/,'')+'/';if(target.origin===window.location.origin&&target.pathname.startsWith(prefix)&&!target.pathname.startsWith(prefix+'ingresar'))return target.pathname;}}catch{}return route();};
   const initialResetToken = params.get('token') || '';
   const [mode, setMode] = useState<AuthViewMode>(() => {
     const modoParam = params.get('modo');
@@ -105,7 +106,7 @@ export default function Login() {
         if (data.data.user.is_store_owner === true) {
           navigate('/emprendedor');
         } else {
-          navigate(route());
+          navigate(customerDestination());
         }
       } catch (err: any) {
         setMessageVariant('error');
@@ -124,7 +125,7 @@ export default function Login() {
     if (user?.email === 'emprendedor@gmail.com' || user?.is_store_owner === true) {
       navigate('/emprendedor');
     } else {
-      navigate(route());
+      navigate(customerDestination());
     }
   };
 

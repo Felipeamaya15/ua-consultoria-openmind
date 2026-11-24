@@ -1,3 +1,4 @@
+import { useFeedback } from '../../../shared/components/FeedbackProvider';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { LoadingState } from '../../../shared/components/states';
 import { Link, useBlocker, useSearchParams } from 'react-router-dom';
@@ -33,6 +34,8 @@ export default function Marketing() {
 }
 
 function MarketingWorkspace({ scope, isCurrent }: { scope: DraftScope; isCurrent: () => boolean }) {
+  const uiFeedback = useFeedback();
+
   const [params] = useSearchParams();
   const {config}=useAdmin();
   const home=window.location.origin+templatePaths[config.template];
@@ -71,14 +74,14 @@ function MarketingWorkspace({ scope, isCurrent }: { scope: DraftScope; isCurrent
   const dirty = (!!productId||!!sharingReference) && JSON.stringify({ publication: current, name: name.trim() }) !== baseline;
   const [campaignDirty, setCampaignDirty] = useState(false);
   const [mediaDirty, setMediaDirty] = useState(false);
-  const [sharingDirty,setSharingDirty]=useState(false);
-  const hasUnsavedChanges = dirty || campaignDirty || mediaDirty || sharingDirty;
+  const hasUnsavedChanges = dirty || campaignDirty || mediaDirty;
   const blocker = useBlocker(({ currentLocation, nextLocation }) => hasUnsavedChanges && (currentLocation.pathname !== nextLocation.pathname || currentLocation.search !== nextLocation.search));
   useEffect(() => {
-    if (blocker.state === 'blocked') {
-      if (window.confirm('Tienes cambios sin guardar en Marketing. ¿Salir y descartarlos?')) blocker.proceed(); else blocker.reset();
-    }
-  }, [blocker]);
+    if(blocker.state!=='blocked')return;
+    let current=true;
+    void uiFeedback.confirm({title:'Salir de Marketing',message:'Tienes cambios sin guardar en Marketing. ¿Salir y descartarlos?',confirmLabel:'Salir y descartar'}).then(accepted=>{if(current){if(accepted)blocker.proceed();else blocker.reset();}});
+    return()=>{current=false;};
+  }, [blocker,uiFeedback]);
   useEffect(() => {
     if (!hasUnsavedChanges) return;
     const leave = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = ''; };
@@ -90,7 +93,7 @@ function MarketingWorkspace({ scope, isCurrent }: { scope: DraftScope; isCurrent
     const storage = (event: StorageEvent) => { if (event.key === repository.key || event.key === null) loadList(); };
     window.addEventListener('storage', storage); return () => window.removeEventListener('storage', storage);
   }, [repository]);
-  const discard = () => !dirty || window.confirm('Tienes cambios sin guardar. ¿Descartarlos y continuar?');
+  const discard = async () => !dirty || (await uiFeedback.confirm({title:"Descartar cambios",confirmLabel:"Descartar cambios",message:'Tienes cambios sin guardar. ¿Descartarlos y continuar?'}));
   function message(error: unknown) { return error instanceof DOMException && error.name === 'SecurityError' ? 'El navegador bloqueó la imagen por sus permisos de seguridad. Revisa las imágenes o prueba otra fuente.' : error instanceof Error ? error.message : 'No pudimos completar la operación. Reintenta.'; }
   const run = (operation: () => void) => {
     setNotice('');
@@ -170,10 +173,10 @@ function MarketingWorkspace({ scope, isCurrent }: { scope: DraftScope; isCurrent
     }
   }
   const missingVariant = !!product && !problem && !!sku && !content && !sources.loading;
-  const changeProduct = (id: string) => { if (id !== productId && !discard()) return; setNotice(''); setProductId(id); setSku(''); if (id !== productId) { setSession(initialTemplateHistory()); setSessionVersion(n => n + 1); setOpened(null); if (productId) setName(''); } };
+  const changeProduct = async (id: string) => { if (id !== productId && !(await discard())) return; setNotice(''); setProductId(id); setSku(''); if (id !== productId) { setSession(initialTemplateHistory()); setSessionVersion(n => n + 1); setOpened(null); if (productId) setName(''); } };
   const refresh = () => { setSku(''); sources.refresh();setSharingAttempt(value=>value+1); };
-  const openDraft = (row: MarketingDraft) => {
-    if (!discard()) return;
+  const openDraft = async (row: MarketingDraft) => {
+    if (!(await discard())) return;
     run(() => {
       const draft = repository.list().find(d => d.id === row.id);
       if (!draft) throw new Error('El borrador ya no está disponible.');
@@ -198,8 +201,8 @@ function MarketingWorkspace({ scope, isCurrent }: { scope: DraftScope; isCurrent
       });
     } finally { savingRef.current = false; setSavingDraft(false); setBusy(false); }
   };
-  const newPublication = () => {
-    if (!discard()) return;
+  const newPublication = async () => {
+    if (!(await discard())) return;
     const nextSession = initialTemplateHistory();
     setSharingReference(undefined);setSharingItem(null);
     setProductId(''); setSku(''); setSource('product'); setDesign({ format: 'square', layout: 'product-spotlight' }); setSession(nextSession);
@@ -240,8 +243,8 @@ function MarketingWorkspace({ scope, isCurrent }: { scope: DraftScope; isCurrent
     } catch (error) { if (mounted.current) setError(message(error)); }
     finally { savingRef.current = false; if (mounted.current) setBusy(false); }
   };
-  function prepareCatalog(selection: CatalogSelection): boolean {
-    if (!discard() || !isCurrent()) return false;
+  async function prepareCatalog(selection: CatalogSelection): Promise<boolean> {
+    if (!(await discard()) || !isCurrent()) return false;
     const next = initialTemplateHistory();
     for (const history of Object.values(next.documents)) history.present.imageIndex = selection.imageIndex;
     setSharingReference(undefined); setSharingItem(null); setProductId(selection.productId); setSku(selection.sku); setSource('product');
@@ -250,15 +253,17 @@ function MarketingWorkspace({ scope, isCurrent }: { scope: DraftScope; isCurrent
     return true;
   }
   async function prepareSharing(item:SharingItem|SharingReference,format:PublicationFormat):Promise<boolean>{
-    if(!discard()||!isCurrent())return false;
+    if(!(await discard())||!isCurrent())return false;
     const fresh=await resolveSharingItem('reference' in item ? item.reference : item,home,new AbortController().signal);
     if(!mounted.current||!isCurrent())return false;
     const next=initialTemplateHistory();
     for(const history of Object.values(next.documents))history.present={...history.present,showDescription:true,...(fresh.group==='Servicios'||fresh.group==='Talleres'?{campaignLayout:'classic' as const,fit:'contain' as const,mediaSide:history.present.template==='minimal'?'end' as const:'start' as const}:{}),cta:fresh.group==='Servicios'||fresh.group==='Talleres'?'Solicita información en nuestra tienda':'Conoce más en nuestra tienda'};
-    setProductId('');setSku('');setSource('product');setDesign({format,layout:'product-spotlight'});setSharingReference(fresh.reference);setSharingItem(fresh);setSharingAttempt(value=>value+1);setSession(next);setSessionVersion(value=>value+1);setOpened(null);setName('');setError('');setNotice('Contenido publicado preparado. Personaliza y descarga tu publicación.');
+    // Al preparar un PRODUCTO desde Difusión, usar el editor de catálogo para habilitar la selección de SKU.
+    const fromProduct = fresh.reference.kind === 'product';
+    setProductId(fromProduct ? fresh.reference.id : '');setSku('');setSource('product');setDesign({format,layout:'product-spotlight'});setSharingReference(fromProduct ? undefined : fresh.reference);setSharingItem(fromProduct ? null : fresh);setSharingAttempt(value=>value+1);setSession(next);setSessionVersion(value=>value+1);setOpened(null);setName('');setError('');setNotice('Contenido publicado preparado. Personaliza y descarga tu publicación.');
     return true;
   }
-  return <MarketingSections home={home} products={sources.products} catalogStatus={{loading:sources.loading,error:sources.productError,retry:sources.refresh}} onSelectProduct={prepareCatalog} onUseImage={id=>prepareSharing({kind:'library',id},'square')} onPrepare={prepareSharing} onSharingDirty={setSharingDirty} busy={busy} isCurrent={isCurrent} onCampaignDirty={setCampaignDirty} onMediaDirty={setMediaDirty}><section className="marketing-module" aria-label="Generador de publicaciones">
+  return <MarketingSections home={home} products={sources.products} catalogStatus={{loading:sources.loading,error:sources.productError,retry:sources.refresh}} onSelectProduct={prepareCatalog} onUseImage={id=>prepareSharing({kind:'library',id},'square')} busy={busy} isCurrent={isCurrent} onCampaignDirty={setCampaignDirty} onMediaDirty={setMediaDirty}><section className="marketing-module" aria-label="Generador de publicaciones">
     {showDrafts && <div ref={draftsRef} tabIndex={-1} className="scroll-mt-24" aria-label="Listado de borradores"><DraftPanel drafts={drafts} onOpen={openDraft} onRename={(draft, nextName) => run(() => {
       const next = repository.rename(draft.id, nextName, draft.updatedAt);
       if (opened?.id === draft.id) {
@@ -278,8 +283,8 @@ function MarketingWorkspace({ scope, isCurrent }: { scope: DraftScope; isCurrent
     <DesignStudio sourceKey={`${sessionVersion}:${productId}:${source}:${sharingKeyValue}`} sourceData={content} brandData={sources.brand} design={design} images={images}
       session={session} onAction={action => { setNotice(''); setSession(value => templateHistory(value, action)); }} previewRef={previewRef} busy={busy} selection={
       <div className="marketing-controls"><PublishedContentPicker home={home} mode="activities" onSelect={selection=>prepareSharing({kind:'section',id:selection.id},design.format)} /><fieldset disabled={sharingReference?sharingLoading:sources.loading || !!sources.productError} className="marketing-control-group">
-        {sharingReference?<div><p>{sharingReference.kind === 'library' ? 'Imagen de la biblioteca' : 'Contenido publicado'}: {sharingItem?.title||'verificando contenido…'}</p><Button type="button" variant="outline" onClick={()=>{if(discard()){setSharingReference(undefined);setSharingItem(null);setProductId('');setSession(initialTemplateHistory());setSessionVersion(value=>value+1);setOpened(null);}}}>Elegir un producto en su lugar</Button></div>:<ContentPicker key={pickerVersion} catalogReady={!sources.loading && !sources.productError} source={source} products={sources.products} productId={productId} sku={sku}
-          onSource={next => { if (discard()) { setNotice(''); setSource(next); setProductId(''); setSku(''); setSession(initialTemplateHistory()); setSessionVersion(n => n + 1); setOpened(null); if (productId) setName(''); } }} onProduct={changeProduct} onSku={value => { setNotice(''); setSku(value); }} />}
+        {sharingReference?<div><p>{sharingReference.kind === 'library' ? 'Imagen de la biblioteca' : 'Contenido publicado'}: {sharingItem?.title||'verificando contenido…'}</p><Button type="button" variant="outline" onClick={async ()=>{if((await discard())){setSharingReference(undefined);setSharingItem(null);setProductId('');setSession(initialTemplateHistory());setSessionVersion(value=>value+1);setOpened(null);}}}>Elegir un producto en su lugar</Button></div>:<ContentPicker key={pickerVersion} catalogReady={!sources.loading && !sources.productError} source={source} products={sources.products} productId={productId} sku={sku}
+          onSource={async next => { if ((await discard())) { setNotice(''); setSource(next); setProductId(''); setSku(''); setSession(initialTemplateHistory()); setSessionVersion(n => n + 1); setOpened(null); if (productId) setName(''); } }} onProduct={changeProduct} onSku={value => { setNotice(''); setSku(value); }} />}
       </fieldset><FormatPicker value={design.format} onChange={format => { setNotice(''); setDesign({ ...design, format }); }} />
         <p className="marketing-hint">Puedes probar los formatos sin cambiar tu catálogo. Guarda un borrador para continuar después.</p>
         <Link to="/emprendedor/productos" className="marketing-text-link">Administrar productos →</Link>
@@ -315,13 +320,15 @@ function MarketingWorkspace({ scope, isCurrent }: { scope: DraftScope; isCurrent
         <Button type="button" size="sm" variant="outline" disabled={busy} aria-expanded={showDrafts} onClick={() => { loadList(); setShowDrafts(true); draftsRef.current?.scrollIntoView({ block: 'start', behavior: 'instant' }); draftsRef.current?.focus({ preventScroll: true }); }}>Mis borradores</Button>
       </div>
       {design.format !== 'square' && <p className="marketing-hint">La publicación directa requiere formato cuadrado. Puedes descargar este formato para publicarlo manualmente.</p>}
+      <p className="marketing-hint">¿Quieres enviar una oferta especial o una campaña de temporada por correo? <Link to="/emprendedor/marketing#campanas" className="marketing-text-link">Ir a Correos y campañas →</Link></p>
       <div className="mk-publication-group" style={{marginTop: 12}}>
         <h3>Publicar manualmente en redes sociales</h3>
-        <p className="marketing-hint">1. Descarga la publicación. 2. Copia la descripción. 3. Abre tu red social, sube la imagen y confirma allí.</p>
+        <p className="marketing-hint">1. Descarga la imagen. 2. Copia la descripción si la necesitas. 3. Abre Instagram, Facebook o WhatsApp y adjunta la imagen manualmente. En WhatsApp puedes pegar el texto como pie de foto antes de enviar.</p>
         <div className="mk-publication-secondary-actions">
           <Button type="button" size="sm" variant="outline" disabled={busy || !content} onClick={() => void copyInstagramCaption()}>Copiar descripción</Button>
           <Button type="button" size="sm" variant="outline" onClick={() => window.open('https://www.instagram.com/', '_blank', 'noopener,noreferrer')}>Abrir Instagram</Button>
           <Button type="button" size="sm" variant="outline" onClick={() => window.open('https://www.facebook.com/', '_blank', 'noopener,noreferrer')}>Abrir Facebook</Button>
+          <Button type="button" size="sm" variant="outline" onClick={() => window.open('https://web.whatsapp.com/', '_blank', 'noopener,noreferrer')}>Abrir WhatsApp</Button>
         </div>
         <details><summary>Ver descripción para copiar manualmente</summary><textarea aria-label="Descripción de la publicación" readOnly rows={4} value={instagramCaption} style={{width:'100%',padding:10}} /></details>
       </div>

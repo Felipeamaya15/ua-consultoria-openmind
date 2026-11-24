@@ -48,3 +48,9 @@
   object-fit: cover;
   border-radius: 12px;
 }
+
+/* Apariencia unificada para componentes de secciones personalizadas. */
+[data-storefront-visual] [data-content-block-id] .section-elements{font-family:var(--lb-body-font,inherit);font-size:var(--lb-body-size,16px);color:var(--lb-body-color,inherit);text-align:var(--lb-body-align,left)}
+[data-storefront-visual] [data-content-block-id] .section-element-image img,
+[data-storefront-visual] [data-content-block-id] .section-element-gallery img,
+[data-storefront-visual] [data-content-block-id] .activity-cover img{object-fit:var(--lb-image-fit,contain);object-position:var(--lb-image-x,50%) var(--lb-image-y,50%)}

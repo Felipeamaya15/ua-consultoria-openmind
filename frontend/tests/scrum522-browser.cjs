@@ -189,8 +189,8 @@ async function main() {
     await page.getByRole('button',{name:'Enviar prueba controlada',exact:true}).waitFor();
     await page.screenshot({path:path.join(output,'negocio-gmail-qa.jpg'),fullPage:false});
     results.push({ flujo: 'Negocio: autorización inicialmente desmarcada, inicio OAuth real, callback con proveedor simulado y prueba SMTP Mailpit', estado: 'aprobado' });
-    page.once('dialog',dialog=>dialog.accept());
     await page.getByRole('button',{name:'Desconectar cuenta',exact:true}).click();
+    await page.getByRole('dialog',{name:'Desconectar correo',exact:true}).getByRole('button',{name:'Desconectar cuenta',exact:true}).click();
     await page.getByText('Cuenta desconectada de la tienda.',{exact:true}).waitFor();
     await page.getByRole('button',{name:'Conectar Gmail',exact:true}).waitFor();
     assert.equal(await authorization.isChecked(),false);

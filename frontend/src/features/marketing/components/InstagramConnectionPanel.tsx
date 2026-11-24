@@ -1,3 +1,4 @@
+import { useFeedback } from '../../../shared/components/FeedbackProvider';
 import { useEffect, useRef, useState } from 'react';
 import { Alert, Button } from '../../admin/components/ui';
 import { instagramService, type InstagramConnection } from '../services/instagramService';
@@ -16,6 +17,8 @@ function callbackError() {
 }
 
 export function InstagramConnectionPanel({isCurrent}: {isCurrent: () => boolean}) {
+  const uiFeedback = useFeedback();
+
   const [data, setData] = useState<InstagramConnection | null>(null), [authorized, setAuthorized] = useState(false);
   const [busy, setBusy] = useState(false), [error, setError] = useState(callbackError), [notice, setNotice] = useState('');
   const alive = useRef(true), lock = useRef(false);
@@ -26,7 +29,7 @@ export function InstagramConnectionPanel({isCurrent}: {isCurrent: () => boolean}
   }
   async function action(kind: 'connect' | 'refresh' | 'disconnect') {
     if (lock.current || !isCurrent()) return;
-    if (kind === 'disconnect' && !window.confirm('¿Desconectar Instagram de esta tienda? Las publicaciones anteriores se conservan.')) return;
+    if (kind === 'disconnect' && !(await uiFeedback.confirm({title:"Desconectar Instagram",confirmLabel:"Desconectar cuenta",message:'¿Desconectar Instagram de esta tienda? Las publicaciones anteriores se conservan.'}))) return;
     lock.current = true; setBusy(true); setError(''); setNotice('');
     try {
       if (kind === 'connect' || kind === 'refresh') {const url = await instagramService.connect(authorized, kind === 'refresh'); if (isCurrent()) window.location.assign(url);}

@@ -240,9 +240,9 @@ export default function MinimalHome() {
                       </p>
                     </div>
 
-                    <span data-visual-part="buyButton" className="w-8 h-8 flex-shrink-0 rounded-full border border-gray-200 flex items-center justify-center text-[var(--primary)] group-hover:bg-[var(--primary)] group-hover:text-[var(--on-primary)] transition-colors">
+                    <Link data-visual-part="buyButton" className="w-8 h-8 flex-shrink-0 rounded-full border border-gray-200 flex items-center justify-center text-[var(--primary)] group-hover:bg-[var(--primary)] group-hover:text-[var(--on-primary)] transition-colors" to={route(`producto/${product.id}`)} aria-label={`Ver detalles de ${product.name}`}>
                       →
-                    </span>
+                    </Link>
 
                   </div>
                 </div>

@@ -51,6 +51,9 @@ x-backend-env: &backend_env
   - STORE_MAIL_DAILY_LIMIT=${STORE_MAIL_DAILY_LIMIT:-500}
   - STORE_MAIL_PROVIDER_DAILY_LIMIT=${STORE_MAIL_PROVIDER_DAILY_LIMIT:-500}
   - STORE_MAIL_PUBLIC_API_URL=https://${DOMAIN}
+  - CART_REMINDERS_ENABLED=${CART_REMINDERS_ENABLED:-0}
+  - CART_REMINDER_PUBLIC_STORE_URL=https://${DOMAIN}
+  - CART_REMINDER_MIN_GAP_HOURS=${CART_REMINDER_MIN_GAP_HOURS:-168}
 
 x-backend-build: &backend_build
   context: ..
@@ -108,6 +111,21 @@ services:
       retries: 6
       start_period: 120s
 
+  recordatorios_carrito:
+    build: *backend_build
+    restart: unless-stopped
+    init: true
+    stop_grace_period: 60s
+    user: "1000:1000"
+    entrypoint: ["python", "manage.py", "procesar_carritos_abandonados", "--daemon", "--intervalo", "300", "--lote", "25"]
+    environment: *backend_env
+    depends_on:
+      db:
+        condition: service_healthy
+      mongodb:
+        condition: service_healthy
+      backend:
+        condition: service_healthy
   expirador_pedidos:
     build: *backend_build
     restart: unless-stopped
