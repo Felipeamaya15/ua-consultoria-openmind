@@ -16,6 +16,15 @@
 		-Server
 	}
 
+	# Las vistas previas de plantillas del panel (/admin/preview/...) son páginas de la tienda (React),
+	# no del administrador de Django; deben ir antes de la regla del backend.
+	@vista_previa path /admin/preview/*
+	handle @vista_previa {
+		root * {$WEB_ROOT:/srv/app}
+		rewrite * /index.html
+		file_server
+	}
+
 	# La API, el administrador de Django y las imágenes de la tienda las atiende el backend.
 	@backend path /api/* /admin/* /media/* /landing/* /sitemap.xml
 	handle @backend {
