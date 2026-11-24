@@ -5,6 +5,7 @@ import { Navigate, useLocation, type RouteObject } from 'react-router-dom';
 import { RequireAdmin } from './auth/RequireAdmin';
 import { AdminProvider } from './context/AdminContext';
 import { AdminLayout } from './components/layout/AdminLayout';
+import { ErrorFallback } from '../../shared/components/ErrorFallback';
 
 const Dashboard = lazyPage(() => import('./pages/Dashboard'));
 const ProductList = lazyPage(() => import('./pages/Products').then(module => ({default:module.ProductList})));
@@ -41,13 +42,16 @@ function ThemeEditorRoute() {
 export const adminRoute: RouteObject = {
   path: '/emprendedor',
   element: <RequireAdmin />,
+  errorElement: <ErrorFallback />,
   children: [
     {
       path: 'diseno/editor',
       element: <ThemeEditorRoute />,
+      errorElement: <ErrorFallback />,
     },
     {
       element: <AdminLayout />,
+      errorElement: <ErrorFallback />,
       children: [
         {
           path: 'perfil',
