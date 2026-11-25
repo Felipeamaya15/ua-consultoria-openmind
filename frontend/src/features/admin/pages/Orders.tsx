@@ -290,9 +290,9 @@ export default function Orders() {
             <div className="flex items-start justify-between">
               <div>
                 <p className="font-mono text-xs text-[var(--muted-foreground)]">
-                  {selectedOrder.number}
+                  {selectedOrder.identificador}
                 </p>
-                <p className="font-bold">{selectedOrder.customer.name}</p>
+                <p className="font-bold">{selectedOrder.nombre_contacto || "Sin nombre"}</p>
               </div>
               <button
                 aria-label="Cerrar detalle del pedido"
@@ -354,9 +354,9 @@ export default function Orders() {
               {selectedOrder.items.map((item, i) => (
                 <div key={i} className="flex items-center justify-between gap-2 border-b border-gray-100 pb-2 mb-2 last:border-0">
                   <div className="flex-1 text-xs">
-                    <p className="font-medium">{item.name}</p>
+                    <p className="font-medium">{item.nombre_producto}</p>
                     <p className="text-[var(--muted-foreground)]">
-                      x{item.quantity}
+                      Cantidad: {item.cantidad}
                     </p>
                     {item.sku && <p className="text-[var(--muted-foreground)]">SKU: {item.sku}</p>}
                   </div>
@@ -472,29 +472,6 @@ export default function Orders() {
               </div>
             </div>
 
-            {selectedOrder.trackingCode && (
-              <div className="bg-[var(--muted)] rounded-xl p-3 text-xs">
-                <p className="font-semibold mb-1">
-                  Seguimiento {selectedOrder.carrier}
-                </p>
-                <p className="font-mono text-[var(--primary)]">
-                  {selectedOrder.trackingCode}
-                </p>
-              </div>
-            )}
-
-            <div>
-              <p className="text-xs font-semibold text-[var(--muted-foreground)] uppercase tracking-wider mb-2">
-                Cambiar estado
-              </p>
-              <select aria-label="Cambiar estado del pedido" value={selectedOrder.status} onChange={event => setConfig({...config,orders:config.orders.map(order => order.id === selectedOrder.id ? {...order,status:event.target.value as Order["status"],updatedAt:new Date().toISOString()} : order)})} className="w-full h-8 text-sm border border-[var(--border)] rounded-lg px-2 bg-white focus:outline-none">
-                {Object.entries(STATUS_BADGE).map(([val, { label }]) => (
-                  <option key={val} value={val}>
-                    {label}
-                  </option>
-                ))}
-              </select>
-            </div>
           </div>
         ) : (
           <div className="bg-white border border-[var(--border)] rounded-xl p-10 text-center text-[var(--muted-foreground)]">

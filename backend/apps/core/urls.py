@@ -51,6 +51,8 @@ from apps.core.presentation.gmail_oauth_views import (
 from . import views
 from apps.core.presentation.views import (
     ConfiguracionPagoAPIView,
+    ConfiguracionEntregaAPIView,
+    AlternativasEntregaAPIView,
     MetodosPagoActivosAPIView,
     RegistrarCompraView,
     TiendaPagoActualAPIView,

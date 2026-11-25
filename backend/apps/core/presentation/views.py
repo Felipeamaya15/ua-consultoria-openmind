@@ -18,11 +18,13 @@ from apps.core.models import (
     ConfiguracionPago,
     ConfiguracionPayPal,
     ConfiguracionTransbank,
+    ConfiguracionEntrega,
+    Tienda,
 )
 from apps.core.presentation.checkout import GuestCheckoutOrderAPIView
 from apps.core.presentation.linkify_notificacion import LinkifyNotificacionView
 from apps.core.presentation.responses import error_response, success_response
-from apps.core.presentation.serializers import ConfiguracionPagoSerializer
+from apps.core.presentation.serializers import ConfiguracionPagoSerializer, ShippingConfigurationSerializer
 from apps.core.models import Pedido
 from apps.core.pickup import validate_pickup, prepare_pickup_for_save
 from copy import deepcopy

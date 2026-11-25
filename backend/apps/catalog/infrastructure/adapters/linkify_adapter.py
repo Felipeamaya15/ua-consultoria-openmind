@@ -4,6 +4,7 @@ import urllib.parse
 import urllib.error
 import json
 from typing import Dict, Any
+from django.conf import settings
 
 
 class LinkifyAdapter:
