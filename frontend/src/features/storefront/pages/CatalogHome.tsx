@@ -1,130 +1,205 @@
+import { ProductImageGallery } from '../components/store/ProductImageGallery';
+import { useHeroContent } from '../hooks/useHeroContent';
+import { HomeSections } from '../../landing/components/HomeSections';
+import { HomeCategories } from '../../landing/components/HomeCategories';
+import { VISUAL_SECTION } from '../visual/sectionIds';
 import { useLandingContent } from '../../landing/hooks/useLandingContent';
 import { LandingDetails } from '../../landing/components/LandingDetails';
 import { useLandingSectionVisibility } from '../../landing/hooks/useLandingSectionVisibility';
 import { useStore } from '../context/StoreContext';
 import { LandingStatus } from '../../landing/components/LandingStatus';
 import { Link } from 'react-router-dom';
-
+import { Icon } from '../components/ui';
+import { HeroCarousel, hasHeroSlides } from '../components/HeroCarousel';
 import { formatPrice } from '../data/mockData';
 import { useStorefrontTemplate } from '../hooks/useStorefrontTemplate';
+import './obsidianShowcase4.css';
 
 export default function CatalogHome() {
-  const { featured } = useLandingContent();
+  const { featured, content } = useLandingContent();
   const isSectionVisible = useLandingSectionVisibility();
   const { landing } = useStore();
+  const heroHasPhoto = hasHeroSlides(landing);
   const { route } = useStorefrontTemplate();
 
   const mochila = featured[0];
-  const discover = featured.slice(1);
+  const showcaseSide = featured.slice(1, 3);
+  const discover = featured.slice(3);
 
+  const visibleBlocks = landing?.contenido?.bloques?.filter(block => block.visible) ?? [];
+  const workshopBlock = visibleBlocks.find(block => /taller|curso|workshop/i.test(
+    `${block.titulo ?? ''} ${block.subtitulo ?? ''}`
+  ));
+  const serviceBlock = visibleBlocks.find(block => /servici|asesor|consultor/i.test(
+    `${block.titulo ?? ''} ${block.subtitulo ?? ''}`
+  ));
+
+  const hero = useHeroContent(landing, route);
   return (
-    <div className="bg-[#050505] text-white overflow-hidden">
-      {/* HERO EDITORIAL */}
-      <section className="max-w-[1320px] mx-auto px-5 pt-2 md:pt-4">
-        <div className="relative min-h-[620px] md:min-h-[720px] overflow-hidden rounded-[28px]">
-          <img
-            data-landing-image={landing?.imagen_principal ? true : undefined}
-            src={landing?.imagen_principal || undefined} hidden={!landing?.imagen_principal}
-            alt={landing?.titulo || ''}
-            className="absolute inset-0 w-full h-full object-cover object-center"
-          />
-          <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/55 to-black/15" />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/45 via-transparent to-black/10" />
+    <div data-landing-page="catalog" className="bg-[var(--visual-background)] text-[var(--visual-text)] overflow-hidden min-w-0">
 
-          <div className="relative z-10 min-h-[620px] md:min-h-[720px] flex items-center">
-            <div className="px-7 sm:px-12 md:px-20 max-w-[650px]">
-              <p className="text-[var(--primary)] text-[11px] md:text-xs font-extrabold uppercase tracking-[0.08em]">
-                Producto destacado
-              </p>
-
+      <section data-visual-section={VISUAL_SECTION.hero} className="om-ob-hero" aria-label="Portada de la tienda">
+        <div data-visual-part="heroFrame" className={`om-ob-hero-frame ${heroHasPhoto ? 'om-ob-hero-frame--photo' : 'om-ob-hero-frame--plain'}`}>
+          <HeroCarousel landing={landing} onContentChange={hero.onChange} />
+          {heroHasPhoto && <div data-visual-part="heroOverlay" className="om-ob-hero-overlay" aria-hidden="true" />}
+          <div data-visual-part="heroLayout" className="om-ob-hero-layout">
+            <div data-visual-part="heroContent" className="om-ob-hero-copy">
+              <p className="om-ob-hero-kicker">Una experiencia a tu manera</p>
               <LandingStatus />
-              <h1 className="mt-6 text-[54px] sm:text-[68px] md:text-[82px] leading-[0.93] tracking-[-0.055em] font-black">
-                {landing?.titulo}
-              </h1>
-
-              <p className="mt-7 max-w-md text-sm md:text-base leading-7 text-white/80">
-                {landing?.descripcion}
+              <h1 hidden={!hero.showTitle}>{hero.title}</h1>
+              <p hidden={!hero.showDescription} data-visual-part="heroSubtitle" className="om-ob-hero-description">
+                {hero.description}
               </p>
-
-              <div className="mt-8 flex items-center gap-5">
-
-                <Link
-                  to={route('catalogo')}
-                  className="rounded-full bg-[var(--accent)] px-7 py-3 text-sm font-semibold hover:bg-[var(--accent)] transition-colors"
+              <div data-visual-part="heroCtaLayout" className="om-ob-hero-actions">
+                <Link data-visual-section={VISUAL_SECTION.heroCta}
+                  hidden={!hero.showButton} to={hero.href}
+                  target={hero.external ? '_blank' : undefined}
+                  rel={hero.external ? 'noopener noreferrer' : undefined}
+                  className="om-ob-hero-button"
                 >
-                  {landing?.texto_boton}
+                  {hero.buttonText || 'Explorar tienda'} <span aria-hidden="true">↗</span>
                 </Link>
               </div>
             </div>
           </div>
+          <span className="om-ob-hero-scroll" aria-hidden="true">DESCUBRE MÁS ↓</span>
         </div>
       </section>
 
-      {/* MANIFIESTO + SEGUNDO PRODUCTO */}
-      {isSectionVisible('Productos destacados') && mochila && (<section data-landing-content className="max-w-[1160px] mx-auto px-5 py-24 md:py-32">
-        <h2 className="max-w-[800px] text-[48px] sm:text-[62px] md:text-[76px] leading-[0.96] tracking-[-0.055em] font-black">
-          Todo lo que necesitas.
-          <br />
-          Nada que no.
-        </h2>
-
-        <Link
-          to={route(`producto/${mochila.id}`)}
-          className="group relative block mt-14 min-h-[500px] md:min-h-[620px] overflow-hidden rounded-[28px]"
-        >
-          <img
-            src={mochila.images[0]}
-            alt={mochila.name}
-            className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.025]"
-          />
-          <div className="absolute inset-0 bg-gradient-to-r from-black/65 via-black/25 to-transparent" />
-
-          <div className="relative z-10 p-8 md:p-12">
-            <p className="text-[var(--primary)] text-xs font-bold">
-              {mochila.category}
-            </p>
-            <h3 className="mt-6 text-3xl md:text-4xl font-semibold tracking-tight">
-              {mochila.name}
-            </h3>
-            <p className="mt-3 max-w-sm text-sm text-white/80">
-              Diseñado para acompañarte todos los días.
-            </p>
-          </div>
+      <nav className="om-ob-quicklinks" aria-label="Explora esta tienda">
+        <Link to={route('catalogo')} className="om-ob-quicklink">
+          <span className="om-ob-quicklink-number">01</span>
+          <span><strong>Catálogo</strong><small>Explora nuestros productos</small></span>
+          <span aria-hidden="true">↗</span>
         </Link>
-      </section>)}
+        {mochila && isSectionVisible('Productos destacados') && <a href="#om-ob-featured" className="om-ob-quicklink">
+          <span className="om-ob-quicklink-number">02</span>
+          <span><strong>Destacados</strong><small>Conoce nuestra selección</small></span>
+          <span aria-hidden="true">↓</span>
+        </a>}
+        {workshopBlock && <a href={`#seccion-${workshopBlock.id}`} className="om-ob-quicklink">
+          <span className="om-ob-quicklink-number">03</span>
+          <span><strong>Talleres</strong><small>Actividades y experiencias</small></span>
+          <span aria-hidden="true">↓</span>
+        </a>}
+        {serviceBlock && <a href={`#seccion-${serviceBlock.id}`} className="om-ob-quicklink">
+          <span className="om-ob-quicklink-number">04</span>
+          <span><strong>Servicios</strong><small>Descubre qué ofrecemos</small></span>
+          <span aria-hidden="true">↓</span>
+        </a>}
+      </nav>
 
-      {/* BLOQUE BLANCO */}
-      <section className="bg-[#f6f6f4] text-[#151515]">
-        <div className="grid grid-cols-1 lg:grid-cols-2 min-h-[560px]">
+
+      {isSectionVisible('Beneficios') && content.beneficios.length > 0 && (
+        <section
+          aria-label="Beneficios de la tienda"
+          data-landing-content
+          data-visual-section={VISUAL_SECTION.sections}
+          data-visual-kind="benefits"
+          className="w-full px-4 sm:px-5 md:px-8 py-6"
+        >
+          <div className="max-w-[1160px] mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 items-start gap-6">
+            {content.beneficios.map((benefit, index) => (
+              <div
+                key={index}
+                className="flex min-w-0 max-w-full items-start gap-3"
+              >
+                <Icon
+                  name={benefit.icono}
+                  className="w-5 h-5 shrink-0 mt-0.5 text-[var(--visual-text)]"
+                />
+
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold leading-5 text-[var(--visual-text)] break-words">
+                    {benefit.titulo}
+                  </p>
+
+                  {benefit.descripcion && (
+                    <p className="mt-1 text-xs leading-5 text-[var(--visual-muted)] break-words">
+                      {benefit.descripcion}
+                    </p>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      <HomeSections commerce={{
+        "sistema:destacados": isSectionVisible('Productos destacados') && mochila && (
+          <section id="om-ob-featured" data-visual-section={VISUAL_SECTION.sections}
+            data-visual-kind="featured" data-landing-content className="om-ob-featured">
+            <div className="om-ob-section-heading">
+              <div>
+                <p className="om-ob-eyebrow">DESCUBRE NUESTRA SELECCIÓN</p>
+                <h2>Productos destacados</h2>
+              </div>
+              <Link to={route('catalogo')} className="om-ob-see-all">Ver catálogo completo ↗</Link>
+            </div>
+            <div data-visual-section={VISUAL_SECTION.productGrid} data-visual-grid="products" className="om-ob-featured-grid">
+              <Link data-ob-featured-gallery to={route(`producto/${mochila.id}`)}
+                className="om-ob-featured-main">
+                <ProductImageGallery images={mochila.images} alt={mochila.name}
+                  imageClassName="w-full h-full object-cover" />
+                <div data-visual-part="heroOverlay" className="om-ob-featured-shade" aria-hidden="true" />
+                <div className="om-ob-featured-copy pointer-events-none p-6 sm:p-8 md:p-12">
+                  <span>{mochila.category}</span>
+                  <h3>{mochila.name}</h3>
+                  <span className="om-ob-featured-price">{formatPrice(mochila.basePrice)} · Ver producto ↗</span>
+                </div>
+              </Link>
+              {showcaseSide.length > 0 && <div className="om-ob-featured-side">
+                {showcaseSide.map(product => (
+                  <Link key={product.id} to={route(`producto/${product.id}`)}
+                    className="om-ob-side-card" data-visual-section={VISUAL_SECTION.productCard}>
+                    <div className="om-ob-side-media">
+                      <ProductImageGallery images={product.images} alt={product.name}
+                        imageClassName="w-full h-full object-cover" />
+                    </div>
+                    <div className="om-ob-side-copy">
+                      <span>{product.category}</span>
+                      <h3>{product.name}</h3>
+                      <strong>{formatPrice(product.basePrice)}</strong>
+                      <small>Descubrir ↗</small>
+                    </div>
+                  </Link>
+                ))}
+              </div>}
+            </div>
+          </section>
+        ),
+        "sistema:contenido": (<section
+        data-visual-section={VISUAL_SECTION.sections}
+        data-visual-kind="content"
+        className="bg-[var(--visual-alternate,var(--secondary))] text-[var(--on-alternate,var(--on-secondary))]"
+      >
+        <div className="max-w-[1160px] mx-auto grid grid-cols-1 lg:grid-cols-2 min-h-[420px] lg:min-h-[540px]">
           <div className="flex items-center">
-            <div className="max-w-[580px] px-8 sm:px-14 lg:pl-[max(4rem,calc((100vw-1160px)/2))] lg:pr-16 py-20">
-              <p className="text-[var(--primary)] text-xs font-bold">
+            <div className="w-full min-w-0 px-5 sm:px-10 lg:px-12 py-12 sm:py-16">
+              <p className="text-[var(--primary)] text-xs font-bold uppercase tracking-wider">
                 Selección cuidada
               </p>
 
-              <h2 className="mt-7 text-[52px] md:text-[66px] leading-[0.96] tracking-[-0.05em] font-black">
-                Una mejor
-                <br />
-                forma de
-                <br />
-                elegir.
+              <h2 className="mt-4 sm:mt-6 text-[clamp(2.15rem,4.5vw,3.75rem)] leading-[1.04] tracking-[-0.04em] font-black break-words text-inherit">
+                Una mejor forma de elegir.
               </h2>
 
-              <p className="mt-7 max-w-md text-base leading-7 text-black/55">
+              <p className="mt-5 sm:mt-6 max-w-xl text-sm sm:text-base leading-7 text-[color-mix(in_srgb,var(--on-alternate,var(--on-secondary))_85%,transparent)]">
                 Encuentra productos de calidad, con información clara,
                 precios transparentes y entrega a todo Chile.
               </p>
 
               <Link
                 to={route('catalogo')}
-                className="inline-flex mt-8 text-[var(--accent)] text-base font-medium hover:translate-x-1 transition-transform"
+                className="inline-flex items-center min-h-11 mt-6 sm:mt-8 text-[var(--accent)] text-base font-semibold hover:translate-x-1 transition-transform"
               >
                 Explorar el catálogo →
               </Link>
             </div>
           </div>
 
-          <div className="min-h-[420px] lg:min-h-full">
+          <div className="min-h-[260px] sm:min-h-[420px] lg:min-h-full">
             <img
               src="https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=1200&h=900&fit=crop&auto=format"
               alt="Compra en tienda"
@@ -132,71 +207,88 @@ export default function CatalogHome() {
             />
           </div>
         </div>
-      </section>
+      </section>),
+        "sistema:descubrir": discover.length > 0 && (
+        <section
+          data-visual-section={VISUAL_SECTION.sections}
+          data-visual-kind="featured"
+          data-landing-content
+          className="max-w-[1160px] mx-auto px-4 sm:px-5 py-14 sm:py-20 md:py-24"
+        >
+          <div className="flex items-end justify-between gap-6 mb-8 sm:mb-10">
+            <div>
+              <p className="text-[var(--primary)] text-xs font-bold">
+                Más para descubrir
+              </p>
 
-      {/* DESCUBRIR */}
-      {isSectionVisible('Productos destacados') && discover.length > 0 && (<section data-landing-content className="max-w-[1160px] mx-auto px-5 py-24 md:py-28">
-        <div className="flex items-end justify-between gap-6 mb-10">
-          <div>
-            <p className="text-[var(--primary)] text-xs font-bold">
-              Más para descubrir
-            </p>
-            <h2 className="mt-3 text-3xl md:text-4xl font-black tracking-[-0.035em]">
-              Seleccionados para ti.
-            </h2>
+              <h2 className="mt-2 sm:mt-3 text-2xl sm:text-3xl md:text-4xl font-black tracking-[-0.035em] text-[var(--visual-text)]">
+                Seleccionados para ti.
+              </h2>
+            </div>
+
+            <Link
+              to={route('catalogo')}
+              className="hidden sm:block text-[var(--accent)] text-sm font-semibold hover:opacity-80"
+            >
+              Ver todos →
+            </Link>
+          </div>
+
+          <div
+            data-visual-section={VISUAL_SECTION.productGrid}
+            data-visual-grid="products"
+            className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5"
+          >
+            {discover.map((product) => (
+              <article
+                data-visual-section={VISUAL_SECTION.productCard}
+                data-visual-card="grid"
+                key={product.id}
+                className="group min-w-0"
+              >
+                <div
+
+                  className="relative relative block aspect-[1.15/1] rounded-[20px] sm:rounded-[24px] overflow-hidden bg-[var(--visual-surface)]"
+                >
+                  <ProductImageGallery images={product.images} alt={product.name} href={route(`producto/${product.id}`)} imageClassName="w-full h-full object-cover group-hover:scale-[1.035] transition-transform duration-500" />
+                </div>
+
+                <p className="mt-4 sm:mt-5 text-[var(--primary)] text-xs font-bold">
+                  {product.category}
+                </p>
+
+                <h3 className="mt-2 sm:mt-3 text-xl md:text-2xl font-semibold tracking-tight text-[var(--visual-text)] break-words">
+                  {product.name}
+                </h3>
+
+                <p
+                  data-visual-part="price"
+                  className="mt-2 sm:mt-3 text-sm font-semibold text-[var(--visual-text)]"
+                >
+                  {formatPrice(product.basePrice)}
+                </p>
+
+                <Link
+                  data-visual-part="buyButton"
+                  to={route(`producto/${product.id}`)}
+                  className="mt-4 sm:mt-5 h-11 rounded-full bg-[var(--accent)] text-[var(--on-accent)] text-sm font-semibold flex items-center justify-center hover:opacity-90 transition-opacity"
+                >
+                  Comprar
+                </Link>
+              </article>
+            ))}
           </div>
 
           <Link
             to={route('catalogo')}
-            className="hidden sm:block text-[var(--accent)] text-sm hover:opacity-70"
+            className="sm:hidden inline-flex items-center min-h-11 mt-7 text-[var(--accent)] text-sm font-medium"
           >
-            Ver todos →
+            Ver todos los productos →
           </Link>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-          {discover.map((product) => (
-            <article key={product.id} className="group">
-              <Link
-                to={route(`producto/${product.id}`)}
-                className="block aspect-[1.15/1] rounded-[24px] overflow-hidden bg-[#171719]"
-              >
-                <img
-                  src={product.images[0]}
-                  alt={product.name}
-                  className="w-full h-full object-cover group-hover:scale-[1.035] transition-transform duration-500"
-                />
-              </Link>
-
-              <p className="mt-5 text-[var(--primary)] text-xs font-bold">
-                {product.category}
-              </p>
-
-              <h3 className="mt-3 text-xl md:text-2xl font-semibold tracking-tight">
-                {product.name}
-              </h3>
-
-              <p className="mt-3 text-sm font-semibold">
-                {formatPrice(product.basePrice)}
-              </p>
-
-              <Link
-                to={route(`producto/${product.id}`)}
-                className="mt-5 h-11 rounded-full bg-[var(--accent)] text-white text-sm font-semibold flex items-center justify-center hover:bg-[var(--accent)] transition-colors"
-              >
-                Comprar
-              </Link>
-            </article>
-          ))}
-        </div>
-
-        <Link
-          to={route('catalogo')}
-          className="sm:hidden inline-block mt-9 text-[var(--accent)] text-sm"
-        >
-          Ver todos los productos →
-        </Link>
-      </section>)}
+        </section>
+      ),
+        'sistema:categorias': <HomeCategories />
+      }} />
       <LandingDetails />
     </div>
   );

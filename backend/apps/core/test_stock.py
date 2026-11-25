@@ -69,37 +69,3 @@ class StockPostgreSQLTests(TestCase):
             obj.stock = -1
             with self.assertRaises(ValidationError):
                 obj.full_clean(exclude=['atributos'])
-
-    def test_api_crea_variantes_no_negativas_y_rechaza_negativa(self):
-        url = f'/api/productos/{self.producto.pk}/variantes/'
-        for stock in (0, 2):
-            response = self.api.post(url, {'sku': f'API-{stock}', 'precio': 10, 'stock': stock}, format='json')
-            self.assertEqual(response.status_code, 201, response.data)
-        count = VarianteProducto.objects.count()
-        response = self.api.post(url, {'sku': 'API-INVALIDO', 'precio': 10, 'stock': -1}, format='json')
-        self.assertEqual(response.status_code, 400, response.data)
-        self.assertEqual(VarianteProducto.objects.count(), count)
-
-    def test_api_actualiza_stock_y_rechaza_negativo_sin_modificar_otros_datos(self):
-        url = f'/api/productos/{self.producto.pk}/variantes/{self.variante.pk}/'
-        for stock in (0, 3):
-            response = self.api.patch(url, {'stock': stock}, format='json')
-            self.assertEqual(response.status_code, 200, response.data)
-            self.variante.refresh_from_db()
-            self.assertEqual(self.variante.stock, stock)
-        response = self.api.patch(url, {'stock': -1, 'precio': 99}, format='json')
-        self.assertEqual(response.status_code, 400, response.data)
-        self.variante.refresh_from_db()
-        self.assertEqual(self.variante.stock, 3)
-        self.assertEqual(self.variante.precio, 10)
-
-    def test_compra_fallida_revierte_descuentos_anteriores(self):
-        response = self.api.post('/api/compras/', {
-            'id_usuario': self.usuario.pk,
-            'items': [{'id_variante': self.variante.pk, 'cantidad': 3}] * 2,
-        }, format='json')
-        self.assertEqual(response.status_code, 400, response.data)
-        self.variante.refresh_from_db()
-        self.assertEqual(self.variante.stock, 5)
-        self.assertFalse(Pedido.objects.exists())
-        self.assertFalse(ItemPedido.objects.exists())

@@ -1,7 +1,17 @@
-# Vistas del módulo Core (PostgreSQL)
+import logging
+
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.views import APIView
+from rest_framework.exceptions import APIException
+from django.db import transaction
 
+from apps.core.delivery import (
+    CREDENTIALS_KEY, OrigenChilexpressError, delivery_data, delivery_for_store, merge_carrier_credentials,
+    resolve_origin_county, chilexpress_missing_fields,
+)
+from apps.core.infrastructure.expiracion_pedidos import devolver_stock_de_pedido_cancelado, liberar_vencidos_de_tienda
+from apps.core.infrastructure.stock_pedidos import descontar_stock_de_pedido
+from apps.core.infrastructure.notificaciones_pedido import notificar_cambio_de_estado, notificar_pago_rechazado
 from apps.core.infrastructure.tenant import resolver_tienda, resolver_tienda_id
 from apps.core.models import (
     ConfiguracionMercadoPago,
@@ -10,9 +20,15 @@ from apps.core.models import (
     ConfiguracionTransbank,
 )
 from apps.core.presentation.checkout import GuestCheckoutOrderAPIView
+from apps.core.presentation.linkify_notificacion import LinkifyNotificacionView
 from apps.core.presentation.responses import error_response, success_response
 from apps.core.presentation.serializers import ConfiguracionPagoSerializer
 from apps.core.models import Pedido
+from apps.core.pickup import validate_pickup, prepare_pickup_for_save
+from copy import deepcopy
+from rest_framework import generics, serializers
+from apps.core.presentation.order_tracking import OrderTrackingAPIView
+from .serializers import PedidoTiendaSerializer, TransferenciaPendienteSerializer
 
 class RegistrarCompraView(GuestCheckoutOrderAPIView):
     """Compatibilidad SCRUM-289: reutiliza la creación y seguridad de SCRUM-291."""
@@ -28,6 +44,9 @@ class TiendaPagoActualAPIView(APIView):
         except Exception as e:
             return error_response(mensaje=str(e), codigo="ERROR_TIENDA", status=getattr(e, "status_code", 400))
 
+logger = logging.getLogger(__name__)
+
+
 class ConfiguracionPagoAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -35,154 +54,161 @@ class ConfiguracionPagoAPIView(APIView):
         try:
             tienda = resolver_tienda(request, exigir_propietario=True)
             config_pago, _ = ConfiguracionPago.objects.get_or_create(tienda=tienda)
-            return success_response(data=config_pago.datos or {})
+            return success_response(data=config_pago.datos_enmascarados)
         except Exception as e:
             return error_response(mensaje=str(e), codigo="ERROR_PAGO", status=getattr(e, "status_code", 400))
 
     def put(self, request):
+        return self.save_configuration(request, partial=False)
+
+    def patch(self, request):
+        return self.save_configuration(request, partial=True)
+
+    def save_configuration(self, request, *, partial):
         try:
             tienda = resolver_tienda(request, exigir_propietario=True)
             serializer = ConfiguracionPagoSerializer(data=request.data)
             if not serializer.is_valid():
                 return error_response(mensaje="Datos incompletos.", codigo="ERROR_VALIDACION", detalles=serializer.errors, status=400)
 
-            config_pago, _ = ConfiguracionPago.objects.get_or_create(tienda=tienda)
-            config_pago.datos = serializer.validated_data
-            config_pago.save()
+            with transaction.atomic():
+                Tienda.objects.select_for_update().get(pk=tienda.pk)
+                config_pago, _ = ConfiguracionPago.objects.get_or_create(tienda=tienda)
+                datos = deepcopy(serializer.validated_data)
+                actuales = config_pago.datos_descifrados
+                for metodo, campos in ConfiguracionPago.CAMPOS_SECRETOS.items():
+                    nuevos = (datos.get(metodo) or {}).get('fields') if isinstance(datos.get(metodo), dict) else None
+                    previos = (actuales.get(metodo) or {}).get('fields') or {}
+                    if isinstance(nuevos, dict):
+                        for campo in campos:
+                            if nuevos.get(campo) and nuevos[campo] == ConfiguracionPago.enmascarar(previos.get(campo, '')):
+                                nuevos[campo] = previos[campo]
+                for metodo, claves in (('linkify', ('idCuenta', 'clavePrivada')), ('tuu', ('accountId', 'secretKey'))):
+                    nuevo = datos.get(metodo)
+                    if (isinstance(nuevo, dict) and nuevo.get('enabled') is False
+                            and not any(nuevo.get('fields', {}).get(k) for k in claves)):
+                        previos = ((config_pago.datos or {}).get(metodo) or {}).get('fields')
+                        if isinstance(previos, dict) and previos:
+                            datos[metodo] = {'enabled': False, 'fields': dict(previos)}
+                if partial:
+                    datos = {**actuales, **datos}
+                config_pago.datos = datos
+                config_pago.save()
 
-            return success_response(mensaje="Métodos guardados.", data=config_pago.datos)
-        except Exception as e:
-            return error_response(mensaje=str(e), codigo="ERROR_PAGO", status=getattr(e, "status_code", 400))
+                return success_response(mensaje="Métodos guardados.", data=config_pago.datos_enmascarados)
+        except APIException as error:
+            return error_response(mensaje="No tienes acceso a esta configuración. Revisa tu sesión.", codigo="ERROR_PAGO", status=error.status_code)
+        except Exception as error:
+            logger.error('PAYMENT_CONFIGURATION_FAILED kind=%s', type(error).__name__)
+            return error_response(mensaje="No pudimos guardar los medios de pago. Actualiza para comprobar su estado antes de reintentar.", codigo="ERROR_PAGO", status=500)
+
+class ConfiguracionEntregaAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        tienda = resolver_tienda(request, exigir_propietario=True)
+        return success_response(data=delivery_for_store(tienda, public=False))
+
+    def put(self, request):
+        return self.save_configuration(request, partial=False)
 
     def patch(self, request):
-        return self.put(request)
+        return self.save_configuration(request, partial=True)
+
+    def save_configuration(self, request, *, partial):
+        tienda = resolver_tienda(request, exigir_propietario=True)
+        serializer = ShippingConfigurationSerializer(data=request.data, partial=partial)
+        if not serializer.is_valid():
+            return error_response('Configuración de entrega inválida.', 'ERROR_VALIDACION',
+                                  serializer.errors, status=400)
+        with transaction.atomic():
+            Tienda.objects.select_for_update().get(pk=tienda.pk)
+            config = ConfiguracionEntrega.objects.filter(tienda=tienda).first()
+            datos = delivery_data(config.datos if config else None)
+            stored_credentials = (config.datos or {}).get(CREDENTIALS_KEY) if config and isinstance(config.datos, dict) else None
+            previous = deepcopy(datos['pickup'])
+            new_credentials = serializer.validated_data.get('chilexpress', {}).pop('credenciales', None)
+            datos['chilexpress'].pop('credenciales', None)
+            def merge(target, changes):
+                for key, value in changes.items():
+                    if isinstance(value, dict) and isinstance(target.get(key), dict):
+                        merge(target[key], value)
+                    else:
+                        target[key] = value
+            for method, changes in serializer.validated_data.items():
+                merge(datos[method], changes)
+            pickup = datos['pickup']
+            errors = validate_pickup(pickup, tienda.pk)
+            if pickup.get('enabled') and pickup.get('version') != 2:
+                if not previous.get('enabled') or any(pickup.get(k) != previous.get(k) for k in ('address', 'schedule')):
+                    errors['location.verification'] = 'Para activar o editar retiro, completa la dirección estructurada y los horarios por día.'
+            if previous.get('version') == 2 and pickup.get('version') != 2:
+                errors['version'] = 'No se puede reemplazar la configuración estructurada por texto.'
+            if errors:
+                return error_response('Revisa la configuración de retiro.', 'ERROR_VALIDACION', {'pickup': errors})
+            datos['pickup'] = prepare_pickup_for_save(pickup, tienda.pk)
+            if config is None:
+                config = ConfiguracionEntrega(tienda=tienda)
+            previous_raw = {CREDENTIALS_KEY: stored_credentials} if stored_credentials else {}
+            try:
+                new_credentials = resolve_origin_county(previous_raw, new_credentials, datos['chilexpress'].get('ambiente'))
+            except OrigenChilexpressError as exc:
+                return error_response(str(exc), 'ERROR_VALIDACION', {'chilexpress': {'credenciales': {'origen_comuna': str(exc)}}})
+            merged = merge_carrier_credentials(previous_raw, 'chilexpress', new_credentials)
+            missing = chilexpress_missing_fields(merged, datos['chilexpress'].get('enabled') is True)
+            if missing:
+                message = f"Faltan campos obligatorios: {', '.join(missing)}."
+                return error_response(message, 'ERROR_VALIDACION',
+                                      {'chilexpress': {'credenciales': {'tcc': message}}})
+            if merged.get('chilexpress') or len(merged) > 1:
+                datos[CREDENTIALS_KEY] = merged
+            datos['chilexpress'].pop('status', None)
+            config.datos = datos
+            config.save()
+        return success_response(data=delivery_data(config.datos), mensaje='Configuración de entregas guardada.')
+
+
+class AlternativasEntregaAPIView(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        return success_response(data=delivery_for_store(resolver_tienda(request)))
+
 
 class MetodosPagoActivosAPIView(APIView):
     """Endpoint público para checkout."""
     permission_classes = [AllowAny]
-    TRANSFER_PUBLIC_FIELDS = {"bank_name", "account_type", "account_number", "holder_rut", "holder_name", "confirmation_email"}
-
     def get(self, request):
-        try:
-            tienda_id = resolver_tienda_id(request)
-            metodos_activos = {}
+        from apps.core.payments import payment_methods_for_store
+        return success_response(data=payment_methods_for_store(resolver_tienda(request)))
 
-            if ConfiguracionTransbank.objects.filter(id_tienda_id=tienda_id, activo=True).exists():
-                metodos_activos["transbank"] = {"enabled": True}
+class WebhookLinkifyAPIView(LinkifyNotificacionView):
+    """Compatibilidad del webhook antiguo con la firma y estados de SCRUM-316/317."""
 
-            if ConfiguracionPayPal.objects.filter(id_tienda_id=tienda_id, activo=True).exists():
-                metodos_activos["paypal"] = {"enabled": True}
-
-            if ConfiguracionMercadoPago.objects.filter(id_tienda_id=tienda_id, activo=True).exists():
-                metodos_activos["mercadopago"] = {"enabled": True}
-
-            try:
-                config_pago = ConfiguracionPago.objects.get(tienda_id=tienda_id)
-                transferencia = (config_pago.datos or {}).get("transfer", {})
-            except ConfiguracionPago.DoesNotExist:
-                transferencia = {}
-
-            if isinstance(transferencia, dict) and transferencia.get("enabled") is True:
-                fields = transferencia.get("fields", {})
-                metodos_activos["transfer"] = {
-                    "enabled": True,
-                    "fields": {f: fields.get(f, "") for f in self.TRANSFER_PUBLIC_FIELDS}
-                }
-
-            return success_response(data=metodos_activos)
-        except Exception as e:
-            return error_response(mensaje=str(e), codigo="ERROR_METODOS_PAGO", status=getattr(e, "status_code", 400))
-
-class IniciarPagoPayPalView(APIView):
-    """Inicia una transacción en PayPal."""
-    permission_classes = [AllowAny]
-
-    def post(self, request):
-        tienda_id = request.data.get('tienda_id')
-        order_number = request.data.get('order_number')
-        amount = request.data.get('amount')
-        return_url = request.data.get('return_url')
-        cancel_url = request.data.get('cancel_url')
-
-        try:
-            # Importación LAZY para evitar caídas de servidor al arrancar
-            from apps.catalog.infrastructure.adapters.paypal_adapter import PayPalAdapter
-            
-            config = ConfiguracionPayPal.objects.get(id_tienda_id=tienda_id, activo=True)
-            adapter = PayPalAdapter(client_id=config.client_id, client_secret=config.client_secret, ambiente=config.ambiente)
-            
-            resultado = adapter.create_order(
-                amount=float(amount), currency='USD', return_url=return_url, 
-                cancel_url=cancel_url, reference_id=order_number
-            )
-            return success_response(data=resultado)
-            
-        except ConfiguracionPayPal.DoesNotExist:
-            return error_response(mensaje="PayPal no configurado para esta tienda.", status=400)
-        except Exception as e:
-            return error_response(mensaje=f"Error conectando con PayPal: {str(e)}", status=500)
-
-class CapturarPagoPayPalView(APIView):
-    """Captura los fondos."""
-    permission_classes = [AllowAny]
-
-    def post(self, request):
-        tienda_id = request.data.get('tienda_id')
-        order_id = request.data.get('order_id')
-
-        try:
-            # Importación LAZY
-            from apps.catalog.infrastructure.adapters.paypal_adapter import PayPalAdapter
-            
-            config = ConfiguracionPayPal.objects.get(id_tienda_id=tienda_id, activo=True)
-            adapter = PayPalAdapter(client_id=config.client_id, client_secret=config.client_secret, ambiente=config.ambiente)
-            
-            resultado = adapter.capture_order(order_id)
-            if resultado.get("exito"):
-                return success_response(mensaje="Pago capturado", data=resultado)
-            else:
-                return error_response(mensaje="No se pudo capturar el pago", status=400)
-                
-        except Exception as e:
-            return error_response(mensaje=f"Error capturando PayPal: {str(e)}", status=500)
-
-class WebhookLinkifyAPIView(APIView):
-    """
-    Endpoint pasivo (Webhook) para recibir notificaciones automáticas de Linkify 
-    cuando detectan una transferencia en la cuenta del vendedor.
-    """
-    permission_classes = [AllowAny]
-
-    def post(self, request):
+    def _avisar(self, request, cuerpo):
         try:
             datos = request.data
-            reference_id = datos.get('buy_order') or datos.get('reference')
-            estado = datos.get('status')
-
-            if not reference_id:
-                return error_response(mensaje="Falta identificador (reference)", status=400)
-
-            # Buscamos el pedido en PostgreSQL
-            try:
-                pedido = Pedido.objects.get(identificador=reference_id)
-            except Pedido.DoesNotExist:
-                return error_response(mensaje="Pedido no encontrado", status=404)
-
-            # Si el banco de Linkify confirmó el ingreso del dinero
-            if estado in ['PAID', 'VERIFIED', 'COMPLETED']:
-                pedido.estado = 'pagado'
-                pedido.save()
-                return success_response(mensaje="Transferencia detectada automáticamente. Pedido pagado.")
-
-            return success_response(mensaje="Notificación recibida, estado pendiente.")
-            
-        except Exception as e:
-            return error_response(mensaje=f"Error procesando webhook Linkify: {str(e)}", status=500)
+        except APIException:
+            return error_response('El cuerpo no es válido.', 'CUERPO_INVALIDO', status=400)
+        if not isinstance(datos, dict):
+            return error_response('El cuerpo debe ser un objeto.', 'CUERPO_INVALIDO', status=400)
+        if any(key in datos for key in ('id_pago', 'idPago', 'payment_id', 'id')):
+            return super()._avisar(request, cuerpo)
+        reference = datos.get('buy_order') or datos.get('reference')
+        if not reference:
+            return error_response('Falta identificador (reference).', 'CUERPO_INVALIDO', status=400)
+        pedido = Pedido.objects.filter(identificador=reference).first()
+        if not pedido:
+            return error_response('Pedido no encontrado.', 'PEDIDO_NO_ENCONTRADO', status=404)
+        self._verificar_firma(request, pedido, cuerpo)
+        if datos.get('status') in ('PAID', 'VERIFIED', 'COMPLETED'):
+            return self._pago_recibido(pedido, datos.get('monto', datos.get('amount')))
+        return success_response(mensaje='Notificación recibida, estado pendiente.')
 
 
 class VerificarTransferenciaLinkifyAPIView(APIView):
     """
-    Endpoint activo para que el administrador solicite a Linkify que 
+    Endpoint activo para que el administrador solicite a Linkify que
     busque una transferencia en su cartola bancaria bajo demanda.
     """
     permission_classes = [IsAuthenticated]
@@ -192,32 +218,232 @@ class VerificarTransferenciaLinkifyAPIView(APIView):
         try:
             tienda = resolver_tienda(request, exigir_propietario=True)
             pedido = Pedido.objects.get(id_pedido=pedido_id, tienda=tienda)
-            
+
+            from apps.landing.external_activity_orders import is_external
+            if is_external(pedido):
+                return error_response('La confirmación de actividades Linkify requiere el aviso firmado de la pasarela.', 'ACTIVIDAD_REVISION', status=409)
+            metodo = (pedido.medio_pago or pedido.metodo_pago or '').strip().lower()
+            if metodo != 'linkify':
+                return error_response('El pedido no corresponde a Linkify.', 'PEDIDO_NO_LINKIFY', status=409)
+
+            if pedido.estado in ('cancelado', *Pedido.ESTADOS_EN_DESPACHO):
+                return error_response('El pedido requiere revisión manual.', 'ESTADO_PEDIDO_INVALIDO', status=409)
+
             config_pago = ConfiguracionPago.objects.get(tienda=tienda)
-            linkify_config = (config_pago.datos or {}).get("linkify", {})
-            api_key = linkify_config.get("api_key")
+            linkify_config = config_pago.datos_descifrados.get("linkify", {})
+
+
+            fields = linkify_config.get("fields", {})
+            api_key = fields.get("clavePrivada") or fields.get("apiKey") or linkify_config.get("api_key")
 
             if not api_key:
-                return error_response(mensaje="La tienda no tiene configurado Linkify.", status=400)
+                return error_response(mensaje="La tienda no tiene configurado Linkify correctamente.", codigo="LINKIFY_NO_CONFIGURADO", status=400)
 
             from apps.catalog.infrastructure.adapters.linkify_adapter import LinkifyAdapter
             adapter = LinkifyAdapter(api_key=api_key)
-            
+
             identificador = pedido.identificador or str(pedido.id_pedido)
             resultado = adapter.verificar_transferencia(identificador, float(pedido.monto_total))
-            
+            if not resultado.get("exito"):
+                respuesta = error_response(
+                    "Linkify no está disponible temporalmente. Puedes reintentar la verificación.",
+                    "LINKIFY_NO_DISPONIBLE", status=503,
+                )
+                respuesta["Retry-After"] = "30"
+                return respuesta
+
             if resultado.get("verificado"):
-                pedido.estado = 'pagado'
-                pedido.save()
+                with transaction.atomic():
+                    pedido = Pedido.objects.select_for_update().get(pk=pedido.pk, tienda=tienda)
+                    pasa_a_pagado = pedido.estado == 'pendiente'
+                    if pasa_a_pagado:
+                        pedido.estado = 'pagado'
+                        pedido.save(update_fields=['estado'])
+                    elif pedido.estado != 'pagado':
+                        return error_response('El pedido requiere revisión manual.', 'ESTADO_PEDIDO_INVALIDO', status=409)
+                if pedido.estado in Pedido.ESTADOS_PAGADOS:
+                    descontar_stock_de_pedido(pedido.pk)
+                if pasa_a_pagado:
+                    notificar_cambio_de_estado(pedido, 'pendiente')
                 return success_response(mensaje="¡Match exitoso! Transferencia encontrada y pedido actualizado.")
             else:
                 return error_response(
-                    mensaje="Aún no se detecta la transferencia en el banco.", 
+                    mensaje="Aún no se detecta la transferencia en el banco.", codigo="TRANSFERENCIA_NO_ENCONTRADA",
                     detalles=resultado.get("mensaje"),
                     status=400
                 )
-                
+
         except Pedido.DoesNotExist:
-            return error_response(mensaje="Pedido no encontrado", status=404)
+            return error_response(mensaje="Pedido no encontrado", codigo="PEDIDO_NO_ENCONTRADO", status=404)
         except Exception as e:
-            return error_response(mensaje=f"Error en validación Linkify: {str(e)}", status=500)
+            return error_response(mensaje="No se pudo validar la transferencia.", codigo="ERROR_LINKIFY", status=getattr(e, "status_code", 500))
+
+class TransferenciasPendientesAPIView(APIView):
+    """Consulta manual de transferencias; Pedido mantiene el único estado del pago."""
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        tienda = resolver_tienda(request, exigir_propietario=True)
+        pendientes = Pedido.objects.filter(
+            tienda=tienda, medio_pago__in=['Transferencia', 'Linkify'], estado='pendiente',
+        ).order_by('-fecha_creacion', '-id_pedido')
+        return success_response(
+            data=TransferenciaPendienteSerializer(pendientes, many=True).data,
+            mensaje='Transferencias pendientes obtenidas correctamente.',
+        )
+
+
+class AprobarTransferenciaManualAPIView(APIView):
+    """Permite al propietario confirmar manualmente una transferencia bancaria."""
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pedido_id):
+        tienda = resolver_tienda(request, exigir_propietario=True)
+
+        with transaction.atomic():
+            try:
+                pedido = Pedido.objects.select_for_update().get(
+                    id_pedido=pedido_id,
+                    tienda=tienda,
+                )
+            except Pedido.DoesNotExist:
+                return error_response(
+                    'Pedido no encontrado.',
+                    'PEDIDO_NO_ENCONTRADO',
+                    status=404,
+                )
+
+            metodo = (pedido.medio_pago or pedido.metodo_pago or '').strip().lower()
+            if metodo != 'transferencia':
+                return error_response(
+                    'El pedido no corresponde a una transferencia bancaria manual.',
+                    'METODO_PAGO_INVALIDO',
+                    status=409,
+                )
+
+            if pedido.estado == 'pagado':
+                return success_response(
+                    data={'id_pedido': pedido.pk, 'estado': pedido.estado},
+                    mensaje='La transferencia ya estaba aprobada.',
+                )
+
+            if pedido.estado != 'pendiente':
+                return error_response(
+                    'Solo se pueden aprobar transferencias de pedidos pendientes.',
+                    'ESTADO_PEDIDO_INVALIDO',
+                    status=409,
+                )
+
+            if (pedido.entrega or {}).get('origen') == 'actividad_transferencia_v1':
+                return error_response('Gestiona esta transferencia en Servicios y talleres, indicando la referencia bancaria.', 'ACTIVIDAD_TRANSFERENCIA', status=409)
+            from apps.landing.paid_checkout import resolve_test_order
+            prueba = resolve_test_order(pedido, approve=True)
+            from apps.landing.unified_activity_orders import resolve_unified_qa
+            qa = resolve_unified_qa(pedido, approve=True)
+            pedido.estado = 'pagado'
+            pedido.save(update_fields=['estado'])
+
+        if not prueba:
+            descontar_stock_de_pedido(pedido.pk)
+            if not qa:
+                notificar_cambio_de_estado(pedido, 'pendiente')
+        return success_response(
+            data={'id_pedido': pedido.pk, 'estado': pedido.estado},
+            mensaje='Transferencia aprobada y pedido marcado como pagado.',
+        )
+
+
+class RechazarTransferenciaManualAPIView(APIView):
+    """Rechaza una transferencia bancaria pendiente sin afectar otros medios de pago."""
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pedido_id):
+        tienda = resolver_tienda(request, exigir_propietario=True)
+
+        with transaction.atomic():
+            try:
+                pedido = Pedido.objects.select_for_update().get(
+                    id_pedido=pedido_id,
+                    tienda=tienda,
+                )
+            except Pedido.DoesNotExist:
+                return error_response(
+                    'Pedido no encontrado.',
+                    'PEDIDO_NO_ENCONTRADO',
+                    status=404,
+                )
+
+            metodo = (pedido.medio_pago or pedido.metodo_pago or '').strip().lower()
+            if metodo != 'transferencia':
+                return error_response(
+                    'El pedido no corresponde a una transferencia bancaria manual.',
+                    'METODO_PAGO_INVALIDO',
+                    status=409,
+                )
+
+            if pedido.estado == 'cancelado':
+                return success_response(
+                    data={'id_pedido': pedido.pk, 'estado': pedido.estado},
+                    mensaje='La transferencia ya estaba rechazada.',
+                )
+
+            if pedido.estado != 'pendiente':
+                return error_response(
+                    'Solo se pueden rechazar transferencias de pedidos pendientes.',
+                    'ESTADO_PEDIDO_INVALIDO',
+                    status=409,
+                )
+
+            if (pedido.entrega or {}).get('origen') == 'actividad_transferencia_v1':
+                return error_response('Gestiona esta transferencia en Servicios y talleres, indicando la referencia bancaria.', 'ACTIVIDAD_TRANSFERENCIA', status=409)
+            from apps.landing.paid_checkout import resolve_test_order
+            prueba = resolve_test_order(pedido, approve=False)
+            from apps.landing.unified_activity_orders import resolve_unified_qa
+            qa = resolve_unified_qa(pedido, approve=False)
+            pedido.estado = 'cancelado'
+            pedido.save(update_fields=['estado'])
+            if not prueba:
+                devolver_stock_de_pedido_cancelado(pedido)
+
+        if not prueba and not qa:
+            notificar_pago_rechazado(pedido)
+        return success_response(
+            data={'id_pedido': pedido.pk, 'estado': pedido.estado},
+            mensaje='Transferencia rechazada y pedido cancelado.',
+        )
+
+
+class TiendaPedidosAPIView(generics.ListAPIView):
+    serializer_class = PedidoTiendaSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        tienda = resolver_tienda(
+            self.request,
+            exigir_propietario=True
+        )
+
+        liberar_vencidos_de_tienda(tienda.pk)
+        pedidos = Pedido.objects.filter(
+            tienda=tienda
+        )
+
+        estado = self.request.query_params.get('estado')
+
+        if estado is not None:
+            estado = estado.strip().lower()
+
+            estados_permitidos = {
+                valor for valor, _ in Pedido.ESTADO_CHOICES
+            }
+
+            if estado not in estados_permitidos:
+                raise serializers.ValidationError({
+                    'estado': 'El estado seleccionado no es válido.'
+                })
+
+            pedidos = pedidos.filter(estado=estado)
+
+        return pedidos.prefetch_related(
+            'itempedido_set'
+        ).order_by('-fecha_creacion')

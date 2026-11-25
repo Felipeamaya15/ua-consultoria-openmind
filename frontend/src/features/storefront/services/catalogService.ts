@@ -1,18 +1,36 @@
+import { readJsonResponse } from '../../../shared/services/apiRequest';
 import { fetchInitialLoad, type InitialLoadOptions } from '../../../core/http/initialLoad';
 import type { Product } from '../data/mockData';
 
 const API_URL =
   (import.meta as any).env.VITE_API_URL || 'http://localhost:8000';
 
+interface BackendAtributo {
+  clave: string;
+  etiqueta: string;
+  valor: string;
+}
+
+interface BackendVariante {
+  sku: string;
+  precio: number | null;
+  precio_oferta: number | null;
+  stock: number;
+  atributos_variante?: BackendAtributo[];
+}
+
 interface BackendProductListItem {
   id: string;
   nombre: string;
   slug: string;
+  descripcion?: string;
   categoria: string;
   imagen: string | null;
+  imagenes?: string[];
   precio: number | null;
   precio_oferta: number | null;
   disponible: boolean;
+  variantes?: BackendVariante[];
 }
 
 interface BackendEnvelope<T> {
@@ -42,9 +60,9 @@ function adaptProduct(item: BackendProductListItem): Product {
     id: item.slug,
     catalogId: item.id,
     name: item.nombre,
-    description: '',
+    description: item.descripcion ?? '',
     category: item.categoria,
-    images: [item.imagen || PLACEHOLDER_IMAGE],
+    images: item.imagenes?.length ? item.imagenes : [item.imagen || PLACEHOLDER_IMAGE],
     basePrice: currentPrice,
     comparePrice: hasOffer ? item.precio! : undefined,
     variants: [
@@ -75,40 +93,49 @@ export async function fetchPublicProducts(options?: InitialLoadOptions & { inclu
   }
 
   const body: BackendEnvelope<BackendProductListItem[]> =
-    await response.json();
+    await readJsonResponse(response,'No pudimos cargar los productos del carrito. Conservamos tu selección; actualiza para reintentar.');
 
   if (!body.exito) {
     throw new Error(body.mensaje || 'Error al obtener productos');
   }
 
   if (!options?.includeVariants) return body.data.map(adaptProduct);
-  // El listado no incluye SKUs: cargar detalle con concurrencia acotada.
+
+
   const products: Array<Product | null> = new Array(body.data.length);
-  let next = 0;
-  await Promise.all(Array.from({ length: Math.min(4, body.data.length) }, async () => {
-    while (next < body.data.length) {
-      const index = next++;
-      products[index] = await fetchPublicProductDetail(body.data[index].slug, options);
+  const missingIndices: number[] = [];
+
+  body.data.forEach((item, index) => {
+    if (Array.isArray(item.variantes)) {
+      products[index] = adaptProductDetail({
+        id: item.id,
+        nombre: item.nombre,
+        slug: item.slug,
+        descripcion: item.descripcion ?? '',
+        categoria: item.categoria,
+        imagenes: item.imagenes?.length ? item.imagenes : item.imagen ? [item.imagen] : [],
+        variantes: item.variantes,
+      });
+    } else {
+      missingIndices.push(index);
     }
-  }));
+  });
+
+  if (missingIndices.length > 0) {
+    let cursor = 0;
+    await Promise.all(Array.from({ length: Math.min(4, missingIndices.length) }, async () => {
+      while (cursor < missingIndices.length) {
+        const index = missingIndices[cursor++];
+        products[index] = await fetchPublicProductDetail(body.data[index].slug, options);
+      }
+    }));
+  }
+
   return products.filter((product): product is Product => product !== null);
 }
 
-interface BackendAtributo {
-  clave: string;
-  etiqueta: string;
-  valor: string;
-}
-
-interface BackendVariante {
-  sku: string;
-  precio: number | null;
-  precio_oferta: number | null;
-  stock: number;
-  atributos_variante?: BackendAtributo[];
-}
-
 interface BackendProductDetail {
+  video_recurso_id?: string | null;
   id: string;
   nombre: string;
   slug: string;
@@ -153,7 +180,7 @@ function adaptProductDetail(item: BackendProductDetail): Product {
     };
   });
 
-  // Agrupa los valores de cada atributo (talla, color, etc.) para armar los selectores
+
   const grouped: Record<string, Set<string>> = {};
   variantesRaw.forEach((v) => {
     (v.atributos_variante ?? []).forEach((a) => {
@@ -179,6 +206,10 @@ function adaptProductDetail(item: BackendProductDetail): Product {
     description: item.descripcion ?? '',
     category: item.categoria,
     images,
+    videoResourceId: item.video_recurso_id ?? null,
+    videoUrl: item.video_recurso_id
+      ? `${API_URL}/api/catalog/productos/${encodeURIComponent(item.slug)}/video/`
+      : undefined,
     basePrice,
     comparePrice,
     variants,
@@ -205,7 +236,7 @@ export async function fetchPublicProductDetail(slug: string, options?: InitialLo
     throw new Error('No se pudo obtener el detalle del producto');
   }
 
-  const body: BackendEnvelope<BackendProductDetail> = await response.json();
+  const body: BackendEnvelope<BackendProductDetail> = await readJsonResponse(response,'No pudimos cargar los productos del carrito. Conservamos tu selección; actualiza para reintentar.');
 
   if (!body.exito) {
     throw new Error(body.mensaje || 'Error al obtener el producto');

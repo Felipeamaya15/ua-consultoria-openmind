@@ -1,7 +1,7 @@
-import type { Product } from "../data/mockAdminData";
+import type { Product } from "../../admin/data/mockAdminData";
 
 const API_URL =
-  (import.meta as any).env.VITE_API_URL || "http://localhost:8000";
+  import.meta.env.VITE_API_URL || "http://localhost:8000";
 
 function toBackendPayload(product: Product) {
   return {

@@ -35,7 +35,6 @@ def ensure_product_stock_validator(db):
                                  validationLevel='strict', validationAction='error')
             return
         except CollectionInvalid:
-            # Otro proceso creó la colección: aplicar la misma regla a continuación.
             existing = next(db.list_collections(filter={'name': 'productos'}))
 
     invalid_count = db.productos.count_documents({'$nor': [STOCK_VALIDATOR]})

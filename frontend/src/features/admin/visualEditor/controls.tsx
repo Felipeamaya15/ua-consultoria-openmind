@@ -1,0 +1,145 @@
+import { FontControl } from './fonts';
+import { fonts } from '../../storefront/visual/cssVariables';
+import type { FontFamily } from '../../storefront/visual/types';
+import { useEffect, useState, type ReactNode } from 'react';
+const OPTION_LABELS: Record<string, string> = { cover: 'Rellenar', contain: 'Contener', original: 'Original', circle: 'Circular', small: 'Pequeño', large: 'Grande', left: 'Izquierda', center: 'Centro', right: 'Derecha', top: 'Arriba', bottom: 'Abajo', desktop: 'Computadora', tablet: 'Tablet', mobile: 'Móvil', compact: 'Compacto', normal: 'Normal', spacious: 'Amplio', square: 'Recto', rounded: 'Redondeado', pill: 'Cápsula', auto: 'Automático', full: 'Todo el ancho', custom: 'Personalizado', solid: 'Relleno', outline: 'Con borde', ghost: 'Solo texto', none: 'Sin efecto', dashed: 'Discontinuo', soft: 'Suave', medium: 'Media', strong: 'Marcada', grid: 'En columnas', row: 'En fila', wrap: 'En varias filas', stack: 'Uno debajo de otro', split: 'En dos zonas', inline: 'En línea', centered: 'Centrado', columns: 'En columnas', below: 'Debajo del texto', pills: 'Cápsulas', cards: 'Cajas', links: 'Enlaces', drawer: 'Panel desplegable', sans: 'Plus Jakarta Sans', serif: 'DM Serif Display', system: 'Fuente del sistema' };
+Object.assign(OPTION_LABELS, { arial: 'Arial', calibri: 'Calibri', cambria: 'Cambria', georgia: 'Georgia', times: 'Times New Roman', verdana: 'Verdana', tahoma: 'Tahoma', trebuchet: 'Trebuchet MS', courier: 'Courier New', garamond: 'Garamond', palatino: 'Palatino', comic: 'Comic Sans MS' });
+export function optionLabel(value: string, label = '') { return value === 'solid' && label.includes('Borde') ? 'Continuo' : OPTION_LABELS[value] ?? value; }
+export interface ControlProps {
+  path?: string;
+  label: string; value: string | number | boolean; onChange: (value: string | number | boolean) => void;
+  onReset: () => void; overridden?: boolean; min?: number; max?: number; step?: number; options?: readonly string[]; disabled?: boolean;
+}
+function Field({ label, onReset, overridden, disabled, children }: ControlProps & { children: ReactNode }) {
+  return <div className="ve-control"><div className="ve-control-label"><span>{label}</span><button type="button" disabled={disabled} onClick={onReset} aria-label={`Restablecer ${label}`} title="Volver al valor del diseño original">↺</button></div>{children}<small>{overridden ? 'Personalizado' : 'Del diseño original'}</small></div>;
+}
+export function ColorPickerControl(props: ControlProps) {
+  const value = String(props.value); const [text, setText] = useState(value);
+  useEffect(() => setText(value), [value]);
+  return <Field {...props}><div className="ve-color" data-follows={value === 'currentColor' ? 'true' : undefined}><input aria-label={props.label} disabled={props.disabled} type="color" value={/^#[\da-f]{6}$/i.test(value) ? value : '#000000'} onChange={e => props.onChange(e.target.value)} /><input aria-label={`${props.label} hexadecimal`} disabled={props.disabled} type="text" value={text} onChange={e => { setText(e.target.value); if (/^(#[\da-f]{3}|#[\da-f]{4}|#[\da-f]{6}|#[\da-f]{8}|transparent|currentColor)$/i.test(e.target.value)) props.onChange(e.target.value); }} onBlur={() => setText(value)} /></div>{value === 'currentColor' && <small className="ve-follows">Sigue la paleta de colores</small>}</Field>;
+}
+export function SelectControl(props: ControlProps) {
+  const font = props.options?.includes('calibri');
+  if (font) return <FontControl {...props} />;
+  return <Field {...props}><select style={font ? { fontFamily: fonts[props.value as FontFamily] } : undefined} disabled={props.disabled} aria-label={props.label} value={String(props.value)} onChange={e => props.onChange(e.target.value)}>{props.options?.map(value => <option key={value} value={value} style={font ? { fontFamily: fonts[value as FontFamily] } : undefined}>{optionLabel(value, props.label)}</option>)}</select>{font && <p style={{fontFamily: fonts[props.value as FontFamily], fontSize: 20}}>Aa · Tu tienda, tu estilo 123</p>}</Field>;
+}
+export function NumberControl(props: ControlProps) {
+  return <Field {...props}><input disabled={props.disabled} aria-label={props.label} type="number" value={Number(props.value)} min={props.min ?? 0} max={props.max ?? 10000} step={props.step ?? 1} onChange={e => { const value = e.target.valueAsNumber; if (Number.isFinite(value) && value >= (props.min ?? 0) && value <= (props.max ?? 10000)) props.onChange(value); }} /></Field>;
+}
+
+
+export function FriendlySizeControl(props: ControlProps) {
+  const [custom, setCustom] = useState(false);
+  const [draft, setDraft] = useState<string | null>(null);
+  const path = props.path ?? '';
+  const isLogo = /(?:^|\.)(?:logoSize|institutionLogoSize)$/.test(path);
+  const range = /institutionLogoSize$/.test(path) ? [32, 48, 72]
+    : /(?:^|\.)logoSize$/.test(path) ? [32, 64, 96]
+    : path === 'image.scale' ? [80, 100, 140]
+    : path === 'hero.titleSize' ? [40, 64, 88]
+    : /imageSize/.test(path) ? [160, 320, 480]
+    : /\.height$/.test(path) ? [48, 72, 96]
+    : /^pages\..*titleSize$/.test(path) ? [24, 32, 44]
+    : [14, 18, 24];
+  const min = props.min ?? 0;
+  const max = props.max ?? 2000;
+  const step = props.step ?? 1;
+  const choices = [...new Set(range.map(value => Math.max(min, Math.min(max, value))))];
+  const current = Number(props.value);
+  const showInput = custom || !choices.includes(current);
+  const inputValue = draft ?? String(current);
+
+  const commit = () => {
+    if (draft === null) return;
+    const parsed = Number(draft.trim());
+    if (draft.trim() !== '' && Number.isFinite(parsed)) {
+      const next = Math.max(min, Math.min(max, Math.round(parsed / step) * step));
+      if (next !== current) props.onChange(next);
+    }
+    setDraft(null);
+  };
+  const adjust = (delta: number) => {
+    const parsed = Number(inputValue);
+    const base = inputValue.trim() !== '' && Number.isFinite(parsed) ? parsed : current;
+    const next = Math.max(min, Math.min(max, base + delta * step));
+    setDraft(null);
+    setCustom(true);
+    props.onChange(next);
+  };
+
+  return <Field {...props}>
+    <div className="ve-segmented" role="group" aria-label={props.label}>
+      {choices.map((value, index) => <button
+        type="button" key={value} disabled={props.disabled}
+        aria-pressed={!showInput && current === value}
+        onClick={() => { setCustom(false); setDraft(null); props.onChange(value); }}
+      >{['Pequeño', 'Mediano', 'Grande'][index] ?? `${value} px`}</button>)}
+    </div>
+    <button type="button" className="ve-custom-choice"
+      disabled={props.disabled} aria-expanded={showInput}
+      onClick={() => { setDraft(String(current)); setCustom(true); }}
+    >Personalizado{!choices.includes(current) ? ' · ' + current + ' px' : ''}</button>
+    {showInput && (isLogo ?
+      <div style={{ display: 'flex', alignItems: 'stretch', gap: 6 }}>
+        <button type="button" disabled={props.disabled || current <= min}
+          aria-label={`Reducir ${props.label.toLowerCase()}`} onClick={() => adjust(-1)}
+          style={{ minWidth: 38, border: '1px solid #cbd5e1', borderRadius: 6 }}>−</button>
+        <input
+          aria-label={`${props.label} personalizado`}
+          type="text" inputMode="numeric" pattern="[0-9]*"
+          disabled={props.disabled} value={inputValue}
+          onFocus={() => { if (draft === null) setDraft(String(current)); }}
+          onChange={event => {
+            const value = event.target.value;
+            if (/^\d*$/.test(value)) setDraft(value);
+          }}
+          onBlur={commit}
+          onKeyDown={event => {
+            if (event.key === 'Enter') { commit(); event.currentTarget.blur(); }
+            if (event.key === 'Escape') { setDraft(null); event.currentTarget.blur(); }
+            if (event.key === 'ArrowUp') { event.preventDefault(); adjust(1); }
+            if (event.key === 'ArrowDown') { event.preventDefault(); adjust(-1); }
+          }}
+          style={{ minWidth: 0, flex: 1 }}
+        />
+        <button type="button" disabled={props.disabled || current >= max}
+          aria-label={`Aumentar ${props.label.toLowerCase()}`} onClick={() => adjust(1)}
+          style={{ minWidth: 38, border: '1px solid #cbd5e1', borderRadius: 6 }}>+</button>
+      </div> :
+      <input
+        aria-label={`${props.label} personalizado`} disabled={props.disabled}
+        type="number" value={current} min={min} max={max} step={step}
+        onChange={event => {
+          const value = event.target.valueAsNumber;
+          if (Number.isFinite(value) && value >= min && value <= max) props.onChange(value);
+        }}
+      />
+    )}
+    {isLogo && showInput && <span style={{ fontSize: 11, opacity: .7 }}>Rango: {min}–{max} px. Se aplica al salir del campo o pulsar Enter.</span>}
+  </Field>;
+}
+
+export function ProductCountControl(props: ControlProps) {
+  const [custom, setCustom] = useState(false);
+  return <Field {...props}><div className="ve-segmented" role="group" aria-label={props.label}>{[1,2,3,4].map(value => <button type="button" key={value} disabled={props.disabled} aria-pressed={props.value === value} onClick={() => props.onChange(value)}>{value}</button>)}</div><button type="button" className="ve-custom-choice" aria-expanded={custom} onClick={() => setCustom(!custom)}>Personalizado</button>{custom && <input aria-label={`${props.label} personalizado`} type="number" value={Number(props.value)} min={props.min ?? 1} max={props.max ?? 12} onChange={event => { const value=event.target.valueAsNumber; if(Number.isInteger(value) && value >= (props.min ?? 1) && value <= (props.max ?? 12)) props.onChange(value); }} />}</Field>;
+}
+export function SliderControl(props: ControlProps) {
+  return <Field {...props}><div className="ve-slider"><input disabled={props.disabled} aria-label={props.label} type="range" value={Number(props.value)} min={props.min ?? 0} max={props.max ?? 200} step={props.step ?? 1} onChange={e => props.onChange(e.target.valueAsNumber)} /><output>{props.value}</output></div></Field>;
+}
+export function FriendlyRadiusControl(props: ControlProps) {
+  const [custom, setCustom] = useState(false);
+  const path=props.path??'';
+  const affects=/imageRadius|image.radius/.test(path)?'la imagen seleccionada':/buttonRadius|heroCta|pages.*button/.test(path)?'el botón de este grupo':/cardRadius/.test(path)?'las tarjetas de esta sección':/productCard|catalog.card/.test(path)?'la tarjeta de producto':/categories/.test(path)?'las categorías':/pages.*field/.test(path)?'los campos de esta página':/pages.*panel/.test(path)?'las cajas de esta página':'los botones y cajas que heredan el estilo general';
+  return <Field {...props}><p className="ve-hint">Afecta {affects}.</p><div className="ve-segmented" role="group" aria-label={props.label}>{[0,8,24].map((value,index) => <button key={value} type="button" disabled={props.disabled} aria-pressed={props.value === value} onClick={() => props.onChange(value)}>{['Recto','Suave','Redondeado'][index]}</button>)}</div><button type="button" className="ve-custom-choice" aria-expanded={custom} onClick={() => setCustom(!custom)}>Personalizado</button>{custom && <input aria-label={`${props.label} personalizado`} disabled={props.disabled} type="number" value={Number(props.value)} min={props.min ?? 0} max={props.max ?? 2000} onChange={event => { const value=event.target.valueAsNumber; if(Number.isFinite(value) && value >= (props.min ?? 0) && value <= (props.max ?? 2000)) props.onChange(value); }} />}</Field>;
+}
+export function ToggleControl(props: ControlProps) {
+  return <Field {...props}><input disabled={props.disabled} aria-label={props.label} type="checkbox" checked={Boolean(props.value)} onChange={e => props.onChange(e.target.checked)} /></Field>;
+}
+export function SegmentedControl(props: ControlProps) {
+  return <Field {...props}><div className="ve-segmented" role="group" aria-label={props.label}>{props.options?.map(value => <button type="button" disabled={props.disabled} key={value} aria-pressed={props.value === value} onClick={() => props.onChange(value)}>{optionLabel(value, props.label)}</button>)}</div></Field>;
+}
+export const AlignmentControl = SegmentedControl;
+export const SpacingControl = NumberControl;
+export const RadiusControl = NumberControl;
+export const ShadowControl = SelectControl;
+export const SizeControl = NumberControl;

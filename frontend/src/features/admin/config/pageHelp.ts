@@ -1,0 +1,25 @@
+export const ADMIN_PAGE_HELP = {
+  '/emprendedor/marketing': { title: 'Marketing', description: 'Prepara publicaciones, organiza tu biblioteca, difunde contenido y crea campañas' },
+  '/emprendedor': { title: 'Estadísticas y Análisis', description: 'Analiza el rendimiento comercial, métricas de ventas y logística de tu tienda.' },
+  '/emprendedor/landing': { title: 'Página principal', description: 'Organiza tu negocio, portada, secciones, productos y contacto. Guarda todo desde una sola barra de acciones.' },
+  '/emprendedor/actividades': { title: 'Servicios y talleres', description: 'Revisa las consultas sobre tus actividades y gestiona las inscripciones gratuitas. Los contenidos se crean y publican desde Página principal → Secciones.' },
+  '/emprendedor/productos': { title: 'Productos', description: 'Agrega, edita y organiza los productos que tus clientes podrán comprar. Revisa sus precios y las unidades disponibles.' },
+  '/emprendedor/pedidos': { title: 'Pedidos', description: 'Revisa las compras, su estado y los datos que necesitas para preparar cada entrega.' },
+  '/emprendedor/ventas': { title: 'Ventas', description: 'Consulta el resumen del período, tus productos vendidos y el historial de ventas de tu tienda.' },
+  '/emprendedor/contactos': { title: 'Contactos de clientes', description: 'Consulta correos únicos de tus pedidos y distingue los contactos operativos de las autorizaciones comerciales.' },
+  '/emprendedor/diseno': { title: 'Diseño de tu tienda', description: 'Elige una plantilla y personaliza los colores, las letras y la apariencia de tu tienda.' },
+  '/emprendedor/promociones': { title: 'Promociones', description: 'Crea y administra promociones para tus productos o campañas. Comprueba sus condiciones antes de compartirlas.' },
+  '/emprendedor/pagos': { title: 'Formas de pago', description: 'Configura las formas de pago que podrán usar tus clientes. Completa los datos del proveedor que quieras habilitar.' },
+  '/emprendedor/entregas': { title: 'Entregas y retiro', description: 'Define cómo recibirán sus compras tus clientes y cuánto cobrarás por cada destino. También puedes ofrecer retiro en tienda.' },
+  '/emprendedor/autenticacion': { title: 'Acceso de clientes', description: 'Elige cómo podrán registrarse e iniciar sesión tus clientes, y si necesitan una cuenta para comprar.' },
+  '/emprendedor/correos': { title: 'Correos para tus clientes', description: 'Personaliza los mensajes preparados para informar a tus clientes sobre sus compras.' },
+  '/emprendedor/seo': { title: 'Tu tienda en buscadores', description: 'Mejora cómo se presenta tu tienda en los buscadores. Los campos de medición son opcionales.' },
+  '/emprendedor/configuracion': { title: 'Página principal', description: 'Organiza tu negocio, portada, secciones, productos y contacto. Guarda todo desde una sola barra de acciones.' },
+  '/emprendedor/legal': { title: 'Páginas legales', description: 'Prepara los textos de términos, privacidad y devoluciones que podrán consultar tus clientes. Revisa que correspondan a tu negocio.' },
+  '/emprendedor/perfil': { title: 'Tu cuenta', description: 'Revisa y actualiza tus datos personales y de contacto.' },
+} as const;
+export function getAdminPageHelp(pathname: string) {
+  const path = pathname.replace(/\/$/, '');
+  if (path === '/emprendedor/diseno/editor') return undefined;
+  return Object.entries(ADMIN_PAGE_HELP).find(([route]) => path === route || route !== '/emprendedor' && path.startsWith(route + '/'))?.[1];
+}

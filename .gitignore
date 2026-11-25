@@ -32,6 +32,7 @@ __pycache__/
 db.sqlite3
 staticfiles/
 media/
+backend/landing/blocks/
 venv/
 .venv/
 
@@ -40,7 +41,23 @@ venv/
 .coverage
 htmlcov/
 
+# Informes y catálogo previos locales; conservarlos fuera de nuevas entregas.
+/backend/qa_*.txt
+/backend/resultado_qa_backend.txt
+/catalogo_meta_previa.tsv
+
 # Respaldos o volcados locales de BD
 *.sql
 *.tar
 *.dump
+
+# Respaldos locales de despliegue / actualización (SCRUM-489)
+backups/
+/.env.gmail.local
+/gmail-local.compose.yml
+
+# Respaldos binarios de MongoDB: mantener fuera de nuevos commits
+*.archive
+/docs/AVANCE_FINAL_ECOMMERCE.md
+
+backend/private_recordings/

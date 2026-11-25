@@ -1,53 +1,86 @@
-import { AccountNavigation } from '../AccountNavigation';
-import { Link } from 'react-router-dom';
+import { MinimalCartIcon } from './MinimalCartIcon';
+import { useCart } from '../../../context/CartContext';
+import { AccountNavigation, notifyStorefrontAuthChange, useStorefrontIdentity } from '../AccountNavigation';
+import { Link, useNavigate } from 'react-router-dom';
 import { Icon } from '../../ui';
+import { authService } from '../../../../auth/services/authService';
+import { useStorefrontTemplate } from '../../../hooks/useStorefrontTemplate';
 
-export function MinimalSidebar() {
+export function MinimalSidebar({mobile=false,onNavigate}:{mobile?:boolean;onNavigate?:()=>void}={}) {
+  const { user } = useStorefrontIdentity();
+  const { route } = useStorefrontTemplate();
+  const navigate = useNavigate();
+  const { count } = useCart();
+
+  const handleLogout = () => {
+    onNavigate?.();
+    authService.logout();
+    notifyStorefrontAuthChange();
+    navigate(route());
+  };
+
   return (
-    <aside className="fixed left-0 top-0 bottom-0 z-50 hidden md:flex w-16 flex-col items-center bg-white border-r border-black/5">
-      {/* Logo */}
-      <Link
-        to="."
-        aria-label="Inicio"
-        className="mt-5 w-9 h-9 rounded-full bg-[var(--primary)] text-white flex items-center justify-center font-semibold text-sm"
-      >
-        S
-      </Link>
+    <aside className={mobile?'minimal-mobile-sidebar flex flex-col items-center gap-4':'fixed left-0 top-0 bottom-0 z-50 hidden md:flex w-20 flex-col items-center bg-white border-r border-black/10 px-1.5 py-4'} onClickCapture={event=>{if(event.target instanceof Element&&event.target.closest('a'))onNavigate?.();}}>
 
-      {/* Navegación */}
+      <div className="w-full flex flex-col items-center gap-1.5">
+        <AccountNavigation className="w-full min-h-10 px-1.5 py-1.5 rounded-xl bg-[var(--primary)] text-[var(--on-primary)] flex items-center justify-center text-[10px] leading-tight font-semibold text-center break-words whitespace-normal shadow-2xs hover:opacity-90 transition-opacity" />
+        {!user && <Link to={route('ingresar?modo=registro')} className="om-minimal-register">Registrarse</Link>}
+        {user && (
+          <button
+            type="button"
+            onClick={handleLogout}
+            className="w-full min-h-7 px-1.5 py-1 rounded-lg border border-gray-200 bg-gray-50 text-[#151515] hover:bg-gray-100 text-[10px] leading-tight font-semibold text-center transition-colors"
+          >
+            Salir
+          </button>
+        )}
+      </div>
+
+
       <nav
-        className="flex flex-col items-center gap-3 mt-12"
+        className="flex flex-col items-center gap-3 mt-10"
         aria-label="Navegación lateral"
       >
         <Link
-          to="."
+          to={route()} onClick={event => {
+            if (!event.ctrlKey && !event.metaKey && !event.shiftKey && !event.altKey && event.currentTarget.pathname === window.location.pathname) {
+              window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+            }
+          }}
           aria-label="Inicio"
-          className="w-10 h-10 rounded-full flex items-center justify-center text-gray-500 hover:bg-gray-100 hover:text-[var(--primary)] transition-colors"
+          title="Inicio"
+          className="w-10 h-10 rounded-full flex items-center justify-center text-gray-600 hover:bg-gray-100 hover:text-[var(--primary)] transition-colors"
         >
-          <Icon name="home" className="w-5 h-5" />
+          <Icon name="home" className="w-5 h-5" />{mobile&&<span>Inicio</span>}
         </Link>
 
         <Link
-          to="catalogo"
+          to={route('catalogo')}
           aria-label="Catálogo"
-          className="w-10 h-10 rounded-full flex items-center justify-center text-gray-500 hover:bg-gray-100 hover:text-[var(--primary)] transition-colors"
+          title="Catálogo"
+          className="w-10 h-10 rounded-full flex items-center justify-center text-gray-600 hover:bg-gray-100 hover:text-[var(--primary)] transition-colors"
         >
-          <Icon name="grid" className="w-5 h-5" />
+          <Icon name="grid" className="w-5 h-5" />{mobile&&<span>Catálogo</span>}
         </Link>
 
         <Link
-          to="seguimiento"
-          aria-label="Seguimiento"
-          className="w-10 h-10 rounded-full flex items-center justify-center text-gray-500 hover:bg-gray-100 hover:text-[var(--primary)] transition-colors"
+          to={route('carrito')}
+          aria-label={`Ver carrito (${count} productos)`}
+          title="Carrito de compras"
+          className="w-10 h-10 rounded-full bg-[var(--primary)] text-[var(--on-primary)] flex items-center justify-center hover:opacity-90 transition-opacity"
         >
-          <Icon name="truck" className="w-5 h-5" />
+          <MinimalCartIcon count={count} />{mobile&&<span>Carrito</span>}
+        </Link>
+
+        <Link
+          to={route('seguimiento')}
+          aria-label="Seguimiento"
+          title="Seguimiento"
+          className="w-10 h-10 rounded-full flex items-center justify-center text-gray-600 hover:bg-gray-100 hover:text-[var(--primary)] transition-colors"
+        >
+          <Icon name="truck" className="w-5 h-5" />{mobile&&<span>Seguimiento</span>}
         </Link>
       </nav>
-
-      {/* Usuario */}
-      <div className="mt-auto mb-5">
-        <AccountNavigation className="w-9 h-9 rounded-full bg-gray-100 text-[var(--primary)] flex items-center justify-center text-xs font-semibold" />
-      </div>
     </aside>
   );
 }

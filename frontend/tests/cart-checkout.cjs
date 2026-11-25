@@ -8,7 +8,7 @@ function load(file, globals) {
     {module, exports: module.exports, Error, console, ...globals});
   return module.exports;
 }
-const jsx = (type, props) => ({type, props});
+const jsx = (type, props) => typeof type==='function'&&['CartProductRow','CartLineItem','QuantityControl','StockFeedback'].includes(type.name)?type(props):({type,props});
 function nodes(tree, out = []) {
   if (Array.isArray(tree)) tree.forEach(child => nodes(child, out));
   else if (tree && typeof tree === 'object') {out.push(tree); nodes(tree.props?.children, out);}
@@ -19,18 +19,43 @@ const items = [
   {productId: '507f1f77bcf86cd799439011', variantId: 'QA-M', sku: 'QA-M', name: 'Pantalón', attributes: {Talla: 'M'}, price: 9000, quantity: 2, maxStock: 7, image: ''},
   {productId: '507f1f77bcf86cd799439011', variantId: 'QA-L', sku: 'QA-L', name: 'Pantalón', attributes: {Talla: 'L'}, price: 12000, quantity: 1, maxStock: 8, image: ''},
 ];
-const result = {id_pedido: 42, tienda_id: 9, estado: 'pendiente', monto_total: '30000.00', descuento: '0.00', costo_envio: '0.00'};
+const result = {id_pedido: 42, identificador: 'PEDIDO-BACKEND-42', tienda_id: 9, estado: 'pendiente', monto_total: '30000.00', descuento: '0.00', costo_envio: '0.00'};
 (async () => {
+  const webpayRequests = [];
+  const {transbankPaymentService} = load('src/features/checkout/services/transbankPaymentService.ts', {
+    fetch: async (url, options) => {webpayRequests.push({url, options}); return {json: async () => ({exito: true})};},
+  });
+  await transbankPaymentService.iniciarPago(9, 'ORDER', 100, 'http://localhost:5173/return', ' buyer@example.com ');
+  assert.equal(JSON.parse(webpayRequests[0].options.body).email, 'buyer@example.com');
+  assert.ok(!webpayRequests[0].url.includes('buyer@example.com'));
   let token = 'buyer-token', calls = [], response = {ok: true, json: async () => ({exito: true, data: result})};
   const {orderService} = load('src/features/storefront/services/orderService.ts', {
-    localStorage: {getItem: () => token}, require: () => ({}),
+    localStorage: {getItem: () => token}, require: () => ({authService: {getToken: () => token}}),
     fetch: async (url, options) => {calls.push({url, options}); return response;},
   });
   const input = {key: 'real-key', items, contact: {name: 'Comprador', email: ' buyer@example.com ', phone: ''}, paymentMethod: 'Transferencia', shippingMethod: 'Retiro', address: {}, promoCode: ''};
   assert.equal((await orderService.create(input)).id_pedido, 42);
+  assert.equal((await orderService.create(input)).identificador, result.identificador);
   assert.equal(calls[0].url, 'http://localhost:8000/api/checkout/pedidos/');
   assert.equal(calls[0].options.headers.Authorization, 'Token buyer-token');
   const payload = JSON.parse(calls[0].options.body);
+  input.address = {street: 'Providencia', number: '123', apt: '', city: 'Providencia', region: 'Metropolitana'};
+  await orderService.create(input);
+  assert.deepEqual(JSON.parse(calls.at(-1).options.body).direccion, input.address);
+  assert.equal(JSON.parse(calls.at(-1).options.body).metodo_entrega, 'Retiro');
+  input.shippingMethod = 'Chilexpress'; input.shippingQuote = 'signed-backend-quote';
+  await orderService.create(input);
+  const quotedPayload = JSON.parse(calls.at(-1).options.body);
+  assert.equal(quotedPayload.cotizacion, 'signed-backend-quote');
+  assert.equal(quotedPayload.metodo_entrega, 'Chilexpress');
+  assert.deepEqual(quotedPayload.direccion, input.address);
+  assert.ok(!('costo_envio' in quotedPayload) && !('monto_total' in quotedPayload));
+  input.shippingMethod = 'Retiro';
+  await orderService.create(input);
+  assert.ok(!('cotizacion' in JSON.parse(calls.at(-1).options.body)));
+  response = {ok: true, json: async () => ({exito: true, data: {...result, costo_envio: '3490.00'}})};
+  await assert.rejects(orderService.create(input), /respuesta del pedido es inválida/);
+  response = {ok: true, json: async () => ({exito: true, data: result})};
   assert.equal(payload.items[0].producto_id, items[0].productId);
   assert.equal(payload.items[0].sku, 'QA-M');
   assert.equal(payload.contacto.email, 'buyer@example.com');
@@ -38,15 +63,21 @@ const result = {id_pedido: 42, tienda_id: 9, estado: 'pendiente', monto_total: '
   assert.ok(!('precio' in payload.items[0]) && !('monto_total' in payload) && !('comprador' in payload));
   token = null;
   await orderService.create(input);
-  assert.ok(!('Authorization' in calls[1].options.headers));
+  assert.ok(!('Authorization' in calls.at(-1).options.headers));
+  for (const invalid of [{...result, monto_total: 'NaN'}, {...result, id_pedido: '42'}, {...result, identificador: {}}, {...result, estado: 'desconocido'}]) {
+    response = {ok: true, json: async () => ({exito: true, data: invalid})};
+    await assert.rejects(orderService.create(input), /respuesta del pedido es inválida/);
+  }
   response = {ok: false, json: async () => ({items: ['Stock insuficiente para QA-M.']})};
   await assert.rejects(orderService.create(input), /Stock insuficiente/);
   response = {ok: false, json: async () => ({exito: false, mensaje: 'Datos inválidos', error: {detalles: {items: ['Stock insuficiente para QA-M.']}}})};
   await assert.rejects(orderService.create(input), /Stock insuficiente/);
 
   let states, stateIndex, refs, refIndex, navigateCalls, clearCount, createCalls, fail, pending;
+  let gatewayFailure = false, gatewayCalls = [];
+  const paymentLocation = {origin: 'http://localhost:5173', href: ''};
   let recordEffects = false, effects = [], paymentReply, paymentFetches = [];
-  const cart = {items, subtotal: 30000, shipping: 0, discount: 0, total: 30000, promoCode: '', shippingMethod: 'Retiro', count: 3,
+  const cart = {activities: [], items, subtotal: 30000, shipping: 0, discount: 0, total: 30000, promoCode: '', shippingMethod: 'Retiro', count: 3,
     clearCart: async () => {clearCount++;}, setShippingMethod() {}, updateQuantity() {}, removeItem() {}, applyPromo() {}};
   let template = 'editorial';
   const mockReact = {
@@ -55,26 +86,52 @@ const result = {id_pedido: 42, tienda_id: 9, estado: 'pendiente', monto_total: '
     useMemo: callback => callback(), useEffect(callback) {if (recordEffects) effects.push(callback);},
   };
   const requireMock = name => {
+    if(name.includes('CartLineItem'))return require('./source-loader.cjs').load('src/features/storefront/components/store/CartLineItem.tsx',{'react/jsx-runtime':{jsx,jsxs:jsx},'react-router-dom':{Link:'Link'},'../../data/mockData':requireMock('../data/mockData')});
+    if(name.includes('FeedbackProvider'))return {useFeedback:()=>({confirm:async()=>false})};
+    if (name.includes('metaPixelService')) return {trackMetaPixelEvent() {}};
+    if (name.includes('ActivityCartPreview')) return {ActivityCartRows: 'ActivityCartRows'};
+      if (name.endsWith('.css')) return {};
+      if (name.includes('paidActivityService')) return {formatActivityDate:()=>''};
+      if (name.includes('activityPurchaseMode')) return {useActivityCheckoutOptions:()=>({mode:'disabled',methods:[]})};
+      if (name.includes('useOptionalGoogleLogin')) return {GOOGLE_LOGIN_CONFIGURED:false,useOptionalGoogleLogin:()=>()=>{}};
+    if (name === '@react-oauth/google') return {useGoogleLogin: () => () => {throw Error('OAuth fuera del alcance de esta fixture de invitado');}};
+    if (name.endsWith('/authService')) return {authService: {hasSession: () => false, getToken: () => null}};
+    if (name.endsWith('/mercadoPagoPaymentService')) return {mercadoPagoPaymentService: {iniciarPago: async (...args) => {gatewayCalls.push(['MercadoPago', ...args]); return gatewayFailure ? {exito: false, mensaje: 'Proveedor no disponible'} : {exito: true, data: {url: 'https://example.test/mercadopago'}};}}};
+    if (name.includes('CommercialOptIn')) return {CommercialOptIn: 'CommercialOptIn'};
+    if (name.includes('commercialConsent')) return {requestConsent: async () => ({exito: true, mensaje: 'Pendiente de confirmar'})};
+    if (name.includes('PickupDetails')) return {default: 'PickupDetails'};
+    if (name.endsWith('visual/pages')) return load('src/features/storefront/visual/pages.ts', {URLSearchParams});
     if (name === 'react/jsx-runtime') return {jsx, jsxs: jsx};
     if (name === 'react') return mockReact;
     if (name === 'react-router-dom') return {Link: 'Link', useNavigate: () => (...args) => navigateCalls.push(args)};
     if (name.includes('CartContext')) return {useCart: () => cart};
+    if (name.includes('StoreIdentityContext')) return {useStoreIdentity: () => ({identity: null})};
+    if (name.includes('storePreferences')) return {readCheckoutAuthSettings: () => ({emailPassword: true, google: true, guestCheckout: true, requiresAuth: 'optional'})};
     if (name.includes('useStorefrontTemplate')) return {useStorefrontTemplate: () => ({route: p => `/plantilla/1/${p}`, isCatalog: template === 'catalog', isVisual: template === 'visual', isMinimal: template === 'minimal'})};
     if (name.includes('mockData')) return {formatPrice: n => `CLP ${n}`};
+    if (name.includes('PickupSchedule')) return {default: 'PickupSchedule'};
+    if (name.includes('pickupSchedule')) return {pickupTimes: () => [], pickupSelectionLabel: () => ''};
     if (name.includes('orderService')) return {orderService: {create: async data => {createCalls.push(data); if (pending) await pending; if (fail) throw Error('Stock insuficiente'); return result;}}};
-    if (name.includes('transbankPaymentService')) return {transbankPaymentService: {iniciarPago: async (...args) => {assert.equal(args[0], 9); assert.equal(args[1], '42'); assert.equal(args[2], 30000); return {exito: true, data: {url: 'webpay', token: 'token'}};}, redirigirAWebpay() {}}};
+    if (name.includes('promotionService')) return {validatePromotion: async code => ({code, type: 'fixed', discount: 1000, shipping: 0, message: 'Aplicado'})};
+    if (name.includes('shippingService')) return {getDeliveryAlternatives: async () => ({pickup: {enabled: true}, chilexpress: {enabled: false}, starken: {enabled: false}}), getShippingQuotes: async () => []};
+    if (name.includes('comunasChile')) return load('src/features/storefront/data/comunasChile.ts', {
+      require: () => ({default: require('../src/features/admin/data/chileTerritory.json')}),
+    });
+    if (name.includes('paypalPaymentService')) return {paypalPaymentService: {iniciarPago: async (...args) => {gatewayCalls.push(['PayPal', ...args]); return gatewayFailure ? {exito: false, mensaje: 'Proveedor no disponible'} : {exito: true, data: {approve_url: 'https://example.test/paypal'}};}}};
+    if (name.includes('transbankPaymentService')) return {transbankPaymentService: {iniciarPago: async (...args) => {assert.equal(args[0], 9); assert.equal(args[1], result.identificador); assert.equal(args[2], 30000); return {exito: true, data: {url: 'webpay', token: 'token'}};}, redirigirAWebpay() {}}};
     if (name.includes('StockFeedback')) return {StockFeedback: 'StockFeedback'};
     if (name.includes('components/ui')) return Object.fromEntries(['Stepper','Button','Input','Select','Alert','Icon','EmptyState'].map(label => [label, label]));
-    throw Error(name);
+    if (name.endsWith('/commerceService')) return {invoiceErrors: () => ({})}; if (name.endsWith('/InvoiceFields')) return {InvoiceFields: 'InvoiceFields'}; if (name.includes('shared/components/states')) return {LoadingState: 'LoadingState', ErrorState: 'ErrorState', EmptyListState: 'EmptyListState'}; if (name.includes('humanizeError')) return {humanizeAdminError: message => message}; throw Error(name);
   };
-  const globals = {require: requireMock, localStorage: {getItem: () => null}, crypto: {randomUUID: () => 'fixed-checkout-key'}, window: {location: {origin: 'http://localhost:5173'}},
+  const receiptStorage = new Map();
+  const globals = {require: requireMock, localStorage: {getItem: () => null}, sessionStorage: {setItem: (key, value) => receiptStorage.set(key, value)}, crypto: {randomUUID: () => 'fixed-checkout-key'}, window: {location: paymentLocation},
     fetch: async url => {paymentFetches.push(url); return paymentReply;}};
   const Checkout = load('src/features/storefront/pages/Checkout.tsx', globals).default;
   function reset() {
-    states = ['confirm', 'guest', {name: 'Comprador', email: 'buyer@example.com', phone: ''}, {street: '', number: '', apt: '', city: '', region: ''}, 'Transferencia', false, {}];
-    states[10] = [{id: 'Transferencia', label: 'Transferencia'}, {id: 'Transbank', label: 'Transbank'}];
-    states[11] = false; states[12] = '';
-    refs = []; navigateCalls = []; clearCount = 0; createCalls = []; fail = false; pending = null;
+    states = [[{id: 'Retiro', label: 'Retiro'}], false, '', 0, 'confirm', 'guest', {name: 'Comprador', email: 'buyer@example.com', phone: ''}, {street: '', number: '', apt: '', city: '', region: ''}, 'Transferencia', false, {}];
+    states[11] = [{id: 'Transferencia', label: 'Transferencia'}, {id: 'Transbank', label: 'Transbank'}];
+    states[12] = false; states[13] = '';
+    refs = []; navigateCalls = []; clearCount = 0; createCalls = []; fail = false; pending = null; gatewayFailure = false; gatewayCalls = []; paymentLocation.href = '';
   }
   function render(component) {stateIndex = 0; refIndex = 0; return nodes(component());}
   const confirm = () => render(Checkout).find(node => node.props?.onClick && nodes(node).some(value => typeof value === 'string' && value.startsWith('Confirmar y pagar'))).props.onClick;
@@ -88,50 +145,94 @@ const result = {id_pedido: 42, tienda_id: 9, estado: 'pendiente', monto_total: '
   assert.equal(navigateCalls.length, 0);
   release(); await Promise.all([first, duplicate]);
   assert.equal(clearCount, 1);
-  assert.equal(navigateCalls[0][1].state.orderNumber, '42');
+  assert.equal(navigateCalls[0][1].state.orderNumber, result.identificador);
+  assert.equal(navigateCalls[0][1].state.identificador, result.identificador);
+  const identifier = result.identificador;
+  delete result.identificador;
+  reset(); await confirm()();
+  assert.equal(navigateCalls[0][1].state.orderNumber, String(result.id_pedido));
+  assert.equal(navigateCalls[0][1].state.identificador, undefined);
+  result.identificador = identifier;
   reset(); fail = true;
   await confirm()();
   assert.equal(clearCount, 0);
   assert.equal(navigateCalls.length, 0);
-  assert.equal(states[6].payment, 'Stock insuficiente');
+  assert.equal(states[10].payment, 'Stock insuficiente');
   const originalKey = createCalls[0].key;
   fail = false; await confirm()();
   assert.equal(createCalls[1].key, originalKey);
   assert.equal(clearCount, 1);
-  reset(); states[4] = 'Transbank';
+  reset(); states[8] = 'Transbank';
   await confirm()();
   assert.equal(clearCount, 1);
-  reset(); states[2].email = 'invalid';
+  assert.deepEqual(JSON.parse(receiptStorage.get(`order-tracking:${result.identificador}`)), {
+    identificador: result.identificador, email: 'buyer@example.com', monto: Number(result.monto_total),
+  });
+  for (const method of ['PayPal', 'MercadoPago']) {
+
+    reset(); states[8] = method; states[11] = [];
+    await confirm()();
+    assert.equal(createCalls.length, 0);
+    assert.equal(gatewayCalls.length, 0);
+    assert.equal(clearCount, 0);
+    assert.equal(navigateCalls.length, 0);
+    assert.equal(paymentLocation.href, '');
+
+
+    reset(); states[8] = method; states[11] = [{id: method, label: method}]; gatewayFailure = true;
+    await confirm()();
+    assert.equal(createCalls.length, 1);
+    assert.equal(gatewayCalls.length, 1);
+    assert.equal(clearCount, 0);
+    assert.equal(navigateCalls.length, 0);
+    assert.equal(paymentLocation.href, '');
+    assert.match(states[10].payment, /Proveedor no disponible/);
+    const gatewayKey = createCalls[0].key;
+    gatewayFailure = false;
+    await confirm()();
+    assert.equal(createCalls.length, 2);
+    assert.equal(createCalls[1].key, gatewayKey, 'El reintento conserva idempotencia');
+    assert.equal(gatewayCalls.length, 2);
+    assert.equal(gatewayCalls[1][0], method);
+    assert.equal(gatewayCalls[1][1], result.tienda_id);
+    assert.equal(gatewayCalls[1][2], result.identificador);
+    if (method === 'PayPal') assert.equal(gatewayCalls[1][3], Number(result.monto_total));
+    assert.equal(clearCount, 1);
+    assert.equal(navigateCalls.length, 0);
+    assert.equal(paymentLocation.href, method === 'PayPal' ? 'https://example.test/paypal' : 'https://example.test/mercadopago');
+    assert.deepEqual(JSON.parse(receiptStorage.get(`order-tracking:${result.identificador}`)), {identificador: result.identificador, email: 'buyer@example.com'});
+  }
+  reset(); states[6].email = 'invalid';
   await confirm()();
   assert.equal(createCalls.length, 0);
 
   async function loadPayments(data, ok = true) {
-    reset(); states[0] = 'payment'; states[10] = []; states[11] = true;
+    reset(); states[4] = 'payment'; states[11] = []; states[12] = true;
     recordEffects = true; effects = [];
     paymentReply = {ok, json: async () => ({exito: ok, data})};
     render(Checkout);
-    assert.ok(states[11]);
+    assert.ok(states[12]);
     effects.find(effect => effect.toString().includes('loadPayments'))();
     await new Promise(setImmediate);
     recordEffects = false;
     return render(Checkout);
   }
-  let paymentTree = await loadPayments({transfer: {enabled: true}, paypal: {enabled: false}, transbank: {enabled: false}});
+  let paymentTree = await loadPayments({transfer: {enabled: true, fields: Object.fromEntries(['bank_name','account_type','account_number','holder_rut','holder_name','confirmation_email'].map(key => [key, 'qa']))}, paypal: {enabled: false}, transbank: {enabled: false}});
   assert.equal(paymentFetches.at(-1), 'http://localhost:8000/api/pagos/activos/');
   assert.deepEqual(paymentTree.filter(node => node.type === 'input' && node.props?.name === 'payment').map(node => node.props.value), ['Transferencia']);
   paymentTree = await loadPayments({Transbank: {enabled: true}, Linkify: {enabled: true}, PayPal: {enabled: 'false'}});
   assert.deepEqual(paymentTree.filter(node => node.type === 'input' && node.props?.name === 'payment').map(node => node.props.value), ['Transbank', 'Linkify']);
   paymentTree = await loadPayments({});
   assert.ok(paymentTree.some(value => typeof value === 'string' && value.includes('no tiene medios de pago habilitados')));
-  states[0] = 'confirm';
+  states[4] = 'confirm';
   await confirm()();
   assert.equal(createCalls.length, 0);
   paymentTree = await loadPayments({}, false);
   assert.ok(paymentTree.some(value => typeof value === 'string' && value.includes('No se pudieron cargar')));
-  states[0] = 'confirm';
+  states[4] = 'confirm';
   await confirm()();
   assert.equal(createCalls.length, 0);
-  reset(); states[10] = [{id: 'PayPal'}];
+  reset(); states[11] = [{id: 'PayPal'}];
   await confirm()();
   assert.equal(createCalls.length, 0, 'No se puede confirmar un medio deshabilitado aunque siga seleccionado');
 
@@ -144,27 +245,50 @@ const result = {id_pedido: 42, tienda_id: 9, estado: 'pendiente', monto_total: '
     assert.ok(tree.includes('CLP 18000'));
     assert.ok(tree.includes('CLP 12000'));
     assert.ok(tree.includes('CLP 30000'));
-    assert.equal(tree.filter(value => value === ' por unidad').length, 2);
+    assert.equal(tree.filter(node=>node?.type==='small'&&nodes(node).filter(value=>typeof value==='string').join('').endsWith(' por unidad')).length, 2);
     assert.ok(tree.some(node => node.props?.to === '/plantilla/1/compra' || node.props?.onClick));
+    cart.shipping = null; cart.shippingMethod = 'Chilexpress';
+    const pendingTree = render(Cart);
+    assert.ok(pendingTree.includes('Se calcula en checkout'));
+    assert.ok(pendingTree.includes('Total sin envío'));
+    assert.ok(!pendingTree.some(value => typeof value === 'string' && value.includes('Envío gratis sobre')));
+    cart.shipping = 0; cart.shippingMethod = 'Retiro';
   }
-  let contextStates = [], cursor = 0, addedToSql = 0, deleted = [];
+  let contextStates = [], cursor = 0, addedToSql = [], deleted = [], editorPreview = false, cartReads = 0;
+  let persistedCart = [{id_item_carrito: 99, id_producto: 123, nombre_producto: 'Legado', precio_unitario: 0, cantidad: 1, stock_disponible: 0}];
   const Provider = load('src/features/storefront/context/CartContext.tsx', {
     localStorage: {getItem: () => 'buyer-token'}, sessionStorage: {getItem: () => null},
     require: name => {
+      if (name.includes('useStorefrontTemplate')) return {useStorefrontTemplate: () => ({route: value => value})};
+      if (name.includes('metaPixelService')) return {trackMetaPixelEvent() {}};
+      if (name.includes('StoreIdentityContext')) return {useStoreIdentity: () => ({identity: null})};
+      if (name.includes('activityCart')) return {useActivityCart:()=>({items:[],clear:async()=>{}})};
+      if (name.includes('cartSession')) return {useCartSession:()=>({token:'buyer-token',scope:'test-account'}),currentCartToken:()=> 'buyer-token'};
+      if (name.includes('cartTransfer')) return {prepareGuestCartTransfer(){},transferGuestCart:async()=>''};
+      if (name.includes('catalogService')) return {fetchPublicProducts:async()=>[]};
+      if (name.includes('guestCartStorage')) return {guestCartKey: () => null};
+      if (name.includes('promotionService')) return {validatePromotion: async () => ({code: 'TEST', type: 'fixed', discount: 0, shipping: 0, message: ''})};
+      if (name === '../visual/pages') return {isActiveEditorPreview: () => editorPreview};
       if (name === 'react/jsx-runtime') return {jsx, jsxs: jsx};
-      if (name === 'react') return {createContext: () => ({Provider: 'Provider'}), useContext() {}, useEffect() {}, useCallback: fn => fn,
+      if (name === 'react') return {useRef:value=>({current:value}), createContext: () => ({Provider: 'Provider'}), useContext() {}, useEffect() {}, useCallback: fn => fn,
         useState(initial) {const i = cursor++; if (!(i in contextStates)) contextStates[i] = initial; return [contextStates[i], next => {contextStates[i] = typeof next === 'function' ? next(contextStates[i]) : next;}];}};
       if (name.includes('cartService')) return {cartService: {
-        obtenerCarrito: async () => [{id_item_carrito: 99, id_producto: 123, nombre_producto: 'Legado', precio_unitario: 0, cantidad: 1, stock_disponible: 0}],
-        agregarItem: async () => {addedToSql++;}, eliminarItem: async id => {deleted.push(id);},
+        obtenerCarrito: async () => { cartReads++; return persistedCart; },
+        agregarItem: async id => {addedToSql.push(id);}, eliminarItem: async id => {deleted.push(id);},
       }};
-      throw Error(name);
+      if (name.endsWith('/commerceService')) return {invoiceErrors: () => ({})}; if (name.endsWith('/InvoiceFields')) return {InvoiceFields: 'InvoiceFields'}; if (name.includes('shared/components/states')) return {LoadingState: 'LoadingState', ErrorState: 'ErrorState', EmptyListState: 'EmptyListState'}; if (name.includes('humanizeError')) return {humanizeAdminError: message => message}; throw Error(name);
     },
   }).CartProvider;
-  const context = () => {cursor = 0; return Provider({children: null}).props.value;};
+  const context = () => {cursor = 0; const scoped=Provider({children:null}); return scoped.type(scoped.props).props.value;};
   await context().addItem(items[0]);
   await context().addItem(items[1]);
-  assert.equal(addedToSql, 0, 'Un ObjectId nunca se convierte en ID SQL mediante parseInt');
+  assert.equal(context().shipping, null);
+  assert.equal(context().total, context().subtotal - context().discount);
+  context().setShippingMethod('Retiro');
+  assert.equal(context().shipping, 0);
+  context().setShippingMethod('Chilexpress');
+  assert.equal(context().shipping, null);
+  assert.deepEqual(addedToSql, [items[0].productId, items[1].productId], 'El backend recibe el identificador Mongo completo, sin parseInt');
   await context().updateQuantity(items[0].productId, 'QA-M', 8);
   assert.equal(context().items[0].quantity, 7);
   assert.equal(context().items[1].quantity, 1);
@@ -180,5 +304,15 @@ const result = {id_pedido: 42, tienda_id: 9, estado: 'pendiente', monto_total: '
   await context().clearCart();
   assert.equal(context().items.length, 0);
   assert.deepEqual(deleted, [99]);
+  contextStates[0] = {...contextStates[0],rows:[{...items[0]}]};
+  persistedCart = [{id_item_carrito: 100, id_producto: 123, producto_mongo_id: items[0].productId,
+    slug: 'polera', sku: 'QA-M', cantidad: 1, precio_unitario: 0, stock_disponible: 0}];
+  await context().refreshCart();
+  assert.equal(context().items.length, 1, 'El carrito persistido y el local deben compartir la identidad Mongo');
+  assert.equal(context().items[0].productId, items[0].productId);
+  assert.equal(context().items[0].id_item_carrito, 100);
+  assert.equal(context().items[0].price, 0);
+  assert.equal(context().items[0].maxStock, 0);
+  editorPreview = true; const readsBeforePreview = cartReads; await context().refreshCart(); assert.equal(cartReads, readsBeforePreview, 'Editor no consulta carrito real');
   console.log('OK: contrato real, Token/invitado, errores, doble envío, reintento, Webpay, cuatro plantillas, stock independiente y limpieza del carrito');
 })().catch(error => {console.error(error); process.exitCode = 1;});

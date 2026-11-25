@@ -1,62 +1,151 @@
-import { useState } from "react"
+import { AutomaticFieldEditor, previewFields, validateAutomaticFields, type AutomaticField } from '../components/AutomaticFieldEditor';
+import { useEffect, useRef, useState } from "react"
 import { useAdmin } from "../context/AdminContext"
 import {
   createDefaultEmailTemplates,
   emailTemplateDefinitions,
   EmailTemplateType,
 } from "../data/mockAdminData"
-import { Alert, Button, Input, Textarea, Toggle } from "../components/ui"
+import { Alert, Button, Toggle } from "../components/ui"
+import { fetchEmailTemplates, saveEmailTemplates, sendEmergencyEmail, type RemoteEmailTemplates } from "../services/emailTemplateService"
 
 const templateTypes = Object.keys(emailTemplateDefinitions) as EmailTemplateType[]
 
-const variables = [
-  "{{customerName}}",
-  "{{customerEmail}}",
-  "{{orderNumber}}",
-  "{{orderTotal}}",
-  "{{shippingMethod}}",
-  "{{carrier}}",
-  "{{trackingCode}}",
-  "{{storeName}}",
-]
 
 export default function EmailTemplates() {
   const { config, setConfig } = useAdmin()
-  const [templates, setTemplates] = useState(() => config.emailTemplates ?? createDefaultEmailTemplates())
+  const defaults = createDefaultEmailTemplates()
+  const [templates, setTemplates] = useState(() => {
+    const defs = createDefaultEmailTemplates()
+    const stored = (config.emailTemplates ?? {}) as Partial<typeof defs>
+    return Object.fromEntries(
+      (Object.keys(defs) as EmailTemplateType[]).map((type) => [
+        type,
+        {
+          ...defs[type],
+          ...(stored[type] ?? {}),
+        },
+      ])
+    ) as typeof defs
+  })
   const [activeType, setActiveType] = useState<EmailTemplateType>("order_received")
   const [saved, setSaved] = useState(false)
-  const activeTemplate = templates[activeType]
+  const [error, setError] = useState("")
+  const [loaded, setLoaded] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const savingRef = useRef(false)
+  const [remoteDefaults, setRemoteDefaults] = useState<RemoteEmailTemplates["por_defecto"]>({})
+  const [fields,setFields] = useState<AutomaticField[]>([])
+  const [required,setRequired] = useState<Record<string,string[]>>({})
+  const [emergencyOpen, setEmergencyOpen] = useState(false)
+  const [emergencyRecipient, setEmergencyRecipient] = useState('')
+  const [emergencyOrderId, setEmergencyOrderId] = useState('')
+  const [emergencySending, setEmergencySending] = useState(false)
+  const [emergencyResult, setEmergencyResult] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+
+  const handleEmergencySend = async () => {
+    if (emergencySending) return
+    setEmergencySending(true)
+    setEmergencyResult(null)
+    try {
+      const res = await sendEmergencyEmail({
+        tipo: activeType,
+        destinatario: emergencyRecipient.trim() || undefined,
+        id_pedido: emergencyOrderId.trim() ? Number(emergencyOrderId.trim()) : undefined,
+      })
+      setEmergencyResult({
+        type: 'success',
+        text: `Correo de emergencia enviado exitosamente a ${res.destinatario || emergencyRecipient.trim()}.`,
+      })
+    } catch (err) {
+      setEmergencyResult({
+        type: 'error',
+        text: err instanceof Error ? err.message : 'No se pudo enviar el correo de emergencia.',
+      })
+    } finally {
+      setEmergencySending(false)
+    }
+  }
+  const activeTemplate = templates[activeType] ?? defaults[activeType] ?? {
+    enabled: true,
+    subject: '',
+    preheader: '',
+    body: '',
+  }
 
   const updateTemplate = (changes: Partial<typeof activeTemplate>) => {
+    if (savingRef.current) return
     setTemplates((current) => ({
       ...current,
-      [activeType]: { ...current[activeType], ...changes },
+      [activeType]: { ...(current[activeType] ?? defaults[activeType]), ...changes },
     }))
     setSaved(false)
   }
 
-  const save = () => {
-    setSaved(setConfig({ ...config, emailTemplates: templates }))
-    window.setTimeout(() => setSaved(false), 2600)
+
+  useEffect(() => {
+    let active = true
+    fetchEmailTemplates()
+      .then((remote) => {
+        if (!active) return
+        if (!remote.variables?.length || !remote.obligatorias || Object.keys(remote.plantillas || {}).some(type => !Array.isArray(remote.obligatorias?.[type]) || remote.obligatorias[type].some(key => !remote.variables?.some(field => field.key === key)))) throw new Error('No pudimos confirmar los campos requeridos del servidor. Recarga antes de editar o guardar.');
+        setRemoteDefaults(remote.por_defecto)
+        setFields(remote.variables??[])
+        setRequired(remote.obligatorias??{})
+        setTemplates((current) => {
+          const defs = createDefaultEmailTemplates()
+          const remotePlantillas = (remote.plantillas ?? {}) as Partial<typeof defs>
+          return Object.fromEntries(
+            (Object.keys(defs) as EmailTemplateType[]).map((type) => [
+              type,
+              {
+                ...defs[type],
+                ...(current[type] ?? {}),
+                ...(remotePlantillas[type] ?? {}),
+              },
+            ])
+          ) as typeof defs
+        })
+        setLoaded(true)
+      })
+      .catch((reason) => { if (active) setError(reason instanceof Error ? reason.message : "No se pudieron cargar las plantillas.") })
+    return () => { active = false }
+  }, [])
+
+  const save = async () => {
+    if (savingRef.current || !loaded) return
+    savingRef.current = true
+    setSaving(true)
+    setSaved(false)
+    setError("")
+    try {
+      const remoteTypes = Object.keys(remoteDefaults)
+      if (!remoteTypes.length) throw new Error('No pudimos confirmar las plantillas disponibles. Recarga antes de guardar.')
+      if(!fields.length) throw new Error('No pudimos cargar los campos automáticos. Recarga antes de guardar.')
+      for(const type of remoteTypes){const template=templates[type as EmailTemplateType] ?? defaults[type as EmailTemplateType];const message=validateAutomaticFields([template.subject,template.preheader,template.body],fields,template.enabled?required[type]??[]:[]);if(message){setActiveType(type as EmailTemplateType);throw new Error(message)}}
+      const toSave = Object.fromEntries(remoteTypes.map((type) => [type, templates[type as EmailTemplateType] ?? defaults[type as EmailTemplateType]]))
+      await saveEmailTemplates(toSave)
+      if (setConfig({ ...config, emailTemplates: templates })) setSaved(true)
+      else setError('Las plantillas se guardaron en el servidor, pero no se pudo actualizar la copia del navegador.')
+    } catch (reason) {
+      setSaved(false)
+      setError(reason instanceof Error ? reason.message : "No se pudieron guardar las plantillas.")
+    } finally {
+      savingRef.current = false
+      setSaving(false)
+    }
   }
 
   const restoreSelected = () => {
-    const defaults = createDefaultEmailTemplates()
-    setTemplates((current) => ({ ...current, [activeType]: defaults[activeType] }))
+    const allDefaults = { ...createDefaultEmailTemplates(), ...remoteDefaults } as typeof templates
+    setTemplates((current) => ({ ...current, [activeType]: allDefaults[activeType] }))
     setSaved(false)
   }
 
   return (
-    <div className="max-w-6xl space-y-6 animate-fade-in">
-      <div>
-        <h1 className="text-2xl font-bold">Correos automáticos</h1>
-        <p className="text-sm text-[var(--muted-foreground)] mt-1">
-          Personaliza los mensajes que se enviarán a tus clientes durante la compra.
-        </p>
-      </div>
-
-      <Alert variant="info" title="Diseño preparado para integración">
-        Este prototipo guarda las plantillas. Los datos del cliente y del pedido se insertarán desde la base de datos cuando se conecte el servicio de correo.
+    <div className="w-full space-y-6 animate-fade-in">
+      <Alert variant="info" title="Envío automático">
+        Estos mensajes se envían solos al comprador según el estado del pedido: «Pendiente», «Pagado/En preparación», «En camino», «Entregado» y «Cancelado». Puedes desactivar o editar el que prefieras.
       </Alert>
 
       <div className="grid grid-cols-1 lg:grid-cols-[240px_minmax(0,1fr)] gap-5">
@@ -65,6 +154,8 @@ export default function EmailTemplates() {
           <div className="space-y-1">
             {templateTypes.map((type) => {
               const definition = emailTemplateDefinitions[type]
+              const template = templates[type] ?? defaults[type]
+              const isEnabled = Boolean(template?.enabled)
               const selected = type === activeType
               return (
                 <button
@@ -74,8 +165,8 @@ export default function EmailTemplates() {
                 >
                   <span className="block text-sm font-semibold">{definition.label}</span>
                   <span className="block text-xs text-[var(--muted-foreground)] mt-1 leading-relaxed">{definition.description}</span>
-                  <span className={`inline-block mt-2 text-[11px] font-medium ${templates[type].enabled ? "text-[var(--success)]" : "text-[var(--muted-foreground)]"}`}>
-                    {templates[type].enabled ? "Activo" : "Desactivado"}
+                  <span className={`inline-block mt-2 text-[11px] font-medium ${isEnabled ? "text-[var(--success)]" : "text-[var(--muted-foreground)]"}`}>
+                    {isEnabled ? "Activo" : "Desactivado"}
                   </span>
                 </button>
               )
@@ -88,71 +179,122 @@ export default function EmailTemplates() {
             <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
               <div>
                 <h2 className="font-semibold">{emailTemplateDefinitions[activeType].label}</h2>
-                <p className="text-xs text-[var(--muted-foreground)] mt-1">Destino automático: <span className="font-mono">{"{{customerEmail}}"}</span></p>
+                <p className="text-xs text-[var(--muted-foreground)] mt-1">Destino automático: <span className="font-mono"><span className="automatic-field-chip">Correo del cliente</span></span></p>
               </div>
-              <Toggle
+              <div className="flex flex-wrap items-center gap-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={saving || !loaded}
+                  onClick={() => { setEmergencyOpen(!emergencyOpen); setEmergencyResult(null); }}
+                >
+                  {emergencyOpen ? 'Cerrar envío manual' : 'Envío manual'}
+                </Button>
+                <Toggle
+                disabled={saving || !loaded}
                 label="Activar envío automático"
                 checked={activeTemplate.enabled}
                 onChange={(enabled) => updateTemplate({ enabled })}
-              />
+                />
+              </div>
+            {emergencyOpen && (
+              <div className="p-4 bg-[var(--muted)]/50 border border-[var(--border)] rounded-xl space-y-3">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xs font-semibold uppercase tracking-wider text-[var(--foreground)]">
+                    Envío manual de emergencia — {emailTemplateDefinitions[activeType].label}
+                  </h3>
+                  <span className="text-[11px] text-[var(--muted-foreground)]">
+                    Omite filtros automáticos y envía de inmediato
+                  </span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium text-[var(--muted-foreground)] mb-1">
+                      Correo destinatario (opcional si indicas pedido)
+                    </label>
+                    <input
+                      type="email"
+                      placeholder="cliente@gmail.com, outlook, hotmail, etc."
+                      value={emergencyRecipient}
+                      onChange={e => setEmergencyRecipient(e.target.value)}
+                      disabled={emergencySending}
+                      className="w-full text-xs px-3 py-2 bg-white border border-[var(--border)] rounded-lg outline-none focus:ring-2 focus:ring-[var(--primary)]"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-[var(--muted-foreground)] mb-1">
+                      N° o ID de pedido (opcional)
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Ej. 12 (deja vacío para último pedido)"
+                      value={emergencyOrderId}
+                      onChange={e => setEmergencyOrderId(e.target.value)}
+                      disabled={emergencySending}
+                      className="w-full text-xs px-3 py-2 bg-white border border-[var(--border)] rounded-lg outline-none focus:ring-2 focus:ring-[var(--primary)]"
+                    />
+                  </div>
+                </div>
+                <div className="flex items-center justify-between pt-1">
+                  <span className="text-xs text-[var(--muted-foreground)]">
+                    Compatible con Gmail, Outlook, Hotmail y demás proveedores.
+                  </span>
+                  <Button
+                    type="button"
+                    variant="primary"
+                    disabled={emergencySending}
+                    onClick={handleEmergencySend}
+                  >
+                    {emergencySending ? 'Enviando correo…' : 'Enviar correo ahora'}
+                  </Button>
+                </div>
+                {emergencyResult && (
+                  <Alert variant={emergencyResult.type === 'success' ? 'success' : 'error'}>
+                    {emergencyResult.text}
+                  </Alert>
+                )}
+              </div>
+            )}
             </div>
             <div className="grid gap-4">
-              <Input
-                label="Asunto"
-                value={activeTemplate.subject}
-                onChange={(event) => updateTemplate({ subject: event.target.value })}
-                disabled={!activeTemplate.enabled}
-              />
-              <Input
-                label="Texto de vista previa"
-                value={activeTemplate.preheader}
-                onChange={(event) => updateTemplate({ preheader: event.target.value })}
-                hint="Texto breve visible junto al asunto en la bandeja de entrada."
-                disabled={!activeTemplate.enabled}
-              />
-              <Textarea
-                label="Contenido del correo"
-                value={activeTemplate.body}
-                onChange={(event) => updateTemplate({ body: event.target.value })}
-                rows={13}
-                disabled={!activeTemplate.enabled}
-              />
+              <AutomaticFieldEditor key={activeType+'-subject'} label="Asunto" value={activeTemplate.subject} onChange={subject=>updateTemplate({subject})} fields={fields} required={activeTemplate.enabled?required[activeType]:[]} maxLength={200} disabled={saving||!loaded||!activeTemplate.enabled}/>
+              <AutomaticFieldEditor key={activeType+'-preheader'} label="Texto de vista previa" value={activeTemplate.preheader} onChange={preheader=>updateTemplate({preheader})} fields={fields} required={activeTemplate.enabled?required[activeType]:[]} maxLength={200} disabled={saving||!loaded||!activeTemplate.enabled}/>
+              <AutomaticFieldEditor key={activeType+'-body'} label="Contenido del correo" value={activeTemplate.body} onChange={body=>updateTemplate({body})} fields={fields} required={activeTemplate.enabled?required[activeType]:[]} multiline disabled={saving||!loaded||!activeTemplate.enabled}/>
             </div>
             <div className="border-t border-[var(--border)] pt-4">
-              <p className="text-xs font-semibold text-[var(--muted-foreground)] mb-2">Variables disponibles</p>
-              <div className="flex flex-wrap gap-2">
-                {variables.map((variable) => (
-                  <code key={variable} className="rounded-md bg-[var(--muted)] px-2 py-1 text-xs text-[var(--foreground)]">{variable}</code>
-                ))}
-              </div>
+              <h3 className="text-sm font-semibold mb-3">Campos automáticos</h3>
+              <p className="text-xs text-[var(--muted-foreground)] mb-3">Los campos automáticos se completan con los datos reales de cada pedido. Puedes editar el texto que los rodea y quitar los campos opcionales. La vista previa usa ejemplos y no envía correos.</p>
+              <p className="mb-3 text-sm" role="status">{!loaded ? 'Cargando los requisitos de esta plantilla desde el servidor…' : (required[activeType] || []).length ? `Requeridos ${activeTemplate.enabled ? 'en este correo activo' : 'al activar este correo'}: ${(required[activeType] || []).map(key => fields.find(field => field.key === key)?.label || key).join(', ')}. Deben aparecer en el asunto, vista previa o contenido antes de guardar.` : 'El servidor no exige campos automáticos para esta plantilla.'}</p>
+              <div className="automatic-field-help">{fields.map(field=><div key={field.key}><strong>{field.label}{required[activeType]?.includes(field.key)?' · Obligatorio al activar':' · Opcional'}</strong><p>{field.description}</p></div>)}</div>
             </div>
           </section>
 
           <section className="bg-white border border-[var(--border)] rounded-2xl overflow-hidden">
             <div className="px-5 py-3 border-b border-[var(--border)] flex items-center justify-between">
               <h2 className="font-semibold text-sm">Vista previa</h2>
-              <span className="text-xs text-[var(--muted-foreground)]">Los campos del cliente se completan al enviar</span>
+              <span className="text-xs text-[var(--muted-foreground)]">Vista previa con datos de ejemplo.</span>
             </div>
             <div className="p-5 bg-[var(--muted)]/40">
               <div className="max-w-xl mx-auto bg-white border border-[var(--border)] rounded-xl overflow-hidden shadow-sm">
                 <div className="px-5 py-4 border-b border-[var(--border)]">
                   <p className="text-xs text-[var(--muted-foreground)]">De: {config.name}</p>
-                  <p className="text-xs text-[var(--muted-foreground)] mt-1">Para: <span className="font-mono">{"{{customerEmail}}"}</span></p>
-                  <p className="font-semibold mt-3">{activeTemplate.subject || "Sin asunto"}</p>
-                  <p className="text-xs text-[var(--muted-foreground)] mt-1">{activeTemplate.preheader}</p>
+                  <p className="text-xs text-[var(--muted-foreground)] mt-1">Para: cliente@example.test</p>
+                  <p className="font-semibold mt-3">{previewFields(activeTemplate.subject,fields) || "Sin asunto"}</p>
+                  <p className="text-xs text-[var(--muted-foreground)] mt-1">{previewFields(activeTemplate.preheader,fields)}</p>
                 </div>
                 <div className="p-5 whitespace-pre-wrap text-sm leading-6 text-[var(--foreground)]">
-                  {activeTemplate.body || "Escribe el contenido de este correo."}
+                  {previewFields(activeTemplate.body,fields) || "Escribe el contenido de este correo."}
                 </div>
               </div>
             </div>
           </section>
 
           <div className="flex flex-col-reverse sm:flex-row sm:justify-between gap-3">
-            <Button variant="outline" onClick={restoreSelected}>Restaurar plantilla</Button>
-            <Button variant="primary" onClick={save}>Guardar correos automáticos</Button>
+            <Button variant="outline" disabled={saving || !loaded} onClick={restoreSelected}>Restaurar plantilla</Button>
+            <Button variant="primary" disabled={saving || !loaded} onClick={save}>{saving ? 'Guardando…' : 'Guardar correos automáticos'}</Button>
           </div>
-          {saved && <Alert variant="success">Plantillas guardadas. Quedarán listas para ser enviadas cuando se conecte el servicio de correo.</Alert>}
+          {error && <Alert variant="error">{error}</Alert>}
+          {saved && <Alert variant="success">Plantillas guardadas. Los correos se envían solos al comprador cuando ocurre cada evento.</Alert>}
         </div>
       </div>
     </div>

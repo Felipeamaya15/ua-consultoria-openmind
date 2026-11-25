@@ -1,0 +1,2 @@
+export const VISUAL_SECTION = { global: "global", topBar: "topBar", header: "header", hero: "hero", heroCta: "heroCta", categories: "categories", productGrid: "productGrid", productCard: "productCard", sections: "sections", contact: "contact", location: "location", footer: "footer", catalog: "catalog", pageLayout: "pageLayout", pagePanel: "pagePanel", pageField: "pageField", pageButton: "pageButton" } as const;
+export type VisualSectionId = typeof VISUAL_SECTION[keyof typeof VISUAL_SECTION];

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, ChangeEvent, FormEvent } from 'react';
+import { LoadingState } from '../../../shared/components/states';
 import { transbankService } from '../services/transbankService';
 import { GuardarTransbankDTO } from '../types/transbank.types';
 import { Button, Input, Select, Alert, Icon } from '../components/ui';
@@ -50,7 +51,7 @@ export const TransbankConfigForm: React.FC<Props> = ({ idTienda = 1 }) => {
       .catch(() => {
         setAlertState({
           variant: 'error',
-          message: 'Error de conexión con el backend de pagos.',
+          message: 'No pudimos cargar la configuración de pagos. Intenta nuevamente.',
         });
       })
       .finally(() => setLoading(false));
@@ -89,23 +90,7 @@ export const TransbankConfigForm: React.FC<Props> = ({ idTienda = 1 }) => {
         setFormData((prev) => ({ ...prev, api_key: '' }));
         setIsConfigured(true);
 
-        // Sincronizar con el storage local si el Checkout depende de él
-        try {
-          const raw = localStorage.getItem('ua-entrepreneur-demo-v1');
-          if (raw) {
-            const parsed = JSON.parse(raw);
-            if (!parsed.config) parsed.config = {};
-            if (!parsed.config.paymentConfiguration) parsed.config.paymentConfiguration = {};
-            parsed.config.paymentConfiguration.transbank = {
-              enabled: formData.activo,
-              commerceCode: formData.codigo_comercio,
-              environment: formData.ambiente,
-            };
-            localStorage.setItem('ua-entrepreneur-demo-v1', JSON.stringify(parsed));
-          }
-        } catch {
-          // Ignorar si no existe la estructura local
-        }
+
       } else {
         const errorDetail = res.error?.detalles
           ? Object.values(res.error.detalles).flat().join(' ')
@@ -128,9 +113,7 @@ export const TransbankConfigForm: React.FC<Props> = ({ idTienda = 1 }) => {
 
   if (loading) {
     return (
-      <div className="bg-white border border-[var(--border)] rounded-2xl p-6 text-center text-[#667085] text-sm">
-        Cargando credenciales de Transbank...
-      </div>
+      <LoadingState spacing="none" className="bg-white border border-[var(--border)] rounded-2xl p-6">Cargando credenciales de Transbank...</LoadingState>
     );
   }
 
@@ -184,12 +167,13 @@ export const TransbankConfigForm: React.FC<Props> = ({ idTienda = 1 }) => {
         />
 
         <Input
-          label="API Key Secret"
+          label="Clave secreta de Transbank"
           type="password"
           value={formData.api_key}
           onChange={(e) => setFormData((c) => ({ ...c, api_key: e.target.value }))}
           placeholder={maskedKey ? `Clave actual: ${maskedKey}` : 'Ingresa tu secreto de Transbank'}
           required={!isConfigured}
+          persistentHint
           hint={
             maskedKey
               ? `Clave guardada: ${maskedKey}. Déjalo en blanco si no deseas modificarla.`

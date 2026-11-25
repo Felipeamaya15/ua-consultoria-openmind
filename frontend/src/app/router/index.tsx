@@ -1,40 +1,46 @@
-import CustomerOrders from '../../features/storefront/pages/CustomerOrders';
+import { lazyPage } from '../LazyPage';
+const CustomerOrders = lazyPage(() => import('../../features/storefront/pages/CustomerOrders'));
 import { RequireCustomer } from '../../features/storefront/components/store/AccountNavigation';
-import Profile from '../../features/storefront/pages/Profile';
+const Profile = lazyPage(() => import('../../features/storefront/pages/Profile'));
+const CommercialPreferences = lazyPage(() => import('../../features/storefront/pages/CommercialPreferences'));
 
-import { CheckoutSummaryPage } from '../../features/checkout/pages/CheckoutSummaryPage';
-import { LinkifyConfigPage } from '../../features/integrations/pages/LinkifyConfigPage';
 import { adminRoute } from '../../features/admin/routes';
+import { RequireAdmin } from '../../features/admin/auth/RequireAdmin';
 import {
   createBrowserRouter,
+  ScrollRestoration,
   Navigate,
+  useLocation,
 } from 'react-router-dom';
 
 import { EditorialLayout } from '../../features/storefront/components/store/EditorialLayout';
 import { MinimalLayout } from '../../features/storefront/components/store/minimal/MinimalLayout';
 import { VisualLayout } from '../../features/storefront/components/store/visual/VisualLayout';
 import { CatalogLayout } from '../../features/storefront/components/store/catalog/CatalogLayout';
+import { templateFromPath } from '../../features/storefront/visual/templates';
 
-import EditorialHome from '../../features/storefront/pages/EditorialHome';
-import MinimalHome from '../../features/storefront/pages/MinimalHome';
-import VisualHome from '../../features/storefront/pages/VisualHome';
-import VisualStory from '../../features/storefront/pages/VisualStory';
-import CatalogHome from '../../features/storefront/pages/CatalogHome';
+const EditorialHome = lazyPage(() => import('../../features/storefront/pages/EditorialHome'));
+const MinimalHome = lazyPage(() => import('../../features/storefront/pages/MinimalHome'));
+const VisualHome = lazyPage(() => import('../../features/storefront/pages/VisualHome'));
+const VisualStory = lazyPage(() => import('../../features/storefront/pages/VisualStory'));
+const CatalogHome = lazyPage(() => import('../../features/storefront/pages/CatalogHome'));
 
-import Catalog from '../../features/storefront/pages/Catalog';
-import ProductDetail from '../../features/storefront/pages/ProductDetail';
-import Cart from '../../features/storefront/pages/Cart';
-import Checkout from '../../features/storefront/pages/Checkout';
-import OrderConfirmation from '../../features/storefront/pages/OrderConfirmation';
-import Tracking from '../../features/storefront/pages/Tracking';
-import Login from '../../features/storefront/pages/Login';
-import Legal from '../../features/storefront/pages/Legal';
+const Catalog = lazyPage(() => import('../../features/storefront/pages/Catalog'));
+const ProductDetail = lazyPage(() => import('../../features/storefront/pages/ProductDetail'));
+const Cart = lazyPage(() => import('../../features/storefront/pages/Cart'));
+const Checkout = lazyPage(() => import('../../features/storefront/pages/Checkout'));
+const OrderConfirmation = lazyPage(() => import('../../features/storefront/pages/OrderConfirmation'));
+const Tracking = lazyPage(() => import('../../features/storefront/pages/Tracking'));
+const Login = lazyPage(() => import('../../features/storefront/pages/Login'));
+const Legal = lazyPage(() => import('../../features/storefront/pages/Legal'));
 
-import { PendingPage } from '../../features/storefront/pages/PreviewPages';
+import { ErrorFallback, NotFoundPage } from '../../shared/components/ErrorFallback';
 
-import { StoreProvider } from '../../features/storefront/context/StoreContext';
+import { StoreProvider, useStore } from '../../features/storefront/context/StoreContext';
 import { CartProvider } from '../../features/storefront/context/CartContext';
 import { OrderProvider } from '../../features/storefront/context/OrderContext';
+import { CookieConsentBanner } from '../../features/storefront/components/store/CookieConsentBanner';
+import { StoreSeoMetadata } from '../../features/storefront/components/store/StoreSeoMetadata';
 
 function StorefrontProviders({
   children,
@@ -43,19 +49,60 @@ function StorefrontProviders({
 }) {
   return (
     <StoreProvider>
+      <StoreSeoMetadata />
+      <ScrollRestoration />
       <CartProvider>
         <OrderProvider>
           {children}
+          <CookieConsentBanner />
         </OrderProvider>
       </CartProvider>
     </StoreProvider>
   );
 }
 
+export function ActiveStorefrontLayout() {
+  const { pathname } = useLocation();
+  const { activeTemplate } = useStore();
+  if (
+    /^\/(?:admin|emprendedor)\/preview\/plantilla\//.test(pathname) &&
+    !templateFromPath(pathname)
+  ) {
+    return <Navigate to="/" replace />;
+  }
+  switch (activeTemplate) {
+    case 'minimal':
+      return <MinimalLayout />;
+    case 'visual':
+      return <VisualLayout />;
+    case 'catalog':
+      return <CatalogLayout />;
+    case 'editorial':
+    default:
+      return <EditorialLayout />;
+  }
+}
+
+export function ActiveStorefrontHome() {
+  const { activeTemplate } = useStore();
+  switch (activeTemplate) {
+    case 'minimal':
+      return <MinimalHome />;
+    case 'visual':
+      return <VisualHome />;
+    case 'catalog':
+      return <CatalogHome />;
+    case 'editorial':
+    default:
+      return <EditorialHome />;
+  }
+}
+
 const sharedChildren = [
   { path: 'mis-pedidos', element: <RequireCustomer><CustomerOrders /></RequireCustomer> },
   { path: 'mis-pedidos/:id', element: <RequireCustomer><CustomerOrders /></RequireCustomer> },
   { path: 'perfil', element: <RequireCustomer><Profile /></RequireCustomer> },
+  { path: 'preferencias-comerciales', element: <CommercialPreferences /> },
   {
     path: 'catalogo',
     element: <Catalog />,
@@ -89,120 +136,94 @@ const sharedChildren = [
     element: <Legal />,
   },
   {
+    path: 'nuestra-historia',
+    element: <VisualStory />,
+  },
+  {
     path: '*',
-    element: <PendingPage title="Página no encontrada" />,
+    element: <NotFoundPage />,
   },
 ];
 
+const storefrontChildren = [
+  {
+    index: true,
+    element: <ActiveStorefrontHome />,
+  },
+  ...sharedChildren,
+];
+
 export const router = createBrowserRouter([
-  adminRoute,
-  { path: "/landing", element: <Navigate to="/" replace /> },
-  /*
-   * ==========================================================
-   * INICIO
-   * ==========================================================
-   */
+  {
+    ...adminRoute,
+    errorElement: <ErrorFallback />,
+  },
+  { path: '/landing', element: <Navigate to="/" replace />, errorElement: <ErrorFallback /> },
+
+  {
+    path: '/plantilla',
+    element: <Navigate to="/" replace />,
+    errorElement: <ErrorFallback />,
+  },
+  {
+    path: '/plantilla/:id',
+    element: <Navigate to="/" replace />,
+    errorElement: <ErrorFallback />,
+  },
+  {
+    path: '/plantilla/:id/*',
+    element: <Navigate to="/" replace />,
+    errorElement: <ErrorFallback />,
+  },
+
+  {
+    path: '/admin/preview/plantilla/:templateId',
+    element: <RequireAdmin />,
+    errorElement: <ErrorFallback />,
+    children: [
+      {
+        element: (
+          <StorefrontProviders>
+            <ActiveStorefrontLayout />
+          </StorefrontProviders>
+        ),
+        errorElement: <ErrorFallback />,
+        children: storefrontChildren,
+      },
+    ],
+  },
+
+  {
+    path: '/emprendedor/preview/plantilla/:templateId',
+    element: <RequireAdmin />,
+    errorElement: <ErrorFallback />,
+    children: [
+      {
+        element: (
+          <StorefrontProviders>
+            <ActiveStorefrontLayout />
+          </StorefrontProviders>
+        ),
+        errorElement: <ErrorFallback />,
+        children: storefrontChildren,
+      },
+    ],
+  },
+
   {
     path: '/',
-    element: <Navigate to="/plantilla/1" replace />,
-  },
-
-  /*
-   * ==========================================================
-   * PLANTILLA 1 — EDITORIAL
-   * ==========================================================
-   */
-  {
-    path: '/plantilla/1',
     element: (
       <StorefrontProviders>
-        <EditorialLayout />
+        <ActiveStorefrontLayout />
       </StorefrontProviders>
     ),
-    children: [
-      {
-        index: true,
-        element: <EditorialHome />,
-      },
-      ...sharedChildren,
-    ],
+    errorElement: <ErrorFallback />,
+    children: storefrontChildren,
   },
 
-  /*
-   * ==========================================================
-   * PLANTILLA 2 — MINIMAL
-   * ==========================================================
-   */
-  {
-    path: '/plantilla/2',
-    element: (
-      <StorefrontProviders>
-        <MinimalLayout />
-      </StorefrontProviders>
-    ),
-    children: [
-      {
-        index: true,
-        element: <MinimalHome />,
-      },
-      ...sharedChildren,
-    ],
-  },
-
-  /*
-   * ==========================================================
-   * PLANTILLA 3 — VISUAL / VELTA
-   * ==========================================================
-   */
-  {
-    path: '/plantilla/3',
-    element: (
-      <StorefrontProviders>
-        <VisualLayout />
-      </StorefrontProviders>
-    ),
-    children: [
-      {
-        index: true,
-        element: <VisualHome />,
-      },
-      {
-        path: 'nuestra-historia',
-        element: <VisualStory />,
-      },
-      ...sharedChildren,
-    ],
-  },
-
-  /*
-   * ==========================================================
-   * PLANTILLA 4 — CATALOG
-   * ==========================================================
-   */
-  {
-    path: '/plantilla/4',
-    element: (
-      <StorefrontProviders>
-        <CatalogLayout />
-      </StorefrontProviders>
-    ),
-    children: [
-      {
-        index: true,
-        element: <CatalogHome />,
-      },
-      ...sharedChildren,
-    ],
-  },
-
-
-  /*
-   * ==========================================================
-   * FALLBACK
-   * ==========================================================
-   */
   {
     path: '*',
-    element: <Navigate to="/plantilla/1" replace />,
+    element: <NotFoundPage />,
+    errorElement: <ErrorFallback />,
   },
 ]);

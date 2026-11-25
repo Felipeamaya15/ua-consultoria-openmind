@@ -1,0 +1,192 @@
+import { formatBusinessDate } from './businessTime';
+import { API_BASE_URL } from '../../../api';
+import { authService } from '../../auth/services/authService';
+import { requestJson } from '../../../shared/services/apiRequest';
+
+
+export const RECENT_ORDERS_LIMIT = 5;
+const MAX_LIMIT = 20;
+
+export const ALLOWED_ORDER_STATUSES = [
+  'pendiente',
+  'pagado',
+  'en_camino',
+  'entregado',
+  'cancelado',
+  'preparando',
+  'en_origen',
+  'enviado',
+  'en_reparto',
+] as const;
+
+export interface RecentOrder {
+  id_pedido: number;
+  identificador: string | null;
+  nombre_contacto: string;
+  estado: string;
+  estado_etiqueta: string;
+  monto_total: string;
+  fecha_creacion: string;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function isRecentOrder(value: unknown): value is RecentOrder {
+  if (!isRecord(value)) return false;
+  return Number.isSafeInteger(value.id_pedido)
+    && (typeof value.identificador === 'string' || value.identificador === null)
+    && typeof value.nombre_contacto === 'string'
+    && typeof value.estado === 'string' && typeof value.estado_etiqueta === 'string'
+    && typeof value.monto_total === 'string' && value.monto_total.trim() !== '' && Number.isFinite(Number(value.monto_total))
+    && typeof value.fecha_creacion === 'string' && !Number.isNaN(Date.parse(value.fecha_creacion));
+}
+
+function isAbort(error: unknown): boolean {
+  return isRecord(error) && error.name === 'AbortError';
+}
+
+
+export async function getRecentOrders(limit: number = RECENT_ORDERS_LIMIT, signal?: AbortSignal): Promise<RecentOrder[]> {
+  const token = authService.getToken();
+  if (!token) throw new Error('Inicia sesión como propietario para consultar las últimas órdenes.');
+  const size = Number.isInteger(limit) && limit >= 1 && limit <= MAX_LIMIT ? limit : RECENT_ORDERS_LIMIT;
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE_URL}/api/tienda/pedidos/ultimos/?limite=${size}`, {
+      headers: { Authorization: `Token ${token}` },
+      signal,
+    });
+  } catch (error) {
+    if (isAbort(error)) throw error;
+    throw new Error('No se pudo conectar con el servidor. Revisa tu conexión e inténtalo nuevamente.');
+  }
+  let body: unknown = null;
+  try { body = await response.json(); } catch {  }
+  const data = isRecord(body) ? body : {};
+  if (response.status === 401) throw new Error('Tu sesión venció. Vuelve a iniciar sesión.');
+  if (response.status === 403) throw new Error('Solo el propietario de la tienda puede ver las últimas órdenes.');
+  if (!response.ok || data.exito !== true) {
+    throw new Error(typeof data.mensaje === 'string' && data.mensaje.trim() ? data.mensaje : 'No se pudieron consultar las últimas órdenes.');
+  }
+  if (!Array.isArray(data.data) || !data.data.every(isRecentOrder)) {
+    throw new Error('El listado de últimas órdenes recibido es inválido.');
+  }
+  return data.data;
+}
+
+
+export function formatRecentOrderDate(value: string): string {
+  return formatBusinessDate(value, true);
+}
+
+export const updateOrderStatus = async (pedidoId: number, nuevoEstado: string) => {
+  const estadoNormalizado = String(nuevoEstado || '').trim().toLowerCase();
+  if (!ALLOWED_ORDER_STATUSES.includes(estadoNormalizado as typeof ALLOWED_ORDER_STATUSES[number])) {
+    throw new Error('El estado logístico proporcionado no es válido.');
+  }
+
+  const token = authService.getToken();
+  if (!token) throw new Error('Inicia sesión como propietario para actualizar el estado.');
+  const updated = await requestJson(`${API_BASE_URL}/api/tienda/pedidos/${pedidoId}/estado/`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { 'Authorization': `Token ${token}` } : {})
+    },
+    body: JSON.stringify({ estado: estadoNormalizado })
+  });
+
+  if (!isRecord(updated) || updated.id_pedido !== pedidoId
+    || !ALLOWED_ORDER_STATUSES.includes(updated.estado as typeof ALLOWED_ORDER_STATUSES[number])
+    || typeof updated.estado_etiqueta !== 'string') {
+    throw new Error('La respuesta del estado del pedido es inválida. Recarga los pedidos para consultar su estado actual.');
+  }
+  const correo = isRecord(updated.correo) && typeof updated.correo.enviado === 'boolean' && typeof updated.correo.codigo === 'string'
+    ? { enviado: updated.correo.enviado, codigo: updated.correo.codigo }
+    : null;
+  return { ...(updated as {id_pedido: number; estado: string; estado_etiqueta: string}), correo };
+};
+
+export interface OrderEmailOutcome {
+  enviado: boolean;
+  codigo: string;
+}
+
+
+export function describeShipmentEmail(correo: OrderEmailOutcome | null | undefined): { text: string; failed: boolean } {
+  if (!correo) return { text: '', failed: false };
+  if (correo.enviado) return { text: 'Se envió el aviso de despacho al comprador por correo.', failed: false };
+  switch (correo.codigo) {
+    case 'ya_enviado': return { text: 'El aviso de despacho ya se había enviado antes a este comprador.', failed: false };
+    case 'envio_en_curso': return { text: 'El aviso de despacho se está enviando.', failed: false };
+    case 'plantilla_desactivada': return { text: 'No se envió correo: el correo "Pedido despachado" está desactivado.', failed: false };
+    case 'no_corresponde': return { text: '', failed: false };
+    case 'destinatario_invalido': return { text: 'No se pudo enviar el aviso: el pedido no tiene un correo válido del comprador.', failed: true };
+    default: return { text: 'No se pudo enviar el aviso de despacho al comprador. Revisa la configuración de correo.', failed: true };
+  }
+}
+
+export async function sendManualOrderEmail(pedidoId: number, tipo: string, destinatario?: string) {
+  const token = authService.getToken();
+  if (!token) throw new Error('Inicia sesión como propietario para enviar correos.');
+  const response = await requestJson(`${API_BASE_URL}/api/tienda/pedidos/${pedidoId}/enviar-correo/`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Token ${token}`,
+    },
+    body: JSON.stringify({ tipo, destinatario }),
+  });
+  return response as {
+    enviado: boolean;
+    codigo: string;
+    tipo: string;
+    destinatario: string;
+    notificaciones?: Record<string, unknown>;
+  };
+}
+
+
+export interface ChilexpressGuide { numero_ot: string; certificado?: string; codigo_barras?: string; tiene_etiqueta?: boolean }
+export interface ChilexpressTracking {
+  estado_actual: string;
+  descripcion_estado: string;
+  entrega?: { receptor_nombre: string; receptor_rut: string; fecha_hora: string } | null;
+  historial: { fecha_hora: string; estado: string; descripcion: string; ubicacion: string; certificado_entrega?: string }[];
+}
+
+export async function emitChilexpressGuide(pedidoId: number): Promise<ChilexpressGuide> {
+  const token = authService.getToken();
+  if (!token) throw new Error('Inicia sesión como propietario para emitir la guía.');
+  const guide = await requestJson(`${API_BASE_URL}/api/tienda/pedidos/${pedidoId}/guia-chilexpress/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Token ${token}` },
+  });
+  if (!isRecord(guide) || typeof guide.numero_ot !== 'string') throw new Error('La respuesta de la guía es inválida.');
+  return guide as unknown as ChilexpressGuide;
+}
+
+export async function fetchOrderTracking(pedidoId: number): Promise<ChilexpressTracking> {
+  const token = authService.getToken();
+  if (!token) throw new Error('Inicia sesión como propietario para consultar el seguimiento.');
+  const tracking = await requestJson(`${API_BASE_URL}/api/tienda/pedidos/${pedidoId}/seguimiento/`, {
+    headers: { Authorization: `Token ${token}` },
+  });
+  if (!isRecord(tracking) || typeof tracking.estado_actual !== 'string' || !Array.isArray(tracking.historial)) {
+    throw new Error('La respuesta del seguimiento es inválida.');
+  }
+  return tracking as unknown as ChilexpressTracking;
+}
+
+export async function openChilexpressLabel(pedidoId: number): Promise<void> {
+  const token = authService.getToken();
+  if (!token) throw new Error('Inicia sesión como propietario para ver la etiqueta.');
+  const response = await fetch(`${API_BASE_URL}/api/tienda/pedidos/${pedidoId}/guia-chilexpress/etiqueta/`, {
+    headers: { Authorization: `Token ${token}` },
+  });
+  if (!response.ok) throw new Error('No hay una etiqueta disponible para este pedido.');
+  const url = URL.createObjectURL(await response.blob());
+  window.open(url, '_blank', 'noopener');
+}

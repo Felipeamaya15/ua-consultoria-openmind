@@ -1,4 +1,6 @@
 from copy import deepcopy
+from datetime import timedelta
+from django.utils import timezone
 from decimal import Decimal
 from unittest.mock import patch
 from uuid import uuid4
@@ -10,7 +12,8 @@ from rest_framework.test import APIClient
 
 from apps.authentication.infrastructure.models import ConfiguracionAutenticacion
 from apps.catalog.infrastructure.repositories import ProductRepository
-from apps.core.models import Tienda, Pedido, ItemPedido, Usuario, Producto, Carrito, ItemCarrito, ConfiguracionPago
+from apps.core.payments import TRANSFER_PUBLIC_FIELDS
+from apps.core.models import Tienda, Pedido, ItemPedido, Usuario, Producto, Carrito, ItemCarrito, ConfiguracionPago, ConfiguracionEntrega, Promocion
 
 
 class CheckoutOrderTests(TestCase):
@@ -21,7 +24,11 @@ class CheckoutOrderTests(TestCase):
         self.buyer = users.objects.create_user(username='checkout-buyer', email='buyer@example.com')
         self.owner = users.objects.create_user(username='checkout-owner')
         self.store = Tienda.objects.create(nombre='Checkout store', id_usuario_propietario=self.owner)
-        # Colección real y aislada: jamás utiliza ni borra productos de la tienda.
+        ConfiguracionEntrega.objects.create(tienda=self.store, datos={
+            'pickup': {'enabled': True, 'address': 'Local de prueba', 'schedule': 'Lun–Vie 09:00 a 18:00'}, 'chilexpress': {'enabled': True}, 'starken': {'enabled': True},
+        })
+        ConfiguracionPago.objects.create(tienda=self.store, datos={'transfer': {'enabled': True,
+            'fields': {field: 'qa' for field in TRANSFER_PUBLIC_FIELDS}}})
         self.repo = ProductRepository()
         self.repo.collection = self.repo.db.get_collection('test_checkout_' + uuid4().hex)
         self.addCleanup(self.repo.collection.drop)
@@ -71,7 +78,8 @@ class CheckoutOrderTests(TestCase):
         self.assertEqual(detail['items'][0]['nombre'], 'Pantalón Mongo')
         self.assertEqual(detail['items'][0]['subtotal'], '18000.00')
         self.assertEqual(detail['medio_pago'], 'Transferencia')
-        self.assertEqual(self.repo.get_by_id(str(self.store.pk), self.product_id)['variantes'][0]['stock'], 7)
+        self.assertEqual([v['stock'] for v in self.repo.get_by_id(str(self.store.pk), self.product_id)['variantes']], [7, 8])
+        self.assertEqual(response.data['data']['identificador'], order.identificador)
 
     def test_repeated_confirmation_returns_same_order_even_after_stock_changes(self):
         first = self.create()
@@ -81,6 +89,34 @@ class CheckoutOrderTests(TestCase):
         self.assertEqual(first.data['data']['id_pedido'], second.data['data']['id_pedido'])
         self.assertEqual(Pedido.objects.count(), 1)
         self.assertEqual(ItemPedido.objects.count(), 2)
+        self.assertEqual(first.data['data']['identificador'], second.data['data']['identificador'])
+
+    def test_all_disabled_payment_methods_are_rejected_without_stock_or_orders(self):
+        ConfiguracionPago.objects.filter(tienda=self.store).update(datos={})
+        with patch.object(self.repo, 'decrease_stock') as decrease:
+            for method in ('Transbank', 'PayPal', 'MercadoPago', 'Linkify', 'Transferencia'):
+                with self.subTest(method=method):
+                    self.assertEqual(self.create(dict(self.payload, medio_pago=method)).status_code, 400)
+            decrease.assert_not_called()
+        self.assertFalse(Pedido.objects.exists())
+        self.assertFalse(ItemPedido.objects.exists())
+
+    def test_retry_survives_payment_disable_but_new_order_is_rejected(self):
+        first = self.create()
+        ConfiguracionPago.objects.filter(tienda=self.store).update(datos={})
+        retry = self.create()
+        self.assertEqual(retry.status_code, 200, retry.data)
+        self.assertEqual(first.data['data'], retry.data['data'])
+        self.assertEqual(self.create(dict(self.payload, clave_checkout=str(uuid4()))).status_code, 400)
+        self.assertEqual([v['stock'] for v in self.repo.get_by_id(str(self.store.pk), self.product_id)['variantes']], [7, 8])
+
+    def test_later_line_without_stock_rejects_order_and_leaves_stock_untouched(self):
+        self.repo.collection.update_many({}, {'$set': {'variantes.1.stock': 0}})
+        response = self.create()
+        self.assertEqual(response.status_code, 400, response.data)
+        self.assertEqual([v['stock'] for v in self.repo.get_by_id(str(self.store.pk), self.product_id)['variantes']], [7, 0])
+        self.assertFalse(Pedido.objects.exists())
+        self.assertFalse(ItemPedido.objects.exists())
 
     def test_key_cannot_be_reused_with_different_data_or_buyer(self):
         self.create()
@@ -151,13 +187,33 @@ class CheckoutOrderTests(TestCase):
         self.assertEqual(Pedido.objects.count(), 0)
 
     def test_shipping_discount_and_offer_are_computed_on_server(self):
+        promotion = Promocion.objects.create(
+            tienda=self.store,
+            nombre='Verano',
+            codigo='VERANO20',
+            tipo='percentage',
+            valor=20,
+            fecha_inicio=timezone.now() - timedelta(days=1),
+            activa=True,
+        )
+        config = ConfiguracionEntrega.objects.get(tienda=self.store)
+        config.datos['chilexpress']['tarifas'] = [
+            {'region': 'Metropolitana', 'comuna': 'Santiago', 'monto': 4500, 'plazo_dias': None}]
+        config.save()
+        quote = self.api.post('/api/entregas/cotizacion/', {
+            'operador': 'Chilexpress', 'region': 'Metropolitana', 'comuna': 'Santiago'}, format='json')
+        self.assertEqual(quote.status_code, 200, quote.data)
         data = dict(self.payload, metodo_entrega='Chilexpress', codigo_promocional='VERANO20',
-                    direccion={'street': 'Calle', 'number': '1', 'apt': '', 'city': 'Santiago', 'region': ''})
-        self.assertEqual(self.create(data).status_code, 201)
+                    cotizacion=quote.data['data']['tarifas'][0]['cotizacion'],
+                    direccion={'street': 'Calle', 'number': '1', 'apt': '', 'city': 'Santiago', 'region': 'Metropolitana'})
+        response = self.create(data)
+        self.assertEqual(response.status_code, 201, response.data)
         order = Pedido.objects.get()
-        self.assertEqual(order.costo_envio, Decimal(3490))
+        self.assertEqual(order.costo_envio, Decimal(4500))
         self.assertEqual(order.descuento, Decimal(6000))
-        self.assertEqual(order.monto_total, Decimal(27490))
+        self.assertEqual(order.monto_total, Decimal(28500))
+        promotion.refresh_from_db()
+        self.assertEqual(promotion.usos, 1)
 
     def test_delivery_requires_real_address_and_invalid_token_is_rejected(self):
         self.assertEqual(self.create(dict(self.payload, metodo_entrega='Starken')).status_code, 400)
@@ -192,7 +248,6 @@ class CheckoutOrderTests(TestCase):
 
     def test_scrum289_guest_contract_uses_same_order_creation_and_snapshots(self):
         self.api.credentials()
-        ConfiguracionPago.objects.create(tienda=self.store, datos={'Transferencia': {'enabled': True}})
         payload = dict(clave_checkout=str(uuid4()), nombre_contacto='Invitado real',
                        correo_contacto='guest@example.com', telefono_contacto='+56912345678',
                        metodo_pago='Transferencia', items=[{'sku': 'QA-M', 'cantidad': 2}])
@@ -233,3 +288,20 @@ class CheckoutOrderTests(TestCase):
         self.assertEqual(order.correo_contacto, order.contacto['email'])
         self.assertEqual(order.metodo_pago, order.medio_pago)
         self.assertEqual(order.itempedido_set.get(sku='QA-M').atributos, {'Talla': 'M'})
+
+    def test_webpay_invalid_clp_total_is_rejected_before_order_or_stock_reservation(self):
+        from apps.core.models import ConfiguracionTransbank
+        ConfiguracionTransbank.objects.create(id_tienda=self.store, activo=True,
+            codigo_comercio='audit', api_key='audit-key')
+        data = {**self.payload, 'medio_pago': 'Transbank'}
+        for price in (0, 0.5):
+            product = self.repo.get_by_id(str(self.store.pk), self.product_id)
+            for variant in product['variantes']:
+                variant['precio'] = price
+                variant.pop('precio_oferta', None)
+            self.repo.update(str(self.store.pk), self.product_id, {'variantes': product['variantes']})
+            response = self.create(data)
+            self.assertEqual(response.status_code, 400, response.data)
+            self.assertFalse(Pedido.objects.exists())
+            self.assertFalse(ItemPedido.objects.exists())
+            self.assertEqual([v['stock'] for v in self.repo.get_by_id(str(self.store.pk), self.product_id)['variantes']], [7, 8])

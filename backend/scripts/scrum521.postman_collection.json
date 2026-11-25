@@ -1,0 +1,278 @@
+{
+  "info": {
+    "name": "SCRUM-521 Marketing QA aislada",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Solo backend sintetico local:8002. Sin publicaciones, correos ni cambios comerciales. El DELETE exige un recurso ya referenciado y debe rechazarse."
+  },
+  "variable": [
+    {
+      "key": "qaBaseUrl",
+      "value": "http://127.0.0.1:8002"
+    },
+    {
+      "key": "ownerToken",
+      "value": ""
+    },
+    {
+      "key": "libraryId",
+      "value": "52100000-0000-4000-8000-000000000001"
+    },
+    {
+      "key": "lockedId",
+      "value": "52100000-0000-4000-8000-000000000002"
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "if (pm.variables.get(\"qaBaseUrl\") !== \"http://127.0.0.1:8002\") throw new Error(\"Solo QA local en 8002\");",
+          "if (pm.info.requestName === \"Identidad exclusiva QA\") pm.collectionVariables.unset(\"qaVerified\");",
+          "if (pm.request.method === \"DELETE\" && pm.collectionVariables.get(\"qaVerified\") !== \"yes\") throw new Error(\"Primero verificar la identidad sintetica QA\");"
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "Identidad exclusiva QA",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Token {{ownerToken}}"
+          }
+        ],
+        "url": "{{qaBaseUrl}}/api/tienda/configuracion/"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+              "pm.test(\"Solo datos sinteticos\", () => pm.expect(pm.response.json().data.nombre).to.eql(\"Marketing QA SCRUM-521\"));",
+              "if (pm.response.code === 200 && pm.response.json().data.nombre === \"Marketing QA SCRUM-521\") pm.collectionVariables.set(\"qaVerified\", \"yes\");"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Busqueda, filtros y orden",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Token {{ownerToken}}"
+          }
+        ],
+        "url": "{{qaBaseUrl}}/api/landing/biblioteca/?q=Imagen%20privada&tipo=imagen&estado=activo&orden=nombre"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+              "const data=pm.response.json().data;",
+              "pm.test(\"Un recurso filtrado\", () => {pm.expect(data.total).to.eql(1);pm.expect(data.resultados[0].tipo).to.eql(\"imagen\");pm.expect(data.resultados[0].activo).to.eql(true);});",
+              "pm.test(\"Respuesta privada\", () => pm.expect(pm.response.headers.get(\"Cache-Control\")).to.include(\"no-store\"));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Detalle privado reutilizable",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Token {{ownerToken}}"
+          }
+        ],
+        "url": "{{qaBaseUrl}}/api/landing/biblioteca/{{libraryId}}/"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+              "pm.test(\"Archivo de imagen\", () => pm.expect(pm.response.json().data.archivo.mime).to.match(/^image\\//));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Busqueda sin resultados",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Token {{ownerToken}}"
+          }
+        ],
+        "url": "{{qaBaseUrl}}/api/landing/biblioteca/?q=no-existe-scrum521"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+              "pm.test(\"Vacio honesto\", () => {pm.expect(pm.response.json().data.total).to.eql(0);pm.expect(pm.response.json().data.resultados).to.eql([]);});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Filtro invalido",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Token {{ownerToken}}"
+          }
+        ],
+        "url": "{{qaBaseUrl}}/api/landing/biblioteca/?tipo=html"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 400\", () => pm.response.to.have.status(400));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Rechazo de borrado en uso",
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Token {{ownerToken}}"
+          }
+        ],
+        "url": "{{qaBaseUrl}}/api/landing/biblioteca/{{lockedId}}/"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 400\", () => pm.response.to.have.status(400));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Tenant manipulado",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Token {{ownerToken}}"
+          }
+        ],
+        "url": "{{qaBaseUrl}}/api/landing/biblioteca/{{libraryId}}/?tienda_id=999"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 400\", () => pm.response.to.have.status(400));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Detalle anonimo bloqueado",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{qaBaseUrl}}/api/landing/biblioteca/{{libraryId}}/"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 401\", () => pm.response.to.have.status(401));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Archivo anonimo bloqueado",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{qaBaseUrl}}/api/landing/biblioteca/{{libraryId}}/imagen/"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 401\", () => pm.response.to.have.status(401));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Catalogo real y variantes",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Token {{ownerToken}}"
+          }
+        ],
+        "url": "{{qaBaseUrl}}/api/catalog/productos/admin/listado/"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+              "pm.test(\"Variantes e imagenes reales\", () => {const p=pm.response.json().data.find(p=>p.slug===\"bolso-qa-scrum521\");pm.expect(p.imagenes.length).to.eql(2);pm.expect(p.variantes.map(v=>v.sku)).to.include(\"QA-ROJO\");});"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

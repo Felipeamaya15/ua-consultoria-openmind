@@ -1,8 +1,15 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 
-import { useOrders } from '../context/OrderContext';
-import { formatPrice, type Order } from '../data/mockData';
+import { formatPrice } from '../data/mockData';
+import {
+  isValidOrderNumber,
+  isValidTrackingEmail,
+  ORDER_NUMBER_FORMAT_MESSAGE,
+  orderService,
+  TRACKING_EMAIL_FORMAT_MESSAGE,
+  type TrackedOrder,
+} from '../services/orderService';
 import {
   Button,
   Input,
@@ -11,30 +18,30 @@ import {
   Icon,
 } from '../components/ui';
 import { useStorefrontTemplate } from '../hooks/useStorefrontTemplate';
+import { shippingService, type DetalleSeguimiento } from '../services/shippingService';
+import { describeTrackingState } from '../data/trackingStates';
+import { PagarPedidoPendiente } from '../components/checkout/PagarPedidoPendiente';
+import { useStoreIdentity } from '../context/StoreIdentityContext';
+import { trackConfirmedMetaPurchase } from '../services/metaPurchaseTracking';
 
 const STATUS_STEPS = [
   {
-    id: 'pending',
-    label: 'Pedido recibido',
+    id: 'pendiente',
+    label: 'Pendiente',
     icon: 'orders',
   },
   {
-    id: 'paid',
-    label: 'Pago confirmado',
+    id: 'pagado',
+    label: 'Pagado/En preparación',
     icon: 'card',
   },
   {
-    id: 'preparing',
-    label: 'En preparación',
-    icon: 'box',
-  },
-  {
-    id: 'shipped',
-    label: 'En tránsito',
+    id: 'en_camino',
+    label: 'En camino',
     icon: 'truck',
   },
   {
-    id: 'delivered',
+    id: 'entregado',
     label: 'Entregado',
     icon: 'checkCircle',
   },
@@ -52,29 +59,41 @@ const ORDER_STATUS_MAP: Record<
       | 'error';
   }
 > = {
-  pending: {
+  pendiente: {
     label: 'Pendiente',
     variant: 'warning',
   },
-  paid: {
-    label: 'Pagado',
+  pagado: {
+    label: 'Pagado/En preparación',
     variant: 'info',
   },
-  preparing: {
-    label: 'En preparación',
+  en_camino: {
+    label: 'En camino',
     variant: 'info',
   },
-  shipped: {
-    label: 'Despachado',
-    variant: 'info',
-  },
-  delivered: {
+  entregado: {
     label: 'Entregado',
     variant: 'success',
   },
-  cancelled: {
+  cancelado: {
     label: 'Cancelado',
     variant: 'error',
+  },
+  preparando: {
+    label: 'Pagado/En preparación',
+    variant: 'info',
+  },
+  en_origen: {
+    label: 'En camino',
+    variant: 'info',
+  },
+  enviado: {
+    label: 'En camino',
+    variant: 'info',
+  },
+  en_reparto: {
+    label: 'En camino',
+    variant: 'info',
   },
 };
 
@@ -83,123 +102,134 @@ interface TrackingState {
   email?: string;
 }
 
+function isDirectTrackingNumber(value: string): boolean {
+  const normalized = value.trim().toUpperCase();
+  return normalized.startsWith('CHILEX')
+    || normalized.startsWith('STK')
+    || normalized.startsWith('STARKEN')
+    || normalized.startsWith('TRK');
+}
+
 export default function Tracking() {
   const location = useLocation();
-  const { orders } = useOrders();
+  const { identity } = useStoreIdentity();
   const { isMinimal, isVisual, isCatalog } = useStorefrontTemplate();
+  const locationState = location.state as TrackingState | null;
+  const incomingNumber = new URLSearchParams(location.search).get('orden')
+    ?? locationState?.orderNumber ?? '';
+  const incomingEmail = locationState?.email ?? '';
+  const isAutomaticLookup = Boolean(incomingNumber.trim() && incomingEmail.trim());
+  const [orderNumber, setOrderNumber] = useState(incomingNumber);
+  const [email, setEmail] = useState(incomingEmail);
+  const [order, setOrder] = useState<TrackedOrder | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const requestRef = useRef<AbortController | null>(null);
+  const lookupEmail = useRef('');
 
-  const locationState =
-    location.state as TrackingState | null;
+  const [liveTracking, setLiveTracking] = useState<DetalleSeguimiento | null>(null);
 
-  const [orderNumber, setOrderNumber] =
-    useState(locationState?.orderNumber ?? '');
+  const search = useCallback(async (number: string, customerEmail: string) => {
+    requestRef.current?.abort();
+    const controller = new AbortController();
+    requestRef.current = controller;
+    setLoading(true);
+    setOrder(null);
+    setLiveTracking(null);
+    setError('');
 
-  const [email, setEmail] = useState(
-    locationState?.email ?? '',
-  );
+    const term = number.trim();
+    const isDirect = isDirectTrackingNumber(term);
 
-  const [searched, setSearched] =
-    useState(false);
-
-  const [order, setOrder] =
-    useState<Order | null>(null);
-
-  const [notFound, setNotFound] =
-    useState(false);
-
-  /*
-   * ==========================================================
-   * BÚSQUEDA
-   * ==========================================================
-   */
-  const findOrder = (
-    number: string,
-    customerEmail: string,
-  ) => {
-    const normalizedNumber = number
-      .trim()
-      .toLowerCase();
-
-    const normalizedEmail = customerEmail
-      .trim()
-      .toLowerCase();
-
-    return orders.find(
-      (candidate) =>
-        candidate.number
-          .trim()
-          .toLowerCase() === normalizedNumber &&
-        candidate.customer.email
-          .trim()
-          .toLowerCase() === normalizedEmail,
-    );
-  };
-
-  const handleSearch = () => {
-    setSearched(true);
-
-    const found = findOrder(
-      orderNumber,
-      email,
-    );
-
-    setOrder(found ?? null);
-    setNotFound(!found);
-  };
-
-  /*
-   * Si venimos directamente desde Pedido confirmado,
-   * intentamos mostrar el pedido automáticamente.
-   *
-   * También esperamos a que "orders" cambie, por si la orden
-   * acaba de ser agregada al contexto.
-   */
-  useEffect(() => {
-    if (
-      !locationState?.orderNumber ||
-      !locationState?.email
-    ) {
+    if (!isDirect && !isValidOrderNumber(term)) {
+      setError(ORDER_NUMBER_FORMAT_MESSAGE);
+      setLoading(false);
       return;
     }
 
-    const found = orders.find(
-      (candidate) =>
-        candidate.number
-          .trim()
-          .toLowerCase() ===
-          locationState.orderNumber!
-            .trim()
-            .toLowerCase() &&
-        candidate.customer.email
-          .trim()
-          .toLowerCase() ===
-          locationState.email!
-            .trim()
-            .toLowerCase(),
-    );
-
-    if (found) {
-      setOrder(found);
-      setSearched(true);
-      setNotFound(false);
+    if (!isDirect && !isValidTrackingEmail(customerEmail)) {
+      setError(TRACKING_EMAIL_FORMAT_MESSAGE);
+      setLoading(false);
+      return;
     }
-  }, [
-    orders,
-    locationState?.orderNumber,
-    locationState?.email,
-  ]);
 
+    try {
+      if (isDirect) {
+        const live = await shippingService.getTracking(term, controller.signal);
+        if (!controller.signal.aborted) setLiveTracking(live);
+      } else {
+        const found = await orderService.track(number, customerEmail, controller.signal);
+        if (!controller.signal.aborted) {
+          lookupEmail.current = customerEmail.trim();
+          setOrder(found);
+
+          // TRACK_ASYNC_PURCHASE_V1
+          const paidStates = new Set([
+            'pagado', 'preparando', 'en_camino',
+            'en_origen', 'enviado', 'en_reparto', 'entregado',
+          ]);
+
+          if (
+            identity?.storeId &&
+            found.identificador &&
+            paidStates.has(found.estado)
+          ) {
+            trackConfirmedMetaPurchase(
+              Number(identity.storeId),
+              found.identificador
+            );
+          }
+        }
+      }
+    } catch (err: any) {
+      if (!controller.signal.aborted) {
+        setError(err instanceof Error ? err.message : 'No se pudo consultar el pedido.');
+      }
+    } finally {
+      if (!controller.signal.aborted) setLoading(false);
+    }
+  }, [identity?.storeId]);
+
+  const isDirectTracking = isDirectTrackingNumber(orderNumber);
+  const invalidOrderNumber = Boolean(
+    orderNumber.trim() && !isDirectTracking && !isValidOrderNumber(orderNumber),
+  );
+  const invalidEmail = Boolean(
+    !isDirectTracking && email.trim() && !isValidTrackingEmail(email),
+  );
+
+  const handleSearch = () => {
+    if (orderNumber.trim() && !invalidOrderNumber && !invalidEmail && (email.trim() || isDirectTracking)) {
+      void search(orderNumber, email);
+    }
+  };
+
+  useEffect(() => {
+    setOrderNumber(incomingNumber);
+    setEmail(incomingEmail);
+    setOrder(null);
+    setError('');
+    setLoading(false);
+    if (incomingNumber.trim() && incomingEmail.trim()) {
+      void search(incomingNumber, incomingEmail);
+    }
+    return () => {requestRef.current?.abort();};
+  }, [incomingNumber, incomingEmail, search]);
+
+
+  const legacySteps: Record<string, string> = {
+    preparando: 'pagado', en_origen: 'en_camino', enviado: 'en_camino', en_reparto: 'en_camino',
+  };
   const currentStepIdx = order
     ? STATUS_STEPS.findIndex(
-        (status) =>
-          status.id === order.status,
+        (status) => status.id === (legacySteps[order.estado] ?? order.estado),
       )
     : -1;
 
   const panelClass = isCatalog
-    ? 'bg-[#f5f5f3] text-[#151515] rounded-[16px]'
+    ? 'bg-[var(--visual-page-panel-background)] text-[var(--visual-page-color)] rounded-[16px]'
     : isVisual
-      ? 'bg-[#f1f1f0] rounded-[10px]'
+      ? 'bg-[var(--visual-page-panel-background)] rounded-[10px]'
       : isMinimal
         ? 'bg-white border border-black/5 rounded-[24px]'
         : 'bg-white border border-[var(--border)] rounded-2xl';
@@ -208,17 +238,15 @@ export default function Tracking() {
     <div
       className={
         isCatalog
-          ? 'max-w-[760px] mx-auto px-5 py-12 md:py-16 text-white'
+          ? 'w-full max-w-[1160px] mx-auto px-5 py-12 md:py-16 text-[var(--visual-page-color)]'
           : isVisual
-            ? 'max-w-[900px] mx-auto px-5 md:px-8 py-12 md:py-16 text-[#111111]'
+            ? 'w-full max-w-[1180px] mx-auto px-5 md:px-8 py-12 md:py-16 text-[var(--visual-page-color)]'
             : isMinimal
-              ? 'max-w-3xl mx-auto px-4 md:px-8 py-12'
-              : 'max-w-2xl mx-auto px-4 py-12'
+              ? 'w-full max-w-6xl mx-auto px-4 md:px-8 py-12'
+              : 'w-full max-w-7xl mx-auto px-4 py-12'
       }
     >
-      {/* =====================================================
-          ENCABEZADO
-      ====================================================== */}
+
       <div
         className={
           isCatalog
@@ -234,10 +262,10 @@ export default function Tracking() {
           <p
             className={
               isCatalog
-                ? 'mb-3 text-[10px] font-black uppercase tracking-[0.16em] text-[#ff5a1f]'
+                ? 'mb-3 text-[10px] font-black uppercase tracking-[0.16em] text-[var(--primary)]'
                 : isVisual
-                  ? 'mb-3 text-[9px] font-medium uppercase tracking-[0.18em] text-[#77716e]'
-                  : 'text-xs text-gray-400 mb-2'
+                  ? 'mb-3 text-[9px] font-medium uppercase tracking-[0.18em] text-[var(--visual-page-color)]'
+                  : 'text-xs text-[var(--visual-page-color)] mb-2'
             }
           >
             ¿Dónde está mi compra?
@@ -247,11 +275,11 @@ export default function Tracking() {
         <h1
           className={
             isCatalog
-              ? 'text-[42px] md:text-[52px] leading-none tracking-[-0.045em] font-black text-white mb-4'
+              ? 'text-[42px] md:text-[52px] leading-none tracking-[-0.045em] font-black text-[var(--visual-page-color)] mb-4'
               : isVisual
                 ? 'font-serif text-[42px] md:text-[52px] leading-none tracking-[-0.025em] mb-4'
                 : isMinimal
-                  ? 'text-3xl md:text-4xl font-semibold tracking-tight text-[#171717] mb-3'
+                  ? 'text-3xl md:text-4xl font-semibold tracking-tight text-[var(--visual-page-color)] mb-3'
                   : 'text-3xl font-bold text-[var(--foreground)] mb-2'
           }
         >
@@ -261,9 +289,9 @@ export default function Tracking() {
         <p
           className={
             isCatalog
-              ? 'text-[13px] leading-6 text-white/45'
+              ? 'text-[13px] leading-6 text-[var(--visual-page-color)]/45'
               : isVisual
-                ? 'text-[14px] leading-6 text-[#77716e]'
+                ? 'text-[14px] leading-6 text-[var(--visual-page-color)]'
                 : 'text-[var(--muted-foreground)]'
           }
         >
@@ -272,15 +300,13 @@ export default function Tracking() {
         </p>
       </div>
 
-      {/* =====================================================
-          BUSCADOR
-      ====================================================== */}
-      <div
+
+      {!isAutomaticLookup && <div data-page-form data-page-panel
         className={`
           ${panelClass}
           ${
             isCatalog
-              ? 'p-6 md:p-7 flex flex-col gap-4 mb-8 [&_input]:text-[#151515] [&_label]:text-[#151515]'
+              ? 'p-6 md:p-7 flex flex-col gap-4 mb-8 [&_input]:text-[var(--visual-page-color)] [&_label]:text-[var(--visual-page-color)]'
               : isVisual
                 ? 'p-6 md:p-7 flex flex-col gap-4 mb-8'
                 : isMinimal
@@ -297,8 +323,9 @@ export default function Tracking() {
               event.target.value,
             )
           }
-          placeholder="ORD-2025-0001"
-          hint="Puedes encontrarlo en tu correo de confirmación"
+          placeholder="ORD-20261008-AB12"
+          hint="El número que aparece al confirmar tu compra, o el código de tu transportista."
+          error={invalidOrderNumber ? ORDER_NUMBER_FORMAT_MESSAGE : undefined}
         />
 
         <Input
@@ -309,45 +336,46 @@ export default function Tracking() {
             setEmail(event.target.value)
           }
           placeholder="correo@ejemplo.com"
-          hint="El correo que usaste al comprar"
+          hint="El correo que usaste al comprar (no requerido para tracking directo de paquetería)"
+          error={invalidEmail ? TRACKING_EMAIL_FORMAT_MESSAGE : undefined}
         />
 
         {isCatalog ? (
-          <button
+          <button data-page-action="primary"
             type="button"
             onClick={handleSearch}
-            disabled={!orderNumber || !email}
-            className="w-full h-12 rounded-[9px] bg-[#1683ff] text-white text-[12px] font-bold hover:bg-[#3194f5] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            disabled={loading || !orderNumber.trim() || invalidOrderNumber || invalidEmail || (!isDirectTracking && !email.trim())}
+            className="w-full h-12 rounded-[9px] bg-[var(--primary)] text-[var(--visual-page-color)] text-[12px] font-bold hover:bg-[var(--primary)] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
           >
-            Consultar pedido →
+            {loading ? 'Consultando...' : 'Consultar pedido →'}
           </button>
         ) : isVisual ? (
-          <button
+          <button data-page-action="primary"
             type="button"
             onClick={handleSearch}
-            disabled={!orderNumber || !email}
-            className="w-full h-12 rounded-[8px] bg-black text-white text-[12px] font-semibold hover:opacity-80 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity"
+            disabled={loading || !orderNumber.trim() || invalidOrderNumber || invalidEmail || (!isDirectTracking && !email.trim())}
+            className="w-full h-12 rounded-[8px] bg-[var(--visual-page-panel-background)] text-[var(--visual-page-color)] text-[12px] font-semibold hover:opacity-80 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity"
           >
-            Consultar pedido →
+            {loading ? 'Consultando...' : 'Consultar pedido →'}
           </button>
         ) : isMinimal ? (
-          <button
+          <button data-page-action="primary"
             type="button"
             onClick={handleSearch}
             disabled={
-              !orderNumber || !email
+              loading || !orderNumber.trim() || invalidOrderNumber || invalidEmail || (!isDirectTracking && !email.trim())
             }
             className="
               w-full h-12 rounded-full
-              bg-[#17213b] text-white
+              bg-[var(--primary)] text-[var(--visual-page-color)]
               text-sm font-semibold
-              hover:bg-[#0f2a56]
+              hover:bg-[var(--primary)]
               disabled:opacity-50
               disabled:cursor-not-allowed
               transition-colors
             "
           >
-            Consultar pedido
+            {loading ? 'Consultando...' : 'Consultar pedido'}
           </button>
         ) : (
           <Button
@@ -356,60 +384,146 @@ export default function Tracking() {
             fullWidth
             onClick={handleSearch}
             disabled={
-              !orderNumber || !email
+              loading || !orderNumber.trim() || invalidOrderNumber || invalidEmail || (!isDirectTracking && !email.trim())
             }
           >
-            Consultar pedido
+            {loading ? 'Consultando...' : 'Consultar pedido'}
           </Button>
         )}
 
         <p
           className={
             isCatalog
-              ? 'text-center text-[10px] text-black/40'
+              ? 'text-center text-[10px] text-black/60'
               : isVisual
                 ? 'text-center text-[10px] text-[#8c8683]'
                 : 'text-center text-xs text-[var(--muted-foreground)]'
           }
         >
-          Demo: usa{' '}
-          <strong>
-            ORD-2025-0001
-          </strong>{' '}
-          y{' '}
-          <strong>
-            maria@email.com
-          </strong>
+          Formato de orden: <strong>ORD-AAAAMMDD-XXXX</strong>. También puedes usar tracking <strong>CHILEX-DEMO12345</strong> / <strong>STK-DEMO12345</strong>
         </p>
-      </div>
+      </div>}
 
-      {/* =====================================================
-          NO ENCONTRADO
-      ====================================================== */}
-      {searched && notFound && (
-        <Alert
-          variant="error"
-          title="Pedido no encontrado"
-        >
-          No encontramos un pedido con ese
-          número y correo. Verifica los datos e
-          intenta de nuevo.
+
+      {loading && <p role="status">Consultando pedido…</p>}
+      {error && (
+        <Alert variant="error" title="No se pudo consultar el pedido">
+          {error}
+          {isAutomaticLookup && (
+            <button data-page-action="ghost" type="button" className="block mt-3 underline" onClick={handleSearch}>
+              Volver a consultar
+            </button>
+          )}
         </Alert>
       )}
 
-      {/* =====================================================
-          PEDIDO ENCONTRADO
-      ====================================================== */}
+
+      {liveTracking && (
+        <div className={isCatalog
+          ? 'flex flex-col gap-5 animate-fade-in text-[#151515] [&_.text-[var\(--muted-foreground\)]]:text-black/60 [&_.text-[var\(--foreground\)]]:text-[#151515]'
+          : 'flex flex-col gap-5 animate-fade-in'
+        }>
+          <div
+            className={`
+              ${panelClass}
+              ${isCatalog ? 'p-6 md:p-7' : isVisual ? 'p-6 md:p-7' : isMinimal ? 'p-6' : 'p-5'}
+            `}
+          >
+            <div className="flex items-start justify-between flex-wrap gap-3 mb-5">
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <span className={`text-xs font-semibold px-2 py-0.5 rounded uppercase tracking-wide ${
+                    liveTracking.proveedor === 'CHILEXPRESS'
+                      ? 'bg-blue-100 text-blue-800'
+                      : liveTracking.proveedor === 'STARKEN'
+                        ? 'bg-amber-100 text-amber-900'
+                        : 'bg-indigo-100 text-indigo-800'
+                  }`}>
+                    {liveTracking.proveedor === 'CHILEXPRESS'
+                      ? '🇨🇱 Chilexpress'
+                      : liveTracking.proveedor === 'STARKEN'
+                        ? '📦 Starken'
+                        : liveTracking.proveedor}
+                  </span>
+                  <span className="text-xs text-[var(--muted-foreground)]">Orden de Flete / Transporte</span>
+                </div>
+
+                <p
+                  className={
+                    isVisual
+                      ? 'font-serif text-[24px] leading-none'
+                      : isMinimal
+                        ? 'font-semibold text-xl tracking-tight'
+                        : 'font-bold text-lg'
+                  }
+                >
+                  {liveTracking.numero_seguimiento}
+                </p>
+              </div>
+
+              <Badge variant={describeTrackingState(liveTracking.estado_actual).variant}>
+                {describeTrackingState(liveTracking.estado_actual).label}
+              </Badge>
+            </div>
+
+            <div className="rounded-xl bg-blue-50/70 border border-blue-100 p-4 mb-6">
+              <p className="text-sm font-medium text-blue-950">
+                {liveTracking.descripcion_estado}
+              </p>
+              {liveTracking.fecha_estimada_entrega && (
+                <p className="text-xs text-blue-700 mt-1">
+                  Entrega estimada: {new Date(liveTracking.fecha_estimada_entrega).toLocaleDateString('es-CL', {
+                    weekday: 'long',
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
+                  })}
+                </p>
+              )}
+            </div>
+
+
+            <div>
+              <h4 className="text-xs font-bold uppercase tracking-wider text-[var(--muted-foreground)] mb-4">
+                Historial de Movimientos
+              </h4>
+
+              <div className="relative pl-6 border-l-2 border-blue-200 ml-2 space-y-6">
+                {liveTracking.historial.map((evento, idx) => (
+                  <div key={idx} className="relative">
+                    <div className="absolute -left-[31px] top-1 w-3.5 h-3.5 rounded-full border-2 border-white bg-blue-600 shadow-sm" />
+
+                    <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-1">
+                      <p className="text-sm font-semibold text-[var(--foreground)]">
+                        {evento.descripcion}
+                      </p>
+                      <span className="text-xs text-[var(--muted-foreground)] shrink-0">
+                        {new Date(evento.fecha_hora).toLocaleDateString('es-CL', {
+                          day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit'
+                        })}
+                      </span>
+                    </div>
+
+                    <p className="text-xs text-[var(--muted-foreground)] mt-0.5">
+                      📍 {evento.ubicacion} · <span className="text-[11px] font-medium">{describeTrackingState(evento.estado).label}</span>
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+
       {order && (
         <div className={isCatalog
-          ? 'flex flex-col gap-5 animate-fade-in text-[#151515] [&_.text-\[var\(--muted-foreground\)\]]:text-black/45 [&_.text-\[var\(--foreground\)\]]:text-[#151515]'
+          ? 'flex flex-col gap-5 animate-fade-in text-[var(--visual-page-color)] [&_.text-\[var\(--muted-foreground\)\]]:text-[var(--visual-page-color)]/45 [&_.text-\[var\(--foreground\)\]]:text-[var(--visual-page-color)]'
           : 'flex flex-col gap-5 animate-fade-in'
         }>
 
-          {/* ===============================================
-              INFORMACIÓN DEL PEDIDO
-          ================================================ */}
-          <div
+
+          <div data-page-panel
             className={`
               ${panelClass}
               ${isCatalog ? 'p-6 md:p-7' : isVisual ? 'p-6 md:p-7' : isMinimal ? 'p-6' : 'p-5'}
@@ -430,27 +544,27 @@ export default function Tracking() {
                         : 'font-bold text-lg'
                   }
                 >
-                  {order.number}
+                  {order.identificador}
                 </p>
               </div>
 
               <Badge
                 variant={
                   ORDER_STATUS_MAP[
-                    order.status
+                    order.estado
                   ]?.variant ?? 'default'
                 }
               >
                 {ORDER_STATUS_MAP[
-                  order.status
-                ]?.label ?? order.status}
+                  order.estado
+                ]?.label ?? order.estado}
               </Badge>
             </div>
 
             <div
               className={
                 isVisual
-                  ? 'grid grid-cols-1 sm:grid-cols-2 gap-5 text-[13px] border-t border-black/10 pt-5'
+                  ? 'grid grid-cols-1 sm:grid-cols-2 gap-5 text-[13px] border-t border-[var(--visual-global-border)]/10 pt-5'
                   : isMinimal
                     ? 'grid grid-cols-1 sm:grid-cols-2 gap-5 text-sm'
                     : 'grid grid-cols-2 gap-4 text-sm'
@@ -462,7 +576,7 @@ export default function Tracking() {
                 </p>
 
                 <p className="font-medium mt-1">
-                  {order.customer.name}
+                  {order.nombre_contacto}
                 </p>
               </div>
 
@@ -472,7 +586,7 @@ export default function Tracking() {
                 </p>
 
                 <p className="font-medium mt-1">
-                  {order.shippingMethod}
+                  {order.entrega.metodo || 'Sin especificar'}
                 </p>
               </div>
 
@@ -482,9 +596,29 @@ export default function Tracking() {
                 </p>
 
                 <p className="font-medium mt-1">
-                  {order.paymentMethod}
+                  {order.medio_pago}
                 </p>
               </div>
+
+              <PagarPedidoPendiente
+                orderNumber={order.identificador}
+                estado={order.estado}
+                medioPago={order.medio_pago}
+                email={lookupEmail.current}
+                venceEn={order.vence_en}
+              />
+
+              {Number(order.descuento) > 0 && (
+                <div>
+                  <p className="text-xs text-[var(--muted-foreground)]">
+                    Descuento aplicado
+                  </p>
+
+                  <p className="font-medium mt-1 text-[var(--success)]">
+                    −{formatPrice(Number(order.descuento))}
+                  </p>
+                </div>
+              )}
 
               <div>
                 <p className="text-xs text-[var(--muted-foreground)]">
@@ -492,29 +626,15 @@ export default function Tracking() {
                 </p>
 
                 <p className="font-semibold mt-1">
-                  {formatPrice(order.total)}
+                  {formatPrice(Number(order.monto_total))}
                 </p>
               </div>
 
-              {order.trackingCode && (
-                <div className="sm:col-span-2">
-                  <p className="text-xs text-[var(--muted-foreground)]">
-                    Código de seguimiento{' '}
-                    {order.carrier}
-                  </p>
-
-                  <p className="font-mono font-bold text-[var(--primary)] mt-1">
-                    {order.trackingCode}
-                  </p>
-                </div>
-              )}
             </div>
           </div>
 
-          {/* ===============================================
-              ESTADO
-          ================================================ */}
-          <div
+
+          <div data-page-panel
             className={`
               ${panelClass}
               ${isCatalog ? 'p-6 md:p-7' : isVisual ? 'p-6 md:p-7' : isMinimal ? 'p-6' : 'p-5'}
@@ -525,8 +645,8 @@ export default function Tracking() {
                 <p
                   className={
                     isVisual
-                      ? 'mb-2 text-[9px] font-medium uppercase tracking-[0.18em] text-[#77716e]'
-                      : 'text-xs text-gray-400 mb-1'
+                      ? 'mb-2 text-[9px] font-medium uppercase tracking-[0.18em] text-[var(--visual-page-color)]'
+                      : 'text-xs text-[var(--visual-page-color)] mb-1'
                   }
                 >
                   Progreso
@@ -579,14 +699,14 @@ export default function Tracking() {
                             ${
                               done
                                 ? isCatalog
-                                  ? 'bg-[#1683ff]'
+                                  ? 'bg-[var(--primary)]'
                                   : isVisual
-                                    ? 'bg-black'
+                                    ? 'bg-[var(--visual-page-panel-background)]'
                                     : 'bg-[var(--success)]'
                                 : isCatalog
-                                  ? 'bg-black/10'
+                                  ? 'bg-[var(--visual-page-panel-background)]/10'
                                   : isVisual
-                                    ? 'bg-black/10'
+                                    ? 'bg-[var(--visual-page-panel-background)]/10'
                                     : 'bg-[var(--border)]'
                             }
                           `}
@@ -606,20 +726,20 @@ export default function Tracking() {
                           ${
                             done
                               ? isCatalog
-                                ? 'bg-[#1683ff] text-white'
+                                ? 'bg-[var(--primary)] text-[var(--visual-page-color)]'
                                 : isVisual
-                                  ? 'bg-black text-white'
+                                  ? 'bg-[var(--visual-page-panel-background)] text-[var(--visual-page-color)]'
                                   : 'bg-[var(--success-bg)] text-[var(--success)]'
                               : active
                                 ? isCatalog
-                                  ? 'bg-[#ff5a1f] text-white'
+                                  ? 'bg-[var(--primary)] text-[var(--visual-page-color)]'
                                   : isVisual
-                                    ? 'bg-black text-white'
-                                    : 'bg-[#17213b] text-white shadow-sm'
+                                    ? 'bg-[var(--visual-page-panel-background)] text-[var(--visual-page-color)]'
+                                    : 'bg-[var(--primary)] text-[var(--visual-page-color)] shadow-sm'
                                 : isCatalog
-                                  ? 'bg-black/[0.06] text-black/35 border border-black/10'
+                                  ? 'bg-[var(--visual-page-panel-background)]/[0.06] text-[var(--visual-page-color)]/35 border border-[var(--visual-global-border)]/10'
                                   : isVisual
-                                    ? 'bg-white text-[#77716e] border border-black/10 opacity-60'
+                                    ? 'bg-[var(--visual-page-panel-background)] text-[var(--visual-page-color)] border border-[var(--visual-global-border)]/10 opacity-60'
                                     : 'bg-[var(--muted)] text-[var(--muted-foreground)] opacity-50'
                           }
                         `}
@@ -650,10 +770,10 @@ export default function Tracking() {
                             ${
                               active
                                 ? isCatalog
-                                  ? 'text-[#e04b1a]'
+                                  ? 'text-[var(--primary)]'
                                   : isVisual
-                                    ? 'text-black'
-                                    : 'text-[#17213b]'
+                                    ? 'text-[var(--visual-page-color)]'
+                                    : 'text-[var(--primary)]'
                                 : done
                                   ? 'text-[var(--foreground)]'
                                   : 'text-[var(--muted-foreground)]'
@@ -682,10 +802,8 @@ export default function Tracking() {
             </div>
           </div>
 
-          {/* ===============================================
-              PRODUCTOS
-          ================================================ */}
-          <div
+
+          <div data-page-panel
             className={`
               ${panelClass}
               ${isCatalog ? 'p-6 md:p-7' : isVisual ? 'p-6 md:p-7' : isMinimal ? 'p-6' : 'p-5'}
@@ -707,46 +825,39 @@ export default function Tracking() {
               {order.items.map(
                 (item, index) => (
                   <div
-                    key={`${item.productId}-${item.variantId}-${index}`}
+                    key={`${item.producto_id}-${item.sku}-${index}`}
                     className={
                       isVisual
-                        ? 'flex items-center gap-4 border-b border-black/10 pb-4 last:border-b-0 last:pb-0'
+                        ? 'flex items-center gap-4 border-b border-[var(--visual-global-border)]/10 pb-4 last:border-b-0 last:pb-0'
                         : 'flex items-center gap-3'
                     }
                   >
-                    <img
-                      src={item.image}
-                      alt={item.name}
-                      className={
-                        isVisual
-                          ? 'w-16 h-16 rounded-[8px] object-cover bg-[#e7e7e4]'
-                          : isMinimal
-                            ? 'w-14 h-14 rounded-xl object-cover'
-                            : 'w-12 h-12 rounded-lg object-cover'
-                      }
-                    />
+                    <div
+                      className={`${isVisual ? 'w-16 h-16 rounded-[8px]' : isMinimal ? 'w-14 h-14 rounded-xl' : 'w-12 h-12 rounded-lg'} bg-[var(--visual-page-panel-background)]/5 flex items-center justify-center flex-shrink-0`}
+                      aria-hidden="true"
+                    >
+                      <Icon name="box" className="w-6 h-6" />
+                    </div>
 
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium truncate">
-                        {item.name}
+                        {item.nombre}
                       </p>
 
                       <p className="text-xs text-[var(--muted-foreground)] mt-0.5">
-                        {Object.values(
-                          item.attributes,
-                        ).join(' / ')}
+                        {item.atributos_variante?.map(attribute => attribute.valor).join(' / ')}
                       </p>
 
                       <p className="text-xs text-[var(--muted-foreground)]">
                         Cantidad:{' '}
-                        {item.quantity}
+                        {item.cantidad}
                       </p>
                     </div>
 
                     <p className="text-sm font-semibold">
                       {formatPrice(
-                        item.price *
-                          item.quantity,
+                        Number(item.precio_unitario) *
+                          item.cantidad,
                       )}
                     </p>
                   </div>

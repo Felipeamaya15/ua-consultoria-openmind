@@ -4,6 +4,7 @@ import {
 } from 'react';
 import {
   Outlet,
+  Link,
   useLocation,
 } from 'react-router-dom';
 
@@ -15,13 +16,18 @@ import {
 import { AdminSidebar } from './AdminSidebar';
 import { AdminHeader } from './AdminHeader';
 import { Alert } from '../ui';
+import { AdminHelpProvider } from '../../context/AdminHelpContext';
+import { AdminPageHeader } from '../AdminPageHeader';
+import { getAdminPageHelp } from '../../config/pageHelp';
 
 import '../../admin.css';
 
 function Layout() {
   const [open, setOpen] = useState(false);
+  const [searchFocusToken, setSearchFocusToken] = useState(0);
 
   const { pathname } = useLocation();
+  const pageHelp = getAdminPageHelp(pathname);
 
   const { storageError } = useAdmin();
 
@@ -58,15 +64,23 @@ function Layout() {
       <AdminSidebar
         open={open}
         onClose={() => setOpen(false)}
+        onOpen={() => setOpen(true)}
+        searchFocusToken={searchFocusToken}
       />
 
       <div className="admin-content">
         <AdminHeader
           open={open}
           onMenu={() => setOpen(!open)}
+          onSearch={() => {
+            setOpen(true);
+            setSearchFocusToken(token => token + 1);
+          }}
         />
 
-        <main className="p-5 md:p-8 max-w-7xl w-full mx-auto">
+        <main id="admin-main-content" tabIndex={-1} className="p-5 md:p-8 w-full">
+          {pageHelp && pathname !== '/emprendedor/landing' && <AdminPageHeader {...pageHelp} action={pathname === '/emprendedor/productos'
+            ? <Link to="/emprendedor/productos/nuevo" className="admin-create-product">+ Nuevo producto</Link> : undefined} />}
           {storageError && (
             <div className="mb-5">
               <Alert variant="error">
@@ -85,7 +99,7 @@ function Layout() {
 export function AdminLayout() {
   return (
     <AdminProvider>
-      <Layout />
+      <AdminHelpProvider><Layout /></AdminHelpProvider>
     </AdminProvider>
   );
 }

@@ -1,4 +1,4 @@
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 from typing import List, Dict, Any, Optional
 from dataclasses import dataclass
 from django.db import transaction
@@ -25,7 +25,7 @@ from apps.core.models import Usuario, Carrito, ItemCarrito, ConfiguracionTransba
 from apps.catalog.application.services import VariantService
 from apps.catalog.infrastructure.repositories import ProductRepository
 from apps.catalog.infrastructure.adapters.transbank_adapter import TransbankWebpayAdapter
-from apps.catalog.domain.stock import validate_stock
+from apps.catalog.domain.stock import validate_stock, is_variant_active
 from apps.catalog.domain.exceptions import (
     CantidadInvalidaException,
     StockInsuficienteException,
@@ -38,8 +38,6 @@ from apps.catalog.domain.exceptions import (
     ConfiguracionPagoInvalidaException,
 )
 
-# CONFIGURACIÓN MERCADO PAGO (ADMIN)
-# ==========================================================
 
 class GuardarConfiguracionMercadoPagoDTO:
     def __init__(
@@ -165,16 +163,6 @@ class GuardarConfiguracionMercadoPagoUseCase:
         return self.execute(*args, **kwargs)
 
 
-
-
-
-
-
-
-# ==========================================================
-# CONFIGURACIÓN DE PAYPAL (ADMIN)
-# ==========================================================
-
 class GuardarConfiguracionPayPalDTO:
     """
     DTO flexible compatible con instanciación directa o desempaquetado de serializer.
@@ -283,7 +271,6 @@ class GuardarConfiguracionPayPalUseCase:
         config.ambiente = ambiente
         config.activo = activo
 
-        # Solo actualizar secret si no viene enmascarado
         if client_secret and not client_secret.startswith("****"):
             config.client_secret = client_secret
 
@@ -302,9 +289,6 @@ class GuardarConfiguracionPayPalUseCase:
     def ejecutar(self, *args, **kwargs) -> Dict[str, Any]:
         return self.execute(*args, **kwargs)
 
-# ==========================================================
-# CONFIGURACIÓN TRANSBANK (PANEL EMPRENDEDOR / ADMIN)
-# ==========================================================
 
 class GuardarConfiguracionTransbankDTO:
     """
@@ -460,10 +444,6 @@ class GuardarConfiguracionTransbankUseCase:
         return self.execute(*args, **kwargs)
 
 
-# ==========================================================
-# PROCESAMIENTO WEBPAY PLUS (CHECKOUT)
-# ==========================================================
-
 @dataclass
 class IniciarPagoTransbankDTO:
     id_tienda: int
@@ -471,6 +451,7 @@ class IniciarPagoTransbankDTO:
     monto: int
     session_id: str
     return_url: str
+    email: str = ""
 
 
 class IniciarPagoTransbankUseCase:
@@ -486,36 +467,80 @@ class IniciarPagoTransbankUseCase:
             orden_compra = dto.get("orden_compra")
             session_id = dto.get("session_id")
             return_url = dto.get("return_url")
+            email = str(dto.get("email") or "").strip()
         else:
             monto = getattr(dto, "monto", 0)
             id_tienda = getattr(dto, "id_tienda", None)
             orden_compra = getattr(dto, "orden_compra", "")
             session_id = getattr(dto, "session_id", "")
             return_url = getattr(dto, "return_url", "")
-
-        if monto <= 0:
-            raise ConfiguracionPagoInvalidaException("El monto a pagar debe ser mayor a 0.")
+            email = str(getattr(dto, "email", "") or "").strip()
 
         tienda_pk = getattr(id_tienda, "id_tienda", None) or getattr(id_tienda, "pk", None) or id_tienda
 
-        config = ConfiguracionTransbank.objects.filter(id_tienda_id=tienda_pk).first()
-        if not config or not config.activo:
-            raise TransbankConfiguracionFaltanteException(
-                "La tienda no tiene habilitada la pasarela de pagos Transbank Webpay."
+        from apps.core.models import Pedido
+
+        with transaction.atomic():
+            pedido = (
+                Pedido.objects.select_for_update().filter(
+                    identificador=orden_compra,
+                    tienda_id=tienda_pk,
+                    correo_contacto__iexact=email,
+                ).first() if email else None
             )
+            if not pedido or pedido.medio_pago != "Transbank" or pedido.estado != "pendiente":
+                raise ConfiguracionPagoInvalidaException("El pedido no está disponible para pagar con Webpay.")
+            from apps.landing.webpay_activity_orders import (is_webpay_activity, assert_start_allowed, remember_session,
+                configure_version, NEW_API_VERSION)
+            webpay_activity=is_webpay_activity(pedido)
+            if webpay_activity: assert_start_allowed(pedido)
+            monto = pedido.monto_total
+            if not monto.is_finite() or monto <= 0 or monto != monto.to_integral_value():
+                raise ConfiguracionPagoInvalidaException("Webpay requiere un total positivo en pesos enteros.")
 
-        adaptador = TransbankWebpayAdapter(
-            codigo_comercio=config.codigo_comercio,
-            api_key=config.api_key,
-            ambiente=config.ambiente,
-        )
+            from apps.core.infrastructure.expiracion_pedidos import pedido_expirado, token_webpay_vigente
 
-        return adaptador.iniciar_transaccion(
-            orden_compra=orden_compra,
-            session_id=session_id,
-            monto=monto,
-            return_url=return_url,
-        )
+            if pedido_expirado(pedido):
+                raise ConfiguracionPagoInvalidaException("Este pedido expiró. Realiza una nueva compra.")
+            if token_webpay_vigente(pedido):
+                return {"token": pedido.webpay_token, "url": pedido.webpay_url}
+            if webpay_activity and pedido.webpay_token:
+                raise ConfiguracionPagoInvalidaException('Este pago debe verificarse antes de iniciar otro. Consulta el pedido.')
+            if bool(pedido.webpay_token) != bool(pedido.webpay_url):
+                raise TransbankTransaccionException("El inicio de Webpay requiere revisión.")
+
+            config = ConfiguracionTransbank.objects.filter(id_tienda_id=tienda_pk).first()
+            if not config or not config.activo or not config.codigo_comercio.strip() or not config.api_key.strip():
+                raise TransbankConfiguracionFaltanteException(
+                    "La tienda no tiene habilitada la pasarela de pagos Transbank Webpay."
+                )
+            adaptador = TransbankWebpayAdapter(
+                codigo_comercio=config.codigo_comercio,
+                api_key=config.api_key,
+                ambiente=config.ambiente,
+            )
+            if webpay_activity:
+                adaptador=configure_version(adaptador,NEW_API_VERSION)
+            respuesta = adaptador.iniciar_transaccion(
+                orden_compra=orden_compra,
+                session_id=session_id,
+                monto=monto,
+                return_url=return_url,
+            )
+            if (not isinstance(respuesta, dict)
+                    or not isinstance(respuesta.get("token"), str)
+                    or not isinstance(respuesta.get("url"), str)
+                    or not respuesta["token"].strip()
+                    or not respuesta["url"].strip()
+                    or len(respuesta["token"]) > 512
+                    or len(respuesta["url"]) > 2048):
+                raise TransbankTransaccionException("Webpay devolvió una transacción incompleta.")
+            pedido.webpay_token = respuesta["token"]
+            pedido.webpay_url = respuesta["url"]
+            pedido.webpay_iniciado_en = timezone.now()
+            pedido.save(update_fields=["webpay_token", "webpay_url", "webpay_iniciado_en"])
+            if webpay_activity: remember_session(pedido,session_id)
+            return {"token": pedido.webpay_token, "url": pedido.webpay_url}
 
     def ejecutar(self, *args, **kwargs) -> Dict[str, Any]:
         return self.execute(*args, **kwargs)
@@ -542,6 +567,9 @@ class ConfirmarPagoTransbankUseCase:
 
         tienda_pk = getattr(id_tienda, "id_tienda", None) or getattr(id_tienda, "pk", None) or id_tienda
 
+        from apps.landing.webpay_activity_orders import confirm_if_activity
+        activity_result=confirm_if_activity(tienda_pk,token_ws)
+        if activity_result is not None: return activity_result
         config = ConfiguracionTransbank.objects.filter(id_tienda_id=tienda_pk).first()
         if not config:
             raise TransbankConfiguracionFaltanteException("Configuración de tienda no encontrada.")
@@ -552,15 +580,86 @@ class ConfirmarPagoTransbankUseCase:
             ambiente=config.ambiente,
         )
 
-        return adaptador.confirmar_transaccion(token_ws=token_ws)
+        try:
+            resultado = adaptador.confirmar_transaccion(token_ws=token_ws)
+        except TransbankRechazoException:
+            self._avisar_pago_rechazado(tienda_pk, token_ws)
+            raise
+        self._registrar_pago_aprobado(tienda_pk, resultado)
+        return resultado
+
+    @staticmethod
+    def _avisar_pago_rechazado(tienda_pk: Any, token_ws: str) -> None:
+        """Correo de pago rechazado al comprador (SCRUM-430); el pedido sigue pendiente. Nunca lanza."""
+        import logging
+        from apps.core.infrastructure.notificaciones_pedido import notificar_pago_rechazado
+        from apps.core.models import Pedido
+
+        try:
+            pedido = Pedido.objects.filter(
+                tienda_id=tienda_pk, medio_pago="Transbank", estado="pendiente", webpay_token=token_ws
+            ).first()
+            if pedido:
+                from apps.landing.webpay_activity_orders import is_webpay_activity
+                if is_webpay_activity(pedido): return
+                try:
+                    notificar_pago_rechazado(pedido)
+                finally:
+                    Pedido.objects.filter(pk=pedido.pk, estado="pendiente", webpay_token=token_ws).update(
+                        webpay_token="", webpay_url="")
+        except Exception:
+            logging.getLogger(__name__).exception("No se pudo avisar el pago rechazado de Webpay.")
+
+    @staticmethod
+    def _registrar_pago_aprobado(tienda_pk: Any, resultado: Dict[str, Any]) -> None:
+        """Conciliación exacta y atómica del pedido de esta tienda con el cobro autorizado."""
+        from apps.core.models import Pedido
+
+        try:
+            monto = Decimal(str(resultado.get("monto")))
+        except (InvalidOperation, TypeError, ValueError):
+            raise TransbankTransaccionException("Webpay devolvió un monto inválido.") from None
+        if not monto.is_finite() or monto <= 0:
+            raise TransbankTransaccionException("Webpay devolvió un monto inválido.")
+        pasa_a_pagado = False
+        with transaction.atomic():
+            pedido = Pedido.objects.select_for_update().filter(
+                identificador=str(resultado.get("orden_compra") or ""), tienda_id=tienda_pk
+            ).first()
+            if not pedido or pedido.medio_pago != "Transbank":
+                raise TransbankTransaccionException("El pago no corresponde a un pedido Webpay de esta tienda.")
+            from apps.landing.webpay_activity_orders import is_webpay_activity
+            if is_webpay_activity(pedido):
+                raise TransbankTransaccionException('El pago de actividad requiere la validación del token original.')
+            if pedido.estado not in ("pendiente", *Pedido.ESTADOS_PAGADOS):
+                raise TransbankTransaccionException("El pedido no admite este pago.")
+            if pedido.monto_total != monto:
+                raise TransbankTransaccionException("El monto autorizado no coincide con el total del pedido. Contacta a la tienda.")
+            pasa_a_pagado = pedido.estado == "pendiente"
+            if pasa_a_pagado:
+                pedido.estado = "pagado"
+                pedido.save(update_fields=["estado"])
+        if pedido.estado in Pedido.ESTADOS_PAGADOS:
+            from apps.core.infrastructure.stock_pedidos import descontar_stock_de_pedido
+            descontar_stock_de_pedido(pedido.pk)
+        if pasa_a_pagado:
+            from apps.core.infrastructure.notificaciones_pedido import notificar_cambio_de_estado
+            notificar_cambio_de_estado(pedido, "pendiente")
 
     def ejecutar(self, *args, **kwargs) -> Dict[str, Any]:
         return self.execute(*args, **kwargs)
 
 
-# ==========================================================
-# CASOS DE USO EXISTENTES DE CATÁLOGO Y CARRITO
-# ==========================================================
+class RegistrarPagoAbortadoTransbankUseCase:
+    """El comprador anuló el pago en el formulario de Webpay (retorna TBK_TOKEN, sin token_ws).
+
+    Según Transbank no se debe confirmar la transacción: solo se le avisa al comprador que el pago no se completó.
+    """
+
+    def execute(self, id_tienda: Any, tbk_token: str) -> None:
+        tienda_pk = getattr(id_tienda, "id_tienda", None) or getattr(id_tienda, "pk", None) or id_tienda
+        ConfirmarPagoTransbankUseCase._avisar_pago_rechazado(tienda_pk, tbk_token)
+
 
 class ListPublicProductsUseCase:
 
@@ -581,9 +680,11 @@ class GetPublicProductDetailUseCase:
 
     def execute(self, tienda_id: str, slug: str) -> Optional[Dict[str, Any]]:
         producto = self.repository.get_by_slug(tienda_id, slug)
+        if producto is None and ObjectId.is_valid(slug):
+            producto = self.repository.get_by_id(tienda_id, slug)
         if producto is None or not producto.get("activo", False):
             return None
-        return producto
+        return {**producto, 'variantes': [v for v in producto.get('variantes', []) if is_variant_active(v)]}
 
 
 class GetPublicProductAttributesUseCase:
@@ -626,7 +727,6 @@ class GetPublicProductAttributesUseCase:
 
 class SoftDeleteProductUseCase:
     def execute(self, id_producto: int, tienda_id: str) -> dict:
-        # Los productos documentales se desactivan por su ObjectId y tienda.
         if ObjectId.is_valid(str(id_producto)):
             repository = ProductRepository()
             product = repository.get_by_id(str(tienda_id), str(id_producto))
@@ -641,7 +741,6 @@ class SoftDeleteProductUseCase:
             id_producto = int(id_producto)
         except (TypeError, ValueError):
             raise ValueError("El producto no existe en el catálogo.") from None
-        # 1. Soft Delete en PostgreSQL
         try:
             producto_pg = Producto.objects.get(id_producto=id_producto, id_tienda=tienda_id)
             if not producto_pg.activo:
@@ -661,6 +760,128 @@ class SoftDeleteProductUseCase:
         )
 
         return {"exito": True, "mensaje": "Producto eliminado lógicamente de forma correcta."}
+
+
+class HardDeleteProductUseCase:
+    """Elimina definitivamente un producto del catálogo preservando ventas, pedidos y reportes."""
+
+    @staticmethod
+    def _detach_and_delete_sql_product(
+        sql_product: Producto,
+        fallback_name: str = "",
+        mongo_id: str = "",
+    ) -> None:
+        from apps.core.models import ItemPedido
+
+        resolved_name = (fallback_name or sql_product.nombre or "")[:200]
+        if resolved_name:
+            ItemPedido.objects.filter(
+                id_producto_id=sql_product.pk,
+                nombre_producto="",
+            ).update(nombre_producto=resolved_name)
+        if mongo_id:
+            ItemPedido.objects.filter(
+                id_producto_id=sql_product.pk,
+                producto_mongo_id="",
+            ).update(producto_mongo_id=mongo_id)
+
+        ItemPedido.objects.filter(id_producto_id=sql_product.pk).update(id_producto=None)
+        ItemCarrito.objects.filter(id_producto_id=sql_product.pk).delete()
+        sql_product.delete()
+
+    @staticmethod
+    def _remove_featured_reference(tienda_id: str, mongo_id: str) -> None:
+        import copy
+        from apps.landing.models import ConfiguracionLanding
+
+        landing = ConfiguracionLanding.objects.filter(tienda_id=tienda_id).first()
+        if landing and isinstance(landing.contenido, dict):
+            featured = landing.contenido.get("productos_destacados")
+            if isinstance(featured, list) and mongo_id in featured:
+                contenido = copy.deepcopy(landing.contenido)
+                contenido["productos_destacados"] = [
+                    pid for pid in featured if pid != mongo_id
+                ]
+                landing.contenido = contenido
+                landing.save(update_fields=["contenido"])
+
+    def execute(self, id_producto: Any, tienda_id: str, confirmacion: Any) -> dict:
+        if not isinstance(confirmacion, str) or confirmacion.strip().casefold() != "eliminar":
+            raise ValueError("Debes escribir 'eliminar' para confirmar la eliminación definitiva.")
+
+        from apps.core.models import ItemPedido
+
+        tienda_id_str = str(tienda_id)
+
+        if ObjectId.is_valid(str(id_producto)):
+            repository = ProductRepository()
+            product = repository.get_admin_product(tienda_id_str, str(id_producto))
+            if product is None:
+                raise LookupError("El producto no existe en el catálogo.")
+
+            mongo_id = str(product["_id"])
+            product_name = str(product.get("nombre") or "")[:200]
+            sql_id = product.get("id_producto")
+            if sql_id is None:
+                sql_id = product.get("id_postgresql")
+
+            with transaction.atomic():
+                if product_name:
+                    ItemPedido.objects.filter(
+                        id_pedido__tienda_id=tienda_id_str,
+                        producto_mongo_id=mongo_id,
+                        nombre_producto="",
+                    ).update(nombre_producto=product_name)
+
+                if sql_id is not None:
+                    try:
+                        sql_id_int = int(sql_id)
+                    except (TypeError, ValueError):
+                        sql_id_int = None
+                    if sql_id_int is not None:
+                        sql_product = Producto.objects.filter(
+                            pk=sql_id_int, id_tienda_id=tienda_id_str
+                        ).first()
+                        if sql_product is not None:
+                            self._detach_and_delete_sql_product(
+                                sql_product,
+                                fallback_name=product_name,
+                                mongo_id=mongo_id,
+                            )
+
+                self._remove_featured_reference(tienda_id_str, mongo_id)
+
+                if not repository.delete(tienda_id_str, mongo_id):
+                    raise RuntimeError("No se pudo eliminar el producto del catálogo.")
+
+            return {
+                "exito": True,
+                "mensaje": "Producto eliminado definitivamente. La información de ventas se conserva intacta.",
+            }
+
+        try:
+            sql_id_int = int(id_producto)
+        except (TypeError, ValueError):
+            raise LookupError("El producto no existe en el catálogo.") from None
+
+        with transaction.atomic():
+            sql_product = Producto.objects.filter(
+                pk=sql_id_int, id_tienda_id=tienda_id_str
+            ).first()
+            if sql_product is None:
+                raise LookupError("El producto no existe en el catálogo.")
+
+            self._detach_and_delete_sql_product(sql_product)
+
+            db = get_mongo_db()
+            db.productos.delete_many(
+                {"id_postgresql": sql_id_int, "tienda_id": tienda_id_str}
+            )
+
+        return {
+            "exito": True,
+            "mensaje": "Producto eliminado definitivamente. La información de ventas se conserva intacta.",
+        }
 
 
 class CreateProductUseCase:
@@ -683,10 +904,16 @@ class CreateProductUseCase:
             "activo": data.get("activo", True),
             "fecha_creacion": timezone.now(),
             "imagenes": data.get("imagenes", []),
+            "video_recurso_id": data.get("video_recurso_id"),
             "atributos_generales": data.get("atributos_generales", []),
             "variantes": data["variantes"],
             "seo": data.get("seo", {}),
         }
+        if data.get("peso_kg") is not None:
+            producto["peso_kg"] = data["peso_kg"]
+        for medida in ("alto_cm", "ancho_cm", "largo_cm"):
+            if data.get(medida) is not None:
+                producto[medida] = data[medida]
 
         return self.repository.create(tienda_id, producto)
 
@@ -704,8 +931,6 @@ class CrearProductoUseCase:
         if 'stock' in datos_validados:
             validate_stock(datos_validados['stock'])
 
-        # Separamos los campos que sí pertenecen al modelo Producto (Postgres)
-        # de los que solo existen para el catálogo (Mongo).
         datos = dict(datos_validados)
         categoria = datos.pop('categoria', '') or 'Sin categoría'
         descripcion = datos.pop('descripcion', '')
@@ -716,8 +941,6 @@ class CrearProductoUseCase:
             **datos
         )
 
-        # Creamos el documento equivalente en Mongo, vinculado por id_producto,
-        # para que el catálogo público y la gestión de variantes funcionen.
         slug_base = slugify(producto.nombre) or f"producto-{producto.id_producto}"
         slug = slug_base
         sufijo = 1
@@ -757,7 +980,6 @@ class UpdateCatalogProductUseCase:
             existing = self.repository.get_by_sku(tienda_id, variant['sku'])
             if existing and existing['_id'] != original['_id']:
                 raise ValueError(f"El SKU '{variant['sku']}' ya existe en esta tienda.")
-        # Mantener metadatos legacy de variantes que siguen existiendo.
         if 'variantes' in data:
             previous = {v['sku']: v for v in original.get('variantes', [])}
             data = {**data, 'variantes': [
@@ -819,16 +1041,29 @@ class ModificarCantidadDTO:
     id_item_carrito: int
     nueva_cantidad: int
     usuario_id: int
+    tienda_id: Optional[str] = None
 
 
 def precio_efectivo_variante(variante: Dict[str, Any]) -> Optional[Decimal]:
-    precio = variante.get("precio")
-    oferta = variante.get("precio_oferta")
-    if precio is None:
+    precio_raw = variante.get("precio")
+    oferta_raw = variante.get("precio_oferta")
+    if precio_raw is None or isinstance(precio_raw, bool):
         return None
-    if oferta is not None and oferta < precio:
-        precio = oferta
-    return Decimal(str(precio))
+    try:
+        precio = Decimal(str(precio_raw))
+    except (InvalidOperation, TypeError, ValueError):
+        return None
+    if not precio.is_finite() or precio < 0:
+        return None
+
+    if oferta_raw is not None and not isinstance(oferta_raw, bool):
+        try:
+            oferta = Decimal(str(oferta_raw))
+            if oferta.is_finite() and Decimal("0") <= oferta < precio:
+                return oferta
+        except (InvalidOperation, TypeError, ValueError):
+            pass
+    return precio
 
 
 def resolver_datos_item(item: ItemCarrito, variant_service: Optional[VariantService] = None):
@@ -836,10 +1071,15 @@ def resolver_datos_item(item: ItemCarrito, variant_service: Optional[VariantServ
     if not item.sku:
         return item.id_producto.stock, item.id_producto.precio
     service = variant_service or VariantService()
+    service.tienda_id = str(item.id_producto.id_tienda_id)
     try:
         variante = service.get_variant_by_sku(str(item.id_producto_id), item.sku)
     except ValueError:
         return 0, item.id_producto.precio
+    if not item.id_producto.activo or not is_variant_active(variante):
+        return 0, item.id_producto.precio
+    item.atributos_calculados = {a.get("clave"): a.get("valor")
+                                 for a in variante.get("atributos_variante", []) if isinstance(a, dict) and a.get("clave")}
     precio = precio_efectivo_variante(variante)
     return int(variante.get("stock", 0)), precio if precio is not None else item.id_producto.precio
 
@@ -866,12 +1106,17 @@ class ConsultarCarritoUseCase:
             )
         except Exception:
             return None
-        return (documento or {}).get("slug")
+        documento = documento or {}
+        item.producto_mongo_id_calculado = str(documento["_id"]) if documento.get("_id") else None
+        imagenes = documento.get("imagenes") or []
+        item.imagen_calculada = imagenes[0] if imagenes else (documento.get("imagen") or "")
+        return documento.get("slug")
 
-    def execute(self, usuario_id: int) -> List[ItemCarrito]:
+    def execute(self, usuario_id: int, tienda_id: Optional[str] = None) -> List[ItemCarrito]:
+        scope = {"id_producto__id_tienda_id": tienda_id} if tienda_id is not None else {}
         items = list(
             ItemCarrito.objects
-            .filter(id_carrito__id_usuario_id=usuario_id)
+            .filter(id_carrito__id_usuario_id=usuario_id, id_producto__activo=True, **scope)
             .select_related("id_producto")
             .order_by("id_item_carrito")
         )
@@ -897,10 +1142,11 @@ class ModificarCantidadItemUseCase:
         if dto.nueva_cantidad <= 0:
             raise CantidadInvalidaException("La cantidad debe ser mayor a 0.")
 
+        scope = {'id_producto__id_tienda_id': dto.tienda_id} if dto.tienda_id is not None else {}
         try:
             item = ItemCarrito.objects.select_related('id_producto', 'id_carrito').get(
                 pk=dto.id_item_carrito,
-                id_carrito__id_usuario_id=dto.usuario_id
+                id_carrito__id_usuario_id=dto.usuario_id, **scope
             )
         except ItemCarrito.DoesNotExist:
             raise ItemCarritoNoEncontradoException("El producto no existe en tu carrito.")
@@ -960,7 +1206,8 @@ class AgregarItemCarritoUseCase:
             raise ProductoNoEncontradoException("Debes indicar el id o el slug del producto.")
 
         repositorio = self._product_repository or ProductRepository()
-        documento = repositorio.get_by_slug(str(dto.tienda_id), slug)
+        documento = (repositorio.get_by_id(str(dto.tienda_id), slug)
+                     or repositorio.get_by_slug(str(dto.tienda_id), slug))
         if not documento or documento.get("activo") is False:
             raise ProductoNoEncontradoException(
                 f"El producto '{slug}' no existe o no está disponible para la compra."
@@ -978,7 +1225,10 @@ class AgregarItemCarritoUseCase:
         en el documento del catálogo; el stock y el precio reales siguen saliendo de las variantes.
         """
         variantes = documento.get("variantes") or []
-        precios = [Decimal(str(v["precio"])) for v in variantes if v.get("precio") is not None]
+        precios = [
+            p for p in (precio_efectivo_variante(v) for v in variantes if isinstance(v, dict))
+            if p is not None
+        ]
         if not precios:
             raise ProductoNoEncontradoException(
                 f"El producto '{documento.get('slug')}' no tiene variantes con precio disponibles para la compra."
@@ -1021,7 +1271,8 @@ class AgregarItemCarritoUseCase:
         carrito, _ = Carrito.objects.get_or_create(id_usuario=usuario_core)
 
         try:
-            producto = Producto.objects.get(pk=id_producto, activo=True)
+            scope = {"id_tienda_id": dto.tienda_id} if dto.tienda_id is not None else {}
+            producto = Producto.objects.get(pk=id_producto, activo=True, **scope)
         except Producto.DoesNotExist:
             raise ProductoNoEncontradoException(
                 f"El producto con ID '{id_producto}' no existe o no se encuentra activo."
@@ -1029,13 +1280,16 @@ class AgregarItemCarritoUseCase:
 
         sku_normalizado = str(dto.sku).strip().upper() if dto.sku else None
 
+        self.variant_service.tienda_id = str(producto.id_tienda_id)
         if sku_normalizado:
             try:
                 variante = self.variant_service.get_variant_by_sku(str(producto.id_producto), sku_normalizado)
             except ValueError as e:
                 raise VarianteNoEncontradaException(str(e))
 
-            # SKU canónico de la variante (get_variant_by_sku también acepta id o índice)
+            if not is_variant_active(variante):
+                raise VarianteNoEncontradaException('La variante ya no está disponible.')
+
             sku_normalizado = str(variante.get("sku") or sku_normalizado).strip().upper()
             stock_disponible = int(variante.get("stock", 0))
             if stock_disponible <= 0:
@@ -1047,7 +1301,6 @@ class AgregarItemCarritoUseCase:
             if stock_disponible <= 0:
                 raise StockInsuficienteException("El producto seleccionado se encuentra agotado.")
 
-        # sku=None se traduce a IS NULL: el producto base y cada variante son ítems distintos.
         item_existente = ItemCarrito.objects.filter(
             id_carrito=carrito,
             id_producto=producto,
@@ -1086,6 +1339,7 @@ class AgregarItemCarritoUseCase:
 class EliminarItemCarritoDTO:
     usuario_id: int
     id_item_carrito: int
+    tienda_id: Optional[str] = None
 
 
 class EliminarItemCarritoUseCase:
@@ -1097,10 +1351,11 @@ class EliminarItemCarritoUseCase:
     """
 
     def execute(self, dto: EliminarItemCarritoDTO) -> None:
+        scope = {"id_producto__id_tienda_id": dto.tienda_id} if dto.tienda_id is not None else {}
         try:
             item = ItemCarrito.objects.select_related("id_carrito").get(
                 pk=dto.id_item_carrito,
-                id_carrito__id_usuario_id=dto.usuario_id
+                id_carrito__id_usuario_id=dto.usuario_id, **scope
             )
         except ItemCarrito.DoesNotExist:
             raise ItemCarritoNoEncontradoException(

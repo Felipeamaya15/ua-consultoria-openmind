@@ -7,7 +7,7 @@ export type ApiStatus = {
 const DEFAULT_API_URL = 'http://localhost:8000';
 
 export const API_BASE_URL =
-  import.meta.env.VITE_API_URL?.replace(/\/$/, '') ?? DEFAULT_API_URL;
+  import.meta.env.VITE_API_URL?.trim().replace(/\/+$/, '') || DEFAULT_API_URL;
 
 export async function checkApiConnection(): Promise<ApiStatus> {
   try {

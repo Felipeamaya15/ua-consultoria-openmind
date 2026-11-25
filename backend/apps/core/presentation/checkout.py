@@ -1,10 +1,14 @@
 """Creacion de pedidos SQL con precios y variantes del catalogo Mongo."""
+from apps.landing.commerce import InvoiceInput
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from hashlib import sha256
 import json
+import logging
 from uuid import uuid4
 
 from django.db import transaction
+from django.utils import timezone
+from django.db.models import F
 from rest_framework import serializers
 from rest_framework.authentication import TokenAuthentication
 from rest_framework.exceptions import NotAuthenticated, PermissionDenied, ValidationError
@@ -13,13 +17,25 @@ from rest_framework.views import APIView
 
 from apps.authentication.infrastructure.models import ConfiguracionAutenticacion
 from apps.authentication.presentation.profile import IsCustomer, StrictSerializer
-from apps.catalog.domain.stock import validate_stock
+from apps.catalog.domain.stock import validate_stock, is_variant_active
 from apps.catalog.infrastructure.repositories import ProductRepository
+from apps.core.infrastructure.expiracion_pedidos import liberar_vencidos_de_tienda
+from apps.core.infrastructure.stock_pedidos import cantidad_apartada
+from apps.core.infrastructure.notificaciones_pedido import notificar_recepcion
 from apps.core.infrastructure.tenant import resolver_tienda
-from apps.core.models import Pedido, ItemPedido, Tienda
+from apps.core.models import Pedido, ItemPedido, Tienda, Producto, ConfiguracionPago, Promocion
+from apps.core.promotions import calculate_promotion, PromotionError
 from apps.core.presentation.responses import success_response
 from apps.core.models import ConfiguracionPago
 from apps.core.infrastructure.linkify_client import LinkifyAdapter
+from apps.core.delivery import DELIVERY_METHODS, delivery_for_store
+from apps.core.presentation.shipping import ErroresDeCotizacionMixin
+from apps.core.shipping import validate_quote
+from apps.core.pickup import validate_pickup_selection
+from apps.core.payments import PAYMENT_METHODS, payment_methods_for_store
+
+logger = logging.getLogger(__name__)
+PICKUP_SHIPPING_COST = Decimal('0.00')
 
 
 class CheckoutItemSerializer(StrictSerializer):
@@ -29,8 +45,19 @@ class CheckoutItemSerializer(StrictSerializer):
 
     def to_internal_value(self, data):
         if isinstance(data, dict) and (isinstance(data.get('cantidad'), bool)
-                                     or not isinstance(data.get('cantidad'), int)):
+                                       or not isinstance(data.get('cantidad'), int)):
             raise serializers.ValidationError({'cantidad': 'La cantidad debe ser un entero positivo.'})
+        return super().to_internal_value(data)
+
+
+class CheckoutActivitySerializer(StrictSerializer):
+    seccion_id = serializers.UUIDField()
+    cantidad = serializers.IntegerField(min_value=1, max_value=10000)
+    version = serializers.RegexField(r'^[a-f0-9]{64}$')
+
+    def to_internal_value(self, data):
+        if isinstance(data, dict) and type(data.get('cantidad')) is not int:
+            raise serializers.ValidationError({'cantidad':'La cantidad debe ser un entero positivo.'})
         return super().to_internal_value(data)
 
 
@@ -46,26 +73,42 @@ class AddressSerializer(StrictSerializer):
     apt = serializers.CharField(max_length=100, allow_blank=True)
     city = serializers.CharField(max_length=100, allow_blank=True)
     region = serializers.CharField(max_length=100, allow_blank=True)
+    sector = serializers.CharField(max_length=20, required=False, allow_blank=True)
 
 
 class CheckoutSerializer(StrictSerializer):
+    factura = InvoiceInput(required=False)
     clave_checkout = serializers.UUIDField()
-    items = CheckoutItemSerializer(many=True, allow_empty=False, max_length=100)
+    items = CheckoutItemSerializer(many=True, allow_empty=True, max_length=100)
+    actividades = CheckoutActivitySerializer(many=True, required=False, max_length=30)
     contacto = ContactSerializer()
-    medio_pago = serializers.ChoiceField(choices=['Transbank', 'PayPal', 'MercadoPago', 'Linkify', 'Transferencia'])
-    metodo_entrega = serializers.ChoiceField(choices=['Chilexpress', 'Starken', 'Retiro'])
+    medio_pago = serializers.ChoiceField(choices=['Transbank', 'PayPal', 'MercadoPago', 'Linkify', 'Transferencia', 'TUU'])
+    metodo_entrega = serializers.ChoiceField(choices=['Chilexpress', 'Starken', 'Retiro', 'Actividad'])
     direccion = AddressSerializer(required=False)
-    codigo_promocional = serializers.ChoiceField(choices=['', 'VERANO20', 'NUEVO5000'], default='', allow_blank=True)
+    cotizacion = serializers.CharField(max_length=4096, required=False)
+    codigo_promocional = serializers.CharField(max_length=40, default='', allow_blank=True, trim_whitespace=True)
+    retiro_seleccion = serializers.DictField(child=serializers.CharField(max_length=10), required=False)
 
     def validate(self, data):
-        if data['metodo_entrega'] != 'Retiro':
+        activities = data.get('actividades', [])
+        if not data['items'] and not activities:
+            raise serializers.ValidationError({'items':'El carrito está vacío.'})
+        if len({line['seccion_id'] for line in activities}) != len(activities):
+            raise serializers.ValidationError({'actividades':'No repitas una actividad.'})
+        if (not data['items']) != (data['metodo_entrega']=='Actividad'):
+            raise serializers.ValidationError({'metodo_entrega':'El despacho se aplica solo a los productos físicos.'})
+        if data['metodo_entrega']=='Actividad' and ('cotizacion' in data or 'retiro_seleccion' in data):
+            raise serializers.ValidationError({'metodo_entrega':'Las actividades no requieren envío ni retiro.'})
+        if 'retiro_seleccion'  in data and (data['metodo_entrega'] != 'Retiro' or set(data['retiro_seleccion']) != {'fecha', 'hora'}):
+            raise serializers.ValidationError({'retiro_seleccion': 'Indica fecha y hora únicamente para retiro en local.'})
+        if data['metodo_entrega'] not in ('Retiro','Actividad'):
             address = data.get('direccion', {})
             if not all(address.get(key, '').strip() for key in ('street', 'number', 'city')):
                 raise serializers.ValidationError({'direccion': 'La entrega requiere calle, numero y ciudad.'})
         return data
 
 
-class CheckoutOrderAPIView(APIView):
+class CheckoutOrderAPIView(ErroresDeCotizacionMixin, APIView):
     authentication_classes = [TokenAuthentication]
     permission_classes = [AllowAny]
 
@@ -80,16 +123,59 @@ class CheckoutOrderAPIView(APIView):
         serializer = CheckoutSerializer(data=self.order_data(request, tienda))
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
-        fingerprint = sha256(json.dumps(data, sort_keys=True, default=str).encode()).hexdigest()
+        activities = data.get('actividades', [])
+        activity_marker = None
+        if activities:
+            from apps.landing.transfer_activity_orders import validate_activity_checkout
+            activity_marker = validate_activity_checkout(request, tienda, data)
+        fingerprint = sha256(json.dumps({key: value for key, value in data.items() if key != 'cotizacion'},
+                                       sort_keys=True, default=str).encode()).hexdigest()
+        liberar_vencidos_de_tienda(tienda.pk)
         with transaction.atomic():
             Tienda.objects.select_for_update().get(pk=tienda.pk)
-            previous = Pedido.objects.filter(clave_checkout=data['clave_checkout']).first()
+            previous = Pedido.objects.select_for_update().filter(clave_checkout=data['clave_checkout']).first()
             if previous:
                 if (previous.tienda_id != tienda.pk or previous.comprador_id != (buyer.pk if buyer else None)
-                        or previous.huella_checkout != fingerprint):
+                        or previous.huella_checkout != fingerprint
+                        or (activities and (previous.entrega or {}).get('origen') != activity_marker)):
                     raise ValidationError('Esta clave de checkout ya fue utilizada para otra solicitud.')
-                return success_response(data=self.result(previous), mensaje='Pedido ya registrado.')
-            repository = ProductRepository()
+                return success_response(data=self.result(previous, self._url_pago(previous, tienda)),
+                                        mensaje='Pedido ya registrado.')
+            payment = payment_methods_for_store(tienda).get(PAYMENT_METHODS[data['medio_pago']], {})
+            if payment.get('enabled') is not True:
+                raise ValidationError({'medio_pago': f"{data['medio_pago']} no está disponible en esta tienda. "
+                                                     'Elige otro medio de pago o contacta a la tienda.'})
+            if not data['items']:
+                shipping = PICKUP_SHIPPING_COST
+                delivery_snapshot = {'metodo':'Actividad','sin_despacho':True}
+            else:
+                method = DELIVERY_METHODS[data['metodo_entrega']]
+                delivery = delivery_for_store(tienda)
+                if not delivery[method]['enabled']:
+                    raise ValidationError({'metodo_entrega': 'El método de entrega no está habilitado en esta tienda.'})
+                quote = (validate_quote(tienda, data['metodo_entrega'], data.get('direccion', {}), data.get('cotizacion'),
+                                        items=data['items'], repository=ProductRepository())
+                         if method != 'pickup' else None)
+
+
+                shipping = PICKUP_SHIPPING_COST if method == 'pickup' else Decimal(quote['monto'])
+
+                delivery_snapshot = {'metodo': data['metodo_entrega'], 'direccion': data.get('direccion', {})}
+                if quote:
+                    delivery_snapshot['cotizacion'] = quote
+                else:
+                    delivery_snapshot['retiro'] = {key: delivery['pickup'][key] for key in ('address', 'schedule')}
+                    for key in ('version', 'location', 'hours', 'validation_method'):
+                        if key in delivery['pickup']:
+                            delivery_snapshot['retiro'][key] = delivery['pickup'][key]
+                    selection = validate_pickup_selection(delivery['pickup'], data.get('retiro_seleccion'))
+                    if selection:
+                        delivery_snapshot['retiro']['seleccion'] = selection
+            if data.get('factura'):
+                from apps.landing.commerce import commerce_options
+                if not commerce_options(tienda)['factura']:
+                    raise ValidationError({'factura': 'Esta tienda no recibe solicitudes de factura.'})
+            repository = ProductRepository() if data['items'] else None
             lines = {}
             for item in data['items']:
                 product = (
@@ -99,7 +185,7 @@ class CheckoutOrderAPIView(APIView):
                 if not product or not product.get('activo', False):
                     raise ValidationError({'items': 'Un producto no esta disponible en esta tienda.'})
                 variant = next((v for v in product.get('variantes', []) if v.get('sku') == item['sku']), None)
-                if variant is None or variant.get('activo') is False:
+                if variant is None or not is_variant_active(variant):
                     raise ValidationError({'items': 'El SKU no pertenece al producto seleccionado.'})
                 key = (str(product['_id']), item['sku'])
                 quantity = lines.get(key, {}).get('cantidad', 0) + item['cantidad']
@@ -111,47 +197,143 @@ class CheckoutOrderAPIView(APIView):
                     if (not price.is_finite() or not base.is_finite() or price < 0 or base < 0
                             or price > base or base > Decimal('9999999999.99')):
                         raise ValueError('Precio invalido.')
-                    if quantity > variant.get('stock', 0):
+                    if quantity > variant.get('stock', 0) - cantidad_apartada(tienda.pk, key[0], item['sku']):
                         raise ValueError(f"Stock insuficiente para {item['sku']}.")
                 except (ValueError, InvalidOperation, KeyError) as exc:
                     raise ValidationError({'items': str(exc)}) from exc
-                lines[key] = dict(producto_mongo_id=key[0], nombre_producto=product['nombre'], sku=item['sku'],
-                                  atributos_variante=variant.get('atributos_variante', []), cantidad=quantity,
-                                  atributos={a.get('etiqueta') or a.get('clave'): a.get('valor')
-                                             for a in variant.get('atributos_variante', [])},
-                                  precio_unitario=price.quantize(Decimal('.01'), rounding=ROUND_HALF_UP))
+                lines[key] = dict(
+                    producto_mongo_id=key[0],
+                    id_producto_id=product.get('id_producto'),
+                    nombre_producto=product['nombre'],
+                    sku=item['sku'],
+                    atributos_variante=variant.get('atributos_variante', []),
+                    cantidad=quantity,
+                    atributos={a.get('etiqueta') or a.get('clave'): a.get('valor')
+                               for a in variant.get('atributos_variante', [])},
+                    precio_unitario=price.quantize(Decimal('.01'), rounding=ROUND_HALF_UP)
+                )
+
+            reservations = []
+            if activities:
+                from apps.landing.unified_activity_orders import reserve_lines, order_line
+                reservations = reserve_lines(tienda, data)
+                if not buyer and any(r.condiciones.get('modalidad_venta') == 'grabado' for r in reservations):
+                    raise NotAuthenticated('Inicia sesión para comprar y acceder a tus talleres grabados.')
+                delivery_snapshot['origen'] = activity_marker
+                from apps.landing.webpay_activity_orders import WEBPAY_MARKER, META, enabled_config, merchant_snapshot
+                if activity_marker==WEBPAY_MARKER:
+                    config=enabled_config(tienda.pk)
+                    if not config: raise ValidationError('Webpay para actividades no está disponible.')
+                    delivery_snapshot[META]=merchant_snapshot(config)
+                from apps.landing.external_activity_orders import MARKER as EXTERNAL_MARKER, META as EXTERNAL_META, snapshot
+                if activity_marker==EXTERNAL_MARKER:
+                    cfg=snapshot(tienda,data['medio_pago'])
+                    if not cfg: raise ValidationError('La configuración de pago no está disponible.')
+                    delivery_snapshot[EXTERNAL_META]=cfg
+                for row in reservations:
+                    lines[('actividad', str(row.seccion_id))] = order_line(row)
             subtotal = sum((line['precio_unitario'] * line['cantidad'] for line in lines.values()), Decimal(0))
-            promo = data['codigo_promocional']
-            discount = min(subtotal, (subtotal * Decimal('.2')).quantize(Decimal('1'), rounding=ROUND_HALF_UP)
-                           if promo == 'VERANO20' else Decimal(5000) if promo == 'NUEVO5000' else Decimal(0))
-            shipping = Decimal(0) if data['metodo_entrega'] == 'Retiro' or subtotal > 50000 else Decimal(3490)
+            try:
+                promotion_amounts = calculate_promotion(
+                    tienda, data['codigo_promocional'], subtotal, shipping, lock=True,
+                )
+            except PromotionError as exc:
+                raise ValidationError({'codigo_promocional': str(exc)}) from exc
+            discount = promotion_amounts.discount
+            shipping = promotion_amounts.shipping
             total = subtotal - discount + shipping
+
+            if activities and activity_marker in ('actividad_webpay_v1','actividad_transferencia_v1','actividad_pasarela_v1') and discount:
+                raise ValidationError({'codigo_promocional':'Los descuentos en pedidos de actividades requieren una distribución verificable.'})
+            if activities and total <= 0:
+                raise ValidationError({'actividades':'El total de la actividad debe ser positivo.'})
+            if (data['medio_pago']=='Transbank' or (activities and data['medio_pago']=='TUU')) and (total <= 0 or total != total.to_integral_value()):
+                raise ValidationError({'medio_pago': 'Webpay requiere un total positivo en pesos enteros.'})
             if total > Decimal('9999999999.99'):
                 raise ValidationError({'items': 'El importe del pedido excede el maximo permitido.'})
+            if data.get('factura'):
+                delivery_snapshot['_solicitud_factura'] = dict(data['factura'])
             order = Pedido.objects.create(
                 comprador=buyer, tienda=tienda, monto_total=total,
                 clave_checkout=data['clave_checkout'], huella_checkout=fingerprint,
                 contacto=data['contacto'], medio_pago=data['medio_pago'],
                 nombre_contacto=data['contacto']['nombre'], correo_contacto=data['contacto']['email'],
                 telefono_contacto=data['contacto'].get('telefono', ''), metodo_pago=data['medio_pago'],
-                entrega={'metodo': data['metodo_entrega'], 'direccion': data.get('direccion', {})},
+                entrega=delivery_snapshot,
                 costo_envio=shipping, descuento=discount,
             )
             ItemPedido.objects.bulk_create([ItemPedido(id_pedido=order, **line) for line in lines.values()])
-            for line in lines.values():
-                repository.decrease_stock(str(tienda.pk), line['sku'], line['cantidad'])
+            if reservations:
+                from apps.landing.models import ReservaActividadPagada
+                ReservaActividadPagada.objects.filter(pk__in=[r.pk for r in reservations]).update(estado='en_pago')
+            if promotion_amounts.promotion:
+                Promocion.objects.filter(pk=promotion_amounts.promotion.pk).update(usos=F('usos') + 1)
+            result = self.result(order, self._url_pago(order, tienda))
+            if activity_marker != 'actividad_unificada_qa_v1' and not (activity_marker=='actividad_webpay_v1' and delivery_snapshot.get('webpay_actividad',{}).get('ambiente')!='PRODUCCION') and not (activity_marker=='actividad_pasarela_v1' and delivery_snapshot.get('pago_actividad_externo',{}).get('ambiente') in ('SANDBOX','INTEGRACION')):
+                transaction.on_commit(lambda: notificar_recepcion(order))
+            return success_response(data=result, mensaje='Pedido creado correctamente.', status=201)
 
-        es_linkify = data['medio_pago'].strip().lower() == 'linkify'
-        url_pago = None
-        if es_linkify:
-            config_pago = ConfiguracionPago.objects.filter(tienda=tienda).first()
-            datos_linkify = config_pago.datos.get('linkify', {}).get('fields', {}) if config_pago else {}
-            id_cuenta = datos_linkify.get('idCuenta', '')
-            if id_cuenta:
-                adapter = LinkifyAdapter(id_cuenta=id_cuenta, clave_privada=datos_linkify.get('clavePrivada', ''))
-                url_pago = adapter.url_de_pago(str(order.pk))
+    @staticmethod
+    def _credenciales_linkify(tienda):
+        """(id_cuenta, clave_privada) si Linkify esta habilitado y configurado en la tienda; si no, None."""
+        config_pago = ConfiguracionPago.objects.filter(tienda=tienda).first()
+        linkify = (config_pago.datos_descifrados.get('linkify') or {}) if config_pago else {}
+        campos = linkify.get('fields') or {}
+        id_cuenta = str(campos.get('idCuenta') or '').strip()
+        clave = str(campos.get('clavePrivada') or '').strip()
+        if linkify.get('enabled') is True and id_cuenta and clave:
+            return id_cuenta, clave
+        return None
 
-        return success_response(data=self.result(order, url_pago), mensaje='Pedido creado correctamente.', status=201)
+    def _url_pago(self, order, tienda):
+        """URL de pago de Linkify del pedido; None si el pedido no es de Linkify o no se puede generar."""
+        from apps.landing.external_activity_orders import is_external, meta, save_meta, deadline
+        if is_external(order) and order.medio_pago in ('TUU','Linkify'):
+            if order.estado!='pendiente' or not deadline(order) or timezone.now()>=deadline(order): return None
+            if meta(order).get('inicio'): return meta(order)['inicio'].get('url')
+            from apps.landing.external_activity_orders import assert_config
+            from apps.core.presentation.pago_pedido_pendiente import ErrorPago
+            try: assert_config(order,start=True)
+            except ErrorPago: return None
+            credentials=self._credenciales_linkify(tienda) if order.medio_pago=='Linkify' else None
+            url=self._url_pago_tuu(order,tienda) if order.medio_pago=='TUU' else LinkifyAdapter(*credentials).url_de_pago(str(order.pk)) if credentials else None
+            if url: save_meta(order,inicio={'url':url})
+            return url
+        if (order.medio_pago or '').strip().lower() == 'tuu':
+            return self._url_pago_tuu(order, tienda)
+        if (order.medio_pago or '').strip().lower() != 'linkify':
+            return None
+        credenciales = self._credenciales_linkify(tienda)
+        if not credenciales:
+            return None
+        return LinkifyAdapter(*credenciales).url_de_pago(str(order.pk))
+
+    @staticmethod
+    def _url_pago_tuu(order, tienda):
+        """URL de pago de TUU Pago Online; None si no está configurado, no hay callback HTTPS o TUU falla."""
+        from urllib.parse import quote
+        from django.conf import settings
+        from apps.catalog.infrastructure.adapters.tuu_adapter import TuuPagoOnlineAdapter
+        from apps.catalog.domain.exceptions import PagoGatewayException
+        from apps.core.presentation.tuu_callback import credenciales_tuu
+        credenciales = credenciales_tuu(tienda)
+        base = getattr(settings, 'TUU_CALLBACK_BASE_URL', '')
+        if not credenciales or not base.startswith('https://'):
+            return None
+        nombre, _, apellido = (order.nombre_contacto or '').strip().partition(' ')
+        tienda_url = settings.STOREFRONT_PUBLIC_URL
+        try:
+            return TuuPagoOnlineAdapter(*credenciales).crear_intento(
+                referencia=order.identificador, monto=int(order.monto_total), email=order.correo_contacto,
+                nombre=nombre, apellido=apellido, telefono=order.telefono_contacto or '',
+                descripcion=f'Pedido {order.identificador}', tienda=tienda.nombre,
+                url_callback=f'{base}/api/pagos/tuu/callback/?tienda={tienda.pk}',
+                url_complete=f'{tienda_url}/seguimiento?orden={quote(order.identificador)}',
+                url_cancel=f'{tienda_url}/seguimiento?orden={quote(order.identificador)}',
+            )
+        except PagoGatewayException:
+            logger.exception('No se pudo iniciar el pago TUU del pedido %s.', order.pk)
+            return None
 
     def order_data(self, request, tienda):
         return request.data
@@ -159,18 +341,18 @@ class CheckoutOrderAPIView(APIView):
     @staticmethod
     def result(order, url_pago=None):
         data = {
-            'id_pedido': order.pk, 'tienda_id': order.tienda_id, 'estado': order.estado,
+            'id_pedido': order.pk, 'identificador': order.identificador,
+            'tienda_id': order.tienda_id, 'estado': order.estado,
             'monto_total': format(order.monto_total, '.2f'),
             'descuento': format(order.descuento, '.2f'), 'costo_envio': format(order.costo_envio, '.2f'),
         }
         if url_pago:
             data['url_pago'] = url_pago
         return data
-  
+
 
 class GuestCheckoutOrderAPIView(CheckoutOrderAPIView):
     def order_data(self, request, tienda):
-        # La ruta entrante también acepta el contrato canónico del checkout.
         if 'contacto' in request.data:
             return request.data
         from apps.core.presentation.serializers import RegistrarCompraSerializer

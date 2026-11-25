@@ -1,0 +1,56 @@
+.section-elements{display:grid;gap:24px;min-width:0;width:100%;font:inherit;color:inherit}
+.section-element{min-width:0;overflow-wrap:anywhere}
+.section-element p{white-space:pre-wrap;line-height:1.7}
+.section-element ul{list-style:disc;padding-inline-start:22px;line-height:1.8}
+.section-element hr{border:0;border-top:1px solid var(--visual-border,#d9dce3);margin:12px 0}
+.section-element-link{display:inline-flex;max-width:100%;align-items:center;justify-content:center;background:var(--visual-primary,var(--primary,#5433eb));color:var(--visual-button-text,#fff);padding:12px 20px;border-radius:var(--visual-radius,8px);font-weight:600;white-space:normal}
+.section-price{font-weight:700;font-size:1.4em}
+.section-element-gallery{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+.section-element figure{margin:0;min-width:0}
+.section-element img{width:100%;max-height:560px;object-fit:contain;border-radius:var(--lb-radius,8px)}
+.section-element figcaption{font-size:.85em;margin-top:8px}
+.store-content-block[data-block-type=personalizada]{grid-template-columns:minmax(0,1fr)}
+@media(max-width:767px){.section-element-gallery{grid-template-columns:repeat(2,minmax(0,1fr))}.section-element-link{width:100%}}
+@media(max-width:420px){.section-element-gallery{grid-template-columns:minmax(0,1fr)}}
+
+.section-media-video {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  max-height: 75vh;
+  object-fit: contain;
+  background: #111;
+  border-radius: 12px;
+}
+.section-element-image,
+.section-element-image figure {
+  width: 100%;
+  min-width: 0;
+}
+.section-media-loading {
+  display: grid;
+  place-items: center;
+  min-height: 220px;
+  background: #f1f5f9;
+  border-radius: 12px;
+}
+
+/* Portada compacta: deja espacio para las fotos y videos adicionales. */
+.activity-cover {
+  margin: 0;
+  width: min(100%, 420px);
+}
+.activity-cover img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  max-height: 236px;
+  object-fit: cover;
+  border-radius: 12px;
+}
+
+/* Apariencia unificada para componentes de secciones personalizadas. */
+[data-storefront-visual] [data-content-block-id] .section-elements{font-family:var(--lb-body-font,inherit);font-size:var(--lb-body-size,16px);color:var(--lb-body-color,inherit);text-align:var(--lb-body-align,left)}
+[data-storefront-visual] [data-content-block-id] .section-element-image img,
+[data-storefront-visual] [data-content-block-id] .section-element-gallery img,
+[data-storefront-visual] [data-content-block-id] .activity-cover img{object-fit:var(--lb-image-fit,contain);object-position:var(--lb-image-x,50%) var(--lb-image-y,50%)}

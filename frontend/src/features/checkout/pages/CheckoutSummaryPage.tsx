@@ -1,4 +1,6 @@
+import { useFeedback } from '../../../shared/components/FeedbackProvider';
 import React, { useState, useEffect } from 'react';
+import { LoadingState } from '../../../shared/components/states';
 import { API_BASE_URL } from '../../../api';
 
 const items = [
@@ -18,12 +20,14 @@ const discount = 5000;
 const total = subtotal + shipping - discount;
 
 export const CheckoutSummaryPage: React.FC = () => {
+  const uiFeedback = useFeedback();
+
   const [selectedPayment, setSelectedPayment] = useState<string>('');
   const [activePaymentMethods, setActivePaymentMethods] = useState<[string, any][]>([]);
   const [loadingPayments, setLoadingPayments] = useState(true);
 
   useEffect(() => {
-    // SCRUM-295: Integración real: solicitamos los medios de pago ACTIVOS al backend
+
     const fetchActivePayments = async () => {
       try {
         const response = await fetch(`${API_BASE_URL}/api/pagos/activos/`);
@@ -89,7 +93,7 @@ export const CheckoutSummaryPage: React.FC = () => {
               <h2 style={{ color: '#111827', marginTop: 0 }}>Medio de pago</h2>
 
               {loadingPayments ? (
-                <p style={{ color: '#6b7280', fontSize: '0.9rem' }}>Cargando medios de pago disponibles...</p>
+                <LoadingState size="sm" align="start" spacing="compact">Cargando medios de pago disponibles...</LoadingState>
               ) : activePaymentMethods.length === 0 ? (
                 <p style={{ color: '#dc2626', fontWeight: 600, fontSize: '0.9rem' }}>No hay medios de pago configurados en la tienda.</p>
               ) : (
@@ -143,7 +147,7 @@ export const CheckoutSummaryPage: React.FC = () => {
                 }}
                 type="button"
                 onClick={() => {
-                  alert(`Compra confirmada con el método: ${selectedPayment}`);
+                  uiFeedback.notify(`Medio de pago seleccionado: ${selectedPayment}. La compra aún debe registrarse en el checkout de la tienda.`,'info');
                 }}
               >
                 Confirmar pedido

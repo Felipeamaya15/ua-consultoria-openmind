@@ -1,0 +1,546 @@
+import { useFeedback } from '../../../shared/components/FeedbackProvider';
+import { LoadingState } from '../../../shared/components/states';
+import { Button, Input, Textarea, Toggle, Modal } from './ui';
+import { MediaPreview } from '../../marketing/components/MediaPreview';
+import type { MediaResource } from '../../marketing/domain/mediaLibrary';
+import { fetchSectionLibrary } from '../../landing/services/sectionResources';
+import type { CarouselSlideContent, BloqueLanding } from '../../landing/types/landing.types';
+import type { Product } from '../../storefront/data/mockData';
+import type { CarouselTextMode } from '../../landing/services/carruselService';
+
+import { useEffect, useId, useRef, useState } from 'react';
+
+import {
+  addCarouselResource, saveCarouselContent, fetchCarouselTextMode, saveCarouselTextMode,
+  deleteCarouselImage,
+  fetchCarouselImages,
+  MAX_IMAGENES_CARRUSEL,
+  MAX_MB_CARRUSEL,
+  reorderCarouselImages,
+  uploadCarouselImage,
+} from '../../landing/services/carruselService';
+
+import {
+  IMAGE_ACCEPT,
+  IMAGE_FORMATS,
+} from '../../../shared/services/imageUpload';
+
+import type {
+  ImagenCarruselLanding,
+} from '../../landing/types/landing.types';
+
+import './carousel-images-editor.css';
+
+type Operation = 'upload' | 'delete' | 'reorder' | 'refresh' | null;
+
+function errorMessage(error: unknown): string {
+  return error instanceof Error
+    ? error.message
+    : 'No pudimos completar la operación. Intenta nuevamente.';
+}
+
+type Destination = { value: string; label: string; group: string };
+const pageDestinations: Destination[] = [
+  {value:'catalogo', label:'Catálogo', group:'Páginas de mi tienda'},
+  {value:'carrito', label:'Carrito de compras', group:'Páginas de mi tienda'},
+  {value:'seguimiento', label:'Seguimiento de pedidos', group:'Páginas de mi tienda'},
+  {value:'ingresar', label:'Acceso de clientes', group:'Páginas de mi tienda'},
+  {value:'perfil', label:'Mi cuenta', group:'Páginas de mi tienda'},
+  {value:'mis-pedidos', label:'Mis pedidos', group:'Páginas de mi tienda'},
+];
+
+function slideDestinations(blocks: BloqueLanding[], products: Product[]): Destination[] {
+  const sections = blocks.filter(block => block.visible && /^[a-zA-Z0-9_-]+$/.test(block.id)).map(block => {
+    const title = block.titulo?.trim() || block.componentes?.find(item => item.visible && ['titulo','nombre'].includes(item.tipo) && item.texto?.trim())?.texto?.trim() || block.nombre_interno?.trim() || 'Sección sin título';
+    const group = block.actividad?.tipo === 'taller' ? 'Talleres publicados' : block.actividad?.tipo === 'servicio' ? 'Servicios publicados' : 'Secciones publicadas';
+    return {value: '#seccion-' + block.id, label: title, group};
+  });
+  const items = products.filter(product => product.status === 'active' && !!product.id).map(product => ({value:'producto/' + encodeURIComponent(product.id), label:product.name, group:'Productos publicados'}));
+  return [...pageDestinations, ...sections, ...items];
+}
+
+function validExternalDestination(value: string): boolean {
+  try {
+    const url = new URL(value);
+    return url.protocol === 'https:' && !!url.hostname && !url.username && !url.password && !/[\s\\<>"]/.test(value);
+  } catch { return false; }
+}
+
+function SlideContentEditor({image,onSaved,disabled,destinations}:{image:ImagenCarruselLanding;onSaved:(image:ImagenCarruselLanding)=>void;disabled:boolean;destinations:Destination[]}) {
+  const [draft,setDraft]=useState<CarouselSlideContent>(image.contenido ?? {}),[saving,setSaving]=useState(false),[error,setError]=useState(''),[notice,setNotice]=useState('');
+  const savedKey=JSON.stringify(image.contenido ?? {});
+  const [externalMode,setExternalMode]=useState((image.contenido?.enlace ?? '').startsWith('https://'));
+  const destinationId=useId();
+  const rawDestination=draft.enlace ?? '';
+  const knownDestination=destinations.some(option=>option.value===rawDestination);
+  const selectedDestination=externalMode ? '__external' : !rawDestination ? 'catalogo' : knownDestination ? rawDestination : '__saved';
+  const invalidExternal=externalMode && !validExternalDestination(rawDestination);
+  const groups=[...new Set(destinations.map(option=>option.group))];
+  useEffect(()=>{setDraft(image.contenido ?? {});setExternalMode((image.contenido?.enlace ?? '').startsWith('https://'));},[image.id,savedKey]);
+  const change=(next:Partial<CarouselSlideContent>)=>{setDraft(old=>({...old,...next}));setError('');setNotice('');};
+  async function persist(value:CarouselSlideContent){if(saving)return;setSaving(true);setError('');try{const saved=await saveCarouselContent(image.id,value);onSaved(saved);setDraft(saved.contenido ?? {});setNotice('Contenido guardado.');}catch(cause){setError(errorMessage(cause));}finally{setSaving(false);}}
+  return <details className="lp-slide-content"><summary>Texto y botón de esta diapositiva</summary><p>Sin personalización se usan los textos generales de la portada. El contenido acompaña a este archivo al reordenarlo.</p><fieldset disabled={disabled||saving}>
+    <Input label="Título de la diapositiva" maxLength={255} placeholder="Usar título general" value={draft.titulo ?? ''} onChange={e=>change({titulo:e.target.value || undefined})}/>
+    <Toggle label="Mostrar título" checked={draft.mostrar_titulo ?? true} onChange={mostrar_titulo=>change({mostrar_titulo})}/>
+    <Textarea label="Descripción de la diapositiva" maxLength={1000} placeholder="Usar descripción general" value={draft.descripcion ?? ''} onChange={e=>change({descripcion:e.target.value || undefined})}/>
+    <Toggle label="Mostrar descripción" checked={draft.mostrar_descripcion ?? true} onChange={mostrar_descripcion=>change({mostrar_descripcion})}/>
+    <Input label="Texto del botón de la diapositiva" maxLength={100} placeholder="Usar botón general" value={draft.texto_boton ?? ''} onChange={e=>change({texto_boton:e.target.value || undefined})}/>
+    <div className="lp-slide-destination">
+      <label htmlFor={destinationId}>Destino del botón de la diapositiva</label>
+      <select id={destinationId} value={selectedDestination} onChange={event=>{
+        const next=event.target.value;
+        if(next==='__external'){setExternalMode(true);change({enlace:undefined});return;}
+        if(next==='__saved')return;
+        setExternalMode(false);change({enlace:next});
+      }}>
+        {groups.map(group=><optgroup key={group} label={group}>{destinations.filter(option=>option.group===group).map(option=><option key={option.value} value={option.value}>{option.label}</option>)}</optgroup>)}
+        {selectedDestination==='__saved'&&<option value="__saved">Destino guardado anteriormente</option>}
+        <option value="__external">Otro sitio web (enlace HTTPS)</option>
+      </select>
+      {externalMode&&<><Input label="Enlace del sitio web" maxLength={2000} placeholder="https://…" value={rawDestination} onChange={event=>change({enlace:event.target.value || undefined})}/>{invalidExternal&&<small>Escribe una dirección HTTPS válida para guardar.</small>}</>}
+      {selectedDestination==='__saved'&&<small>Este destino no está en las opciones actuales. Puedes conservarlo o elegir otro.</small>}
+      <small>Elige el destino sin copiar enlaces. Solo aparecen productos y secciones guardadas y visibles.</small>
+    </div>
+    <Toggle label="Mostrar botón" checked={draft.mostrar_boton ?? true} onChange={mostrar_boton=>change({mostrar_boton})}/>
+    <Button type="button" disabled={saving||invalidExternal||JSON.stringify(draft)===savedKey} onClick={()=>void persist(draft)}>{saving?'Guardando…':'Guardar contenido de esta diapositiva'}</Button>
+    <Button type="button" variant="ghost" disabled={saving||savedKey==='{}'} onClick={()=>void persist({})}>Restablecer textos generales</Button>
+  </fieldset>{error&&<p role="alert">{error}</p>}{notice&&<p role="status">{notice}</p>}</details>;
+}
+
+export function CarouselImagesEditor({blocks=[],products=[]}:{blocks?:BloqueLanding[];products?:Product[]} = {}) {
+  const uiFeedback = useFeedback();
+
+  const destinations=slideDestinations(blocks,products);
+  const fileId = useId();
+  const descriptionId = useId();
+  const textModeInputName = useId();
+  const fileInput = useRef<HTMLInputElement>(null);
+
+  const [images, setImages] = useState<ImagenCarruselLanding[]>([]);
+  const [file, setFile] = useState<File | null>(null);
+  const [description, setDescription] = useState('');
+
+  const [loading, setLoading] = useState(true);
+  const [operation, setOperation] = useState<Operation>(null);
+  const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');
+  const [textMode, setTextMode] = useState<CarouselTextMode>('unico');
+  const [modeLoading, setModeLoading] = useState(true);
+  const [modeLoadFailed, setModeLoadFailed] = useState(false);
+  const [modeSaving, setModeSaving] = useState(false);
+
+  const [library,setLibrary]=useState<MediaResource[]>([]),[picker,setPicker]=useState(false),[libraryLoading,setLibraryLoading]=useState(false);
+  const libraryRequest=useRef<AbortController|null>(null);
+  useEffect(()=>()=>libraryRequest.current?.abort(),[]);
+  async function openLibrary(){setPicker(true);setLibraryLoading(true);setError('');libraryRequest.current?.abort();const controller=new AbortController();libraryRequest.current=controller;try{const rows=await fetchSectionLibrary(controller.signal);if(!controller.signal.aborted)setLibrary(rows.filter(row=>row.activo&&['imagen','video'].includes(row.tipo)));}catch(cause){if(!controller.signal.aborted)setError(errorMessage(cause));}finally{if(!controller.signal.aborted)setLibraryLoading(false);}}
+  async function useResource(id:string){if(busy)return;setOperation('upload');setError('');try{const item=await addCarouselResource(id);setImages(rows=>[...rows,item]);setPicker(false);setNotice('Recurso agregado al carrusel.');}catch(cause){setError(errorMessage(cause));}finally{setOperation(null);}}
+  const busy = loading || operation !== null || modeSaving;
+  const full = images.length >= MAX_IMAGENES_CARRUSEL;
+
+  useEffect(() => {
+    let active = true;
+    fetchCarouselTextMode().then(mode => {
+      if (active) setTextMode(mode);
+    }).catch(cause => {
+      if (active) { setModeLoadFailed(true); setError(errorMessage(cause)); }
+    }).finally(() => {
+      if (active) setModeLoading(false);
+    });
+    return () => { active = false; };
+  }, []);
+
+  async function changeTextMode(mode: CarouselTextMode) {
+    if (busy || modeLoading || modeLoadFailed || mode === textMode) return;
+    setModeSaving(true); setError(''); setNotice('');
+    try {
+      const saved = await saveCarouselTextMode(mode);
+      setTextMode(saved);
+      setNotice(saved === 'unico'
+        ? 'Texto unico activado. Los textos individuales siguen guardados.'
+        : 'Texto por imagen activado. Puedes personalizar cada diapositiva.');
+    } catch (cause) {
+      setError(errorMessage(cause));
+    } finally {
+      setModeSaving(false);
+    }
+  }
+
+  useEffect(() => {
+    let active = true;
+
+    fetchCarouselImages()
+      .then(result => {
+        if (active) {
+          setImages(result);
+        }
+      })
+      .catch(cause => {
+        if (active) {
+          setError(errorMessage(cause));
+        }
+      })
+      .finally(() => {
+        if (active) {
+          setLoading(false);
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+
+  async function refresh() {
+    if (busy) return;
+
+    setOperation('refresh');
+    setError('');
+    setNotice('');
+
+    try {
+      const result = await fetchCarouselImages();
+
+      setImages(result);
+      setNotice('Lista de fotografías actualizada.');
+    } catch (cause) {
+      setError(errorMessage(cause));
+    } finally {
+      setOperation(null);
+    }
+  }
+
+
+  async function upload() {
+    if (!file || busy || full) return;
+
+    setOperation('upload');
+    setError('');
+    setNotice('');
+
+    try {
+
+      const created = await uploadCarouselImage(
+        file,
+        description,
+      );
+
+      setImages(current =>
+        [...current, created].sort(
+          (a, b) => a.orden - b.orden,
+        ),
+      );
+
+      setFile(null);
+      setDescription('');
+
+      if (fileInput.current) {
+        fileInput.current.value = '';
+      }
+
+      setNotice('Fotografía subida y guardada correctamente.');
+    } catch (cause) {
+      setError(
+        `${errorMessage(cause)} Si hubo un problema de conexión, ` +
+        'actualiza la lista antes de intentar subirla nuevamente.',
+      );
+    } finally {
+      setOperation(null);
+    }
+  }
+
+
+  async function move(index: number, direction: -1 | 1) {
+    if (busy) return;
+
+    const target = index + direction;
+
+    if (target < 0 || target >= images.length) {
+      return;
+    }
+
+    const reordered = [...images];
+
+    [reordered[index], reordered[target]] = [
+      reordered[target],
+      reordered[index],
+    ];
+
+    setOperation('reorder');
+    setError('');
+    setNotice('');
+
+    try {
+      const saved = await reorderCarouselImages(
+        reordered.map(image => image.id),
+      );
+
+      setImages(saved);
+      setNotice('Orden de las fotografías guardado.');
+    } catch (cause) {
+      setError(
+        `${errorMessage(cause)} ` +
+        'Actualiza la lista para comprobar el orden guardado.',
+      );
+    } finally {
+      setOperation(null);
+    }
+  }
+
+
+  async function remove(image: ImagenCarruselLanding) {
+    if (busy) return;
+
+    const confirmed = (await uiFeedback.confirm({title:"Eliminar imagen",confirmLabel:"Eliminar imagen",message:'¿Eliminar esta fotografía del carrusel? ' +
+      'La eliminación se guarda inmediatamente ' +
+      'y no puede deshacerse desde Página principal.'}));
+
+    if (!confirmed) return;
+
+    setOperation('delete');
+    setError('');
+    setNotice('');
+
+    try {
+      await deleteCarouselImage(image.id);
+
+      setImages(current =>
+        current.filter(item => item.id !== image.id),
+      );
+
+      setNotice('Fotografía eliminada correctamente.');
+    } catch (cause) {
+      setError(
+        `${errorMessage(cause)} ` +
+        'Actualiza la lista para comprobar si se eliminó.',
+      );
+    } finally {
+      setOperation(null);
+    }
+  }
+
+  return (
+    <section
+      className="lp-carousel-editor"
+      aria-label="Imágenes del carrusel de portada"
+      aria-busy={busy}
+    >
+      <div className="lp-carousel-heading">
+        <div>
+          <h3>Fotografías del carrusel</h3>
+
+          <p>
+            Agrega hasta {MAX_IMAGENES_CARRUSEL} fotografías
+            para la portada de tu tienda.
+          </p>
+        </div>
+
+        <span className="lp-carousel-counter">
+          {images.length}/{MAX_IMAGENES_CARRUSEL}
+        </span>
+      </div>
+
+      <p className="lp-carousel-info">
+        Los cambios de fotografías se guardan inmediatamente.
+        No dependen del botón general «Guardar cambios».
+      </p>
+      <fieldset className="lp-carousel-text-mode" disabled={busy || modeLoading || modeLoadFailed}>
+        <legend>Textos de portada</legend>
+        <label>
+          <input type="radio" name={textModeInputName} checked={textMode === 'unico'}
+            onChange={() => void changeTextMode('unico')} />
+          Un solo título, descripción y botón para todas las imágenes
+        </label>
+        <label>
+          <input type="radio" name={textModeInputName} checked={textMode === 'por_imagen'}
+            onChange={() => void changeTextMode('por_imagen')} />
+          Personalizar el título, la descripción y el botón de cada imagen
+        </label>
+        <p>
+          {modeLoading ? 'Cargando preferencia…' : textMode === 'unico'
+            ? 'Se usan los textos generales de arriba. No se borran los textos individuales guardados.'
+            : 'Abre «Texto y botón de esta diapositiva» en cada imagen para editarla. Los campos vacíos usan el texto general.'}
+        </p>
+      </fieldset>
+
+      {error && (
+        <p className="lp-carousel-error" role="alert">
+          {error}
+        </p>
+      )}
+
+      {notice && (
+        <p className="lp-carousel-success" role="status">
+          {notice}
+        </p>
+      )}
+
+      {loading ? (
+        <LoadingState align="start" spacing="compact">Cargando fotografías…</LoadingState>
+      ) : (
+        <>
+          {images.length === 0 ? (
+            <p className="lp-carousel-empty">
+              Todavía no tienes fotografías en el carrusel.
+              Puedes agregar la primera a continuación.
+            </p>
+          ) : (
+            <ol className="lp-carousel-grid">
+              {images.map((image, index) => (
+                <li
+                  className="lp-carousel-item"
+                  key={image.id}
+                >
+                  {image.tipo === 'video' ? <video src={image.archivo} controls muted playsInline preload="none" aria-label={image.texto_alternativo || 'Video del carrusel'} /> : (<img
+                    src={image.archivo}
+                    alt={
+                      image.texto_alternativo ||
+                      `Vista previa de fotografía ${index + 1}`
+                    }
+                    loading="lazy"
+                  />)}
+
+
+                  <div className="lp-carousel-item-content">
+                    <strong>
+                      Fotografía {index + 1}
+                    </strong>
+
+                    <p>
+                      {image.texto_alternativo ||
+                        'Sin descripción alternativa'}
+                    </p>
+
+                    {textMode === 'por_imagen' && <SlideContentEditor image={image} destinations={destinations} disabled={busy} onSaved={saved=>setImages(rows=>rows.map(row=>row.id===saved.id?saved:row))} />}
+                    <div className="lp-carousel-actions">
+                      <button
+                        type="button"
+                        disabled={busy || index === 0}
+                        onClick={() => void move(index, -1)}
+                        aria-label={
+                          `Subir fotografía ${index + 1} una posición`
+                        }
+                      >
+                        ↑ Subir
+                      </button>
+
+                      <button
+                        type="button"
+                        disabled={
+                          busy ||
+                          index === images.length - 1
+                        }
+                        onClick={() => void move(index, 1)}
+                        aria-label={
+                          `Bajar fotografía ${index + 1} una posición`
+                        }
+                      >
+                        ↓ Bajar
+                      </button>
+
+                      <button
+                        type="button"
+                        className="lp-carousel-delete"
+                        disabled={busy}
+                        onClick={() => void remove(image)}
+                        aria-label={
+                          `Eliminar fotografía ${index + 1}`
+                        }
+                      >
+                        Eliminar
+                      </button>
+                    </div>
+                  </div>
+                </li>
+              ))}
+            </ol>
+          )}
+        </>
+      )}
+
+      <Button type="button" variant="outline" disabled={busy||full} onClick={()=>void openLibrary()}>Agregar imagen o video desde la biblioteca</Button>
+      <Modal open={picker} onClose={()=>{setPicker(false);libraryRequest.current?.abort();}} title="Elegir multimedia para el carrusel" size="xl" portal>
+        {libraryLoading?<LoadingState align="start" spacing="compact">Cargando biblioteca…</LoadingState>:<div className="flexible-library-results">{library.map(resource=><div key={resource.id}><strong>{resource.titulo}</strong><MediaPreview resource={resource}/><Button type="button" disabled={busy||full} onClick={()=>void useResource(resource.id)}>Usar {resource.titulo}</Button></div>)}{!library.length&&<p>No hay imágenes o videos activos. Agrégalos desde Marketing → Biblioteca multimedia.</p>}</div>}{error&&<p role="alert">{error}</p>}
+      </Modal>
+      <div className="lp-carousel-upload">
+        <h4>Agregar fotografía</h4>
+
+        <label htmlFor={fileId}>
+          Selecciona una fotografía
+        </label>
+
+        <input
+          ref={fileInput}
+          id={fileId}
+          type="file"
+          accept={IMAGE_ACCEPT}
+          disabled={busy || full}
+          onChange={event => {
+            setFile(
+              event.currentTarget.files?.[0] || null
+            );
+            setError('');
+            setNotice('');
+          }}
+        />
+
+        <small>
+          Formatos {IMAGE_FORMATS}. Máximo{' '}
+          {MAX_MB_CARRUSEL} MB por fotografía.
+        </small>
+
+        <label htmlFor={descriptionId}>
+          Descripción de la fotografía (opcional)
+        </label>
+
+        <input
+          id={descriptionId}
+          type="text"
+          value={description}
+          maxLength={250}
+          disabled={busy || full}
+          placeholder="Ej.: Productos destacados de mi tienda"
+          onChange={event =>
+            setDescription(event.target.value)
+          }
+        />
+
+        <small>
+          Esta descripción ayuda a las personas
+          que utilizan lectores de pantalla.
+        </small>
+
+        {full && (
+          <p className="lp-carousel-info" role="status">
+            Alcanzaste el máximo de ocho fotografías.
+            Elimina una para agregar otra.
+          </p>
+        )}
+
+        <div className="lp-carousel-footer">
+          <button
+            type="button"
+            className="lp-button lp-button-primary"
+            disabled={!file || busy || full}
+            onClick={() => void upload()}
+          >
+            {operation === 'upload'
+              ? 'Procesando y subiendo fotografía...'
+              : 'Agregar fotografía'}
+          </button>
+
+          <button
+            type="button"
+            className="lp-button"
+            disabled={busy}
+            onClick={() => void refresh()}
+          >
+            {operation === 'refresh'
+              ? 'Actualizando...'
+              : 'Actualizar lista'}
+          </button>
+        </div>
+      </div>
+    </section>
+  );
+}

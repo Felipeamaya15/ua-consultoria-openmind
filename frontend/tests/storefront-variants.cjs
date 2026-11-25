@@ -1,4 +1,4 @@
-// Ejecutar desde frontend: node tests/storefront-variants.cjs
+
 const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
@@ -41,7 +41,12 @@ function cardHarness(product, template = 'catalog', layout = 'grid') {
   const jsx = (type, props) => ({ type, props });
   const card = load('src/features/storefront/components/store/ProductCard.tsx', {
     require: name => {
-      if (name === 'react/jsx-runtime') return { jsx, jsxs: jsx };
+        if(name.includes('WholesaleQuote'))return {WholesaleQuote:'WholesaleQuote'};
+      if (name.includes('StoreContext')) return { useStore: () => ({config:{}}) };
+        if (name.includes('seoService')) return { updateProductSeo: () => {} };
+        if (name.includes('metaPixelService')) return { trackMetaPixelEvent: () => {} };
+        if (name.includes('shared/components/states')) return { LoadingState: 'LoadingState', ErrorState: 'ErrorState', EmptyListState: 'EmptyListState' };
+        if (name === 'react/jsx-runtime') return { jsx, jsxs: jsx };
       if (name === 'react') return { useState: initial => {
         const index = cursor++;
         if (!(index in state)) state[index] = typeof initial === 'function' ? initial() : initial;
@@ -49,7 +54,9 @@ function cardHarness(product, template = 'catalog', layout = 'grid') {
       } };
       if (name === 'react-router-dom') return { Link: 'Link' };
       if (name.includes('mockData')) return { formatPrice: value => `CLP ${value}` };
+      if (name.includes('ProductImageGallery')) return { ProductImageGallery: 'ProductImageGallery' };
       if (name.includes('StockFeedback')) return { StockFeedback: 'StockFeedback' };
+      if (name.includes('visual/sectionIds')) return load('src/features/storefront/visual/sectionIds.ts', {});
       if (name.includes('CartContext')) return { useCart: () => ({ items: cart, addItem: item => cart.push(item) }) };
       if (name.includes('useStorefrontTemplate')) return { useStorefrontTemplate: () => ({ route: p => `/${p}`, isCatalog: template === 'catalog', isMinimal: template === 'minimal', isVisual: template === 'visual' }) };
       if (name === '../ui') return { Badge: 'Badge' };
@@ -63,6 +70,7 @@ async function main() {
   const requests = [];
   const service = load('src/features/storefront/services/catalogService.ts', {
     require: name => {
+        if(name.includes('WholesaleQuote'))return {WholesaleQuote:'WholesaleQuote'};
       assert.ok(name.includes('initialLoad'));
       return { fetchInitialLoad: async url => { requests.push(url); return response(url.endsWith('/productos/') ? [summary] : details); } };
     },
@@ -105,7 +113,7 @@ async function main() {
       assert.equal(harness.cart[0].comparePrice, undefined);
       assert.equal(harness.cart[0].maxStock, 8);
       assert.equal(harness.cart[0].attributes.talla, 'L');
-      // Aunque se fuerce el evento de una opción disabled, no permite comprar stock cero.
+
       walk(tree, n => n.type === 'select')[0].props.onChange({ target: { value: 'QA-PANT-XL' } });
       tree = harness.render();
       add = walk(tree, n => n.type === 'button' && n.props['aria-label']?.startsWith('Agregar '))[0];
@@ -129,6 +137,11 @@ async function main() {
     const jsx = (type, props) => ({ type, props });
     const detail = load('src/features/storefront/pages/ProductDetail.tsx', {
       require: name => {
+        if(name.includes('WholesaleQuote'))return {WholesaleQuote:'WholesaleQuote'};
+        if (name.includes('StoreContext')) return { useStore: () => ({config:{}}) };
+        if (name.includes('seoService')) return { updateProductSeo: () => {} };
+        if (name.includes('metaPixelService')) return { trackMetaPixelEvent: () => {} };
+        if (name.includes('shared/components/states')) return { LoadingState: 'LoadingState', ErrorState: 'ErrorState', EmptyListState: 'EmptyListState' };
         if (name === 'react/jsx-runtime') return { jsx, jsxs: jsx };
         if (name === 'react') return { useEffect: () => {}, useState: () => {
           const index = cursor++;
@@ -136,7 +149,9 @@ async function main() {
         } };
         if (name === 'react-router-dom') return { Link: 'Link', useParams: () => ({ id: raw.slug }) };
         if (name.includes('mockData')) return { formatPrice: value => `CLP ${value}` };
-        if (name.includes('StockFeedback')) return { StockFeedback: 'StockFeedback' };
+        if (name.includes('ProductImageGallery')) return { ProductImageGallery: 'ProductImageGallery' };
+      if (name.includes('StockFeedback')) return { StockFeedback: 'StockFeedback' };
+        if (name.includes('QuantityControl')) return { QuantityControl: 'QuantityControl' };
       if (name.includes('CartContext')) return { useCart: () => ({ items: cart, addItem: item => cart.push(item) }) };
         if (name.includes('useStorefrontTemplate')) return { useStorefrontTemplate: () => ({ route: p => `/${p}`, isCatalog: template === 'catalog', isMinimal: template === 'minimal', isVisual: template === 'visual' }) };
         if (name.includes('components/ui')) return { Badge: 'Badge', Breadcrumb: 'Breadcrumb', Alert: 'Alert', Icon: 'Icon' };
@@ -149,7 +164,7 @@ async function main() {
     const render = () => { cursor = 0; return detail.default(); };
     let tree = render();
     assert.ok(text(tree).includes('Talla'));
-    assert.equal(walk(tree, n => n.type === 'button' && text(n) === 'XL')[0].props.disabled, true);
+    assert.equal(walk(tree, n => n.type === 'button' && text(n).startsWith('XL'))[0].props.disabled, true);
     walk(tree, n => n.type === 'button' && text(n) === 'L')[0].props.onClick();
     tree = render();
     assert.ok(text(tree).includes('QA-PANT-L'));
@@ -159,8 +174,14 @@ async function main() {
     assert.equal(buy.props.disabled, false);
     buy.props.onClick();
     assert.equal(cart[0].sku, 'QA-PANT-L');
+    assert.equal(cart[0].productId, raw.id, 'Detalle y carrito recargado comparten el ID Mongo, sin confundirlo con el slug');
     assert.equal(cart[0].maxStock, 8);
     assert.equal(cart[0].comparePrice, undefined);
+    cursor = 0;
+    const previewTree = detail.default({ previewProduct: product });
+    const previewBuy = walk(previewTree, n => n.type === 'button' && /Comprar|Agregar al carrito|Agregado al carrito/.test(text(n)))[0];
+    previewBuy.props.onClick();
+    assert.equal(cart.length, 1, 'El ejemplo reutiliza la vista pero nunca agrega al carrito real');
   }
 
   details = { ...raw, variantes: [
@@ -175,6 +196,7 @@ async function main() {
   const add = walk(h.render(), n => n.type === 'button')[0];
   add.props.onClick();
   assert.equal(h.cart[0].sku, 'RED-S');
+  assert.equal(h.cart[0].productId, raw.id);
 
   const filters = load('src/features/storefront/hooks/useAttributeFilters.ts', { require: () => ({}) });
   assert.equal(filters.matchesAttributeSelection(dynamic, { color: ['Rojo'], size: ['Pequeño'] }), true);

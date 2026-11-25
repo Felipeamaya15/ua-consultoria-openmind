@@ -2,9 +2,10 @@ const fs = require('node:fs'), path = require('node:path'), vm = require('node:v
 const assert = require('node:assert/strict'), ts = require('typescript');
 const root = path.resolve(__dirname, '..');
 function load(file, globals) {
+  if (file.endsWith('/authService.ts')) return require('./source-loader.cjs').load(file, {}, { sessionStorage: { getItem: () => null }, ...globals });
   const module = {exports: {}};
   const source = fs.readFileSync(path.join(root, file), 'utf8').replace('import.meta.env.VITE_API_URL', 'undefined');
-  vm.runInNewContext(ts.transpileModule(source, {compilerOptions: {target: ts.ScriptTarget.ES2020, module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX}}).outputText, {module, exports: module.exports, Error, ...globals});
+  vm.runInNewContext(ts.transpileModule(source, {compilerOptions: {target: ts.ScriptTarget.ES2020, module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX}}).outputText, {module, exports: module.exports, Error, sessionStorage: {getItem: () => null}, ...globals});
   return module.exports;
 }
 (async () => {
@@ -13,7 +14,7 @@ function load(file, globals) {
   await authService.getEntrepreneurProfile();
   await authService.updateEntrepreneurProfile('new@example.com');
   await authService.changeEntrepreneurPassword('old', 'new');
-  assert.equal(calls[0].url, 'http://localhost:8000/api/auth/emprendedor/perfil/');
+  assert.equal(calls[0].url, 'http://test/api/auth/emprendedor/perfil/');
   assert.equal(calls[0].options.headers.Authorization, 'Token token');
   assert.equal(calls[1].options.body, '{"email":"new@example.com"}');
   assert.equal(calls[1].options.method, 'PATCH');
@@ -23,34 +24,37 @@ function load(file, globals) {
 
   let states = [], index = 0, effects = [], deny = false, token = 'token';
   const jsx = (type, props) => ({type, props});
-  const service = {getEntrepreneurProfile: async () => {if (deny) throw Error('Denied'); return {email: 'owner@example.com'};}};
+  const service = {hasSession: () => !!token, getEntrepreneurProfile: async () => {if (deny) throw Error('Denied'); return {email: 'owner@example.com'};}};
   const {RequireAdmin} = load('src/features/admin/auth/RequireAdmin.tsx', {localStorage: {getItem: () => token}, require: id => {
     if (id === 'react/jsx-runtime') return {jsx, jsxs: jsx};
     if (id === 'react') return {useState: initial => {const i = index++; if (!(i in states)) states[i] = initial; return [states[i], value => {states[i] = value;}];}, useEffect: effect => effects.push(effect)};
-    if (id === 'react-router-dom') return {Navigate: 'Navigate', Outlet: 'Outlet'};
+    if (id === 'react-router-dom') return {Navigate: 'Navigate', Outlet: 'Outlet', useLocation: () => ({pathname: '/admin'})};
     if (id.includes('authService')) return {authService: service};
-    throw Error(id);
+    if (id.includes('shared/components/states')) return {LoadingState: 'LoadingState', ErrorState: 'ErrorState', EmptyListState: 'EmptyListState'}; if (id.includes('humanizeError')) return {humanizeAdminError: message => message}; throw Error(id);
   }});
   async function renderGuard() {
     states = []; index = 0; effects = [];
-    assert.equal(RequireAdmin().props.role, 'status'); // No panel mientras se verifica.
+    assert.equal(RequireAdmin().props.role, 'status');
     effects[0](); await new Promise(setImmediate); index = 0; return RequireAdmin();
   }
   assert.equal((await renderGuard()).type, 'Outlet');
   deny = true;
-  assert.equal((await renderGuard()).props.to, '/plantilla/1');
+  assert.equal((await renderGuard()).props.to, '/');
   token = null;
-  assert.equal((await renderGuard()).props.to, '/plantilla/1/ingresar');
+  assert.equal((await renderGuard()).props.to, '/ingresar');
 
-  // Vista emprendedor: datos remotos, persistencia confirmada y errores visibles.
+
   let fail = false, savedEmail, changedPassword;
-  Object.assign(service, {updateEntrepreneurProfile: async email => {if (fail) throw Error('No guardado'); savedEmail = email; return {email};}, changeEntrepreneurPassword: async (old, next) => {changedPassword = [old, next];}});
+  Object.assign(service, {getSessionStartedAt: () => null, updateEntrepreneurProfile: async email => {if (fail) throw Error('No guardado'); savedEmail = email; return {email};}, changeEntrepreneurPassword: async (old, next) => {changedPassword = [old, next];}});
   const {default: Profile} = load('src/features/admin/pages/Profile.tsx', {require: id => {
+    if (id === 'react-router-dom') return {useNavigate: () => () => {}};
+    if (id.includes('AdminContext')) return {useAdmin: () => ({config: {template: 'editorial'}})};
+    if (id.includes('navigation')) return {templatePaths: {editorial: '/plantilla/1'}};
     if (id === 'react/jsx-runtime') return {jsx, jsxs: jsx, Fragment: 'Fragment'};
     if (id === 'react') return {useState: initial => {const i = index++; if (!(i in states)) states[i] = initial; return [states[i], value => {states[i] = value;}];}, useEffect: effect => effects.push(effect)};
     if (id.includes('authService')) return {authService: service};
     if (id.includes('components/ui')) return {Input: 'Input', Button: 'Button', Alert: 'Alert'};
-    throw Error(id);
+    if (id.includes('shared/components/states')) return {LoadingState: 'LoadingState', ErrorState: 'ErrorState', EmptyListState: 'EmptyListState'}; if (id.includes('humanizeError')) return {humanizeAdminError: message => message}; throw Error(id);
   }});
   function nodes(tree, out = []) {if (Array.isArray(tree)) tree.forEach(x => nodes(x, out)); else if (tree && typeof tree === 'object') {out.push(tree); nodes(tree.props?.children, out);} else if (typeof tree === 'string') out.push(tree); return out;}
   function renderProfile() {index = 0; return nodes(Profile());}
@@ -64,6 +68,6 @@ function load(file, globals) {
   tree = renderProfile(); const inputs = tree.filter(x => x.type === 'Input');
   inputs[1].props.onChange({target: {value: 'old'}}); inputs[2].props.onChange({target: {value: 'new'}});
   await renderProfile().filter(x => x.type === 'form')[1].props.onSubmit({preventDefault() {}});
-  assert.deepEqual(changedPassword, ['old', 'new']); assert.ok(renderProfile().includes('Contraseña actualizada.'));
+  assert.deepEqual(changedPassword, ['old', 'new']); assert.ok(renderProfile().includes('Contrasena actualizada.'));
   console.log('OK: contrato Token emprendedor, guard propietario/cliente/visitante y formulario remoto con errores.');
 })().catch(error => {console.error(error); process.exitCode = 1;});

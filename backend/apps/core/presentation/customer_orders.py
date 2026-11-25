@@ -1,5 +1,5 @@
 from django.shortcuts import get_object_or_404
-from django.db.models import Prefetch
+from django.db.models import Prefetch, Q
 from rest_framework import serializers
 from rest_framework.authentication import TokenAuthentication
 from rest_framework.permissions import IsAuthenticated
@@ -7,6 +7,8 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.views import APIView
 from apps.authentication.presentation.profile import IsCustomer
 from apps.core.models import Pedido, ItemPedido
+from apps.core.infrastructure.expiracion_pedidos import liberar_vencidos_de_tienda, vence_en
+from apps.core.infrastructure.tenant import resolver_tienda
 from apps.core.presentation.responses import success_response
 
 
@@ -38,13 +40,19 @@ class OrderItemSerializer(serializers.ModelSerializer):
 class OrderSerializer(serializers.ModelSerializer):
     estado_etiqueta = serializers.CharField(source='get_estado_display')
     cantidad_productos = serializers.SerializerMethodField()
+    vence_en = serializers.SerializerMethodField()
 
     class Meta:
         model = Pedido
-        fields = ['id_pedido', 'fecha_creacion', 'estado', 'estado_etiqueta', 'monto_total', 'cantidad_productos']
+        fields = ['id_pedido', 'identificador', 'fecha_creacion', 'estado', 'estado_etiqueta', 'medio_pago', 'monto_total', 'cantidad_productos', 'vence_en']
 
     def get_cantidad_productos(self, order):
         return sum(item.cantidad for item in order.itempedido_set.all())
+
+    def get_vence_en(self, order):
+        """Fecha limite para pagar un pedido pendiente (ISO); None si no vence."""
+        limite = vence_en(order)
+        return limite.isoformat() if limite else None
 
 
 class OrderDetailSerializer(OrderSerializer):
@@ -56,7 +64,13 @@ class OrderDetailSerializer(OrderSerializer):
     def to_representation(self, order):
         result = super().to_representation(order)
         if order.clave_checkout:
-            result.update(medio_pago=order.medio_pago, entrega=order.entrega,
+            delivery=dict(order.entrega or {})
+            delivery.pop('pago_actividad_externo',None)
+            delivery.pop('_solicitud_factura', None)
+            delivery.pop('_grabaciones_acceso', None)
+            if isinstance(delivery.get('guia'), dict):
+                delivery['guia'] = {k: v for k, v in delivery['guia'].items() if k != 'etiqueta'}
+            result.update(medio_pago=order.medio_pago, entrega=delivery,
                           costo_envio=format(order.costo_envio, '.2f'), descuento=format(order.descuento, '.2f'))
         return result
 
@@ -68,8 +82,9 @@ class CustomerOrdersAPIView(APIView):
     def get(self, request, pedido_id=None):
         if any(key in request.query_params for key in ('user_id', 'id_usuario', 'comprador', 'comprador_id')):
             raise ValidationError('El comprador se determina exclusivamente desde la sesión autenticada.')
-        # Sin vínculo explícito, el pedido legado no pertenece a la sesión actual.
-        orders = Pedido.objects.filter(comprador=request.user).prefetch_related(
+        tienda = resolver_tienda(request)
+        liberar_vencidos_de_tienda(tienda.pk)
+        orders = Pedido.objects.filter(Q(tienda=tienda) | Q(tienda__isnull=True), comprador=request.user).prefetch_related(
             Prefetch('itempedido_set', queryset=ItemPedido.objects.select_related('id_producto'))
         ).order_by('-fecha_creacion', '-id_pedido')
         if pedido_id is not None:

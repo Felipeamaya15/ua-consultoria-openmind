@@ -1,21 +1,51 @@
 export interface BeneficioLanding {
   titulo: string;
   descripcion: string;
-  icono: 'truck' | 'lock' | 'return' | 'chat';
+  icono: import('./benefitIcons').BenefitIcon;
 }
 export interface ContactoLanding {
   telefono: string; whatsapp: string; correo: string; instagram: string;
   facebook: string; sitio_web: string; horario: string;
+  youtube?: string;
+  redes_sociales?: import('./socialProfiles').SocialMetadata;
 }
 export interface UbicacionLanding {
   direccion: string; comuna: string; ciudad: string; region: string; enlace_maps: string;
 }
+export type TipoBloqueLanding = 'historia' | 'imagen_texto' | 'texto' | 'galeria' | 'cita' | 'personalizada';
+export interface ImagenBloqueLanding { id: string; src: string; alt: string; video_recurso_id?: string }
+export interface BloqueLanding {
+  id: string; tipo: TipoBloqueLanding; visible: boolean;
+  titulo: string; subtitulo: string; texto: string; imagenes: ImagenBloqueLanding[];
+  nombre_interno?: string;
+  componentes?: import('./sectionElements').SectionElement[];
+  actividad?: import('./sectionElements').SectionActivity | null;
+}
 export interface ContenidoLanding {
+
+  carrusel_texto_modo?: 'unico' | 'por_imagen';
+
+  orden_apartados?: string[];
+
+  bloques?: BloqueLanding[];
+  apariencia_bloques?: Partial<Record<'editorial' | 'minimal' | 'visual' | 'catalog', import('../../storefront/visual/blockAppearance').BlockStyles>>;
   productos_destacados: string[];
   categorias: string[];
   beneficios: BeneficioLanding[];
   contacto: ContactoLanding;
   ubicacion: UbicacionLanding;
+}
+
+export interface CarouselSlideContent {
+  titulo?: string; descripcion?: string; texto_boton?: string; enlace?: string;
+  mostrar_titulo?: boolean; mostrar_descripcion?: boolean; mostrar_boton?: boolean;
+}
+export interface ImagenCarruselLanding {
+  tipo?: 'imagen' | 'video'; contenido?: CarouselSlideContent; recurso_id?: string;
+  id: string;
+  archivo: string;
+  orden: number;
+  texto_alternativo: string;
 }
 
 export interface LandingConfig {
@@ -25,6 +55,7 @@ export interface LandingConfig {
   descripcion: string;
   texto_boton: string;
   imagen_principal: string | null;
+  imagenes_carrusel?: ImagenCarruselLanding[];
   logo: string | null;
   secciones: Record<string, boolean>;
   contenido?: Partial<ContenidoLanding>;

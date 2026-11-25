@@ -1,13 +1,14 @@
 const API_BASE = (import.meta.env.VITE_API_URL || 'http://localhost:8000').replace(/\/+$/, '');
 
 export const transbankPaymentService = {
-  async iniciarPago(idTienda: number, ordenCompra: string, monto: number, returnUrl: string) {
+  async iniciarPago(idTienda: number, ordenCompra: string, monto: number, returnUrl: string, email: string) {
     const res = await fetch(`${API_BASE}/api/catalog/pagos/transbank/iniciar/`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         id_tienda: idTienda,
         orden_compra: ordenCompra,
+        email: email.trim(),
         monto: Math.round(monto),
         session_id: `SES-${Date.now()}`,
         return_url: returnUrl,
@@ -27,8 +28,16 @@ export const transbankPaymentService = {
     });
     return res.json();
   },
+  async pagoAbortado(idTienda: number, tbkToken: string) {
+    const res = await fetch(`${API_BASE}/api/catalog/pagos/transbank/abortado/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id_tienda: idTienda, tbk_token: tbkToken }),
+    });
+    return res.json();
+  },
 
-  // Redirige al cliente a la pantalla oficial de Webpay Plus
+
   redirigirAWebpay(url: string, token: string) {
     const form = document.createElement('form');
     form.method = 'POST';

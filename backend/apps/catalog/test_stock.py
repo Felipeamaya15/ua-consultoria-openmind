@@ -10,7 +10,7 @@ from apps.core.infrastructure.mongo_client import get_mongo_client
 
 
 class MongoStockContract:
-    """Mismo contrato para los dos caminos de importación existentes."""
+    """Contrato del repositorio canónico; el alias retirado no duplica esta suite."""
     tienda_id = '37'
 
     def setUp(self):
@@ -116,7 +116,3 @@ class MongoStockContract:
 
 class MongoStockTests(MongoStockContract, SimpleTestCase):
     repository_module = 'apps.catalog.infrastructure.repositories'
-
-
-class MongoStockAlternateRepositoryTests(MongoStockContract, SimpleTestCase):
-    repository_module = 'apps.catalog.application.infrastructure.repositories'

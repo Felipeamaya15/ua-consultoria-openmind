@@ -127,3 +127,17 @@ class ContenidoLandingTests(TestCase):
     def test_banderas_deben_ser_booleanos(self):
         self.payload['secciones'] = {'Beneficios': 'false'}
         self.assertEqual(self.put().status_code, 400)
+
+    def test_iconos_ampliados_conservan_contrato_y_guardado(self):
+        from apps.landing.content_serializers import BeneficioSerializer
+        for icon in BeneficioSerializer().fields['icono'].choices:
+            with self.subTest(icon=icon):
+                self.payload['contenido']['beneficios'] = [{'titulo': 'Beneficio propio', 'icono': icon}]
+                response = self.put()
+                self.assertIn(response.status_code, (200, 201), response.data)
+                loaded = self.client.get(self.url)
+                self.assertEqual(loaded.data['data']['contenido']['beneficios'][0]['icono'], icon)
+        self.payload['contenido']['beneficios'] = []
+        self.assertEqual(self.put().status_code, 200)
+        self.payload['contenido']['beneficios'] = [{'titulo': 'Inválido', 'icono': 'unknown'}]
+        self.assertEqual(self.put().status_code, 400)

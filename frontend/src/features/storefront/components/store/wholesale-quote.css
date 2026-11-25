@@ -1,0 +1,20 @@
+/* Componente de cotización responsive y compatible con las cuatro plantillas. */
+.om-wholesale{margin:1.25rem 0;border:1px solid var(--visual-global-border,#b9a3bd);border-radius:12px;overflow:hidden;min-width:0;color:var(--visual-page-color,inherit)}
+.om-wholesale__toggle{display:flex;width:100%;min-height:48px;justify-content:space-between;align-items:center;gap:1rem;padding:.85rem 1rem;border:0;border-radius:0;background:color-mix(in srgb,var(--primary,#965f93) 40%,#26687b 60%);color:#fff;font-weight:700;text-align:left;cursor:pointer}
+.om-wholesale__toggle:hover,.om-wholesale__toggle:focus-visible{filter:brightness(.93)}
+.om-wholesale__toggle:focus-visible,.om-wholesale__submit:focus-visible,.om-wholesale__consent input:focus-visible{outline:3px solid #185c7d;outline-offset:3px}
+.om-wholesale__toggle span{font-size:1.35rem;line-height:1}
+.om-wholesale__form{display:grid;gap:1rem;min-width:0;padding:clamp(.75rem,3vw,1.5rem);background:var(--visual-page-panel-background,#fff)}
+.om-wholesale__fields{display:grid;gap:1rem;min-width:0;border:0;margin:0;padding:0}
+.om-wholesale__fields legend{font-weight:700;margin-bottom:.6rem;overflow-wrap:anywhere}
+.om-wholesale__fields>label:not(.om-wholesale__consent){display:grid;gap:.35rem;min-width:0;font-weight:500}
+.om-wholesale__fields input:not([type=checkbox]),.om-wholesale__fields textarea{box-sizing:border-box;display:block;width:100%;min-width:0;min-height:44px;padding:.65rem .75rem;border:1px solid color-mix(in srgb,var(--visual-global-border,#a4a4a4) 75%,#888);border-radius:8px;background:var(--visual-page-panel-background,#fff);color:inherit;font:inherit}
+.om-wholesale__fields textarea{resize:vertical}
+.om-wholesale__consent{display:flex;gap:.85rem;align-items:flex-start;cursor:pointer;padding:.45rem 0;min-width:0;line-height:1.5}
+.om-wholesale__consent input{appearance:auto;flex:0 0 23px;width:23px;height:23px;min-width:23px;min-height:23px;margin:0;accent-color:var(--primary,#804c7f);cursor:pointer}
+.om-wholesale__consent span{min-width:0;overflow-wrap:anywhere}
+.om-wholesale__submit{width:100%;min-height:48px;padding:.65rem 1rem;border:0;border-radius:10px;background:var(--primary,#804c7f);color:var(--on-primary,#fff);font-weight:700;cursor:pointer}
+.om-wholesale__submit:disabled{opacity:.53;cursor:not-allowed}
+.om-wholesale__hint{margin:0;font-size:.875rem;opacity:.8}
+.om-wholesale__message{overflow-wrap:anywhere;margin:0}
+@media(max-width:420px){.om-wholesale__form{padding:.75rem}.om-wholesale__consent{gap:.75rem}}

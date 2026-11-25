@@ -43,4 +43,9 @@ class LinkifyAdapter:
             hashlib.sha256,
         ).hexdigest()
 
-        return hmac.compare_digest(firma_calculada, firma_recibida)
+        try:
+            return hmac.compare_digest(digest.hex(), firma.lower()) or hmac.compare_digest(
+                base64.b64encode(digest).decode("ascii"), firma
+            )
+        except TypeError:
+            return False

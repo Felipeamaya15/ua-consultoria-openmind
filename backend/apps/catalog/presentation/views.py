@@ -10,18 +10,15 @@ from pymongo.errors import DuplicateKeyError, PyMongoError
 from bson import ObjectId
 
 
-# 1. Framework & Librerías de terceros (DRF)
 from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from apps.authentication.permissions import IsStoreOwner
 from rest_framework.views import APIView
 
-# 2. Módulos Core (Infraestructura, Modelos y Respuestas comunes)
 from apps.core.infrastructure.tenant import resolver_tienda, resolver_tienda_id
 from apps.core.presentation.responses import error_response, success_response
 
-# 3. Catálogo - Capa de Dominio (Excepciones)
 from apps.catalog.domain.exceptions import (
     CantidadInvalidaException,
     ItemCarritoNoEncontradoException,
@@ -30,13 +27,12 @@ from apps.catalog.domain.exceptions import (
     VarianteNoEncontradaException,
     ConfiguracionPagoInvalidaException,
     TiendaNoAutorizadaException,
-    # Nuevas excepciones - Adaptador Transbank
     TransbankTransaccionException,
+    TransbankServicioNoDisponibleException,
     TransbankRechazoException,
     TransbankConfiguracionFaltanteException,
 )
 
-# 4. Catálogo - Capa de Aplicación (Servicios y Casos de Uso)
 from apps.catalog.application.services import VariantService
 from apps.catalog.application.use_cases import (
     ActualizarProductoAdminUseCase,
@@ -56,32 +52,29 @@ from apps.catalog.application.use_cases import (
     ModificarCantidadItemUseCase,
     ObtenerConfiguracionTransbankUseCase,
     ObtenerProductoAdminUseCase,
+    HardDeleteProductUseCase,
     SoftDeleteProductUseCase,
     ValidarDisponibilidadProductoUseCase,
-    # Nuevos Casos de Uso y DTOs - Adaptador Transbank
     IniciarPagoTransbankDTO,
     IniciarPagoTransbankUseCase,
     ConfirmarPagoTransbankUseCase,
-    #PayPal
+    RegistrarPagoAbortadoTransbankUseCase,
     GuardarConfiguracionPayPalDTO,
     ObtenerConfiguracionPayPalUseCase,
     GuardarConfiguracionPayPalUseCase,
-    #MercadoPago
     GuardarConfiguracionMercadoPagoDTO,
     ObtenerConfiguracionMercadoPagoUseCase,
     GuardarConfiguracionMercadoPagoUseCase,
 
 )
 
-# 5. Catálogo - Capa de Infraestructura (Repositorios y Filtros)
 from apps.catalog.infrastructure.attribute_filters import (
     FiltrosAtributosInvalidos,
     parse_attribute_params,
 )
 from apps.catalog.infrastructure.repositories import ProductRepository
 
-# 6. Catálogo - Capa de Presentación (Serializadores)
-from .serializers import AgregarItemCarritoRequestSerializer, ConfiguracionTransbankInputSerializer, ConfiguracionTransbankResponseSerializer, ItemCarritoResponseSerializer, ModificarCantidadRequestSerializer, ProductoAdminDetailSerializer, ProductoCreateSerializer, ProductoStockUpdateSerializer, ProductoUpdateSerializer, VarianteStockUpdateSerializer, IniciarPagoTransbankSerializer, ConfirmarPagoTransbankSerializer, ConfiguracionPayPalInputSerializer, ConfiguracionPayPalResponseSerializer, ConfiguracionMercadoPagoInputSerializer, ConfiguracionMercadoPagoResponseSerializer
+from .serializers import AgregarItemCarritoRequestSerializer, ConfiguracionTransbankInputSerializer, ConfiguracionTransbankResponseSerializer, ItemCarritoResponseSerializer, ModificarCantidadRequestSerializer, ProductoAdminDetailSerializer, ProductoCreateSerializer, ProductoStockUpdateSerializer, ProductoUpdateSerializer, VarianteStockUpdateSerializer, IniciarPagoTransbankSerializer, ConfirmarPagoTransbankSerializer, PagoAbortadoTransbankSerializer, ConfiguracionPayPalInputSerializer, ConfiguracionPayPalResponseSerializer, ConfiguracionMercadoPagoInputSerializer, ConfiguracionMercadoPagoResponseSerializer
 
 
 class StorePaymentConfigurationView(APIView):
@@ -153,20 +146,6 @@ class ConfiguracionMercadoPagoView(StorePaymentConfigurationView):
             )
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 class ConfiguracionPayPalView(StorePaymentConfigurationView):
     """
     GET: Consulta la configuración actual de PayPal para la tienda.
@@ -224,13 +203,6 @@ class ConfiguracionPayPalView(StorePaymentConfigurationView):
                 },
                 status=status.HTTP_400_BAD_REQUEST,
             )
-
-
-
-
-
-
-
 
 
 class ConfiguracionTransbankView(StorePaymentConfigurationView):
@@ -319,13 +291,9 @@ class ConfiguracionTransbankView(StorePaymentConfigurationView):
             )
         except Exception as e:
             return Response(
-                {"exito": False, "mensaje": f"Error interno: {str(e)}", "error": {"codigo": "ERROR_INTERNO", "detalles": None}},
+                {"exito": False, "mensaje": "No se pudo guardar la configuración de Webpay.", "error": {"codigo": "ERROR_INTERNO", "detalles": None}},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
-
-
-
-
 
 
 class CarritoItemsView(APIView):
@@ -337,7 +305,7 @@ class CarritoItemsView(APIView):
 
     def get(self, request, *args, **kwargs):
         """Recupera los ítems del carrito del usuario autenticado."""
-        items = ConsultarCarritoUseCase().execute(request.user.id)
+        items = ConsultarCarritoUseCase().execute(request.user.id, resolver_tienda_id(request))
         data = ItemCarritoResponseSerializer(items, many=True).data
         return success_response(
             data=data,
@@ -369,7 +337,7 @@ class CarritoItemsView(APIView):
             cantidad=serializer.validated_data.get("cantidad", 1),
             sku=serializer.validated_data.get("sku"),
             slug=slug,
-            tienda_id=resolver_tienda_id(request) if id_producto is None else None,
+            tienda_id=resolver_tienda_id(request),
         )
 
         use_case = AgregarItemCarritoUseCase()
@@ -402,7 +370,7 @@ class CarritoItemsView(APIView):
             )
         except Exception as e:
             return Response(
-                {"exito": False, "mensaje": f"Error interno: {str(e)}", "error": {"codigo": "ERROR_INTERNO", "detalles": None}},
+                {"exito": False, "mensaje": "No se pudo procesar el carrito.", "error": {"codigo": "ERROR_INTERNO", "detalles": None}},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
@@ -420,7 +388,8 @@ class ModificarCantidadItemAPIView(APIView):
         dto = ModificarCantidadDTO(
             id_item_carrito=id_item_carrito,
             nueva_cantidad=serializer.validated_data['cantidad'],
-            usuario_id=request.user.id
+            usuario_id=request.user.id,
+            tienda_id=resolver_tienda_id(request),
         )
 
         use_case = ModificarCantidadItemUseCase()
@@ -451,7 +420,8 @@ class ModificarCantidadItemAPIView(APIView):
         """
         dto = EliminarItemCarritoDTO(
             usuario_id=request.user.id,
-            id_item_carrito=id_item_carrito
+            id_item_carrito=id_item_carrito,
+            tienda_id=resolver_tienda_id(request),
         )
 
         use_case = EliminarItemCarritoUseCase()
@@ -702,13 +672,54 @@ class ProductDeleteAPIView(APIView):
             )
 
 
+class ProductPermanentDeleteAPIView(APIView):
+    """Elimina definitivamente un producto del catálogo preservando las ventas históricas."""
+
+    permission_classes = [IsAuthenticated]
+
+    def delete(self, request, id_producto):
+        tienda_id = resolver_tienda_id(request, exigir_propietario=True)
+        confirmacion = (
+            request.data.get("confirmacion")
+            if isinstance(request.data, dict)
+            else None
+        ) or request.query_params.get("confirmacion")
+
+        try:
+            use_case = HardDeleteProductUseCase()
+            resultado = use_case.execute(
+                id_producto=id_producto,
+                tienda_id=tienda_id,
+                confirmacion=confirmacion,
+            )
+            return success_response(mensaje=resultado["mensaje"])
+        except LookupError as e:
+            return error_response(
+                mensaje=str(e),
+                codigo="PRODUCTO_NO_ENCONTRADO",
+                status=404,
+            )
+        except ValueError as e:
+            return error_response(
+                mensaje=str(e),
+                codigo="CONFIRMACION_INVALIDA",
+                status=400,
+            )
+        except Exception:
+            return error_response(
+                mensaje="Ocurrió un error interno al intentar eliminar definitivamente el producto",
+                codigo="ERROR_INTERNO",
+                status=500,
+            )
+
+
 class ProductoCreateView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
         tienda = resolver_tienda(request, exigir_propietario=True)
 
-        serializer = ProductCreateSerializer(data=request.data)
+        serializer = ProductCreateSerializer(data=request.data, context={"tienda_id": str(tienda.pk)})
         serializer.is_valid(raise_exception=True)
         try:
             product_id = CreateProductUseCase(ProductRepository()).execute(
@@ -821,8 +832,13 @@ class ProductoUpdateView(APIView):
             revision = request.data.get('revision')
             if not isinstance(revision, str) or not revision:
                 return error_response("Recarga el producto antes de editar: falta revision.", "ERROR_VALIDACION")
-            # Validar el documento completo también para PATCH; no perder campos omitidos.
-            serializer = ProductCreateSerializer(data={**original, **request.data})
+            serializer = ProductCreateSerializer(
+                data={**original, **request.data},
+                context={
+                    "existing_images": set(original.get("imagenes") or []),
+                    "tienda_id": tienda_id,
+                },
+            )
             serializer.is_valid(raise_exception=True)
             fields = {key: value for key, value in serializer.validated_data.items()
                       if request.method == 'PUT' or key in request.data}
@@ -929,7 +945,24 @@ class ValidarDisponibilidadAPIView(APIView):
 
             )
 
-class ProductVariantsView(APIView):
+class VariantTenantMixin:
+    def initial(self, request, *args, **kwargs):
+        super().initial(request, *args, **kwargs)
+        from apps.catalog.domain.stock import validate_stock
+        from rest_framework.exceptions import ValidationError
+        tienda_id = resolver_tienda_id(request, exigir_propietario=request.method in ('PUT', 'PATCH', 'DELETE')
+                                       or request.method == 'POST')
+        if request.method in ('POST', 'PUT', 'PATCH'):
+            for field in ('stock', 'cantidad'):
+                if field in request.data:
+                    try:
+                        validate_stock(request.data[field])
+                    except ValueError as error:
+                        raise ValidationError({field: str(error)}) from error
+        self.service = VariantService(tienda_id=tienda_id)
+
+
+class ProductVariantsView(VariantTenantMixin, APIView):
 
     """
 
@@ -956,7 +989,6 @@ class ProductVariantsView(APIView):
 
         try:
 
-            # Si la ruta incluye SKU, retorna esa variante específica
 
             if sku:
 
@@ -964,8 +996,6 @@ class ProductVariantsView(APIView):
 
                 return Response(variante, status=status.HTTP_200_OK)
 
-
-            # Si no hay SKU, lista todas las variantes del producto
 
             variantes = self.service.get_variants(pid)
 
@@ -1099,8 +1129,6 @@ class ProductVariantsView(APIView):
             )
 
 
-        # Validaciones para el caso de datos inválidos (HTTP 400)
-
         errores = {}
 
 
@@ -1152,8 +1180,6 @@ class ProductVariantsView(APIView):
 
             )
 
-
-        # Campos permitidos para edición
 
         campos_permitidos = [
             "precio",
@@ -1302,7 +1328,6 @@ class ProductVariantsView(APIView):
 
                     )
 
-                # Rechazo controlado cuando el stock es 0 o insuficiente
 
                 return Response(
 
@@ -1325,8 +1350,6 @@ class ProductVariantsView(APIView):
 
         data = request.data
 
-
-        # --- 1. Validaciones para el caso inválido de QA (HTTP 400) ---
 
         errores = {}
 
@@ -1402,8 +1425,6 @@ class ProductVariantsView(APIView):
             )
 
 
-        # --- 2. Persistencia con VariantService (HTTP 201) ---
-
         payload = {
 
             "sku": str(data["sku"]).strip().upper(),
@@ -1461,7 +1482,7 @@ class ProductVariantsView(APIView):
 
             )
 
-class VariantPurchaseView(APIView):
+class VariantPurchaseView(VariantTenantMixin, APIView):
 
     """
 
@@ -1469,7 +1490,7 @@ class VariantPurchaseView(APIView):
 
     """
 
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
 
 
     def __init__(self, **kwargs):
@@ -1556,6 +1577,54 @@ class VariantPurchaseView(APIView):
             return Response({"error": f"Error interno: {str(e)}", "codigo": "ERROR_INTERNO"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
+def url_retorno_webpay(request, destino: str) -> str:
+    """URL de retorno enviada a Webpay: endpoint del backend que acepta POST/GET y redirige a `destino`."""
+    from urllib.parse import urlencode
+    from django.urls import reverse
+    base = request.build_absolute_uri(reverse("pago-transbank-retorno"))
+    return f"{base}?{urlencode({'destino': destino})}"
+
+
+class RetornoTransbankView(APIView):
+    """
+    Puente de retorno desde Webpay
+    """
+    permission_classes = [AllowAny]
+    authentication_classes = []
+    PARAMETROS = ("token_ws", "TBK_TOKEN", "TBK_ORDEN_COMPRA", "TBK_ID_SESION")
+
+    def _redirigir(self, request):
+        from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit, unquote
+        from django.http import HttpResponse
+        destino = request.query_params.get("destino", "")
+        # Compatibilidad con retornos de Webpay doblemente codificados.
+        # La validacion posterior sigue restringiendo el destino.
+        if destino.lower().startswith(("http%3a%2f%2f", "https%3a%2f%2f")):
+            destino = unquote(destino)
+        try:
+            destino = IniciarPagoTransbankSerializer().validate_return_url(destino)
+        except Exception:
+            return error_response("Destino de retorno no válido.", "DATOS_INVALIDOS", status=400)
+        recibidos = {}
+        for fuente in (request.query_params, request._request.POST):
+            for clave in self.PARAMETROS:
+                valor = fuente.get(clave)
+                if valor:
+                    recibidos[clave] = str(valor)[:512]
+        partes = urlsplit(destino)
+        consulta = [par for par in parse_qsl(partes.query) if par[0] not in self.PARAMETROS]
+        consulta += list(recibidos.items())
+        respuesta = HttpResponse(status=303)
+        respuesta["Location"] = urlunsplit(partes._replace(query=urlencode(consulta)))
+        return respuesta
+
+    def get(self, request):
+        return self._redirigir(request)
+
+    def post(self, request):
+        return self._redirigir(request)
+
+
 class IniciarPagoTransbankView(APIView):
     """
     Inicia la transacción contra Transbank para el checkout.
@@ -1564,6 +1633,7 @@ class IniciarPagoTransbankView(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
+        resolver_tienda(request)
         serializer = IniciarPagoTransbankSerializer(data=request.data)
         if not serializer.is_valid():
             return Response(
@@ -1580,7 +1650,8 @@ class IniciarPagoTransbankView(APIView):
             orden_compra=serializer.validated_data["orden_compra"],
             monto=serializer.validated_data["monto"],
             session_id=serializer.validated_data["session_id"],
-            return_url=serializer.validated_data["return_url"],
+            return_url=url_retorno_webpay(request, serializer.validated_data["return_url"]),
+            email=serializer.validated_data["email"],
         )
 
         use_case = IniciarPagoTransbankUseCase()
@@ -1594,11 +1665,17 @@ class IniciarPagoTransbankView(APIView):
                 },
                 status=status.HTTP_200_OK,
             )
+        except ConfiguracionPagoInvalidaException as e:
+            return error_response(mensaje=str(e), codigo="DATOS_INVALIDOS", status=status.HTTP_400_BAD_REQUEST)
         except TransbankConfiguracionFaltanteException as e:
             return Response(
                 {"exito": False, "mensaje": str(e), "error": {"codigo": "PASARELA_NO_DISPONIBLE", "detalles": None}},
                 status=status.HTTP_400_BAD_REQUEST,
             )
+        except TransbankServicioNoDisponibleException as e:
+            respuesta = error_response(str(e), "PASARELA_TEMPORALMENTE_NO_DISPONIBLE", status=503)
+            respuesta["Retry-After"] = "30"
+            return respuesta
         except TransbankTransaccionException as e:
             return Response(
                 {"exito": False, "mensaje": str(e), "error": {"codigo": "ERROR_TRANSBANK", "detalles": None}},
@@ -1614,6 +1691,7 @@ class ConfirmarPagoTransbankView(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
+        resolver_tienda(request)
         serializer = ConfirmarPagoTransbankSerializer(data=request.data)
         if not serializer.is_valid():
             return Response(
@@ -1644,11 +1722,40 @@ class ConfirmarPagoTransbankView(APIView):
                 {"exito": False, "mensaje": str(e), "error": {"codigo": "PAGO_RECHAZADO", "detalles": None}},
                 status=status.HTTP_400_BAD_REQUEST,
             )
+        except TransbankServicioNoDisponibleException as e:
+            respuesta = error_response(str(e), "PASARELA_TEMPORALMENTE_NO_DISPONIBLE", status=503)
+            respuesta["Retry-After"] = "30"
+            return respuesta
         except (TransbankConfiguracionFaltanteException, TransbankTransaccionException) as e:
             return Response(
                 {"exito": False, "mensaje": str(e), "error": {"codigo": "ERROR_TRANSBANK", "detalles": None}},
                 status=status.HTTP_502_BAD_GATEWAY,
             )
+
+class PagoAbortadoTransbankView(APIView):
+    """
+    El comprador anuló el pago en Webpay: avisa por correo que el pago no se completó.
+    POST /api/catalog/pagos/transbank/abortado/
+    """
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        resolver_tienda(request)
+        serializer = PagoAbortadoTransbankSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(
+                {
+                    "exito": False,
+                    "mensaje": "Parámetros de anulación inválidos.",
+                    "error": {"codigo": "DATOS_INVALIDOS", "detalles": serializer.errors},
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        RegistrarPagoAbortadoTransbankUseCase().execute(
+            serializer.validated_data["id_tienda"], serializer.validated_data["tbk_token"]
+        )
+        return Response({"exito": True, "mensaje": "Anulación del pago registrada."}, status=status.HTTP_200_OK)
+
 
 class ProductoAdminListView(APIView):
     permission_classes = [IsAuthenticated, IsStoreOwner]

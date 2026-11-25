@@ -1,0 +1,69 @@
+import logging
+
+from rest_framework import serializers
+from rest_framework.exceptions import APIException
+from rest_framework.permissions import AllowAny
+from rest_framework.views import APIView
+
+from apps.authentication.presentation.profile import StrictSerializer
+from apps.core.infrastructure.tenant import resolver_tienda
+from apps.core.presentation.responses import error_response, success_response
+from apps.core.shipping import ErrorCotizacion, issue_quote
+
+logger = logging.getLogger(__name__)
+
+
+class ErroresDeCotizacionMixin:
+    """Responde los ErrorCotizacion con el formato estandar {exito, mensaje, error{codigo, detalles}}.
+
+    Se aplica solo a las vistas donde importa (cotizar y confirmar el pedido): el manejador
+    global de errores no esta activado en settings y activarlo cambiaria toda la API.
+    """
+
+    def handle_exception(self, exc):
+        if isinstance(exc, ErrorCotizacion):
+            return error_response(exc.mensaje_error, exc.codigo_error, exc.detail)
+        return super().handle_exception(exc)
+
+
+class ShippingQuoteItemSerializer(StrictSerializer):
+    producto_id = serializers.CharField(max_length=100)
+    sku = serializers.CharField(max_length=100)
+    cantidad = serializers.IntegerField(min_value=1, max_value=100000)
+
+    def to_internal_value(self, data):
+        if isinstance(data, dict) and type(data.get('cantidad')) is not int:
+            raise serializers.ValidationError({'cantidad': 'La cantidad debe ser un entero positivo.'})
+        return super().to_internal_value(data)
+
+
+class ShippingQuoteSerializer(StrictSerializer):
+    operador = serializers.ChoiceField(choices=['Chilexpress', 'Starken'])
+    region = serializers.CharField(max_length=100)
+    comuna = serializers.CharField(max_length=100)
+    sector = serializers.CharField(max_length=20, required=False, allow_blank=True)
+    items = ShippingQuoteItemSerializer(many=True, required=False, max_length=100)
+
+
+class ShippingQuoteAPIView(ErroresDeCotizacionMixin, APIView):
+    authentication_classes = []
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        tienda = resolver_tienda(request)
+        serializer = ShippingQuoteSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            quote = issue_quote(tienda, **serializer.validated_data)
+        except ErrorCotizacion as error:
+            logger.info("Cotizacion de envio rechazada: codigo=%s tienda=%s operador=%s",error.codigo_error,
+                tienda.pk,serializer.validated_data.get("operador"),
+            )
+            raise
+        except APIException:
+            raise
+        except Exception:  # noqa: BLE001 - el comprador nunca debe ver un error tecnico
+            logger.exception('Cotizacion de envio: error inesperado (tienda=%s)', tienda.pk)
+            return error_response('No pudimos obtener la tarifa de envío en este momento. Intenta nuevamente.',
+                                  'ERROR_COTIZACION', status=500)
+        return success_response(data={'tarifas': [quote]})

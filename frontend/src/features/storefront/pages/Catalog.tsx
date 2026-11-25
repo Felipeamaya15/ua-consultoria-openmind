@@ -1,3 +1,5 @@
+import { VISUAL_SECTION } from '../visual/sectionIds';
+import { ErrorState, LoadingState } from '../../../shared/components/states';
 import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 
@@ -34,6 +36,7 @@ export default function Catalog() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -55,7 +58,7 @@ export default function Catalog() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [attempt]);
 
   const categories = useMemo(() => {
     const unique = Array.from(
@@ -234,54 +237,47 @@ export default function Catalog() {
 
   if (loading) {
     return (
-      <div className="max-w-7xl mx-auto px-4 py-20 text-center text-sm text-[var(--muted-foreground)]">
-        Cargando catálogo...
-      </div>
+      <LoadingState spacing="none" className="max-w-7xl mx-auto px-4 py-20">Cargando catálogo...</LoadingState>
     );
   }
 
   if (loadError) {
     return (
-      <div className="max-w-7xl mx-auto px-4 py-20 text-center">
-        <p className="text-sm text-[var(--muted-foreground)]">
-          No pudimos cargar el catálogo. Intenta recargar la página.
-        </p>
+      <div className="max-w-7xl mx-auto px-4 py-20">
+        <ErrorState onRetry={() => { setLoadError(false); setLoading(true); setAttempt(n => n + 1); }}>
+          No pudimos cargar el catálogo. Intenta nuevamente.
+        </ErrorState>
       </div>
     );
   }
 
-  /*
-   * ==========================================================
-   * PLANTILLA 4 — CATALOG / DARK EDITORIAL
-   * ==========================================================
-   */
 
   if (isCatalog) {
     return (
-      <div className="bg-[#050505] text-white">
-        <section className="max-w-[1160px] mx-auto px-5 pt-10 md:pt-14 pb-20 md:pb-28">
-          {/* CABECERA */}
-          <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-7 mb-9">
-            <div>
-              <p className="text-[#ff5a1f] text-[10px] font-extrabold uppercase tracking-[0.16em] mb-3">
+      <div data-catalog-page="catalog" data-visual-section={VISUAL_SECTION.catalog} data-visual-catalog className="bg-[var(--visual-background)] text-[var(--visual-text)] min-w-0">
+        <section className="max-w-[1160px] mx-auto px-4 sm:px-5 pt-8 sm:pt-10 md:pt-14 pb-16 sm:pb-20 md:pb-28">
+
+          <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-5 sm:gap-7 mb-7 sm:mb-9">
+            <div className="min-w-0">
+              <p className="text-[var(--accent)] text-[10px] font-extrabold uppercase tracking-[0.16em] mb-3">
                 Explora la colección
               </p>
 
-              <h1 className="text-[44px] sm:text-[56px] md:text-[64px] leading-[0.94] tracking-[-0.05em] font-black">
+              <h1 className="text-[36px] sm:text-[56px] md:text-[64px] leading-[0.94] tracking-[-0.05em] font-black break-words">
                 Catálogo.
               </h1>
 
-              <p className="mt-4 text-[13px] text-white/45">
+              <p className="mt-3 sm:mt-4 text-[13px] text-[var(--visual-muted)]">
                 {filtered.length}{' '}
                 {filtered.length === 1 ? 'producto disponible' : 'productos disponibles'}
               </p>
             </div>
 
-            <div className="flex flex-wrap items-center gap-2">
-              <div className="relative flex-1 sm:flex-none">
+            <div data-catalog-toolbar className="flex flex-wrap items-center gap-2 w-full lg:w-auto">
+              <div data-catalog-search className="relative w-full sm:w-auto sm:flex-none">
                 <Icon
                   name="search"
-                  className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-black/35 pointer-events-none"
+                  className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-black/60 pointer-events-none"
                 />
 
                 <input
@@ -292,7 +288,7 @@ export default function Catalog() {
                   }}
                   aria-label="Buscar productos"
                   placeholder="Buscar productos..."
-                  className="h-11 w-full sm:w-[230px] rounded-[10px] bg-white pl-11 pr-4 text-[12px] text-[#151515] placeholder:text-black/35 outline-none ring-1 ring-transparent focus:ring-[#1683ff]"
+                  className="h-11 w-full sm:w-[230px] rounded-[10px] bg-white pl-11 pr-4 text-[12px] text-[#151515] placeholder:text-black/60 outline-none ring-1 ring-transparent focus:ring-[var(--primary)]"
                 />
               </div>
 
@@ -300,7 +296,7 @@ export default function Catalog() {
                 aria-label="Ordenar productos"
                 value={sort}
                 onChange={(event) => setSort(event.target.value)}
-                className="h-11 rounded-[10px] bg-white px-4 text-[12px] font-medium text-[#151515] outline-none"
+                className="h-11 flex-1 sm:flex-initial min-w-0 rounded-[10px] bg-white px-4 text-[12px] font-medium text-[#151515] outline-none"
               >
                 {SORT_OPTIONS.map((option) => (
                   <option key={option.value} value={option.value}>
@@ -309,7 +305,7 @@ export default function Catalog() {
                 ))}
               </select>
 
-              <div className="flex h-11 overflow-hidden rounded-[10px] bg-[#202022] ring-1 ring-white/10">
+              <div className="flex h-11 shrink-0 overflow-hidden rounded-[10px] bg-[var(--visual-surface)] ring-1 ring-[var(--visual-border)]">
                 {(['grid', 'list'] as const).map((view) => (
                   <button
                     type="button"
@@ -318,8 +314,8 @@ export default function Catalog() {
                     aria-label={view === 'grid' ? 'Vista en grilla' : 'Vista en lista'}
                     className={`w-11 flex items-center justify-center transition-colors ${
                       viewMode === view
-                        ? 'bg-[#1683ff] text-white'
-                        : 'text-white/45 hover:text-white'
+                        ? 'bg-[var(--primary)] text-[var(--on-primary)]'
+                        : 'text-[var(--visual-muted)] hover:text-[var(--visual-text)]'
                     }`}
                   >
                     <Icon
@@ -334,23 +330,23 @@ export default function Catalog() {
 
           <button
             type="button"
-            className="md:hidden mb-5 h-10 rounded-full border border-white/15 px-5 text-[11px] font-semibold text-white"
-            aria-expanded={filtersOpen}
+            className="md:hidden mb-5 min-h-11 w-full sm:w-auto justify-center items-center rounded-full border border-[var(--visual-border)] px-5 text-[12px] font-semibold text-[var(--visual-text)]"
+            data-visual-part="catalogFiltersToggle" aria-expanded={filtersOpen}
             onClick={() => setFiltersOpen(!filtersOpen)}
           >
             Filtros{activeFiltersCount > 0 && ` (${activeFiltersCount})`} {filtersOpen ? '−' : '+'}
           </button>
 
-          <div className="grid grid-cols-12 gap-5 md:gap-7 items-start">
-            {/* FILTROS */}
-            <aside
-              className={`col-span-12 md:col-span-3 ${
+          <div data-visual-part="catalogLayout" className="grid grid-cols-12 gap-5 md:gap-7 items-start">
+
+            <aside data-visual-part="catalogFilters" data-visual-open={filtersOpen}
+              className={`col-span-12 md:col-span-3 min-w-0 ${
                 filtersOpen ? 'block' : 'hidden'
               } md:block`}
             >
-              <div className="sticky top-28 max-h-[calc(100vh-8rem)] flex flex-col rounded-[16px] bg-[#f5f5f3] text-[#151515]">
+              <div className="md:sticky md:top-28 md:max-h-[calc(100vh-8rem)] flex flex-col rounded-[16px] bg-[#f5f5f3] text-[#151515]">
                 <div className="flex items-center justify-between gap-3 px-5 pt-5 pb-4 border-b border-black/10">
-                  <p className="text-[10px] font-black uppercase tracking-[0.16em] text-black/45">
+                  <p className="text-[10px] font-black uppercase tracking-[0.16em] text-black/60">
                     Filtros
                   </p>
 
@@ -358,7 +354,7 @@ export default function Catalog() {
                     <button
                       type="button"
                       onClick={clearFilters}
-                      className="text-[11px] font-semibold text-[#1683ff] hover:opacity-70"
+                      className="text-[11px] font-semibold text-[var(--primary)] hover:opacity-70"
                     >
                       Limpiar ({activeFiltersCount})
                     </button>
@@ -366,13 +362,13 @@ export default function Catalog() {
                 </div>
 
                 <div className="flex-1 overflow-y-auto p-5">
-                  <p className="mb-4 text-[10px] font-black uppercase tracking-[0.16em] text-black/45">
+                  <p className="mb-4 text-[10px] font-black uppercase tracking-[0.16em] text-black/60">
                     Categorías
                   </p>
 
-                  <div className="flex flex-col gap-1">
+                  <div data-visual-section={VISUAL_SECTION.categories} data-visual-part="categoryList" className="flex flex-col gap-1">
                     {categories.map((cat) => (
-                      <button
+                      <button data-visual-part="categoryItem" aria-pressed={category === cat}
                         type="button"
                         key={cat}
                         onClick={() => {
@@ -381,7 +377,7 @@ export default function Catalog() {
                         }}
                         className={`rounded-[9px] px-3 py-2.5 text-left text-[12px] font-medium transition-colors ${
                           category === cat
-                            ? 'bg-[#1683ff] text-white'
+                            ? 'bg-[var(--primary)] text-[var(--on-primary)]'
                             : 'text-[#202020] hover:bg-black/[0.05]'
                         }`}
                       >
@@ -391,7 +387,7 @@ export default function Catalog() {
                   </div>
 
                   <div className="border-t border-black/10 mt-5 pt-5">
-                    <p className="mb-3 text-[10px] font-black uppercase tracking-[0.16em] text-black/45">
+                    <p className="mb-3 text-[10px] font-black uppercase tracking-[0.16em] text-black/60">
                       Disponibilidad
                     </p>
 
@@ -411,7 +407,7 @@ export default function Catalog() {
                             );
                             setPage(1);
                           }}
-                          className="accent-[#1683ff]"
+                          className="accent-[var(--primary)]"
                         />
                         <span>{option}</span>
                       </label>
@@ -419,7 +415,7 @@ export default function Catalog() {
                   </div>
 
                   <div className="border-t border-black/10 mt-5 pt-5">
-                    <p className="mb-3 text-[10px] font-black uppercase tracking-[0.16em] text-black/45">
+                    <p className="mb-3 text-[10px] font-black uppercase tracking-[0.16em] text-black/60">
                       Precio
                     </p>
 
@@ -434,7 +430,7 @@ export default function Catalog() {
                           setPage(1);
                         }}
                         placeholder="Mín."
-                        className="h-10 min-w-0 rounded-[8px] border border-black/10 bg-white px-3 text-[11px] outline-none focus:border-[#1683ff]"
+                        className="h-10 min-w-0 rounded-[8px] border border-black/10 bg-white px-3 text-[11px] outline-none focus:border-[var(--primary)]"
                       />
 
                       <input
@@ -447,7 +443,7 @@ export default function Catalog() {
                           setPage(1);
                         }}
                         placeholder="Máx."
-                        className="h-10 min-w-0 rounded-[8px] border border-black/10 bg-white px-3 text-[11px] outline-none focus:border-[#1683ff]"
+                        className="h-10 min-w-0 rounded-[8px] border border-black/10 bg-white px-3 text-[11px] outline-none focus:border-[var(--primary)]"
                       />
                     </div>
                   </div>
@@ -464,21 +460,22 @@ export default function Catalog() {
               </div>
             </aside>
 
-            {/* PRODUCTOS */}
-            <main className="col-span-12 md:col-span-9">
+
+            <main data-visual-part="catalogResults" className="col-span-12 md:col-span-9 min-w-0">
               {appliedFilters}
 
               {paginated.length === 0 ? (
-                <div className="rounded-[18px] border border-white/10 bg-[#111113] px-6 py-20 text-center">
-                  <Icon name="search" className="w-10 h-10 mx-auto text-white/25" />
+                <div className="rounded-[18px] border border-[var(--visual-border)] bg-[var(--visual-surface)] px-6 py-20 text-center">
+                  <Icon name="search" className="w-10 h-10 mx-auto text-[var(--visual-muted)]" />
                   <h2 className="mt-5 text-xl font-bold">Sin resultados</h2>
-                  <p className="mt-2 text-sm text-white/45">
+                  <p className="mt-2 text-sm text-[var(--visual-muted)]">
                     No encontramos productos para tu búsqueda.
                   </p>
                 </div>
               ) : (
                 <>
                   <div
+                    data-visual-section={VISUAL_SECTION.productGrid} data-visual-grid={viewMode === 'grid' ? 'catalog' : undefined}
                     className={
                       viewMode === 'grid'
                         ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4'
@@ -513,120 +510,300 @@ export default function Catalog() {
     );
   }
 
-  /*
-   * ==========================================================
-   * PLANTILLA 3 — VISUAL / VELTA
-   * ==========================================================
-   */
 
   if (isVisual) {
     return (
-      <div className="bg-white text-[#111111]">
-        <section className="max-w-[1180px] mx-auto px-5 md:px-8 pt-8 md:pt-10 pb-20">
-          <div className="mb-8 md:mb-10">
-            <h1 className="font-serif text-[42px] sm:text-[48px] md:text-[52px] leading-none tracking-[-0.025em] text-[#111111]">
-              Nuestra colección
-            </h1>
-          </div>
+      <div data-catalog-page="visual" data-visual-section={VISUAL_SECTION.catalog} data-visual-catalog className="bg-white text-[#111111] min-w-0">
+        <section className="max-w-[1180px] mx-auto px-4 sm:px-5 md:px-8 pt-8 md:pt-10 pb-16 sm:pb-20">
+          <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4 sm:gap-6 mb-6 md:mb-8">
+            <div className="min-w-0">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-black/55 mb-2">
+                Catálogo completo
+              </p>
 
-          {/* FILTROS */}
-          <div className="mb-6 border-b border-black/10 pb-6">
-            <div className="flex items-center justify-between gap-4">
-              <button
-                type="button"
-                aria-expanded={filtersOpen}
-                onClick={() => setFiltersOpen(!filtersOpen)}
-                className="inline-flex items-center gap-2 rounded-full border border-black/15 px-5 py-2.5 text-[11px] font-semibold uppercase tracking-[0.12em] transition-colors hover:border-black"
-              >
-                Filtros{activeFiltersCount > 0 && ` (${activeFiltersCount})`}{' '}
-                <span aria-hidden="true">{filtersOpen ? '−' : '+'}</span>
-              </button>
+              <h1 className="font-serif text-[34px] sm:text-[48px] md:text-[52px] leading-none tracking-[-0.025em] text-[#111111] break-words">
+                {category !== 'Todos' ? category : 'Nuestra colección'}
+              </h1>
 
-              {activeFiltersCount > 0 && (
-                <button
-                  type="button"
-                  onClick={clearFilters}
-                  className="text-[11px] font-semibold underline underline-offset-4 hover:opacity-60"
-                >
-                  Limpiar filtros ({activeFiltersCount})
-                </button>
-              )}
+              <p className="mt-2.5 text-xs text-black/60">
+                {filtered.length}{' '}
+                {filtered.length === 1 ? 'producto disponible' : 'productos disponibles'}
+              </p>
             </div>
 
-            {filtersOpen && (
-              <div className="mt-6">
-                {attrFilters.groups.length === 0 ? (
-                  <p className="text-[13px] text-[#8c8683]">
-                    No hay filtros disponibles.
-                  </p>
-                ) : (
-                  <div className="max-h-[280px] overflow-y-auto pr-2 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-8 gap-y-6 content-start">
-                    <AttributeFilters
-                      groups={attrFilters.groups}
-                      selected={attrFilters.selected}
-                      onToggle={(name, value) => {
-                        attrFilters.toggle(name, value);
-                        setPage(1);
-                      }}
-                    />
-                  </div>
-                )}
+            <div data-catalog-toolbar className="flex flex-wrap items-center gap-2 w-full lg:w-auto">
+              <div data-catalog-search className="relative w-full sm:w-auto">
+                <Icon
+                  name="search"
+                  className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none"
+                />
+                <input
+                  value={search}
+                  onChange={(event) => {
+                    setSearch(event.target.value);
+                    setPage(1);
+                  }}
+                  aria-label="Buscar productos"
+                  placeholder="Buscar..."
+                  className="h-11 w-full sm:w-52 border border-black/15 px-3 pl-10 text-xs text-[#111111] bg-white outline-none focus:border-black"
+                />
               </div>
-            )}
-          </div>
 
-          {appliedFilters}
+              <select
+                aria-label="Ordenar productos"
+                value={sort}
+                onChange={(event) => setSort(event.target.value)}
+                className="h-11 flex-1 sm:flex-initial min-w-0 border border-black/15 px-3 text-xs text-[#111111] bg-white outline-none focus:border-black"
+              >
+                {SORT_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
 
-          {paginated.length === 0 ? (
-            <EmptyState
-              icon={<Icon name="search" className="w-12 h-12" />}
-              title="Sin resultados"
-              description="No se encontraron productos para tu búsqueda."
-            />
-          ) : (
-            <>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 md:gap-6">
-                {paginated.map((product) => (
-                  <ProductCard
-                    key={product.id}
-                    product={product}
-                    layout="grid"
-                  />
+              <div className="flex h-11 shrink-0 overflow-hidden border border-black/15 bg-white">
+                {(['grid', 'list'] as const).map((view) => (
+                  <button
+                    type="button"
+                    key={view}
+                    onClick={() => setViewMode(view)}
+                    aria-label={view === 'grid' ? 'Vista en grilla' : 'Vista en lista'}
+                    className={`w-11 flex items-center justify-center transition-colors ${
+                      viewMode === view
+                        ? 'bg-[var(--primary)] text-[var(--on-primary)]'
+                        : 'bg-white text-black/60 hover:bg-black/5'
+                    }`}
+                  >
+                    <Icon
+                      name={view === 'grid' ? 'grid' : 'list'}
+                      className="w-3.5 h-3.5"
+                    />
+                  </button>
                 ))}
               </div>
+            </div>
+          </div>
 
-              {filtered.length > PAGE_SIZE && (
-                <div className="flex justify-center mt-12">
-                  <Pagination
-                    page={page}
-                    total={filtered.length}
-                    pageSize={PAGE_SIZE}
-                    onChange={setPage}
+          <div className="md:hidden mb-3 flex flex-wrap gap-1.5">
+            {categories.map((cat) => (
+              <button
+                key={cat}
+                type="button"
+                aria-pressed={category === cat}
+                onClick={() => {
+                  setCategory(cat);
+                  setPage(1);
+                }}
+                className={`min-h-9 px-3.5 py-1.5 text-xs font-semibold border transition-colors ${
+                  category === cat
+                    ? 'bg-[var(--primary)] text-[var(--on-primary)] border-[var(--primary)]'
+                    : 'bg-[#f6f5f2] text-[#171717] border-black/10'
+                }`}
+              >
+                {cat}
+              </button>
+            ))}
+          </div>
+
+          <button
+            type="button"
+            data-visual-part="catalogFiltersToggle"
+            aria-expanded={filtersOpen}
+            onClick={() => setFiltersOpen(!filtersOpen)}
+            className="md:hidden mb-5 min-h-11 w-full sm:w-auto flex justify-center items-center gap-2 border border-black/20 bg-white px-5 py-2.5 text-xs font-semibold uppercase tracking-[0.12em] text-[#111111]"
+          >
+            <span>Filtros{activeFiltersCount > 0 && ` (${activeFiltersCount})`}</span>
+            <span aria-hidden="true">{filtersOpen ? '−' : '+'}</span>
+          </button>
+
+
+          <div data-visual-part="catalogLayout" className="grid grid-cols-12 gap-5 md:gap-7 items-start">
+            <aside
+              data-visual-part="catalogFilters"
+              data-visual-open={filtersOpen}
+              className={`col-span-12 md:col-span-3 min-w-0 ${
+                filtersOpen ? 'block' : 'hidden'
+              } md:block`}
+            >
+              <div className="md:sticky md:top-24 md:max-h-[calc(100vh-7rem)] flex flex-col border border-black/10 bg-[#faf9f6] text-[#111111]">
+                <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-black/10">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-black/65">
+                    Filtros
+                  </p>
+
+                  {activeFiltersCount > 0 && (
+                    <button
+                      type="button"
+                      onClick={clearFilters}
+                      className="text-[11px] font-semibold text-[var(--primary)] underline underline-offset-4 hover:opacity-70"
+                    >
+                      Limpiar ({activeFiltersCount})
+                    </button>
+                  )}
+                </div>
+
+                <div className="flex-1 overflow-y-auto p-5">
+                  <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.18em] text-black/60">
+                    Categorías
+                  </p>
+
+                  <div data-visual-section={VISUAL_SECTION.categories} data-visual-part="categoryList" className="flex flex-col gap-1">
+                    {categories.map((cat) => (
+                      <button
+                        key={cat}
+                        type="button"
+                        data-visual-part="categoryItem"
+                        aria-pressed={category === cat}
+                        onClick={() => {
+                          setCategory(cat);
+                          setPage(1);
+                        }}
+                        className={`px-3 py-2 text-left text-xs font-medium transition-colors ${
+                          category === cat
+                            ? 'bg-[var(--primary)] text-[var(--on-primary)]'
+                            : 'text-[#171717] hover:bg-black/5'
+                        }`}
+                      >
+                        {cat}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="border-t border-black/10 mt-5 pt-5">
+                    <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.18em] text-black/60">
+                      Disponibilidad
+                    </p>
+
+                    {['En stock', 'Sin stock'].map((option) => (
+                      <label
+                        key={option}
+                        className="flex items-center gap-2.5 py-1.5 text-xs cursor-pointer"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={availability.includes(option)}
+                          onChange={(event) => {
+                            setAvailability((previous) =>
+                              event.target.checked
+                                ? [...previous, option]
+                                : previous.filter((value) => value !== option),
+                            );
+                            setPage(1);
+                          }}
+                          className="accent-[var(--primary)]"
+                        />
+                        <span>{option}</span>
+                      </label>
+                    ))}
+                  </div>
+
+                  <div className="border-t border-black/10 mt-5 pt-5">
+                    <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.18em] text-black/60">
+                      Precio
+                    </p>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      <input
+                        type="number"
+                        min="0"
+                        aria-label="Precio mínimo"
+                        value={minPrice}
+                        onChange={(event) => {
+                          setMinPrice(event.target.value);
+                          setPage(1);
+                        }}
+                        placeholder="Mín."
+                        className="h-9 min-w-0 border border-black/15 bg-white px-2.5 text-xs outline-none focus:border-[var(--primary)]"
+                      />
+
+                      <input
+                        type="number"
+                        min="0"
+                        aria-label="Precio máximo"
+                        value={maxPrice}
+                        onChange={(event) => {
+                          setMaxPrice(event.target.value);
+                          setPage(1);
+                        }}
+                        placeholder="Máx."
+                        className="h-9 min-w-0 border border-black/15 bg-white px-2.5 text-xs outline-none focus:border-[var(--primary)]"
+                      />
+                    </div>
+                  </div>
+
+                  <AttributeFilters
+                    groups={attrFilters.groups}
+                    selected={attrFilters.selected}
+                    onToggle={(name, value) => {
+                      attrFilters.toggle(name, value);
+                      setPage(1);
+                    }}
                   />
                 </div>
+              </div>
+            </aside>
+
+            <main data-visual-part="catalogResults" className="col-span-12 md:col-span-9 min-w-0">
+              {appliedFilters}
+
+              {paginated.length === 0 ? (
+                <EmptyState
+                  icon={<Icon name="search" className="w-12 h-12" />}
+                  title="Sin resultados"
+                  description="No se encontraron productos para tu búsqueda."
+                />
+              ) : (
+                <>
+                  <div
+                    data-visual-section={VISUAL_SECTION.productGrid}
+                    data-visual-grid={viewMode === 'grid' ? 'catalog' : undefined}
+                    className={
+                      viewMode === 'grid'
+                        ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 md:gap-6'
+                        : 'flex flex-col gap-4'
+                    }
+                  >
+                    {paginated.map((product) => (
+                      <ProductCard
+                        key={product.id}
+                        product={product}
+                        layout={viewMode === 'list' ? 'list' : 'grid'}
+                      />
+                    ))}
+                  </div>
+
+                  {filtered.length > PAGE_SIZE && (
+                    <div className="flex justify-center mt-12">
+                      <Pagination
+                        page={page}
+                        total={filtered.length}
+                        pageSize={PAGE_SIZE}
+                        onChange={setPage}
+                      />
+                    </div>
+                  )}
+                </>
               )}
-            </>
-          )}
+            </main>
+          </div>
         </section>
       </div>
     );
   }
 
-  /*
-   * ==========================================================
-   * PLANTILLAS 1 Y 2
-   * ==========================================================
-   */
 
   return (
     <div
+      data-catalog-page={isMinimal ? 'minimal' : 'editorial'}
+      data-visual-section={VISUAL_SECTION.catalog} data-visual-catalog
       className={
         isMinimal
-          ? 'max-w-6xl mx-auto px-4 md:px-8 pt-12 pb-8'
-          : 'max-w-7xl mx-auto px-4 py-8'
+          ? 'max-w-6xl mx-auto px-4 md:px-8 pt-8 sm:pt-12 pb-8 min-w-0'
+          : 'max-w-7xl mx-auto px-4 py-6 sm:py-8 min-w-0'
       }
     >
-      {/* CABECERA */}
+
 
       <div
         className={`
@@ -634,13 +811,13 @@ export default function Catalog() {
           sm:flex-row
           sm:items-end
           justify-between
-          gap-5
-          ${isMinimal ? 'mb-8' : 'mb-6'}
+          gap-4 sm:gap-5
+          ${isMinimal ? 'mb-6 sm:mb-8' : 'mb-6'}
         `}
       >
-        <div>
+        <div className="min-w-0">
           {isMinimal && (
-            <p className="text-xs text-gray-400 mb-2">
+            <p className="text-xs text-gray-500 mb-2">
               Explora nuestra selección
             </p>
           )}
@@ -648,8 +825,8 @@ export default function Catalog() {
           <h1
             className={
               isMinimal
-                ? 'text-3xl md:text-4xl font-semibold tracking-tight text-[#171717]'
-                : 'text-2xl font-semibold font-display text-[var(--foreground)]'
+                ? 'text-3xl md:text-4xl font-semibold tracking-tight text-[#171717] break-words'
+                : 'text-2xl font-semibold font-display text-[var(--foreground)] break-words'
             }
           >
             {category !== 'Todos'
@@ -671,53 +848,106 @@ export default function Catalog() {
           </p>
         </div>
 
-        {/* Herramientas */}
 
-        <div className="flex flex-wrap items-center gap-2">
+        <div data-catalog-toolbar className={`flex flex-wrap items-center ${isMinimal ? 'gap-2.5 sm:gap-3' : 'gap-2'} w-full sm:w-auto`}>
 
-          {/* Buscar */}
 
-          <div className="relative">
-            <Icon
-              name="search"
-              className="
-                absolute
-                left-3
-                top-1/2
-                -translate-y-1/2
-                w-4
-                h-4
-                text-gray-400
-                pointer-events-none
-              "
-            />
+          {isMinimal ? (
+            <div
+              data-catalog-search
+              className="om-minimal-search-field om-minimal-search-field--catalog group w-full sm:w-72 md:w-80 lg:w-96 h-12 bg-white rounded-full border border-gray-200 shadow-xs hover:border-gray-300 hover:shadow-md focus-within:border-[var(--primary)] focus-within:ring-4 focus-within:ring-[var(--primary)]/15 pl-4 pr-2.5 flex flex-nowrap items-center gap-2.5 transition-all duration-200"
+            >
+              <svg
+                className="om-minimal-search-icon w-4 h-4 text-gray-400 group-focus-within:text-[var(--primary)] shrink-0 transition-colors pointer-events-none"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                aria-hidden="true"
+              >
+                <circle cx="11" cy="11" r="7" strokeWidth="1.8" />
+                <path
+                  d="m20 20-3.5-3.5"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                />
+              </svg>
 
-            <input
-              value={search}
-              onChange={(event) => {
-                setSearch(event.target.value);
-                setPage(1);
-              }}
-              aria-label="Buscar productos"
-              placeholder="Buscar..."
-              className={`
-                border
-                border-[var(--border)]
-                bg-white
-                focus:outline-none
-                focus:ring-1
-                focus:ring-[var(--primary)]
-                transition-all
-                ${
-                  isMinimal
-                    ? 'h-10 text-sm rounded-xl pl-9 pr-3 w-44 md:w-52'
-                    : 'h-8 text-sm rounded-lg pl-9 pr-3 w-40 focus:w-52'
-                }
-              `}
-            />
-          </div>
+              <input
+                type="search"
+                value={search}
+                onChange={(event) => {
+                  setSearch(event.target.value);
+                  setPage(1);
+                }}
+                aria-label="Buscar productos"
+                placeholder="¿Qué estás buscando hoy?"
+                className="om-minimal-search-input flex-1 min-w-0 w-full h-full bg-transparent border-none outline-none ring-0 focus:ring-0 focus:outline-none focus:border-none text-sm text-[#171717] placeholder:text-gray-400"
+              />
 
-          {/* Orden */}
+              {search.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSearch('');
+                    setPage(1);
+                  }}
+                  aria-label="Limpiar búsqueda"
+                  title="Limpiar búsqueda"
+                  className="om-minimal-search-clear w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
+                >
+                  <svg
+                    className="w-3.5 h-3.5"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path d="M18 6 6 18M6 6l12 12" />
+                  </svg>
+                </button>
+              )}
+            </div>
+          ) : (
+            <div data-catalog-search className="relative w-full sm:w-auto">
+              <Icon
+                name="search"
+                className="
+                  absolute
+                  left-3.5
+                  top-1/2
+                  -translate-y-1/2
+                  w-4
+                  h-4
+                  text-gray-500
+                  pointer-events-none
+                "
+              />
+
+              <input
+                value={search}
+                onChange={(event) => {
+                  setSearch(event.target.value);
+                  setPage(1);
+                }}
+                aria-label="Buscar productos"
+                placeholder="Buscar..."
+                className="
+                  border
+                  border-[var(--border)]
+                  bg-white
+                  focus:outline-none
+                  focus:ring-1
+                  focus:ring-[var(--primary)]
+                  transition-all
+                  h-11 sm:h-8 text-sm rounded-lg pl-9 pr-3 w-full sm:w-40 sm:focus:w-52
+                "
+              />
+            </div>
+          )}
+
 
           <select
             aria-label="Ordenar productos"
@@ -726,14 +956,14 @@ export default function Catalog() {
               setSort(event.target.value)
             }
             className={`
+              flex-1 sm:flex-initial min-w-0
               border
-              border-[var(--border)]
               bg-white
               focus:outline-none
               ${
                 isMinimal
-                  ? 'h-10 text-xs rounded-xl px-3'
-                  : 'h-8 text-xs rounded-lg px-2'
+                  ? 'h-12 text-xs font-medium text-[#171717] border-gray-200 shadow-xs rounded-full px-4 hover:border-gray-300 transition-colors'
+                  : 'h-11 sm:h-8 text-xs border-[var(--border)] rounded-lg px-2'
               }
             `}
           >
@@ -747,19 +977,17 @@ export default function Catalog() {
             ))}
           </select>
 
-          {/* Grid / lista */}
 
           <div
             className={`
-              flex
+              flex shrink-0
               border
-              border-[var(--border)]
               overflow-hidden
               bg-white
               ${
                 isMinimal
-                  ? 'rounded-xl h-10'
-                  : 'rounded-lg'
+                  ? 'rounded-full h-12 border-gray-200 shadow-xs'
+                  : 'rounded-lg h-11 sm:h-auto border-[var(--border)]'
               }
             `}
           >
@@ -783,12 +1011,12 @@ export default function Catalog() {
                     transition-colors
                     ${
                       isMinimal
-                        ? 'w-10'
-                        : 'px-2 py-1.5'
+                        ? 'w-12'
+                        : 'w-11 sm:w-auto sm:px-2 sm:py-1.5'
                     }
                     ${
                       viewMode === view
-                        ? 'bg-[var(--primary)] text-white'
+                        ? 'bg-[var(--primary)] text-[var(--on-primary)]'
                         : 'bg-white text-[var(--muted-foreground)] hover:bg-[var(--muted)]'
                     }
                   `}
@@ -808,21 +1036,23 @@ export default function Catalog() {
         </div>
       </div>
 
-      {/* Filtros móvil */}
 
       <button
         type="button"
         className={`
           md:hidden
           mb-4
-          text-sm
+          min-h-11
+          w-full sm:w-auto
+          justify-center items-center
+          text-sm font-medium
           ${
             isMinimal
-              ? 'bg-white border border-[var(--border)] rounded-full px-4 py-2'
-              : ''
+              ? 'bg-white border border-[var(--border)] rounded-full px-5 py-2'
+              : 'bg-white border border-[var(--border)] rounded-lg px-4 py-2'
           }
         `}
-        aria-expanded={filtersOpen}
+        data-visual-part="catalogFiltersToggle" aria-expanded={filtersOpen}
         onClick={() =>
           setFiltersOpen(!filtersOpen)
         }
@@ -830,21 +1060,21 @@ export default function Catalog() {
         Filtros{activeFiltersCount > 0 && ` (${activeFiltersCount})`} {filtersOpen ? '−' : '+'}
       </button>
 
-      {/* CONTENIDO */}
 
-      <div
+      <div data-visual-part="catalogLayout"
         className={`
           grid
           grid-cols-12
           ${isMinimal ? 'gap-5 md:gap-7' : 'gap-6'}
         `}
       >
-        {/* FILTROS */}
 
-        <aside
+
+        <aside data-visual-part="catalogFilters" data-visual-open={filtersOpen}
           className={`
             col-span-12
             md:col-span-3
+            min-w-0
             ${filtersOpen ? 'block' : 'hidden'}
             md:block
           `}
@@ -854,23 +1084,23 @@ export default function Catalog() {
               bg-white
               border
               border-[var(--border)]
-              sticky
+              md:sticky
               flex
               flex-col
               ${
                 isMinimal
-                  ? 'rounded-[20px] top-24 max-h-[calc(100vh-7rem)]'
-                  : 'rounded-xl top-20 max-h-[calc(100vh-6rem)]'
+                  ? 'rounded-[26px] md:top-24 md:max-h-[calc(100vh-7rem)] shadow-xs'
+                  : 'rounded-xl md:top-20 md:max-h-[calc(100vh-6rem)]'
               }
             `}
           >
-            {/* Encabezado fijo con Limpiar filtros */}
+
 
             <div
               className={`
                 flex items-center justify-between gap-3
                 border-b border-[var(--border)]
-                ${isMinimal ? 'px-4 py-3' : 'px-4 py-3'}
+                ${isMinimal ? 'px-5 py-3.5' : 'px-4 py-3'}
               `}
             >
               <p className="text-xs font-semibold uppercase tracking-wider text-[var(--muted-foreground)]">
@@ -889,7 +1119,7 @@ export default function Catalog() {
             </div>
 
             <div className="flex-1 overflow-y-auto p-4">
-              {/* Categorías */}
+
 
               <p
                 className={`
@@ -905,9 +1135,9 @@ export default function Catalog() {
                 Categorías
               </p>
 
-              <div className="flex flex-col gap-1">
+              <div data-visual-section={VISUAL_SECTION.categories} data-visual-part="categoryList" className="flex flex-col gap-1.5">
                 {categories.map((cat) => (
-                  <button
+                  <button data-visual-part="categoryItem" aria-pressed={category === cat}
                     type="button"
                     key={cat}
                     onClick={() => {
@@ -917,17 +1147,17 @@ export default function Catalog() {
                     className={`
                       text-left
                       text-sm
-                      px-3
+                      px-3.5
                       py-2
-                      transition-colors
+                      transition-all
                       ${
                         isMinimal
-                          ? 'rounded-xl'
+                          ? 'rounded-full'
                           : 'rounded-lg'
                       }
                       ${
                         category === cat
-                          ? 'bg-[var(--primary)] text-white'
+                          ? 'bg-[var(--primary)] text-[var(--on-primary)]'
                           : 'text-[var(--foreground)] hover:bg-[var(--muted)]'
                       }
                     `}
@@ -937,7 +1167,6 @@ export default function Catalog() {
                 ))}
               </div>
 
-              {/* Disponibilidad */}
 
               <div className="border-t border-[var(--border)] mt-4 pt-4">
                 <p className="text-xs font-semibold uppercase tracking-wider text-[var(--muted-foreground)] mb-3">
@@ -948,7 +1177,7 @@ export default function Catalog() {
                   (option) => (
                     <label
                       key={option}
-                      className="flex items-center gap-2 text-sm py-1 cursor-pointer"
+                      className="flex items-center gap-2 text-sm py-1.5 cursor-pointer"
                     >
                       <input
                         type="checkbox"
@@ -980,7 +1209,6 @@ export default function Catalog() {
                 )}
               </div>
 
-              {/* Precio */}
 
               <div className="border-t border-[var(--border)] mt-4 pt-4">
                 <p className="text-xs font-semibold uppercase tracking-wider text-[var(--muted-foreground)] mb-3">
@@ -999,16 +1227,16 @@ export default function Catalog() {
                     }}
                     placeholder="Min"
                     className={`
-                      w-full
+                      w-full min-w-0
                       text-xs
                       border
                       border-[var(--border)]
-                      px-2
+                      px-3
                       focus:outline-none
                       ${
                         isMinimal
-                          ? 'h-9 rounded-lg'
-                          : 'h-7 rounded'
+                          ? 'h-9 rounded-full'
+                          : 'h-9 sm:h-7 rounded'
                       }
                     `}
                   />
@@ -1024,16 +1252,16 @@ export default function Catalog() {
                     }}
                     placeholder="Max"
                     className={`
-                      w-full
+                      w-full min-w-0
                       text-xs
                       border
                       border-[var(--border)]
-                      px-2
+                      px-3
                       focus:outline-none
                       ${
                         isMinimal
-                          ? 'h-9 rounded-lg'
-                          : 'h-7 rounded'
+                          ? 'h-9 rounded-full'
+                          : 'h-9 sm:h-7 rounded'
                       }
                     `}
                   />
@@ -1052,20 +1280,20 @@ export default function Catalog() {
           </div>
         </aside>
 
-        {/* PRODUCTOS */}
 
-        <main className="col-span-12 md:col-span-3 lg:col-span-9">
+        <main data-visual-part="catalogResults" className="col-span-12 md:col-span-9 min-w-0">
           {appliedFilters}
 
           {paginated.length === 0 ? (
             <EmptyState
-              icon={<Icon name="search" className="w-12 h-12 text-gray-400" />}
+              icon={<Icon name="search" className="w-12 h-12 text-gray-500" />}
               title="Sin resultados"
               description="No encontramos productos para tu búsqueda."
             />
           ) : (
             <>
               <div
+                data-visual-section={VISUAL_SECTION.productGrid} data-visual-grid={viewMode === 'grid' ? 'catalog' : undefined}
                 className={
                   viewMode === 'grid'
                     ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6'

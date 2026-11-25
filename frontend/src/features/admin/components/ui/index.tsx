@@ -1,6 +1,27 @@
-import { useId, type ReactNode } from 'react';
+import { useId, type ReactNode, type ComponentProps } from 'react';
+import { Alert as StoreAlert, Input as StoreInput, Textarea as StoreTextarea, Select as StoreSelect } from '../../../storefront/components/ui';
+import { useAdminHelp } from '../../context/AdminHelpContext';
+import { humanizeAdminError } from '../../utils/humanizeError';
 import { Icon as StoreIcon } from '../../../storefront/components/ui/Icon';
-export { Button, Input, Textarea, Select, Badge, Alert, EmptyState, InstitutionalBadge } from '../../../storefront/components/ui';
+export { Button, Badge, EmptyState, InstitutionalBadge } from '../../../storefront/components/ui';
+export function Input({ persistentHint = false, ...props }: ComponentProps<typeof StoreInput> & { persistentHint?: boolean }) {
+  const { showHelp } = useAdminHelp();
+  return <StoreInput {...props} hint={persistentHint || showHelp ? props.hint : undefined} />;
+}
+export function Textarea({ persistentHint = false, ...props }: ComponentProps<typeof StoreTextarea> & { persistentHint?: boolean }) {
+  const { showHelp } = useAdminHelp();
+  return <StoreTextarea {...props} hint={persistentHint || showHelp ? props.hint : undefined} />;
+}
+export function Select({ persistentHint = false, ...props }: ComponentProps<typeof StoreSelect> & { persistentHint?: boolean }) {
+  const { showHelp } = useAdminHelp();
+  return <StoreSelect {...props} hint={persistentHint || showHelp ? props.hint : undefined} />;
+}
+function errorText(children: ReactNode): ReactNode {
+  return Array.isArray(children) ? children.map(errorText) : typeof children === 'string' ? humanizeAdminError(children) : children;
+}
+export function Alert(props: ComponentProps<typeof StoreAlert>) {
+  return <StoreAlert {...props} title={props.variant === 'error' && props.title ? humanizeAdminError(props.title) : props.title}>{props.variant === 'error' ? errorText(props.children) : props.children}</StoreAlert>;
+}
 export { AdminModal as Modal } from './AdminModal';
 export type IconName = string;
 const extraIcons: Record<string,ReactNode> = {
@@ -14,11 +35,44 @@ export function Icon({name,className='w-4 h-4'}:{name:string;className?:string})
   if (!extraIcons[name]) return <StoreIcon name={name === 'file' ? 'orders' : name} className={className}/>;
   return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className={className}>{extraIcons[name]}</svg>;
 }
-export function Toggle({checked,onChange,label,id,ariaLabel}:{checked:boolean;onChange:(v:boolean)=>void;label?:string;id?:string;ariaLabel?:string}) {
+export function Toggle({checked,onChange,label,id,ariaLabel,disabled=false}:{checked:boolean;onChange:(v:boolean)=>void;label?:string;id?:string;ariaLabel?:string;disabled?:boolean}) {
   const generated = useId();
-  return <label htmlFor={id ?? generated} className="flex items-center gap-3 cursor-pointer select-none"><span className="relative shrink-0"><input id={id ?? generated} type="checkbox" className="sr-only peer" aria-label={ariaLabel || label || 'Activar opción'} checked={checked} onChange={e=>onChange(e.target.checked)}/><span className={'block w-10 h-5 rounded-full transition-colors peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 '+(checked?'bg-[var(--primary)]':'bg-[var(--border)]')}/><span className={'absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform '+(checked?'translate-x-5':'')}/></span>{label && <span className="text-sm">{label}</span>}</label>;
+  return <label htmlFor={id ?? generated} className="flex items-center gap-3 cursor-pointer select-none"><span className="relative shrink-0"><input id={id ?? generated} type="checkbox" disabled={disabled} className="sr-only peer" aria-label={ariaLabel || label || 'Activar opción'} checked={checked} onChange={e=>onChange(e.target.checked)}/><span className={'block w-10 h-5 rounded-full transition-colors peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 '+(checked?'bg-[var(--primary)]':'bg-[var(--border)]')}/><span className={'absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform '+(checked?'translate-x-5':'')}/></span>{label && <span className="text-sm">{label}</span>}</label>;
 }
 export function AdminCard({children,className=''}:{children:ReactNode;className?:string}) {return <section className={'bg-white border border-[var(--border)] rounded-xl p-5 '+className}>{children}</section>;}
-export function Tabs({tabs,active,onChange}:{tabs:{id:string;label:string}[];active:string;onChange:(id:string)=>void}) {
-  return <div role="tablist" className="flex overflow-x-auto border-b border-[var(--border)] gap-1">{tabs.map(tab=><button type="button" role="tab" aria-selected={active===tab.id} key={tab.id} onClick={()=>onChange(tab.id)} className={'shrink-0 px-4 py-2.5 text-sm border-b-2 '+(active===tab.id?'border-[var(--primary)] text-[var(--primary)]':'border-transparent text-[var(--muted-foreground)]')}>{tab.label}</button>)}</div>;
+export function Tabs({tabs,active,onChange,label,idPrefix,numbered=false,disabled=false,wrap=false}:{tabs:{id:string;label:string}[];active:string;onChange:(id:string)=>void;label?:string;idPrefix?:string;numbered?:boolean;disabled?:boolean;wrap?:boolean}) {
+  return (
+    <div role="tablist" aria-label={label} className={numbered ? 'admin-numbered-tabs' : `flex ${wrap ? 'flex-wrap' : 'overflow-x-auto'} border-b border-[var(--border)] gap-1`}>
+      {tabs.map((tab, index) => (
+        <button
+          type="button"
+          role="tab"
+          id={idPrefix ? `${idPrefix}-tab-${tab.id}` : undefined}
+          aria-controls={idPrefix ? `${idPrefix}-panel-${tab.id}` : undefined}
+          disabled={disabled}
+          aria-selected={active === tab.id}
+          tabIndex={active === tab.id ? 0 : -1}
+          key={tab.id}
+          onClick={() => onChange(tab.id)}
+          onKeyDown={event => {
+            if (disabled || !['ArrowRight', 'ArrowLeft', 'Home', 'End'].includes(event.key) || tabs.length === 0) return;
+            event.preventDefault();
+            const nextIndex =
+              event.key === 'Home'
+                ? 0
+                : event.key === 'End'
+                  ? tabs.length - 1
+                  : (index + (event.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length;
+            const nextTab = tabs[nextIndex];
+            onChange(nextTab.id);
+            const buttons = event.currentTarget.parentElement?.querySelectorAll<HTMLButtonElement>('[role="tab"]');
+            buttons?.[nextIndex]?.focus();
+          }}
+          className={numbered ? undefined : (wrap ? 'min-w-0 flex-1 basis-40 whitespace-normal break-words ' : 'shrink-0 ') + 'px-4 py-2.5 text-sm border-b-2 ' + (active === tab.id ? 'border-[var(--primary)] text-[var(--primary)]' : 'border-transparent text-[var(--muted-foreground)]')}
+        >
+          {numbered && <span className="admin-tab-number" aria-hidden="true">{String(index + 1).padStart(2, '0')}</span>}{tab.label}
+        </button>
+      ))}
+    </div>
+  );
 }

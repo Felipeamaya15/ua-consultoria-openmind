@@ -1,0 +1,28 @@
+purpose:
+  stands_in_for: Instagram API with Unified Login, config_id, SUAT and graph.facebook.com photo publishing.
+  unblocks: Real Django and browser verification without credentials or external publication.
+assumptions:
+  - id: explicit-publish-after-container
+    status: supported
+    claim: A photo uses a JPEG media container and a separate media_publish request with creation_id.
+    reason: The official Meta publishing reference specifies the two operations for Unified Login.
+    verification: Edge and Django executed both operations against this stand-in; 13 browser cases passed. Real-account acceptance remains unverified.
+    source: https://developers.facebook.com/documentation/instagram-platform/content-publishing
+    updated_at: '2026-11-15'
+  - id: no-idempotency-promise
+    status: unknown
+    claim: Repeating media_publish after a timeout is safe.
+    reason: No provider idempotency guarantee is assumed; OpenMind reserves writes durably and never repeats an uncertain publish.
+    verification: Browser IG09 and IG11 observed exactly two publications for two distinct contents, including a 5xx after acceptance, without duplicate POSTs.
+    source: backend/apps/instagram/publishing.py; frontend/tests/instagram-mock/default.js
+    updated_at: '2026-11-15'
+  - id: unified-suat-identity
+    status: supported
+    claim: Unified Login returns a SUAT for graph.facebook.com; me represents the system user and assigned_instagram_accounts provides Instagram identities.
+    reason: Official Unified Login authentication and getting-started documentation; mandatory messages grant is accepted but never used.
+    verification: Backend and Edge exercised app/type/scope checks, client business ID, explicit Instagram identity and nullable expiry. No messaging, ads or comments endpoints were called.
+    source: https://developers.facebook.com/documentation/instagram-platform/instagram-api-with-unified-login/authentication
+    updated_at: '2026-11-16'
+fingerprints:
+  - tests/instagram-mock/default.js
+  - ../../backend/apps/instagram/provider.py
