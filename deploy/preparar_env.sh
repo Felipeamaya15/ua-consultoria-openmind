@@ -22,6 +22,7 @@ sed -i "s|^DOMAIN=.*|DOMAIN=$DOMINIO|" .env
 sed -i "s|^DJANGO_SECRET_KEY=.*|DJANGO_SECRET_KEY=$(texto 64)|" .env
 sed -i "s|^PAYMENT_CREDENTIALS_KEY=.*|PAYMENT_CREDENTIALS_KEY=$(clave_fernet)|" .env
 sed -i "s|^GOOGLE_OAUTH_TOKEN_ENCRYPTION_KEY=.*|GOOGLE_OAUTH_TOKEN_ENCRYPTION_KEY=$(clave_fernet)|" .env
+sed -i "s|^INSTAGRAM_TOKEN_ENCRYPTION_KEY=.*|INSTAGRAM_TOKEN_ENCRYPTION_KEY=$(clave_fernet)|" .env
 sed -i "s|^POSTGRES_PASSWORD=.*|POSTGRES_PASSWORD=$(texto 32)|" .env
 sed -i "s|^MONGO_PASSWORD=.*|MONGO_PASSWORD=$(texto 32)|" .env
 sed -i "s|^DEFAULT_FROM_EMAIL=.*|DEFAULT_FROM_EMAIL=Mi Tienda <contacto@$DOMINIO>|" .env
