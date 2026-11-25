@@ -7,6 +7,7 @@ from apps.core.models import Usuario, Tienda, Producto
 from apps.core.services import configurar_tienda
 from apps.core.infrastructure.tenant import resolver_tienda
 from rest_framework.exceptions import APIException
+from .models import Pedido
 
 @admin.register(Usuario)
 class UsuarioAdmin(admin.ModelAdmin):
@@ -26,7 +27,6 @@ class TiendaAdmin(admin.ModelAdmin):
         return queryset.del_propietario(request.user)
 
     def has_add_permission(self, request):
-        # La asignación inicial es una operación de configuración del despliegue.
         return (
             request.user.is_superuser
             and super().has_add_permission(request)
@@ -40,14 +40,12 @@ class TiendaAdmin(admin.ModelAdmin):
             obj.id_usuario_propietario, nombre=obj.nombre, descripcion=obj.descripcion,
         )
         if not creada:
-            # Cubre formularios abiertos antes de que otra configuración terminara.
             raise PermissionDenied('Esta instalación ya tiene una tienda configurada.')
         obj.pk = tienda.pk
         obj.fecha_creacion = tienda.fecha_creacion
         obj._state = tienda._state
 
     def get_readonly_fields(self, request, obj=None):
-        # La transferencia de propiedad no forma parte de una edición común.
         return ('id_usuario_propietario',) if obj else ()
 
     def formfield_for_foreignkey(self, db_field, request, **kwargs):
@@ -87,8 +85,6 @@ class ProductoAdmin(TiendaAdministradaMixin, admin.ModelAdmin):
         if obj.id_tienda_id != self.tienda_administrada(request).pk:
             raise PermissionDenied('El producto no pertenece a la tienda administrada.')
         super().save_model(request, obj, form, change)
-
-        # 2. Si es una creación nueva (no una edición existente), lo sincroniza en MongoDB
         if not change:
             repo = ProductRepository()
             mongo_id = repo.create(str(obj.id_tienda_id), {
@@ -101,8 +97,6 @@ class ProductoAdmin(TiendaAdministradaMixin, admin.ModelAdmin):
                 "activo": True,
                 "variantes": []
             })
-            
-            # Muestra un mensaje verde de éxito en el Django Admin con el ID de Mongo
             self.message_user(
                 request, 
                 f"✅ Producto guardado en PostgreSQL y sincronizado en MongoDB con ID: {mongo_id}"

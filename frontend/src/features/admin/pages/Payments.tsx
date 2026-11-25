@@ -1503,6 +1503,7 @@ export default function Payments() {
                     </Button>
                   </div>
                 </div>
+                <PendingTransfers />
               </>
             )}
           </AdminCard>

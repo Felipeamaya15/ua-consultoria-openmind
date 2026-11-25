@@ -26,7 +26,6 @@ from apps.core.infrastructure.tenant import resolver_tienda
 from apps.core.models import Pedido, ItemPedido, Tienda, Producto, ConfiguracionPago, Promocion
 from apps.core.promotions import calculate_promotion, PromotionError
 from apps.core.presentation.responses import success_response
-from apps.core.models import ConfiguracionPago
 from apps.core.infrastructure.linkify_client import LinkifyAdapter
 from apps.core.delivery import DELIVERY_METHODS, delivery_for_store
 from apps.core.presentation.shipping import ErroresDeCotizacionMixin

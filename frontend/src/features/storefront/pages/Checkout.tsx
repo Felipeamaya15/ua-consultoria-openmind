@@ -653,7 +653,7 @@ export default function Checkout() {
         newErrors.address = 'Selecciona tu sector o localidad.';
       }
 
-      if (!shippingMethod) {
+      if (shippingLoading || shippingError || !selectedShippingOption) {
         newErrors.shipping =
           'Selecciona un método de entrega';
       } else if (selectedShippingOption.requiresAddress && !deliveryReady) {
@@ -1480,9 +1480,8 @@ export default function Checkout() {
                               value: comuna,
                               label: comuna,
                             }),
-                          )
-                        }
-                        options={REGIONES}
+                          ),
+                        ]}
                       />
                     </div>
 
