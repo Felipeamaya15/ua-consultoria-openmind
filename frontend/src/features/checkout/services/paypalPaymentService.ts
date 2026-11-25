@@ -1,27 +1,25 @@
+import { readJsonResponse } from '../../../shared/services/apiRequest';
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
+const post = async (path: string, body: Record<string, unknown>) => {
+  const response = await fetch(`${API_URL}${path}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  return readJsonResponse(response,'No pudimos consultar el pago. Revisa el estado del pedido antes de volver a pagar.');
+};
+
 export const paypalPaymentService = {
-  iniciarPago: async (
+
+  iniciarPago: (
     tienda_id: number | string,
     order_number: string,
-    amount: number,
+    _amount: number,
     return_url: string,
-    cancel_url: string
-  ) => {
-    const response = await fetch(`${API_URL}/api/pagos/paypal/iniciar/`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        tienda_id,
-        order_number,
-        amount,
-        return_url,
-        cancel_url
-      }),
-    });
+    cancel_url: string,
+  ) => post('/api/pagos/paypal/iniciar/', { tienda_id, order_number, return_url, cancel_url }),
 
-    return response.json();
-  }
+  capturarPago: (tienda_id: number | string, order_number: string, order_id: string) =>
+    post('/api/pagos/paypal/capturar/', { tienda_id, order_number, order_id }),
 };

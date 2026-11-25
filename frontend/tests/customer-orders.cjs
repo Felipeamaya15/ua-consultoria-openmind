@@ -2,9 +2,10 @@ const fs = require('node:fs'), path = require('node:path'), vm = require('node:v
 const assert = require('node:assert/strict'), ts = require('typescript');
 const root = path.resolve(__dirname, '..');
 function load(file, globals) {
+  if (file.endsWith('/authService.ts')) return require('./source-loader.cjs').load(file, {}, { sessionStorage: { getItem: () => null }, ...globals });
   const module = {exports: {}};
   const source = fs.readFileSync(path.join(root, file), 'utf8').replace('import.meta.env.VITE_API_URL', 'undefined');
-  vm.runInNewContext(ts.transpileModule(source, {compilerOptions: {target: ts.ScriptTarget.ES2020, module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX}}).outputText, {module, exports: module.exports, Error, ...globals});
+  vm.runInNewContext(ts.transpileModule(source, {compilerOptions: {target: ts.ScriptTarget.ES2020, module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX}}).outputText, {module, exports: module.exports, Error, AbortController, URLSearchParams, sessionStorage: {getItem: () => null}, ...globals});
   return module.exports;
 }
 (async () => {
@@ -14,11 +15,11 @@ function load(file, globals) {
   const {authService} = load('src/features/auth/services/authService.ts', {localStorage: {getItem: () => token, removeItem: () => {token = null;}}, fetch: async (url, options) => {calls.push({url, options}); return reply;}});
   reply = {ok: true, json: async () => ({exito: true, data: [real]})};
   assert.equal((await authService.getCustomerOrders())[0].id_pedido, 42);
-  assert.equal(calls[0].url, 'http://localhost:8000/api/mi-cuenta/pedidos/');
+  assert.equal(calls[0].url, 'http://test/api/mi-cuenta/pedidos/');
   assert.equal(calls[0].options.headers.Authorization, 'Token buyer-token');
   reply = {ok: true, json: async () => ({exito: true, data: real})};
   assert.equal((await authService.getCustomerOrder('42')).items[0].nombre, 'Producto real');
-  assert.equal(calls[1].url, 'http://localhost:8000/api/mi-cuenta/pedidos/42/');
+  assert.equal(calls[1].url, 'http://test/api/mi-cuenta/pedidos/42/');
   await assert.rejects(authService.getCustomerOrder('../43'), /Pedido no encontrado/);
   reply = {ok: false, json: async () => ({mensaje: 'No encontrado'})};
   await assert.rejects(authService.getCustomerOrder('43'), /No encontrado/);
@@ -30,13 +31,21 @@ function load(file, globals) {
   const jsx = (type, props) => ({type, props});
   const service = {getCustomerOrders: async () => {if (fail) throw Error('No disponible'); return data;}, getCustomerOrder: async requested => {assert.equal(requested, '42'); return real;}};
   const requireMock = name => {
+    if (name === '../components/checkout/PagarPedidoPendiente') return {PagarPedidoPendiente: 'PagarPedidoPendiente'};
     if (name === 'react/jsx-runtime') return {jsx, jsxs: jsx};
-    if (name === 'react') return {useState: initial => {const i = index++; if (!(i in states)) states[i] = initial; return [states[i], value => {states[i] = value;}];}, useEffect: effect => effects.push(effect)};
+    if (name === 'react') return {useRef: () => ({current: null}), useState: initial => {const i = index++; if (!(i in states)) states[i] = initial; return [states[i], value => {states[i] = value;}];}, useEffect: effect => effects.push(effect)};
     if (name === 'react-router-dom') return {Link: 'Link', NavLink: 'NavLink', useParams: () => ({id})};
+    if (name.includes('businessTime')) return require('./source-loader.cjs').load('src/features/admin/services/businessTime.ts');
+    if (name.includes('reportFormatting')) return require('./source-loader.cjs').load('src/features/admin/services/reportFormatting.ts');
+    if (name.includes('PickupSchedule')) return {PickupSelectionSummary: 'PickupSelectionSummary'};
     if (name.includes('authService')) return {authService: service};
     if (name.includes('useStorefrontTemplate')) return {useStorefrontTemplate: () => ({route: p => '/plantilla/' + template + '/' + p})};
     if (name.includes('CustomerAccountNavigation')) return {CustomerAccountNavigation: 'AccountNav'};
-    throw Error(name);
+    if (name.includes('shared/components/states')) return {LoadingState: 'LoadingState', ErrorState: 'ErrorState', EmptyListState: 'EmptyListState'}; if (name.includes('humanizeError')) return {humanizeAdminError: message => message}; if (name.includes('emptyStates')) return require('./source-loader.cjs').load('src/features/admin/services/emptyStates.ts');     if (name.includes('StoreIdentityContext')) return {useStoreIdentity:()=>({identity:null})};
+    if (name.includes('metaPurchaseTracking')) return {trackConfirmedMetaPurchase:()=>{}};
+    if (name.includes('PaidActivityOrderQA')) return {PaidActivityOrderQA:'PaidActivityOrderQA'};
+    if (name.includes('PagarPedidoPendiente')) return {PagarPedidoPendiente:'PagarPedidoPendiente'};
+throw Error(name);
   };
   const {default: Orders} = load('src/features/storefront/pages/CustomerOrders.tsx', {require: requireMock});
   function nodes(tree, out = []) {if (Array.isArray(tree)) tree.forEach(x => nodes(x, out)); else if (tree && typeof tree === 'object') {out.push(tree); nodes(tree.props?.children, out);} else if (typeof tree === 'string') out.push(tree); return out;}
@@ -46,7 +55,7 @@ function load(file, globals) {
   for (template of [1, 2, 3, 4]) {
     const tree = await render();
     assert.ok(tree.includes('Enviado'));
-    assert.ok(tree.includes('40.00'));
+    assert.ok(tree.includes('$40 CLP'));
     assert.ok(tree.some(n => n.type === 'Link' && n.props.to === `/plantilla/${template}/mis-pedidos/42`));
   }
   id = '42';
@@ -57,5 +66,62 @@ function load(file, globals) {
   assert.ok(nodes(CustomerAccountNavigation()).includes('Mis pedidos'));
   const routes = fs.readFileSync(path.join(root, 'src/app/router/index.tsx'), 'utf8');
   for (const route of ['mis-pedidos', 'mis-pedidos/:id']) assert.ok(routes.includes(`path: '${route}', element: <RequireCustomer>`));
-  console.log('OK: datos remotos, vacío, listado/detalle, Token, errores y navegación en cuatro plantillas protegidas.');
+
+
+  const storeOrder = {id_pedido: 42, identificador: 'PEDIDO-42', nombre_contacto: 'Comprador', correo_contacto: 'buyer@example.test',
+    monto_total: '40.00', estado: 'pendiente', fecha_creacion: '2026-10-02T12:00:00Z', metodo_pago: 'Transferencia',
+    estado_etiqueta: 'Pendiente', pago_estado: 'pendiente', moneda: 'CLP',
+    costo_envio: '0.00', descuento: '0.00', items: [{id_item_pedido: 1, nombre_producto: 'Producto real', sku: 'SKU-REAL', cantidad: 2, precio_unitario: '20.00', total_linea: '40.00'}]};
+  const paginacion = {pagina: 1, tamano: 20, total: 1, total_paginas: 1};
+  let storeReply = {ok: true, json: async () => ({exito: true, data: [storeOrder], paginacion})}, storeToken = 'session-owner', storeCalls = [];
+  const {default: StoreOrders} = load('src/features/admin/pages/Orders.tsx', {
+    fetch: async (url, options) => {storeCalls.push({url, options}); return storeReply;},
+    require: name => {
+      if(name.includes('FeedbackProvider'))return {useFeedback:()=>({confirm:async()=>false,ask:async()=>null,notify(){}})};
+      if (name === 'react/jsx-runtime') return {jsx, jsxs: jsx};
+      if (name === 'react') return requireMock(name);
+      if (name === 'react-router-dom') return {Link: 'Link', useSearchParams: () => [new URLSearchParams(), () => {}]};
+      if (name.includes('HistoryControls')) return {HistoryPagination: 'HistoryPagination'};
+      if (name.includes('components/OrderFilters')) return {OrderFilters: 'OrderFilters'};
+      if (name.includes('useCommercialHistory')) return {useCommercialExport: () => ({busy: false, error: '', message: '', download() {}})};
+      if (name.includes('commercialService')) return require('./source-loader.cjs').load('src/features/admin/services/commercialService.ts', {
+        '../../../api': {API_BASE_URL: 'https://configured.example.test'},
+        '../../auth/services/authService': {authService: {getToken: () => storeToken}},
+      }, {fetch: async (url, options) => {storeCalls.push({url, options}); return storeReply;}});
+      if (name.includes('orderStatus')) return load('src/features/admin/data/orderStatus.ts', {});
+      if (name.includes('orderNavigation')) return load('src/features/admin/services/orderNavigation.ts', {require: id => { if (id.includes('businessTime')) return load('src/features/admin/services/businessTime.ts', {}); if (id.includes('orderStatus')) return load('src/features/admin/data/orderStatus.ts', {}); if (id.includes('shared/components/states')) return {LoadingState: 'LoadingState', ErrorState: 'ErrorState', EmptyListState: 'EmptyListState'}; if (id.includes('humanizeError')) return {humanizeAdminError: message => message}; if (id.includes('emptyStates')) return require('./source-loader.cjs').load('src/features/admin/services/emptyStates.ts'); throw Error(id); }});
+      if (name.endsWith('/api')) return {API_BASE_URL: 'https://configured.example.test'};
+      if (name.includes('authService')) return {authService: {getToken: () => storeToken}};
+      if (name.includes('PickupSchedule')) return {PickupSelectionSummary: 'PickupSelectionSummary'};
+      if (name.includes('pendingTransfersService')) return {approveManualTransfer: async () => {throw Error('No se debe aprobar durante la lectura');}, verifyTransfer: async () => {throw Error('No se debe verificar durante la lectura');}};
+      if (name.includes('recentOrdersService')) return {updateOrderStatus: async () => {throw Error('No se debe actualizar durante la lectura');}};
+      if (name.includes('reportFormatting')) return require('./source-loader.cjs').load('src/features/admin/services/reportFormatting.ts');
+      if (name.includes('businessTime')) return require('./source-loader.cjs').load('src/features/admin/services/businessTime.ts');
+      if (name.includes('mockAdminData')) return {formatPrice: String};
+      if (name.includes('components/ui')) return {Badge: 'Badge', Icon: 'Icon', Input: 'Input', Button: 'Button', Select: 'Select'};
+      if (name.includes('shared/components/states')) return {LoadingState: 'LoadingState', ErrorState: 'ErrorState', EmptyListState: 'EmptyListState'}; if (name.includes('humanizeError')) return {humanizeAdminError: message => message}; if (name.includes('emptyStates')) return require('./source-loader.cjs').load('src/features/admin/services/emptyStates.ts');     if (name.includes('StoreIdentityContext')) return {useStoreIdentity:()=>({identity:null})};
+    if (name.includes('metaPurchaseTracking')) return {trackConfirmedMetaPurchase:()=>{}};
+    if (name.includes('PaidActivityOrderQA')) return {PaidActivityOrderQA:'PaidActivityOrderQA'};
+    if (name.includes('PagarPedidoPendiente')) return {PagarPedidoPendiente:'PagarPedidoPendiente'};
+throw Error(name);
+    },
+  });
+  async function renderStore() {
+    states = []; index = 0; effects = []; StoreOrders(); effects[0]();
+    await new Promise(setImmediate); index = 0; return nodes(StoreOrders());
+  }
+  assert.ok((await renderStore()).includes('Comprador'));
+  assert.equal(storeCalls[0].url, 'https://configured.example.test/api/tienda/pedidos/historial/?');
+  assert.equal(storeCalls[0].options.headers.Authorization, 'Token session-owner');
+  for (const invalid of [{...storeOrder, fecha_creacion: 'invalid'}, {...storeOrder, monto_total: 'NaN'}, {...storeOrder, items: null}, {data: [storeOrder]}]) {
+    storeReply = {ok: true, json: async () => ({exito: true, data: Array.isArray(invalid.data) ? invalid : [invalid], paginacion})};
+    assert.ok((await renderStore()).some(node => node.type === 'ErrorState'));
+  }
+  storeReply = {ok: false};
+  assert.ok((await renderStore()).includes('No se pudo completar la consulta. El servicio no está disponible en este momento. Intenta nuevamente más tarde.'));
+  storeToken = null;
+  const beforeStore = storeCalls.length;
+  assert.ok((await renderStore()).includes('Inicia sesión como propietario para consultar esta información.'));
+  assert.equal(storeCalls.length, beforeStore);
+  console.log('OK: pedidos cliente y propietario, contratos, Token, errores y navegación en cuatro plantillas protegidas.');
 })().catch(error => {console.error(error); process.exitCode = 1;});

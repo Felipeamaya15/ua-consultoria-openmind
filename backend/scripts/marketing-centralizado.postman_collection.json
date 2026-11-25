@@ -1,0 +1,219 @@
+{
+  "info": {
+    "name": "Marketing centralizado — QA aislado",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Regresión de lecturas y autorización existentes, solo en QA 8002. No envía correos ni inicia OAuth válido."
+  },
+  "variable": [
+    {
+      "key": "qaBaseUrl",
+      "value": "http://localhost:8002"
+    },
+    {
+      "key": "ownerToken",
+      "value": ""
+    },
+    {
+      "key": "verifiedBuyerToken",
+      "value": ""
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "const base = pm.variables.get(\"qaBaseUrl\");",
+          "if (!/^http:\\/\\/(localhost|127\\.0\\.0\\.1):8002$/.test(base)) throw new Error(\"Solo se admite el servidor QA local en el puerto 8002.\");"
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "Estado de correo aislado",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Token {{ownerToken}}"
+          }
+        ],
+        "url": "{{qaBaseUrl}}/api/tienda/correo/google/estado/"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+              "pm.test(\"Contrato exito\", () => pm.expect(pm.response.json().exito).to.eql(true));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Audiencia verificada",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Token {{ownerToken}}"
+          }
+        ],
+        "url": "{{qaBaseUrl}}/api/tienda/campanas/destinatarios/"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+              "pm.test(\"Contrato exito\", () => pm.expect(pm.response.json().exito).to.eql(true));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Borradores persistentes",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Token {{ownerToken}}"
+          }
+        ],
+        "url": "{{qaBaseUrl}}/api/tienda/campanas/"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+              "pm.test(\"Contrato exito\", () => pm.expect(pm.response.json().exito).to.eql(true));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Contactos existentes",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Token {{ownerToken}}"
+          }
+        ],
+        "url": "{{qaBaseUrl}}/api/tienda/contactos/"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+              "pm.test(\"Contrato exito\", () => pm.expect(pm.response.json().exito).to.eql(true));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Plantillas transaccionales",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Token {{ownerToken}}"
+          }
+        ],
+        "url": "{{qaBaseUrl}}/api/tienda/correos/"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+              "pm.test(\"Contrato exito\", () => pm.expect(pm.response.json().exito).to.eql(true));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Correo sin sesión",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "http://127.0.0.1:8002/api/tienda/correo/google/estado/",
+        "auth": {
+          "type": "noauth"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 401\", () => pm.response.to.have.status(401));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "OAuth exige autorizacion expresa",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Token {{ownerToken}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{qaBaseUrl}}/api/tienda/correo/google/iniciar/",
+        "body": {
+          "mode": "raw",
+          "raw": "{}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 400\", () => pm.response.to.have.status(400));"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

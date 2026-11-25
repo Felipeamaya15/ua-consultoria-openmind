@@ -1,6 +1,7 @@
 from urllib.parse import urlparse
 
 from rest_framework import serializers
+from apps.landing.activities import ActivityConfigSerializer, validate_activity
 
 
 class WebURLField(serializers.URLField):
@@ -14,7 +15,7 @@ class WebURLField(serializers.URLField):
 class BeneficioSerializer(serializers.Serializer):
     titulo = serializers.CharField(max_length=100)
     descripcion = serializers.CharField(max_length=250, allow_blank=True, required=False)
-    icono = serializers.ChoiceField(choices=['truck', 'lock', 'return', 'chat'], required=False)
+    icono = serializers.ChoiceField(choices=['truck', 'lock', 'return', 'chat', 'store', 'leaf', 'gift', 'checkCircle', 'hand', 'book', 'heart', 'clock'], required=False)
 
 
 class ContactoSerializer(serializers.Serializer):
@@ -43,7 +44,125 @@ class UbicacionSerializer(serializers.Serializer):
         return value
 
 
+class ImagenBloqueSerializer(serializers.Serializer):
+    id = serializers.UUIDField(format='hex_verbose')
+    src = serializers.CharField(max_length=2800000, allow_blank=True)
+    video_recurso_id = serializers.UUIDField(format='hex_verbose', required=False)
+    alt = serializers.CharField(max_length=250, allow_blank=True, default='')
+
+    def validate_id(self, value):
+        return str(value)
+
+    def validate_src(self, value):
+        from apps.landing.block_images import validate_block_image
+        return validate_block_image(value) if value else value
+
+
+    def validate_video_recurso_id(self, value):
+        return str(value)
+
+    def validate(self, value):
+        has_image = bool(value.get('src'))
+        has_video = bool(value.get('video_recurso_id'))
+
+        if has_image == has_video:
+            raise serializers.ValidationError(
+                'Selecciona una imagen o un video, no ambos.'
+            )
+
+        return value
+
+
+class BloqueLandingSerializer(serializers.Serializer):
+    id = serializers.UUIDField(format='hex_verbose')
+    tipo = serializers.ChoiceField(choices=['historia', 'imagen_texto', 'texto', 'galeria', 'cita', 'personalizada'])
+    visible = serializers.BooleanField(default=True)
+    titulo = serializers.CharField(max_length=255, allow_blank=True, default='')
+    subtitulo = serializers.CharField(max_length=500, allow_blank=True, default='')
+    texto = serializers.CharField(max_length=10000, allow_blank=True, default='')
+    imagenes = ImagenBloqueSerializer(many=True, required=False, default=list)
+    nombre_interno = serializers.CharField(max_length=100, allow_blank=True, required=False)
+    from apps.landing.section_elements import SectionElementSerializer
+    componentes = SectionElementSerializer(many=True, required=False)
+    actividad = ActivityConfigSerializer(required=False, allow_null=True)
+
+    def validate_id(self, value):
+        return str(value)
+
+    def validate(self, value):
+        elements = value.get('componentes', [])
+        if value['tipo'] != 'personalizada' and elements:
+            raise serializers.ValidationError('Los bloques configurables requieren una sección personalizada.')
+        if len(elements) > 30 or len({element['id'] for element in elements}) != len(elements):
+            raise serializers.ValidationError('Usa hasta 30 bloques con identificadores únicos por sección.')
+        images = value['imagenes']
+        limit = 8 if value['tipo'] == 'galeria' else 1 if value['tipo'] in ['historia', 'imagen_texto'] else 0
+        if len(images) > limit:
+            raise serializers.ValidationError({'imagenes': f'Este bloque permite hasta {limit} imágenes.'})
+        if len({i['id'] for i in images}) != len(images):
+            raise serializers.ValidationError({'imagenes': 'Los identificadores deben ser únicos.'})
+        validate_activity(value)
+        return value
+
+
 class ContenidoLandingSerializer(serializers.Serializer):
+    bloques = BloqueLandingSerializer(many=True, required=False)
+    orden_apartados = serializers.ListField(child=serializers.CharField(max_length=50), max_length=26, required=False)
+
+    def validate_bloques(self, value):
+        previous = {block['id']: block for block in self.context.get('bloques_previos', [])}
+        for block in value:
+            if 'actividad' not in block and 'actividad' in previous.get(block['id'], {}):
+                import copy
+                block['actividad'] = copy.deepcopy(previous[block['id']]['actividad'])
+            # Mantener configuraciones historicas, pero impedir publicar nuevas ventas de grabaciones.
+            activity_config = block.get('actividad') or {}
+            previous_config = (previous.get(block['id'], {}).get('actividad') or {})
+            if (activity_config.get('modalidad_venta') == 'grabado'
+                    and previous_config.get('modalidad_venta') != 'grabado'):
+                raise serializers.ValidationError(
+                    'Las nuevas ventas de talleres grabados estan deshabilitadas. Usa un taller en vivo o programado.'
+                )
+            validate_activity(block)
+
+            portada = (block.get('actividad') or {}).get('portada') or ''
+            tienda = self.context.get('tienda')
+            if tienda and portada.startswith('/media/landing/blocks/'):
+                prefix = (
+                    f"/media/landing/blocks/{tienda.pk}/"
+                    f"{block['id']}/"
+                )
+                if not portada.startswith(prefix):
+                    raise serializers.ValidationError(
+                        'La portada debe pertenecer a esta tienda y actividad.'
+                    )
+            activity = block.get('actividad') or {}
+            if activity.get('modalidad_venta') == 'grabado' and self.context.get('tienda'):
+                from apps.landing.private_recordings import require_recording
+                require_recording(self.context['tienda'], activity.get('grabacion_id'))
+            if activity.get('cupos') and self.context.get('tienda'):
+                from apps.landing.models import SolicitudActividad
+                reserved = SolicitudActividad.objects.filter(tienda=self.context['tienda'], seccion_id=block['id'], tipo='inscripcion').exclude(estado='cancelada').count()
+                if activity['cupos'] < reserved:
+                    raise serializers.ValidationError('Los cupos no pueden ser menores que las inscripciones vigentes. Cancela las que correspondan antes de reducirlos.')
+        if len(value) > 20:
+            raise serializers.ValidationError('Se permiten hasta 20 secciones.')
+        if len({b['id'] for b in value}) != len(value):
+            raise serializers.ValidationError('Los identificadores de las secciones deben ser únicos.')
+        uploads = [image['src'] for block in value for container in [block, *block.get('componentes', [])]
+                   for image in container.get('imagenes', []) if image['src'].startswith('data:')]
+        uploads += [
+            block['actividad']['portada']
+            for block in value
+            if block.get('actividad')
+            and block['actividad'].get('portada', '').startswith('data:')
+        ]
+        if sum(len(src) for src in uploads) > 14000000:
+            raise serializers.ValidationError('Guarda las imágenes en grupos de hasta 10 MB.')
+        from apps.landing.section_elements import validate_media_references
+        validate_media_references(value, self.context.get('tienda'), self.context.get('bloques_previos', []))
+        return value
+
     productos_destacados = serializers.ListField(child=serializers.RegexField(r'^[0-9a-f]{24}$'), max_length=6, required=False)
     categorias = serializers.ListField(child=serializers.CharField(max_length=100), max_length=6, required=False)
     beneficios = BeneficioSerializer(many=True, required=False)
@@ -56,6 +175,9 @@ class ContenidoLandingSerializer(serializers.Serializer):
         return value
 
     def validate(self, value):
+        if 'orden_apartados' in value:
+            from apps.landing.home_sections import validate_home_order
+            validate_home_order(value['orden_apartados'], value.get('bloques', self.context.get('bloques_previos', [])))
         for key in ('productos_destacados', 'categorias'):
             if len(value.get(key, [])) != len(set(value.get(key, []))):
                 raise serializers.ValidationError({key: 'No se permiten selecciones duplicadas.'})

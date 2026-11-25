@@ -7,6 +7,8 @@ from django.contrib.auth.models import AnonymousUser
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import IntegrityError, connection, connections, transaction
 from django.db.migrations.executor import MigrationExecutor
+from django.db.migrations import RunPython
+from unittest.mock import patch
 from django.db.models.deletion import ProtectedError
 from django.test import RequestFactory, TestCase, TransactionTestCase
 
@@ -127,7 +129,7 @@ class ConfiguracionTiendaTests(TestCase):
     def test_admin_crea_primera_y_rechaza_segunda_por_get_y_post(self):
         url = '/admin/core/tienda/add/'
         self.assertEqual(self.client.get(url).status_code, 200)
-        data = {'nombre': 'Primera', 'id_usuario_propietario': self.owner.pk, '_save': 'Save'}
+        data = {'nombre': 'Primera', 'id_usuario_propietario': self.owner.pk, 'horas_expiracion_pedido_en_linea': 2, 'horas_expiracion_pedido_manual': 48, '_save': 'Save'}
         self.assertEqual(self.client.post(url, data).status_code, 302)
         tienda = Tienda.objects.del_propietario(self.owner).get()
         self.assertEqual(self.client.get(url).status_code, 403)
@@ -142,6 +144,7 @@ class ConfiguracionTiendaTests(TestCase):
         self.assertTrue(admin.has_add_permission(request))
         formulario = admin.get_form(request)(data={
             'nombre': 'Segunda', 'id_usuario_propietario': self.owner.pk,
+            'horas_expiracion_pedido_en_linea': 2, 'horas_expiracion_pedido_manual': 48,
         })
         self.assertTrue(formulario.is_valid(), formulario.errors)
         primera, _ = configurar_tienda(self.owner, nombre='Primera')
@@ -153,7 +156,7 @@ class ConfiguracionTiendaTests(TestCase):
         tienda, _ = configurar_tienda(self.owner, nombre='Original')
         response = self.client.post(
             f'/admin/core/tienda/{tienda.pk}/change/',
-            {'nombre': 'Actualizada', 'descripcion': 'Nueva', '_save': 'Save'},
+            {'nombre': 'Actualizada', 'descripcion': 'Nueva', 'horas_expiracion_pedido_en_linea': 2, 'horas_expiracion_pedido_manual': 48, '_save': 'Save'},
         )
         self.assertEqual(response.status_code, 302)
         tienda.refresh_from_db()
@@ -199,22 +202,33 @@ class ConfiguracionTiendaConcurrenteTests(TransactionTestCase):
 
 
 class TiendaPropietarioMigrationTests(TransactionTestCase):
-    migrate_from = ('core', '0003_itempedido_id_variante')
+    migrate_from = ('core', '0001_initial')
     migrate_to = ('core', '0004_tienda_propietario_auth')
 
     def setUp(self):
         executor = MigrationExecutor(connection)
-        self.other_targets = [node for node in executor.loader.graph.leaf_nodes() if node[0] != 'core']
+        self.final_targets = executor.loader.graph.leaf_nodes()
+        self.other_targets = [node for node in self.final_targets
+                              if node[0] not in ('core', 'authentication', 'landing', 'visual_config')
+                              and self.migrate_to not in executor.loader.graph.forwards_plan(node)]
         targets = [self.migrate_from, *self.other_targets]
-        executor.migrate(targets)
+        operation = executor.loader.disk_migrations[('authentication', '0002_ensure_configuracion_autenticacion_table')].operations[0]
+        promotion_reverse = executor.loader.disk_migrations[('core', '0023_reconciliar_promocion_historica')].operations[0].database_operations[0]
+        self.assertFalse(self.final_model_promotions_exist())
+        with patch.object(operation, 'reverse_code', RunPython.noop), patch.object(promotion_reverse, 'reverse_code', RunPython.noop):
+            executor.migrate(targets)
         self.old_apps = executor.loader.project_state(targets).apps
 
+    @staticmethod
+    def final_model_promotions_exist():
+        from apps.core.models import Promocion
+        return Promocion.objects.exists()
+
     def tearDown(self):
-        # Solo datos de la base de pruebas; deja el esquema actual para los siguientes tests.
         executor = MigrationExecutor(connection)
         if self.migrate_to not in executor.loader.applied_migrations:
             self.old_apps.get_model('core', 'Tienda').objects.all().delete()
-        executor.migrate([self.migrate_to, *self.other_targets])
+        executor.migrate(self.final_targets)
         super().tearDown()
 
     def legacy(self, pk, email):

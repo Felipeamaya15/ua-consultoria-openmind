@@ -2,19 +2,14 @@ from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
 from django.test import TestCase
 
-from apps.core.models import Tienda, Usuario
+from django.contrib.auth import get_user_model
+from apps.core.models import Tienda
 from apps.visual_config.models import ConfiguracionVisual
 
 
 class ConfiguracionVisualTests(TestCase):
     def setUp(self):
-        self.propietario = Usuario.objects.create(
-            correo='visual@example.test',
-            password_hash='test',
-            nombre='Nombre',
-            apellido='Apellido',
-            rol='admin',
-        )
+        self.propietario = get_user_model().objects.create_user(username='visual-owner', email='visual@example.test')
 
         self.tienda = Tienda.objects.create(
             nombre='Mi tienda',

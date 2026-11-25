@@ -1,0 +1,5 @@
+simulation: marketing-delivery-qa
+routing: path
+mocks:
+  - routeKey: openmind
+    path: ./marketing-delivery-mock/config.yaml

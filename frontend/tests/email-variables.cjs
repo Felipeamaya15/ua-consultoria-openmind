@@ -1,0 +1,84 @@
+
+const fs = require('node:fs'), path = require('node:path'), vm = require('node:vm');
+const assert = require('node:assert/strict'), ts = require('typescript');
+const root = path.resolve(__dirname, '..');
+
+function load(relative) {
+  const file = path.resolve(root, relative), module = { exports: {} };
+  const code = ts.transpileModule(fs.readFileSync(file, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 } }).outputText;
+  vm.runInNewContext(code, { module, exports: module.exports });
+  return module.exports;
+}
+const same = (actual, expected, message) => assert.deepEqual(JSON.parse(JSON.stringify(actual)), JSON.parse(JSON.stringify(expected)), message);
+let passed = 0;
+function test(name, fn) { fn(); console.log('OK ' + name); passed++; }
+
+
+const VARIABLES_DEL_BACKEND = ['customerName', 'customerEmail', 'orderNumber', 'orderTotal', 'orderSummary', 'shippingMethod', 'carrier', 'trackingCode', 'trackingLink', 'storeName'];
+const TIPOS_DEL_BACKEND = ['order_cancelled', 'order_delivered', 'order_received', 'order_shipped', 'payment_success'];
+
+const pantalla = fs.readFileSync(path.join(root, 'src/features/admin/pages/Emails.tsx'), 'utf8').replace(/\r/g, '');
+const backendFields=fs.readFileSync(path.join(root,'../backend/apps/core/domain/plantillas_correo/base.py'),'utf8');
+const variablesDeLaPantalla=[...(backendFields.match(/VARIABLES_PERMITIDAS = \(([\s\S]*?)\)/)||[])[1].matchAll(/'([A-Za-z]+)'/g)].map(match=>`{{${match[1]}}}`);
+const { createDefaultEmailTemplates, emailTemplateDefinitions } = load('src/features/admin/data/emailTemplates.ts');
+const porDefecto = createDefaultEmailTemplates();
+const usadas = texto => [...texto.matchAll(/\{\{\s*(\w+)\s*\}\}/g)].map(m => m[1]);
+
+test('la pantalla ofrece exactamente las mismas variables que el backend', () => {
+  assert.ok(pantalla.includes('setFields(remote.variables??[])'), 'el catálogo debe provenir del backend real');
+  same([...variablesDeLaPantalla].sort(), VARIABLES_DEL_BACKEND.map(nombre => `{{${nombre}}}`).sort());
+});
+
+test('ninguna variable de la pantalla se repite', () => {
+  assert.equal(new Set(variablesDeLaPantalla).size, variablesDeLaPantalla.length);
+});
+
+test('la pantalla maneja los mismos tipos de correo que el backend', () => {
+  same(Object.keys(porDefecto).sort(), TIPOS_DEL_BACKEND);
+  same(Object.keys(emailTemplateDefinitions).sort(), TIPOS_DEL_BACKEND);
+});
+
+test('los textos por defecto de la pantalla solo usan variables permitidas', () => {
+  for (const [tipo, plantilla] of Object.entries(porDefecto)) {
+    const desconocidas = usadas(`${plantilla.subject}\n${plantilla.preheader}\n${plantilla.body}`).filter(v => !VARIABLES_DEL_BACKEND.includes(v));
+    same(desconocidas, [], tipo);
+  }
+});
+
+test('el correo de despacho trae por defecto el mismo texto que el backend, con el enlace de seguimiento', () => {
+  const despacho = porDefecto.order_shipped;
+  assert.equal(despacho.enabled, true);
+  assert.equal(despacho.subject, 'Tu pedido ya fue despachado · {{orderNumber}}');
+  assert.equal(despacho.preheader, 'Tu compra va en camino.');
+  assert.equal(despacho.body, 'Hola {{customerName}},\n\n'
+    + 'Tu pedido {{orderNumber}} ya fue despachado y va en camino.\n\n'
+    + 'Transportista: {{carrier}}\n'
+    + 'Código de seguimiento: {{trackingCode}}\n\n'
+    + 'Revisa el estado de tu pedido aquí (te pediremos el correo con el que compraste): {{trackingLink}}\n\n'
+    + 'Gracias por comprar en {{storeName}}.');
+});
+
+test('los textos por defecto no tienen saltos de línea de más ni espacios al final', () => {
+  for (const [tipo, plantilla] of Object.entries(porDefecto)) {
+    assert.ok(!/\n{3,}/.test(plantilla.body), tipo);
+    assert.equal(plantilla.body, plantilla.body.trim(), tipo);
+    assert.equal(plantilla.subject, plantilla.subject.trim(), tipo);
+  }
+});
+
+
+test('el correo de recepción de pedido incluye por defecto el resumen de compra (SCRUM-432)', () => {
+  const recepcion = porDefecto.order_received;
+  assert.equal(recepcion.enabled, true);
+  assert.ok(recepcion.body.includes('{{orderSummary}}'), 'debe incluir {{orderSummary}}');
+  assert.ok(recepcion.body.includes('Resumen de compra:'), 'debe incluir la sección Resumen de compra:');
+});
+
+test('el correo de pago exitoso incluye por defecto el resumen de compra (SCRUM-433)', () => {
+  const pagoExitoso = porDefecto.payment_success;
+  assert.equal(pagoExitoso.enabled, true);
+  assert.ok(pagoExitoso.body.includes('{{orderSummary}}'), 'debe incluir {{orderSummary}}');
+  assert.ok(pagoExitoso.body.includes('Resumen de compra:'), 'debe incluir la sección Resumen de compra:');
+});
+
+console.log(`\n${passed} pruebas OK`);

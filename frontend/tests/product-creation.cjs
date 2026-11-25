@@ -1,4 +1,4 @@
-// Ejecutar desde frontend: node tests/product-creation.cjs
+
 const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
@@ -7,24 +7,26 @@ const ts = require('typescript');
 const root = path.resolve(__dirname, '..');
 const product = {
   id: 'local', name: 'Polera', description: 'Algodón', category: 'Ropa', status: 'active',
-  images: [], basePrice: 80, attributes: { Talla: ['M'] }, tags: [],
+  images: [], basePrice: 80, comparePrice: 100, attributes: { Talla: ['M'] }, tags: [],
   variants: [{ id: 'v', sku: ' pol-m ', price: 80, comparePrice: 100, stock: 3, attributes: { Talla: 'M' } }],
 };
 function load(file, globals) {
+  if (file.endsWith('productService.ts')) return require('./source-loader.cjs').load(file, {}, {sessionStorage: {getItem: () => null}, ...globals});
   const module = { exports: {} };
   const source = fs.readFileSync(path.join(root, file), 'utf8').replace('(import.meta as any).env.VITE_API_URL', '"http://test"');
   const code = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020, jsx: ts.JsxEmit.ReactJSX } }).outputText;
-  vm.runInNewContext(code, { module, exports: module.exports, Error, ...globals });
+  vm.runInNewContext(code, { module, exports: module.exports, Error, sessionStorage: {getItem: () => null}, ...globals });
   return module.exports;
 }
 async function main() {
-  let token = 'owner-token', request, reply;
+  let token = 'owner-token', sessionToken = null, request, reply;
   const service = load('src/features/admin/services/productService.ts', {
     localStorage: { getItem: () => token },
+    sessionStorage: { getItem: () => sessionToken },
     fetch: async (url, options) => { request = { url, options }; return reply; },
   });
-  reply = { ok: true, json: async () => ({ exito: true, data: { id: 'mongo-id' } }) };
-  assert.equal(await service.createPublicProduct(product), 'mongo-id');
+  reply = { ok: true, json: async () => ({ exito: true, data: { id: '0123456789abcdef01234567' } }) };
+  assert.equal(await service.createPublicProduct(product), '0123456789abcdef01234567');
   assert.equal(request.url, 'http://test/api/catalog/productos/crear/');
   assert.equal(request.options.headers.Authorization, 'Token owner-token');
   const body = JSON.parse(request.options.body);
@@ -44,8 +46,12 @@ async function main() {
   }
   token = null;
   await assert.rejects(() => service.createPublicProduct(product), /Inicia sesión/);
+  sessionToken = 'session-owner';
+  reply = {ok: true, json: async () => ({exito: true, data: {id: '0123456789abcdef01234567'}})};
+  await service.createPublicProduct(product);
+  assert.equal(request.options.headers.Authorization, 'Token session-owner');
 
-  // Creación y edición solo marcan Guardado tras éxito backend, sin AdminContext.
+
   for (const editing of [false, true]) for (const fails of [true, false]) {
     const state = [], changes = [];
     let calls = 0;
@@ -53,6 +59,10 @@ async function main() {
     const form = load('src/features/admin/pages/Products.tsx', {
       setTimeout: () => {},
       require: id => {
+        if(id.includes("FeedbackProvider"))return {useFeedback:()=>({confirm:async()=>false})};
+        if (id.includes('shared/services/imageUpload')) return { IMAGE_ACCEPT: 'image/*', prepareImage: async () => { throw new Error('Este test no selecciona archivos'); } };
+        if (id === '../../marketing/services/mediaLibraryService') return {saveProductVideoResource: async () => {throw new Error('Esta fixture no selecciona videos');}};
+        if (id === '../components/ProductVideoField') return {ProductVideoField: 'ProductVideoField'};
         if (id === 'react/jsx-runtime') return { jsx, jsxs: jsx };
         if (id === 'react') return {
           useEffect: () => {}, useMemo: f => f(), useRef: () => ({ current: null }),
@@ -65,11 +75,11 @@ async function main() {
         if (id === 'react-router-dom') return { Link: 'Link', useNavigate: () => () => {}, useParams: () => ({ id: 'nuevo' }) };
         if (id.includes('mockAdminData')) return { mockProducts: [], formatPrice: String };
         if (id.includes('productService')) return {
-          createPublicProduct: async () => { assert.equal(editing, false); calls++; if (fails) throw new Error('Servidor caído'); return 'mongo-id'; },
+          createPublicProduct: async () => { assert.equal(editing, false); calls++; if (fails) throw new Error('Servidor caído'); return '0123456789abcdef01234567'; },
           updateCatalogProduct: async p => { assert.equal(editing, true); calls++; if (fails) throw new Error('Servidor caído'); return { ...p, revision: 'new-revision' }; },
         };
         if (id.includes('components/ui')) return Object.fromEntries(['Alert','Badge','Button','Input','Select','Tabs','Textarea','Toggle'].map(x => [x, x]));
-        throw new Error(id);
+        if (id.includes('shared/components/states')) return {LoadingState: 'LoadingState', ErrorState: 'ErrorState', EmptyListState: 'EmptyListState'}; if (id.includes('humanizeError')) return {humanizeAdminError: message => message}; if (id.includes('emptyStates')) return require('./source-loader.cjs').load('src/features/admin/services/emptyStates.ts'); throw new Error(id);
       },
     });
     const tree = form.ProductEditor({ initial: structuredClone(product), editing });

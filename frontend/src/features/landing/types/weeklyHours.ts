@@ -1,6 +1,6 @@
 const days = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
 
-// Presentación del horario persistido. El texto antiguo se conserva sin inferir días.
+
 export function weeklyHours(value: string) {
   if (!value.trim()) return null;
   const parts = value.split(/;\s*|\n/).filter(part => part.trim());

@@ -1,44 +1,26 @@
-import { useEffect } from 'react';
-import { Outlet, useLocation } from 'react-router-dom';
+import { StorePageContent } from '../StorePageContent';
+import { Outlet } from 'react-router-dom';
 
 import { MinimalSidebar } from './MinimalSidebar';
 import { MinimalHeader } from './MinimalHeader';
 import { MinimalFooter } from './MinimalFooter';
+import { StoreVisualRoot } from '../StoreVisualRoot';
+import './minimalLandingPolish.css';
 
 export function MinimalLayout() {
-  const { pathname, search } = useLocation();
-
-  useEffect(() => {
-    window.scrollTo(0, 0);
-  }, [pathname, search]);
-
   return (
-    <div className="template-minimal min-h-screen bg-[#f5f5f3]">
-
+    <StoreVisualRoot className="template-minimal min-h-screen bg-[#f5f5f3]">
       <MinimalSidebar />
 
-      <div className="md:pl-16 min-h-screen flex flex-col">
-
-        <div className="bg-[var(--institutional)] text-white py-2 px-4 text-xs flex items-center justify-center gap-2.5 font-medium">
-          <img
-            src="/logo-universidad-autonoma.png"
-            alt="Logo Universidad Autónoma de Chile"
-            className="w-8 h-8 object-contain bg-white rounded-md p-1 shadow-sm"
-          />
-          <span>
-            Plataforma impulsada por <strong>Universidad Autónoma de Chile</strong>
-          </span>
-        </div>
-
+      <div className="md:pl-20 min-h-screen flex flex-col">
         <MinimalHeader />
 
-        <main className="flex-1">
-          <Outlet />
+        <main id="main-content" tabIndex={-1} className="flex-1">
+          <StorePageContent><Outlet /></StorePageContent>
         </main>
 
         <MinimalFooter />
-
       </div>
-    </div>
+    </StoreVisualRoot>
   );
 }

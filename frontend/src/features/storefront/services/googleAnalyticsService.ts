@@ -1,0 +1,86 @@
+export interface GoogleAnalyticsIdValidation {
+  valid: boolean;
+  measurementId: string;
+  error?: string;
+}
+
+type GtagArguments = [command: string, targetOrAction: string | Date, params?: Record<string, unknown>];
+
+declare global {
+  interface Window {
+    dataLayer?: unknown[];
+    gtag?: (...args: GtagArguments) => void;
+    __googleAnalyticsId?: string;
+  }
+}
+
+
+export function validateGoogleAnalyticsId(value: unknown): GoogleAnalyticsIdValidation {
+  if (value === null || value === undefined) {
+    return { valid: true, measurementId: '' };
+  }
+
+  const measurementId = String(value).trim().toUpperCase();
+  if (!measurementId) {
+    return { valid: true, measurementId: '' };
+  }
+
+  if (!measurementId.startsWith('G-')) {
+    return {
+      valid: false,
+      measurementId,
+      error: 'El identificador de Google Analytics debe comenzar con G-.',
+    };
+  }
+
+  if (!/^G-[A-Z0-9]{4,20}$/.test(measurementId)) {
+    return {
+      valid: false,
+      measurementId,
+      error: 'Ingresa un identificador de medición GA4 válido, sin espacios ni símbolos.',
+    };
+  }
+
+  return { valid: true, measurementId };
+}
+
+
+export function initGoogleAnalytics(value: unknown): boolean {
+  if (typeof window === 'undefined' || typeof document === 'undefined') return false;
+
+  const validation = validateGoogleAnalyticsId(value);
+  if (!validation.valid || !validation.measurementId) return false;
+  const measurementId = validation.measurementId;
+  const flags=window as unknown as Record<string,unknown>;
+  if(window.__googleAnalyticsId&&window.__googleAnalyticsId!==measurementId)flags['ga-disable-'+window.__googleAnalyticsId]=true;
+  flags['ga-disable-'+measurementId]=false;
+
+  window.dataLayer = window.dataLayer || [];
+  window.gtag = window.gtag || function (...args: GtagArguments) {
+    window.dataLayer?.push(args);
+  };
+
+  window.gtag('consent', 'update', { analytics_storage: 'granted' });
+  if (window.__googleAnalyticsId === measurementId) return true;
+
+  let script = document.getElementById('google-analytics-script') as HTMLScriptElement | null;
+  if (!script) {
+    script = document.createElement('script');
+    script.id = 'google-analytics-script';
+    script.async = true;
+    script.src = `https://www.googletagmanager.com/gtag/js?id=${encodeURIComponent(measurementId)}`;
+    document.head.appendChild(script);
+  }
+
+  window.gtag('js', new Date());
+  window.gtag('config', measurementId, { send_page_view: true });
+  window.__googleAnalyticsId = measurementId;
+  return true;
+}
+
+
+export function disableGoogleAnalytics(): void {
+  if(typeof window==='undefined')return;
+  if(window.__googleAnalyticsId)(window as unknown as Record<string,unknown>)['ga-disable-'+window.__googleAnalyticsId]=true;
+  if(typeof window.gtag==='function')window.gtag('consent','update',{analytics_storage:'denied'});
+}

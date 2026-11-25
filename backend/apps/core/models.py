@@ -1,7 +1,11 @@
+import copy
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.db.models import Q
+from django.db.models.functions import Upper
+from apps.core.promotion_dates import promotion_instant
 from django.utils import timezone
 from django.utils.crypto import get_random_string
 
@@ -41,12 +45,83 @@ class Tienda(models.Model):
     )
     nombre = models.CharField(max_length=150)
     descripcion = models.TextField(blank=True, null=True)
+    correo_negocio = models.EmailField(blank=True, default='')
+    horas_expiracion_pedido_en_linea = models.PositiveSmallIntegerField(
+        default=2, validators=[MinValueValidator(1), MaxValueValidator(720)])
+    horas_expiracion_pedido_manual = models.PositiveSmallIntegerField(
+        default=48, validators=[MinValueValidator(0), MaxValueValidator(720)])
     fecha_creacion = models.DateTimeField(auto_now_add=True)
 
     objects = TiendaQuerySet.as_manager()
 
     class Meta:
         db_table = 'tienda'
+
+
+class Promocion(models.Model):
+    TIPO_PORCENTAJE = 'percentage'
+    TIPO_MONTO_FIJO = 'fixed'
+    TIPO_ENVIO_GRATIS = 'free_shipping'
+    TIPO_PRECIO_OFERTA = 'precio_oferta'
+
+    TIPOS_CODIGO = [
+        (TIPO_PORCENTAJE, 'Descuento porcentual'),
+        (TIPO_MONTO_FIJO, 'Descuento por monto fijo'),
+        (TIPO_ENVIO_GRATIS, 'Envío gratuito'),
+        ('descuento_porcentual', 'Descuento porcentual'),
+        ('descuento_monto_fijo', 'Descuento por monto fijo'),
+        ('envio_gratuito', 'Envío gratuito'),
+    ]
+    TIPOS = TIPOS_CODIGO + [
+        (TIPO_PRECIO_OFERTA, 'Precio de oferta'),
+    ]
+
+    id_promocion = models.BigAutoField(primary_key=True)
+    tienda = models.ForeignKey(Tienda, on_delete=models.CASCADE, related_name='promociones')
+    nombre = models.CharField(max_length=150)
+    tipo = models.CharField(max_length=30, choices=TIPOS)
+    codigo = models.CharField(max_length=40, blank=True, default='')
+    valor = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    monto_minimo = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    maximo_usos = models.PositiveIntegerField(null=True, blank=True)
+    usos = models.PositiveIntegerField(default=0)
+    activa = models.BooleanField(default=True)
+    fecha_inicio = models.DateTimeField(null=True, blank=True)
+    fecha_fin = models.DateTimeField(null=True, blank=True)
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+    fecha_actualizacion = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'promocion'
+        constraints = [
+            models.UniqueConstraint(
+                Upper('codigo'), 'tienda',
+                condition=~Q(codigo=''),
+                name='uq_promocion_codigo_por_tienda',
+            ),
+            models.CheckConstraint(
+                condition=(
+                    Q(fecha_inicio__isnull=True)
+                    | Q(fecha_fin__isnull=True)
+                    | Q(fecha_fin__gte=models.F('fecha_inicio'))
+                ),
+                name='chk_promocion_fechas_validas',
+            ),
+            models.CheckConstraint(condition=Q(valor__gte=0), name='chk_promocion_valor_no_negativo'),
+            models.CheckConstraint(condition=Q(monto_minimo__gte=0), name='chk_promocion_minimo_no_negativo'),
+            models.CheckConstraint(condition=Q(tipo='precio_oferta') | ~Q(codigo=''), name='chk_promocion_codigo_cupon'),
+            models.CheckConstraint(condition=Q(tipo__in=('percentage','fixed','free_shipping','descuento_porcentual','descuento_monto_fijo','envio_gratuito','precio_oferta')), name='chk_promocion_tipo_valido'),
+            models.CheckConstraint(condition=(~Q(tipo__in=('percentage','descuento_porcentual')) | Q(valor__gt=0,valor__lte=100)) & (~Q(tipo__in=('fixed','descuento_monto_fijo')) | Q(valor__gt=0)), name='chk_promocion_descuento_valido'),
+        ]
+
+    def save(self, *args, **kwargs):
+        self.fecha_inicio = promotion_instant(self.fecha_inicio)
+        self.fecha_fin = promotion_instant(self.fecha_fin, end=True)
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.nombre} ({self.get_tipo_display()})"
+
 
 class Producto(models.Model):
     id_producto = models.BigAutoField(primary_key=True)
@@ -68,7 +143,6 @@ class Producto(models.Model):
 
 class Carrito(models.Model):
     id_carrito = models.BigAutoField(primary_key=True)
-    # OneToOneField asegura que la relación sea ÚNICA (UK) como en tu diagrama
     id_usuario = models.OneToOneField(Usuario, on_delete=models.CASCADE, db_column='id_usuario')
     fecha_actualizacion = models.DateTimeField(auto_now=True)
 
@@ -105,21 +179,24 @@ def generar_identificador_orden():
 class Pedido(models.Model):
     ESTADO_CHOICES = [
         ('pendiente', 'Pendiente'),
-        ('pagado', 'Pagado'),
-        ('enviado', 'Enviado'),
+        ('pagado', 'Pagado/En preparación'),
+        ('en_camino', 'En camino'),
+        ('entregado', 'Entregado'),
         ('cancelado', 'Cancelado'),
     ]
+    ESTADOS_PAGADOS = ('pagado', 'en_camino', 'entregado', 'preparando', 'en_origen', 'enviado', 'en_reparto')
+    ESTADOS_EN_DESPACHO = ('en_camino', 'entregado', 'preparando', 'en_origen', 'enviado', 'en_reparto')
     id_pedido = models.BigAutoField(primary_key=True)
-    
+
     identificador = models.CharField(
-        max_length=20, 
+        max_length=20,
         unique=False,
-        default=generar_identificador_orden, 
+        default=generar_identificador_orden,
         editable=False,
         verbose_name="Número de Orden",
         null=True
     )
-    
+
     id_usuario = models.ForeignKey(Usuario, on_delete=models.CASCADE, db_column='id_usuario', null=True, blank=True)
     comprador = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
@@ -136,11 +213,17 @@ class Pedido(models.Model):
     tienda = models.ForeignKey(Tienda, on_delete=models.PROTECT, null=True, blank=True)
     clave_checkout = models.UUIDField(unique=True, null=True, blank=True)
     huella_checkout = models.CharField(max_length=64, blank=True, default='')
+    webpay_token = models.CharField(max_length=512, blank=True, default='')
+    webpay_url = models.CharField(max_length=2048, blank=True, default='')
+    webpay_iniciado_en = models.DateTimeField(null=True, blank=True)
+    stock_descontado = models.BooleanField(default=False)
+    stock_devuelto = models.BooleanField(default=False)
     contacto = models.JSONField(default=dict, blank=True)
     entrega = models.JSONField(default=dict, blank=True)
     medio_pago = models.CharField(max_length=40, blank=True, default='')
     costo_envio = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     descuento = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    pago_fx = models.JSONField(default=dict, blank=True)
 
     class Meta:
         db_table = 'pedido'
@@ -176,6 +259,95 @@ class ItemPedido(models.Model):
             models.CheckConstraint(check=Q(cantidad__gt=0), name='chk_item_pedido_cantidad_valida'),
             models.CheckConstraint(check=Q(precio_unitario__gte=0), name='chk_item_pedido_precio_valido'),
         ]
+
+
+class ConsentimientoComercial(models.Model):
+    """Evidencia separada de compras/cookies. Sin registro nunca significa autorizado.
+
+    No hay API que permita al vendedor conceder consentimiento por el cliente.
+    La captura del comprador exige texto aprobado y verificación de identidad.
+    """
+    tienda = models.ForeignKey(Tienda, on_delete=models.CASCADE)
+    email = models.EmailField(max_length=320)
+    estado = models.CharField(max_length=15, choices=[('pendiente', 'Pendiente de verificación'), ('autorizado', 'Autorizado'), ('retirado', 'Retirado')])
+    version_texto = models.CharField(max_length=100, blank=True, default='')
+    referencia_evidencia = models.CharField(max_length=250, blank=True, default='')
+    fecha_actualizacion = models.DateTimeField(default=timezone.now)
+
+    verificado = models.BooleanField(default=False)
+    fecha_autorizacion = models.DateTimeField(null=True, blank=True)
+    fecha_verificacion = models.DateTimeField(null=True, blank=True)
+    fecha_retirada = models.DateTimeField(null=True, blank=True)
+    revision = models.PositiveIntegerField(default=0)
+
+    def save(self, *args, **kwargs):
+        from django.core.exceptions import ValidationError
+        from django.core.validators import validate_email
+        self.email = self.email.strip().lower()
+        validate_email(self.email)
+        if self.estado == 'autorizado' and (not self.version_texto.strip() or not self.referencia_evidencia.strip()):
+            raise ValidationError('La autorización requiere versión del texto y referencia de evidencia.')
+        previous = type(self).objects.filter(pk=self.pk).values('estado').first() if self.pk else None
+        if previous and previous['estado'] != self.estado:
+            self.fecha_actualizacion = timezone.now()
+            fields = {'fecha_actualizacion'}
+            if self.estado == 'retirado':
+                self.fecha_retirada = self.fecha_actualizacion
+                self.verificado = False
+                self.revision += 1
+                fields.update({'fecha_retirada', 'verificado', 'revision'})
+            if kwargs.get('update_fields') is not None:
+                kwargs['update_fields'] = set(kwargs['update_fields']) | fields
+        return super().save(*args, **kwargs)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['tienda', 'email'], name='uq_consentimiento_tienda_email'),
+            models.CheckConstraint(condition=Q(estado__in=['pendiente', 'retirado']) | (Q(estado='autorizado') & ~Q(version_texto='') & ~Q(referencia_evidencia='')), name='chk_consentimiento_evidencia'),
+            models.CheckConstraint(condition=Q(email=models.functions.Lower(models.functions.Trim('email'))), name='chk_consentimiento_normalizado'),
+        ]
+
+class SolicitudConsentimiento(models.Model):
+    import uuid
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    consentimiento = models.ForeignKey(ConsentimientoComercial, on_delete=models.CASCADE)
+    proposito = models.CharField(max_length=12, choices=[('confirmar', 'Confirmar'), ('gestionar', 'Gestionar')])
+    confirmacion = models.ForeignKey('self', null=True, blank=True, on_delete=models.PROTECT)
+    token_hash = models.CharField(max_length=64)
+    revision = models.PositiveIntegerField()
+    version_texto = models.CharField(max_length=100)
+    fecha_creacion = models.DateTimeField(default=timezone.now)
+    fecha_vencimiento = models.DateTimeField()
+    fecha_consumida = models.DateTimeField(null=True, blank=True)
+
+
+class HistorialConsentimientoQuerySet(models.QuerySet):
+    def update(self, **kwargs):
+        raise ValueError('El historial de consentimiento es de solo adición.')
+
+    def delete(self):
+        raise ValueError('El historial de consentimiento no se elimina desde la aplicación.')
+
+
+class EventoConsentimiento(models.Model):
+    consentimiento = models.ForeignKey(ConsentimientoComercial, on_delete=models.PROTECT, related_name='eventos')
+    tipo = models.CharField(max_length=12, choices=[('solicitado', 'Solicitado'), ('autorizado', 'Autorizado'), ('retirado', 'Retirado')])
+    fecha = models.DateTimeField(default=timezone.now)
+    revision = models.PositiveIntegerField()
+    version_texto = models.CharField(max_length=100)
+    texto = models.TextField()
+    metodo = models.CharField(max_length=40, default='enlace_email')
+    solicitud_id = models.UUIDField()
+    objects = HistorialConsentimientoQuerySet.as_manager()
+
+    def save(self, *args, **kwargs):
+        if not self._state.adding:
+            raise ValueError('El historial de consentimiento es de solo adición.')
+        return super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValueError('El historial de consentimiento no se elimina desde la aplicación.')
+
 
 class ConfiguracionTransbank(models.Model):
     AMBIENTE_CHOICES = [
@@ -296,15 +468,159 @@ class VarianteProducto(models.Model):
             models.CheckConstraint(check=models.Q(precio__gte=0), name='chk_variante_precio_valido'),
             models.CheckConstraint(check=models.Q(stock__gte=0), name='chk_variante_stock_valido'),
         ]
+
 class ConfiguracionPago(models.Model):
     tienda = models.OneToOneField(
         'core.Tienda',
         on_delete=models.CASCADE,
         related_name='configuracion_pago'
     )
-    # Almacenará el JSON con los métodos (Transbank, PayPal, etc.) y su estado 'enabled'
+    datos = models.JSONField(default=dict, blank=True)
+    fecha_actualizacion = models.DateTimeField(auto_now=True)
+
+    CAMPOS_SECRETOS = {'linkify': ('clavePrivada',), 'tuu': ('secretKey',)}
+
+    class Meta:
+        db_table = 'configuracion_pago'
+
+    @classmethod
+    def transformar_secretos(cls, datos, funcion):
+        resultado = copy.deepcopy(datos) if isinstance(datos, dict) else {}
+        for metodo, campos in cls.CAMPOS_SECRETOS.items():
+            fields = (resultado.get(metodo) or {}).get('fields') if isinstance(resultado.get(metodo), dict) else None
+            if not isinstance(fields, dict):
+                continue
+            for campo in campos:
+                if isinstance(fields.get(campo), str):
+                    fields[campo] = funcion(fields[campo])
+        return resultado
+
+    @staticmethod
+    def enmascarar(valor):
+        if not valor:
+            return ''
+        if len(valor) <= 8:
+            return '********'
+        return f"{'*' * (len(valor) - 4)}{valor[-4:]}"
+
+    @property
+    def datos_enmascarados(self):
+        return self.transformar_secretos(self.datos_descifrados, self.enmascarar)
+
+    @property
+    def datos_descifrados(self):
+        from apps.core.infrastructure.encryption import descifrar
+        return self.transformar_secretos(self.datos, descifrar)
+
+    def save(self, *args, **kwargs):
+        from apps.core.infrastructure.encryption import cifrar
+        self.datos = self.transformar_secretos(self.datos, cifrar)
+        super().save(*args, **kwargs)
+
+class ConfiguracionEntrega(models.Model):
+    tienda = models.OneToOneField(
+        'core.Tienda',
+        on_delete=models.CASCADE,
+        related_name='configuracion_entrega'
+    )
+
+    datos = models.JSONField(default=dict, blank=True)
+
+    fecha_actualizacion = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'configuracion_entrega'
+
+    def __str__(self):
+        return f"Configuración de entrega - Tienda {self.tienda_id}"
+
+class ConfiguracionLegal(models.Model):
+    tienda = models.OneToOneField(
+        'core.Tienda',
+        on_delete=models.CASCADE,
+        related_name='configuracion_legal',
+    )
     datos = models.JSONField(default=dict, blank=True)
     fecha_actualizacion = models.DateTimeField(auto_now=True)
 
     class Meta:
-        db_table = 'configuracion_pago'
+        db_table = 'configuracion_legal'
+        verbose_name = 'Configuración legal'
+        verbose_name_plural = 'Configuraciones legales'
+
+    def __str__(self):
+        return f"Configuración legal - Tienda {self.tienda_id}"
+
+class ConfiguracionCorreo(models.Model):
+    tienda = models.OneToOneField(
+        'core.Tienda',
+        on_delete=models.CASCADE,
+        related_name='configuracion_correo',
+    )
+    plantillas = models.JSONField(default=dict, blank=True)
+    fecha_actualizacion = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'configuracion_correo'
+        verbose_name = 'Configuración de correo'
+        verbose_name_plural = 'Configuraciones de correo'
+
+
+class ConexionGmailTienda(models.Model):
+    """Conexion Gmail independiente de cada tienda."""
+
+    tienda = models.OneToOneField(
+        "core.Tienda",
+        on_delete=models.CASCADE,
+        related_name="conexion_gmail",
+    )
+    correo_autorizado = models.EmailField(blank=True, default="")
+    refresh_token_cifrado = models.TextField(blank=True, default="")
+    estado_oauth_hash = models.CharField(
+        max_length=64,
+        blank=True,
+        default="",
+    )
+    estado_oauth_expira = models.DateTimeField(
+        null=True,
+        blank=True,
+    )
+    actualizado_en = models.DateTimeField(auto_now=True)
+    autorizacion_correo = models.EmailField(blank=True, default='')
+    autorizacion_fecha = models.DateTimeField(null=True, blank=True)
+    autorizacion_version = models.CharField(max_length=100, blank=True, default='')
+    autorizacion_usuario = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True,
+        on_delete=models.PROTECT, related_name='+')
+    autorizacion_pendiente = models.JSONField(default=dict, blank=True)
+
+    def __str__(self):
+        return f"Conexion Gmail de tienda {self.tienda_id}"
+
+
+class EventoAutorizacionCorreo(models.Model):
+    tienda = models.ForeignKey(Tienda, on_delete=models.PROTECT)
+    usuario = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT)
+    correo = models.EmailField()
+    tipo = models.CharField(max_length=20)
+    version = models.CharField(max_length=100)
+    texto = models.TextField()
+    fecha = models.DateTimeField(default=timezone.now)
+
+
+class VerificacionCorreoCuenta(models.Model):
+    """Prueba del buzón vinculada a usuario y dirección; iniciar sesión no la crea."""
+    usuario = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    correo = models.EmailField()
+    fecha = models.DateTimeField(default=timezone.now)
+    metodo = models.CharField(max_length=40)
+
+
+class TipoCambioGuardado(models.Model):
+    """Ultimo dolar observado obtenido (fila unica, pk=1) usado para cobrar con PayPal."""
+    observado = models.DecimalField(max_digits=12, decimal_places=4)
+    fecha_dato = models.DateField()
+    fuente = models.CharField(max_length=60)
+    obtenido_en = models.DateTimeField()
+
+    def __str__(self):
+        return f"{self.observado} ({self.fuente}, {self.fecha_dato})"

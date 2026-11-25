@@ -1,31 +1,55 @@
+
 import json
 import requests
 from typing import Dict, Any
+
 from apps.catalog.domain.ports.transbank_gateway import TransbankGatewayPort
 from apps.catalog.domain.exceptions import (
     TransbankTransaccionException,
     TransbankRechazoException,
+    TransbankServicioNoDisponibleException,
 )
 
 
 class TransbankWebpayAdapter(TransbankGatewayPort):
     """
-    Adaptador concreto que implementa la comunicación directa con
-    la API REST de Webpay Plus de Transbank.
+    Adaptador concreto que implementa la comunicación directa
+    con la API REST de Webpay Plus de Transbank.
     """
 
-    URL_INTEGRACION = "https://webpay3gint.transbank.cl/rswebpaytransaction/api/webpay/v1.0/transactions"
-    URL_PRODUCCION = "https://webpay3g.transbank.cl/rswebpaytransaction/api/webpay/v1.0/transactions"
+    URL_INTEGRACION = (
+        "https://webpay3gint.transbank.cl/"
+        "rswebpaytransaction/api/webpay/v1.0/transactions"
+    )
 
-    def __init__(self, codigo_comercio: str, api_key: str, ambiente: str = "INTEGRACION"):
+    URL_PRODUCCION = (
+        "https://webpay3g.transbank.cl/"
+        "rswebpaytransaction/api/webpay/v1.0/transactions"
+    )
+
+    def __init__(
+        self,
+        codigo_comercio: str,
+        api_key: str,
+        ambiente: str = "INTEGRACION",
+    ):
         self.codigo_comercio = str(codigo_comercio).strip()
         self.api_key = str(api_key).strip()
         self.ambiente = str(ambiente).strip().upper()
+
         self.base_url = (
-            self.URL_PRODUCCION if self.ambiente == "PRODUCCION" else self.URL_INTEGRACION
+            self.URL_PRODUCCION
+            if self.ambiente == "PRODUCCION"
+            else self.URL_INTEGRACION
         )
 
     def _get_headers(self) -> Dict[str, str]:
+        """
+        Las credenciales se envian exclusivamente desde
+        el backend hacia Transbank.
+
+        No se incluyen en las respuestas de nuestra API.
+        """
         return {
             "Tbk-Api-Key-Id": self.codigo_comercio,
             "Tbk-Api-Key-Secret": self.api_key,
@@ -39,6 +63,12 @@ class TransbankWebpayAdapter(TransbankGatewayPort):
         monto: int,
         return_url: str,
     ) -> Dict[str, Any]:
+        """
+        Inicia una transaccion Webpay.
+
+        Nunca devuelve errores tecnicos originales
+        ni respuestas crudas del proveedor.
+        """
         payload = {
             "buy_order": str(orden_compra),
             "session_id": str(session_id),
@@ -53,28 +83,56 @@ class TransbankWebpayAdapter(TransbankGatewayPort):
                 data=json.dumps(payload),
                 timeout=15,
             )
-        except requests.exceptions.RequestException as e:
-            raise TransbankTransaccionException(
-                f"Fallo de conexión al contactar a Transbank: {str(e)}"
+
+        except requests.exceptions.RequestException:
+            raise TransbankServicioNoDisponibleException(
+                "Webpay no responde en este momento. "
+                "Intenta nuevamente mas tarde."
+            ) from None
+
+        if response.status_code == 429 or response.status_code >= 500:
+            raise TransbankServicioNoDisponibleException(
+                "Webpay no esta disponible temporalmente. "
+                "Intenta nuevamente mas tarde."
             )
 
         if response.status_code != 200:
-            detalle = response.text
-            try:
-                detalle = response.json().get("error_message", detalle)
-            except Exception:
-                pass
             raise TransbankTransaccionException(
-                f"Transbank rechazó la inicialización de pago (Status {response.status_code}): {detalle}"
+                "Webpay rechazo el inicio de la transaccion."
             )
 
-        datos = response.json()
+        try:
+            datos = response.json()
+
+        except (ValueError, TypeError):
+            raise TransbankTransaccionException(
+                "Webpay devolvio una respuesta invalida."
+            ) from None
+
+        if not isinstance(datos, dict) or not all(
+            isinstance(datos.get(campo), str)
+            and datos[campo].strip()
+            for campo in ("token", "url")
+        ):
+            raise TransbankTransaccionException(
+                "Webpay devolvio una respuesta incompleta."
+            )
+
         return {
-            "token": datos.get("token"),
-            "url": datos.get("url"),
+            "token": datos["token"],
+            "url": datos["url"],
         }
 
-    def confirmar_transaccion(self, token_ws: str) -> Dict[str, Any]:
+    def confirmar_transaccion(
+        self,
+        token_ws: str,
+    ) -> Dict[str, Any]:
+        """
+        Confirma una transaccion Webpay.
+
+        El resultado solo se considera aprobado
+        si response_code es 0 y status es AUTHORIZED.
+        """
         endpoint = f"{self.base_url}/{token_ws}"
 
         try:
@@ -83,24 +141,44 @@ class TransbankWebpayAdapter(TransbankGatewayPort):
                 headers=self._get_headers(),
                 timeout=20,
             )
-        except requests.exceptions.RequestException as e:
-            raise TransbankTransaccionException(
-                f"Fallo de conexión al confirmar el pago en Transbank: {str(e)}"
+
+        except requests.exceptions.RequestException:
+            raise TransbankServicioNoDisponibleException(
+                "No se pudo contactar a Webpay para confirmar "
+                "el pago. Intenta nuevamente."
+            ) from None
+
+        if response.status_code == 429 or response.status_code >= 500:
+            raise TransbankServicioNoDisponibleException(
+                "Webpay no esta disponible temporalmente. "
+                "Intenta nuevamente mas tarde."
             )
 
         if response.status_code != 200:
             raise TransbankTransaccionException(
-                f"Error en respuesta de confirmación de Transbank (Status {response.status_code})"
+                "Webpay rechazo la confirmacion del pago."
             )
 
-        datos = response.json()
+        try:
+            datos = response.json()
+
+        except (ValueError, TypeError):
+            raise TransbankTransaccionException(
+                "Webpay devolvio una confirmacion invalida."
+            ) from None
+
+        if not isinstance(datos, dict):
+            raise TransbankTransaccionException(
+                "Webpay devolvio una confirmacion invalida."
+            )
+
         response_code = datos.get("response_code")
         status = datos.get("status")
 
-        # response_code 0 y status AUTHORIZED garantizan pago exitoso en Webpay
         if response_code != 0 or status != "AUTHORIZED":
             raise TransbankRechazoException(
-                f"La transacción fue rechazada por la entidad emisora (Código de respuesta: {response_code}, Estado: {status})"
+                "La transaccion fue rechazada. "
+                "Verifica tus datos o utiliza otro medio de pago."
             )
 
         return {
@@ -109,7 +187,9 @@ class TransbankWebpayAdapter(TransbankGatewayPort):
             "codigo_autorizacion": datos.get("authorization_code"),
             "monto": datos.get("amount"),
             "tipo_pago": datos.get("payment_type_code"),
-            "ultimos_4_digitos": datos.get("card_detail", {}).get("card_number"),
+            "ultimos_4_digitos": (
+                datos.get("card_detail") or {}
+            ).get("card_number"),
             "fecha_transaccion": datos.get("transaction_date"),
             "estado": status,
             "vci": datos.get("vci"),

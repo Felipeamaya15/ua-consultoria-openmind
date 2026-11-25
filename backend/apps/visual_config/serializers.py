@@ -15,11 +15,24 @@ class PlantillaDisponibleSerializer(serializers.Serializer):
 
 class PlantillaSeleccionadaSerializer(serializers.ModelSerializer):
     plantilla_seleccionada = serializers.ChoiceField(
-        choices=ConfiguracionVisual.Plantilla.choices
+        choices=ConfiguracionVisual.Plantilla.choices,
+        required=False,
+    )
+    plantilla_activa = serializers.ChoiceField(
+        choices=ConfiguracionVisual.Plantilla.choices,
+        required=False,
+        write_only=True,
     )
 
     class Meta:
         model = ConfiguracionVisual
         fields = [
             'plantilla_seleccionada',
+            'plantilla_activa',
         ]
+
+    def validate(self, attrs):
+        plantilla = attrs.get('plantilla_seleccionada') or attrs.get('plantilla_activa')
+        if not plantilla:
+            raise serializers.ValidationError({'plantilla_seleccionada': 'Este campo es requerido.'})
+        return {'plantilla_seleccionada': plantilla}

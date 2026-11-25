@@ -1,0 +1,166 @@
+"""Borradores persistentes y selección de destinatarios con evidencia vigente."""
+import re
+from django.db import transaction
+from django.shortcuts import get_object_or_404
+from rest_framework import serializers
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.exceptions import ValidationError
+from apps.authentication.presentation.profile import StrictSerializer
+from apps.core.infrastructure.tenant import resolver_tienda
+from apps.core.infrastructure.contacts import eligible_consents
+from apps.core.models import Tienda, ConsentimientoComercial
+from apps.core.presentation.responses import success_response, error_response
+from apps.landing.activity_views import NoStoreActivityView
+from apps.landing.models import CampanaPromocional, DestinatarioCampana
+from apps.core.infrastructure.store_mail import connection_state
+from apps.landing.campaign_rendering import validate_design
+
+LIMIT = 1000
+
+
+class CampaignInput(StrictSerializer):
+    clave = serializers.UUIDField()
+    revision = serializers.IntegerField(min_value=1, required=False)
+    nombre = serializers.CharField(max_length=150)
+    asunto = serializers.CharField(max_length=200, allow_blank=True)
+    cuerpo = serializers.CharField(max_length=5000, allow_blank=True)
+    destinatarios = serializers.ListField(child=serializers.IntegerField(min_value=1), max_length=LIMIT)
+    producto_id = serializers.RegexField(r'^[a-fA-F0-9]{24}$', allow_blank=True, required=False, default='')
+    contenido = serializers.JSONField(required=False, allow_null=True, default=None)
+    diseno = serializers.JSONField(required=False, default=dict)
+
+    def validate_asunto(self, value):
+        if any(char in value for char in ('\r', '\n', '\x00')):
+            raise serializers.ValidationError('El asunto debe ocupar una sola línea.')
+        return value
+
+    def validate_cuerpo(self, value):
+        if '\x00' in value:
+            raise serializers.ValidationError('El contenido contiene caracteres no válidos.')
+        return value
+
+    def validate_destinatarios(self, value):
+        return list(dict.fromkeys(value))
+
+
+def product_snapshot(store, product_id, previous):
+    if not product_id:
+        return {}
+    if previous.get('id') == product_id:
+        return previous
+    from apps.catalog.infrastructure.repositories import ProductRepository
+    from pymongo.errors import PyMongoError
+    try:
+        product = ProductRepository().get_admin_product(str(store.pk), product_id)
+    except PyMongoError:
+        raise ValidationError('No se pudo consultar el producto. El borrador se conserva.') from None
+    if not product or str(product.get('tienda_id')) != str(store.pk) or not product.get('activo'):
+        raise ValidationError('Selecciona un producto activo de esta tienda.')
+    variants = product.get('variantes', [])
+    prices = [v.get('precio_oferta') if v.get('precio_oferta') is not None and v['precio_oferta'] < v.get('precio', 0) else v.get('precio', 0) for v in variants]
+    image = next(iter(product.get('imagenes', [])), '')
+    if not isinstance(image, str) or len(image) > 2800000 or not (image.startswith(('https://','http://','/media/')) or re.match(r'^data:image/(?:png|jpeg|webp|gif);base64,', image)):
+        image = ''
+    return {'id': product_id, 'nombre': product.get('nombre', ''), 'precio': str(min(prices)) if prices else '', 'imagen': image}
+
+
+def campaign_data(row, detail=True):
+    result = {'id': str(row.pk), 'clave': str(row.clave), 'nombre': row.nombre, 'asunto': row.asunto,
+        'cuerpo': row.cuerpo, 'producto': row.producto, 'estado': row.estado, 'revision': row.revision,
+        'creado': row.creado, 'actualizado': row.actualizado,
+        'diseno': {k: v for k, v in row.diseno.items() if not k.startswith('_')},
+        'confirmada_en': row.confirmada_en,
+        'envio_habilitado': connection_state(row.tienda)['envio_habilitado'],
+        'aviso_envio': connection_state(row.tienda)['aviso']}
+    from django.db.models import Count
+    result['resultados'] = dict(row.destinatarios.order_by('estado').values_list('estado').annotate(total=Count('pk')))
+    if detail:
+        selected = list(row.destinatarios.select_related('consentimiento'))
+        current_ids = set(eligible_consents(row.tienda).filter(pk__in=[r.consentimiento_id for r in selected]).values_list('pk', flat=True))
+        result['destinatarios'] = [{'id': record.consentimiento_id, 'email': record.email,
+            'elegible': record.consentimiento_id in current_ids and record.revision_consentimiento == record.consentimiento.revision and record.email == record.consentimiento.email,
+            'intentos': record.intentos, 'estado': record.estado, 'ultimo_error': record.ultimo_error,
+            'finalizado': record.finalizado} for record in selected]
+        result['elegibles'] = sum(record['elegible'] for record in result['destinatarios'])
+        result['excluidos'] = len(selected)-result['elegibles']
+    return result
+
+
+class CampaignAudienceView(NoStoreActivityView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        store = resolver_tienda(request, exigir_propietario=True)
+        query = serializers.CharField(max_length=100, allow_blank=True).run_validation(request.query_params.get('q', ''))
+        rows = eligible_consents(store).filter(email__icontains=query).order_by('email')
+        total = rows.count()
+        return success_response(data={'total': total, 'limite': LIMIT, 'limite_excedido': total > LIMIT,
+            'resultados': list(rows.values('id','email')[:LIMIT])})
+
+
+class CampaignsView(NoStoreActivityView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, pk=None):
+        store = resolver_tienda(request, exigir_propietario=True)
+        if pk:
+            return success_response(data=campaign_data(get_object_or_404(CampanaPromocional, pk=pk, tienda=store)))
+        page = serializers.IntegerField(min_value=1, max_value=100000).run_validation(request.query_params.get('pagina', 1))
+        rows = CampanaPromocional.objects.filter(tienda=store)
+        total = rows.count()
+        return success_response(data={'resultados': [campaign_data(row, False) for row in rows[(page-1)*20:page*20]],
+            'pagina': page, 'paginas': max(1,(total+19)//20), 'total': total,
+            'envio_habilitado': connection_state(store)['envio_habilitado']})
+
+    def post(self, request, pk=None):
+        if pk:
+            return error_response('Método no permitido.', 'METODO_INVALIDO', status=405)
+        return self.save(request)
+
+    def put(self, request, pk=None):
+        if not pk:
+            return error_response('Indica el borrador que quieres guardar.', 'METODO_INVALIDO', status=405)
+        return self.save(request, pk)
+
+    @transaction.atomic
+    def save(self, request, pk=None):
+        store = resolver_tienda(request, exigir_propietario=True)
+        Tienda.objects.select_for_update().get(pk=store.pk)
+        serializer = CampaignInput(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        values = serializer.validated_data
+        design = validate_design(store, values['diseno'])
+        row = get_object_or_404(CampanaPromocional.objects.select_for_update(), pk=pk, tienda=store) if pk else CampanaPromocional.objects.filter(tienda=store, clave=values['clave']).first()
+        if row and not pk:
+            if (row.nombre, row.asunto, row.cuerpo, (row.producto.get('id', '') if row.producto.get('tipo') != 'seccion' else '')) != (values['nombre'], values['asunto'], values['cuerpo'], values['producto_id']) or row.producto.get('seleccion') != values['contenido'] or {k: v for k,v in row.diseno.items() if not k.startswith('_')} != design or set(row.destinatarios.values_list('consentimiento_id', flat=True)) != set(values['destinatarios']):
+                return error_response('Esta clave ya identifica otro borrador. Actualiza la campaña antes de guardar.', 'CLAVE_REUTILIZADA', status=409)
+            return success_response(data=campaign_data(row))
+        if row and (row.revision != values.get('revision') or row.clave != values['clave']):
+            return error_response('El borrador cambió. Vuelve a abrirlo antes de guardar.', 'REVISION_CAMBIO', status=409)
+        if row and row.estado != 'borrador':
+            return error_response('Una campaña confirmada conserva su contenido e historial. Crea otro borrador.', 'CAMPANA_CONFIRMADA', status=409)
+        ids = values['destinatarios']
+        records = list(ConsentimientoComercial.objects.filter(tienda=store, pk__in=ids))
+        if len(records) != len(ids):
+            raise ValidationError('La selección contiene contactos que no pertenecen a esta tienda.')
+        from apps.landing.campaign_content import content_snapshot
+        snapshot = content_snapshot(store, values['contenido'], row.producto if row else {})
+        if snapshot is not None and values['producto_id'] != (snapshot['id'] if snapshot['tipo'] == 'producto' else ''):
+            raise ValidationError('La referencia de producto no coincide con el contenido seleccionado.')
+        if snapshot is None:
+            snapshot = product_snapshot(store, values['producto_id'], row.producto if row else {})
+        if row is None:
+            if CampanaPromocional.objects.filter(tienda=store).count() >= 500:
+                raise ValidationError('Se alcanzó el límite de 500 borradores. Revisa las campañas existentes.')
+            row = CampanaPromocional(tienda=store, autor=request.user, clave=values['clave'])
+        else:
+            row.revision += 1
+        row.nombre, row.asunto, row.cuerpo, row.producto = values['nombre'], values['asunto'], values['cuerpo'], snapshot
+        row.diseno = design
+        row.save()
+        valid = set(eligible_consents(store).filter(pk__in=ids).values_list('pk', flat=True))
+        row.destinatarios.all().delete()
+        DestinatarioCampana.objects.bulk_create([DestinatarioCampana(campana=row, consentimiento=record,
+            revision_consentimiento=record.revision, email=record.email,
+            estado='seleccionado' if record.pk in valid else 'excluido') for record in records])
+        return success_response(data=campaign_data(row), status=200 if pk else 201)

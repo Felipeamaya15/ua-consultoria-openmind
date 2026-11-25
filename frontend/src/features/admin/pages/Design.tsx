@@ -1,55 +1,123 @@
-import { useState } from "react"
-import { Link } from "react-router-dom"
+
+import { PaletteLibrary } from '../../../shared/PaletteLibrary';
+import { VISUAL_PRESETS } from '../../storefront/visual/presets';
+import { VISUAL_DEFAULTS } from '../../storefront/visual/defaults';
+import { usePaletteLibrary, saveAppearance, saveSelectedTemplate, paletteOverrides, type Appearance, type StorePalette } from '../../../shared/palettes';
+import { resolveStoreVisualConfig } from '../../storefront/visual/resolveVisualConfig';
+import { useEffect, useRef, useState } from "react"
+import { Link, useBlocker } from "react-router-dom"
 import { useAdmin } from "../context/AdminContext"
 import { TemplateId } from "../data/mockAdminData"
 import { templatePaths } from "../config/navigation"
 import { openAdminWindow } from "../auth/demoSession"
-import { Button, Alert, Badge } from "../components/ui"
+import { Button, Alert, Badge, Modal } from "../components/ui"
+import { AdminHelp } from '../components/AdminPageHeader';
+import { clearEditorColorOverrides, loadThemeCustomization, patchThemeCustomization } from '../data/themeCustomization';
 
 const TEMPLATES: {
   id: TemplateId
   name: string
   description: string
   tags: string[]
-  preview: string
 }[] = [
   {
     id: "editorial",
-    name: "Plantilla 01 — Studio Pop",
+    name: "Studio Pop",
     description:
-      "Tienda luminosa y modular con escaparate visual, CTA vibrante y compra rápida.",
+      "Colorida, moderna y dinámica. Ideal para una marca con personalidad.",
     tags: ["Modular", "Color", "Editorial"],
-    preview:
-      "https://images.unsplash.com/photo-1555212697-194d092e3b8f?w=400&h=250&fit=crop&auto=format",
   },
   {
     id: "minimal",
-    name: "Plantilla 02 — Soft Discovery",
+    name: "Soft Discovery",
     description:
-      "Estilo Shop con bordes redondeados suaves (28px), buscador en píldora con acento violeta (#5433eb) y tarjetas ultra suaves.",
-    tags: ["Pillow-soft", "Shop Violet", "Clean Canvas"],
-    preview:
-      "https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=400&h=250&fit=crop&auto=format",
+      "Suave, cercana y fácil de recorrer. Una experiencia acogedora para tus clientes.",
+    tags: ["Suave", "Cercana", "Luminosa"],
   },
   {
     id: "visual",
-    name: "Plantilla 03 — Velta Editorial",
+    name: "Velta Editorial",
     description:
-      "Imágenes a pantalla completa, navegación superpuesta oscura, bloques de producto con gran protagonismo visual.",
-    tags: ["Oscuro", "Full-bleed", "Editorial"],
-    preview:
-      "https://images.unsplash.com/photo-1558769132-cb1aea458c5e?w=400&h=250&fit=crop&auto=format",
+      "Elegante y enfocada en fotografía. Cuenta tu historia con imágenes.",
+    tags: ["Fotografía", "Elegancia", "Historia"],
   },
   {
     id: "catalog",
-    name: "Plantilla 04 — Obsidian Showcase",
+    name: "Obsidian Showcase",
     description:
-      "Vitrina oscura premium, producto protagonista y acción de compra enfocada.",
-    tags: ["Premium", "Oscuro", "Showcase"],
-    preview:
-      "https://images.unsplash.com/photo-1472851294608-062f824d29cc?w=400&h=250&fit=crop&auto=format",
+      "Oscura, premium y minimalista. Tus productos son protagonistas.",
+    tags: ["Premium", "Oscuro", "Minimalista"],
   },
 ]
+
+
+const THUMBNAIL_BROWSER_WIDTH = 1280;
+const THUMBNAIL_BROWSER_HEIGHT = 720;
+
+function StorefrontTemplateThumbnail({ template, name }: { template: TemplateId; name: string }) {
+  const hostRef = useRef<HTMLDivElement>(null);
+  const [scale, setScale] = useState(0.5);
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    const host = hostRef.current;
+    if (!host) return;
+    const measure = () => setScale(Math.min(1, Math.max(0.1, host.clientWidth / THUMBNAIL_BROWSER_WIDTH)));
+    measure();
+    if (typeof ResizeObserver !== 'undefined') {
+      const observer = new ResizeObserver(measure);
+      observer.observe(host);
+      return () => observer.disconnect();
+    }
+    window.addEventListener('resize', measure);
+    return () => window.removeEventListener('resize', measure);
+  }, []);
+
+  useEffect(() => {
+    const host = hostRef.current;
+    if (!host) return;
+    if (typeof IntersectionObserver === 'undefined') {
+      setVisible(true);
+      return;
+    }
+    const observer = new IntersectionObserver(
+      ([entry]) => setVisible(Boolean(entry?.isIntersecting)),
+      { rootMargin: '120px 0px' },
+    );
+    observer.observe(host);
+    return () => observer.disconnect();
+  }, []);
+
+  return (
+    <div ref={hostRef} role="img" aria-label={`Vista real de la tienda con ${name}`}
+      className="absolute inset-0 overflow-hidden bg-[var(--muted)]">
+      {visible ? (
+        <iframe
+          title={`Vista de la tienda real con ${name}`}
+          aria-hidden="true"
+          tabIndex={-1}
+          loading="lazy"
+          src={`${templatePaths[template]}?miniatura=1`}
+          className="absolute top-0 left-0 pointer-events-none border-0 bg-white"
+          style={{
+            width: THUMBNAIL_BROWSER_WIDTH,
+            height: THUMBNAIL_BROWSER_HEIGHT,
+            transform: `scale(${scale})`,
+            transformOrigin: 'top left',
+          }}
+        />
+      ) : (
+        <div aria-hidden="true" className="absolute inset-0 flex items-center justify-center text-xs text-[var(--muted-foreground)]">
+          Preparando vista de la tienda…
+        </div>
+      )}
+    </div>
+  );
+}
+
+const originalColors = (id: TemplateId) => ({ ...VISUAL_DEFAULTS.global.colors, ...(VISUAL_PRESETS[id]?.config.global?.colors ?? {}) })
+const originalPalette = (id: TemplateId): StorePalette => ({ id: 'system-original', nombre: 'Original', colores: originalColors(id) })
+const SWATCH_KEYS = ['primary', 'alternate', 'accent', 'structural', 'surface'] as const
 
 const templateOptions = TEMPLATES.map((template) => ({
   value: template.id,
@@ -60,87 +128,147 @@ export default function Design() {
   const {
     config,
     setConfig,
-    updateTemplate,
     previewTemplate,
     setPreviewTemplate,
   } = useAdmin()
 
-  const [saved, setSaved] = useState(false)
-  const [colorsSaved, setColorsSaved] = useState(false)
-  const activeTemplate = previewTemplate ?? config.template
-  const activeTheme =
-    config.themeEditor?.[activeTemplate] ?? {
-      primaryColor: config.primaryColor,
-      secondaryColor: config.secondaryColor,
-      accentColor: config.accentColor,
-      paletteName: "Original",
-      images: {},
-    }
-
-  const palettes = [
-    { name: "Original", primaryColor: "#1a3a6b", secondaryColor: "#eef1f8", accentColor: "#e04b1a" },
-    { name: "Oceano", primaryColor: "#2563eb", secondaryColor: "#eff6ff", accentColor: "#0ea5e9" },
-    { name: "Bosque", primaryColor: "#15803d", secondaryColor: "#f0fdf4", accentColor: "#84cc16" },
-    { name: "Grafito", primaryColor: "#1f2937", secondaryColor: "#f3f4f6", accentColor: "#f97316" },
-  ]
-
-  const updateColors = (
-    patch: Partial<typeof activeTheme>,
-  ) => {
-    const nextTheme = {
-      ...activeTheme,
-      ...patch,
-      images: activeTheme.images,
-    }
-
-    const ok = setConfig({
-      ...config,
-      primaryColor: nextTheme.primaryColor,
-      secondaryColor: nextTheme.secondaryColor,
-      accentColor: nextTheme.accentColor,
-      themeEditor: {
-        ...config.themeEditor,
-        [activeTemplate]: nextTheme,
-      },
-    })
-
-    if (ok) {
-      setColorsSaved(true)
-      setTimeout(() => setColorsSaved(false), 1800)
-    }
+const [saved,setSaved]=useState(false);
+  const [templateSavedMsg, setTemplateSavedMsg] = useState('');
+  const [editorTarget, setEditorTarget] = useState<TemplateId | null>(null);
+  const [activationTarget, setActivationTarget] = useState<TemplateId | null>(null);
+  const activeTemplate=previewTemplate??config.template;
+  const paletteSource=usePaletteLibrary();
+  const [paletteNotice,setPaletteNotice]=useState('');
+  const [paletteDrafts,setPaletteDrafts]=useState<Partial<Record<TemplateId,StorePalette>>>({});
+  const [paletteBusy,setPaletteBusy]=useState(false);
+  const paletteSelection=paletteDrafts[activeTemplate];
+  const colors=paletteSelection?.colores??resolveStoreVisualConfig(config,activeTemplate,paletteSource.appearance?.[activeTemplate]?{visualConfig:paletteOverrides(paletteSource.appearance[activeTemplate],paletteSource.library)}:undefined).global.colors;
+  const dirty=Object.keys(paletteDrafts).length>0;
+  const blocker=useBlocker(dirty);
+  useEffect(()=>{
+    if(!dirty)return;
+    const leave=(event:BeforeUnloadEvent)=>{event.preventDefault();event.returnValue='';};
+    window.addEventListener('beforeunload',leave);return()=>window.removeEventListener('beforeunload',leave);
+  },[dirty]);
+  function discard(){setPaletteDrafts({});setPreviewTemplate(null);setPaletteNotice('');setSaved(false);setTemplateSavedMsg('');}
+  async function handleSave(template: TemplateId = config.template):Promise<boolean>{
+    if(paletteBusy)return false;
+    setPaletteBusy(true);setSaved(false);setPaletteNotice('');
+    try{
+      const appearances:Appearance={};let nextConfig={...config,themeEditor:{...config.themeEditor}};
+      for(const [key,palette] of Object.entries(paletteDrafts)){
+        const id=key as TemplateId;if(!palette)continue;
+        const theme=loadThemeCustomization(id,config.themeEditor?.[id],config,config.visualConfig);
+        const base=clearEditorColorOverrides(paletteSource.appearance?.[id]?.visualConfig??theme.visualConfig);
+        const editorialButton = id === 'editorial' ? {
+          heroCta: {
+            ...base?.heroCta,
+            background: 'currentColor',
+            textColor: 'currentColor',
+            border: {...base?.heroCta?.border, color: 'currentColor'}
+          },
+          responsive: {
+            ...base?.responsive,
+            tablet: {
+              ...base?.responsive?.tablet,
+              heroCta: {
+                ...base?.responsive?.tablet?.heroCta,
+                background: 'currentColor',
+                textColor: 'currentColor',
+                border: {...base?.responsive?.tablet?.heroCta?.border, color: 'currentColor'}
+              }
+            },
+            mobile: {
+              ...base?.responsive?.mobile,
+              heroCta: {
+                ...base?.responsive?.mobile?.heroCta,
+                background: 'currentColor',
+                textColor: 'currentColor',
+                border: {...base?.responsive?.mobile?.heroCta?.border, color: 'currentColor'}
+              }
+            }
+          }
+        } : {};
+        const visualConfig={...base,...editorialButton,global:{...base?.global,colors:palette.colores}};
+        appearances[id]={visualConfig,paleta_id:palette.id.startsWith('system-')?null:palette.id};
+        nextConfig.themeEditor[id]=patchThemeCustomization(theme,{visualConfig,paletteName:palette.nombre});
+      }
+      if(Object.keys(appearances).length)await saveAppearance(appearances);
+      await saveSelectedTemplate(template);
+      if(!setConfig({...nextConfig,template}))throw new Error('No pudimos guardar la copia local. Los cambios de paleta enviados al servidor se conservan; vuelve a intentar.');
+      setPaletteDrafts({});setPreviewTemplate(null);setSaved(true);
+      const tplName = TEMPLATES.find(t => t.id === template)?.name ?? template;
+      setTemplateSavedMsg(`Plantilla "${tplName}" guardada y activa en tu tienda para todos los visitantes.`);
+      return true;
+    }catch(error){setPaletteNotice(error instanceof Error?error.message:'No se pudieron guardar los cambios.');return false;}
+    finally{setPaletteBusy(false);}
   }
 
-  const handleSave = () => {
-    if (previewTemplate) updateTemplate(previewTemplate)
-    setSaved(true)
-    setTimeout(() => setSaved(false), 2000)
-  }
-
-  const handleOpenEditor = () => {
-    if (!previewTemplate) return
-
-    openAdminWindow(
-      `/emprendedor/diseno/editor?plantilla=${previewTemplate}`,
-    )
-  }
+  const handleOpenEditor = (tplId?: TemplateId) => {
+    setEditorTarget(tplId ?? activeTemplate);
+  };
 
   return (
-    <div className="flex flex-col gap-6 max-w-5xl">
-      <Alert variant="info">
+    <div className="flex flex-col gap-6 w-full">
+      <AdminHelp>
         Al cambiar de plantilla, todos tus productos, precios e imágenes se
         mantienen intactos. Solo cambia la presentación visual.
-      </Alert>
+      </AdminHelp>
+
+      <div className="bg-white border border-[var(--border)] rounded-2xl p-4 sm:p-5 flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4 shadow-2xs">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2 flex-wrap">
+            <h2 className="font-bold text-base text-[var(--foreground)]">
+              Plantilla activa en tu tienda:{" "}
+              <span className="text-[var(--primary)]">
+                {TEMPLATES.find((t) => t.id === config.template)?.name}
+              </span>
+            </h2>
+            <Badge variant="success">Activa</Badge>
+          </div>
+          <p className="text-xs text-[var(--muted-foreground)] mt-1">
+            Personaliza textos, bloques, banners, tipografías y colores desde el editor visual interactivo o cambia de plantilla con un clic.
+          </p>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2.5 w-full xl:w-auto xl:shrink-0">
+          <Button
+            type="button"
+            variant="primary"
+            onClick={() => handleOpenEditor(activeTemplate)}
+          >
+            Abrir editor de plantillas →
+          </Button>
+
+          <Link
+            to="/"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <Button type="button" variant="outline">
+              Ver tienda pública ↗
+            </Button>
+          </Link>
+
+          {dirty && (
+            <Button type="button" variant="outline" disabled={paletteBusy} onClick={discard}>
+              Descartar cambios
+            </Button>
+          )}
+
+          <Button type="button" variant={dirty ? "primary" : "outline"} disabled={!dirty || paletteBusy} onClick={() => void handleSave()}>
+            {paletteBusy ? 'Guardando…' : 'Guardar cambios'}
+          </Button>
+        </div>
+      </div>
 
       {saved && (
         <Alert variant="success">
-          Plantilla seleccionada. El botón Ver tienda abrirá su ruta.
+          {templateSavedMsg || 'Cambios guardados. Las paletas y la plantilla están disponibles para tu tienda.'}
         </Alert>
       )}
-      {colorsSaved && (
-        <Alert variant="success">
-          Colores guardados para la plantilla seleccionada.
-        </Alert>
-      )}
+
+      {paletteNotice && <p role="alert" className="text-sm text-red-600">{paletteNotice}</p>}
 
       <div className="bg-white border border-[var(--border)] rounded-2xl p-5">
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-5">
@@ -149,92 +277,55 @@ export default function Design() {
               Colores de la tienda
             </h2>
             <p className="text-xs text-[var(--muted-foreground)] mt-1">
-              Ajusta la paleta usada por botones, acentos y fondos de apoyo.
+              Elige la identidad de colores de tu tienda. Esta paleta se aplicará automáticamente a las 4 plantillas.
             </p>
           </div>
 
           <div className="flex items-center gap-2">
-            <span className="w-7 h-7 rounded-full border border-[var(--border)]" style={{ background: activeTheme.primaryColor }} />
-            <span className="w-7 h-7 rounded-full border border-[var(--border)]" style={{ background: activeTheme.secondaryColor }} />
-            <span className="w-7 h-7 rounded-full border border-[var(--border)]" style={{ background: activeTheme.accentColor }} />
+            <span className="w-7 h-7 rounded-full border border-[var(--border)]" style={{ background: colors.primary }} />
+            <span className="w-7 h-7 rounded-full border border-[var(--border)]" style={{ background: colors.secondary }} />
+            <span className="w-7 h-7 rounded-full border border-[var(--border)]" style={{ background: colors.accent }} />
           </div>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-5">
-          {palettes.map((palette) => (
-            <button
-              key={palette.name}
-              type="button"
-              onClick={() => updateColors({
-                ...palette,
-                paletteName: palette.name,
-              })}
-              className={`rounded-xl border p-2 text-left transition-colors ${
-                activeTheme.paletteName === palette.name
-                  ? "border-[var(--primary)] ring-2 ring-[var(--primary)]/15"
-                  : "border-[var(--border)] hover:border-[var(--muted-foreground)]"
-              }`}
-            >
-              <div className="flex gap-1 mb-2">
-                <span className="h-7 flex-1 rounded" style={{ background: palette.primaryColor }} />
-                <span className="h-7 flex-1 rounded" style={{ background: palette.secondaryColor }} />
-                <span className="h-7 flex-1 rounded" style={{ background: palette.accentColor }} />
-              </div>
-              <span className="text-xs font-semibold">
-                {palette.name}
-              </span>
-            </button>
-          ))}
-        </div>
-
-        <div className="grid sm:grid-cols-3 gap-3">
-          {[
-            ["Principal", "primaryColor"],
-            ["Secundario", "secondaryColor"],
-            ["Acento", "accentColor"],
-          ].map(([label, key]) => (
-            <label
-              key={key}
-              className="flex items-center justify-between gap-3 rounded-xl border border-[var(--border)] px-3 py-2"
-            >
-              <span className="text-sm">{label}</span>
-              <input
-                type="color"
-                value={activeTheme[key as "primaryColor" | "secondaryColor" | "accentColor"]}
-                onChange={(event) =>
-                  updateColors({
-                    paletteName: "Personalizada",
-                    [key]: event.target.value,
-                  })
-                }
-                className="h-9 w-14 cursor-pointer rounded border border-[var(--border)] bg-white"
-              />
-            </label>
-          ))}
-        </div>
+        <PaletteLibrary
+          colors={colors}
+          selectedId={paletteSelection?.id ?? paletteSource.appearance?.[activeTemplate]?.paleta_id}
+          onApply={palette => {
+            setPaletteDrafts({
+              editorial: palette,
+              minimal: palette,
+              visual: palette,
+              catalog: palette,
+            });
+            setSaved(false);
+          }}
+          onOriginal={() => {
+            setPaletteDrafts(Object.fromEntries(TEMPLATES.map(({ id }) => [id, originalPalette(id)])) as Partial<Record<TemplateId, StorePalette>>);
+            setSaved(false);
+          }}
+        />
       </div>
-
-
 
       <div>
         <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 mb-4">
           <div>
-            <h2 className="font-semibold">
+            <h2 className="font-semibold text-base">
               Selecciona una plantilla
             </h2>
 
             <p className="text-xs text-[var(--muted-foreground)] mt-1">
-              Puedes elegir desde el selector o revisar cada propuesta visual.
+               Cada tarjeta muestra tu tienda real en esa plantilla. La vista previa no activa ni cambia el diseño del comprador.
             </p>
           </div>
 
           <label className="w-full sm:w-80">
             <span className="text-xs font-medium text-[var(--muted-foreground)]">
-              Plantilla activa
+              Plantilla para previsualizar
             </span>
 
             <select
-              value={previewTemplate ?? config.template}
+              value={activeTemplate}
               onChange={(event) =>
                 setPreviewTemplate(event.target.value as TemplateId)
               }
@@ -264,16 +355,12 @@ export default function Design() {
                   isPreviewing
                     ? "border-[var(--primary)] shadow-lg"
                     : isActive
-                      ? "border-[var(--success)]"
+                      ? "border-[var(--success)] shadow-sm"
                       : "border-[var(--border)] hover:border-[var(--muted-foreground)]"
                 }`}
               >
                 <div className="relative aspect-video overflow-hidden bg-[var(--muted)]">
-                  <img
-                    src={tpl.preview}
-                    alt={tpl.name}
-                    className="w-full h-full object-cover"
-                  />
+                  <StorefrontTemplateThumbnail template={tpl.id} name={tpl.name} />
 
                   {isActive && !isPreviewing && (
                     <div className="absolute top-2 right-2">
@@ -316,7 +403,29 @@ export default function Design() {
                     </div>
                   </div>
 
-                  <div className="flex gap-2 mt-4">
+                  <div className="flex items-center gap-2 mt-4">
+                    <span className="flex items-center gap-1" role="img" aria-label={`Colores originales de ${tpl.name}`} title={`Colores originales de ${tpl.name}`}>
+                      {SWATCH_KEYS.map((key) => {
+                        const original = originalColors(tpl.id)
+                        const value = original[key] === 'currentColor' ? original.primary : original[key]
+                        return <i key={key} className="block w-4 h-4 rounded-full border border-black/10" style={{ background: value }} />
+                      })}
+                    </span>
+                    <span className="text-[11px] text-[var(--muted-foreground)]">Colores originales</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPaletteDrafts((drafts) => ({ ...drafts, [tpl.id]: originalPalette(tpl.id) }))
+                        setSaved(false)
+                      }}
+                      className="ml-auto text-[11px] font-medium text-[var(--primary)] hover:underline"
+                    >
+                      Restablecer
+                    </button>
+                  </div>
+
+                  <div className="flex flex-wrap gap-2 mt-4">
+                    <Button type="button" size="sm" className="min-h-11" onClick={() => setEditorTarget(tpl.id)}>Editar plantilla</Button>
                     <button
                       type="button"
                       onClick={() =>
@@ -324,22 +433,20 @@ export default function Design() {
                           isPreviewing ? null : tpl.id,
                         )
                       }
-                      className="flex-1 h-8 text-xs font-medium border border-[var(--border)] rounded-lg hover:bg-[var(--muted)] transition-colors"
+                      className="flex-1 min-h-11 px-2 text-xs font-medium border border-[var(--border)] rounded-lg hover:bg-[var(--muted)] transition-colors"
                     >
-                      {isPreviewing
-                        ? "Cancelar preview"
-                        : "Previsualizar"}
+                      {isPreviewing ? "Cancelar vista previa" : "Previsualizar"}
                     </button>
 
                     <button
                       type="button"
                       onClick={() => {
-                        setPreviewTemplate(tpl.id)
+                        setActivationTarget(tpl.id)
                       }}
-                      className="flex-1 h-8 text-xs font-semibold bg-[var(--primary)] text-white rounded-lg hover:bg-[#0f2a56] transition-colors disabled:opacity-50"
-                      disabled={isActive && !isPreviewing}
+                      className="flex-1 min-h-11 px-2 text-xs font-semibold border border-[var(--primary)] text-[var(--primary)] rounded-lg hover:bg-[var(--muted)] transition-colors disabled:opacity-50"
+                      disabled={isActive || paletteBusy}
                     >
-                      {isActive ? "Activa" : "Usar esta"}
+                      {isActive ? "Activa" : "Activar plantilla"}
                     </button>
                   </div>
                 </div>
@@ -364,7 +471,7 @@ export default function Design() {
             </p>
 
             <p className="text-xs text-[var(--muted-foreground)] mt-0.5">
-              Tu tienda actual no ha cambiado. Confirma para aplicar.
+              Tu tienda actual no ha cambiado. Para activarla, usa «Activar plantilla» en su tarjeta.
             </p>
           </div>
 
@@ -385,17 +492,9 @@ export default function Design() {
             <Button
               variant="outline"
               size="sm"
-              onClick={handleOpenEditor}
+              onClick={() => handleOpenEditor()}
             >
               Abrir editor →
-            </Button>
-
-            <Button
-              variant="primary"
-              size="sm"
-              onClick={handleSave}
-            >
-              {saved ? "✓ Aplicada" : "Aplicar plantilla"}
             </Button>
 
             <Button
@@ -410,6 +509,16 @@ export default function Design() {
           </div>
         </div>
       )}
+      <Modal open={!!editorTarget} onClose={() => setEditorTarget(null)} title="¿Quieres abrir el editor de esta plantilla?" size="sm">
+        <p>Podrás editar su diseño sin cambiar la plantilla activa de tu tienda.</p>
+        {dirty && <p className="mt-2 text-sm">Hay cambios de paleta sin guardar en esta página. Guárdalos antes si quieres usarlos en el editor.</p>}
+        <div className="mt-4 flex flex-wrap justify-end gap-2"><Button variant="outline" onClick={() => setEditorTarget(null)}>Cancelar</Button><Button onClick={() => { if (editorTarget) openAdminWindow(`/emprendedor/diseno/editor?plantilla=${editorTarget}`); setEditorTarget(null) }}>Ir al editor</Button></div>
+      </Modal>
+      <Modal open={!!activationTarget} onClose={() => { if (!paletteBusy) setActivationTarget(null) }} title="Activar plantilla" size="sm">
+        <p>¿Quieres activar {TEMPLATES.find(t => t.id === activationTarget)?.name} en tu tienda? Se conservarán el contenido y las personalizaciones. También se guardarán las paletas pendientes.</p>
+        <div className="mt-4 flex flex-wrap justify-end gap-2"><Button variant="outline" disabled={paletteBusy} onClick={() => setActivationTarget(null)}>Cancelar</Button><Button disabled={paletteBusy} onClick={() => { if (activationTarget) void handleSave(activationTarget).then(ok => { if (ok) setActivationTarget(null) }) }}>{paletteBusy ? 'Guardando…' : 'Activar plantilla'}</Button></div>
+      </Modal>
+      <Modal open={blocker.state==='blocked'} onClose={()=>{if(!paletteBusy)blocker.reset?.();}} title="Tienes cambios sin guardar" size="sm"><p>Guarda los cambios de paleta antes de continuar.</p><div className="flex flex-wrap justify-end gap-2 mt-4"><Button type="button" variant="outline" disabled={paletteBusy} onClick={()=>blocker.reset?.()}>Cancelar</Button><Button type="button" variant="outline" disabled={paletteBusy} onClick={()=>blocker.proceed?.()}>Continuar sin guardar</Button><Button type="button" disabled={paletteBusy} onClick={()=>void handleSave().then(ok=>{if(ok)blocker.proceed?.();})}>Guardar y continuar</Button></div></Modal>
     </div>
   )
 }

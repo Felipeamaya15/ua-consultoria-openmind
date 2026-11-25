@@ -1,0 +1,780 @@
+[
+  {
+    "codigo": "01",
+    "nombre": "Tarapacá",
+    "provincias": [
+      {
+        "codigo": "011",
+        "nombre": "Iquique",
+        "comunas": [
+          "Alto Hospicio",
+          "Iquique"
+        ]
+      },
+      {
+        "codigo": "014",
+        "nombre": "Tamarugal",
+        "comunas": [
+          "Camiña",
+          "Colchane",
+          "Huara",
+          "Pica",
+          "Pozo Almonte"
+        ]
+      }
+    ]
+  },
+  {
+    "codigo": "02",
+    "nombre": "Antofagasta",
+    "provincias": [
+      {
+        "codigo": "021",
+        "nombre": "Antofagasta",
+        "comunas": [
+          "Antofagasta",
+          "Mejillones",
+          "Sierra Gorda",
+          "Taltal"
+        ]
+      },
+      {
+        "codigo": "022",
+        "nombre": "El Loa",
+        "comunas": [
+          "Calama",
+          "Ollagüe",
+          "San Pedro de Atacama"
+        ]
+      },
+      {
+        "codigo": "023",
+        "nombre": "Tocopilla",
+        "comunas": [
+          "María Elena",
+          "Tocopilla"
+        ]
+      }
+    ]
+  },
+  {
+    "codigo": "03",
+    "nombre": "Atacama",
+    "provincias": [
+      {
+        "codigo": "031",
+        "nombre": "Copiapó",
+        "comunas": [
+          "Caldera",
+          "Copiapó",
+          "Tierra Amarilla"
+        ]
+      },
+      {
+        "codigo": "032",
+        "nombre": "Chañaral",
+        "comunas": [
+          "Chañaral",
+          "Diego de Almagro"
+        ]
+      },
+      {
+        "codigo": "033",
+        "nombre": "Huasco",
+        "comunas": [
+          "Alto del Carmen",
+          "Freirina",
+          "Huasco",
+          "Vallenar"
+        ]
+      }
+    ]
+  },
+  {
+    "codigo": "04",
+    "nombre": "Coquimbo",
+    "provincias": [
+      {
+        "codigo": "041",
+        "nombre": "Elqui",
+        "comunas": [
+          "Andacollo",
+          "Coquimbo",
+          "La Higuera",
+          "La Serena",
+          "Paiguano",
+          "Vicuña"
+        ]
+      },
+      {
+        "codigo": "042",
+        "nombre": "Choapa",
+        "comunas": [
+          "Canela",
+          "Illapel",
+          "Los Vilos",
+          "Salamanca"
+        ]
+      },
+      {
+        "codigo": "043",
+        "nombre": "Limarí",
+        "comunas": [
+          "Combarbalá",
+          "Monte Patria",
+          "Ovalle",
+          "Punitaqui",
+          "Río Hurtado"
+        ]
+      }
+    ]
+  },
+  {
+    "codigo": "05",
+    "nombre": "Valparaíso",
+    "provincias": [
+      {
+        "codigo": "051",
+        "nombre": "Valparaíso",
+        "comunas": [
+          "Casablanca",
+          "Concón",
+          "Juan Fernández",
+          "Puchuncaví",
+          "Quintero",
+          "Valparaíso",
+          "Viña del Mar"
+        ]
+      },
+      {
+        "codigo": "052",
+        "nombre": "Isla de Pascua",
+        "comunas": [
+          "Isla de Pascua"
+        ]
+      },
+      {
+        "codigo": "053",
+        "nombre": "Los Andes",
+        "comunas": [
+          "Calle Larga",
+          "Los Andes",
+          "Rinconada",
+          "San Esteban"
+        ]
+      },
+      {
+        "codigo": "054",
+        "nombre": "Petorca",
+        "comunas": [
+          "Cabildo",
+          "La Ligua",
+          "Papudo",
+          "Petorca",
+          "Zapallar"
+        ]
+      },
+      {
+        "codigo": "055",
+        "nombre": "Quillota",
+        "comunas": [
+          "Calera",
+          "Hijuelas",
+          "La Cruz",
+          "Nogales",
+          "Quillota"
+        ]
+      },
+      {
+        "codigo": "056",
+        "nombre": "San Antonio",
+        "comunas": [
+          "Algarrobo",
+          "Cartagena",
+          "El Quisco",
+          "El Tabo",
+          "San Antonio",
+          "Santo Domingo"
+        ]
+      },
+      {
+        "codigo": "057",
+        "nombre": "San Felipe de Aconcagua",
+        "comunas": [
+          "Catemu",
+          "Llaillay",
+          "Panquehue",
+          "Putaendo",
+          "San Felipe",
+          "Santa María"
+        ]
+      },
+      {
+        "codigo": "058",
+        "nombre": "Marga Marga",
+        "comunas": [
+          "Limache",
+          "Olmué",
+          "Quilpué",
+          "Villa Alemana"
+        ]
+      }
+    ]
+  },
+  {
+    "codigo": "06",
+    "nombre": "Libertador General Bernardo O'Higgins",
+    "provincias": [
+      {
+        "codigo": "061",
+        "nombre": "Cachapoal",
+        "comunas": [
+          "Codegua",
+          "Coinco",
+          "Coltauco",
+          "Doñihue",
+          "Graneros",
+          "Las Cabras",
+          "Machalí",
+          "Malloa",
+          "Mostazal",
+          "Olivar",
+          "Peumo",
+          "Pichidegua",
+          "Quinta de Tilcoco",
+          "Rancagua",
+          "Rengo",
+          "Requínoa",
+          "San Vicente"
+        ]
+      },
+      {
+        "codigo": "062",
+        "nombre": "Cardenal Caro",
+        "comunas": [
+          "La Estrella",
+          "Litueche",
+          "Marchihue",
+          "Navidad",
+          "Paredones",
+          "Pichilemu"
+        ]
+      },
+      {
+        "codigo": "063",
+        "nombre": "Colchagua",
+        "comunas": [
+          "Chimbarongo",
+          "Chépica",
+          "Lolol",
+          "Nancagua",
+          "Palmilla",
+          "Peralillo",
+          "Placilla",
+          "Pumanque",
+          "San Fernando",
+          "Santa Cruz"
+        ]
+      }
+    ]
+  },
+  {
+    "codigo": "07",
+    "nombre": "Maule",
+    "provincias": [
+      {
+        "codigo": "071",
+        "nombre": "Talca",
+        "comunas": [
+          "Constitución",
+          "Curepto",
+          "Empedrado",
+          "Maule",
+          "Pelarco",
+          "Pencahue",
+          "Río Claro",
+          "San Clemente",
+          "San Rafael",
+          "Talca"
+        ]
+      },
+      {
+        "codigo": "072",
+        "nombre": "Cauquenes",
+        "comunas": [
+          "Cauquenes",
+          "Chanco",
+          "Pelluhue"
+        ]
+      },
+      {
+        "codigo": "073",
+        "nombre": "Curicó",
+        "comunas": [
+          "Curicó",
+          "Hualañé",
+          "Licantén",
+          "Molina",
+          "Rauco",
+          "Romeral",
+          "Sagrada Familia",
+          "Teno",
+          "Vichuquén"
+        ]
+      },
+      {
+        "codigo": "074",
+        "nombre": "Linares",
+        "comunas": [
+          "Colbún",
+          "Linares",
+          "Longaví",
+          "Parral",
+          "Retiro",
+          "San Javier",
+          "Villa Alegre",
+          "Yerbas Buenas"
+        ]
+      }
+    ]
+  },
+  {
+    "codigo": "08",
+    "nombre": "Biobío",
+    "provincias": [
+      {
+        "codigo": "081",
+        "nombre": "Concepción",
+        "comunas": [
+          "Chiguayante",
+          "Concepción",
+          "Coronel",
+          "Florida",
+          "Hualpén",
+          "Hualqui",
+          "Lota",
+          "Penco",
+          "San Pedro de la Paz",
+          "Santa Juana",
+          "Talcahuano",
+          "Tomé"
+        ]
+      },
+      {
+        "codigo": "082",
+        "nombre": "Arauco",
+        "comunas": [
+          "Arauco",
+          "Cañete",
+          "Contulmo",
+          "Curanilahue",
+          "Lebu",
+          "Los Alamos",
+          "Tirúa"
+        ]
+      },
+      {
+        "codigo": "083",
+        "nombre": "Biobío",
+        "comunas": [
+          "Alto Biobío",
+          "Antuco",
+          "Cabrero",
+          "Laja",
+          "Los Angeles",
+          "Mulchén",
+          "Nacimiento",
+          "Negrete",
+          "Quilaco",
+          "Quilleco",
+          "San Rosendo",
+          "Santa Bárbara",
+          "Tucapel",
+          "Yumbel"
+        ]
+      }
+    ]
+  },
+  {
+    "codigo": "09",
+    "nombre": "La Araucanía",
+    "provincias": [
+      {
+        "codigo": "091",
+        "nombre": "Cautín",
+        "comunas": [
+          "Carahue",
+          "Cholchol",
+          "Cunco",
+          "Curarrehue",
+          "Freire",
+          "Galvarino",
+          "Gorbea",
+          "Lautaro",
+          "Loncoche",
+          "Melipeuco",
+          "Nueva Imperial",
+          "Padre Las Casas",
+          "Perquenco",
+          "Pitrufquén",
+          "Pucón",
+          "Saavedra",
+          "Temuco",
+          "Teodoro Schmidt",
+          "Toltén",
+          "Vilcún",
+          "Villarrica"
+        ]
+      },
+      {
+        "codigo": "092",
+        "nombre": "Malleco",
+        "comunas": [
+          "Angol",
+          "Collipulli",
+          "Curacautín",
+          "Ercilla",
+          "Lonquimay",
+          "Los Sauces",
+          "Lumaco",
+          "Purén",
+          "Renaico",
+          "Traiguén",
+          "Victoria"
+        ]
+      }
+    ]
+  },
+  {
+    "codigo": "10",
+    "nombre": "Los Lagos",
+    "provincias": [
+      {
+        "codigo": "101",
+        "nombre": "Llanquihue",
+        "comunas": [
+          "Calbuco",
+          "Cochamó",
+          "Fresia",
+          "Frutillar",
+          "Llanquihue",
+          "Los Muermos",
+          "Maullín",
+          "Puerto Montt",
+          "Puerto Varas"
+        ]
+      },
+      {
+        "codigo": "102",
+        "nombre": "Chiloé",
+        "comunas": [
+          "Ancud",
+          "Castro",
+          "Chonchi",
+          "Curaco de Vélez",
+          "Dalcahue",
+          "Puqueldón",
+          "Queilén",
+          "Quellón",
+          "Quemchi",
+          "Quinchao"
+        ]
+      },
+      {
+        "codigo": "103",
+        "nombre": "Osorno",
+        "comunas": [
+          "Osorno",
+          "Puerto Octay",
+          "Purranque",
+          "Puyehue",
+          "Río Negro",
+          "San Juan de la Costa",
+          "San Pablo"
+        ]
+      },
+      {
+        "codigo": "104",
+        "nombre": "Palena",
+        "comunas": [
+          "Chaitén",
+          "Futaleufú",
+          "Hualaihué",
+          "Palena"
+        ]
+      }
+    ]
+  },
+  {
+    "codigo": "11",
+    "nombre": "Aysén del General Carlos Ibáñez del Campo",
+    "provincias": [
+      {
+        "codigo": "111",
+        "nombre": "Coyhaique",
+        "comunas": [
+          "Coyhaique",
+          "Lago Verde"
+        ]
+      },
+      {
+        "codigo": "112",
+        "nombre": "Aysén",
+        "comunas": [
+          "Aysén",
+          "Cisnes",
+          "Guaitecas"
+        ]
+      },
+      {
+        "codigo": "113",
+        "nombre": "Capitán Prat",
+        "comunas": [
+          "Cochrane",
+          "O'Higgins",
+          "Tortel"
+        ]
+      },
+      {
+        "codigo": "114",
+        "nombre": "General Carrera",
+        "comunas": [
+          "Chile Chico",
+          "Río Ibáñez"
+        ]
+      }
+    ]
+  },
+  {
+    "codigo": "12",
+    "nombre": "Magallanes y de la Antártica Chilena",
+    "provincias": [
+      {
+        "codigo": "121",
+        "nombre": "Magallanes",
+        "comunas": [
+          "Laguna Blanca",
+          "Punta Arenas",
+          "Río Verde",
+          "San Gregorio"
+        ]
+      },
+      {
+        "codigo": "122",
+        "nombre": "Antártica Chilena",
+        "comunas": [
+          "Antártica",
+          "Cabo de Hornos"
+        ]
+      },
+      {
+        "codigo": "123",
+        "nombre": "Tierra del Fuego",
+        "comunas": [
+          "Porvenir",
+          "Primavera",
+          "Timaukel"
+        ]
+      },
+      {
+        "codigo": "124",
+        "nombre": "Última Esperanza",
+        "comunas": [
+          "Natales",
+          "Torres del Paine"
+        ]
+      }
+    ]
+  },
+  {
+    "codigo": "13",
+    "nombre": "Metropolitana de Santiago",
+    "provincias": [
+      {
+        "codigo": "131",
+        "nombre": "Santiago",
+        "comunas": [
+          "Cerrillos",
+          "Cerro Navia",
+          "Conchalí",
+          "El Bosque",
+          "Estación Central",
+          "Huechuraba",
+          "Independencia",
+          "La Cisterna",
+          "La Florida",
+          "La Granja",
+          "La Pintana",
+          "La Reina",
+          "Las Condes",
+          "Lo Barnechea",
+          "Lo Espejo",
+          "Lo Prado",
+          "Macul",
+          "Maipú",
+          "Pedro Aguirre Cerda",
+          "Peñalolén",
+          "Providencia",
+          "Pudahuel",
+          "Quilicura",
+          "Quinta Normal",
+          "Recoleta",
+          "Renca",
+          "San Joaquín",
+          "San Miguel",
+          "San Ramón",
+          "Santiago",
+          "Vitacura",
+          "Ñuñoa"
+        ]
+      },
+      {
+        "codigo": "132",
+        "nombre": "Cordillera",
+        "comunas": [
+          "Pirque",
+          "Puente Alto",
+          "San José de Maipo"
+        ]
+      },
+      {
+        "codigo": "133",
+        "nombre": "Chacabuco",
+        "comunas": [
+          "Colina",
+          "Lampa",
+          "Tiltil"
+        ]
+      },
+      {
+        "codigo": "134",
+        "nombre": "Maipo",
+        "comunas": [
+          "Buin",
+          "Calera de Tango",
+          "Paine",
+          "San Bernardo"
+        ]
+      },
+      {
+        "codigo": "135",
+        "nombre": "Melipilla",
+        "comunas": [
+          "Alhué",
+          "Curacaví",
+          "María Pinto",
+          "Melipilla",
+          "San Pedro"
+        ]
+      },
+      {
+        "codigo": "136",
+        "nombre": "Talagante",
+        "comunas": [
+          "El Monte",
+          "Isla de Maipo",
+          "Padre Hurtado",
+          "Peñaflor",
+          "Talagante"
+        ]
+      }
+    ]
+  },
+  {
+    "codigo": "14",
+    "nombre": "Los Ríos",
+    "provincias": [
+      {
+        "codigo": "141",
+        "nombre": "Valdivia",
+        "comunas": [
+          "Corral",
+          "Lanco",
+          "Los Lagos",
+          "Mariquina",
+          "Máfil",
+          "Paillaco",
+          "Panguipulli",
+          "Valdivia"
+        ]
+      },
+      {
+        "codigo": "142",
+        "nombre": "Ranco",
+        "comunas": [
+          "Futrono",
+          "La Unión",
+          "Lago Ranco",
+          "Río Bueno"
+        ]
+      }
+    ]
+  },
+  {
+    "codigo": "15",
+    "nombre": "Arica y Parinacota",
+    "provincias": [
+      {
+        "codigo": "151",
+        "nombre": "Arica",
+        "comunas": [
+          "Arica",
+          "Camarones"
+        ]
+      },
+      {
+        "codigo": "152",
+        "nombre": "Parinacota",
+        "comunas": [
+          "General Lagos",
+          "Putre"
+        ]
+      }
+    ]
+  },
+  {
+    "codigo": "16",
+    "nombre": "Ñuble",
+    "provincias": [
+      {
+        "codigo": "161",
+        "nombre": "Diguillín",
+        "comunas": [
+          "Bulnes",
+          "Chillán",
+          "Chillán Viejo",
+          "El Carmen",
+          "Pemuco",
+          "Pinto",
+          "Quillón",
+          "San Ignacio",
+          "Yungay"
+        ]
+      },
+      {
+        "codigo": "162",
+        "nombre": "Itata",
+        "comunas": [
+          "Cobquecura",
+          "Coelemu",
+          "Ninhue",
+          "Portezuelo",
+          "Quirihue",
+          "Ranquil",
+          "Treguaco"
+        ]
+      },
+      {
+        "codigo": "163",
+        "nombre": "Punilla",
+        "comunas": [
+          "Coihueco",
+          "San Carlos",
+          "San Fabián",
+          "San Nicolás",
+          "Ñiquén"
+        ]
+      }
+    ]
+  }
+]

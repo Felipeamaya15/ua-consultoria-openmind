@@ -1,3 +1,6 @@
+
+import math
+from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 
 import requests
@@ -12,9 +15,10 @@ from apps.catalog.domain.ports.payment_gateway import (
 
 
 class MercadoPagoAdapter(PaymentGatewayPort):
-    """Adaptador de Mercado Pago  que implementa el puerto de pagos."""
+    """Adaptador de Mercado Pago que implementa el puerto de pagos."""
 
     BASE_URL = "https://api.mercadopago.com"
+    DEFAULT_TIMEOUT = 15
 
     ESTADOS = {
         "approved": EstadoPago.APROBADO,
@@ -28,10 +32,27 @@ class MercadoPagoAdapter(PaymentGatewayPort):
         "charged_back": EstadoPago.RECHAZADO,
     }
 
-    def __init__(self, access_token: str, ambiente: str = "SANDBOX", moneda: str = "CLP"):
+    def __init__(
+        self,
+        access_token: str,
+        ambiente: str = "SANDBOX",
+        moneda: str = "CLP",
+        timeout: float = DEFAULT_TIMEOUT,
+    ):
+        if (
+            isinstance(timeout, bool)
+            or not isinstance(timeout, (int, float))
+            or not math.isfinite(timeout)
+            or timeout <= 0
+        ):
+            raise ValueError(
+                "El tiempo de espera de Mercado Pago debe ser un número positivo."
+            )
+
         self.access_token = str(access_token).strip()
         self.ambiente = str(ambiente).strip().upper()
         self.moneda = moneda
+        self.timeout = float(timeout)
 
     def _headers(self) -> dict:
         return {
@@ -45,15 +66,25 @@ class MercadoPagoAdapter(PaymentGatewayPort):
         monto: Decimal,
         descripcion: str,
         url_retorno: str,
+        expira_en=None,
     ) -> PagoIniciado:
+        """Crea la preferencia de pago. Con `expira_en` (datetime con zona horaria) el enlace deja de servir
+        pasada esa fecha: asi nadie puede pagar un pedido que la tienda ya cancelo por vencimiento."""
         monto = Decimal(str(monto))
+
         payload = {
-            "items": [{
-                "title": descripcion or f"Orden {orden_compra}",
-                "quantity": 1,
-                "currency_id": self.moneda,
-                "unit_price": int(monto) if monto == monto.to_integral_value() else float(monto),
-            }],
+            "items": [
+                {
+                    "title": descripcion or f"Orden {orden_compra}",
+                    "quantity": 1,
+                    "currency_id": self.moneda,
+                    "unit_price": (
+                        int(monto)
+                        if monto == monto.to_integral_value()
+                        else float(monto)
+                    ),
+                }
+            ],
             "external_reference": str(orden_compra),
             "back_urls": {
                 "success": url_retorno,
@@ -62,36 +93,138 @@ class MercadoPagoAdapter(PaymentGatewayPort):
             },
         }
 
-        datos = self._request("POST", f"{self.BASE_URL}/checkout/preferences", json=payload, timeout=15)
+        if expira_en is not None:
+            ahora = datetime.now(timezone.utc)
+            payload["expires"] = True
+            payload["expiration_date_from"] = self._fecha_mp(ahora)
+            payload["expiration_date_to"] = self._fecha_mp(max(expira_en, ahora + timedelta(minutes=1)))
 
-        url_pago = datos.get("sandbox_init_point") if self.ambiente == "SANDBOX" else datos.get("init_point")
+        datos = self._request(
+            "POST",
+            f"{self.BASE_URL}/checkout/preferences",
+            json=payload,
+            timeout=self.timeout,
+        )
+
+        url_pago = (
+            datos.get("sandbox_init_point")
+            if self.ambiente == "SANDBOX"
+            else datos.get("init_point")
+        )
+
         if not datos.get("id") or not url_pago:
-            raise PagoGatewayException("Mercado Pago no devolvió la preferencia de pago esperada.")
-        return PagoIniciado(referencia=str(datos["id"]), url_pago=url_pago)
+            raise PagoGatewayException(
+                "Mercado Pago no devolvió la preferencia de pago esperada."
+            )
+
+        return PagoIniciado(
+            referencia=str(datos["id"]),
+            url_pago=url_pago,
+        )
 
     def consultar_pago(self, id_transaccion: str) -> ResultadoPago:
-        datos = self._request("GET", f"{self.BASE_URL}/v1/payments/{id_transaccion}", timeout=20)
+        datos = self._request(
+            "GET",
+            f"{self.BASE_URL}/v1/payments/{id_transaccion}",
+            timeout=max(self.timeout, 20),
+        )
 
         status = datos.get("status", "")
+
         return ResultadoPago(
             id_transaccion=str(datos.get("id", id_transaccion)),
             orden_compra=str(datos.get("external_reference") or ""),
             monto=Decimal(str(datos.get("transaction_amount", 0))),
-            estado=self.ESTADOS.get(status, EstadoPago.PENDIENTE),
+            estado=self.ESTADOS.get(
+                status,
+                EstadoPago.PENDIENTE,
+            ),
             detalle_estado=datos.get("status_detail") or status,
         )
 
+    def buscar_pagos_por_referencia(self, orden_compra: str) -> list:
+        """Todos los pagos que Mercado Pago tiene registrados para el pedido (external_reference), normalizados.
+
+        Sirve para conciliar un pedido pendiente: el comprador pudo pagar y no volver nunca a la tienda.
+        Lanza PagoGatewayException si Mercado Pago no responde o responde algo invalido.
+        """
+        datos = self._request(
+            "GET",
+            f"{self.BASE_URL}/v1/payments/search",
+            params={
+                "external_reference": str(orden_compra),
+                "sort": "date_created",
+                "criteria": "desc",
+                "limit": 50,
+            },
+            timeout=max(self.timeout, 20),
+        )
+        resultados = datos.get("results")
+        if not isinstance(resultados, list):
+            raise PagoGatewayException("Mercado Pago devolvió una respuesta inválida.")
+        pagos = []
+        for pago in resultados:
+            if not isinstance(pago, dict):
+                continue
+            status = pago.get("status", "")
+            try:
+                monto = Decimal(str(pago.get("transaction_amount", 0)))
+            except ArithmeticError:
+                raise PagoGatewayException("Mercado Pago devolvió una respuesta inválida.") from None
+            pagos.append(ResultadoPago(
+                id_transaccion=str(pago.get("id", "")),
+                orden_compra=str(pago.get("external_reference") or ""),
+                monto=monto,
+                estado=self.ESTADOS.get(status, EstadoPago.PENDIENTE),
+                detalle_estado=pago.get("status_detail") or status,
+            ))
+        return pagos
+
+    @staticmethod
+    def _fecha_mp(valor) -> str:
+        """Formato que exige Mercado Pago: yyyy-MM-dd'T'HH:mm:ss.SSSZ (con desfase, por ejemplo +00:00)."""
+        valor = valor.astimezone(timezone.utc)
+        return valor.strftime("%Y-%m-%dT%H:%M:%S.") + f"{valor.microsecond // 1000:03d}+00:00"
+
     def _request(self, metodo: str, url: str, **kwargs) -> dict:
+        kwargs.setdefault("timeout", self.timeout)
+
         try:
-            response = requests.request(metodo, url, headers=self._headers(), **kwargs)
-        except requests.exceptions.RequestException as e:
-            raise PagoGatewayException(f"Fallo de conexión con Mercado Pago: {e}")
+            response = requests.request(
+                metodo,
+                url,
+                headers=self._headers(),
+                **kwargs,
+            )
+
+        except requests.exceptions.Timeout:
+            raise PagoGatewayException(
+                "Tiempo de espera agotado al comunicarse con Mercado Pago. "
+                "Intenta nuevamente."
+            ) from None
+
+        except requests.exceptions.RequestException:
+            raise PagoGatewayException(
+                "Fallo de conexión con Mercado Pago. "
+                "Intenta nuevamente más tarde."
+            ) from None
 
         if response.status_code not in (200, 201):
-            detalle = response.text
-            try:
-                detalle = response.json().get("message", detalle)
-            except Exception:
-                pass
-            raise PagoGatewayException(f"Mercado Pago respondió con error (Status {response.status_code}): {detalle}")
-        return response.json()
+            raise PagoGatewayException(
+                "Mercado Pago no pudo procesar la solicitud."
+            )
+
+        try:
+            datos = response.json()
+
+        except (ValueError, TypeError):
+            raise PagoGatewayException(
+                "Mercado Pago devolvió una respuesta inválida."
+            ) from None
+
+        if not isinstance(datos, dict):
+            raise PagoGatewayException(
+                "Mercado Pago devolvió una respuesta inválida."
+            )
+
+        return datos

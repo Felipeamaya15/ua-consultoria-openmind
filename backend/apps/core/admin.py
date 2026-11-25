@@ -84,13 +84,15 @@ class ProductoAdmin(TiendaAdministradaMixin, admin.ModelAdmin):
     list_filter = ('id_tienda',)
 
     def save_model(self, request, obj, form, change):
-        # 1. Guarda el producto en PostgreSQL primero
+        if obj.id_tienda_id != self.tienda_administrada(request).pk:
+            raise PermissionDenied('El producto no pertenece a la tienda administrada.')
         super().save_model(request, obj, form, change)
 
         # 2. Si es una creación nueva (no una edición existente), lo sincroniza en MongoDB
         if not change:
             repo = ProductRepository()
-            mongo_id = repo.create({
+            mongo_id = repo.create(str(obj.id_tienda_id), {
+                "id_producto": obj.id_producto,
                 "nombre": obj.nombre,
                 "tienda_id": str(obj.id_tienda_id),
                 "slug": slugify(obj.nombre),
@@ -105,3 +107,44 @@ class ProductoAdmin(TiendaAdministradaMixin, admin.ModelAdmin):
                 request, 
                 f"✅ Producto guardado en PostgreSQL y sincronizado en MongoDB con ID: {mongo_id}"
             )
+        else:
+            from apps.core.infrastructure.mongo_client import get_mongo_db
+            db = get_mongo_db()
+            
+            filtro = {
+                "tienda_id": str(obj.id_tienda_id),
+                "$or": [
+                    {"id_producto": obj.id_producto},
+                    {"id_postgresql": obj.id_producto}
+                ]
+            }
+            producto_mongo = db.productos.find_one(filtro)
+            if producto_mongo:
+                producto_mongo['nombre'] = obj.nombre
+                producto_mongo['precio'] = float(obj.precio) if obj.precio else 0.0
+                producto_mongo['stock'] = int(obj.stock) if obj.stock is not None else 0
+                producto_mongo['activo'] = obj.activo
+                if producto_mongo.get('variantes') and len(producto_mongo['variantes']) > 0:
+                    for variante in producto_mongo['variantes']:
+                        variante['stock'] = producto_mongo['stock']
+                        variante['precio'] = producto_mongo['precio']
+                db.productos.replace_one({'_id': producto_mongo['_id']}, producto_mongo)
+                self.message_user(
+                    request, 
+                    f"🔄 Stock ({obj.stock}) y datos del producto sincronizados correctamente en el catálogo y sus variantes."
+                )
+@admin.register(Pedido)
+class PedidoAdmin(TiendaAdministradaMixin, admin.ModelAdmin):
+    filtro_tienda = 'tienda'
+    list_display = ('id_pedido', 'identificador', 'comprador', 'monto_total', 'estado')
+    readonly_fields = ('identificador',)
+
+    def save_model(self, request, obj, form, change):
+        if obj.tienda_id != self.tienda_administrada(request).pk:
+            raise PermissionDenied('El pedido no pertenece a la tienda administrada.')
+        return super().save_model(request, obj, form, change)
+
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        if db_field.name == 'tienda':
+            kwargs['queryset'] = Tienda.objects.filter(pk=self.tienda_administrada(request).pk)
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)

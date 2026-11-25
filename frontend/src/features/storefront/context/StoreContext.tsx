@@ -1,7 +1,12 @@
+import { usePaletteLibrary, paletteOverrides } from '../../../shared/palettes';
+import { readBlockStyles } from '../visual/blockAppearance';
+import { isActiveEditorPreview } from '../visual/pages';
 import {
   createContext,
+  useCallback,
   useContext,
   useEffect,
+  useMemo,
   useState,
   type ReactNode,
 } from 'react';
@@ -9,195 +14,321 @@ import { useLocation } from 'react-router-dom';
 import {
   defaultStoreConfig,
   type TemplateId,
-  type StoreConfig,
   type Product,
 } from '../data/mockData';
-
 import { fetchPublicProducts } from '../services/catalogService';
-import { fetchLandingConfig } from '../../landing/services/landingService';
+import { LANDING_CONFIG_CHANGED, fetchLandingConfig } from '../../landing/services/landingService';
+import { fetchStoreInformation, STORE_INFORMATION_CHANGED, type StoreInformation } from '../services/storeInformationService';
 import type { LandingConfig } from '../../landing/types/landing.types';
-
-const ADMIN_STORAGE_KEY = 'ua-entrepreneur-demo-v1';
-
-function readBusinessConfig(): StoreConfig {
-  try {
-    const raw = localStorage.getItem(ADMIN_STORAGE_KEY);
-    if (!raw) return defaultStoreConfig;
-
-    const parsed = JSON.parse(raw);
-    const saved = parsed?.config;
-    if (!saved || typeof saved !== 'object') return defaultStoreConfig;
-
-    return {
-      ...defaultStoreConfig,
-      name: saved.name || defaultStoreConfig.name,
-      description: saved.description || defaultStoreConfig.description,
-      logo: saved.logo || defaultStoreConfig.logo,
-    };
-  } catch {
-    return defaultStoreConfig;
-  }
-}
-
+import { isRecord, resolveVisualConfig, resolveStoreVisualConfig, getServerSelectedTemplate } from '../visual/resolveVisualConfig';
+import { CAROUSEL_TRANSITIONS } from '../visual/carouselTransitionLibrary';
+import { isOnlineEffectId } from '../visual/onlineEffects';
+import type { VisualConfig } from '../visual/types';
+import { useStoreIdentity } from './StoreIdentityContext';
+import { readPublishedLegalPages } from '../data/legalPublication';
+import { templateFromPath } from '../visual/templates';
+import { findImageSetting, captureOriginalImage, isLegacyEditableImage, readThemeImages, restoreOriginalImage, type OriginalImageStyle } from '../visual/imageSettings';
+import { getStoreConfigKey, readStoredStoreConfig, isStoreConfigChange, STORE_CONFIG_CHANGED_EVENT } from '../visual/storage';
+import { legalService } from '../services/legalService';
+import { type LegalType, type LegalPage } from '../data/legalContent';
 const StoreContext = createContext({
-  config: readBusinessConfig(),
+  config: { ...defaultStoreConfig, name: '', description: '', logo: '' },
+  activeTemplate: 'editorial' as TemplateId,
+  plantillaActiva: 'editorial' as TemplateId,
+  visualConfig: resolveVisualConfig(),
+  blockStyles: readBlockStyles(undefined),
   landing: null as LandingConfig | null,
   landingLoading: true,
   landingError: '',
   landingProducts: [] as Product[],
   landingCatalogError: '',
+  legalPages: readPublishedLegalPages(undefined),
+  legalVerified: false,
+  legalScopeKey: '',
+  legalLoading: true,
+  legalError: '',
+  refreshLegal: async () => {},
 });
-
-const templateByNumber: Record<string, TemplateId> = {
-  '1': 'editorial',
-  '2': 'minimal',
-  '3': 'visual',
-  '4': 'catalog',
-};
-
-type StoredImageSetting = {
-  src?: string;
-  scale?: number;
-  x?: number;
-  y?: number;
-  radius?: number;
-};
-
-type StoredTheme = {
-  primaryColor?: string;
-  secondaryColor?: string;
-  accentColor?: string;
-  images?: Record<string, StoredImageSetting>;
-};
-
-function readTheme(template: TemplateId): StoredTheme | null {
+function readTheme(saved: Record<string, unknown>, template: TemplateId): Record<string, unknown> | null {
   try {
-    const raw = localStorage.getItem(ADMIN_STORAGE_KEY);
-    if (!raw) return null;
-
-    const parsed = JSON.parse(raw);
-    return parsed?.config?.themeEditor?.[template] ?? null;
+    const theme = isRecord(saved.themeEditor) ? saved.themeEditor[template] : null;
+    return isRecord(theme) ? theme : null;
   } catch {
     return null;
   }
 }
 
-function applyImageCustomizations(theme: StoredTheme | null) {
-  if (!theme?.images) return;
 
+function allowedSavedCarouselTransition(value: unknown): VisualConfig['hero']['carouselTransition'] | undefined {
+  if (typeof value !== 'string') return undefined;
+  if (isOnlineEffectId(value)) return value;
+  return CAROUSEL_TRANSITIONS.some(effect => effect.id === value)
+    ? value as VisualConfig['hero']['carouselTransition']
+    : undefined;
+}
+function readSavedCarouselTransition(config: unknown): VisualConfig['hero']['carouselTransition'] | undefined {
+  if (!isRecord(config) || !isRecord(config.hero)) return undefined;
+  return allowedSavedCarouselTransition(config.hero.carouselTransition);
+}
+function applyImageCustomizations(theme: Record<string, unknown> | null, originals: Map<HTMLImageElement, OriginalImageStyle>) {
+  const settings = readThemeImages(theme?.images);
   const images = Array.from(
     document.querySelectorAll<HTMLImageElement>('img'),
   );
-
   images.forEach((img, index) => {
-    if (img.hasAttribute('data-landing-image') || img.closest('[data-landing-content]')) return;
-    const key = `image-${index}`;
-    const setting = theme.images?.[key];
-
+    if (!isLegacyEditableImage(img)) return;
+    const setting = findImageSetting(settings, img, index);
     if (!setting) return;
-
+    if (!originals.has(img)) originals.set(img, captureOriginalImage(img));
     if (setting.src && img.src !== setting.src) {
       img.src = setting.src;
     }
-
+    if (setting.alt) img.alt = setting.alt;
+    else if (originals.get(img)?.alt != null) img.alt = originals.get(img)!.alt!;
     img.style.objectPosition =
       `${setting.x ?? 50}% ${setting.y ?? 50}%`;
-
     img.style.transform =
       `scale(${(setting.scale ?? 100) / 100})`;
-
     img.style.transformOrigin = 'center';
+    img.style.objectFit = setting.fit ?? originals.get(img)?.fit ?? '';
     img.style.borderRadius =
       `${setting.radius ?? 0}px`;
   });
 }
-
-function applyTheme(theme: StoredTheme | null) {
-  if (!theme) return;
-
-  const root = document.documentElement;
-
-  if (theme.primaryColor) {
-    root.style.setProperty(
-      '--primary',
-      theme.primaryColor,
-    );
-    root.style.setProperty(
-      '--ring',
-      theme.primaryColor,
-    );
-  }
-
-  if (theme.secondaryColor) {
-    root.style.setProperty(
-      '--secondary',
-      theme.secondaryColor,
-    );
-  }
-
-  if (theme.accentColor) {
-    root.style.setProperty(
-      '--accent',
-      theme.accentColor,
-    );
-  }
-
-  applyImageCustomizations(theme);
-}
-
 export function StoreProvider({
   children,
 }: {
   children: ReactNode;
 }) {
   const { pathname } = useLocation();
-  const [landing, setLanding] = useState<LandingConfig | null>(null);
-  const [landingLoading, setLandingLoading] = useState(true);
-  const [landingError, setLandingError] = useState('');
-  const [landingProducts, setLandingProducts] = useState<Product[]>([]);
-  const [landingCatalogError, setLandingCatalogError] = useState('');
+  const { identity, loading: identityLoading, error: identityError } = useStoreIdentity();
+  const storageKey = identity ? getStoreConfigKey(identity) : null;
+  const [storageRevision, setStorageRevision] = useState(0);
   useEffect(() => {
-    let active = true;
-    fetchPublicProducts().then(products => { if (active) setLandingProducts(products); })
-      .catch(error => { if (active) setLandingCatalogError(error instanceof Error ? error.message : 'No se pudo cargar el catálogo de landing.'); });
-    fetchLandingConfig().then(data => { if (active) setLanding(data); })
-      .catch(error => { if (active) setLandingError(error instanceof Error ? error.message : 'No se pudo cargar la configuración de landing.'); })
-      .finally(() => { if (active) setLandingLoading(false); });
-    return () => { active = false; };
-  }, []);
+    if (!storageKey || typeof window === 'undefined') return;
+    const refresh = () => setStorageRevision(value => value + 1);
+    const onStorage = (event: StorageEvent) => { if (event.key === storageKey || event.key === null) refresh(); };
+    const onChange = (event: Event) => { if (isStoreConfigChange(event, storageKey)) refresh(); };
+    window.addEventListener('storage', onStorage);
+    window.addEventListener(STORE_CONFIG_CHANGED_EVENT, onChange);
+    return () => {
+      window.removeEventListener('storage', onStorage);
+      window.removeEventListener(STORE_CONFIG_CHANGED_EVENT, onChange);
+    };
+  }, [storageKey]);
+  const savedConfig = useMemo(() => readStoredStoreConfig(identity), [identity, storageRevision]);
+  const paletteSource=usePaletteLibrary();
+  const storedTemplate = ['editorial','minimal','visual','catalog'].includes(String(savedConfig.template))
+    ? (savedConfig.template as TemplateId)
+    : undefined;
+  const serverTemplate = paletteSource.selectedTemplate ?? getServerSelectedTemplate(identity);
+  const activeTemplate: TemplateId =
+    templateFromPath(pathname) ??
+    serverTemplate ??
+    storedTemplate ??
+    'editorial';
+  const visualConfig = useMemo(() => {
+    const appearance = paletteSource.appearance?.[activeTemplate];
+    const remote = paletteOverrides(appearance, paletteSource.library);
+    const local = readTheme(savedConfig, activeTemplate);
 
+    const localVisual = isRecord(local?.visualConfig) ? local.visualConfig : {};
+    const localHero = isRecord(localVisual.hero) ? localVisual.hero : {};
+    const remoteHero: Record<string, unknown> = isRecord(remote?.hero) ? remote.hero : {};
+    const promoKeys = ['promoText','promoVisible','promoAlign','promoBackground','promoTextColor','promoTextSize','promoRadius','promoBorderWidth','promoBorderColor'];
+    const recoveredPromo = Object.fromEntries(promoKeys.filter(key => remoteHero[key] === undefined && localHero[key] !== undefined).map(key => [key, localHero[key]]));
+    const compatibleRemote = remote ? {
+      ...remote,
+      hero: { ...remoteHero, ...recoveredPromo },
+    } : undefined;
+    const resolved = resolveStoreVisualConfig(savedConfig, activeTemplate, compatibleRemote ? { ...local, visualConfig: compatibleRemote } : undefined);
+
+
+    const transition = readSavedCarouselTransition(appearance?.visualConfig)
+      ?? readSavedCarouselTransition(local?.visualConfig)
+      ?? readSavedCarouselTransition(savedConfig.visualConfig);
+    return transition
+      ? { ...resolved, hero: { ...resolved.hero, carouselTransition: transition } }
+      : resolved;
+  }, [activeTemplate, savedConfig, paletteSource.appearance, paletteSource.library]);
+
+  const [businessResult, setBusiness] = useState<{ key: string; value: StoreInformation } | null>(null);
+  const business = businessResult?.key === storageKey ? businessResult.value : null;
   useEffect(() => {
-    const match = pathname.match(
-      /^\/plantilla\/([1-4])(?:\/|$)/,
-    );
-
-    if (!match) return;
-
-    const template = templateByNumber[match[1]];
-    const theme = readTheme(template);
-
-    applyTheme(theme);
-
-    const observer = new MutationObserver(() => {
-      applyImageCustomizations(theme);
+    if (!storageKey) return;
+    let controller: AbortController | undefined;
+    const refresh = () => {
+      controller?.abort();
+      const request = new AbortController();
+      controller = request;
+      void fetchStoreInformation(request.signal).then(value => {
+        if (!request.signal.aborted) {
+          setBusiness({ key: storageKey, value });
+          if (typeof document !== 'undefined' && !/\/producto\//.test(pathname)) {
+            const nextTitle = (typeof savedConfig.metaTitle === 'string' && savedConfig.metaTitle.trim()) || value.nombre?.trim();
+            const nextDescription = (typeof savedConfig.metaDescription === 'string' && savedConfig.metaDescription.trim()) || value.descripcion?.trim();
+            if (nextTitle) {
+              document.title = nextTitle;
+              if (typeof document.querySelector === 'function') {
+                const ogTitle = document.querySelector('meta[property="og:title"]');
+                if (ogTitle) ogTitle.setAttribute('content', nextTitle);
+              }
+            }
+            if (nextDescription && typeof document.querySelector === 'function') {
+              const metaDescription = document.querySelector('meta[name="description"]');
+              if (metaDescription) metaDescription.setAttribute('content', nextDescription);
+              const ogDescription = document.querySelector('meta[property="og:description"]');
+              if (ogDescription) ogDescription.setAttribute('content', nextDescription);
+            }
+            if (typeof window !== 'undefined' && window.location?.origin && typeof document.querySelector === 'function') {
+              const ogUrl = document.querySelector('meta[property="og:url"]');
+              if (ogUrl) ogUrl.setAttribute('content', `${window.location.origin}${window.location.pathname}`);
+            }
+          }
+        }
+      }).catch(() => {});
+    };
+    refresh();
+    window.addEventListener(STORE_INFORMATION_CHANGED, refresh);
+    window.addEventListener('focus', refresh);
+    return () => {
+      controller?.abort();
+      window.removeEventListener(STORE_INFORMATION_CHANGED, refresh);
+      window.removeEventListener('focus', refresh);
+    };
+  }, [storageKey]);
+  const [landingResult, setLanding] = useState<{ key: string; value: LandingConfig | null; error: string; loading: boolean } | null>(null);
+  const [catalogResult, setCatalog] = useState<{ key: string; products: Product[]; error: string } | null>(null);
+  const currentLanding = landingResult?.key === storageKey ? landingResult : null;
+  const [editorLanding, setEditorLanding] = useState<{key: string | null; value: LandingConfig} | null>(null);
+  useEffect(() => {
+    if (!isActiveEditorPreview()) return;
+    const preview = (event: Event) => {
+      const value = (event as CustomEvent<LandingConfig>).detail;
+      if (value && String(value.tienda) === identity?.storeId) setEditorLanding({key:storageKey,value});
+    };
+    window.addEventListener('openmind:editor-landing-preview', preview);
+    return () => window.removeEventListener('openmind:editor-landing-preview', preview);
+  }, [identity?.storeId, storageKey]);
+  const landing = editorLanding?.key === storageKey ? editorLanding.value : currentLanding?.value ?? null;
+  const landingLoading = currentLanding?.loading ?? true;
+  const landingError = currentLanding?.error ?? '';
+  const landingProducts = catalogResult?.key === storageKey ? catalogResult.products : [];
+  const landingCatalogError = catalogResult?.key === storageKey ? catalogResult.error : '';
+  useEffect(() => {
+    if (!identity || !storageKey) return;
+    const catalogController = new AbortController();
+    let landingController: AbortController | undefined;
+    void fetchPublicProducts({ signal: catalogController.signal }).then(products => {
+      if (!catalogController.signal.aborted) setCatalog({ key: storageKey, products, error: '' });
+    }).catch(error => {
+      if (!catalogController.signal.aborted) setCatalog({ key: storageKey, products: [], error: error instanceof Error ? error.message : 'No se pudo cargar el catálogo de landing.' });
     });
-
+    const refresh = () => {
+      landingController?.abort();
+      const request = new AbortController();
+      landingController = request;
+      setLanding(previous => ({ key: storageKey, value: previous?.key === storageKey ? previous.value : null, error: '', loading: true }));
+      void fetchLandingConfig({ signal: request.signal }).then(data => {
+        if (data && String(data.tienda) !== identity.storeId) throw new Error('La configuración de inicio no corresponde a esta tienda.');
+        if (!request.signal.aborted) setLanding({ key: storageKey, value: data, error: '', loading: false });
+      }).catch(error => {
+        if (!request.signal.aborted) setLanding(previous => ({ key: storageKey, value: previous?.key === storageKey ? previous.value : null, error: error instanceof Error ? error.message : 'No se pudo cargar la configuración de landing.', loading: false }));
+      });
+    };
+    refresh();
+    window.addEventListener(LANDING_CONFIG_CHANGED, refresh);
+    window.addEventListener('focus', refresh);
+    return () => {
+      catalogController.abort(); landingController?.abort();
+      window.removeEventListener(LANDING_CONFIG_CHANGED, refresh);
+      window.removeEventListener('focus', refresh);
+    };
+  }, [identity, storageKey]);
+  const [legalRevision, setLegalRevision] = useState(0);
+  const [legalResult, setLegalResult] = useState<{ key: string; pages: Record<LegalType, LegalPage> | null; loading: boolean; error: string } | null>(null);
+  const currentLegal = legalResult?.key === storageKey ? legalResult : null;
+  const legalPages = currentLegal?.pages ?? readPublishedLegalPages(undefined);
+  const legalLoading = currentLegal?.loading ?? true;
+  const legalError = currentLegal?.error ?? '';
+  const legalVerified = !!currentLegal?.pages;
+  const refreshLegal = useCallback(async () => { setLegalRevision(value => value + 1); }, []);
+  useEffect(() => {
+    if (!storageKey) return;
+    const controller = new AbortController();
+    setLegalResult(previous => ({ key: storageKey, pages: previous?.key === storageKey ? previous.pages : null, loading: true, error: '' }));
+    legalService.fetchPublicLegalPages({ signal: controller.signal }).then(pages => {
+      if (!controller.signal.aborted) setLegalResult({ key: storageKey, pages, loading: false, error: '' });
+    }).catch(() => {
+      if (!controller.signal.aborted) setLegalResult(previous => ({ key: storageKey, pages: previous?.key === storageKey ? previous.pages : null, loading: false, error: 'No pudimos confirmar el contenido legal de esta tienda.' }));
+    });
+    return () => controller.abort();
+  }, [storageKey, storageRevision, legalRevision]);
+  useEffect(() => {
+    if (pathname.startsWith('/emprendedor') && !pathname.startsWith('/emprendedor/preview/')) return;
+    if (!activeTemplate || typeof document === 'undefined' || typeof MutationObserver === 'undefined') return;
+    const theme = readTheme(savedConfig, activeTemplate);
+    const originals = new Map<HTMLImageElement, OriginalImageStyle>();
+    applyImageCustomizations(theme, originals);
+    const observer = new MutationObserver(() => {
+      applyImageCustomizations(theme, originals);
+    });
     observer.observe(document.body, {
       childList: true,
       subtree: true,
     });
+    return () => {
+      observer.disconnect();
+      for (const [img, original] of originals) {
+        restoreOriginalImage(img, original);
+      }
+    };
+  }, [pathname, activeTemplate, savedConfig]);
 
-    return () => observer.disconnect();
-  }, [pathname]);
+
+  const publicStorefront = !pathname.startsWith('/emprendedor') && !isActiveEditorPreview();
+  const initialPalettePending = identityLoading ||
+    (identity !== null && !paletteSource.library && !paletteSource.error);
+
+  if (publicStorefront && !identityError && initialPalettePending) {
+    return (
+      <div
+        role="status"
+        aria-label="Cargando la apariencia de la tienda"
+        style={{ minHeight: '100vh', backgroundColor: '#ffffff' }}
+      />
+    );
+  }
 
   return (
     <StoreContext.Provider
-      value={{ config: { ...readBusinessConfig(), ...(landing ? { logo: landing.logo || '' } : {}) }, landing, landingLoading, landingError, landingProducts, landingCatalogError }}
+      value={{
+        config: {
+          ...defaultStoreConfig,
+          ...savedConfig,
+          template: activeTemplate,
+          name: business?.nombre ?? '',
+          description: business?.descripcion ?? '',
+          logo: landing?.logo || '',
+          primaryColor: visualConfig.global.colors.primary,
+          secondaryColor: visualConfig.global.colors.secondary,
+          accentColor: visualConfig.global.colors.accent,
+        },
+        activeTemplate,
+        plantillaActiva: activeTemplate,
+        visualConfig,
+        blockStyles: readBlockStyles(
+          landing?.contenido?.apariencia_bloques?.[activeTemplate] ??
+          readTheme(savedConfig, activeTemplate)?.blockStyles
+        ),
+        landing, landingLoading, landingError, landingProducts, landingCatalogError,
+        legalPages, legalLoading, legalError, legalVerified,
+        legalScopeKey: storageKey ?? '', refreshLegal,
+      }}
     >
       {children}
     </StoreContext.Provider>
   );
 }
-
 export const useStore = () =>
   useContext(StoreContext);

@@ -1,0 +1,5 @@
+simulation: instagram-login-qa
+routing: path
+mocks:
+  - routeKey: instagram
+    path: ./instagram-mock/config.yaml

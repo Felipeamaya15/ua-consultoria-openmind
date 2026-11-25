@@ -1,0 +1,187 @@
+"""Avisos por correo de un pedido (SCRUM-431).
+
+Cuando un pedido cambia de estado, este módulo decide si corresponde un correo al comprador, lo construye con
+la plantilla de la tienda (apps/core/domain/plantillas_correo) y lo envía con el servicio de correo
+(apps/core/infrastructure/email_service). Nunca lanza una excepción: un correo que falla no debe impedir
+el cambio de estado.
+
+Para no enviar dos veces el mismo aviso automático, en el pedido queda una marca en `entrega['notificaciones'][tipo]`:
+
+    {'enviado': True | False, 'codigo': 'enviado' | 'error_de_envio' | ..., 'fecha': ISO, 'intentos': N}
+
+- La marca guarda también el destinatario enmascarado (`m***@gmail.com`): el correo completo nunca se copia al registro.
+- Si el aviso ya salió (`enviado`), el automático no se repite aunque el pedido vuelva a ese estado.
+- Si falló, se reintenta la próxima vez que el pedido entre en ese estado.
+- Mientras un envío está en curso (`codigo` "enviando", hace menos de 5 minutos) no se inicia otro automático.
+- Para envíos manuales de emergencia (`enviar_correo_manual`), se omite la restricción de plantilla desactivada
+  y de ya enviado, permitiendo reintentar o emitir en cualquier momento.
+"""
+import logging
+from datetime import datetime, timedelta
+
+from django.db import transaction
+from django.utils import timezone
+
+from apps.core.domain.plantillas_correo import PlantillaCorreoInvalida, construir_correo
+from apps.core.domain.plantillas_correo.base import contexto_pedido, correo_comprador
+from apps.core.infrastructure.email_service import ResultadoEnvio, correo_enmascarado, enviar_correo
+from apps.core.models import Pedido
+
+logger = logging.getLogger(__name__)
+
+CORREO_POR_ESTADO = {
+    'pagado': 'payment_success',
+    'en_camino': 'order_shipped',
+    'entregado': 'order_delivered',
+    'cancelado': 'order_cancelled',
+    'enviado': 'order_shipped',
+    'en_reparto': 'order_shipped',
+    'preparando': 'payment_success',
+}
+ESPERA_ENVIO_EN_CURSO = timedelta(minutes=5)
+
+NO_CORRESPONDE = 'no_corresponde'
+PLANTILLA_DESACTIVADA = 'plantilla_desactivada'
+YA_ENVIADO = 'ya_enviado'
+ENVIO_EN_CURSO = 'envio_en_curso'
+ERROR_INESPERADO = 'error_inesperado'
+ENVIANDO = 'enviando'
+
+
+def notificar_pedido(tipo, pedido, forzar=False, destinatario_override=None):
+    """Construye el correo `tipo` del pedido y lo envía. No guarda marcas ni lanza por datos del pedido."""
+    try:
+        correo = construir_correo(tipo, pedido, forzar=forzar)
+    except PlantillaCorreoInvalida as error:
+        return ResultadoEnvio(False, NO_CORRESPONDE, str(error))
+    if correo is None:
+        return ResultadoEnvio(False, PLANTILLA_DESACTIVADA, 'El propietario desactivó este correo.')
+    contexto = contexto_pedido(pedido)
+    destinatario = destinatario_override or contexto['customerEmail']
+    reply_to = getattr(getattr(pedido, 'tienda', None), 'correo_negocio', '') or ''
+    return enviar_correo(
+        destinatario, correo.asunto, correo.cuerpo,
+        preheader=correo.preheader, nombre_remitente=contexto['storeName'],
+        referencia=f"{tipo} {contexto['orderNumber']}",
+        reply_to=reply_to,
+    )
+
+
+def _marca(pedido, tipo):
+    notificaciones = (pedido.entrega or {}).get('notificaciones')
+    marca = notificaciones.get(tipo) if isinstance(notificaciones, dict) else None
+    return marca if isinstance(marca, dict) else {}
+
+
+def _guardar_marca(pedido, tipo, marca):
+    """Escribe (o borra, si `marca` es None) la marca del aviso sin tocar el resto de `entrega`."""
+    entrega = dict(pedido.entrega or {})
+    notificaciones = dict(entrega.get('notificaciones') or {})
+    if marca is None:
+        notificaciones.pop(tipo, None)
+    else:
+        notificaciones[tipo] = marca
+    if notificaciones:
+        entrega['notificaciones'] = notificaciones
+    else:
+        entrega.pop('notificaciones', None)
+    pedido.entrega = entrega
+    pedido.save(update_fields=['entrega'])
+
+
+def _reciente(fecha):
+    try:
+        return timezone.now() - datetime.fromisoformat(fecha) < ESPERA_ENVIO_EN_CURSO
+    except (TypeError, ValueError):
+        return False
+
+
+def _reservar(pedido, tipo):
+    """Reserva el envío del aviso. Devuelve (motivo, marca_anterior); `motivo` es None si se puede enviar."""
+    with transaction.atomic():
+        actual = Pedido.objects.select_for_update().get(pk=pedido.pk)
+        anterior = _marca(actual, tipo)
+        if anterior.get('enviado'):
+            return YA_ENVIADO, anterior
+        if anterior.get('codigo') == ENVIANDO and _reciente(anterior.get('fecha')):
+            return ENVIO_EN_CURSO, anterior
+        _guardar_marca(actual, tipo, {
+            'enviado': False, 'codigo': ENVIANDO, 'fecha': timezone.now().isoformat(),
+            'intentos': anterior.get('intentos', 0),
+        })
+    pedido.entrega = actual.entrega
+    return None, anterior
+
+
+def notificar_evento(tipo, pedido):
+    """Envía el aviso `tipo` del pedido una sola vez (automático). Nunca lanza.
+
+    Devuelve un `ResultadoEnvio`, o None si falló algo inesperado antes de poder enviar.
+    """
+    try:
+        motivo, anterior = _reservar(pedido, tipo)
+        if motivo:
+            return ResultadoEnvio(False, motivo)
+        try:
+            resultado = notificar_pedido(tipo, pedido)
+        except Exception:
+            logger.exception('Falló la preparación del correo %s del pedido %s', tipo, pedido.pk)
+            resultado = ResultadoEnvio(False, ERROR_INESPERADO, 'Error inesperado al preparar el correo.')
+        if resultado.codigo in (NO_CORRESPONDE, PLANTILLA_DESACTIVADA):
+            _guardar_marca(pedido, tipo, anterior or None)
+        else:
+            _guardar_marca(pedido, tipo, {
+                'enviado': resultado.enviado, 'codigo': resultado.codigo, 'fecha': timezone.now().isoformat(),
+                'intentos': anterior.get('intentos', 0) + 1,
+                'destinatario': correo_enmascarado(correo_comprador(pedido)),
+                'manual': False,
+            })
+        return resultado
+    except Exception:
+        logger.exception('Falló el aviso por correo %s del pedido %s', tipo, getattr(pedido, 'pk', '?'))
+        return None
+
+
+def enviar_correo_manual(pedido, tipo, destinatario_override=None):
+    """Envío forzado y manual de emergencia.
+
+    Bypasa el bloqueo de plantilla desactivada y de ya_enviado.
+    Actualiza la marca del pedido con manual=True.
+    """
+    try:
+        resultado = notificar_pedido(tipo, pedido, forzar=True, destinatario_override=destinatario_override)
+        anterior = _marca(pedido, tipo)
+        destinatario_final = destinatario_override or correo_comprador(pedido)
+        _guardar_marca(pedido, tipo, {
+            'enviado': resultado.enviado,
+            'codigo': resultado.codigo,
+            'fecha': timezone.now().isoformat(),
+            'intentos': anterior.get('intentos', 0) + 1,
+            'destinatario': correo_enmascarado(destinatario_final),
+            'manual': True,
+        })
+        return resultado
+    except Exception:
+        logger.exception('Falló el envío manual de emergencia del correo %s del pedido %s', tipo, getattr(pedido, 'pk', '?'))
+        return ResultadoEnvio(False, ERROR_INESPERADO, 'Error inesperado al realizar el envío manual.')
+
+
+def notificar_cambio_de_estado(pedido, estado_anterior):
+    """Envía el aviso que corresponde cuando un pedido cambió de estado. Nunca lanza.
+
+    Devuelve un `ResultadoEnvio`, o None si ese cambio de estado no genera ningún correo.
+    """
+    tipo = CORREO_POR_ESTADO.get(getattr(pedido, 'estado', None))
+    if tipo is None or pedido.estado == estado_anterior:
+        return None
+    return notificar_evento(tipo, pedido)
+
+
+def notificar_pago_rechazado(pedido):
+    """Correo de pago rechazado (SCRUM-430): se envía cuando el propietario rechaza el pago del pedido."""
+    return notificar_evento('payment_rejected', pedido)
+
+
+def notificar_recepcion(pedido):
+    """Correo de confirmación de recepción del pedido (SCRUM-428): se envía al crear el pedido."""
+    return notificar_evento('order_received', pedido)

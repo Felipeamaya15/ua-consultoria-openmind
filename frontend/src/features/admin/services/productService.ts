@@ -1,4 +1,5 @@
 import type { Product } from "../data/mockAdminData";
+import { requestJson } from '../../../shared/services/apiRequest';
 
 const API_URL =
   (import.meta as any).env.VITE_API_URL || "http://localhost:8000";
@@ -8,6 +9,10 @@ export type AdminProduct = Product & {
   revision?: string;
   generalAttributes?: CatalogAttribute[];
   attributeLabels?: Record<string, string>;
+  weightKg?: number | null;
+  heightCm?: number | null;
+  widthCm?: number | null;
+  lengthCm?: number | null;
 };
 
 function toBackendPayload(product: AdminProduct) {
@@ -17,6 +22,11 @@ function toBackendPayload(product: AdminProduct) {
     categoria: product.category,
     activo: product.status === "active",
     imagenes: product.images,
+    video_recurso_id: product.videoResourceId ?? null,
+    peso_kg: product.weightKg ?? null,
+    alto_cm: product.heightCm ?? null,
+    ancho_cm: product.widthCm ?? null,
+    largo_cm: product.lengthCm ?? null,
     atributos_generales: product.generalAttributes ?? [],
     variantes: product.variants.map((variant) => {
       const hasOffer =
@@ -29,6 +39,10 @@ function toBackendPayload(product: AdminProduct) {
         precio: hasOffer ? variant.comparePrice! : variant.price,
         precio_oferta: hasOffer ? variant.price : null,
         stock: variant.stock,
+        peso_kg: variant.weightKg ?? null,
+        alto_cm: variant.heightCm ?? null,
+        ancho_cm: variant.widthCm ?? null,
+        largo_cm: variant.lengthCm ?? null,
         atributos_variante: Object.entries(variant.attributes).map(
           ([nombre, valor]) => ({
             clave: nombre.toLowerCase(),
@@ -39,8 +53,8 @@ function toBackendPayload(product: AdminProduct) {
       };
     }),
     seo: {
-      meta_titulo: product.seoTitle || "",
-      meta_descripcion: product.seoDescription || "",
+      meta_titulo: product.seoTitle?.trim() || "",
+      meta_descripcion: product.seoDescription?.trim() || "",
     },
   };
 }
@@ -48,38 +62,41 @@ function toBackendPayload(product: AdminProduct) {
 export async function createPublicProduct(
   product: Product,
 ): Promise<string> {
-  const token = localStorage.getItem("token");
+  const token = (localStorage.getItem("token") || sessionStorage.getItem("token"));
   if (!token) throw new Error("Inicia sesión para crear productos.");
-  const response = await fetch(`${API_URL}/api/catalog/productos/crear/`, {
+  const data = await requestJson(`${API_URL}/api/catalog/productos/crear/`, {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Token ${token}` },
     body: JSON.stringify(toBackendPayload(product)),
-  });
-
-  const body = await response.json().catch(() => null);
-
-  if (!response.ok || !body?.exito || !body?.data?.id) {
-    throw new Error(
-      body?.mensaje || (body ? JSON.stringify(body) : "No se pudo guardar el producto en el catálogo."),
-    );
-  }
-
-  return body.data.id;
+  }) as { id?: unknown } | null;
+  if (!data || typeof data.id !== 'string' || !/^[a-f0-9]{24}$/i.test(data.id)) throw new Error('No se pudo confirmar el producto guardado. Actualiza el listado antes de reintentar.');
+  return data.id;
 }
 
 export async function deleteCatalogProduct(productId: string): Promise<void> {
-  const token = localStorage.getItem("token");
+  const token = (localStorage.getItem("token") || sessionStorage.getItem("token"));
   if (!token) throw new Error("Inicia sesión para eliminar productos.");
-  const response = await fetch(`${API_URL}/api/catalog/productos/${productId}/eliminar/`, {
+  await requestJson(`${API_URL}/api/catalog/productos/${productId}/eliminar/`, {
     method: "DELETE",
     headers: { Authorization: `Token ${token}` },
   });
-  const body = await response.json().catch(() => null);
-  if (!response.ok || !body?.exito) {
-    throw new Error(body?.mensaje || "No se pudo eliminar el producto.");
-  }
 }
 
+export async function permanentDeleteCatalogProduct(
+  productId: string,
+  confirmacion: string,
+): Promise<void> {
+  const token = (localStorage.getItem("token") || sessionStorage.getItem("token"));
+  if (!token) throw new Error("Inicia sesión para eliminar productos.");
+  await requestJson(`${API_URL}/api/catalog/productos/${productId}/eliminar-definitivo/`, {
+    method: "DELETE",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Token ${token}`,
+    },
+    body: JSON.stringify({ confirmacion }),
+  });
+}
 
 function adaptAdminProduct(item: any): AdminProduct {
   if (!/^[a-f0-9]{24}$/i.test(item.id)) throw new Error("El backend devolvió un ID de producto inválido.");
@@ -94,34 +111,67 @@ function adaptAdminProduct(item: any): AdminProduct {
       if (!attributes[a.clave].includes(a.valor)) attributes[a.clave].push(a.valor);
     }
     const offer = v.precio_oferta != null && v.precio_oferta < v.precio;
-    return { id: `variant-${index}`, sku: v.sku, attributes: values,
-      price: offer ? v.precio_oferta : v.precio, comparePrice: offer ? v.precio : undefined,
-      stock: v.stock, available: v.stock > 0 };
+    return {
+      id: `variant-${index}`,
+      sku: v.sku,
+      attributes: values,
+      price: offer ? v.precio_oferta : v.precio,
+      comparePrice: offer ? v.precio : undefined,
+      stock: v.stock,
+      available: v.stock > 0,
+      weightKg: typeof v.peso_kg === 'number' ? v.peso_kg : null,
+      heightCm: typeof v.alto_cm === 'number' ? v.alto_cm : null,
+      widthCm: typeof v.ancho_cm === 'number' ? v.ancho_cm : null,
+      lengthCm: typeof v.largo_cm === 'number' ? v.largo_cm : null,
+    };
   });
+
+  const minVariant = variants.length
+    ? variants.reduce((lowest: any, current: any) =>
+        current.price < lowest.price ? current : lowest,
+      )
+    : undefined;
+  const compareCandidates = variants
+    .map((v: any) => v.comparePrice)
+    .filter((p: any): p is number => typeof p === "number" && Number.isFinite(p));
+
   return {
-    id: item.id, catalogId: item.id, revision: item.revision,
-    name: item.nombre, description: item.descripcion ?? '', category: item.categoria,
-    images: item.imagenes ?? [], variants, attributes, attributeLabels: labels,
+    id: item.id,
+    catalogId: item.id,
+    revision: item.revision,
+    name: item.nombre,
+    description: item.descripcion ?? "",
+    category: item.categoria,
+    images: item.imagenes ?? [],
+    videoResourceId: item.video_recurso_id ?? null,
+    weightKg: typeof item.peso_kg === 'number' && Number.isFinite(item.peso_kg) ? item.peso_kg : null,
+    heightCm: typeof item.alto_cm === 'number' && Number.isFinite(item.alto_cm) ? item.alto_cm : null,
+    widthCm: typeof item.ancho_cm === 'number' && Number.isFinite(item.ancho_cm) ? item.ancho_cm : null,
+    lengthCm: typeof item.largo_cm === 'number' && Number.isFinite(item.largo_cm) ? item.largo_cm : null,
+    variants,
+    attributes,
+    attributeLabels: labels,
     generalAttributes: item.atributos_generales ?? [],
-    basePrice: variants.length ? Math.min(...variants.map((v: any) => v.price)) : 0,
-    tags: [], featured: false, status: item.activo ? 'active' : 'archived',
-    seoTitle: item.seo?.meta_titulo ?? '', seoDescription: item.seo?.meta_descripcion ?? '',
-    createdAt: item.fecha_creacion ?? '',
+    basePrice: minVariant ? minVariant.price : 0,
+    comparePrice:
+      minVariant?.comparePrice ??
+      (compareCandidates.length ? Math.max(...compareCandidates) : undefined),
+    tags: [],
+    featured: false,
+    status: item.activo ? "active" : "archived",
+    seoTitle: item.seo?.meta_titulo ?? "",
+    seoDescription: item.seo?.meta_descripcion ?? "",
+    createdAt: item.fecha_creacion ?? "",
   };
 }
 
 async function adminRequest(path: string, options: RequestInit = {}): Promise<any> {
-  const token = localStorage.getItem('token');
+  const token = (localStorage.getItem('token') || sessionStorage.getItem('token'));
   if (!token) throw new Error('Inicia sesión para administrar productos.');
-  const response = await fetch(`${API_URL}/api/catalog/productos/${path}`, {
+  return requestJson(`${API_URL}/api/catalog/productos/${path}`, {
     ...options,
     headers: { 'Content-Type': 'application/json', Authorization: `Token ${token}` },
-  });
-  const body = await response.json().catch(() => null);
-  if (!response.ok || !body?.exito) {
-    throw new Error(body?.mensaje || (body ? JSON.stringify(body) : 'No se pudo consultar o guardar el catálogo.'));
-  }
-  return body.data;
+  }, 'No se pudo consultar o guardar el catálogo.');
 }
 
 export async function fetchAdminProducts(): Promise<AdminProduct[]> {

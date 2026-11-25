@@ -2,10 +2,11 @@ const fs = require('node:fs'), path = require('node:path'), vm = require('node:v
 const assert = require('node:assert/strict'), ts = require('typescript');
 const root = path.resolve(__dirname, '..');
 function load(file, globals) {
+  if (file.endsWith('/authService.ts')) return require('./source-loader.cjs').load(file, {}, { sessionStorage: { getItem: () => null }, ...globals });
   const module = { exports: {} };
   const source = fs.readFileSync(path.join(root, file), 'utf8').replace('import.meta.env.VITE_API_URL', 'undefined');
   const code = ts.transpileModule(source, { compilerOptions: { target: ts.ScriptTarget.ES2020, module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX } }).outputText;
-  vm.runInNewContext(code, { module, exports: module.exports, Error, ...globals });
+  vm.runInNewContext(code, { module, exports: module.exports, Error, sessionStorage: {getItem: () => null}, ...globals });
   return module.exports;
 }
 async function run() {
@@ -22,7 +23,7 @@ async function run() {
   assert.equal(calls[1].options.method, 'PATCH');
   assert.equal(calls[1].options.body, '{"phone":"123456789"}');
   await authService.changePassword('old', 'new');
-  assert.equal(calls[2].url, 'http://localhost:8000/api/auth/perfil/password/');
+  assert.equal(calls[2].url, 'http://test/api/auth/perfil/password/');
   assert.equal(calls[2].options.method, 'POST');
   reply = {ok: false, json: async () => ({exito: false, error: {detalles: {email: ['Email ocupado.']}}})};
   await assert.rejects(authService.updateProfile({email: 'taken@example.com'}), /Email ocupado/);
@@ -33,7 +34,7 @@ async function run() {
   await assert.rejects(authService.getProfile(), /Inicia sesión/);
   assert.equal(calls.length, count);
 
-  // Renderiza y ejecuta handlers con el mismo arnés ligero usado en las pruebas existentes.
+
   let states = [], index = 0, effects = [], rejectSave = false, release;
   const realProfile = { ...profile };
   const service = {
@@ -52,7 +53,7 @@ async function run() {
     if (id.includes('CustomerAccountNavigation')) return {CustomerAccountNavigation: 'AccountNav'};
     if (id.includes('authService')) return {authService: service};
     if (id.includes('useStorefrontTemplate')) return {useStorefrontTemplate: () => ({route: p => '/plantilla/1/' + p})};
-    throw Error(id);
+    if (id.includes('shared/components/states')) return {LoadingState: 'LoadingState', ErrorState: 'ErrorState', EmptyListState: 'EmptyListState'}; if (id.includes('humanizeError')) return {humanizeAdminError: message => message}; throw Error(id);
   }});
   function render() { index = 0; return Profile(); }
   function nodes(tree, result = []) {

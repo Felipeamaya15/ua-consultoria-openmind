@@ -1,98 +1,57 @@
-import { AccountNavigation } from '../AccountNavigation';
+import { MinimalCartIcon } from './MinimalCartIcon';
+export { MinimalCartIcon } from './MinimalCartIcon';
+import { useEffect, useState } from 'react';
+import { AdminModal } from '../../../../admin/components/ui/AdminModal';
+import { MinimalSidebar } from './MinimalSidebar';
+import { InstitutionalBadge, Icon } from '../../ui';
+import { VISUAL_SECTION } from '../../../visual/sectionIds';
 import { useStore } from '../../../context/StoreContext';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { useCart } from '../../../context/CartContext';
-
-function MinimalCartIcon({ count }: { count: number }) {
-  return (
-    <div className="relative">
-      <svg
-        className="w-5 h-5"
-        fill="none"
-        stroke="currentColor"
-        viewBox="0 0 24 24"
-        aria-hidden="true"
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth={1.7}
-          d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"
-        />
-      </svg>
-
-      {count > 0 && (
-        <span className="absolute -top-2 -right-2 min-w-4 h-4 px-1 rounded-full bg-white text-[var(--primary)] text-[9px] font-bold flex items-center justify-center">
-          {count}
-        </span>
-      )}
-    </div>
-  );
-}
+import { useStorefrontTemplate } from '../../../hooks/useStorefrontTemplate';
 
 export function MinimalHeader() {
-  const { landing } = useStore();
+  const [menuOpen,setMenuOpen]=useState(false);
+  const {pathname,search}=useLocation();
+  useEffect(()=>setMenuOpen(false),[pathname,search]);
+  useEffect(()=>{const media=window.matchMedia('(min-width: 768px)');const close=()=>{if(media.matches)setMenuOpen(false);};media.addEventListener('change',close);return()=>media.removeEventListener('change',close);},[]);
+  const { config } = useStore();
   const { count } = useCart();
+  const { route } = useStorefrontTemplate();
+
 
   return (
-    <div className="px-4 md:px-8 pt-5">
-      <header className="max-w-6xl mx-auto bg-white rounded-2xl border border-black/5 shadow-sm px-4 md:px-6 h-16 md:max-lg:h-auto md:max-lg:min-h-16 md:max-lg:py-3 md:max-lg:flex-wrap flex items-center justify-between gap-4">
+    <div data-visual-header-shell className="minimal-header-shell px-3 sm:px-4 md:px-8 pt-4 sm:pt-5">
+      <header data-visual-section={VISUAL_SECTION.header} data-visual-part="headerLayout" className="max-w-6xl mx-auto bg-white rounded-2xl border border-black/5 shadow-sm px-3 sm:px-4 md:px-6 py-2.5 sm:py-3 min-h-16 flex items-center justify-between gap-2 sm:gap-4">
 
-        {/* Nombre */}
-        <Link
-          to="."
-          className="flex items-center gap-2 font-semibold text-[var(--primary)] whitespace-nowrap"
+
+        <InstitutionalBadge compact /><Link data-visual-part="logo" onClick={event => {
+            if (!event.ctrlKey && !event.metaKey && !event.shiftKey && !event.altKey && event.currentTarget.pathname === window.location.pathname) {
+              window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+            }
+          }}
+          to={route()}
+          aria-label={`Ir al inicio de ${config.name || 'la tienda'}`}
+          className="flex min-w-0 max-w-full items-center gap-2 font-semibold text-[var(--primary)]"
         >
-          {landing?.logo && <img data-landing-image src={landing.logo} alt="Logo de la tienda" className="block w-auto h-auto max-w-[80px] sm:max-w-[120px] xl:max-w-[160px] max-h-10 sm:max-h-11 shrink-0 object-contain object-center" />}
-          Mi Tienda.
+          {config.logo && <img data-landing-image src={config.logo} alt={`Logo de ${config.name}`} className="block w-auto h-auto max-w-[60px] sm:max-w-[110px] xl:max-w-[150px] max-h-9 sm:max-h-11 shrink-0 object-contain object-center" />}
+          <span className="min-w-0 truncate text-sm sm:text-lg font-bold">{config.name}</span>
         </Link>
 
-        {/* Navegación */}
-        <nav
-          className="hidden md:flex md:max-lg:order-3 md:max-lg:w-full md:max-lg:justify-center items-center bg-[#f4f4f4] rounded-full p-1"
-          aria-label="Navegación principal"
-        >
-          <Link
-            to="."
-            className="px-5 py-2 rounded-full text-xs font-medium text-gray-600 hover:bg-white hover:text-[var(--primary)] transition-colors"
-          >
-            Inicio
-          </Link>
+
+        <div className="flex shrink-0 items-center gap-2 md:gap-4">
+
 
           <Link
-            to="catalogo"
-            className="px-5 py-2 rounded-full text-xs font-medium text-gray-600 hover:bg-white hover:text-[var(--primary)] transition-colors"
-          >
-            Catálogo
-          </Link>
-
-          <Link
-            to="seguimiento"
-            className="px-5 py-2 rounded-full text-xs font-medium text-gray-600 hover:bg-white hover:text-[var(--primary)] transition-colors"
-          >
-            Seguimiento
-          </Link>
-        </nav>
-
-        {/* Acciones */}
-        <div className="flex items-center gap-2 md:gap-4">
-          <AccountNavigation className="hidden sm:block text-xs font-medium text-[var(--primary)]" />
-
-          <Link
-            to="ingresar"
-            className="hidden md:block px-4 py-2 rounded-full border border-gray-200 text-xs font-medium text-[var(--primary)] hover:bg-gray-50 transition-colors"
-          >
-            Registrarse
-          </Link>
-
-          <Link
-            to="carrito"
+            to={route('carrito')}
             aria-label={`Ver carrito (${count} productos)`}
-            className="w-10 h-10 rounded-full bg-[var(--primary)] text-white flex items-center justify-center hover:opacity-90 transition-opacity"
+            className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-[var(--primary)] text-[var(--on-primary)] flex md:hidden items-center justify-center hover:opacity-90 transition-opacity"
           >
             <MinimalCartIcon count={count} />
           </Link>
         </div>
+        <button type="button" className="minimal-menu-button md:hidden" aria-label="Abrir menú de navegación" aria-expanded={menuOpen} onClick={()=>setMenuOpen(true)}><Icon name="menu" className="w-5 h-5" /></button>
+        <AdminModal open={menuOpen} onClose={()=>setMenuOpen(false)} title="Menú de la tienda" className="minimal-navigation-drawer" size="sm"><MinimalSidebar mobile onNavigate={()=>setMenuOpen(false)} /></AdminModal>
       </header>
     </div>
   );

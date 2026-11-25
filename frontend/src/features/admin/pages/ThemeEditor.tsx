@@ -1,853 +1,471 @@
-import {
-  useEffect,
-  useRef,
-  useState,
-} from 'react';
-import {
-  Link,
-  useSearchParams,
-} from 'react-router-dom';
-
+import { isRecord, mergeVisualOverrides } from '../../storefront/visual/resolveVisualConfig';
+import { fetchAppearance, fetchPalettes, saveAppearance, paletteOverrides, type Appearance, type PaletteLibrary } from '../../../shared/palettes';
+import { BlockAppearanceInspector } from '../visualEditor/blocks';
+import { editBlockAppearance } from '../../storefront/visual/blockAppearance';
+import type { SetStateAction } from 'react';
+import type { EditorDocument } from '../visualEditor/model';
+import type { VisualConfig, VisualConfigOverrides } from '../../storefront/visual/types';
+import { createHistory, recordHistory, undoHistory, redoHistory } from '../visualEditor/history';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Link, useBlocker, useSearchParams } from 'react-router-dom';
 import { useAdmin } from '../context/AdminContext';
+import { useStoreIdentity } from '../../storefront/context/StoreIdentityContext';
+import { readStoredStoreConfig } from '../../storefront/visual/storage';
 import { templatePaths } from '../config/navigation';
 import type { TemplateId } from '../data/mockAdminData';
-import type {
-  ThemeImageSetting,
-  ThemeTemplateCustomization,
-} from '../types';
-import {
-  Button,
-  Modal,
-} from '../components/ui';
-
+import { VISUAL_SECTIONS, type VisualSectionId } from '../visualEditor/sections';
+import { createEditorDocument, editScopedProperty, isEditorDirty, publishEditorDocument, resetProperty, resetSection, resolveEditorDocument, restorePreset, sectionOverridePath, retainCarouselFields } from '../visualEditor/model';
+import { VisualInspector, getInspectorGroups } from '../visualEditor/inspector';
+import { LegacyImageInspector } from '../visualEditor/images';
+import { FieldHelp, SECTION_HELP } from '../visualEditor/help';
+import { optionLabel } from '../visualEditor/controls';
+import { STORE_PAGES, previewPath, CHECKOUT_PREVIEW_STEPS, type PreviewPageId } from '../../storefront/visual/pages';
+import { connectVisualPreview } from '../visualEditor/preview';
+import { TemplateGallery } from '../visualEditor/templates';
+import { ContentInspector } from '../visualEditor/content';
+import { Icon } from '../../storefront/components/ui/Icon';
+import { ProductHoverInspector, ProductDetailTransitionInspector } from '../visualEditor/ProductHoverInspector';
+import { HeroCarouselInspector } from '../visualEditor/HeroCarouselInspector';
+import { fetchPrivateLandingConfig as fetchLandingConfig, saveLandingConfig, saveBlockStyles } from '../../landing/services/landingService';
 import '../admin.css';
+import '../visualEditor/editor.css';
+import '../visualEditor/workspace.css';
+const ABSENT_SECTION_NOTICE = 'Esta sección no está visible en esta página. Sus ajustes se aplicarán cuando tenga contenido o esté habilitada.';
 
-const PALETTES = [
-  {
-    name: 'Océano',
-    primary: '#2563eb',
-    secondary: '#eff6ff',
-    accent: '#0ea5e9',
-  },
-  {
-    name: 'Bosque',
-    primary: '#15803d',
-    secondary: '#f0fdf4',
-    accent: '#84cc16',
-  },
-  {
-    name: 'Ciruela',
-    primary: '#7e22ce',
-    secondary: '#faf5ff',
-    accent: '#d946ef',
-  },
-  {
-    name: 'Grafito',
-    primary: '#1f2937',
-    secondary: '#f3f4f6',
-    accent: '#f97316',
-  },
-] as const;
 
-type SelectedImage = {
-  key: string;
-  label: string;
-  top: number;
-  left: number;
+type SharedCarouselSettings = {
+  carouselMode: NonNullable<VisualConfig['hero']['carouselMode']>;
+  carouselInterval: NonNullable<VisualConfig['hero']['carouselInterval']>;
+  carouselTransition: NonNullable<VisualConfig['hero']['carouselTransition']>;
+  carouselIndicators: boolean;
+  productImageMode: NonNullable<VisualConfig['hero']['productImageMode']>;
+  productImageInterval: number;
+  productImageTransition: NonNullable<VisualConfig['hero']['productImageTransition']>;
+  catalogProductImageMode: NonNullable<VisualConfig['hero']['catalogProductImageMode']>;
+  catalogProductImageInterval: number;
+  catalogProductImageTransition: NonNullable<VisualConfig['hero']['catalogProductImageTransition']>;
+  detailProductImageTransition: NonNullable<VisualConfig['hero']['detailProductImageTransition']>;
+  importedEffectPresets: string;
+  hoverFeaturedMotion: NonNullable<VisualConfig['hero']['hoverFeaturedMotion']>;
+  hoverFeaturedLight: NonNullable<VisualConfig['hero']['hoverFeaturedLight']>;
+  hoverCatalogMotion: NonNullable<VisualConfig['hero']['hoverCatalogMotion']>;
+  hoverCatalogLight: NonNullable<VisualConfig['hero']['hoverCatalogLight']>;
+  hoverCategoryMotion: NonNullable<VisualConfig['hero']['hoverCategoryMotion']>;
+  hoverCategoryLight: NonNullable<VisualConfig['hero']['hoverCategoryLight']>;
 };
+function readSharedCarousel(hero: VisualConfig['hero']): SharedCarouselSettings {
+  return {
+    carouselMode: hero.carouselMode ?? 'automatic',
+    carouselInterval: hero.carouselInterval ?? 5,
+    carouselTransition: hero.carouselTransition ?? 'fade',
+    carouselIndicators: hero.carouselIndicators ?? true,
+    productImageMode: hero.productImageMode ?? 'hover',
+    productImageInterval: hero.productImageInterval ?? 5,
+    productImageTransition: hero.productImageTransition ?? 'slide',
+    catalogProductImageMode: hero.catalogProductImageMode ?? 'hover',
+    catalogProductImageInterval: hero.catalogProductImageInterval ?? 2,
+    catalogProductImageTransition: hero.catalogProductImageTransition ?? 'slide',
+    detailProductImageTransition: hero.detailProductImageTransition ?? 'none',
+    importedEffectPresets: hero.importedEffectPresets ?? '[]',
+    hoverFeaturedMotion: hero.hoverFeaturedMotion ?? 'none',
+    hoverFeaturedLight: hero.hoverFeaturedLight ?? 'none',
+    hoverCatalogMotion: hero.hoverCatalogMotion ?? 'none',
+    hoverCatalogLight: hero.hoverCatalogLight ?? 'none',
+    hoverCategoryMotion: hero.hoverCategoryMotion ?? 'none',
+    hoverCategoryLight: hero.hoverCategoryLight ?? 'none',
+  };
+}
+function applySharedCarousel(document: EditorDocument, shared: SharedCarouselSettings | null): EditorDocument {
+  if (!shared) return document;
+  return {
+    ...document,
+    overrides: {
+      ...document.overrides,
+      hero: { ...document.overrides.hero, ...shared },
+    },
+  };
+}
 
-function clampPopover(
-  value: number,
-  min: number,
-  max: number,
-) {
-  return Math.max(min, Math.min(value, max));
+
+const PROMO_KEYS = [
+  'promoText', 'promoVisible', 'promoAlign', 'promoBackground',
+  'promoTextColor', 'promoTextSize', 'promoRadius',
+  'promoBorderWidth', 'promoBorderColor',
+] as const;
+function recoverLocalPromo(
+  server: VisualConfigOverrides,
+  stored: Record<string, unknown>,
+  template: TemplateId,
+): VisualConfigOverrides {
+  const themes = isRecord(stored.themeEditor) ? stored.themeEditor : {};
+  const theme = isRecord(themes[template]) ? themes[template] : {};
+  const visual = isRecord(theme.visualConfig) ? theme.visualConfig : {};
+  const localHero = isRecord(visual.hero) ? visual.hero : {};
+  const remoteHero = isRecord(server.hero) ? server.hero : {};
+  const missing = Object.fromEntries(PROMO_KEYS
+    .filter(key => remoteHero[key] === undefined && localHero[key] !== undefined)
+    .map(key => [key, localHero[key]]));
+  return Object.keys(missing).length
+    ? mergeVisualOverrides(server, { hero: missing as VisualConfigOverrides['hero'] })
+    : server;
 }
 
 export default function ThemeEditor() {
-  const {
-    config,
-    setConfig,
-    updateTemplate,
-  } = useAdmin();
-
-  const [params] = useSearchParams();
-
+  const { config, setConfig, storageError } = useAdmin();
+  const { identity } = useStoreIdentity();
+  const [params, setParams] = useSearchParams();
   const requested = params.get('plantilla');
+  const template: TemplateId = requested && Object.prototype.hasOwnProperty.call(templatePaths, requested) ? requested as TemplateId : config.template;
+  const remote = useRef<{appearance:Appearance;library:PaletteLibrary}|null>(null);
+  const [loadingContent,setLoadingContent]=useState(false);
+  const [sharedCarousel, setSharedCarousel] = useState<SharedCarouselSettings | null>(null);
+  const load = () => {
+    const document = createEditorDocument(config, template, readStoredStoreConfig(identity));
+    const entry = remote.current?.appearance[template];
+    if (!entry) return document;
+    const server = retainCarouselFields(entry.visualConfig, paletteOverrides(entry, remote.current?.library) ?? {});
 
-  const template: TemplateId =
-    requested &&
-    Object.prototype.hasOwnProperty.call(
-      templatePaths,
-      requested,
-    )
-      ? (requested as TemplateId)
-      : config.template;
-
-  const iframeRef =
-    useRef<HTMLIFrameElement>(null);
-
-  const [paletteOpen, setPaletteOpen] =
-    useState(false);
-
-  const [selectedImage, setSelectedImage] =
-    useState<SelectedImage | null>(null);
-
-  const [saved, setSaved] =
-    useState(false);
-
-  const [confirmOpen, setConfirmOpen] =
-    useState(false);
-
-
-  function loadThemeFor(
-    targetTemplate: TemplateId,
-  ): ThemeTemplateCustomization {
-    return (
-      config.themeEditor?.[targetTemplate] ?? {
-        primaryColor: config.primaryColor,
-        secondaryColor: config.secondaryColor,
-        accentColor: config.accentColor,
-        paletteName: 'Original',
-        images: {},
-      }
-    );
-  }
-
-  // Borrador local: solo vive en esta pantalla hasta publicar
-  const [theme, setTheme] =
-    useState<ThemeTemplateCustomization>(() =>
-      loadThemeFor(template),
-    );
-
-  // Si cambia la plantilla que se está editando, reinicia
-  // el borrador con lo último publicado de esa plantilla
+    return {...document, overrides: recoverLocalPromo(server, readStoredStoreConfig(identity), template), paletteId: entry.paleta_id};
+  };
+  const [baseline, setBaseline] = useState(load);
+  const [history, setHistory] = useState(() => createHistory(load()));
+  const draft = history.present;
+  const setDraft = (next: SetStateAction<EditorDocument>) => { if (saving) return; setSaved(false); setHistory(current => recordHistory(current, typeof next === 'function' ? next(current.present) : next)); };
+  const [contentError, setContentError] = useState('');
+  const [contentLoadFailed,setContentLoadFailed]=useState(false);
+  const [tool, setTool] = useState<'templates' | 'style' | 'content' | 'images'>('style');
+  const [editScope, setEditScope] = useState<'all' | 'device'>('all');
+  const [zoom, setZoom] = useState('fit');
+  const [expanded, setExpanded] = useState(false);
+  const templateDrafts = useRef<Partial<Record<TemplateId, { baseline: EditorDocument; history: typeof history }>>>({});
+  const previousTemplate = useRef(template);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState(false);
+  const [inspectorOpen, setInspectorOpen] = useState(true);
+  const [selectedSection, setSelectedSection] = useState<VisualSectionId>('hero');
+  const heroAdvancedToggle = useRef<HTMLButtonElement>(null);
+  const [heroAdvancedOpen, setHeroAdvancedOpen] = useState(false);
+  const [viewport, setViewport] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
+  const [previewPage, setPreviewPage] = useState<PreviewPageId>('home');
+  const previewProduct = 'ejemplo-editor';
+  const [inspectorGroup, setInspectorGroup] = useState<string>();
+  const [registerPreview, setRegisterPreview] = useState(false);
+  const [checkoutStep, setCheckoutStep] = useState('contact');
+  const activePage = previewPage === 'home' ? 'login' : previewPage === 'checkout' && checkoutStep === 'confirm' ? 'confirmation' : previewPage;
+  const relativePreviewPath = previewPath(previewPage, previewProduct, registerPreview);
+  const publicPageUrl = `${templatePaths[template]}${relativePreviewPath ? '/' + relativePreviewPath : ''}`;
+  const previewUrl = `${publicPageUrl}${publicPageUrl.includes('?') ? '&' : '?'}visualExample=1${previewPage === 'checkout' ? '&visualStep=' + checkoutStep : ''}`;
+  const [saved, setSaved] = useState(false);
+  const [notice, setNotice] = useState('');
+  const [sectionPresent, setSectionPresent] = useState(true);
+  const [restoreRequested, setRestoreRequested] = useState(false);
+  const [imageMode, setImageMode] = useState(false);
+  const [selectedBlockId, setSelectedBlockId] = useState<string>();
+  const selectedBlock = draft.landing?.contenido?.bloques?.find(block => block.id === selectedBlockId);
+  const [contentImage, setContentImage] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<{ key: string; src: string; legacyKey?: string } | null>(null);
+  const [navigationHref, setNavigationHref] = useState<string>();
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+  const connection = useRef<ReturnType<typeof connectVisualPreview> | null>(null);
+  const frameWrap = useRef<HTMLDivElement>(null);
+  const leaveDialog = useRef<HTMLDivElement>(null);
+  const [previewBounds, setPreviewBounds] = useState({ width: 900, height: 700 });
+  const frameWidth = viewport === 'mobile' ? 375 : viewport === 'tablet' ? 768 : 1440;
+  const previewScale = zoom === 'fit' ? Math.min(1, Math.max(1, previewBounds.width - 32) / frameWidth) : Number(zoom) / 100;
+  const effective = useMemo(() => {
+    const base = resolveEditorDocument(draft, template);
+    return sharedCarousel ? { ...base, hero: { ...base.hero, ...sharedCarousel } } : base;
+  }, [draft, template, sharedCarousel]);
+  const latest = useRef({ effective, draft, selectedSection, imageMode }); latest.current = { effective, draft, selectedSection, imageMode };
+  const draftDirty = isEditorDirty(draft, baseline);
+  const cachedDirty = Object.entries(templateDrafts.current).some(([id, item]) => id !== template && item && isEditorDirty(item.history.present, item.baseline));
+  const dirty = draftDirty || cachedDirty;
+  const discarding = useRef(false);
+  const blocker = useBlocker(({ currentLocation, nextLocation }) => {
+    const nextTemplate = new URLSearchParams(nextLocation.search).get('plantilla');
+    const tryingAnotherTemplate = currentLocation.pathname === nextLocation.pathname && nextTemplate && Object.prototype.hasOwnProperty.call(templatePaths, nextTemplate);
+    return !discarding.current && !tryingAnotherTemplate && dirty && (currentLocation.pathname !== nextLocation.pathname || currentLocation.search !== nextLocation.search);
+  });
   useEffect(() => {
-    setTheme(loadThemeFor(template));
+    const controller = new AbortController();
+    setLoadingContent(true);
+    void Promise.all([fetchLandingConfig({signal:controller.signal}),fetchAppearance(controller.signal),fetchPalettes(controller.signal)]).then(([landing,appearance,library]) => {
+      remote.current={appearance,library};
+      const entry=appearance[template];
+      const remoteDesign=entry?{overrides:recoverLocalPromo(retainCarouselFields(entry.visualConfig, paletteOverrides(entry,library)??{}),readStoredStoreConfig(identity),template),paletteId:entry.paleta_id}:{};
+      if (controller.signal.aborted) return;
+      const initial = createEditorDocument(config, template, readStoredStoreConfig(identity));
+      setSharedCarousel(readSharedCarousel(resolveEditorDocument({ ...initial, ...remoteDesign }, template).hero));
+      if (!landing) {setContentError('No hay una portada disponible. Puedes guardar el diseño y configurar contenido desde Página principal.');setBaseline(current=>({...current,...remoteDesign}));setHistory(current=>({...current,present:{...current.present,...remoteDesign}}));return;}
+      if(String(landing.tienda)!==identity?.storeId){setContentLoadFailed(true);setContentError('El contenido no corresponde a esta tienda. Recarga para verificar la identidad.');return;}
+      const blockStyles = landing.contenido?.apariencia_bloques?.[template] ?? config.themeEditor[template]?.blockStyles;
+      setBaseline(current => ({...current,...remoteDesign,landing,...(blockStyles ? {blockStyles} : {})}));
+      setHistory(current => ({...current, present:{...current.present,...remoteDesign,landing,...(blockStyles ? {blockStyles} : {})}, past:current.past.map(item => ({...item,...remoteDesign,landing,...(blockStyles ? {blockStyles} : {})})), future:current.future.map(item => ({...item,...remoteDesign,landing,...(blockStyles ? {blockStyles} : {})}))}));
+    }).catch(() => { if (!controller.signal.aborted) {setContentLoadFailed(true);setContentError('No pudimos cargar el contenido o la apariencia del servidor. Recarga antes de guardar para evitar sobrescribir ajustes.');} }).finally(()=>{if(!controller.signal.aborted)setLoadingContent(false);});
+    return () => controller.abort();
+  }, [identity?.storeId]);
+  useEffect(() => { discarding.current = false; }, [template]);
+  useEffect(() => {
+    if (blocker.state !== 'blocked' && !restoreRequested) return;
+    const previousFocus = document.activeElement;
+    leaveDialog.current?.querySelector<HTMLButtonElement>('button')?.focus();
+    return () => { if (previousFocus instanceof HTMLElement && previousFocus.isConnected) previousFocus.focus(); };
+  }, [blocker.state, restoreRequested]);
+  useEffect(() => {
+    if (previousTemplate.current === template) return;
+    templateDrafts.current[previousTemplate.current] = { baseline, history };
+    const cached = templateDrafts.current[template];
+    const remoteStyles = baseline.landing?.contenido?.apariencia_bloques?.[template];
+    const next = { ...(cached?.baseline ?? load()), ...(!cached && remoteStyles ? {blockStyles:remoteStyles} : {}), ...(baseline.landing ? {landing: baseline.landing} : {}) };
+    const nextHistory = cached?.history ?? createHistory(next);
+    const content = draft.landing;
+    setBaseline(next); setHistory({...nextHistory, present: {...nextHistory.present, ...(content ? {landing: content} : {})}, past: nextHistory.past, future: nextHistory.future});
+    previousTemplate.current = template;
+    setSaved(false); setSelectedImage(null);
+    if (template !== 'visual' && previewPage === 'story') changePage('home');
+    setNotice('Plantilla en prueba. Tus personalizaciones se conservan al volver. Guarda para aplicar esta elección.');
   }, [template]);
-
-  function updateTheme(
-    patch: Partial<ThemeTemplateCustomization>,
-  ) {
-    const nextTheme = {
-      ...theme,
-      ...patch,
-      images: patch.images ?? theme.images,
-    };
-
-    setTheme(nextTheme);
-
-    applyThemeToPreview(nextTheme);
-  }
-
-  function applyThemeToPreview(
-    currentTheme = theme,
-  ) {
-    const doc =
-      iframeRef.current?.contentDocument;
-
-    if (!doc) return;
-
-    const root = doc.documentElement;
-
-    root.style.setProperty(
-      '--primary',
-      currentTheme.primaryColor,
-    );
-
-    root.style.setProperty(
-      '--secondary',
-      currentTheme.secondaryColor,
-    );
-
-    root.style.setProperty(
-      '--accent',
-      currentTheme.accentColor,
-    );
-
-    root.style.setProperty(
-      '--ring',
-      currentTheme.primaryColor,
-    );
-
-    const images = Array.from(
-      doc.querySelectorAll<HTMLImageElement>('img'),
-    );
-
-    images.forEach((img, index) => {
-      const key = `image-${index}`;
-      const setting =
-        currentTheme.images[key];
-
-      img.dataset.themeEditorKey = key;
-
-      if (!setting) return;
-
-      if (
-        setting.src &&
-        img.src !== setting.src
-      ) {
-        img.src = setting.src;
-      }
-
-      img.style.objectPosition =
-        `${setting.x}% ${setting.y}%`;
-
-      img.style.transform =
-        `scale(${setting.scale / 100})`;
-
-      img.style.transformOrigin = 'center';
-
-      img.style.borderRadius =
-        `${setting.radius}px`;
-    });
-  }
-
-  function attachEditorEvents() {
-    const iframe = iframeRef.current;
-    const doc = iframe?.contentDocument;
-
-    if (!iframe || !doc) return;
-
-    applyThemeToPreview();
-
-    let editorStyle =
-      doc.getElementById(
-        'ua-theme-editor-style',
-      ) as HTMLStyleElement | null;
-
-    if (!editorStyle) {
-      editorStyle =
-        doc.createElement('style');
-
-      editorStyle.id =
-        'ua-theme-editor-style';
-
-      editorStyle.textContent = `
-        img[data-theme-editor-key] {
-          cursor: pointer !important;
-          transition:
-            outline-color .15s ease,
-            box-shadow .15s ease,
-            transform .2s ease,
-            border-radius .2s ease !important;
-        }
-
-        img[data-theme-editor-key]:hover {
-          outline: 3px solid #2563eb !important;
-          outline-offset: -3px !important;
-          box-shadow:
-            inset 0 0 0 9999px
-            rgba(37, 99, 235, .04) !important;
-        }
-
-        img[data-theme-editor-selected="true"] {
-          outline: 4px solid #2563eb !important;
-          outline-offset: -4px !important;
-        }
-      `;
-
-      doc.head.appendChild(editorStyle);
-    }
-
-    const images = Array.from(
-      doc.querySelectorAll<HTMLImageElement>('img'),
-    );
-
-    images.forEach((img, index) => {
-      const key = `image-${index}`;
-
-      img.dataset.themeEditorKey = key;
-
-      img.onclick = (event) => {
-        event.preventDefault();
-        event.stopPropagation();
-
-        images.forEach(
-          (current) =>
-            delete current.dataset
-              .themeEditorSelected,
-        );
-
-        img.dataset.themeEditorSelected =
-          'true';
-
-        const imageRect =
-          img.getBoundingClientRect();
-
-        const iframeRect =
-          iframe.getBoundingClientRect();
-
-        const width = 310;
-
-        const preferredLeft =
-          iframeRect.left +
-          imageRect.right +
-          12;
-
-        const fallbackLeft =
-          iframeRect.left +
-          imageRect.left -
-          width -
-          12;
-
-        const left =
-          preferredLeft + width <
-          window.innerWidth
-            ? preferredLeft
-            : fallbackLeft;
-
-        setSelectedImage({
-          key,
-          label:
-            img.alt?.trim() ||
-            `Imagen ${index + 1}`,
-          top: clampPopover(
-            iframeRect.top +
-              imageRect.top,
-            76,
-            window.innerHeight - 460,
-          ),
-          left: clampPopover(
-            left,
-            12,
-            window.innerWidth -
-              width -
-              12,
-          ),
-        });
-      };
-    });
-  }
-
-  function currentImageSetting():
-    ThemeImageSetting {
-    if (!selectedImage) {
-      return {
-        src: '',
-        scale: 100,
-        x: 50,
-        y: 50,
-        radius: 0,
-      };
-    }
-
-    const existing =
-      theme.images[selectedImage.key];
-
-    if (existing) return existing;
-
-    const doc =
-      iframeRef.current?.contentDocument;
-
-    const img =
-      doc?.querySelector<HTMLImageElement>(
-        `img[data-theme-editor-key="${selectedImage.key}"]`,
-      );
-
-    return {
-      src: img?.src ?? '',
-      scale: 100,
-      x: 50,
-      y: 50,
-      radius: 0,
-    };
-  }
-
-  function updateSelectedImage(
-    patch: Partial<ThemeImageSetting>,
-  ) {
-    if (!selectedImage) return;
-
-    const current =
-      currentImageSetting();
-
-    const next: ThemeImageSetting = {
-      ...current,
-      ...patch,
-    };
-
-    updateTheme({
-      images: {
-        ...theme.images,
-        [selectedImage.key]: next,
-      },
-    });
-  }
-
-  function resetSelectedImage() {
-    if (!selectedImage) return;
-
-    const nextImages = {
-      ...theme.images,
-    };
-
-    delete nextImages[selectedImage.key];
-
-    updateTheme({
-      images: nextImages,
-    });
-
-    const doc =
-      iframeRef.current?.contentDocument;
-
-    const img =
-      doc?.querySelector<HTMLImageElement>(
-        `img[data-theme-editor-key="${selectedImage.key}"]`,
-      );
-
-    if (img) {
-      img.style.objectPosition = '';
-      img.style.transform = '';
-      img.style.transformOrigin = '';
-      img.style.borderRadius = '';
-    }
-  }
-
-  function saveAndPublish() {
-    setConfig({
-      ...config,
-      template,
-      primaryColor: theme.primaryColor,
-      secondaryColor: theme.secondaryColor,
-      accentColor: theme.accentColor,
-      themeEditor: {
-        ...config.themeEditor,
-        [template]: theme,
-      },
-    });
-
-    setSaved(true);
-
-    setTimeout(
-      () => setSaved(false),
-      1800,
-    );
-  }
-
+  useEffect(() => { connection.current?.content(draft.landing); }, [draft.landing]);
+  useEffect(() => { connection.current?.update(effective, draft.images); }, [effective, draft.images]);
+  useEffect(() => { connection.current?.updateBlocks(draft.blockStyles ?? {}); }, [draft.blockStyles]);
+  useEffect(() => { connection.current?.imageMode(imageMode); }, [imageMode]);
+  useEffect(() => () => connection.current?.disconnect(), []);
   useEffect(() => {
-    function handleResize() {
-      setSelectedImage(null);
-    }
-
-    window.addEventListener(
-      'resize',
-      handleResize,
-    );
-
-    return () =>
-      window.removeEventListener(
-        'resize',
-        handleResize,
-      );
+    const element = frameWrap.current; if (!element || typeof ResizeObserver === 'undefined') return;
+    const observer = new ResizeObserver(entries => { const { width, height } = entries[0].contentRect; setPreviewBounds({ width, height }); });
+    observer.observe(element); return () => observer.disconnect();
   }, []);
+  useEffect(() => {
+    if (!dirty) return;
+    const leave = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = ''; };
+    window.addEventListener('beforeunload', leave); return () => window.removeEventListener('beforeunload', leave);
+  }, [dirty]);
+  useEffect(() => {
+    const shortcut = (event: KeyboardEvent) => {
+      if (saving) return;
+      if (event.key === 'Escape') { setExpanded(false); return; }
+      if (!(event.ctrlKey || event.metaKey) || (event.target instanceof Element && event.target.closest('input,textarea,select,[contenteditable=true]'))) return;
+      if (event.key.toLowerCase() === 'z') { event.preventDefault(); stepEditorHistory(event.shiftKey ? 'redo' : 'undo'); }
+      else if (event.key.toLowerCase() === 'y') { event.preventDefault(); stepEditorHistory('redo'); }
+    };
+    window.addEventListener('keydown', shortcut); return () => window.removeEventListener('keydown', shortcut);
+  }, [saving, history, template]);
+  function stepEditorHistory(direction: 'undo' | 'redo') {
+    const next = direction === 'undo' ? undoHistory(history) : redoHistory(history);
+    const before = readSharedCarousel(resolveEditorDocument(history.present, template).hero);
+    const after = readSharedCarousel(resolveEditorDocument(next.present, template).hero);
+    setHistory(next);
+    if (JSON.stringify(before) !== JSON.stringify(after)) setSharedCarousel(after);
+  }
+  function selectSection(section: VisualSectionId) {
+    setSelectedBlockId(undefined); setInspectorOpen(true); setTool('style'); setContentImage(false);
+    setSelectedSection(section); if (section !== 'hero') setHeroAdvancedOpen(false); setInspectorGroup(undefined); setSelectedImage(null); setNavigationHref(undefined); setImageMode(false);
+    if (section === 'catalog' && previewPage !== 'catalog') { setPreviewPage('catalog'); setNotice('Abriendo el catálogo en vista previa.'); return; }
+    const found = connection.current?.focus(section);
+    setNotice(found ? '' : ABSENT_SECTION_NOTICE);
+  }
+  function onLoad() {
+    connection.current?.disconnect();
+    const doc = iframeRef.current?.contentDocument; if (!doc || doc.URL === 'about:blank') return;
+    connection.current = connectVisualPreview(doc, (section, href, group) => { setSelectedBlockId(undefined); setInspectorOpen(true); setTool('style'); setContentImage(false); setImageMode(false); setSelectedSection(section === 'heroCta' ? 'hero' : section); setInspectorGroup(group); setSelectedImage(null); setNavigationHref(href); setNotice(''); }, (key, src, legacyKey) => { setSelectedBlockId(undefined); setInspectorOpen(true); setTool('images'); setContentImage(false); setEditScope('all'); setImageMode(true); setSelectedImage({ key, src, legacyKey }); }, (institutional, section) => { setSelectedBlockId(undefined); setSelectedImage(null); setInspectorOpen(true); setTool(institutional ? 'style' : 'content'); setContentImage(!institutional); setEditScope('all'); setImageMode(false); setSelectedSection(section ?? (institutional ? 'topBar' : 'hero')); setInspectorGroup(undefined); setNotice(institutional ? 'La identidad institucional es obligatoria y su logo no se puede reemplazar.' : 'Edita la portada o el logo aquí. Las fotos de productos se administran en Productos.'); }, setSectionPresent, id => {setSelectedBlockId(id);setSelectedImage(null);setImageMode(false);setTool('style');setInspectorOpen(true);setNotice('');});
+    connection.current.imageMode(latest.current.imageMode);
+    connection.current.update(latest.current.effective, latest.current.draft.images);
+    connection.current.content(latest.current.draft.landing);
+    connection.current.updateBlocks(latest.current.draft.blockStyles ?? {});
+    if (selectedBlockId) connection.current.focusBlock(selectedBlockId);
+    else connection.current.focus(latest.current.selectedSection);
+  }
+  async function save():Promise<boolean> {
+    if(saving||loadingContent||contentLoadFailed)return false;
+    const submitted=draft;setSaving(true);setSaveError(false);
+    let savedContent=baseline.landing;
+    try {
+      if(submitted.landing&&JSON.stringify(submitted.landing)!==JSON.stringify(baseline.landing)) {
+        if(!submitted.landing.titulo.trim()||!submitted.landing.texto_boton.trim())throw new Error('Completa el título y el botón de la portada.');
+        savedContent=await saveLandingConfig(submitted.landing);
+        setBaseline(current=>({...current,landing:savedContent}));
+        setHistory(current=>({...current,present:{...current.present,landing:savedContent}}));
+      }
+      const pending=[...Object.entries(templateDrafts.current).filter(([id])=>id!==template).map(([id,item])=>({id:id as TemplateId,document:item!.history.present,baseline:item!.baseline})),{id:template,document:submitted,baseline}];
+      if (sharedCarousel) {
 
-  const imageSetting =
-    currentImageSetting();
+        const templates: TemplateId[] = ['catalog', 'editorial', 'minimal', 'visual'];
+        for (const id of templates) {
+          if (pending.some(item => item.id === id)) continue;
+          const initial = createEditorDocument(config, id, readStoredStoreConfig(identity));
+          const entry = remote.current?.appearance[id];
+          const original: EditorDocument = entry ? {
+            ...initial,
+            overrides: retainCarouselFields(entry.visualConfig, paletteOverrides(entry, remote.current?.library) ?? {}),
+            paletteId: entry.paleta_id,
+          } : initial;
+          pending.push({ id, document: original, baseline: original });
+        }
+        for (const item of pending) {
+          item.document = applySharedCarousel(item.document, sharedCarousel);
+        }
+      }
+      for(const item of pending)if(JSON.stringify(item.document.blockStyles??{})!==JSON.stringify(item.baseline.blockStyles??{}))await saveBlockStyles(item.id,item.document.blockStyles??{});
+      const appearances:Appearance={};
+      const paletteLibrary=await fetchPalettes();
+      if(remote.current)remote.current.library=paletteLibrary;
+      for(const item of pending){
+        const effective=resolveEditorDocument(item.document,item.id);
+        const palette=paletteLibrary.propias.find(value=>value.id===item.document.paletteId);
+        const paletteMatches=palette&&Object.entries(palette.colores).every(([key,value])=>effective.global.colors[key as keyof typeof effective.global.colors]===value);
+        const legacy=Object.fromEntries(Object.entries({...item.document.storeColors,...item.document.templateColors}).map(([key,value])=>[key.replace('Color',''),value]));
+        const visualConfig=retainCarouselFields(item.document.overrides, mergeVisualOverrides(mergeVisualOverrides(item.document.storeOverrides,{global:{colors:legacy}}),item.document.overrides));
+        appearances[item.id]={visualConfig,paleta_id:paletteMatches?palette.id:null};
+      }
+      await saveAppearance(appearances);
+      let nextConfig=config;
+      for(const item of pending)nextConfig=publishEditorDocument(nextConfig,item.id,item.document);
 
-  return (
-    <div className="min-h-screen bg-[#eef2f7]">
-      <header className="fixed inset-x-0 top-0 z-50 h-16 bg-white border-b border-[var(--border)] flex items-center justify-between px-4 md:px-6 shadow-sm">
-        <div className="flex items-center gap-4 min-w-0">
-          <Link
-            to="/emprendedor/diseno"
-            className="text-sm font-medium text-[var(--primary)] whitespace-nowrap"
-          >
-            ← Volver a Diseño
-          </Link>
-
-          <div className="hidden sm:block h-6 w-px bg-[var(--border)]" />
-
-          <div>
-            <p className="text-sm font-semibold">
-              Editor de tienda
-            </p>
-            <p className="text-xs text-[var(--muted-foreground)]">
-              Toca una imagen para editarla
-            </p>
-          </div>
+      if(!setConfig({...nextConfig,template:config.template}))throw new Error('La apariencia se guardó en el servidor, pero no pudimos guardar la copia local. Conservamos el borrador para reintentar.');
+      if (remote.current) {
+        remote.current.appearance = { ...remote.current.appearance, ...appearances };
+      }
+      for (const item of pending) {
+        if (item.id === template) continue;
+        const stored = { ...item.document, landing: savedContent, paletteId: appearances[item.id]?.paleta_id };
+        templateDrafts.current[item.id] = { baseline: stored, history: createHistory(stored) };
+      }
+      const published={...applySharedCarousel(submitted, sharedCarousel),landing:savedContent,paletteId:appearances[template]?.paleta_id};
+      setHistory(current=>({...current,present:published}));setBaseline(published);setSaved(true);
+      setNotice('Cambios guardados. El carrusel se aplica a las cuatro plantillas; la apariencia individual se conserva.');
+      return true;
+    }catch(error){setSaveError(true);setNotice((savedContent!==baseline.landing?'El contenido ya se guardó. La apariencia sigue pendiente. ':'')+(error instanceof Error?error.message:'No se pudieron guardar los cambios. Conservamos tu borrador.'));return false;}
+    finally{setSaving(false);}
+  }
+  function changePage(page: PreviewPageId) {
+    setInspectorOpen(true);
+    setSelectedBlockId(undefined); setContentImage(false); setPreviewPage(page); setInspectorGroup(undefined); setSelectedSection(page === 'home' ? 'hero' : page === 'catalog' ? 'catalog' : 'pageLayout');
+    setImageMode(false); setSelectedImage(null); setNavigationHref(undefined); setNotice(''); setTool('style');
+  }
+  function chooseTool(next: typeof tool) {
+    setTool(next); setContentImage(false); setInspectorOpen(true); if (next !== 'style') setEditScope('all');
+    setImageMode(next === 'images');
+    if (next === 'images') setInspectorOpen(true);
+    if (next === 'content') setInspectorOpen(true);
+  }
+  function resetVisibleSection() {
+    setDraft(current => {
+      if (!selectedSection.startsWith('page')) {
+        const reset = resetSection(current, sectionOverridePath(selectedSection, previewPage === 'catalog', activePage));
+        return selectedSection === 'hero' && previewPage === 'home' ? resetSection(reset, 'heroCta') : reset;
+      }
+      const groups = getInspectorGroups(selectedSection, false, activePage).filter(group => !inspectorGroup || group.label === inspectorGroup);
+      return groups.flatMap(group => group.fields).reduce((document, field) => resetSection(document, field.path), current);
+    });
+    setNotice('Se recuperaron los ajustes originales de este grupo en computadora, tablet y móvil.');
+  }
+  const currentLabel = selectedBlock && tool === 'style' ? selectedBlock.titulo || 'Sección de mi tienda' : contentImage && tool === 'content' && selectedSection === 'hero' ? 'Imagen principal' : inspectorGroup || VISUAL_SECTIONS.find(([id]) => id === selectedSection)?.[1];
+  const sectionOptions = VISUAL_SECTIONS.filter(([id]) => ['global', 'topBar', 'header', 'footer'].includes(id) || (previewPage === 'home' ? !id.startsWith('page') && id !== 'catalog' && id !== 'heroCta' : previewPage === 'catalog' ? ['catalog','productGrid','productCard','categories'].includes(id) : id.startsWith('page') && (id !== 'pageField' || !['confirmation','orders','terms','privacy','refund','story'].includes(activePage))));
+  return <div aria-busy={saving} className={`ve-editor ve-redesign ${expanded ? 've-expanded' : ''}`}>
+    <header className="ve-toolbar">
+      <Link className="ve-institution" style={{ maxWidth: 'none' }} aria-label="Volver al panel de administración · Universidad Autónoma de Chile" to="/emprendedor/diseno"><img src="/logo-universidad-autonoma.png" alt="" /><span style={{ display: 'inline', fontWeight: 600 }}>← Volver al panel de administración</span></Link><strong>{config.name || 'Mi tienda'}<small>Editor visual de tu tienda</small></strong>
+      <button type="button" disabled={!history.past.length || saving} onClick={() => stepEditorHistory('undo')}>Deshacer</button><button type="button" disabled={!history.future.length || saving} onClick={() => stepEditorHistory('redo')}>Rehacer</button>
+      <button type="button" aria-pressed={expanded} onClick={() => setExpanded(!expanded)}>{expanded ? 'Volver al editor' : 'Ampliar vista'}</button><button type="button" aria-expanded={inspectorOpen} aria-controls="ve-properties" onClick={() => setInspectorOpen(!inspectorOpen)}>Opciones</button>
+      <span role="status" aria-live="polite" className={saveError ? 've-save-error' : dirty ? 've-dirty' : 've-saved'}>{saving ? 'Guardando…' : saveError ? 'No se pudo guardar' : dirty ? 'Cambios sin guardar' : saved ? '✓ Guardado' : '✓ Sin cambios pendientes'}</span>
+      <button type="button" disabled={!dirty || saving || loadingContent || contentLoadFailed} onClick={() => { templateDrafts.current = {}; setSharedCarousel(readSharedCarousel(resolveEditorDocument(baseline, template).hero)); setHistory(createHistory(baseline)); setSaved(false); setSaveError(false); setNotice('Borrador descartado.'); if (template !== config.template) { discarding.current = true; setParams({plantilla:config.template}); } }}>Descartar cambios</button>
+      <button type="button" className="ve-primary" disabled={!dirty || saving || loadingContent || contentLoadFailed} onClick={save}>{saving ? 'Guardando…' : 'Guardar cambios'}</button>
+    </header>
+    <fieldset className="ve-editor-controls" disabled={saving || loadingContent}>
+    <nav className="ve-tools" aria-label="Herramientas del editor">{([['style','Diseño y apariencia'],['templates','Plantillas'],['content','Contenido y secciones'],['images','Imágenes']] as const).map(([id,label]) => <button key={id} type="button" aria-pressed={tool === id} onClick={() => chooseTool(id)}>{label}</button>)}<FieldHelp label="Cómo empezar">1) Elige la página que quieres cambiar. 2) Haz clic en la parte de tu tienda que quieras editar, o elígela en «Sección». 3) Ajusta las opciones del panel derecho y pulsa «Guardar cambios».</FieldHelp><span>Selecciona un elemento de tu tienda para editarlo</span></nav>
+    <div className={`ve-workspace ${inspectorOpen ? '' : 've-hide-inspector'}`}>
+      <main className="ve-preview">
+        <div className="ve-preview-toolbar">
+          <label>Página que estás editando<select aria-label="Página que estás editando" value={previewPage} onChange={e => changePage(e.target.value as PreviewPageId)}><option value="home">Inicio</option>{STORE_PAGES.filter(page => page.id !== 'story' || template === 'visual').map(page => <option key={page.id} value={page.id}>{page.label}</option>)}</select></label>
+          <label>Sección<select aria-label="Sección que estás editando" value={selectedBlockId ? 'block:'+selectedBlockId : selectedSection} onChange={e => { if(e.target.value.startsWith('block:')) {const id=e.target.value.slice(6);setSelectedBlockId(id);setTool('style');setImageMode(false);setSelectedImage(null);setInspectorOpen(true);setNotice(connection.current?.focusBlock(id) ? '' : 'Esta sección está oculta. Actívala desde Página principal para verla.');} else selectSection(e.target.value as VisualSectionId);}}>{sectionOptions.map(([id,label]) => <option key={id} value={id}>{label}</option>)}{previewPage === 'home' && draft.landing?.contenido?.bloques?.map(block => <option key={block.id} value={'block:'+block.id}>{block.titulo || 'Sin título'}{!block.visible ? ' (oculta)' : ''}</option>)}</select></label>
+          <div role="group" aria-label="Pantalla de vista previa">{(['desktop', 'tablet', 'mobile'] as const).map(value => <button type="button" key={value} aria-pressed={viewport === value} onClick={() => { setViewport(value); setEditScope('all'); }}>{optionLabel(value)}</button>)}</div>
+          <label className="ve-scope">Aplicar cambios<select aria-label="Alcance de los cambios" disabled={tool !== 'style'} value={editScope} onChange={e => setEditScope(e.target.value as 'all' | 'device')}><option value="all">A todos los dispositivos</option><option value="device">Solo {optionLabel(viewport).toLowerCase()}</option></select></label>
+          {previewPage === 'product' && <span>Producto de ejemplo · Bolso de algodón</span>}
+          {previewPage === 'login' && <select aria-label="Vista de acceso" value={registerPreview ? 'register' : 'login'} onChange={e => setRegisterPreview(e.target.value === 'register')}><option value="login">Inicio de sesión</option><option value="register">Crear cuenta</option></select>}
+          {previewPage === 'checkout' && <select aria-label="Etapa de compra" value={checkoutStep} onChange={e => { setCheckoutStep(e.target.value); setInspectorGroup(undefined); }}>{CHECKOUT_PREVIEW_STEPS.map((step, index) => <option key={step} value={step}>{['Contacto','Entrega','Pago','Confirmación'][index]}</option>)}</select>}
+          {navigationHref && <a href={navigationHref} target="_blank" rel="noopener noreferrer">Probar navegación ↗</a>}
+          <a href={previewPage === 'product' ? templatePaths[template] + '/catalogo' : publicPageUrl} target="_blank" rel="noopener noreferrer">{previewPage === 'product' ? 'Ver catálogo público ↗' : 'Vista previa ↗'}</a>
         </div>
-
-        <div className="relative flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() =>
-              setPaletteOpen(
-                (value) => !value,
-              )
-            }
-          >
-            🎨 Colores
-          </Button>
-
-          <Link
-            to={templatePaths[template]}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Button
-              variant="outline"
-              size="sm"
-            >
-              Ver tienda ↗
-            </Button>
-          </Link>
-
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() =>
-              setTheme(loadThemeFor(template))
-            }
-          >
-            Descartar cambios
-          </Button>
-
-          <Button
-            variant="primary"
-            size="sm"
-            onClick={() => setConfirmOpen(true)}
-          >
-            {saved
-              ? '✓ Publicado'
-              : 'Guardar y publicar'}
-          </Button>
-
-          {paletteOpen && (
-            <div className="absolute right-0 top-12 z-[70] w-80 rounded-2xl border border-[var(--border)] bg-white p-4 shadow-2xl">
-              <div className="flex items-start justify-between gap-3 mb-4">
-                <div>
-                  <h2 className="font-semibold">
-                    Paleta de la tienda
-                  </h2>
-                  <p className="text-xs text-[var(--muted-foreground)] mt-1">
-                    Elige una combinación o ajusta los colores.
-                  </p>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() =>
-                    setPaletteOpen(false)
-                  }
-                  className="text-lg leading-none"
-                  aria-label="Cerrar colores"
-                >
-                  ×
-                </button>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                {PALETTES.map(
-                  (palette) => (
-                    <button
-                      key={palette.name}
-                      type="button"
-                      onClick={() =>
-                        updateTheme({
-                          paletteName:
-                            palette.name,
-                          primaryColor:
-                            palette.primary,
-                          secondaryColor:
-                            palette.secondary,
-                          accentColor:
-                            palette.accent,
-                        })
-                      }
-                      className={`rounded-xl border p-2 text-left ${
-                        theme.paletteName ===
-                        palette.name
-                          ? 'border-[var(--primary)] ring-2 ring-[var(--primary)]/15'
-                          : 'border-[var(--border)]'
-                      }`}
-                    >
-                      <div className="flex gap-1 mb-2">
-                        <span
-                          className="h-6 flex-1 rounded"
-                          style={{
-                            background:
-                              palette.primary,
-                          }}
-                        />
-                        <span
-                          className="h-6 flex-1 rounded"
-                          style={{
-                            background:
-                              palette.secondary,
-                          }}
-                        />
-                        <span
-                          className="h-6 flex-1 rounded"
-                          style={{
-                            background:
-                              palette.accent,
-                          }}
-                        />
-                      </div>
-                      <span className="text-xs font-semibold">
-                        {palette.name}
-                      </span>
-                    </button>
-                  ),
-                )}
-              </div>
-
-              <div className="mt-4 grid gap-3">
-                {[
-                  [
-                    'Principal',
-                    'primaryColor',
-                  ],
-                  [
-                    'Secundario',
-                    'secondaryColor',
-                  ],
-                  [
-                    'Acento',
-                    'accentColor',
-                  ],
-                ].map(
-                  ([label, key]) => (
-                    <label
-                      key={key}
-                      className="flex items-center justify-between gap-3 text-sm"
-                    >
-                      <span>{label}</span>
-                      <input
-                        type="color"
-                        value={
-                          theme[
-                            key as keyof Pick<
-                              ThemeTemplateCustomization,
-                              | 'primaryColor'
-                              | 'secondaryColor'
-                              | 'accentColor'
-                            >
-                          ] as string
-                        }
-                        onChange={(
-                          event,
-                        ) =>
-                          updateTheme({
-                            paletteName:
-                              'Personalizada',
-                            [key]:
-                              event.target
-                                .value,
-                          })
-                        }
-                        className="h-9 w-14 cursor-pointer rounded border border-[var(--border)] bg-white"
-                      />
-                    </label>
-                  ),
-                )}
-              </div>
-            </div>
-          )}
-        </div>
-      </header>
-
-      <main className="pt-16 h-screen">
-        <iframe
-          ref={iframeRef}
-          title="Vista real del cliente"
-          src={templatePaths[template]}
-          onLoad={attachEditorEvents}
-          className="w-full h-full border-0 bg-white"
-        />
+        <div className="ve-preview-heading"><span>{previewPage === 'home' ? 'Inicio' : STORE_PAGES.find(p => p.id === previewPage)?.label} <span aria-hidden="true">/</span> {optionLabel(viewport)} · {frameWidth} px</span><div className="ve-zoom"><label>Zoom<select aria-label="Zoom de vista previa" value={zoom} onChange={e => setZoom(e.target.value)}><option value="fit">Ajustar</option>{[50,75,100,125,150].map(value => <option key={value} value={value}>{value}%</option>)}</select></label><span>{Math.round(previewScale * 100)}%</span></div></div>
+        {(storageError || (notice && (notice !== ABSENT_SECTION_NOTICE || !sectionPresent))) && <p className="ve-notice" role={storageError ? 'alert' : 'status'}>{storageError || notice}</p>}
+        <div className="ve-frame-wrap" ref={frameWrap}><div className="ve-frame-stage" style={{width:frameWidth * previewScale,height:Math.max(300 * previewScale,previewBounds.height - 24)}}><iframe key={previewUrl} loading="eager" ref={iframeRef} title="Vista real del cliente" src={previewUrl} onLoad={onLoad} style={{ width: frameWidth, height: Math.max(300, (previewBounds.height - 24) / previewScale), transform: `scale(${previewScale})` }} /></div></div>
+        <div className="ve-canvas-status"><span>Vista previa segura · Sin compras ni pagos reales</span><span>Secciones publicadas · Solo esta tienda</span></div>
       </main>
+      <aside className="ve-properties" id="ve-properties" aria-label="Opciones del elemento seleccionado" hidden={!inspectorOpen}>
+        <div className="ve-property-tabs" role="group" aria-label="Edición contextual"><button type="button" aria-pressed={tool === 'style'} onClick={() => chooseTool('style')}>Apariencia</button><button type="button" aria-pressed={tool === 'content'} onClick={() => chooseTool('content')}>Contenido</button><button type="button" aria-label="Ocultar propiedades" onClick={() => setInspectorOpen(false)}>×</button></div>
+        <div className="ve-inspector-heading"><div><small>{tool === 'templates' ? 'ELIGE TU ESTILO' : imageMode ? 'IMAGEN SELECCIONADA' : 'EDICIÓN CONTEXTUAL'}</small><h1 aria-live="polite">{tool === 'templates' ? 'Plantillas de tienda' : imageMode ? 'Imágenes' : currentLabel}</h1></div>{!imageMode && !selectedBlock && SECTION_HELP[selectedSection] && <FieldHelp label={currentLabel || ''}>{SECTION_HELP[selectedSection]!}</FieldHelp>}</div>
+        {tool === 'templates' ? <TemplateGallery selected={template} onSelect={id => { if (id !== template) setParams({plantilla:id}); }} /> : tool === 'content' ? <ContentInspector section={selectedSection} home={previewPage === 'home'} error={contentError} landing={draft.landing} onChange={landing=>setDraft(current=>({...current,landing}))} /> : selectedBlock && tool === 'style' ? <><p className="ve-hint ve-scope-hint">{editScope === 'all' ? 'Diseño general · Se adapta a todas las pantallas.' : `Solo ${optionLabel(viewport).toLowerCase()}.`}</p><BlockAppearanceInspector key={selectedBlock.id} block={selectedBlock} styles={draft.blockStyles ?? {}} device={viewport} onEdit={(key,value) => setDraft(current => ({...current,blockStyles:editBlockAppearance(current.blockStyles ?? {},selectedBlock.id,key,value,editScope,viewport)}))} onReset={() => setDraft(current => { const next={...current.blockStyles};delete next[selectedBlock.id];return {...current,blockStyles:next};})} /></> : imageMode && !selectedImage ? <ContentInspector section={selectedSection} home={previewPage==='home'} error={contentError} landing={draft.landing} imagesOnly onChange={landing=>setDraft(current=>({...current,landing}))} /> : imageMode && selectedImage ? <><p className="ve-hint">Reemplazar la imagen se aplica a todos los dispositivos.</p><LegacyImageInspector key={selectedImage.key} selected={selectedImage} document={draft} onChange={setDraft} /></> : <><p className="ve-hint ve-scope-hint">{editScope === 'all' ? 'Diseño general · Cada ajuste se aplica a todas las pantallas. Reemplaza la variante de esa propiedad.' : `Apariencia exclusiva de ${optionLabel(viewport).toLowerCase()}.`}</p><VisualInspector key={`${selectedSection}:${activePage}:${inspectorGroup ?? ''}`} section={selectedSection} effective={effective} document={draft} viewport={viewport} editScope={editScope} catalogPage={previewPage === 'catalog'} page={activePage} groupLabel={inspectorGroup} onPaletteSelect={paletteId=>setDraft(current=>({...current,paletteId}))} onEditMany={edits => setDraft(current => {
+          const paletteChanged = Object.keys(edits).some(path => path.includes('global.colors.'));
+          const targets = editScope === 'all'
+            ? ['heroCta', 'responsive.tablet.heroCta', 'responsive.mobile.heroCta']
+            : [viewport === 'desktop' ? 'heroCta' : `responsive.${viewport}.heroCta`];
+          const buttonEdits = template === 'editorial' && paletteChanged
+            ? Object.fromEntries(targets.flatMap(path => [
+                [`${path}.background`, 'currentColor'],
+                [`${path}.textColor`, 'currentColor'],
+                [`${path}.border.color`, 'currentColor']
+              ]))
+            : {};
+          return Object.entries({...edits,...buttonEdits}).reduce(
+            (document, [path,value]) => editScopedProperty(document,template,path,value,editScope,viewport),
+            current
+          );
+        })} onEdit={(path, value) => setDraft(current => editScopedProperty(current, template, path, value, editScope, viewport))} onReset={path => setDraft(current => resetProperty(current, path))} />{selectedSection === 'hero' && previewPage === 'home' && (<div className="ve-hero-advanced-actions" onKeyDown={event => {
+          if (event.key === 'Escape' && !event.defaultPrevented && heroAdvancedOpen) {
+            event.preventDefault(); event.stopPropagation(); setHeroAdvancedOpen(false); heroAdvancedToggle.current?.focus();
+          }
+        }}>
+          <button ref={heroAdvancedToggle} type="button" className="ve-advanced-toggle ve-hero-advanced-toggle" aria-label={heroAdvancedOpen ? 'Ocultar opciones avanzadas' : 'Opciones avanzadas'} aria-expanded={heroAdvancedOpen} aria-controls="ve-hero-carousel-advanced" title="Más acciones: carrusel, movimientos y animaciones" onClick={() => setHeroAdvancedOpen(open => !open)}>
+            <Icon name="settings" className="ve-hero-advanced-icon" />
+            <span><strong>{heroAdvancedOpen ? 'Ocultar opciones avanzadas' : 'Opciones avanzadas'}</strong><small>Carrusel y animaciones</small></span>
+            <Icon name="chevron" className="ve-hero-advanced-chevron" />
+          </button>
+          {heroAdvancedOpen && (<div id="ve-hero-carousel-advanced"><HeroCarouselInspector hero={effective.hero} imageCount={draft.landing?.imagenes_carrusel?.length ?? 0} onEdit={(field, value) => {
+          setSharedCarousel(current => ({ ...(
+            current ?? readSharedCarousel(effective.hero)
+          ), [field]: value } as SharedCarouselSettings));
+          setDraft(current => editScopedProperty(current, template, `hero.${field}`, value, 'all', 'desktop'));
+        }} /></div>)}
+        </div>)}
 
-      <Modal
-        open={confirmOpen}
-        onClose={() => setConfirmOpen(false)}
-        title="¿Aplicar estos cambios a tu tienda?"
-        size="sm"
-      >
-      
-        <p className="text-sm text-[var(--muted-foreground)] mb-5">
-          Los visitantes de tu tienda verán este diseño de inmediato. Puedes
-          seguir editando si algo no te convence todavía.
-        </p>
+          {previewPage === 'product' && selectedSection === 'pageLayout' && (
+            <ProductDetailTransitionInspector
+              transition={effective.hero.detailProductImageTransition ?? 'none'}
+              onEdit={value => {
+                setSharedCarousel(current => ({ ...(current ?? readSharedCarousel(effective.hero)), detailProductImageTransition: value }));
+                setDraft(current => editScopedProperty(current, template, 'hero.detailProductImageTransition', value, 'all', 'desktop'));
+              }}
+            />
+          )}
 
-        <div className="flex justify-end gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setConfirmOpen(false)}
-          >
-            Seguir editando
-          </Button>
-
-          <Button
-            variant="primary"
-            size="sm"
-            onClick={() => {
-              saveAndPublish();
-              setConfirmOpen(false);
-            }}
-          >
-            Sí, aplicar a mi tienda
-          </Button>
-        </div>
-            </Modal>
-
-      {selectedImage && (
-        <div
-          className="fixed z-[80] w-[310px] rounded-2xl border border-[var(--border)] bg-white shadow-2xl"
-          style={{
-            top: selectedImage.top,
-            left: selectedImage.left,
-          }}
-        >
-          <div className="flex items-start justify-between border-b border-[var(--border)] px-4 py-3">
-            <div className="min-w-0">
-              <p className="font-semibold text-sm">
-                Editar imagen
-              </p>
-              <p className="truncate text-xs text-[var(--muted-foreground)]">
-                {selectedImage.label}
-              </p>
-            </div>
-
-            <button
-              type="button"
-              onClick={() =>
-                setSelectedImage(null)
-              }
-              className="text-lg"
-              aria-label="Cerrar edición de imagen"
-            >
-              ×
-            </button>
-          </div>
-
-          <div className="p-4 space-y-4">
-            <label className="block">
-              <span className="text-xs font-medium">
-                Imagen
-              </span>
-              <input
-                type="text"
-                value={imageSetting.src}
-                onChange={(event) =>
-                  updateSelectedImage({
-                    src: event.target.value,
-                  })
-                }
-                className="mt-1 h-10 w-full rounded-lg border border-[var(--border)] px-3 text-xs outline-none focus:border-[var(--primary)]"
+          {(previewPage === 'home' || previewPage === 'catalog') &&
+            ['sections', 'productCard', 'productGrid', 'categories'].includes(selectedSection) && (
+              <ProductHoverInspector
+                hero={effective.hero}
+                suggestedArea={selectedSection === 'categories' ? 'category' : previewPage === 'catalog' ? 'catalog' : 'featured'}
+                onEdit={(field, value) => {
+                  setSharedCarousel(current => ({
+                    ...(current ?? readSharedCarousel(effective.hero)),
+                    [field]: value,
+                  } as SharedCarouselSettings));
+                  setDraft(current => editScopedProperty(current, template, `hero.${field}`, value, 'all', 'desktop'));
+                }}
               />
-            </label>
+          )}
 
-            <label className="block">
-              <div className="flex justify-between text-xs">
-                <span>Escala</span>
-                <span>
-                  {imageSetting.scale}%
-                </span>
-              </div>
-              <input
-                type="range"
-                min="80"
-                max="180"
-                value={imageSetting.scale}
-                onChange={(event) =>
-                  updateSelectedImage({
-                    scale: Number(
-                      event.target.value,
-                    ),
-                  })
-                }
-                className="w-full"
-              />
-            </label>
 
-            <label className="block">
-              <div className="flex justify-between text-xs">
-                <span>
-                  Posición horizontal
-                </span>
-                <span>
-                  {imageSetting.x}%
-                </span>
-              </div>
-              <input
-                type="range"
-                min="0"
-                max="100"
-                value={imageSetting.x}
-                onChange={(event) =>
-                  updateSelectedImage({
-                    x: Number(
-                      event.target.value,
-                    ),
-                  })
-                }
-                className="w-full"
-              />
-            </label>
-
-            <label className="block">
-              <div className="flex justify-between text-xs">
-                <span>
-                  Posición vertical
-                </span>
-                <span>
-                  {imageSetting.y}%
-                </span>
-              </div>
-              <input
-                type="range"
-                min="0"
-                max="100"
-                value={imageSetting.y}
-                onChange={(event) =>
-                  updateSelectedImage({
-                    y: Number(
-                      event.target.value,
-                    ),
-                  })
-                }
-                className="w-full"
-              />
-            </label>
-
-            <label className="block">
-              <div className="flex justify-between text-xs">
-                <span>
-                  Redondeado
-                </span>
-                <span>
-                  {imageSetting.radius}px
-                </span>
-              </div>
-              <input
-                type="range"
-                min="0"
-                max="48"
-                value={imageSetting.radius}
-                onChange={(event) =>
-                  updateSelectedImage({
-                    radius: Number(
-                      event.target.value,
-                    ),
-                  })
-                }
-                className="w-full"
-              />
-            </label>
-
-            <Button
-              fullWidth
-              variant="outline"
-              onClick={resetSelectedImage}
-            >
-              Restablecer imagen
-            </Button>
-          </div>
-        </div>
-      )}
+          <button className="ve-reset-section ve-danger" type="button" onClick={resetVisibleSection}>Restablecer sección ↺</button></>}
+        <details className="ve-restore"><summary>Opciones del diseño</summary><button type="button" className="ve-danger" onClick={() => setRestoreRequested(true)}>Volver al diseño original</button><Link to="/emprendedor/diseno">Volver al panel de administración</Link></details>
+      </aside>
     </div>
-  );
+    </fieldset>
+    {(blocker.state === 'blocked' || restoreRequested) && <div className="ve-modal-backdrop"><div ref={leaveDialog} role="dialog" aria-modal="true" aria-labelledby="ve-leave-title" className="ve-modal" onKeyDown={event => {
+      if (saving) return;
+      if (event.key === 'Escape') { event.preventDefault(); if (restoreRequested) setRestoreRequested(false); else blocker.reset?.(); }
+      if (event.key === 'Tab') {
+        const buttons = event.currentTarget.querySelectorAll('button');
+        if (event.shiftKey && document.activeElement === buttons[0]) { event.preventDefault(); buttons[buttons.length - 1]?.focus(); }
+        else if (!event.shiftKey && document.activeElement === buttons[buttons.length - 1]) { event.preventDefault(); buttons[0]?.focus(); }
+      }
+    }}><h2 id="ve-leave-title">{restoreRequested ? 'Volver al diseño original' : 'Tienes cambios sin guardar'}</h2><p>{restoreRequested ? 'Se retirarán los ajustes generales y los de esta plantilla. Las imágenes, el contenido y la identidad institucional se conservan. Guarda después para aplicar el cambio.' : 'Guarda el diseño o descarta el borrador antes de salir.'}</p><button type="button" disabled={saving} onClick={() => { if (restoreRequested) setRestoreRequested(false); else blocker.reset?.(); }}>{restoreRequested?'Seguir editando':'Cancelar'}</button>{!restoreRequested&&<button type="button" disabled={saving} onClick={()=>void save().then(ok=>{if(ok)blocker.proceed?.();})}>{saving?'Guardando…':'Guardar y continuar'}</button>}<button type="button" onClick={() => { if (restoreRequested) { setDraft(restorePreset(draft)); setRestoreRequested(false); setNotice('Diseño original recuperado en el borrador.'); } else blocker.proceed?.(); }}>{restoreRequested ? 'Restablecer diseño' : 'Continuar sin guardar'}</button></div></div>}
+  </div>;
 }

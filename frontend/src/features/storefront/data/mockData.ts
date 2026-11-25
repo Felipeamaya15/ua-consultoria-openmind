@@ -1,4 +1,5 @@
-// Datos de demostración del diseño; no se realizan llamadas al backend.
+import type { VisualConfigOverrides } from '../visual/types';
+
 export type TemplateId = 'editorial' | 'minimal' | 'visual' | 'catalog';
 
 export interface ProductVariant {
@@ -9,17 +10,23 @@ export interface ProductVariant {
   comparePrice?: number;
   stock: number;
   available: boolean;
+  weightKg?: number | null;
+  heightCm?: number | null;
+  widthCm?: number | null;
+  lengthCm?: number | null;
 }
 
 export interface Product {
   variantsLoaded?: boolean;
   attributeLabels?: Record<string, string>;
-  catalogId?: string; // ID Mongo estable, independiente del slug público.
+  catalogId?: string;
   id: string;
   name: string;
   description: string;
   category: string;
   images: string[];
+  videoResourceId?: string | null;
+  videoUrl?: string;
   basePrice: number;
   comparePrice?: number;
   variants: ProductVariant[];
@@ -76,6 +83,7 @@ export interface Address {
 }
 
 export interface StoreConfig {
+  visualConfig?: VisualConfigOverrides;
   name: string;
   description: string;
   logo?: string;
@@ -102,7 +110,7 @@ export interface Promotion {
   id: string;
   name: string;
   code?: string;
-  type: 'percentage' | 'fixed' | 'free_shipping';
+  type: 'percentage' | 'fixed' | 'free_shipping' | 'precio_oferta';
   value: number;
   minAmount?: number;
   maxUses?: number;
@@ -246,7 +254,7 @@ export const defaultStoreConfig: StoreConfig = {
   ],
   primaryColor: '#1a3a6b',
   secondaryColor: '#eef1f8',
-  accentColor: '#e04b1a',
+  accentColor: '#c2410c',
   template: 'editorial',
   requiresAuth: 'optional',
   paymentMethods: ['Transbank', 'MercadoPago', 'Transferencia bancaria'],

@@ -10,23 +10,30 @@ import type {
   LegalPage,
 } from '../../storefront/data/legalContent';
 import type { EmailTemplates } from '../data/emailTemplates';
+import type { VisualConfigOverrides } from '../../storefront/visual/types';
+import type { ThemeImageSetting } from '../../storefront/visual/imageSettings';
+export type { ThemeImageSetting } from '../../storefront/visual/imageSettings';
+
+export interface ShippingRate {
+  region: string;
+  comuna: string;
+  monto: number;
+  plazo_dias: number | null;
+}
 
 export interface CarrierConnection {
   enabled: boolean;
   accountId: string;
   apiKey: string;
-  status: 'not_configured' | 'credentials_saved';
-}
-
-export interface ThemeImageSetting {
-  src: string;
-  scale: number;
-  x: number;
-  y: number;
-  radius: number;
+  status: 'not_configured' | 'configured' | 'credentials_saved';
+  tarifas?: ShippingRate[];
+  ambiente?: 'SANDBOX' | 'PRODUCCION';
+  credenciales?: Partial<Record<'cotizador' | 'coberturas' | 'envios' | 'tcc' | 'origen' | 'origen_region' | 'origen_comuna' | 'rut' | 'origen_calle' | 'origen_numero' | 'telefono', string>>;
 }
 
 export interface ThemeTemplateCustomization {
+  blockStyles?: import('../../storefront/visual/blockAppearance').BlockStyles;
+  visualConfig?: VisualConfigOverrides;
   primaryColor: string;
   secondaryColor: string;
   accentColor: string;
@@ -56,11 +63,8 @@ export interface AdminConfig extends StoreConfig {
   shippingConfiguration: {
     chilexpress: CarrierConnection;
     starken: CarrierConnection;
-    pickup: {
-      enabled: boolean;
-      address: string;
-      schedule: string;
-    };
+    pickup: import('../services/pickupConfiguration').PickupConfiguration;
+    paquete?: PackageConfiguration;
   };
 
   paymentConfiguration: Record<
@@ -80,4 +84,14 @@ export interface AdminConfig extends StoreConfig {
   };
 
   themeEditor: ThemeEditorConfiguration;
+}
+
+export interface PackageConfiguration {
+  peso_default_kg: number | null;
+  margen_porcentaje: number;
+  limite_peso_kg: number | null;
+  limite_unidades: number | null;
+  alto_cm: number;
+  ancho_cm: number;
+  largo_cm: number;
 }

@@ -1,11 +1,17 @@
+import { CommercialPreferencesLink } from './CommercialPreferencesLink';
+import { StoreBusinessDescription } from './StoreBusinessDescription';
+import { isActiveEditorPreview } from '../../visual/pages';
+import { StorePageContent } from './StorePageContent';
+import { VISUAL_SECTION } from '../../visual/sectionIds';
 import { AccountNavigation } from './AccountNavigation';
-import { useLandingContent } from '../../../landing/hooks/useLandingContent';
-import { useLandingSectionVisibility } from '../../../landing/hooks/useLandingSectionVisibility';
+import { StoreVisualRoot } from './StoreVisualRoot';
+
 import { useEffect, useState } from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 
 import { useStore } from '../../context/StoreContext';
 import { useCart } from '../../context/CartContext';
+import { useStorefrontTemplate } from '../../hooks/useStorefrontTemplate';
 import { InstitutionalBadge } from '../ui';
 import { authService } from '../../../auth/services/authService';
 
@@ -28,7 +34,7 @@ function CartIcon({ count }: { count: number }) {
       </svg>
 
       {count > 0 && (
-        <span className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-[var(--accent)] text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+        <span className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-[var(--accent)] text-[var(--on-accent)] text-[10px] font-bold rounded-full flex items-center justify-center">
           {count}
         </span>
       )}
@@ -36,27 +42,10 @@ function CartIcon({ count }: { count: number }) {
   );
 }
 
-/**
- * ============================================================
- * TEMPLATE 1 — EDITORIAL
- * ============================================================
- *
- * Layout principal de la plantilla editorial.
- *
- * Contiene los elementos persistentes de la plantilla:
- * - Barra institucional
- * - Header
- * - Navegación
- * - Categorías
- * - Footer
- *
- * El contenido de cada página se renderiza mediante <Outlet />.
- */
 export function EditorialLayout() {
-  const { categories } = useLandingContent();
-  const isSectionVisible = useLandingSectionVisibility();
-  const { config, landing } = useStore();
+  const { config, landingLoading } = useStore();
   const { count } = useCart();
+  const { route } = useStorefrontTemplate();
   const navigate = useNavigate();
 
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -64,128 +53,107 @@ export function EditorialLayout() {
 
   const { pathname, search } = useLocation();
 
-  // Buscar si hay un usuario logueado al cargar el layout
-  // Buscar si hay un usuario logueado al cargar o al cambiar de página
   useEffect(() => {
+    if (isActiveEditorPreview()) return;
     authService.getMe().then(response => {
       if (response?.data) {
         setUser(response.data);
       } else {
-        setUser(null); // Limpia el estado si el token no existe o expiró
+        setUser(null);
       }
     });
-  }, [pathname]); // <-- Agregamos 'pathname' para que se actualice al navegar
+  }, [pathname]);
 
   const handleLogout = () => {
     authService.logout();
     setUser(null);
-    navigate('/plantilla/1');
+    navigate(route());
   };
 
-  /**
-   * Al cambiar de página:
-   * - cierra el menú móvil;
-   * - vuelve al inicio de la página.
-   */
   useEffect(() => {
     setMobileOpen(false);
-    window.scrollTo(0, 0);
   }, [pathname, search]);
 
-
+  useEffect(() => {
+    if (!mobileOpen) return;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setMobileOpen(false);
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [mobileOpen]);
 
   return (
-    <div className="template-editorial min-h-screen bg-[#fafaf8] flex flex-col">
+    <StoreVisualRoot className="template-editorial min-h-screen bg-[#fafaf8] flex flex-col">
 
-      {/* =====================================================
-          BARRA INSTITUCIONAL
-      ====================================================== */}
-      <div className="bg-[var(--institutional)] text-white py-2 px-4 text-xs flex items-center justify-center gap-2.5 font-medium">
-        <img
-          src="/logo-universidad-autonoma.png"
-          alt="Logo Universidad Autónoma de Chile"
-          className="w-8 h-8 object-contain bg-white rounded-md p-1 shadow-sm"
-        />
-        <span>
-          Plataforma impulsada por <strong>Universidad Autónoma de Chile</strong>
-        </span>
-      </div>
+      <header data-visual-section={VISUAL_SECTION.header} className="bg-white border-b border-[var(--border)] sticky top-0 z-40">
+        <div data-visual-part="headerLayout" className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between gap-6">
 
-      {/* =====================================================
-          HEADER
-      ====================================================== */}
-      <header className="bg-white border-b border-[var(--border)] sticky top-0 z-40">
-
-        <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between gap-6">
-
-          {/* Logo / nombre de tienda */}
-          <Link
-            to="."
-            className="flex items-center gap-3"
-            aria-label={`Ir al inicio de ${config.name}`}
+          <InstitutionalBadge compact /><Link data-visual-part="logo" onClick={event => {
+            if (!event.ctrlKey && !event.metaKey && !event.shiftKey && !event.altKey && event.currentTarget.pathname === window.location.pathname) {
+              window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+            }
+          }}
+            to={route()}
+            className="flex min-w-0 max-w-full items-center gap-3"
+            aria-label={`Ir al inicio de ${config.name || 'la tienda'}`}
           >
             {config.logo ? (
               <img
-                data-landing-image={landing?.logo ? true : undefined}
+                data-landing-image
                 src={config.logo}
                 alt={`Logo de ${config.name}`}
                 className="block w-auto h-auto max-w-[80px] sm:max-w-[120px] xl:max-w-[160px] max-h-10 sm:max-h-11 shrink-0 object-contain object-center"
               />
+            ) : landingLoading ? (
+              <div className="w-8 h-8 shrink-0" aria-hidden="true" />
             ) : (
-              <div className="w-8 h-8 rounded-full bg-[var(--primary)] flex items-center justify-center text-white text-xs font-bold">
+              <div className="w-8 h-8 rounded-full bg-[var(--primary)] flex items-center justify-center text-[var(--on-primary)] text-xs font-bold shrink-0">
                 {config.name?.slice(0, 2).toUpperCase() || 'MT'}
               </div>
             )}
 
-            <span className="font-display text-xl text-[var(--foreground)]">
+            <span className="font-display text-xl truncate text-[var(--foreground)]">
               {config.name}
             </span>
           </Link>
 
-          {/* =================================================
-              NAVEGACIÓN DESKTOP
-          ================================================== */}
-          <nav
+
+          <nav data-visual-part="navigation"
             className="hidden md:flex items-center gap-6"
             aria-label="Navegación principal"
           >
-            <Link
-              to="."
-              className="text-sm text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition-colors"
-            >
-              Inicio
-            </Link>
+
 
             <Link
-              to="catalogo"
+              to={route('catalogo')}
               className="text-sm text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition-colors"
             >
               Catálogo
             </Link>
 
             <Link
-              to="seguimiento"
+              to={route('seguimiento')}
               className="text-sm text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition-colors"
             >
               Seguimiento
             </Link>
           </nav>
 
-          {/* =================================================
-              ACCIONES
-          ================================================== */}
-          <div className="flex items-center gap-3">
 
-            {/* Carrito */}
+          <div className="flex shrink-0 items-center gap-3">
+
             <Link
-              to="carrito"
+              to={route('carrito')}
               className="text-[var(--foreground)] hover:text-[var(--primary)] transition-colors"
               aria-label={`Ver carrito (${count} productos)`}
             >
               <CartIcon count={count} />
             </Link>
 
-            {/* Login / Usuario Desktop */}
+
             {user ? (
               <div className="hidden sm:flex items-center gap-4 border-l border-[var(--border)] pl-4 ml-2">
                 <span className="text-sm font-semibold text-[var(--foreground)]">
@@ -203,10 +171,11 @@ export function EditorialLayout() {
               <AccountNavigation className="hidden sm:block text-sm font-medium text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition-colors ml-2" />
             )}
 
-            {/* Botón menú móvil */}
+
             <button
               type="button"
-              className="md:hidden text-[var(--foreground)] p-1 ml-2"
+              data-mobile-menu-toggle
+              className="md:hidden inline-flex items-center justify-center min-w-10 min-h-10 text-[var(--foreground)] p-2 ml-1 rounded-lg"
               onClick={() => setMobileOpen((open) => !open)}
               aria-label="Menú"
               aria-expanded={mobileOpen}
@@ -227,52 +196,46 @@ export function EditorialLayout() {
                 />
               </svg>
             </button>
-
           </div>
         </div>
 
-        {/* =================================================
-            NAVEGACIÓN MÓVIL
-        ================================================== */}
+
         {mobileOpen && (
           <nav
             id="mobile-navigation"
+            data-mobile-navigation
             aria-label="Navegación móvil"
-            className="md:hidden border-t border-[var(--border)] bg-white px-4 py-3 flex flex-col gap-2"
+            className="md:hidden border-t border-[var(--border)] bg-white px-4 py-3 flex flex-col gap-2 shadow-lg"
           >
-            <Link
-              to="."
-              className="text-sm py-2"
-              onClick={() => setMobileOpen(false)}
-            >
-              Inicio
-            </Link>
+
 
             <Link
-              to="catalogo"
-              className="text-sm py-2"
+              to={route('catalogo')}
+              className="text-sm font-medium py-2.5 px-2 rounded-lg"
               onClick={() => setMobileOpen(false)}
             >
               Catálogo
             </Link>
 
             <Link
-              to="seguimiento"
-              className="text-sm py-2"
+              to={route('seguimiento')}
+              className="text-sm font-medium py-2.5 px-2 rounded-lg"
               onClick={() => setMobileOpen(false)}
             >
               Seguimiento
             </Link>
 
-            {/* Login / Usuario Móvil */}
             {user ? (
               <>
-                <div className="text-sm py-2 font-semibold text-[var(--foreground)] border-t border-[var(--border)] mt-2 pt-4">
+                <div
+                  className="text-sm py-2.5 px-2 font-semibold border-t border-[var(--border)] mt-1 pt-3"
+                  onClick={() => setMobileOpen(false)}
+                >
                   <AccountNavigation className="underline" />
                 </div>
                 <button
                   type="button"
-                  className="text-sm py-2 text-left text-[var(--muted-foreground)]"
+                  className="text-sm font-medium py-2.5 px-2 text-left rounded-lg"
                   onClick={() => {
                     handleLogout();
                     setMobileOpen(false);
@@ -282,137 +245,97 @@ export function EditorialLayout() {
                 </button>
               </>
             ) : (
-              <AccountNavigation className="text-sm py-2 border-t border-[var(--border)] mt-2 pt-4" />
+              <div
+                className="border-t border-[var(--border)] mt-1 pt-3"
+                onClick={() => setMobileOpen(false)}
+              >
+                <AccountNavigation className="block text-sm font-medium py-2 px-2 rounded-lg" />
+              </div>
             )}
           </nav>
         )}
-
-        {/* =================================================
-            CATEGORÍAS
-        ================================================== */}
-        {isSectionVisible('Categorías') && categories.length > 0 && (<div className="border-t border-[var(--border)] overflow-x-auto scrollbar-hide">
-          <div className="max-w-7xl mx-auto px-4 flex gap-6 py-2">
-
-            {categories.map((category) => (
-              <Link
-                key={category}
-                to={
-                  category === 'Todos'
-                    ? 'catalogo'
-                    : `catalogo?cat=${encodeURIComponent(category)}`
-                }
-                className="text-xs text-[var(--muted-foreground)] hover:text-[var(--primary)] whitespace-nowrap transition-colors"
-              >
-                {category}
-              </Link>
-            ))}
-
-          </div>
-        </div>)}
-
       </header>
 
-      {/* =====================================================
-          CONTENIDO DE LA PÁGINA
-      ====================================================== */}
-      <main className="flex-1">
-        <Outlet />
+
+      <main id="main-content" tabIndex={-1} className="flex-1">
+        <StorePageContent><Outlet /></StorePageContent>
       </main>
 
-      {/* =====================================================
-          FOOTER
-      ====================================================== */}
-      <footer className="bg-[var(--foreground)] text-white mt-16">
 
-        <div className="max-w-7xl mx-auto px-4 py-10 grid grid-cols-1 md:grid-cols-4 gap-8">
+      <footer data-visual-section={VISUAL_SECTION.footer} className="bg-[var(--primary)] text-[var(--on-primary)] mt-16">
+        <div data-visual-part="footerLayout" className="max-w-7xl mx-auto px-4 py-10 grid grid-cols-1 md:grid-cols-4 gap-8">
 
-          {/* Información de tienda */}
           <div className="md:col-span-2">
-
-            <p className="font-display text-2xl mb-2">
+            {config.logo && <img data-landing-image className="store-footer-logo" src={config.logo} alt={`Logo de ${config.name}`} />}
+            <p data-visual-part="footerTitle" className="font-display text-2xl mb-2">
               {config.name}
             </p>
-
-            <p className="text-sm text-white/60">
-              {config.description}
-            </p>
-
-            <div className="mt-4">
-              <InstitutionalBadge />
-            </div>
-
+            <StoreBusinessDescription className="text-sm leading-relaxed" />
           </div>
 
-          {/* Tienda */}
-          <div>
 
-            <p className="text-xs font-semibold uppercase tracking-wider text-white/40 mb-3">
+          <div>
+            <p data-visual-part="footerTitle" className="text-xs font-semibold uppercase tracking-wider text-[color-mix(in_srgb,currentColor_60%,transparent)] mb-3">
               Tienda
             </p>
-
-            <div className="flex flex-col gap-2 text-sm text-white/70">
-
+            <div className="flex flex-col gap-2 text-sm text-[color-mix(in_srgb,currentColor_70%,transparent)]">
               <Link
-                to="catalogo"
-                className="hover:text-white transition-colors"
+                to={route('catalogo')}
+                className="hover:text-inherit transition-colors"
               >
                 Catálogo
               </Link>
-
               <Link
-                to="seguimiento"
-                className="hover:text-white transition-colors"
+                to={route('seguimiento')}
+                className="hover:text-inherit transition-colors"
               >
                 Seguimiento
               </Link>
-
             </div>
-
           </div>
 
-          {/* Legal */}
-          <div>
 
-            <p className="text-xs font-semibold uppercase tracking-wider text-white/40 mb-3">
+          <div>
+            <p data-visual-part="footerTitle" className="text-xs font-semibold uppercase tracking-wider text-[color-mix(in_srgb,currentColor_60%,transparent)] mb-3">
               Legal
             </p>
-
-            <div className="flex flex-col gap-2 text-sm text-white/70">
-
+            <div className="flex flex-col gap-2 text-sm text-[color-mix(in_srgb,currentColor_70%,transparent)]">
               <Link
-                to="legal/terms"
-                className="hover:text-white transition-colors"
+                to={route('legal/terms')}
+                className="hover:text-inherit transition-colors"
               >
                 Términos
               </Link>
-
               <Link
-                to="legal/privacy"
-                className="hover:text-white transition-colors"
+                to={route('legal/privacy')}
+                className="hover:text-inherit transition-colors"
               >
                 Privacidad
               </Link>
-
               <Link
-                to="legal/refund"
-                className="hover:text-white transition-colors"
+                to={route('legal/refund')}
+                className="hover:text-inherit transition-colors"
               >
                 Reembolsos
               </Link>
-
+              <Link
+                to={route('legal/cookies')}
+                className="hover:text-inherit transition-colors"
+              >
+                Cookies
+              </Link>
             </div>
-
           </div>
-
         </div>
 
-        {/* Copyright */}
-        <div className="border-t border-white/10 py-4 text-center text-xs text-white/40 px-4">
-          © 2025 {config.name} · Plataforma e-commerce Universidad Autónoma de Chile
+
+        <div data-visual-part="branding" className="border-t border-[color-mix(in_srgb,currentColor_10%,transparent)] py-4 text-xs text-[color-mix(in_srgb,currentColor_60%,transparent)] px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+          <InstitutionalBadge compact showVersion={true} />
+          <p className="text-center sm:text-right">© {new Date().getFullYear()} {config.name} · OpenMind</p>
         </div>
 
+        <CommercialPreferencesLink />
       </footer>
-
-    </div>
+    </StoreVisualRoot>
   );
 }

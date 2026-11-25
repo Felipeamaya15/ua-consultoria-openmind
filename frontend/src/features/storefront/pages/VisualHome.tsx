@@ -1,38 +1,41 @@
+import { ProductImageGallery } from '../components/store/ProductImageGallery';
+import { useStorefrontTemplate } from '../hooks/useStorefrontTemplate';
+import { useHeroContent } from '../hooks/useHeroContent';
+import { HomeSections } from '../../landing/components/HomeSections';
+import { HomeCategories } from '../../landing/components/HomeCategories';
+import { VISUAL_SECTION } from '../visual/sectionIds';
 import { useLandingContent } from '../../landing/hooks/useLandingContent';
 import { LandingDetails } from '../../landing/components/LandingDetails';
 import { useLandingSectionVisibility } from '../../landing/hooks/useLandingSectionVisibility';
 import { useStore } from '../context/StoreContext';
 import { LandingStatus } from '../../landing/components/LandingStatus';
 import { Link } from 'react-router-dom';
+import { Icon } from '../components/ui';
+import { HeroCarousel } from '../components/HeroCarousel';
 
 import { formatPrice } from '../data/mockData';
 
 export default function VisualHome() {
-  const { featured } = useLandingContent();
+  const { featured, content } = useLandingContent();
   const isSectionVisible = useLandingSectionVisibility();
-  const { landing } = useStore();
-  const visualProducts = featured.map(p => ({ id: p.id, name: p.name, category: p.category, description: p.description, price: p.basePrice, image: p.images[0] }));
+  const { route } = useStorefrontTemplate();
+  const { landing, config } = useStore();
+  const visualProducts = featured.map(p => ({ id: p.id, name: p.name, category: p.category, description: p.description, price: p.basePrice, image: p.images[0], images: p.images }));
+  const hero = useHeroContent(landing, route);
   return (
-    <>
-      {/* ======================================================
-          HERO
-      ====================================================== */}
-      <section className="px-5 md:px-8 pt-5">
-        <div
+    <div data-landing-page="visual" className="min-w-0 overflow-x-hidden">
+
+      <section data-visual-section={VISUAL_SECTION.hero} className="px-4 sm:px-5 md:px-8 pt-4 sm:pt-5">
+        <div data-visual-part="heroLayout"
           className="
-            relative min-h-[620px] md:min-h-[720px]
+            relative min-h-[460px] sm:min-h-[620px] md:min-h-[720px]
             overflow-hidden
             flex items-end
           "
         >
-          <img
-            data-landing-image={landing?.imagen_principal ? true : undefined}
-            src={landing?.imagen_principal || undefined} hidden={!landing?.imagen_principal}
-            alt={landing?.titulo || ''}
-            className="absolute inset-0 w-full h-full object-cover"
-          />
+          <HeroCarousel landing={landing} onContentChange={hero.onChange} />
 
-          <div
+          <div data-visual-part="heroOverlay"
             className="
               absolute inset-0
               bg-gradient-to-t
@@ -42,106 +45,116 @@ export default function VisualHome() {
             "
           />
 
-          <div
+          <div data-visual-part="heroContent"
             className="
               relative z-10
               text-white
+              w-full min-w-0
               max-w-3xl
-              px-7 md:px-12
-              pb-10 md:pb-14
+              px-5 sm:px-7 md:px-12
+              pb-8 sm:pb-10 md:pb-14
             "
           >
             <p
               className="
                 text-[10px] md:text-xs
                 uppercase tracking-[0.24em]
-                mb-5
+                mb-4 sm:mb-5
               "
             >
               Abierto ahora
             </p>
 
             <LandingStatus />
-            <h1
+            <h1 hidden={!hero.showTitle}
               className="
                 font-serif
-                text-5xl md:text-7xl
-                leading-[0.96]
+                text-4xl sm:text-5xl md:text-7xl
+                leading-[0.98]
                 max-w-3xl
+                break-words
               "
             >
-              {landing?.titulo}
+              {hero.title}
             </h1>
 
-            <p
+            <p hidden={!hero.showDescription} data-visual-part="heroSubtitle"
               className="
-                mt-7
+                mt-5 sm:mt-7
                 text-sm md:text-base
                 leading-relaxed
                 max-w-xl
                 text-white/85
+                break-words
               "
             >
-              {landing?.descripcion}
+              {hero.description}
             </p>
 
-            <div className="flex flex-wrap gap-3 mt-8">
-              <Link
-                to="catalogo"
+            <div data-visual-part="heroCtaLayout" className="flex flex-col sm:flex-row flex-wrap gap-3 mt-6 sm:mt-8">
+              <Link data-visual-section={VISUAL_SECTION.heroCta}
+                hidden={!hero.showButton} to={hero.href} target={hero.external ? "_blank" : undefined} rel={hero.external ? "noopener noreferrer" : undefined}
                 className="
-                  bg-[var(--primary)] text-white
-                  px-7 py-4
+                  inline-flex items-center justify-center min-h-11
+                  bg-[var(--primary)] text-[var(--on-primary)]
+                  px-7 py-3.5
                   text-[11px] font-semibold
                   uppercase tracking-[0.12em]
                   hover:opacity-90
                   transition-colors
                 "
               >
-                {landing?.texto_boton}
-              </Link>
-
-              <Link
-                to="nuestra-historia"
-                className="
-                  border border-white/70
-                  text-white
-                  px-7 py-4
-                  text-[11px] font-semibold
-                  uppercase tracking-[0.12em]
-                  hover:bg-white hover:text-black
-                  transition-colors
-                "
-              >
-                Nuestra historia
+                {hero.buttonText}
               </Link>
             </div>
 
             <p
               className="
-                mt-8
+                mt-6 sm:mt-8
                 text-[10px]
                 uppercase tracking-[0.2em]
                 text-white/65
               "
             >
-              — Velta · Envíos a todo Chile
+              — {config.name} · Envíos a todo Chile
             </p>
           </div>
         </div>
       </section>
 
-      {/* ======================================================
-          PRODUCTOS DESTACADOS
-      ====================================================== */}
-      {isSectionVisible('Productos destacados') && visualProducts.length > 0 && (<section data-landing-content className="px-5 md:px-8 py-20 md:py-28">
+
+      {isSectionVisible('Beneficios') && content.beneficios.length > 0 && (
+        <section
+          aria-label="Beneficios de la tienda"
+          data-landing-content
+          className="w-full px-4 sm:px-5 md:px-8 py-5"
+        >
+          <div className="max-w-6xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:flex lg:flex-wrap items-start gap-x-12 gap-y-4">
+            {content.beneficios.map((benefit, index) => (
+              <div key={index} className="flex items-start gap-3 min-w-0 max-w-full sm:max-w-[260px]">
+                <Icon name={benefit.icono} className="w-5 h-5 shrink-0 mt-0.5" />
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold leading-5 break-words">{benefit.titulo}</p>
+                  {benefit.descripcion && (
+                    <p className="text-xs opacity-70 mt-1 leading-5 break-words">{benefit.descripcion}</p>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      <HomeSections commerce={{
+        "sistema:destacados": isSectionVisible('Productos destacados') && visualProducts.length > 0 && (<section data-visual-section={VISUAL_SECTION.sections} data-visual-kind="featured" data-landing-content className="px-4 sm:px-5 md:px-8 py-14 sm:py-20 md:py-28">
         <div className="max-w-6xl mx-auto">
-          <header className="mb-12">
+          <header className="mb-8 sm:mb-12">
             <p
               className="
                 text-[10px]
                 uppercase tracking-[0.24em]
-                text-gray-400
-                mb-4
+                text-gray-500
+                mb-3 sm:mb-4
               "
             >
               Productos destacados
@@ -150,7 +163,7 @@ export default function VisualHome() {
             <h2
               className="
                 font-serif
-                text-5xl md:text-6xl
+                text-3xl sm:text-5xl md:text-6xl
                 leading-none
               "
             >
@@ -158,32 +171,32 @@ export default function VisualHome() {
             </h2>
           </header>
 
-          {/* PRODUCTO PRINCIPAL */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+
+          <div data-visual-section={VISUAL_SECTION.productGrid} data-visual-grid="products" className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
             <VisualHomeProduct product={visualProducts[0]} large />
-            {visualProducts.length > 1 && <div className="grid grid-cols-1 gap-4">
+            {visualProducts.length > 1 && <div data-visual-section={VISUAL_SECTION.productGrid} data-visual-grid="products" className="grid grid-cols-1 gap-4">
               {visualProducts.slice(1, 3).map(p => <VisualHomeProduct key={p.id} product={p} />)}
             </div>}
           </div>
 
-          {/* SEGUNDA FILA */}
-          {visualProducts.length > 3 && <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="grid grid-cols-2 gap-4">
+
+          {visualProducts.length > 3 && <div data-visual-section={VISUAL_SECTION.productGrid} data-visual-grid="products" className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div data-visual-section={VISUAL_SECTION.productGrid} data-visual-grid="products" className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {visualProducts.slice(3, 5).map(p => <VisualHomeProduct key={p.id} product={p} />)}
             </div>
             {visualProducts[5] && <VisualHomeProduct product={visualProducts[5]} wide />}
           </div>}
 
-          <div className="mt-10">
+          <div className="mt-8 sm:mt-10">
             <Link
-              to="catalogo"
+              to={route('catalogo')}
               className="
-                inline-flex
+                inline-flex items-center justify-center min-h-11 w-full sm:w-auto
                 border border-[var(--primary)]
-                px-7 py-4
+                px-7 py-3.5
                 text-[11px] font-semibold
                 uppercase tracking-[0.12em]
-                hover:bg-[var(--primary)] hover:text-white
+                hover:bg-[var(--primary)] hover:text-[var(--on-primary)]
                 transition-colors
               "
             >
@@ -191,159 +204,14 @@ export default function VisualHome() {
             </Link>
           </div>
         </div>
-      </section>)}
-
-      {/* ======================================================
-          HISTORIA
-      ====================================================== */}
-      <section className="bg-[#f2f1ef]">
-        <div
-          className="
-            max-w-6xl mx-auto
-            grid grid-cols-1 md:grid-cols-2
-          "
-        >
-          <div className="min-h-[620px]">
-            <img
-              src="https://images.unsplash.com/photo-1643168343279-3f93c2e592ef?w=800&h=1000&fit=crop&auto=format"
-              alt="Selección de productos Velta"
-              className="w-full h-full object-cover"
-            />
-          </div>
-
-          <div
-            className="
-              flex flex-col justify-center
-              px-8 md:px-14
-              py-16
-            "
-          >
-            <p
-              className="
-                text-[10px]
-                uppercase tracking-[0.24em]
-                text-gray-500
-                mb-7
-              "
-            >
-              7 años en marcha
-            </p>
-
-            <p
-              className="
-                text-[10px]
-                uppercase tracking-[0.24em]
-                text-gray-500
-                mb-4
-              "
-            >
-              Nuestra historia
-            </p>
-
-            <h2
-              className="
-                font-serif
-                text-4xl md:text-5xl
-                leading-[1.05]
-              "
-            >
-              Nacido de una idea,
-              <br />
-              <em className="font-normal">
-                construido con criterio
-              </em>
-            </h2>
-
-            <p className="mt-7 text-sm leading-7 text-gray-600">
-              Valentina Roque fundó Velta en 2018 con una
-              convicción simple: que encontrar productos de
-              calidad no debería ser complicado. Lo que comenzó
-              como un catálogo pequeño y cuidado se convirtió
-              en una tienda que hoy despacha a todo el país.
-            </p>
-
-            <p className="mt-5 text-sm leading-7 text-gray-600">
-              Cada producto pasa por una selección estricta.
-              Si no cumple con los estándares de calidad,
-              diseño y durabilidad que exigimos, no entra al
-              catálogo. Así de simple.
-            </p>
-
-            <p className="mt-8 font-serif italic text-lg">
-              Valentina Roque, fundadora
-            </p>
-          </div>
-        </div>
-      </section>
-
-      {/* ======================================================
-          SEGUNDA SECCIÓN DE HISTORIA
-      ====================================================== */}
-      <section className="py-20 md:py-28 px-5 md:px-8">
-        <div
-          className="
-            max-w-6xl mx-auto
-            grid grid-cols-1 md:grid-cols-2
-            gap-12 md:gap-20
-            items-center
-          "
-        >
-          <div>
-            <p
-              className="
-                text-[10px]
-                uppercase tracking-[0.24em]
-                text-gray-400
-                mb-5
-              "
-            >
-              Nuestro espacio
-            </p>
-
-            <h2
-              className="
-                font-serif
-                text-4xl md:text-5xl
-                leading-[1.05]
-              "
-            >
-              Un catálogo que crece
-              <br />
-              <em className="font-normal">
-                con intención
-              </em>
-            </h2>
-
-            <p className="mt-7 text-sm leading-7 text-gray-600">
-              Trabajamos con proveedores y marcas que comparten
-              la misma idea: que un producto bien elegido vale
-              más que diez comprados sin criterio. Cada categoría
-              se revisa y actualiza de forma constante.
-            </p>
-
-            <p className="mt-5 text-sm leading-7 text-gray-600">
-              Tenés dudas o querés conocernos mejor — escribinos.
-              Respondemos todas las consultas.
-            </p>
-          </div>
-
-          <div className="min-h-[520px]">
-            <img
-              src="https://images.unsplash.com/photo-1441984904996-e0b6ba687e04?w=900&h=700&fit=crop&auto=format"
-              alt="Interior de la tienda Velta"
-              className="w-full h-full object-cover"
-            />
-          </div>
-        </div>
-      </section>
+      </section>),
+        'sistema:categorias': <HomeCategories />
+      }} />
       <LandingDetails />
-    </>
+    </div>
   );
 }
 
-/* ============================================================
-   TARJETA EXCLUSIVA DEL HOME DE VELTA
-============================================================ */
 
 interface VisualHomeProductProps {
   product: {
@@ -353,6 +221,7 @@ interface VisualHomeProductProps {
     description: string;
     price: number;
     image: string;
+    images: string[];
   };
   large?: boolean;
   wide?: boolean;
@@ -363,74 +232,72 @@ function VisualHomeProduct({
   large = false,
   wide = false,
 }: VisualHomeProductProps) {
+  const { route } = useStorefrontTemplate();
   return (
-    <article
+    <article data-visual-section={VISUAL_SECTION.productCard} data-visual-card="grid"
       className={`
         bg-[#f1f0ee]
-        flex flex-col
+        flex flex-col min-w-0
         ${large ? 'h-full' : ''}
       `}
     >
-      <Link
-        to={`producto/${product.id}`}
-        className={`
+      <div
+
+        className={`relative relative
           block overflow-hidden bg-gray-200
           ${
             large
-              ? 'min-h-[620px] flex-1'
+              ? 'min-h-[300px] sm:min-h-[480px] md:min-h-[620px] flex-1'
               : wide
-                ? 'h-[390px]'
-                : 'h-[300px]'
+                ? 'h-[240px] sm:h-[390px]'
+                : 'h-[220px] sm:h-[300px]'
           }
         `}
       >
-        <img
-          src={product.image}
-          alt={product.name}
-          className="
+        <ProductImageGallery images={product.images} alt={product.name} href={route(`producto/${product.id}`)} imageClassName="
             w-full h-full object-cover
             hover:scale-[1.02]
             transition-transform duration-700
-          "
-        />
-      </Link>
+          " />
+      </div>
 
-      <div className="p-6">
+      <div data-visual-part="body" className="p-4 sm:p-6">
         <p
           className="
             text-[9px]
             uppercase tracking-[0.2em]
             text-gray-500
-            mb-3
+            mb-2 sm:mb-3
           "
         >
           {product.category}
         </p>
 
-        <h3 className="font-serif text-2xl leading-tight">
+        <h3 className="font-serif text-xl sm:text-2xl leading-tight break-words">
           {product.name}
         </h3>
 
-        <p className="text-sm text-gray-500 leading-6 mt-3">
+        <p data-visual-part="description" className="text-sm text-gray-500 leading-6 mt-2 sm:mt-3 break-words">
           {product.description}
         </p>
 
         <div
           className="
-            flex items-center justify-between
-            gap-5 mt-6
+            flex flex-wrap items-center justify-between
+            gap-3 sm:gap-5 mt-5 sm:mt-6
           "
         >
-          <span className="text-sm font-semibold">
+          <span data-visual-part="price" className="text-sm font-semibold">
             {formatPrice(product.price)}
           </span>
 
-          <Link
-            to={`producto/${product.id}`}
+          <Link data-visual-part="buyButton"
+            to={route(`producto/${product.id}`)}
             className="
+              inline-flex items-center justify-center min-h-10
               bg-[var(--primary)]
               text-white
-              px-6 py-3
+              px-6 py-2.5
               text-[10px]
               font-semibold
               uppercase

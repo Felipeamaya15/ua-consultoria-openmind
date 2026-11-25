@@ -1,12 +1,72 @@
+from apps.landing.activity_replies import ActivityRepliesView, SendActivityReplyView
+from apps.landing.cart_reminders import RegistroCarritoView
 from django.urls import path
+from apps.landing.views import ConfiguracionLandingAPIView, AparienciaBloquesAPIView, RedesSocialesAPIView
+from apps.landing.media_views import MediaLibraryView, MediaResourceView, MediaImageView
+from apps.landing.public_section_media import PublicSectionMediaView, PublicSectionImageView, PublicSectionVideoView
+from apps.landing.activity_views import ActivitySubmissionView, ActivityEnrollmentView, ActivityRequestsView, ActivityRequestView, PaidActivityAvailabilityView
+from apps.landing.carrusel_views import (ImagenesCarruselLandingAPIView, ImagenCarruselLandingDetalleAPIView, OrdenImagenesCarruselLandingAPIView, ModoTextoCarruselAPIView)
 
-from apps.landing.views import ConfiguracionLandingAPIView
+from apps.landing.qa_activity_management import OwnerActivitySales, CustomerActivitySales, ActivityRefundAction
 
+from apps.landing.transfer_activity_orders import ActivityCheckoutModeView
 
 urlpatterns = [
+    path('recordatorio-carrito/', RegistroCarritoView.as_view(), name='recordatorio-carrito'),
+    path('modo-compra-actividades/', ActivityCheckoutModeView.as_view(), name='modo-compra-actividades'),
+    path('ventas-actividades-qa/', OwnerActivitySales.as_view(), name='ventas-actividades-qa'),
+    path('ventas-actividades-qa/pedido/<int:pedido_id>/', CustomerActivitySales.as_view(), name='ventas-actividades-cliente-qa'),
+    path('ventas-actividades-qa/pedido/<int:pedido_id>/<uuid:reserva_id>/', ActivityRefundAction.as_view(), name='devolucion-actividad-qa'),
+    path('solicitudes-actividades/<uuid:pk>/respuestas/', ActivityRepliesView.as_view(), name='respuestas-actividad'),
+    path('solicitudes-actividades/<uuid:pk>/respuestas/<uuid:reply_id>/enviar/', SendActivityReplyView.as_view(), name='enviar-respuesta-actividad'),
+    path('actividades/<uuid:pk>/disponibilidad/', PaidActivityAvailabilityView.as_view(), name='disponibilidad-actividad-pagada'),
+    path('actividades/<uuid:pk>/consultas/', ActivitySubmissionView.as_view(), name='consulta-actividad'),
+    path('actividades/<uuid:pk>/inscripciones/', ActivityEnrollmentView.as_view(), name='inscripcion-actividad'),
+    path('solicitudes-actividades/', ActivityRequestsView.as_view(), name='solicitudes-actividades'),
+    path('solicitudes-actividades/<uuid:pk>/', ActivityRequestView.as_view(), name='gestion-solicitud-actividad'),
+    path('multimedia-publica/', PublicSectionMediaView.as_view(), name='multimedia-secciones-publicadas'),
+    path('multimedia-publica/<uuid:pk>/imagen/', PublicSectionImageView.as_view(), name='imagen-seccion-publicada'),
+    path('multimedia-publica/<uuid:pk>/video/', PublicSectionVideoView.as_view(), name='video-seccion-publicado'),
+    path('biblioteca/', MediaLibraryView.as_view(), name='biblioteca-multimedia'),
+    path('biblioteca/<uuid:pk>/', MediaResourceView.as_view(), name='recurso-multimedia'),
+    path('biblioteca/<uuid:pk>/imagen/', MediaImageView.as_view(), name='imagen-biblioteca'),
+    path('redes-sociales/', RedesSocialesAPIView.as_view(), name='redes-sociales'),
+    path('apariencia/', AparienciaBloquesAPIView.as_view(), name='apariencia-bloques'),
+    path("configuracion/", ConfiguracionLandingAPIView.as_view(), name="configuracion-landing"),
+    path('carrusel/', ImagenesCarruselLandingAPIView.as_view(), name='imagenes-carrusel-landing'),
+    path('carrusel/orden/', OrdenImagenesCarruselLandingAPIView.as_view(), name='orden-imagenes-carrusel'),
+    path('carrusel/modo-texto/', ModoTextoCarruselAPIView.as_view(), name='modo-texto-carrusel'),
+    path('carrusel/<uuid:pk>/', ImagenCarruselLandingDetalleAPIView.as_view(), name='detalle-imagen-carrusel'),
+]
+
+from apps.landing.activity_cart_sync_views import (
+    CartActivityListView,
+    CartActivityItemView,
+)
+
+urlpatterns += [
     path(
-        "configuracion/",
-        ConfiguracionLandingAPIView.as_view(),
-        name="configuracion-landing",
+        'carrito-actividades/',
+        CartActivityListView.as_view(),
+        name='carrito-actividades',
     ),
+    path(
+        'carrito-actividades/<uuid:pk>/',
+        CartActivityItemView.as_view(),
+        name='carrito-actividades-item',
+    ),
+]
+
+from apps.landing.commerce import CommerceView, AbandonedCartsView, WholesaleQuoteView
+urlpatterns += [
+    path('comercio/', CommerceView.as_view()),
+    path('carritos-abandonados/', AbandonedCartsView.as_view()),
+    path('cotizaciones/', WholesaleQuoteView.as_view()),
+]
+
+from apps.landing.private_recordings import RecordingUploadView, MyRecordingsView, RecordingStreamView
+urlpatterns += [
+    path('grabaciones/', RecordingUploadView.as_view()),
+    path('mis-talleres/', MyRecordingsView.as_view()),
+    path('mis-talleres/<int:pedido_id>/<uuid:reserva_id>/video/', RecordingStreamView.as_view()),
 ]

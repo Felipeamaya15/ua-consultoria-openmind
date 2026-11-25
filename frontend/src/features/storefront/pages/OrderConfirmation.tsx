@@ -4,10 +4,14 @@ import {
   useLocation,
 } from 'react-router-dom';
 
-import { Button, Icon } from '../components/ui';
+import { Icon } from '../components/ui';
 import { useStorefrontTemplate } from '../hooks/useStorefrontTemplate';
+import TransbankReturnResult from './TransbankReturnResult';
+import ExternalPaymentReturnResult from './ExternalPaymentReturnResult';
+import type { CreatedOrder } from '../services/orderService';
+import { isStorefrontEditorPreview } from '../visual/pages';
 
-interface ConfirmationState {
+interface ConfirmationState extends Pick<CreatedOrder, 'identificador'> {
   orderNumber?: string;
   email?: string;
 }
@@ -18,8 +22,41 @@ export default function OrderConfirmation() {
   const { route, isMinimal, isVisual, isCatalog } =
     useStorefrontTemplate();
 
-  const state =
-    location.state as ConfirmationState | null;
+
+  const query = new URLSearchParams(location.search);
+  const tokenWs = query.get('token_ws') ?? '';
+  const tbkToken = query.get('TBK_TOKEN') ?? '';
+
+  if (tokenWs || tbkToken) {
+    return (
+      <TransbankReturnResult
+        orderNumber={query.get('orderNumber') ?? query.get('TBK_ORDEN_COMPRA') ?? ''}
+        tokenWs={tokenWs}
+        tbkToken={tbkToken}
+        tiendaId={Number(query.get('tienda')) || 1}
+      />
+    );
+  }
+
+
+  const gateway = query.get('gateway');
+  if (gateway === 'paypal' || gateway === 'mercadopago') {
+    return (
+      <ExternalPaymentReturnResult
+        gateway={gateway}
+        orderNumber={query.get('orderNumber') ?? ''}
+        tiendaId={Number(query.get('tienda')) || 1}
+        reference={query.get('cancelado') === '1' ? '' : (gateway === 'paypal' ? query.get('token') : query.get('payment_id')) ?? ''}
+      />
+    );
+  }
+
+  let editorPreview = false;
+  try { editorPreview = isStorefrontEditorPreview(window.parent !== window, window.parent.location.pathname); } catch {  }
+
+  const state = (location.state as ConfirmationState | null) ?? (editorPreview
+    ? { orderNumber: 'VISTA-PREVIA', email: 'ejemplo@example.test', identificador: 'VISTA-PREVIA' }
+    : null);
 
   if (!state?.orderNumber) {
     return (
@@ -31,41 +68,42 @@ export default function OrderConfirmation() {
   }
 
   const orderNumber = state.orderNumber;
+  const paymentNotice='El pedido está registrado y el pago sigue pendiente. Realiza la transferencia con las instrucciones de la tienda y envía el comprobante. Consulta Seguimiento para saber cuándo se apruebe el pago.';
   const email = state.email ?? 'tu correo';
-  const hasAccount = !!localStorage.getItem('token');
+  const identificador = state.identificador?.trim();
+  const trackingRoute = identificador
+    ? `${route('seguimiento')}?orden=${encodeURIComponent(identificador)}`
+    : route('seguimiento');
 
-  /*
-   * ==========================================================
-   * PLANTILLA 3 — VELTA
-   * ==========================================================
-   */
+
   if (isCatalog) {
     return (
-      <div className="max-w-[760px] mx-auto px-5 py-16 md:py-20 text-center text-white">
-        <div className="mx-auto w-16 h-16 rounded-full bg-[#1683ff] flex items-center justify-center">
-          <span className="text-2xl font-black" aria-hidden="true">✓</span>
+      <div className="w-full max-w-[1160px] mx-auto px-5 py-16 md:py-20 text-center text-[var(--visual-page-color)]">
+        <div className="mx-auto w-16 h-16 rounded-full bg-[var(--primary)] flex items-center justify-center">
+          <span className="text-2xl font-black" aria-hidden="true">◷</span>
         </div>
 
-        <p className="mt-7 text-[#ff5a1f] text-[10px] font-black uppercase tracking-[0.16em]">
+        <p className="mt-7 text-[var(--primary)] text-[10px] font-black uppercase tracking-[0.16em]">
           Compra registrada
         </p>
 
         <h1 className="mt-3 text-[42px] md:text-[54px] leading-[0.96] tracking-[-0.045em] font-black">
-          ¡Pedido confirmado!
+          Pedido recibido
         </h1>
+        <p role="status" className="mx-auto mt-4 max-w-xl rounded-xl border border-current/20 p-4 text-sm">{paymentNotice}</p>
 
-        <p className="mt-5 text-[13px] leading-6 text-white/50">
+        <p className="mt-5 text-[13px] leading-6 text-[var(--visual-page-color)]/50">
           Tu número de orden es{' '}
           <strong className="text-white">{orderNumber}</strong>
         </p>
 
-        <p className="mt-1 text-[12px] text-white/40">
+        <p className="mt-1 text-[12px] text-[var(--visual-page-color)]/40">
           Pedido registrado para{' '}
           <strong className="text-white/75">{email}</strong>
         </p>
 
-        <div className="mt-9 rounded-[16px] bg-[#f5f5f3] p-6 md:p-8 text-left text-[#151515]">
-          <p className="text-[9px] font-black uppercase tracking-[0.16em] text-[#e04b1a]">
+        <div data-page-panel className="mt-9 rounded-[16px] bg-[var(--visual-page-panel-background)] p-6 md:p-8 text-left text-[var(--visual-page-color)]">
+          <p className="text-[9px] font-black uppercase tracking-[0.16em] text-[var(--primary)]">
             Próximos pasos
           </p>
 
@@ -76,32 +114,32 @@ export default function OrderConfirmation() {
           <div className="mt-7 grid grid-cols-1 md:grid-cols-3 gap-6">
             {[
               ['1', 'Pedido registrado', 'Tu pedido quedó registrado con estado pendiente.'],
-              ['2', 'Pago pendiente', 'El registro del pedido no confirma su pago.'],
-              ['3', 'Sigue tu pedido', 'Con tu cuenta puedes consultar el estado en Mis pedidos.'],
+              ['2', 'Pago pendiente', 'Realiza la transferencia y comparte el comprobante con la tienda. El pago está pendiente de verificación.'],
+              ['3', 'Sigue tu pedido', 'Puedes consultar el estado desde Seguimiento.'],
             ].map(([number, title, description]) => (
               <div key={number}>
-                <span className="w-8 h-8 rounded-full bg-[#1683ff] text-white flex items-center justify-center text-[11px] font-black">
+                <span className="w-8 h-8 rounded-full bg-[var(--primary)] text-[var(--visual-page-color)] flex items-center justify-center text-[11px] font-black">
                   {number}
                 </span>
                 <p className="mt-4 text-[12px] font-black">{title}</p>
-                <p className="mt-2 text-[10px] leading-5 text-black/50">{description}</p>
+                <p className="mt-2 text-[10px] leading-5 text-[var(--visual-page-color)]/50">{description}</p>
               </div>
             ))}
           </div>
         </div>
 
         <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <Link
-            to={route(hasAccount ? 'mis-pedidos' : 'catalogo')}
-            state={{ orderNumber, email }}
-            className="h-12 rounded-[9px] bg-[#1683ff] text-white text-[12px] font-bold flex items-center justify-center hover:bg-[#3194f5] transition-colors"
+          <Link data-page-action="primary"
+            to={trackingRoute}
+            state={{ email: state.email ?? '' }}
+            className="h-12 rounded-[9px] bg-[var(--primary)] text-[var(--visual-page-color)] text-[12px] font-bold flex items-center justify-center hover:bg-[var(--primary)] transition-colors"
           >
-            {hasAccount ? 'Ver mis pedidos' : 'Seguir comprando'}
+            Ver mi pedido
           </Link>
 
-          <Link
+          <Link data-page-action="outline"
             to={route('catalogo')}
-            className="h-12 rounded-[9px] bg-white text-black text-[12px] font-bold flex items-center justify-center hover:bg-[#f0f0ee] transition-colors"
+            className="h-12 rounded-[9px] bg-[var(--visual-page-panel-background)] text-[var(--visual-page-color)] text-[12px] font-bold flex items-center justify-center hover:bg-[var(--visual-page-panel-background)] transition-colors"
           >
             Seguir comprando
           </Link>
@@ -112,32 +150,33 @@ export default function OrderConfirmation() {
 
   if (isVisual) {
     return (
-      <div className="bg-white text-[#111111]">
-        <div className="max-w-[900px] mx-auto px-5 md:px-8 py-14 md:py-20">
+      <div className="bg-[var(--visual-page-panel-background)] text-[var(--visual-page-color)]">
+        <div className="w-full max-w-[1180px] mx-auto px-5 md:px-8 py-14 md:py-20">
           <div className="flex flex-col items-center text-center">
-            <div className="w-16 h-16 rounded-full bg-black text-white flex items-center justify-center mb-7">
+            <div className="w-16 h-16 rounded-full bg-[var(--visual-page-panel-background)] text-[var(--visual-page-color)] flex items-center justify-center mb-7">
               <Icon
-                name="check"
+                name="clock"
                 className="w-7 h-7"
               />
             </div>
 
-            <p className="mb-3 text-[9px] font-medium uppercase tracking-[0.18em] text-[#77716e]">
-              Compra completada
+            <p className="mb-3 text-[9px] font-medium uppercase tracking-[0.18em] text-[var(--visual-page-color)]">
+              Pendiente de pago
             </p>
 
             <h1 className="font-serif text-[42px] md:text-[52px] leading-none tracking-[-0.025em]">
-              ¡Pedido confirmado!
+              Pedido recibido
             </h1>
+        <p role="status" className="mx-auto mt-4 max-w-xl rounded-xl border border-current/20 p-4 text-sm">{paymentNotice}</p>
 
-            <p className="mt-5 max-w-lg text-[14px] leading-6 text-[#77716e]">
+            <p className="mt-5 text-[14px] leading-6 text-[var(--visual-page-color)]">
               Tu pedido fue registrado correctamente.
               Guarda tu número de orden para consultar
               su estado cuando quieras.
             </p>
 
-            <div className="mt-9 w-full max-w-lg rounded-[10px] bg-[#f1f1f0] px-6 py-6">
-              <p className="text-[9px] font-medium uppercase tracking-[0.16em] text-[#77716e]">
+            <div data-page-panel className="mt-9 w-full rounded-[10px] bg-[var(--visual-page-panel-background)] px-6 py-6">
+              <p className="text-[9px] font-medium uppercase tracking-[0.16em] text-[var(--visual-page-color)]">
                 Número de orden
               </p>
 
@@ -145,9 +184,9 @@ export default function OrderConfirmation() {
                 {orderNumber}
               </p>
 
-              <div className="border-t border-black/10 my-5" />
+              <div className="border-t border-[var(--visual-global-border)]/10 my-5" />
 
-              <p className="text-[11px] text-[#77716e]">
+              <p className="text-[11px] text-[var(--visual-page-color)]">
                 Pedido registrado para
               </p>
 
@@ -156,8 +195,8 @@ export default function OrderConfirmation() {
               </p>
             </div>
 
-            <div className="mt-5 w-full rounded-[10px] bg-[#f1f1f0] p-6 md:p-8 text-left">
-              <p className="mb-2 text-[9px] font-medium uppercase tracking-[0.18em] text-[#77716e]">
+            <div data-page-panel className="mt-5 w-full rounded-[10px] bg-[var(--visual-page-panel-background)] p-6 md:p-8 text-left">
+              <p className="mb-2 text-[9px] font-medium uppercase tracking-[0.18em] text-[var(--visual-page-color)]">
                 Próximos pasos
               </p>
 
@@ -166,68 +205,72 @@ export default function OrderConfirmation() {
               </h2>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div>
-                  <span className="w-8 h-8 rounded-full bg-black text-white flex items-center justify-center text-[11px] font-semibold mb-4">
+                <div className="flex gap-4 md:block">
+                  <span className="w-8 h-8 rounded-full border border-[var(--visual-global-border)] text-[var(--visual-page-color)] flex items-center justify-center flex-shrink-0 font-serif text-[13px] md:mb-4">
                     1
                   </span>
 
-                  <p className="text-[13px] font-semibold">
-                    Pedido registrado
-                  </p>
+                  <div>
+                    <p className="text-[13px] font-semibold">
+                      Pedido registrado
+                    </p>
 
-                  <p className="mt-2 text-[11px] leading-5 text-[#77716e]">
-                    Tu pedido quedó
-                    registrado con estado pendiente.
-                  </p>
+                    <p className="mt-2 text-[11px] leading-5 text-[var(--visual-page-color)]">
+                      Tu pedido quedó
+                      registrado con estado pendiente.
+                    </p>
+                  </div>
                 </div>
 
-                <div>
-                  <span className="w-8 h-8 rounded-full bg-black text-white flex items-center justify-center text-[11px] font-semibold mb-4">
+                <div className="flex gap-4 md:block">
+                  <span className="w-8 h-8 rounded-full border border-[var(--visual-global-border)] text-[var(--visual-page-color)] flex items-center justify-center flex-shrink-0 font-serif text-[13px] md:mb-4">
                     2
                   </span>
 
-                  <p className="text-[13px] font-semibold">
-                    Pago pendiente
-                  </p>
+                  <div>
+                    <p className="text-[13px] font-semibold">
+                      Pago pendiente
+                    </p>
 
-                  <p className="mt-2 text-[11px] leading-5 text-[#77716e]">
-                    El registro del pedido no realiza
-                    cobros ni envía correos.
-                  </p>
+                    <p className="mt-2 text-[11px] leading-5 text-[var(--visual-page-color)]">
+                      Te enviamos un correo con la
+                      confirmación de recepción de tu
+                      pedido.
+                    </p>
+                  </div>
                 </div>
 
-                <div>
-                  <span className="w-8 h-8 rounded-full bg-black text-white flex items-center justify-center text-[11px] font-semibold mb-4">
+                <div className="flex gap-4 md:block">
+                  <span className="w-8 h-8 rounded-full border border-[var(--visual-global-border)] text-[var(--visual-page-color)] flex items-center justify-center flex-shrink-0 font-serif text-[13px] md:mb-4">
                     3
                   </span>
 
-                  <p className="text-[13px] font-semibold">
-                    Sigue tu pedido
-                  </p>
+                  <div>
+                    <p className="text-[13px] font-semibold">
+                      Sigue tu pedido
+                    </p>
 
-                  <p className="mt-2 text-[11px] leading-5 text-[#77716e]">
-                    Puedes consultar el estado de tu
-                    pedido desde Seguimiento.
-                  </p>
+                    <p className="mt-2 text-[11px] leading-5 text-[var(--visual-page-color)]">
+                      Puedes consultar el estado de tu
+                      pedido desde Seguimiento.
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full max-w-lg mt-6">
-              <Link
-                to={route(hasAccount ? 'mis-pedidos' : 'catalogo')}
-                state={{
-                  orderNumber,
-                  email,
-                }}
-                className="h-12 rounded-[8px] bg-black text-white text-[12px] font-semibold flex items-center justify-center hover:opacity-80 transition-opacity"
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 w-full mt-6">
+              <Link data-page-action="primary"
+                to={trackingRoute}
+                state={{ email: state.email ?? '' }}
+                className="min-h-[48px] px-6 py-3 rounded-[8px] bg-[var(--visual-page-panel-background)] text-[var(--visual-page-color)] text-[12px] font-semibold flex items-center justify-center gap-2 hover:opacity-80 transition-opacity"
               >
-                {hasAccount ? 'Ver mis pedidos →' : 'Seguir comprando →'}
+                Ver mi pedido
               </Link>
 
-              <Link
+              <Link data-page-action="outline"
                 to={route('catalogo')}
-                className="h-12 rounded-[8px] bg-white border border-black text-black text-[12px] font-semibold flex items-center justify-center hover:bg-black hover:text-white transition-colors"
+                className="min-h-[48px] px-6 py-3 rounded-[8px] bg-[var(--visual-page-panel-background)] border border-[var(--visual-global-border)] text-[var(--visual-page-color)] text-[12px] font-semibold flex items-center justify-center gap-2 hover:bg-[var(--visual-page-panel-background)] hover:text-[var(--visual-page-color)] transition-colors"
               >
                 Seguir comprando
               </Link>
@@ -238,49 +281,46 @@ export default function OrderConfirmation() {
     );
   }
 
-  /*
-   * ==========================================================
-   * PLANTILLA 2 — MINIMAL
-   * ==========================================================
-   */
+
   if (isMinimal) {
     return (
-      <div className="max-w-3xl mx-auto px-4 md:px-8 py-16 md:py-20">
+      <div className="w-full max-w-6xl mx-auto px-4 md:px-8 py-16 md:py-20">
         <div className="flex flex-col items-center text-center">
 
-          <div className="w-20 h-20 rounded-full bg-[#17213b] text-white flex items-center justify-center mb-7">
+          <div className="w-20 h-20 rounded-full bg-[var(--primary)] text-[var(--visual-page-color)] flex items-center justify-center mb-7">
             <Icon
-              name="check"
+              name="clock"
               className="w-8 h-8"
             />
           </div>
 
-          <p className="text-xs text-gray-400 mb-2">
-            Compra completada
+          <p className="text-xs text-[var(--visual-page-color)] mb-2">
+            Pendiente de pago
           </p>
 
-          <h1 className="text-3xl md:text-4xl font-semibold tracking-tight text-[#171717]">
-            ¡Pedido confirmado!
+          <h1 className="text-3xl md:text-4xl font-semibold tracking-tight text-[var(--visual-page-color)]">
+            Pedido recibido
           </h1>
+        <p role="status" className="mx-auto mt-4 max-w-xl rounded-xl border border-current/20 p-4 text-sm">{paymentNotice}</p>
 
-          <p className="text-sm md:text-base text-gray-500 mt-3 max-w-md">
+          <p className="text-sm md:text-base text-[var(--visual-page-color)] mt-3">
             Tu pedido fue registrado correctamente.
             Guarda tu número de orden para poder
             consultar su estado.
           </p>
 
-          <div className="mt-8 bg-white border border-black/5 rounded-[22px] px-7 py-5 w-full max-w-md">
-            <p className="text-xs text-gray-400 mb-2">
+          <div data-page-panel className="mt-8 bg-[var(--visual-page-panel-background)] border border-[var(--visual-global-border)]/5 rounded-[22px] px-7 py-5 w-full">
+            <p className="text-xs text-[var(--visual-page-color)] mb-2">
               Número de orden
             </p>
 
-            <p className="text-lg md:text-xl font-semibold tracking-tight text-[#17213b] break-all">
+            <p className="text-lg md:text-xl font-semibold tracking-tight text-[var(--primary)] break-all">
               {orderNumber}
             </p>
 
-            <div className="border-t border-black/5 my-4" />
+            <div className="border-t border-[var(--visual-global-border)]/5 my-4" />
 
-            <p className="text-xs text-gray-400">
+            <p className="text-xs text-[var(--visual-page-color)]">
               Pedido registrado para
             </p>
 
@@ -289,23 +329,23 @@ export default function OrderConfirmation() {
             </p>
           </div>
 
-          <div className="bg-white border border-black/5 rounded-[24px] p-6 md:p-7 w-full mt-5 text-left">
+          <div data-page-panel className="bg-[var(--visual-page-panel-background)] border border-[var(--visual-global-border)]/5 rounded-[24px] p-6 md:p-7 w-full mt-5 text-left">
             <p className="text-lg font-semibold tracking-tight mb-5">
               ¿Qué sigue?
             </p>
 
             <div className="flex flex-col gap-5">
               <div className="flex gap-4">
-                <span className="w-8 h-8 rounded-full bg-[#f1f2f5] text-[#17213b] flex items-center justify-center flex-shrink-0 text-xs font-semibold">
+                <span className="w-8 h-8 rounded-full bg-[var(--visual-page-panel-background)] text-[var(--primary)] flex items-center justify-center flex-shrink-0 text-xs font-semibold">
                   1
                 </span>
 
                 <div>
-                  <p className="text-sm font-medium text-[#171717]">
+                  <p className="text-sm font-medium text-[var(--visual-page-color)]">
                     Pedido registrado
                   </p>
 
-                  <p className="text-xs text-gray-500 mt-1 leading-relaxed">
+                  <p className="text-xs text-[var(--visual-page-color)] mt-1 leading-relaxed">
                     Tu pedido quedó
                     registrado con estado pendiente.
                   </p>
@@ -313,33 +353,34 @@ export default function OrderConfirmation() {
               </div>
 
               <div className="flex gap-4">
-                <span className="w-8 h-8 rounded-full bg-[#f1f2f5] text-[#17213b] flex items-center justify-center flex-shrink-0 text-xs font-semibold">
+                <span className="w-8 h-8 rounded-full bg-[var(--visual-page-panel-background)] text-[var(--primary)] flex items-center justify-center flex-shrink-0 text-xs font-semibold">
                   2
                 </span>
 
                 <div>
-                  <p className="text-sm font-medium text-[#171717]">
+                  <p className="text-sm font-medium text-[var(--visual-page-color)]">
                     Pago pendiente
                   </p>
 
-                  <p className="text-xs text-gray-500 mt-1 leading-relaxed">
-                    El registro del pedido no realiza
-                    cobros ni envía correos.
+                  <p className="text-xs text-[var(--visual-page-color)] mt-1 leading-relaxed">
+                    Te enviamos un correo con la
+                    confirmación de recepción de tu
+                    pedido.
                   </p>
                 </div>
               </div>
 
               <div className="flex gap-4">
-                <span className="w-8 h-8 rounded-full bg-[#f1f2f5] text-[#17213b] flex items-center justify-center flex-shrink-0 text-xs font-semibold">
+                <span className="w-8 h-8 rounded-full bg-[var(--visual-page-panel-background)] text-[var(--primary)] flex items-center justify-center flex-shrink-0 text-xs font-semibold">
                   3
                 </span>
 
                 <div>
-                  <p className="text-sm font-medium text-[#171717]">
+                  <p className="text-sm font-medium text-[var(--visual-page-color)]">
                     Sigue tu pedido
                   </p>
 
-                  <p className="text-xs text-gray-500 mt-1 leading-relaxed">
+                  <p className="text-xs text-[var(--visual-page-color)] mt-1 leading-relaxed">
                     Puedes consultar el estado de tu pedido
                     desde la sección Seguimiento.
                   </p>
@@ -349,20 +390,17 @@ export default function OrderConfirmation() {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full mt-6">
-            <Link
-              to={route(hasAccount ? 'mis-pedidos' : 'catalogo')}
-              state={{
-                orderNumber,
-                email,
-              }}
-              className="h-12 rounded-full bg-[#17213b] text-white text-sm font-semibold flex items-center justify-center hover:bg-[#0f2a56] transition-colors"
+            <Link data-page-action="primary"
+              to={trackingRoute}
+              state={{ email: state.email ?? '' }}
+              className="h-12 rounded-full bg-[var(--primary)] text-[var(--visual-page-color)] text-sm font-semibold flex items-center justify-center hover:bg-[var(--primary)] transition-colors"
             >
-              {hasAccount ? 'Ver mis pedidos' : 'Seguir comprando'}
+              Ver mi pedido
             </Link>
 
-            <Link
+            <Link data-page-action="outline"
               to={route('catalogo')}
-              className="h-12 rounded-full bg-white border border-black/10 text-[#17213b] text-sm font-semibold flex items-center justify-center hover:bg-gray-50 transition-colors"
+              className="h-12 rounded-full bg-[var(--visual-page-panel-background)] border border-[var(--visual-global-border)]/10 text-[var(--primary)] text-sm font-semibold flex items-center justify-center hover:bg-[var(--visual-page-panel-background)] transition-colors"
             >
               Seguir comprando
             </Link>
@@ -372,25 +410,22 @@ export default function OrderConfirmation() {
     );
   }
 
-  /*
-   * ==========================================================
-   * PLANTILLA 1 — EDITORIAL
-   * ==========================================================
-   */
+
   return (
-    <div className="max-w-lg mx-auto px-4 py-20 text-center flex flex-col items-center gap-6">
+    <div className="w-full max-w-7xl mx-auto px-4 py-12 text-center flex flex-col items-center gap-6">
 
       <div className="w-20 h-20 rounded-full bg-[var(--success-bg)] flex items-center justify-center text-[var(--success)]">
         <Icon
-          name="check"
+          name="clock"
           className="w-9 h-9"
         />
       </div>
 
       <div>
         <h1 className="text-2xl font-bold text-[var(--foreground)] mb-2">
-          ¡Pedido confirmado!
+          Pedido recibido
         </h1>
+        <p role="status" className="mx-auto mt-4 max-w-xl rounded-xl border border-current/20 p-4 text-sm">{paymentNotice}</p>
 
         <p className="text-[var(--muted-foreground)]">
           Tu número de orden es{' '}
@@ -405,7 +440,7 @@ export default function OrderConfirmation() {
         </p>
       </div>
 
-      <div className="bg-white border border-[var(--border)] rounded-2xl p-6 w-full text-sm">
+      <div data-page-panel className="bg-[var(--visual-page-panel-background)] border border-[var(--border)] rounded-2xl p-6 w-full text-sm">
         <p className="font-semibold mb-3">
           ¿Qué sigue?
         </p>
@@ -428,8 +463,10 @@ export default function OrderConfirmation() {
             </span>
 
             <span>
-              El registro del pedido no realiza cobros ni
-              envía correos.
+              Aún no se ha confirmado tu pago.
+              Te enviamos un correo con la
+              confirmación de recepción de tu
+              pedido.
             </span>
           </div>
 
@@ -446,33 +483,22 @@ export default function OrderConfirmation() {
         </div>
       </div>
 
-      <div className="flex flex-col sm:flex-row gap-3 w-full">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 w-full mt-2">
         <Link
-          to={route(hasAccount ? 'mis-pedidos' : 'catalogo')}
-          state={{
-            orderNumber,
-            email,
-          }}
-          className="flex-1"
+          data-page-action="primary"
+          to={trackingRoute}
+          state={{ email: state.email ?? '' }}
+          className="min-h-[48px] px-6 py-3 rounded-xl bg-[var(--primary)] text-[var(--on-primary)] text-sm font-semibold inline-flex items-center justify-center gap-2 shadow-sm transition-all hover:brightness-95"
         >
-          <Button
-            variant="primary"
-            fullWidth
-          >
-            {hasAccount ? 'Ver mis pedidos' : 'Seguir comprando'}
-          </Button>
+          Ver mi pedido
         </Link>
 
         <Link
+          data-page-action="outline"
           to={route('catalogo')}
-          className="flex-1"
+          className="min-h-[48px] px-6 py-3 rounded-xl border border-[var(--border)] bg-[var(--visual-page-field-background,white)] text-[var(--foreground)] text-sm font-semibold inline-flex items-center justify-center gap-2 shadow-sm transition-all hover:bg-[var(--muted)]"
         >
-          <Button
-            variant="outline"
-            fullWidth
-          >
-            Seguir comprando
-          </Button>
+          Seguir comprando
         </Link>
       </div>
     </div>

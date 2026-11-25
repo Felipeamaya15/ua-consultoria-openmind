@@ -1,8 +1,15 @@
 from rest_framework import serializers
-# CAMBIO: Importamos el validador de Base64 que creamos para MongoDB
 from apps.core.domain.validators import validate_base64_image
+from django.core.exceptions import ValidationError as ImageValidationError
 from apps.core.models import Producto
-from apps.catalog.domain.stock import validate_stock
+from apps.catalog.domain.stock import validate_stock, is_variant_active
+
+
+def normalized_images(images):
+    try:
+        return [validate_base64_image(image, max_size_mb=2) for image in images]
+    except ImageValidationError as error:
+        raise serializers.ValidationError(error.messages) from error
 
 
 class StockValidationMixin:
@@ -13,37 +20,6 @@ class StockValidationMixin:
             raise serializers.ValidationError(str(error)) from error
         return value
 
-class ProductPublicListItemSerializer(serializers.Serializer):
-    id = serializers.CharField(source="_id")
-    nombre = serializers.CharField()
-    slug = serializers.CharField()
-    categoria = serializers.CharField()
-    imagen = serializers.SerializerMethodField()
-    precio = serializers.SerializerMethodField()
-    precio_oferta = serializers.SerializerMethodField()
-    disponible = serializers.SerializerMethodField()
-
-    def get_imagen(self, producto):
-        imagenes = producto.get("imagenes") or []
-        return imagenes[0] if imagenes else None
-
-    def _variantes(self, producto):
-        return producto.get("variantes") or []
-
-    def get_precio(self, producto):
-        precios = [v["precio"] for v in self._variantes(producto) if v.get("precio") is not None]
-        return min(precios) if precios else None
-
-    def get_precio_oferta(self, producto):
-        ofertas = [
-            v["precio_oferta"] for v in self._variantes(producto)
-            if v.get("precio_oferta") is not None
-        ]
-        return min(ofertas) if ofertas else None
-
-    def get_disponible(self, producto):
-        return any((v.get("stock") or 0) > 0 for v in self._variantes(producto))
-
 
 class VarianteSerializer(serializers.Serializer):
     sku = serializers.CharField()
@@ -53,6 +29,66 @@ class VarianteSerializer(serializers.Serializer):
     atributos_variante = serializers.ListField(child=serializers.DictField(), required=False)
 
 
+class ProductPublicListItemSerializer(serializers.Serializer):
+    id = serializers.CharField(source="_id")
+    nombre = serializers.CharField()
+    slug = serializers.CharField()
+    descripcion = serializers.CharField(required=False, allow_blank=True, default="")
+    categoria = serializers.CharField()
+    imagen = serializers.SerializerMethodField()
+    imagenes = serializers.SerializerMethodField()
+    precio = serializers.SerializerMethodField()
+    precio_oferta = serializers.SerializerMethodField()
+    disponible = serializers.SerializerMethodField()
+    variantes = serializers.SerializerMethodField()
+
+    def get_imagenes(self, producto):
+        return producto.get("imagenes") or []
+
+    def get_imagen(self, producto):
+        imagenes = producto.get("imagenes") or []
+        return imagenes[0] if imagenes else None
+
+    def _variantes(self, producto):
+        return [variant for variant in producto.get("variantes", []) if is_variant_active(variant)]
+
+    def get_variantes(self, producto):
+        return VarianteSerializer(self._variantes(producto), many=True).data
+
+    @staticmethod
+    def _oferta_valida(variant):
+        precio = variant.get('precio')
+        oferta = variant.get('precio_oferta')
+        if (
+            precio is None or oferta is None
+            or isinstance(precio, bool) or isinstance(oferta, bool)
+        ):
+            return None
+        try:
+            return oferta if 0 <= float(oferta) < float(precio) else None
+        except (TypeError, ValueError):
+            return None
+
+    def _price_variant(self, producto):
+        variants = [v for v in self._variantes(producto) if v.get('precio') is not None]
+        return min(
+            variants,
+            key=lambda v: self._oferta_valida(v) if self._oferta_valida(v) is not None else v['precio'],
+            default=None,
+        )
+
+    def get_precio(self, producto):
+        variant = self._price_variant(producto)
+        return variant['precio'] if variant else None
+
+    def get_precio_oferta(self, producto):
+        variant = self._price_variant(producto)
+        return self._oferta_valida(variant) if variant else None
+
+    def get_disponible(self, producto):
+        return any((v.get("stock") or 0) > 0 for v in self._variantes(producto))
+
+
 class AtributoGeneralSerializer(serializers.Serializer):
     clave = serializers.CharField()
     etiqueta = serializers.CharField()
@@ -60,8 +96,8 @@ class AtributoGeneralSerializer(serializers.Serializer):
 
 
 class SeoSerializer(serializers.Serializer):
-    meta_titulo = serializers.CharField(required=False, allow_null=True)
-    meta_descripcion = serializers.CharField(required=False, allow_null=True)
+    meta_titulo = serializers.CharField(required=False, allow_null=True, allow_blank=True)
+    meta_descripcion = serializers.CharField(required=False, allow_null=True, allow_blank=True)
 
 
 class ProductPublicDetailSerializer(serializers.Serializer):
@@ -74,26 +110,32 @@ class ProductPublicDetailSerializer(serializers.Serializer):
     descripcion = serializers.CharField(required=False, allow_blank=True)
     categoria = serializers.CharField()
     imagenes = serializers.ListField(child=serializers.CharField(), required=False)
+    video_recurso_id = serializers.CharField(required=False, allow_blank=True, allow_null=True)
     atributos_generales = AtributoGeneralSerializer(many=True, required=False)
     variantes = VarianteSerializer(many=True, required=False)
     seo = SeoSerializer(required=False)
 
-
     def validate_imagenes(self, value):
-        for img_b64 in value:
-
-            if img_b64.startswith('http') or img_b64.startswith('/'):
-                continue
-
-            validate_base64_image(img_b64, max_size_mb=2)
-        return value
+        existing_images = self.context.get("existing_images") or ()
+        if not existing_images:
+            return normalized_images(value)
+        result = []
+        for item in value:
+            if item in existing_images:
+                result.append(item)
+            else:
+                result.extend(normalized_images([item]))
+        return result
 
 
 class ProductAdminDetailSerializer(ProductPublicDetailSerializer):
     activo = serializers.BooleanField()
     fecha_creacion = serializers.DateTimeField(required=False)
-    # El panel necesita todos los campos de las variantes, incluidos metadatos legacy.
     variantes = serializers.ListField(child=serializers.DictField(), required=False)
+    peso_kg = serializers.FloatField(required=False, allow_null=True)
+    alto_cm = serializers.FloatField(required=False, allow_null=True)
+    ancho_cm = serializers.FloatField(required=False, allow_null=True)
+    largo_cm = serializers.FloatField(required=False, allow_null=True)
     revision = serializers.SerializerMethodField()
 
     def get_revision(self, product):
@@ -113,18 +155,25 @@ class ProductPublicAttributesSerializer(serializers.Serializer):
 
 
 class ProductImageSerializer(serializers.Serializer):
-
     imagen = serializers.CharField()
 
-
     def validate_imagen(self, value):
-        if value.startswith('http') or value.startswith('/'):
-            return value
+        return normalized_images([value])[0]
 
-        validate_base64_image(value, max_size_mb=2)
-        return value
 
 class ProductoCreateSerializer(serializers.ModelSerializer):
+    def validate_imagenes(self, value):
+        existing_images = self.context.get("existing_images") or ()
+        if not existing_images:
+            return normalized_images(value)
+        result = []
+        for item in value:
+            if item in existing_images:
+                result.append(item)
+            else:
+                result.extend(normalized_images([item]))
+        return result
+
     categoria = serializers.CharField(required=False, allow_blank=True, default='')
     descripcion = serializers.CharField(required=False, allow_blank=True, default='')
     imagenes = serializers.ListField(
@@ -139,7 +188,7 @@ class ProductoCreateSerializer(serializers.ModelSerializer):
                 'required': True,
                 'allow_blank': False,
                 'error_messages': {
-                    'required': 'El campo nombre es obligatorio.',
+                    'required': 'El campo nombre is obligatorio.',
                     'blank': 'El nombre no puede estar vacío.'
                 }
             },
@@ -169,10 +218,12 @@ class ProductoCreateSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("El stock inicial no puede ser negativo.")
         return value
 
+
 class ProductoAdminDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = Producto
         fields = ['id_producto', 'nombre', 'precio', 'stock', 'activo', 'id_tienda']
+
 
 class ProductoUpdateSerializer(StockValidationMixin, serializers.ModelSerializer):
     class Meta:
@@ -192,6 +243,7 @@ class ProductoUpdateSerializer(StockValidationMixin, serializers.ModelSerializer
             raise serializers.ValidationError("El precio no puede ser negativo.")
         return value
 
+
 class ProductoStockUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Producto
@@ -204,14 +256,20 @@ class ProductoStockUpdateSerializer(serializers.ModelSerializer):
 
 
 class VarianteStockUpdateSerializer(StockValidationMixin, serializers.Serializer):
-    stock = serializers.IntegerField(required=True, min_value=0,
-        error_messages={'min_value': 'El stock no puede ser negativo.', 'invalid': 'El stock debe ser un entero mayor o igual a cero.'})
+    stock = serializers.IntegerField(
+        required=True,
+        min_value=0,
+        error_messages={
+            'min_value': 'El stock no puede ser negativo.',
+            'invalid': 'El stock debe ser un entero mayor o igual a cero.',
+        },
+    )
 
     def to_internal_value(self, data):
-        # DRF acepta 1.0 y True como enteros. El inventario no se redondea.
         if isinstance(data, dict) and 'stock' in data and (isinstance(data['stock'], bool) or isinstance(data['stock'], float)):
             raise serializers.ValidationError({'stock': 'El stock debe ser un entero mayor o igual a cero.'})
         return super().to_internal_value(data)
+
 
 class VarianteInputSerializer(VarianteStockUpdateSerializer):
     sku = serializers.CharField()
@@ -221,12 +279,19 @@ class VarianteInputSerializer(VarianteStockUpdateSerializer):
     atributos_variante = serializers.ListField(
         child=serializers.DictField(), required=False, default=list
     )
+    peso_kg = serializers.FloatField(required=False, allow_null=True, min_value=0.01, max_value=1000)
+    alto_cm = serializers.FloatField(required=False, allow_null=True, min_value=0.1, max_value=200)
+    ancho_cm = serializers.FloatField(required=False, allow_null=True, min_value=0.1, max_value=200)
+    largo_cm = serializers.FloatField(required=False, allow_null=True, min_value=0.1, max_value=200)
 
     def validate_sku(self, value):
         return value.strip().upper()
 
     def validate(self, data):
         import math
+        medidas = [data.get(key) for key in ('alto_cm', 'ancho_cm', 'largo_cm')]
+        if any(m is not None for m in medidas) and any(m is None for m in medidas):
+            raise serializers.ValidationError('Ingresa alto, ancho y largo de la variante, o deja las tres vacías.')
         if any(not math.isfinite(data[field]) for field in ('precio', 'precio_oferta')
                if data.get(field) is not None):
             raise serializers.ValidationError("Los precios deben ser números finitos.")
@@ -249,11 +314,76 @@ class AtributoGeneralInputSerializer(serializers.Serializer):
 
 
 class SeoInputSerializer(serializers.Serializer):
-    meta_titulo = serializers.CharField(required=False, allow_blank=True)
-    meta_descripcion = serializers.CharField(required=False, allow_blank=True)
+    meta_titulo = serializers.CharField(
+        required=False,
+        allow_blank=True,
+        allow_null=True,
+        max_length=200,
+        error_messages={
+            'max_length': 'El meta-título no puede superar los 200 caracteres.'
+        }
+    )
+    meta_descripcion = serializers.CharField(
+        required=False,
+        allow_blank=True,
+        allow_null=True,
+        max_length=500,
+        error_messages={
+            'max_length': 'La meta-descripción no puede superar los 500 caracteres.'
+        }
+    )
+
+    def to_internal_value(self, data):
+        ret = super().to_internal_value(data)
+        if ret.get('meta_titulo') is not None:
+            ret['meta_titulo'] = ret['meta_titulo'].strip()
+        if ret.get('meta_descripcion') is not None:
+            ret['meta_descripcion'] = ret['meta_descripcion'].strip()
+        return ret
 
 
 class ProductCreateSerializer(serializers.Serializer):
+    video_recurso_id = serializers.CharField(
+        required=False, allow_blank=True, allow_null=True
+    )
+
+    def validate_video_recurso_id(self, value):
+        if not value:
+            return None
+
+        from uuid import UUID
+        from apps.landing.models import RecursoMultimedia
+
+        try:
+            resource_id = str(UUID(value))
+        except (ValueError, TypeError, AttributeError):
+            raise serializers.ValidationError(
+                "El identificador del video no es valido."
+            )
+
+        tienda_id = self.context.get("tienda_id")
+
+        if not tienda_id:
+            raise serializers.ValidationError(
+                "No se pudo identificar la tienda."
+            )
+
+        existe = RecursoMultimedia.objects.filter(
+            pk=resource_id,
+            tienda_id=tienda_id,
+            tipo="video",
+            activo=True,
+            eliminado=False,
+            archivo__isnull=False,
+            archivo__mime__in=["video/mp4", "video/webm"],
+        ).exists()
+
+        if not existe:
+            raise serializers.ValidationError(
+                "El video no existe o no pertenece a esta tienda."
+            )
+
+        return resource_id
     activo = serializers.BooleanField(required=False, default=True)
     nombre = serializers.CharField(
         max_length=200,
@@ -274,15 +404,29 @@ class ProductCreateSerializer(serializers.Serializer):
     )
     variantes = VarianteInputSerializer(many=True)
     seo = SeoInputSerializer(required=False)
+    peso_kg = serializers.FloatField(required=False, allow_null=True, min_value=0.01, max_value=1000)
+    alto_cm = serializers.FloatField(required=False, allow_null=True, min_value=0.1, max_value=200)
+    ancho_cm = serializers.FloatField(required=False, allow_null=True, min_value=0.1, max_value=200)
+    largo_cm = serializers.FloatField(required=False, allow_null=True, min_value=0.1, max_value=200)
+
+    def validate(self, attrs):
+        attrs = super().validate(attrs)
+        medidas = [attrs.get(key) for key in ('alto_cm', 'ancho_cm', 'largo_cm')]
+        if any(m is not None for m in medidas) and any(m is None for m in medidas):
+            raise serializers.ValidationError({'alto_cm': 'Ingresa alto, ancho y largo, o deja las tres medidas vacías.'})
+        return attrs
 
     def validate_imagenes(self, value):
-        from django.core.exceptions import ValidationError
-        for image in value:
-            try:
-                validate_base64_image(image, max_size_mb=2)
-            except ValidationError as error:
-                raise serializers.ValidationError(error.messages) from error
-        return value
+        existing_images = self.context.get("existing_images") or ()
+        if not existing_images:
+            return normalized_images(value)
+        result = []
+        for item in value:
+            if item in existing_images:
+                result.append(item)
+            else:
+                result.extend(normalized_images([item]))
+        return result
 
     def validate_variantes(self, value):
         if not value:
@@ -294,175 +438,21 @@ class ProductCreateSerializer(serializers.Serializer):
             raise serializers.ValidationError(
                 "Los SKU de las variantes deben ser únicos."
             )
-        return value        
-
-class ModificarCantidadRequestSerializer(serializers.Serializer):
-    cantidad = serializers.IntegerField(min_value=1, error_messages={
-        'min_value': 'La cantidad mínima permitida es 1.',
-        'invalid': 'Debe ingresar un número entero válido.'
-    })
-
-class ItemCarritoResponseSerializer(serializers.Serializer):
-    id_item_carrito = serializers.IntegerField()
-    id_producto = serializers.IntegerField(source='id_producto.id_producto')
-    nombre_producto = serializers.CharField(source='id_producto.nombre')
-    precio_unitario = serializers.SerializerMethodField()
-    cantidad = serializers.IntegerField()
-    subtotal = serializers.SerializerMethodField()
-    sku = serializers.CharField(allow_null=True, required=False)
-    stock_disponible = serializers.SerializerMethodField()
-    slug = serializers.SerializerMethodField()
-
-    @staticmethod
-    def _precio(obj):
-        precio = getattr(obj, 'precio_calculado', None)
-        return precio if precio is not None else obj.id_producto.precio
-
-    def get_precio_unitario(self, obj):
-        return f"{self._precio(obj):.2f}"
-
-    def get_subtotal(self, obj):
-        return obj.cantidad * self._precio(obj)
-
-    def get_stock_disponible(self, obj):
-        # Los casos de uso calculan el stock real (variante o producto base).
-        return getattr(obj, 'stock_disponible_calculado', obj.id_producto.stock)
-
-    def get_slug(self, obj):
-        return getattr(obj, 'slug_calculado', None)
-
-class AgregarItemCarritoRequestSerializer(serializers.Serializer):
-    id_producto = serializers.IntegerField(
-        required=False,
-        min_value=1,
-        error_messages={
-            "invalid": "El 'id_producto' debe ser un número entero válido."
-        }
-    )
-    slug = serializers.SlugField(
-        required=False,
-        allow_blank=False,
-        error_messages={
-            "invalid": "El 'slug' del producto no es válido.",
-            "blank": "El 'slug' del producto no puede estar vacío."
-        }
-    )
-    cantidad = serializers.IntegerField(
-        required=False,
-        default=1,
-        min_value=1,
-        error_messages={
-            "min_value": "La cantidad debe ser mayor a 0.",
-            "invalid": "La cantidad debe ser un número entero válido."
-        }
-    )
-    sku = serializers.CharField(
-        required=False,
-        allow_null=True,
-        allow_blank=True,
-        default=None
-    )
-
-    def validate(self, attrs):
-        if attrs.get("id_producto") is None and not attrs.get("slug"):
+        schemas = [{attribute['clave'] for attribute in variant['atributos_variante']}
+                   for variant in value]
+        if any(schema != schemas[0] for schema in schemas[1:]):
             raise serializers.ValidationError(
-                {"id_producto": "Debes indicar el 'id_producto' o el 'slug' del producto."}
+                "Todas las variantes deben definir los mismos atributos del producto."
             )
-        return attrs
-
-class ConfiguracionTransbankInputSerializer(serializers.Serializer):
-    codigo_comercio = serializers.CharField(
-        max_length=64,
-        required=True,
-        error_messages={"required": "El código de comercio es obligatorio."}
-    )
-    api_key = serializers.CharField(
-        max_length=255,
-        required=True,
-        error_messages={"required": "La API Key o Secret es obligatoria."}
-    )
-    ambiente = serializers.ChoiceField(
-        choices=["INTEGRACION", "PRODUCCION"],
-        default="INTEGRACION"
-    )
-    activo = serializers.BooleanField(default=True)
-
-
-class ConfiguracionTransbankResponseSerializer(serializers.Serializer):
-    id_tienda = serializers.SerializerMethodField()
-    codigo_comercio = serializers.CharField()
-    ambiente = serializers.CharField()
-    activo = serializers.BooleanField()
-    api_key_enmascarada = serializers.CharField(allow_blank=True, required=False)
-    fecha_actualizacion = serializers.DateTimeField(allow_null=True, required=False)
-    configurado = serializers.BooleanField(default=True)
-
-    def get_id_tienda(self, obj):
-        val = obj.get("id_tienda") if isinstance(obj, dict) else getattr(obj, "id_tienda", None)
-        return getattr(val, "id_tienda", val)
-    
-
-class IniciarPagoTransbankSerializer(serializers.Serializer):
-    id_tienda = serializers.IntegerField(required=True)
-    orden_compra = serializers.CharField(max_length=64, required=True)
-    monto = serializers.IntegerField(min_value=1, required=True)
-    session_id = serializers.CharField(max_length=64, required=True)
-    return_url = serializers.URLField(required=True)
-
-
-class ConfirmarPagoTransbankSerializer(serializers.Serializer):
-    id_tienda = serializers.IntegerField(required=True)
-    token_ws = serializers.CharField(max_length=255, required=True)
-
-class ConfiguracionPayPalInputSerializer(serializers.Serializer):
-    client_id = serializers.CharField(max_length=255, required=False, allow_blank=True)
-    client_secret = serializers.CharField(max_length=255, required=False, allow_blank=True)
-    ambiente = serializers.ChoiceField(choices=['SANDBOX', 'LIVE'], default='SANDBOX')
-    activo = serializers.BooleanField(default=False)
-
-
-class ConfiguracionPayPalResponseSerializer(serializers.Serializer):
-    id_tienda = serializers.SerializerMethodField()
-    client_id = serializers.CharField(allow_blank=True)
-    ambiente = serializers.CharField()
-    activo = serializers.BooleanField()
-    client_secret_enmascarado = serializers.CharField(allow_blank=True, required=False)
-    fecha_actualizacion = serializers.DateTimeField(allow_null=True, required=False)
-    configurado = serializers.BooleanField(default=False)
-
-    def get_id_tienda(self, obj):
-        val = obj.get("id_tienda") if isinstance(obj, dict) else getattr(obj, "id_tienda", None)
-        return getattr(val, "id_tienda", val)
-
-class ConfiguracionMercadoPagoInputSerializer(serializers.Serializer):
-    public_key = serializers.CharField(max_length=255, required=False, allow_blank=True)
-    access_token = serializers.CharField(max_length=255, required=False, allow_blank=True)
-    ambiente = serializers.ChoiceField(choices=['SANDBOX', 'PRODUCCION'], default='SANDBOX')
-    activo = serializers.BooleanField(default=False)
-
-
-class ConfiguracionMercadoPagoResponseSerializer(serializers.Serializer):
-    id_tienda = serializers.SerializerMethodField()
-    public_key = serializers.CharField(allow_blank=True)
-    ambiente = serializers.CharField()
-    activo = serializers.BooleanField()
-    access_token_enmascarado = serializers.CharField(allow_blank=True, required=False)
-    fecha_actualizacion = serializers.DateTimeField(allow_null=True, required=False)
-    configurado = serializers.BooleanField(default=False)
-
-    def get_id_tienda(self, obj):
-        val = obj.get("id_tienda") if isinstance(obj, dict) else getattr(obj, "id_tienda", None)
-        return getattr(val, "id_tienda", val)
-        schemas = [{a['clave'] for a in v['atributos_variante']} for v in value]
-        if any(schema != schemas[0] for schema in schemas):
-            raise serializers.ValidationError("Todas las variantes deben tener las mismas claves de atributos.")
         return value
 
+
 class ModificarCantidadRequestSerializer(serializers.Serializer):
     cantidad = serializers.IntegerField(min_value=1, error_messages={
         'min_value': 'La cantidad mínima permitida es 1.',
         'invalid': 'Debe ingresar un número entero válido.'
     })
+
 
 class ItemCarritoResponseSerializer(serializers.Serializer):
     id_item_carrito = serializers.IntegerField()
@@ -474,6 +464,9 @@ class ItemCarritoResponseSerializer(serializers.Serializer):
     sku = serializers.CharField(allow_null=True, required=False)
     stock_disponible = serializers.SerializerMethodField()
     slug = serializers.SerializerMethodField()
+    producto_mongo_id = serializers.SerializerMethodField()
+    imagen = serializers.SerializerMethodField()
+    atributos = serializers.SerializerMethodField()
 
     @staticmethod
     def _precio(obj):
@@ -487,12 +480,20 @@ class ItemCarritoResponseSerializer(serializers.Serializer):
         return obj.cantidad * self._precio(obj)
 
     def get_stock_disponible(self, obj):
-        # Los casos de uso calculan el stock real (variante o producto base).
         return getattr(obj, 'stock_disponible_calculado', obj.id_producto.stock)
 
+    def get_imagen(self, obj):
+        return getattr(obj, "imagen_calculada", "")
+
+    def get_atributos(self, obj):
+        return getattr(obj, "atributos_calculados", {})
+
+    def get_producto_mongo_id(self, obj):
+        return getattr(obj, "producto_mongo_id_calculado", None)
+
     def get_slug(self, obj):
-        # La consulta del carrito lo resuelve desde el catálogo; puede ser None.
         return getattr(obj, 'slug_calculado', None)
+
 
 class AgregarItemCarritoRequestSerializer(serializers.Serializer):
     id_producto = serializers.IntegerField(
@@ -533,6 +534,7 @@ class AgregarItemCarritoRequestSerializer(serializers.Serializer):
             )
         return attrs
 
+
 class ConfiguracionTransbankInputSerializer(serializers.Serializer):
     codigo_comercio = serializers.CharField(
         max_length=64,
@@ -568,14 +570,32 @@ class ConfiguracionTransbankResponseSerializer(serializers.Serializer):
 class IniciarPagoTransbankSerializer(serializers.Serializer):
     id_tienda = serializers.IntegerField(required=True)
     orden_compra = serializers.CharField(max_length=64, required=True)
+    email = serializers.EmailField(required=True)
     monto = serializers.IntegerField(min_value=1, required=True)
     session_id = serializers.CharField(max_length=64, required=True)
     return_url = serializers.URLField(required=True)
+
+    def validate_return_url(self, value):
+        from urllib.parse import urlsplit
+        from django.conf import settings
+        target = urlsplit(value)
+        allowed = {urlsplit(origin)._replace(path="", query="", fragment="").geturl().rstrip("/")
+                   for origin in settings.CORS_ALLOWED_ORIGINS}
+        origin = f"{target.scheme}://{target.netloc}"
+        if target.username or target.password or origin not in allowed:
+            raise serializers.ValidationError("El retorno debe pertenecer a la tienda configurada.")
+        return value
 
 
 class ConfirmarPagoTransbankSerializer(serializers.Serializer):
     id_tienda = serializers.IntegerField(required=True)
     token_ws = serializers.CharField(max_length=255, required=True)
+
+
+class PagoAbortadoTransbankSerializer(serializers.Serializer):
+    id_tienda = serializers.IntegerField(required=True)
+    tbk_token = serializers.CharField(max_length=512, required=True)
+
 
 class ConfiguracionPayPalInputSerializer(serializers.Serializer):
     client_id = serializers.CharField(max_length=255, required=False, allow_blank=True)
@@ -596,6 +616,7 @@ class ConfiguracionPayPalResponseSerializer(serializers.Serializer):
     def get_id_tienda(self, obj):
         val = obj.get("id_tienda") if isinstance(obj, dict) else getattr(obj, "id_tienda", None)
         return getattr(val, "id_tienda", val)
+
 
 class ConfiguracionMercadoPagoInputSerializer(serializers.Serializer):
     public_key = serializers.CharField(max_length=255, required=False, allow_blank=True)

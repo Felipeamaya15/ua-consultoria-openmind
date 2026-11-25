@@ -12,7 +12,6 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
 
 from django.conf import settings
 
-# No usa la historia de migraciones SQL de la instalación, ni escribe en PostgreSQL.
 settings.DATABASES = {'default': {'ENGINE': 'django.db.backends.sqlite3', 'NAME': ':memory:'}}
 settings.MIGRATION_MODULES = {
     label: None for label in (

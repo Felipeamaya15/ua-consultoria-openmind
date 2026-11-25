@@ -3,14 +3,14 @@ import { TransbankConfig, GuardarTransbankDTO, ApiResponse } from '../types/tran
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 const getHeaders = () => {
-  // 1. Intenta leer el token del usuario que inició sesión
+
   const token = localStorage.getItem('token') || sessionStorage.getItem('token');
 
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
   };
 
-  // 2. Si hay token, lo adjunta a la llamada
+
   if (token) {
     headers['Authorization'] = `Token ${token}`;
   }

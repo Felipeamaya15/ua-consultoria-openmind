@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
+import { LoadingState } from '../../../shared/components/states';
 import { paypalService } from '../services/paypalService';
 import { ConfiguracionPayPalInput } from '../types/paypal.types';
+import { humanizeAdminError } from '../utils/humanizeError';
 
 interface Props {
   tiendaId?: number;
@@ -34,7 +36,7 @@ export const PayPalConfigForm: React.FC<Props> = ({ tiendaId = 1 }) => {
       setSecretEnmascarado(data.client_secret_enmascarado || '');
       setIsConfigured(data.configurado);
     } catch {
-      // Si aún no está configurado en la base de datos se mantiene estado por defecto
+
       setIsConfigured(false);
     } finally {
       setInitialLoading(false);
@@ -47,7 +49,7 @@ export const PayPalConfigForm: React.FC<Props> = ({ tiendaId = 1 }) => {
     setSuccessMsg(null);
 
     if (activo && !clientId.trim()) {
-      setErrorMsg('El Client ID es obligatorio para habilitar PayPal.');
+      setErrorMsg('Completa el identificador de PayPal para habilitarlo.');
       return;
     }
 
@@ -77,15 +79,13 @@ export const PayPalConfigForm: React.FC<Props> = ({ tiendaId = 1 }) => {
 
   if (initialLoading) {
     return (
-      <div className="bg-white rounded-xl border border-gray-200 p-6 flex justify-center items-center text-gray-500">
-        Cargando configuración de PayPal...
-      </div>
+      <LoadingState spacing="none" className="bg-white rounded-xl border border-gray-200 p-6">Cargando configuración de PayPal...</LoadingState>
     );
   }
 
   return (
     <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm flex flex-col gap-5">
-      {/* Encabezado */}
+
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-[#003087]/10 flex items-center justify-center text-[#003087]">
@@ -98,7 +98,7 @@ export const PayPalConfigForm: React.FC<Props> = ({ tiendaId = 1 }) => {
               <h3 className="font-semibold text-base text-[#151515]">PayPal</h3>
               {isConfigured && activo && (
                 <span className="px-2 py-0.5 text-[10px] font-bold tracking-wide uppercase bg-emerald-100 text-emerald-700 rounded-full">
-                  API CONECTADA
+                  CUENTA CONECTADA
                 </span>
               )}
             </div>
@@ -106,7 +106,7 @@ export const PayPalConfigForm: React.FC<Props> = ({ tiendaId = 1 }) => {
           </div>
         </div>
 
-        {/* Switch Activación */}
+
         <label className="relative inline-flex items-center cursor-pointer">
           <input
             type="checkbox"
@@ -118,10 +118,10 @@ export const PayPalConfigForm: React.FC<Props> = ({ tiendaId = 1 }) => {
         </label>
       </div>
 
-      {/* Alertas */}
+
       {errorMsg && (
         <div className="p-3 text-sm text-red-700 bg-red-50 border border-red-200 rounded-xl">
-          {errorMsg}
+          {humanizeAdminError(errorMsg, 'No pudimos guardar la configuración de PayPal. Revisa los datos e intenta nuevamente.')}
         </div>
       )}
       {successMsg && (
@@ -130,14 +130,15 @@ export const PayPalConfigForm: React.FC<Props> = ({ tiendaId = 1 }) => {
         </div>
       )}
 
-      {/* Formulario */}
+
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-xs font-semibold text-[#344054] mb-1.5">
+            <label htmlFor="paypal-ambiente" className="block text-xs font-semibold text-[#344054] mb-1.5">
               Entorno de Operación
             </label>
             <select
+              id="paypal-ambiente"
               value={ambiente}
               onChange={(e) => setAmbiente(e.target.value as 'SANDBOX' | 'LIVE')}
               className="w-full h-11 px-3 border border-gray-300 rounded-xl bg-white text-sm text-[#151515] focus:ring-2 focus:ring-[#003087] focus:outline-none"
@@ -148,10 +149,11 @@ export const PayPalConfigForm: React.FC<Props> = ({ tiendaId = 1 }) => {
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-[#344054] mb-1.5">
+            <label htmlFor="paypal-client-id" className="block text-xs font-semibold text-[#344054] mb-1.5">
               Client ID
             </label>
             <input
+              id="paypal-client-id"
               type="text"
               value={clientId}
               onChange={(e) => setClientId(e.target.value)}
@@ -162,10 +164,11 @@ export const PayPalConfigForm: React.FC<Props> = ({ tiendaId = 1 }) => {
         </div>
 
         <div>
-          <label className="block text-xs font-semibold text-[#344054] mb-1.5">
+          <label htmlFor="paypal-client-secret" className="block text-xs font-semibold text-[#344054] mb-1.5">
             Client Secret
           </label>
           <input
+            id="paypal-client-secret"
             type="password"
             value={clientSecret}
             onChange={(e) => setClientSecret(e.target.value)}

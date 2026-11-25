@@ -1,4 +1,4 @@
-// Ejecutar desde frontend: node tests/product-editing.cjs
+
 const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
@@ -6,10 +6,11 @@ const assert = require('node:assert/strict');
 const ts = require('typescript');
 const root = path.resolve(__dirname, '..');
 function load(file, globals) {
+  if (file.endsWith('productService.ts')) return require('./source-loader.cjs').load(file, {}, {sessionStorage: {getItem: () => null}, ...globals});
   const module = { exports: {} };
   const source = fs.readFileSync(path.join(root, file), 'utf8').replace('(import.meta as any).env.VITE_API_URL', '"http://test"');
   const code = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020, jsx: ts.JsxEmit.ReactJSX } }).outputText;
-  vm.runInNewContext(code, { module, exports: module.exports, Error, ...globals });
+  vm.runInNewContext(code, { module, exports: module.exports, Error, sessionStorage: {getItem: () => null}, ...globals });
   return module.exports;
 }
 const id = '0123456789abcdef01234567';
@@ -35,12 +36,18 @@ async function main() {
   assert.equal(list[0].id, id);
   assert.equal(list[0].status, 'archived');
   assert.equal(list[0].variants[0].stock, 5);
+  assert.equal(list[0].basePrice, 80);
+  assert.equal(list[0].comparePrice, 100);
   reply = ok(raw);
   const product = await service.fetchAdminProduct(id);
   assert.equal(request.url, `http://test/api/catalog/productos/${id}/admin/`);
   assert.equal(product.generalAttributes[0].valor, 'QA');
   assert.equal(product.attributes.talla[0], 'M');
   assert.equal(product.seoTitle, 'SEO');
+  assert.equal(product.basePrice, 80);
+  assert.equal(product.comparePrice, 100);
+  assert.equal(product.variants[0].price, 80);
+  assert.equal(product.variants[0].comparePrice, 100);
   product.name = 'Editado'; product.variants[0].stock = 7;
   reply = ok({ ...raw, nombre: 'Editado', revision: 'revision-nueva' });
   const saved = await service.updateCatalogProduct(product);
@@ -64,13 +71,17 @@ async function main() {
   reply = ok({ ...raw, id: 'abcdefabcdefabcdefabcdef' });
   await assert.rejects(() => service.updateCatalogProduct(product), /no confirmó/);
 
-  // Carga del formulario/listado mediante efectos, sin consultar mocks o almacenamiento local.
+
   for (const mode of ['detail', 'list', 'failure']) {
     const state = [], effects = [];
     let cursor = 0, queried = 0;
     const jsx = (type, props) => ({ type, props });
     const components = load('src/features/admin/pages/Products.tsx', {
       require: name => {
+        if(name.includes("FeedbackProvider"))return {useFeedback:()=>({confirm:async()=>false})};
+        if (name.includes('shared/services/imageUpload')) return { IMAGE_ACCEPT: 'image/*', prepareImage: async () => { throw new Error('Este test no selecciona archivos'); } };
+        if (name === '../../marketing/services/mediaLibraryService') return {saveProductVideoResource: async () => {throw new Error('Esta fixture no selecciona videos');}};
+        if (name === '../components/ProductVideoField') return {ProductVideoField: 'ProductVideoField'};
         if (name === 'react/jsx-runtime') return { jsx, jsxs: jsx };
         if (name === 'react') return {
           useMemo: f => f(), useRef: () => ({ current: null }),
@@ -81,18 +92,18 @@ async function main() {
             return [state[index], value => { state[index] = typeof value === 'function' ? value(state[index]) : value; }];
           },
         };
-        if (name === 'react-router-dom') return { Link: 'Link', useParams: () => ({ id }), useNavigate: () => () => {} };
+        if (name === 'react-router-dom') return { Link: 'Link', useLocation: () => ({ state: null }), useParams: () => ({ id }), useNavigate: () => () => {} };
         if (name.includes('mockAdminData')) return { formatPrice: String };
         if (name.includes('productService')) return {
           fetchAdminProduct: async key => { queried++; assert.equal(key, id); if (mode === 'failure') throw new Error('No autorizado'); return saved; },
           fetchAdminProducts: async () => { queried++; return [saved]; },
         };
         if (name.includes('components/ui')) return Object.fromEntries(['Alert','Badge','Button','Input','Select','Tabs','Textarea','Toggle'].map(x => [x, x]));
-        throw new Error(`Unexpected dependency: ${name}`);
+        if (name.includes('shared/components/states')) return {LoadingState: 'LoadingState', ErrorState: 'ErrorState', EmptyListState: 'EmptyListState'}; if (name.includes('humanizeError')) return {humanizeAdminError: message => message}; if (name.includes('emptyStates')) return require('./source-loader.cjs').load('src/features/admin/services/emptyStates.ts'); throw new Error(`Unexpected dependency: ${name}`);
       },
     });
     const render = mode === 'list' ? components.ProductList : components.ProductForm;
-    render(); effects[0]();
+    render(); effects.forEach(effect => effect());
     await new Promise(resolve => setImmediate(resolve));
     cursor = 0;
     const tree = render();

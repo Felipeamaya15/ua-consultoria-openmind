@@ -29,19 +29,13 @@ export function endDemoSession(): void {
   sessionStorage.removeItem(DEMO_SESSION_KEY);
 }
 
-/**
- * Abre una ruta administrativa en una pestaña nueva manteniendo
- * la sesión demo exclusivamente en sessionStorage.
- *
- * Se abre primero una ventana same-origin vacía, se copia allí la
- * sesión y recién después se navega hacia la ruta solicitada.
- */
+
 export function openAdminWindow(path: string): void {
   const newWindow = window.open('', '_blank');
 
   if (!newWindow) {
-    // Si el navegador bloquea popups, mantenemos la navegación
-    // en la pestaña actual en lugar de dejar el botón sin efecto.
+
+
     window.location.assign(path);
     return;
   }
